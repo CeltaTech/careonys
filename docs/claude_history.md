@@ -564,3 +564,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el Panel podía arrastrar una guardia con check-in a otra fila de la vista por Paciente y sacarle un Paciente de la lista, y el Asistente se enteraba al confirmar el Reporte Diario, con un aviso que le pedía volver y entrar por otro Paciente.
 - **Qué dice ahora:** la base rechaza sacar o cambiar un Paciente de una guardia con check-in, y el Panel no ofrece arrastrarla. El aviso salió; si el Backend llegara a rechazar el reporte por eso, la aplicación muestra la falla del sistema.
 - **Motivo:** lo decidió el Desarrollador: la solución no es poner un mensaje, sino que no sea posible que pase lo que no tiene que pasar.
+
+## Una guardia empezada no cambia de Asistente, salvo una emergencia
+
+- **Qué decía antes:** el Panel podía correr de día o de horario una guardia activa o completada, y cambiarle el Asistente a una ausente arrastrándola o desde Continuidad sin decir por qué ni dejar quién lo hizo.
+- **Qué dice ahora:** la base rechaza cambiar Asistente, día u horario de una guardia empezada. La única excepción es cubrir una ausente, por una sola función que pide el motivo y deja registro de quién, cuándo, la guardia, el Asistente anterior, el nuevo y el motivo. El Panel sólo ofrece ese camino, con el motivo obligatorio y sin tocar la fecha.
+- **Motivo:** lo decidió el Desarrollador: una guardia empezada no cambia de Asistente salvo una emergencia, y de esa emergencia tiene que quedar registro de todo.

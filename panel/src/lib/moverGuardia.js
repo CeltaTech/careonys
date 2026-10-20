@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 import { cambiarPacienteDeGuardia } from './cambiarPacienteDeGuardia';
 import { mensajeDeError } from './errores';
 import { FILA_SIN_CUBRIR, filaDeGuardia } from './cobertura';
-import { asignarConFecha, reasignarGuardia } from './reasignarGuardia';
+import { asignarConFecha } from './reasignarGuardia';
 import { moverTurnoAOtroPaciente, quienTieneElTurno } from './asignarTurno';
 
 /* Arrastrar una guardia dentro de la grilla: un solo lugar para lo que eso significa.
@@ -37,13 +37,22 @@ import { moverTurnoAOtroPaciente, quienTieneElTurno } from './asignarTurno';
 /** Las dos únicas cosas que puede haber en las filas de la grilla. */
 const VISTAS = ['asistente', 'paciente'];
 
+/** Los estados de una guardia que todavía no empezó. Cualquier otro cuenta como empezada. */
+const SIN_EMPEZAR = ['programada', 'pausada', 'cancelada'];
+
 /**
- * Si la grilla ofrece arrastrar esta guardia. Una guardia con el check-in marcado ya empezó: el
- * Asistente está atendiendo a sus Pacientes y tiene que cargar el Reporte Diario de cada uno.
- * No se la arrastra a otra fila ni se le cambia la lista de Pacientes; la base tampoco lo deja.
+ * Si la guardia ya empezó: tiene el check-in, o su estado ya no es uno de antes de empezar
+ * (activa, ausente, completada). Un estado desconocido cuenta como empezada. Una guardia empezada
+ * no cambia de Asistente, de día ni de horario, ni de lista de Pacientes, y la base tampoco lo
+ * deja. La única excepción es cubrir una ausente, por `reasignarGuardia`, con el motivo.
  */
+export function yaEmpezo(guardia) {
+  return Boolean(guardia?.checkin_at) || !SIN_EMPEZAR.includes(guardia?.estado);
+}
+
+/** Si la grilla ofrece arrastrar esta guardia: sólo si todavía no empezó. */
 export function seArrastra(guardia) {
-  return Boolean(guardia) && !guardia.checkin_at;
+  return Boolean(guardia) && !yaEmpezo(guardia);
 }
 
 /**
@@ -95,13 +104,6 @@ export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, ho
   }
 
   const asistenteId = fila === FILA_SIN_CUBRIR ? null : fila;
-
-  // Un turno ya empezado y sin quien lo haga se cubre en el momento, sin esperar respuesta. Y no
-  // se lo puede dejar sin nadie: ya está sin nadie.
-  if (guardia.estado === 'ausente') {
-    if (!asistenteId) return { error: null };
-    return reasignarGuardia(guardia, asistenteId, fecha, t);
-  }
 
   return asignarConFecha(guardia, asistenteId, fecha, t);
 }

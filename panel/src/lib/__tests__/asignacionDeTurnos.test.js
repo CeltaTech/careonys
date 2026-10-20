@@ -4,6 +4,7 @@ import { T } from '../../i18n/translations';
 // Este archivo prueba qué camino toma cada cambio de Asistente, no la base. La base se reemplaza
 // por una que anota lo que se le pidió, y el backend por uno al que se le dice qué contestar.
 const pedidosALaBase = [];
+const funcionesLlamadas = [];
 const llamadasAlBackend = [];
 let respuestaDelBackend = null;
 // Las asignaciones sin responder que la base de mentira contesta, filtradas por la columna que
@@ -12,6 +13,10 @@ let pendientesEnLaBase = [];
 
 vi.mock('../supabaseClient', () => ({
   supabase: {
+    rpc: async (nombre, argumentos) => {
+      funcionesLlamadas.push({ nombre, argumentos });
+      return { error: null };
+    },
     from: (tabla) => ({
       select: () => {
         let columna = null;
@@ -84,6 +89,7 @@ const asignaciones = () => pedidosALaBase.filter((p) => 'asistente_id' in p.camb
 
 beforeEach(() => {
   pedidosALaBase.length = 0;
+  funcionesLlamadas.length = 0;
   llamadasAlBackend.length = 0;
   respuestaDelBackend = null;
   pendientesEnLaBase = [];
@@ -176,14 +182,37 @@ describe('arrastrar en la vista de Asistentes', () => {
     expect(pedidosALaBase.map((p) => p.cambios.fecha)).toEqual(['2026-10-22', '2026-10-20']);
   });
 
-  it('un turno ausente se cubre en el momento, sin esperar respuesta', async () => {
-    await moverGuardia(guardia({ estado: 'ausente', asistente_id: ANA }), { fila: BRUNO, fecha: '2026-10-20', vista: 'asistente' }, t);
+  it('un turno ausente ya empezó: no se arrastra, se cubre desde el detalle con el motivo', async () => {
+    const ausente = guardia({ estado: 'ausente', asistente_id: ANA });
+    expect(seArrastra(ausente)).toBe(false);
+    await moverGuardia(ausente, { fila: BRUNO, fecha: '2026-10-21', vista: 'asistente' }, t);
     expect(llamadasAlBackend).toEqual([]);
-    expect(asignaciones()[0].cambios).toMatchObject({ asistente_id: BRUNO, estado: 'programada' });
+    expect(pedidosALaBase).toEqual([]);
+    expect(funcionesLlamadas).toEqual([]);
+  });
+
+  it('ninguna guardia empezada se arrastra, y un estado desconocido cuenta como empezada', () => {
+    for (const estado of ['activa', 'ausente', 'completada', 'otro']) {
+      expect(seArrastra(guardia({ estado }))).toBe(false);
+    }
+    for (const estado of ['programada', 'pausada', 'cancelada']) {
+      expect(seArrastra(guardia({ estado }))).toBe(true);
+    }
   });
 });
 
 describe('reasignar desde el detalle', () => {
+  it('un turno ausente se cubre por la función de emergencia, con el motivo y sin tocar la fecha', async () => {
+    const { error } = await reasignarGuardia(guardia({ estado: 'ausente', asistente_id: ANA }), BRUNO, '2026-10-25', t, 'No llegó');
+    expect(error).toBeNull();
+    expect(llamadasAlBackend).toEqual([]);
+    expect(funcionesLlamadas).toEqual([
+      { nombre: 'reasignar_guardia_por_emergencia', argumentos: { p_guardia_id: 'g1', p_asistente_id: BRUNO, p_motivo: 'No llegó' } },
+    ]);
+    expect(asignaciones()).toEqual([]);
+    expect(pedidosALaBase.map((p) => p.tabla)).toEqual(['incidentes_relevo']);
+  });
+
   it('elegir a quien ya lo aceptó no lo vuelve a preguntar', async () => {
     await reasignarGuardia(guardia({ asistente_id: ANA }), ANA, '2026-10-20', t);
     expect(llamadasAlBackend).toEqual([]);

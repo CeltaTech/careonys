@@ -17,6 +17,7 @@ import { estaEnElPadron } from '../../lib/candidatos';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { DescansosDeLaGuardia } from './DescansosDeLaGuardia';
+import { yaEmpezo } from '../../lib/moverGuardia';
 
 // Qué se resuelve en esta pantalla y en qué estado queda. Es el nombre guardado de la tabla, y con
 // él salen los motivos del catálogo de la Prestadora y se escribe la resolución. El estado se nombra
@@ -65,6 +66,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const [horasExtraMotivo, setHorasExtraMotivo] = useState(guardia.horas_extra_motivo ?? '');
   const [nuevoAsistenteId, setNuevoAsistenteId] = useState('');
   const [nuevaFecha, setNuevaFecha] = useState(guardia.fecha);
+  const [motivoEmergencia, setMotivoEmergencia] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState(null);
 
@@ -84,7 +86,12 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     setError(null);
     setProcesando(true);
     try {
-      await onReasignar(guardia.id, nuevoAsistenteId === SIN_ASIGNAR ? null : nuevoAsistenteId, nuevaFecha);
+      await onReasignar(
+        guardia.id,
+        nuevoAsistenteId === SIN_ASIGNAR ? null : nuevoAsistenteId,
+        nuevaFecha,
+        cubrePorEmergencia ? motivoEmergencia.trim() : '',
+      );
     } finally {
       setProcesando(false);
     }
@@ -274,7 +281,11 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const muestraCheckout = tieneAsistente && guardia.estado === 'activa' && !guardia.checkout_at;
   const puedeCancelar = guardia.estado === 'programada' || guardia.estado === 'activa';
   const puedeMarcarAusente = tieneAsistente && guardia.estado === 'programada';
-  const puedeReasignar = guardia.estado === 'programada' || guardia.estado === 'ausente';
+  // Una guardia empezada no cambia de Asistente ni de fecha. La única excepción es la ausente: el
+  // turno empezó, nadie lo está haciendo y otro lo cubre. Eso pide el motivo, no deja tocar la
+  // fecha y queda registrado en la base (`reasignar_guardia_por_emergencia`).
+  const cubrePorEmergencia = guardia.estado === 'ausente' && !guardia.checkin_at;
+  const puedeReasignar = (guardia.estado === 'programada' && !yaEmpezo(guardia)) || cubrePorEmergencia;
   // Se anotan mientras la guardia está en pie o ya terminó, y nunca en una cancelada: ahí no
   // hubo trabajo que pagar. Mientras la liquidación del mes no esté hecha se pueden corregir.
   const puedeAnotarHorasExtra = tieneAsistente && guardia.estado !== 'cancelada' && guardia.estado !== 'ausente';
@@ -566,17 +577,33 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
                 <option key={a.id} value={a.id}>{a.nombre}</option>
               ))}
             </FormField>
-            <FormField
-              label={t.guardias.detalle.reasignar_fecha}
-              name="reasignar_fecha"
-              type="date"
-              value={nuevaFecha}
-              onChange={(e) => setNuevaFecha(e.target.value)}
-            />
+            {cubrePorEmergencia ? (
+              <FormField
+                label={t.comun.motivo}
+                name="reasignar_motivo"
+                type="textarea"
+                required
+                maxLength={500}
+                value={motivoEmergencia}
+                onChange={(e) => setMotivoEmergencia(e.target.value)}
+              />
+            ) : (
+              <FormField
+                label={t.guardias.detalle.reasignar_fecha}
+                name="reasignar_fecha"
+                type="date"
+                value={nuevaFecha}
+                onChange={(e) => setNuevaFecha(e.target.value)}
+              />
+            )}
             <Button
               variant="secondary"
               onClick={handleReasignarDesdeModal}
-              disabled={procesando || !nuevoAsistenteId || !nuevaFecha}
+              disabled={
+                procesando
+                || !nuevoAsistenteId
+                || (cubrePorEmergencia ? !motivoEmergencia.trim() : !nuevaFecha)
+              }
             >
               {t.guardias.detalle.reasignar_confirmar}
             </Button>

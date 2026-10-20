@@ -557,6 +557,19 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
         if (errorExcepcion) throw errorExcepcion;
       }
 
+      // Si lo cubre un Asistente, la guardia entrante —ausente: ya empezó y nadie la está
+      // haciendo— cambia de Asistente. Es la única emergencia en que una guardia empezada lo
+      // hace, y la base sólo la deja pasar por esta función, que pide el motivo y deja registro.
+      // Va antes de cerrar el incidente: si la base la rechaza, el incidente sigue abierto.
+      if (!esFamiliar && incidente.guardia_entrante_id) {
+        const { error: errorGuardia } = await supabase.rpc('reasignar_guardia_por_emergencia', {
+          p_guardia_id: incidente.guardia_entrante_id,
+          p_asistente_id: asistenteId,
+          p_motivo: motivo.trim(),
+        });
+        if (errorGuardia) throw errorGuardia;
+      }
+
       const { error: errorIncidente } = await supabase
         .from('incidentes_relevo')
         .update({
@@ -567,18 +580,6 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
         .eq('id', incidente.id);
       if (errorIncidente) throw errorIncidente;
 
-      // Resolver el incidente acá no basta: si se asignó un Asistente real (no un familiar
-      // cubriendo informalmente), la guardia entrante tiene que quedar reflejada como cubierta
-      // — si no, la grilla de Guardias y cualquier otro lugar que lea guardias.estado sigue
-      // mostrándola como "sin cobertura" aunque el incidente ya esté resuelto acá.
-      if (!esFamiliar && incidente.guardia_entrante_id) {
-        const { error: errorGuardia } = await supabase
-          .from('guardias')
-          .update({ asistente_id: asistenteId, estado: 'programada' })
-          .eq('id', incidente.guardia_entrante_id);
-        if (errorGuardia) throw errorGuardia;
-      }
-
       onResuelto();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -587,9 +588,11 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
     }
   }
 
-  // El motivo dejó de ser obligatorio: era la justificación de una excepción autorizada, y esto
-  // no es una excepción autorizada. El familiar no tiene que justificar nada.
-  const puedeGuardar = esFamiliar ? Boolean(familiarPersonaId) : Boolean(asistenteId);
+  // El familiar no tiene que justificar nada. Cambiarle el Asistente a una guardia empezada sí:
+  // la base no lo hace sin motivo.
+  const puedeGuardar = esFamiliar
+    ? Boolean(familiarPersonaId)
+    : Boolean(asistenteId) && (!incidente.guardia_entrante_id || Boolean(motivo.trim()));
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
@@ -620,12 +623,17 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
             <FormField label={t.continuidad.resolver_familiar_motivo} name="motivo" type="textarea" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
           </>
         ) : (
-          <FormField label={t.continuidad.resolver_asistente} name="asistente_id" type="select" value={asistenteId} onChange={(e) => setAsistenteId(e.target.value)} required>
-            <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
-            {asistentesAsignables.map((a) => (
-              <option key={a.id} value={a.id}>{a.nombre}</option>
-            ))}
-          </FormField>
+          <>
+            <FormField label={t.continuidad.resolver_asistente} name="asistente_id" type="select" value={asistenteId} onChange={(e) => setAsistenteId(e.target.value)} required>
+              <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
+              {asistentesAsignables.map((a) => (
+                <option key={a.id} value={a.id}>{a.nombre}</option>
+              ))}
+            </FormField>
+            {incidente.guardia_entrante_id && (
+              <FormField label={t.comun.motivo} name="motivo" type="textarea" required maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+            )}
+          </>
         )}
 
         <div className="panel-modal-acciones">

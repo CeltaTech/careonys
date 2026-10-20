@@ -324,11 +324,14 @@ de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 `supabase/config.toml` a propósito: así no son direcciones web. Las políticas las siguen
 encontrando porque guardan el identificador interno de la función, no su nombre. **Una función se
 queda en `public` solamente si el navegador la llama a propósito, y entonces no puede recibir un
-identificador que la apunte a otra Prestadora** — hoy el Panel llama cuatro: `ausencias_que_tapan`,
-que recibe dos fechas y resuelve la Prestadora adentro con `prestadora_actual()`; `resolver`, que
-también la resuelve adentro con `prestadora_actual()`; y `domicilio_del_paciente_en` y
-`domicilios_de_pacientes_en`, que reciben pacientes y una fecha y corren con los permisos de quien
-llama, así que la protección por fila de cada tabla decide qué ve. Además el Panel lee
+identificador que la apunte a otra Prestadora** — hoy el Panel llama cuatro: `resolver`, que
+resuelve la Prestadora adentro con `prestadora_actual()`; `reasignar_guardia_por_emergencia`, que
+también la resuelve adentro, corre con los permisos de quien llama y es el único camino por el que
+una guardia empezada —la ausente— cambia de Asistente, con motivo y registro; y
+`domicilio_del_paciente_en` y `domicilios_de_pacientes_en`, que reciben pacientes y una fecha y
+corren con los permisos de quien llama, así que la protección por fila de cada tabla decide qué ve.
+`ausencias_que_tapan` sigue en `public`, recibe dos fechas y resuelve la Prestadora adentro, pero
+hoy no la llama nadie. Además el Panel lee
 `cuenta_desactivada` como columna calculada de `asistentes`: recibe la fila que la consulta ya le
 dejó ver y contesta falso si es de otra Prestadora. Y el backend, con la credencial
 de quien pide, llama tres más: `tiene_permiso_la_sesion` y `permisos_efectivos_de_la_sesion`, que

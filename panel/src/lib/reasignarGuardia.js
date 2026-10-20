@@ -14,10 +14,13 @@ import { asignarTurno } from './asignarTurno';
    (`lib/asignarTurno.js`). Quien la tenía la pierde en el mismo paso, y los avisos los manda el
    backend. Elegir «sin asignar» la deja sin nadie.
 
-   Si estaba marcada como ausente, el turno ya empezó y nadie lo está haciendo: quien lo cubre
-   entra ahora, sin esperar respuesta. Ahí son tres cosas que van juntas:
+   Si estaba marcada como ausente, el turno ya empezó y nadie lo está haciendo. Es la única
+   emergencia en la que una guardia empezada cambia de Asistente, y la base sólo la deja pasar por
+   `reasignar_guardia_por_emergencia`, que pide el motivo y deja registro de quién, cuándo, el
+   Asistente anterior, el nuevo y el motivo. La fecha y el horario no cambian. Quien la cubre entra
+   ahora, sin esperar respuesta. Son tres cosas que van juntas:
 
-     1. Se guarda el Asistente nuevo y la fecha.
+     1. Se cambia el Asistente por la función de emergencia, con el motivo.
      2. Se cierra el incidente de relevo abierto por la ausencia. Si no, la alerta de "necesita
         relevo" sigue encendida aunque el Paciente ya tenga quien lo cuide.
      3. Se avisa el cambio, porque a la casa del Paciente entra otra persona. El aviso sale
@@ -27,23 +30,27 @@ import { asignarTurno } from './asignarTurno';
  * @param {object} guardia  La guardia entera, como está hoy — hace falta para saber si estaba
  *                          ausente. Con el id solo no alcanzaría.
  * @param {string | null} asistenteId  Quién pasa a hacerla, o `null` para dejarla sin asignar.
- * @param {string} fecha  En qué fecha queda. Puede ser la misma que ya tenía.
+ * @param {string} fecha  En qué fecha queda. Puede ser la misma que ya tenía. En la emergencia no
+ *                          se usa: la guardia ya empezó y su fecha no cambia.
  * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
  *                          acá no se sabe en qué idioma está, y hacen falta para las dos cosas
  *                          que nunca deben verse crudas: el rechazo por Matrícula vencida, el
  *                          rechazo por modalidad de trabajo y cualquier otro error de la base.
+ * @param {string} motivo  Por qué se la cubre. Sólo se usa en la emergencia, y ahí es obligatorio.
  * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
  */
-export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
+export async function reasignarGuardia(guardia, asistenteId, fecha, t = null, motivo = '') {
   const estabaSinCobertura = guardia?.estado === 'ausente';
 
   // Un turno que ya está en curso y se quedó sin quien lo haga no espera respuesta: quien lo
   // cubre entra ahora. Todo lo demás se asigna y queda esperando que el Asistente acepte.
   if (!estabaSinCobertura) return asignarConFecha(guardia, asistenteId, fecha, t);
 
-  const cambios = { asistente_id: asistenteId, fecha, estado: 'programada' };
-
-  const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
+  const { error: errorUpdate } = await supabase.rpc('reasignar_guardia_por_emergencia', {
+    p_guardia_id: guardia.id,
+    p_asistente_id: asistenteId,
+    p_motivo: motivo ?? '',
+  });
   if (errorUpdate) {
     // Dos rechazos de la base pueden caer acá y ninguno se muestra crudo: la Matrícula vencida
     // y la modalidad de trabajo en la que este Asistente no está. Cada uno tiene su frase y su

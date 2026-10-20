@@ -586,7 +586,17 @@ RLS). Resumen de las tablas:
   base rechaza borrar o cambiar una fila de la lista y cambiar `guardias.paciente_id`
   (disparadores `guardia_empezada_no_pierde_pacientes` y
   `guardia_empezada_no_cambia_de_paciente`). Agregar Pacientes se permite, y borrar la guardia
-  entera se lleva su lista. En el Panel, una guardia con check-in no se arrastra.
+  entera se lleva su lista. En el Panel, una guardia empezada no se arrastra.
+- **Una guardia empezada no cambia de Asistente, de día ni de horario.** Empezada es la que tiene
+  check-in o un estado que no sea programada, pausada o cancelada. El disparador
+  `guardia_empezada_no_cambia_de_asistente` rechaza en ella todo cambio de `asistente_id`, `fecha`,
+  `hora_inicio` y `hora_fin`. La única excepción es la emergencia de la guardia **ausente** —empezó
+  y nadie la está haciendo—, que pasa sólo por `reasignar_guardia_por_emergencia(guardia,
+  asistente, motivo)`: exige el motivo, cambia sólo el Asistente, deja la guardia en `programada`
+  esperando el check-in de quien la cubre, y anota en `auditoria_reasignaciones_por_emergencia`
+  quién, cuándo, la guardia, el Asistente anterior, el nuevo y el motivo. Ese registro sólo crece:
+  lo leen la administración y la coordinación de la Prestadora, se escribe únicamente desde esa
+  función y no tiene cambio ni borrado. Una guardia activa no tiene camino de emergencia.
 - **`domicilios_temporales_paciente`** — dónde se atiende al Paciente durante una temporada en
   que no está en su casa: el verano en la casa de un hijo, una internación, una mudanza
   mientras arreglan el departamento. Mientras dura, **reemplaza** a la dirección de la Ficha de Persona del Paciente;

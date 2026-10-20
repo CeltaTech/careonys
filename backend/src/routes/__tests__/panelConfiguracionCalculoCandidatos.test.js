@@ -20,7 +20,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
-import { PESOS, TOPES } from '../../utils/perfilesDeCandidatos.js';
+import { PERFILES, PESOS, TOPES } from '../../utils/perfilesDeCandidatos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
@@ -134,7 +134,9 @@ describe('leer cómo ordena esta Prestadora', () => {
     ]);
     const { cuerpo } = await leer();
     assert.equal(cuerpo.configuracion.perfil, 'descanso');
-    assert.equal(cuerpo.configuracion.pesos.descanso_corto, -60);
+    assert.equal(cuerpo.configuracion.pesos.descanso_corto, PERFILES.descanso.pesos.descanso_corto);
+    assert.equal(cuerpo.configuracion.topes.continuidad_veces_maxima, 3);
+    assert.equal(cuerpo.configuracion.pesos.continuidad_maxima, 3 * PESOS.continuidad_por_vez);
     assert.equal(cuerpo.configuracion.topes.horas_descanso_minimo, 14);
   });
 
@@ -144,7 +146,7 @@ describe('leer cómo ordena esta Prestadora', () => {
     ]);
     const { cuerpo } = await leer();
     assert.equal(cuerpo.configuracion.pesos.cerca, 22);
-    assert.equal(cuerpo.configuracion.pesos.descanso_corto, -60, 'el perfil se perdió');
+    assert.equal(cuerpo.configuracion.pesos.descanso_corto, PERFILES.descanso.pesos.descanso_corto, 'el perfil se perdió');
     assert.deepEqual(cuerpo.configuracion.corridos.pesos, { cerca: 22 });
   });
 
@@ -171,14 +173,11 @@ describe('guardar', () => {
       perfil: 'descanso',
       pesos: {
         ...PESOS,
-        continuidad_maxima: 36,
-        descanso_ok: 14,
-        descanso_corto: -60,
-        horas_cerca_del_tope: -30,
-        horas_pasa_el_tope: -70,
+        ...PERFILES.descanso.pesos,
+        continuidad_maxima: 3 * PESOS.continuidad_por_vez,
         cerca: 22,
       },
-      topes: { ...TOPES, horas_descanso_minimo: 14 },
+      topes: { ...TOPES, ...PERFILES.descanso.topes },
     });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);

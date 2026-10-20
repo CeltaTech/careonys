@@ -36,11 +36,18 @@ import { DIAS_AVISO_POR_DEFECTO } from './reglaVencimientos.js';
  * venga alguien que ya conocen vale más que cualquier otra comodidad de la agenda: tres guardias
  * previas con ese Paciente pesan más que todo lo demás a favor sumado.
  */
+const CONTINUIDAD_POR_VEZ_DE_FABRICA = 12;
+const VECES_DE_CONTINUIDAD_DE_FABRICA = 5;
+
 export const PESOS = {
   /** Por cada vez que ya atendió a este Paciente. */
-  continuidad_por_vez: 12,
-  /** Tope de la continuidad: a partir de acá, más veces ya no mueven la aguja. */
-  continuidad_maxima: 60,
+  continuidad_por_vez: CONTINUIDAD_POR_VEZ_DE_FABRICA,
+  /**
+   * Tope de la continuidad: a partir de acá, más veces ya no mueven la aguja. No se configura
+   * como puntaje: sale de multiplicar las veces que cuentan (`TOPES.continuidad_veces_maxima`)
+   * por lo que suma cada vez, y lo recalcula `pesosYTopesDe`.
+   */
+  continuidad_maxima: VECES_DE_CONTINUIDAD_DE_FABRICA * CONTINUIDAD_POR_VEZ_DE_FABRICA,
   /** Nunca lo atendió. Resta poco: no es un problema, es solo que no hay nada a favor. */
   sin_continuidad: -5,
 
@@ -110,6 +117,12 @@ export const PESOS = {
 /** Los topes y umbrales. Valores de fábrica. */
 export const TOPES = {
   /**
+   * Cuántas veces de haber atendido al Paciente cuentan, como máximo. De ahí sale el techo de la
+   * continuidad (`continuidad_maxima`), que es este número por lo que suma cada vez.
+   */
+  continuidad_veces_maxima: VECES_DE_CONTINUIDAD_DE_FABRICA,
+
+  /**
    * Horas semanales máximas que fija la Prestadora. Si el Asistente tiene cargadas en
    * `asistentes.horas_semanales` las que él acepta trabajar, manda el menor de los dos (ver
    * `topeSemanalDe`).
@@ -161,7 +174,6 @@ export const TOPES = {
  */
 export const PESOS_QUE_SE_PUEDEN_TOCAR = {
   continuidad_por_vez: { minimo: 0, maximo: 60 },
-  continuidad_maxima: { minimo: 0, maximo: 300 },
   sin_continuidad: { minimo: -60, maximo: 0 },
   libre: { minimo: 0, maximo: 60 },
   matricula_ok: { minimo: 0, maximo: 60 },
@@ -178,6 +190,7 @@ export const PESOS_QUE_SE_PUEDEN_TOCAR = {
 
 /** Qué topes se pueden tocar, y entre qué valores. */
 export const TOPES_QUE_SE_PUEDEN_TOCAR = {
+  continuidad_veces_maxima: { minimo: 0, maximo: 25 },
   horas_semanales: { minimo: 1, maximo: 168 },
   horas_descanso_minimo: { minimo: 0, maximo: 48 },
   horas_descanso_a_mencionar: { minimo: 1, maximo: 168 },
@@ -186,6 +199,54 @@ export const TOPES_QUE_SE_PUEDEN_TOCAR = {
   km_cerca: { minimo: 0, maximo: 200 },
   km_lejos: { minimo: 0, maximo: 500 },
 };
+
+/**
+ * Los cuatro niveles con los que la Prestadora pondera cada situación, de menos a más.
+ *
+ * Es lo único que ve: «No importa», «Poco», «Bastante», «Mucho». Lo guardado sigue siendo un
+ * número, y la conversión vive acá y en ningún otro lado. «Bastante» es el valor de fábrica de
+ * cada situación; los otros tres salen de multiplicarlo.
+ */
+export const NIVELES = ['no_importa', 'poco', 'bastante', 'mucho'];
+
+/** El nivel que corresponde al valor de fábrica. */
+export const NIVEL_DE_FABRICA = 'bastante';
+
+const FACTOR_DE_NIVEL = { no_importa: 0, poco: 0.5, bastante: 1, mucho: 2.5 };
+
+/** Las situaciones que se ponderan por nivel: las que se pueden tocar, en el orden de la tabla. */
+export const SITUACIONES_PONDERABLES = Object.keys(PESOS_QUE_SE_PUEDEN_TOCAR);
+
+/**
+ * El número que vale una situación en un nivel. Redondea a entero conservando el signo del valor
+ * de fábrica: lo que resta, resta más o menos, nunca pasa a sumar.
+ */
+export function pesoDeNivel(clave, nivel) {
+  const base = PESOS[clave];
+  const factor = FACTOR_DE_NIVEL[nivel];
+  if (!Number.isFinite(base) || factor === undefined) return base;
+  const valor = Math.sign(base) * Math.round(Math.abs(base) * factor);
+  return valor === 0 ? 0 : valor;
+}
+
+/**
+ * El nivel que corresponde a un número guardado. Si no coincide con ninguno, el más cercano; si
+ * no es un número, el de fábrica.
+ */
+export function nivelMasCercano(clave, valor) {
+  const numero = Number(valor);
+  if (valor === '' || valor === null || valor === undefined || !Number.isFinite(numero)) return NIVEL_DE_FABRICA;
+  let mejor = NIVEL_DE_FABRICA;
+  let distancia = Infinity;
+  for (const nivel of NIVELES) {
+    const d = Math.abs(pesoDeNivel(clave, nivel) - numero);
+    if (d < distancia) {
+      distancia = d;
+      mejor = nivel;
+    }
+  }
+  return mejor;
+}
 
 /**
  * Las tres formas armadas.
@@ -209,13 +270,13 @@ export const PERFILES = {
    */
   descanso: {
     pesos: {
-      continuidad_maxima: 36,
-      descanso_ok: 14,
-      descanso_corto: -60,
-      horas_cerca_del_tope: -30,
-      horas_pasa_el_tope: -70,
+      descanso_ok: pesoDeNivel('descanso_ok', 'mucho'),
+      descanso_corto: pesoDeNivel('descanso_corto', 'mucho'),
+      horas_cerca_del_tope: pesoDeNivel('horas_cerca_del_tope', 'mucho'),
+      horas_pasa_el_tope: pesoDeNivel('horas_pasa_el_tope', 'mucho'),
     },
     topes: {
+      continuidad_veces_maxima: 3,
       horas_descanso_minimo: 14,
     },
   },
@@ -227,11 +288,11 @@ export const PERFILES = {
    */
   cercania: {
     pesos: {
-      continuidad_maxima: 36,
-      cerca: 28,
-      lejos: -30,
+      cerca: pesoDeNivel('cerca', 'mucho'),
+      lejos: pesoDeNivel('lejos', 'mucho'),
     },
     topes: {
+      continuidad_veces_maxima: 3,
       km_cerca: 10,
       km_lejos: 20,
     },
@@ -256,11 +317,21 @@ export const NOMBRES_DE_PERFIL = Object.keys(PERFILES);
 export function pesosYTopesDe(configuracion) {
   const nombre = configuracion?.perfil;
   const perfil = PERFILES[nombre] ?? PERFILES[PERFIL_POR_DEFECTO];
+  const pesos = { ...PESOS, ...perfil.pesos, ...soloLoQueSePuedeTocar(configuracion?.pesos, PESOS_QUE_SE_PUEDEN_TOCAR) };
+  const topes = { ...TOPES, ...perfil.topes, ...soloLoQueSePuedeTocar(configuracion?.topes, TOPES_QUE_SE_PUEDEN_TOCAR) };
   return {
     perfil: PERFILES[nombre] ? nombre : PERFIL_POR_DEFECTO,
-    pesos: { ...PESOS, ...perfil.pesos, ...soloLoQueSePuedeTocar(configuracion?.pesos, PESOS_QUE_SE_PUEDEN_TOCAR) },
-    topes: { ...TOPES, ...perfil.topes, ...soloLoQueSePuedeTocar(configuracion?.topes, TOPES_QUE_SE_PUEDEN_TOCAR) },
+    pesos: { ...pesos, continuidad_maxima: techoDeContinuidad(pesos, topes) },
+    topes,
   };
+}
+
+/**
+ * El techo de la continuidad: las veces que cuentan por lo que suma cada vez. Es la misma cuenta
+ * para el Panel y para el backend, porque los dos leen este archivo.
+ */
+export function techoDeContinuidad(pesos, topes) {
+  return topes.continuidad_veces_maxima * pesos.continuidad_por_vez;
 }
 
 /**

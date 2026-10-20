@@ -8,12 +8,15 @@ import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
 import { avisar } from '../../lib/mensajeEmergente';
 import {
+  NIVELES,
   NOMBRES_DE_PERFIL,
   PERFILES,
-  PESOS_QUE_SE_PUEDEN_TOCAR,
+  SITUACIONES_PONDERABLES,
   TOPES_QUE_SE_PUEDEN_TOCAR,
   PESOS,
   TOPES,
+  nivelMasCercano,
+  pesoDeNivel,
 } from '../../lib/perfilesDeCandidatos';
 import '../../styles/molde-paginas.css';
 
@@ -25,8 +28,9 @@ import '../../styles/molde-paginas.css';
  * vivir cerca, llegar descansado, tener la semana casi llena. Hasta ahora esos números eran
  * iguales para toda Prestadora.
  *
- * SE ELIGE UNA DE TRES FORMAS ARMADAS, y quien quiera puede además correr número por número. El
- * detalle está plegado a propósito: la mayoría elige una forma y no entra nunca más.
+ * SE ELIGE UNA DE TRES FORMAS ARMADAS, y quien quiera puede además personalizar cada situación
+ * con un nivel —No importa, Poco, Bastante, Mucho—, sin ver ningún número. El detalle está
+ * plegado a propósito: la mayoría elige una forma y no entra nunca más.
  *
  * EL ORDEN NO DECIDE. Esto cambia en qué orden aparece la lista y nada más. Quien elige sigue
  * siendo la Coordinadora, que sabe cosas que el sistema no sabe. Y estirar el turno de alguien
@@ -135,13 +139,10 @@ export function ElCalculoDeCandidatos() {
 
         {estado === 'listo' && detalleAbierto && (
           <>
-            <TablaDeNumeros
-              titulo={tc.calculo_pesos_titulo}
-              bordes={PESOS_QUE_SE_PUEDEN_TOCAR}
+            <TablaDeNiveles
               valores={pesos}
-              nombreDe={(clave) => tc[`calculo_peso_${clave}`]}
-              alCambiar={(clave, valor) => {
-                setPesos((previos) => ({ ...previos, [clave]: valor }));
+              alCambiar={(clave, nivel) => {
+                setPesos((previos) => ({ ...previos, [clave]: pesoDeNivel(clave, nivel) }));
               }}
               t={t}
             />
@@ -160,6 +161,49 @@ export function ElCalculoDeCandidatos() {
           </>
         )}
     </>
+  );
+}
+
+/** Un nivel por situación. El número que se guarda no se muestra: lo arma `pesoDeNivel`. */
+function TablaDeNiveles({ valores, alCambiar, t }) {
+  const tc = t.configuracion;
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{tc.calculo_pesos_titulo}</h2>
+      </div>
+      <table className="panel-tabla">
+        <thead>
+          <tr>
+            <th>{tc.calculo_col_criterio}</th>
+            <th>{tc.calculo_col_valor}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {SITUACIONES_PONDERABLES.map((clave) => {
+            const nombre = tc[`calculo_peso_${clave}`];
+            return (
+              <tr key={clave}>
+                <td><b>{nombre}</b></td>
+                <td>
+                  <select
+                    value={nivelMasCercano(clave, valores[clave])}
+                    onChange={(e) => alCambiar(clave, e.target.value)}
+                    aria-label={con(t.comun.campo_de_fila, { campo: tc.calculo_col_valor, nombre })}
+                  >
+                    {NIVELES.map((nivel) => (
+                      <option key={nivel} value={nivel}>
+                        {tc[`calculo_nivel_${nivel}`]}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
   );
 }
 

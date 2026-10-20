@@ -11,13 +11,17 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  NIVELES,
   NOMBRES_DE_PERFIL,
   PERFILES,
   PERFIL_POR_DEFECTO,
   PESOS,
   PESOS_QUE_SE_PUEDEN_TOCAR,
   TOPES,
+  SITUACIONES_PONDERABLES,
   TOPES_QUE_SE_PUEDEN_TOCAR,
+  nivelMasCercano,
+  pesoDeNivel,
   pesosYTopesDe,
   revisarCambios,
   soloLoQueCorreDelPerfil,
@@ -33,7 +37,7 @@ describe('las tres capas, y la última manda', () => {
 
   it('el perfil corre lo suyo y deja el resto de fábrica', () => {
     const { pesos, topes } = pesosYTopesDe({ perfil: 'descanso', pesos: {}, topes: {} });
-    expect(pesos.descanso_corto).toBe(-60);
+    expect(pesos.descanso_corto).toBe(pesoDeNivel('descanso_corto', 'mucho'));
     expect(topes.horas_descanso_minimo).toBe(14);
     expect(pesos.cerca).toBe(PESOS.cerca);
   });
@@ -96,12 +100,12 @@ describe('se guarda lo que se corrió, y nada más', () => {
     const armado = pesosYTopesDe({ perfil: 'descanso' });
     const corridos = soloLoQueCorreDelPerfil('descanso', armado.pesos, armado.topes);
     expect(corridos.pesos.descanso_corto).toBeUndefined();
-    expect(PERFILES.descanso.pesos.descanso_corto).toBe(-60);
+    expect(PERFILES.descanso.pesos.descanso_corto).toBe(pesoDeNivel('descanso_corto', 'mucho'));
   });
 
   it('lo guardado y lo leído dan la vuelta completa sin cambiar nada', () => {
     const elegido = { ...pesosYTopesDe({ perfil: 'cercania' }).pesos, lejos: -40 };
-    const corridos = soloLoQueCorreDelPerfil('cercania', elegido, TOPES);
+    const corridos = soloLoQueCorreDelPerfil('cercania', elegido, pesosYTopesDe({ perfil: 'cercania' }).topes);
     const vuelta = pesosYTopesDe({ perfil: 'cercania', ...corridos });
     expect(vuelta.pesos).toEqual(elegido);
   });
@@ -152,5 +156,105 @@ describe('lo que llega de afuera se revisa antes de guardarlo', () => {
       expect(borde.minimo).toBeGreaterThan(-1000);
       expect(borde.maximo).toBeLessThan(1000);
     }
+  });
+});
+
+describe('la ponderación por niveles', () => {
+  it('«Bastante» es el valor de fábrica de cada situación', () => {
+    for (const clave of SITUACIONES_PONDERABLES) {
+      expect(pesoDeNivel(clave, 'bastante')).toBe(PESOS[clave]);
+    }
+  });
+
+  it('«Poco» es la mitad, «Mucho» dos veces y media y «No importa» cero, redondeado con el signo de fábrica', () => {
+    expect(pesoDeNivel('continuidad_por_vez', 'poco')).toBe(6);
+    expect(pesoDeNivel('continuidad_por_vez', 'mucho')).toBe(30);
+    expect(pesoDeNivel('sin_continuidad', 'poco')).toBe(-3);
+    expect(pesoDeNivel('sin_continuidad', 'mucho')).toBe(-13);
+    expect(pesoDeNivel('papeles_ok', 'mucho')).toBe(13);
+    expect(pesoDeNivel('descanso_corto', 'mucho')).toBe(-63);
+    expect(Object.is(pesoDeNivel('lejos', 'no_importa'), 0)).toBe(true);
+  });
+
+  it('ningún nivel cambia de signo ni se sale del borde', () => {
+    for (const clave of SITUACIONES_PONDERABLES) {
+      const borde = PESOS_QUE_SE_PUEDEN_TOCAR[clave];
+      for (const nivel of NIVELES) {
+        const valor = pesoDeNivel(clave, nivel);
+        expect(Number.isInteger(valor)).toBe(true);
+        expect(valor).toBeGreaterThanOrEqual(borde.minimo);
+        expect(valor).toBeLessThanOrEqual(borde.maximo);
+        expect(valor * PESOS[clave]).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it('los bloqueos y el techo de la continuidad no se ponderan', () => {
+    expect(SITUACIONES_PONDERABLES).not.toContain('continuidad_maxima');
+    expect(SITUACIONES_PONDERABLES).not.toContain('ocupado');
+    expect(SITUACIONES_PONDERABLES).toHaveLength(13);
+  });
+
+  it('cada nivel se reconoce a sí mismo', () => {
+    for (const clave of SITUACIONES_PONDERABLES) {
+      for (const nivel of NIVELES) {
+        expect(nivelMasCercano(clave, pesoDeNivel(clave, nivel))).toBe(nivel);
+      }
+    }
+  });
+
+  it('un número que no es de ningún nivel muestra el más cercano', () => {
+    // descanso_ok: No importa 0, Poco 3, Bastante 6, Mucho 15.
+    expect(nivelMasCercano('descanso_ok', 14)).toBe('mucho');
+    expect(nivelMasCercano('descanso_ok', 9)).toBe('bastante');
+    expect(nivelMasCercano('descanso_ok', 1)).toBe('no_importa');
+    // lejos: 0, −6, −12, −30.
+    expect(nivelMasCercano('lejos', -8)).toBe('poco');
+    expect(nivelMasCercano('lejos', -25)).toBe('mucho');
+  });
+
+  it('sin número guardado muestra el de fábrica', () => {
+    expect(nivelMasCercano('cerca', undefined)).toBe('bastante');
+    expect(nivelMasCercano('cerca', '')).toBe('bastante');
+  });
+
+  it('los perfiles armados ponen en «Mucho» lo que suben', () => {
+    for (const clave of ['descanso_ok', 'descanso_corto', 'horas_cerca_del_tope', 'horas_pasa_el_tope']) {
+      expect(PERFILES.descanso.pesos[clave]).toBe(pesoDeNivel(clave, 'mucho'));
+    }
+    for (const clave of ['cerca', 'lejos']) {
+      expect(PERFILES.cercania.pesos[clave]).toBe(pesoDeNivel(clave, 'mucho'));
+    }
+  });
+});
+
+describe('el techo de la continuidad se cuenta en veces', () => {
+  it('de fábrica cuentan cinco veces, y el techo es cinco por lo que suma cada una', () => {
+    const { pesos, topes } = pesosYTopesDe(null);
+    expect(topes.continuidad_veces_maxima).toBe(5);
+    expect(pesos.continuidad_maxima).toBe(60);
+    expect(PESOS.continuidad_maxima).toBe(TOPES.continuidad_veces_maxima * PESOS.continuidad_por_vez);
+  });
+
+  it('en «descanso» y «cercanía» cuentan tres', () => {
+    for (const nombre of ['descanso', 'cercania']) {
+      const { pesos, topes } = pesosYTopesDe({ perfil: nombre });
+      expect(topes.continuidad_veces_maxima).toBe(3);
+      expect(pesos.continuidad_maxima).toBe(36);
+    }
+  });
+
+  it('el techo sigue a lo que suma cada vez', () => {
+    const { pesos } = pesosYTopesDe({
+      perfil: 'continuidad',
+      pesos: { continuidad_por_vez: pesoDeNivel('continuidad_por_vez', 'mucho') },
+      topes: { continuidad_veces_maxima: 4 },
+    });
+    expect(pesos.continuidad_maxima).toBe(4 * 30);
+  });
+
+  it('un techo guardado como puntaje ya no se toma', () => {
+    const { pesos } = pesosYTopesDe({ perfil: 'continuidad', pesos: { continuidad_maxima: 200 }, topes: {} });
+    expect(pesos.continuidad_maxima).toBe(60);
   });
 });

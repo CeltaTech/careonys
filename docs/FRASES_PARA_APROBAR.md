@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 38 fichas.** Panel 14, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 37 fichas.** Panel 13, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (14)
-
-### 40. Enlace de entrevista que ya no sirve
-
-| | |
-|---|---|
-| **Texto actual** | La entrevista no está disponible. Si tiene dudas, responda el correo de la citación. |
-| **Propuesta corta** | «Ante dudas, responda el email de la citación.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | «La entrevista no está disponible» repite el título «Este enlace ya no abre nada». |
-| **Quién lo lee** | el postulante. |
-| **Dónde está** | página de la entrevista que abre el enlace del correo, debajo de «Este enlace ya no abre nada». |
-| **Qué estaba haciendo** | abrió el enlace de su entrevista. |
-| **Qué pasó** | el sistema no encontró una entrevista agendada con ese enlace: llegó incompleto, la Prestadora la canceló o ya no está agendada. Contesta igual a los tres casos a propósito. |
-| **Qué puede hacer después** | responder el correo de la citación. |
-| **Cómo se muestra** | texto fijo. |
-| **Decisión** |  |
+## Panel (13)
 
 ### 41. Todavía no es la hora de la entrevista
 

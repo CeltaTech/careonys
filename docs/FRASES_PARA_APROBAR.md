@@ -4,9 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 29 fichas.** Panel 5, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 28 fichas.** Panel 4, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (5)
+## Panel (4)
 
 ### 43. Falta cómo recibe el trabajo
 
@@ -55,22 +55,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué puede hacer después** | ver el documento o el papel firmado, armar un consentimiento nuevo o cambiar el Pagador. |
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
-
-### 68. Conviviente hospitalizado
-
-| | |
-|---|---|
-| **Texto actual** | {paciente} convive con este Paciente y está hospitalizado. Evalúe si corresponde reforzar la cobertura. |
-| **Propuesta corta** | «{paciente} convive con este Paciente y está hospitalizado. Revise la cobertura.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | «Evalúe si corresponde reforzar» se acorta sin perder la acción. |
-| **Quién lo lee** | el Administrador y el Coordinador. |
-| **Dónde está** | Panel → Clientes → un Cliente → «Prestaciones», tarjeta «Hospitalización». |
-| **Qué estaba haciendo** | abrió las Prestaciones de un Paciente. |
-| **Qué pasó** | se registró la hospitalización de otro Paciente del mismo Cliente. {paciente} es su nombre. |
-| **Qué puede hacer después** | revisar la cobertura y tocar «Marcar como resuelta». El aviso se va solo al cerrar la hospitalización. |
-| **Cómo se muestra** | franja con el botón «Marcar como resuelta». |
-| **Decisión** |  |
 
 ### 71. Confirmar el borrado de un domicilio temporal
 

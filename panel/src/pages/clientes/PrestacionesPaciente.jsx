@@ -19,7 +19,6 @@ import { servicioSirveParaCliente } from '../../lib/serviciosDelPaciente';
 import { lugaresDe, lugaresDeVarias } from '../../lib/lugaresDeCadaPersona';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
-import { FICHA_NOMBRE, conSuFicha } from '../../lib/fichaDelPaciente';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -93,23 +92,16 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [guardandoHosp, setGuardandoHosp] = useState(false);
   const [cerrandoHosp, setCerrandoHosp] = useState(false);
   const [errorHosp, setErrorHosp] = useState(null);
-  const [alertasContingencia, setAlertasContingencia] = useState([]);
-  const [resolviendoAlertaId, setResolviendoAlertaId] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
 
-    const [listaResp, prestacionesResp, cierresResp, hospResp, alertasResp, serviciosResp] = await Promise.all([
+    const [listaResp, prestacionesResp, cierresResp, hospResp, serviciosResp] = await Promise.all([
       supabase.from('lista_precios').select('*').eq('activo', true).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
       supabase.from('cierres_servicio_paciente').select('id, servicio_id').eq('paciente_id', paciente.id),
       supabase.from('hospitalizaciones_paciente').select('*').eq('paciente_id', paciente.id).is('fecha_fin', null).maybeSingle(),
-      supabase
-        .from('alertas_contingencia_hospitalizacion')
-        .select(`*, pacientes:pacientes!alertas_contingencia_hosp_hospitalizado_tenant_fk(${FICHA_NOMBRE})`)
-        .eq('paciente_conviviente_id', paciente.id)
-        .is('resuelto_at', null),
       // Los Servicios vigentes que alcanza esta sesión. La protección por fila ya los acota a la
       // Prestadora; cuáles de ellos sirven para este Paciente lo decide abajo la misma regla que
       // aplica la base, y no una consulta escrita a medida acá.
@@ -122,7 +114,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
     const falla =
       listaResp.error || prestacionesResp.error || cierresResp.error ||
-      hospResp.error || alertasResp.error || serviciosResp.error;
+      hospResp.error || serviciosResp.error;
     if (falla) {
       setError(mensajeDeError(falla, t));
       setEstado('error');
@@ -134,7 +126,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setCierres(cierresResp.data ?? []);
     setServiciosDelCliente(serviciosResp.data ?? []);
     setHospitalizacionActiva(hospResp.data ?? null);
-    setAlertasContingencia(alertasResp.data ?? []);
 
     const idsCierre = (cierresResp.data ?? []).map((c) => c.id);
     if (idsCierre.length > 0) {
@@ -427,7 +418,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setGuardandoHosp(true);
     setErrorHosp(null);
 
-    const { data: hospInsertada, error: errorInsert } = await supabase
+    const { error: errorInsert } = await supabase
       .from('hospitalizaciones_paciente')
       .insert({
         prestadora_id: prestadoraId,
@@ -436,9 +427,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         motivo: motivoHosp || null,
         fecha_inicio: fechaInicioHosp,
         registrado_por: usuario.id,
-      })
-      .select()
-      .single();
+      });
 
     if (errorInsert) {
       setErrorHosp(mensajeDeError(errorInsert, t));
@@ -455,34 +444,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         .gte('fecha', fechaInicioHosp),
       supabase.from('series_guardias').update({ estado: 'pausada' }).eq('paciente_id', paciente.id).eq('estado', 'activa'),
     ]);
-
-    // Contingencia: otros Pacientes del mismo Cliente (conviven bajo el mismo grupo familiar,
-    // no necesariamente el mismo domicilio) que no tengan a su vez una hospitalización activa.
-    const { data: otrosPacientes } = await supabase
-      .from('pacientes')
-      .select('id')
-      .eq('cliente_id', paciente.cliente_id)
-      .neq('id', paciente.id);
-
-    if (otrosPacientes?.length > 0) {
-      const { data: hospActivasOtros } = await supabase
-        .from('hospitalizaciones_paciente')
-        .select('paciente_id')
-        .in('paciente_id', otrosPacientes.map((p) => p.id))
-        .is('fecha_fin', null);
-      const idsConHospitalizacionActiva = new Set((hospActivasOtros ?? []).map((h) => h.paciente_id));
-      const convivientes = otrosPacientes.filter((p) => !idsConHospitalizacionActiva.has(p.id));
-      if (convivientes.length > 0) {
-        await supabase.from('alertas_contingencia_hospitalizacion').insert(
-          convivientes.map((p) => ({
-            prestadora_id: prestadoraId,
-            hospitalizacion_id: hospInsertada.id,
-            paciente_hospitalizado_id: paciente.id,
-            paciente_conviviente_id: p.id,
-          }))
-        );
-      }
-    }
 
     setGuardandoHosp(false);
     setMostrandoFormHosp(false);
@@ -513,24 +474,9 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     await Promise.all([
       supabase.from('guardias').update({ estado: 'programada' }).eq('paciente_id', paciente.id).eq('estado', 'pausada'),
       supabase.from('series_guardias').update({ estado: 'activa' }).eq('paciente_id', paciente.id).eq('estado', 'pausada'),
-      supabase
-        .from('alertas_contingencia_hospitalizacion')
-        .update({ resuelto_at: new Date().toISOString() })
-        .eq('hospitalizacion_id', hospitalizacionActiva.id)
-        .is('resuelto_at', null),
     ]);
 
     setCerrandoHosp(false);
-    recargar();
-  }
-
-  async function handleResolverAlertaContingencia(alertaId) {
-    setResolviendoAlertaId(alertaId);
-    await supabase
-      .from('alertas_contingencia_hospitalizacion')
-      .update({ resuelto_at: new Date().toISOString() })
-      .eq('id', alertaId);
-    setResolviendoAlertaId(null);
     recargar();
   }
 
@@ -745,19 +691,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   )}
                 </div>
                 {errorHosp && <Alert variant="error">{errorHosp}</Alert>}
-
-                {alertasContingencia.map((alerta) => (
-                  <Alert key={alerta.id} variant="info">
-                    {t.prestaciones.hospitalizacion_contingencia_alerta.replace('{paciente}', conSuFicha(alerta.pacientes)?.nombre ?? '—')}{' '}
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleResolverAlertaContingencia(alerta.id)}
-                      disabled={resolviendoAlertaId === alerta.id}
-                    >
-                      {t.prestaciones.hospitalizacion_contingencia_marcar_resuelta}
-                    </Button>
-                  </Alert>
-                ))}
 
                 {hospitalizacionActiva ? (
                   <div className="panel-fila-alerta">

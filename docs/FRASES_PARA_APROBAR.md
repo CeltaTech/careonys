@@ -4,9 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 33 fichas.** Panel 9, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 31 fichas.** Panel 7, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (9)
+## Panel (7)
 
 ### 43. Falta cómo recibe el trabajo
 
@@ -54,39 +54,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | se cambió el Pagador después de la firma, por ejemplo. El aviso no frena nada. |
 | **Qué puede hacer después** | ver el documento o el papel firmado, armar un consentimiento nuevo o cambiar el Pagador. |
 | **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 50. Botón para agregar una persona autorizada
-
-| | |
-|---|---|
-| **Texto actual** | Agregar persona |
-| **Propuesta corta** | «Agregar persona» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | corta y bajo el título «Personas autorizadas». |
-| **Quién lo lee** | la coordinación de la Prestadora que puede editar los datos del Cliente. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Personas autorizadas», al lado del título. |
-| **Qué estaba haciendo** | quería sumar a alguien que vea la información del Cliente desde su aplicación. |
-| **Qué pasó** | el botón abre la ventana «Agregar una persona autorizada». |
-| **Qué puede hacer después** | completar los datos y guardar. El sistema crea la cuenta y envía el enlace para activarla. |
-| **Cómo se muestra** | botón. |
-| **Decisión** |  |
-
-### 62. Sólo los reportes más recientes
-
-| | |
-|---|---|
-| **Texto actual** | Se muestran sólo los reportes más recientes del período. Para ver otros, acorte el rango de fechas. |
-| **Propuesta corta** | «Se muestran los {n} más recientes. Acorte las fechas para ver otros.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice el tope real sin escribirlo a mano; la instrucción no es obvia. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias → Reportes diarios (sólo en prestación directa). |
-| **Qué estaba haciendo** | consultaba reportes con los filtros de fechas y tipo. |
-| **Qué pasó** | la búsqueda llegó al máximo de 300 reportes; puede haber más. |
-| **Qué puede hacer después** | acortar las fechas o cambiar el filtro. |
-| **Cómo se muestra** | texto fijo, en letra chica arriba de la tabla. |
-| **Decisión** |  |
+| **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
 ### 65. Faltan Prestaciones o el precio del paquete
 

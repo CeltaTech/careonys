@@ -132,7 +132,7 @@ export function Reportes() {
             mensajeVacio={t.reportes.vacio}
           >
             <>
-              {filas.length === TOPE_FILAS && <p className="panel-mini">{t.reportes.aviso_tope}</p>}
+              {filas.length === TOPE_FILAS && <p className="panel-mini">{t.reportes.aviso_tope.replace('{n}', TOPE_FILAS)}</p>}
               <table className="panel-tabla">
                 <thead>
                   <tr>

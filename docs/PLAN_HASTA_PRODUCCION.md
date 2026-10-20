@@ -796,6 +796,13 @@ botones de armar el consentimiento y registrar la firma; y el único requisito q
 para habilitar un Servicio es el coordinador asignado. ¿Son dos requisitos, y un Servicio sin
 Pagador firmado tampoco se habilita? ¿O el acto muestra cómo está esa firma y deja seguir?
 
+Con esa pregunta se resuelve todo lo del Pagador junto, textos incluidos —ficha 49 de
+`docs/FRASES_PARA_APROBAR.md`—, porque un texto sobre algo que no está definido no tiene sentido.
+Lo que falta: **el cambio de Pagador** con el Servicio en curso, que hoy sólo muestra dos avisos;
+**el Pagador que desiste**, que no se puede anotar, porque un consentimiento firmado no se revoca;
+y **más de un Pagador**, que la regla del producto admite y la base no, porque guarda uno solo por
+Cliente.
+
 **27.** Construir los ocho pasos de ese plan, en el orden que tiene escrito.
 
 **28.** La explicación de la coordinación que acompañaba al equipo del Paciente ya salió. Queda la

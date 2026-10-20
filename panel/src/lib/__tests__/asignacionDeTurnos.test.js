@@ -58,7 +58,7 @@ vi.mock('../avisarCambioDeAsistente', () => ({ avisarCambioDeAsistente: async ()
 
 const { asignarSerie, asignarTurno, cargarAsignacionesPendientes, pedidoDeConfirmacion, pedidoDeConfirmacionDelMovimiento } =
   await import('../asignarTurno');
-const { moverGuardia } = await import('../moverGuardia');
+const { moverGuardia, seArrastra } = await import('../moverGuardia');
 const { reasignarGuardia } = await import('../reasignarGuardia');
 
 const t = T['es-AR'];
@@ -259,6 +259,16 @@ describe('arrastrar en la vista de Pacientes', () => {
     await mover(guardia({ paciente_id: 'p1' }));
     expect(llamadasAlBackend).toEqual([]);
     expect(pedidosALaBase.map((p) => p.cambios)).toEqual([{ paciente_id: 'p2' }, { fecha: '2026-10-21' }]);
+  });
+
+  it('con check-in: la guardia ya empezó y no se mueve ni cambia de Paciente', async () => {
+    const empezada = guardia({ paciente_id: 'p1', estado: 'activa', asistente_id: ANA, checkin_at: '2026-10-20T08:00:00Z' });
+    expect(seArrastra(empezada)).toBe(false);
+    expect(seArrastra(guardia({ paciente_id: 'p1' }))).toBe(true);
+    const { error } = await mover(empezada);
+    expect(error).toBeNull();
+    expect(llamadasAlBackend).toEqual([]);
+    expect(pedidosALaBase).toEqual([]);
   });
 });
 

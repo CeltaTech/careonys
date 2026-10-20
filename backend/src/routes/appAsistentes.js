@@ -1628,13 +1628,13 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     return responderError(res, e);
   }
   const paciente = pacienteId ? pacientes.find((p) => p.id === pacienteId) : pacientes.length === 1 ? pacientes[0] : null;
+  // La base no deja sacar un Paciente de una guardia con check-in, y la aplicación entra al reporte
+  // por el Paciente. Llegar acá sin uno es un defecto, y se contesta como falla del sistema.
   if (!paciente) {
-    return res.status(400).json({
-      error: pacienteId
-        ? 'Ese Paciente no está en este turno'
-        : 'Falta decir de qué Paciente habla el reporte',
-      motivo: 'falta_paciente',
-    });
+    return responderError(
+      res,
+      new Error(pacienteId ? 'Ese Paciente no está en este turno' : 'Falta decir de qué Paciente habla el reporte')
+    );
   }
 
   const reportes = await reportesDeLaGuardia(guardia.id, guardia.prestadora_id);

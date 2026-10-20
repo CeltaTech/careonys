@@ -25,6 +25,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { FILA_SIN_CUBRIR, filaDeGuardia } from '../../lib/cobertura';
 import { SIN_PACIENTES, filasPorPaciente } from '../../lib/pacientesDeGuardia';
+import { seArrastra } from '../../lib/moverGuardia';
 import { ordenPorUrgencia, situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
 import { correrHora, finDeGuardia, hoyISO, inicioDeGuardia, sumarDias } from '../../lib/horarios';
 import { con } from '../../lib/textos';
@@ -394,8 +395,12 @@ export function GrillaGuardias({
         className={`grilla-chip${elegida ? ' grilla-chip-elegida' : ''}`}
         data-tono={tonoDeGuardia(guardia, contexto)}
         style={estilo}
-        draggable
+        draggable={seArrastra(guardia)}
         onDragStart={(e) => {
+          if (!seArrastra(guardia)) {
+            e.preventDefault();
+            return;
+          }
           e.dataTransfer.setData('guardiaId', guardia.id);
           if (filaOrigen) e.dataTransfer.setData('filaOrigen', filaOrigen);
         }}

@@ -581,6 +581,12 @@ RLS). Resumen de las tablas:
 - **`guardias`** — instancia concreta de una guardia; conserva `asistente_id`, `paciente_id`,
   `checkin/checkout` con GPS igual que el diseño original de abajo, más `serie_id` y
   `prestadora_id` (FK compuesta tenant-segura contra `pacientes`/`asistentes`).
+- **`guardia_pacientes`** — la lista de Pacientes que cubre una guardia; `guardias.paciente_id`
+  queda sincronizada con ella. **A una guardia con check-in no se le saca ningún Paciente**: la
+  base rechaza borrar o cambiar una fila de la lista y cambiar `guardias.paciente_id`
+  (disparadores `guardia_empezada_no_pierde_pacientes` y
+  `guardia_empezada_no_cambia_de_paciente`). Agregar Pacientes se permite, y borrar la guardia
+  entera se lleva su lista. En el Panel, una guardia con check-in no se arrastra.
 - **`domicilios_temporales_paciente`** — dónde se atiende al Paciente durante una temporada en
   que no está en su casa: el verano en la casa de un hijo, una internación, una mudanza
   mientras arreglan el departamento. Mientras dura, **reemplaza** a la dirección de la Ficha de Persona del Paciente;

@@ -38,6 +38,15 @@ import { moverTurnoAOtroPaciente, quienTieneElTurno } from './asignarTurno';
 const VISTAS = ['asistente', 'paciente'];
 
 /**
+ * Si la grilla ofrece arrastrar esta guardia. Una guardia con el check-in marcado ya empezó: el
+ * Asistente está atendiendo a sus Pacientes y tiene que cargar el Reporte Diario de cada uno.
+ * No se la arrastra a otra fila ni se le cambia la lista de Pacientes; la base tampoco lo deja.
+ */
+export function seArrastra(guardia) {
+  return Boolean(guardia) && !guardia.checkin_at;
+}
+
+/**
  * @param {object} guardia  La guardia entera, como está hoy — hacen falta `paciente_id` y
  *                          `prestadora_id` para rehacer la lista de Pacientes. Con el id solo no alcanzaría.
  * @param {object} movimiento  Lo que informa la grilla al soltar:
@@ -55,7 +64,7 @@ const VISTAS = ['asistente', 'paciente'];
  * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
  */
 export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, horaInicio, horaFin }, t = null) {
-  if (!guardia?.id) return { error: null };
+  if (!guardia?.id || !seArrastra(guardia)) return { error: null };
 
   if (!VISTAS.includes(vista)) {
     return { error: mensajeDeError(new Error(`Vista de grilla desconocida: ${String(vista)}`), t, 'moverGuardia') };

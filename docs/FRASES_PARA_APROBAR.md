@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 27 fichas.** Panel 3, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 26 fichas.** Panel 3, aplicación del Asistente 17, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (18)
-
-### 3. Falta el Paciente del Reporte Diario
-
-| | |
-|---|---|
-| **Texto actual** | No se identificó el Paciente de este Reporte Diario. Vuelva a la guardia y entre por el Paciente correspondiente. |
-| **Propuesta corta** | «Paciente no encontrado en esta guardia.» |
-| **¿Aparece hoy?** | dudoso |
-| **Por qué** | dice qué pasó. «Vuelva a la guardia y entre por…» explica algo que el Asistente no puede corregir: al Paciente lo sacaron. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | una guardia en curso → «Cargar Reporte Diario» → «Confirmar y guardar». |
-| **Qué estaba haciendo** | guardaba el Reporte Diario. |
-| **Qué pasó** | el sistema no encontró a ese Paciente en el turno. No se pudo confirmar en qué situación de uso normal pasa; lo más probable es que hayan sacado al Paciente del turno con la hoja abierta. |
-| **Qué puede hacer después** | tocar «Volver» y entrar por otro Paciente, o intentar de nuevo. Lo cargado se conserva. |
-| **Cómo se muestra** | franja arriba de la hoja. |
-| **Decisión** |  |
+## Aplicación del Asistente (17)
 
 ### 4. No se puede cerrar sin relevo
 

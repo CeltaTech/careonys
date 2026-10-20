@@ -25,7 +25,6 @@ export const T = {
         // pantalla no ofrece el botón; esto se lee si se llegó por otro camino.
         videollamada_no_configurada: 'Esta Prestadora todavía no configuró las videollamadas, así que por ahora la conversación sigue por escrito.',
         falta_checkin: 'Esta guardia todavía no tiene el check-in marcado, así que no se puede cerrar.',
-        falta_paciente: 'No se identificó el Paciente de este Reporte Diario. Vuelva a la guardia y entre por el Paciente correspondiente.',
         // La misma frase que ve quien todavía no intentó cerrar: es la misma regla, contada
         // antes o después del intento. Por eso hay un solo texto y no dos iguales.
         continuidad: 'No puede cerrar esta guardia hasta que llegue el relevo. Si es urgente, avise al Coordinador.',
@@ -774,7 +773,6 @@ export const T = {
       motivos: {
         videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
         falta_checkin: 'This shift has no check-in yet, so it cannot be closed.',
-        falta_paciente: 'The Patient for this Daily Report could not be identified. Go back to the shift and open it from the right Patient.',
         continuidad: 'You cannot close this shift until your relief arrives. If it is urgent, notify the Coordinator.',
         no_disponible: 'This feature is not switched on at this provider.',
         faltan_datos: 'Required data is missing. Check the form and try again.',
@@ -1422,7 +1420,6 @@ export const T = {
       motivos: {
         videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
         falta_checkin: 'Este plantão ainda não tem o check-in marcado, então não é possível encerrá-lo.',
-        falta_paciente: 'Não foi identificado o Paciente deste Relatório Diário. Volte ao plantão e entre pelo Paciente correspondente.',
         continuidad: 'Não é possível encerrar este plantão até a substituição chegar. Se for urgente, avise o Coordenador.',
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
         faltan_datos: 'Faltam dados obrigatórios. Revise o formulário e tente novamente.',

@@ -558,3 +558,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el Panel podía borrar un domicilio temporal, y del período no quedaba constancia.
 - **Qué dice ahora:** el domicilio temporal no se borra por ninguna vía; lo mal cargado se edita, cada alta y cada modificación queda en el historial clínico, y si el Paciente pasa a otro domicilio temporal se agrega uno nuevo.
 - **Motivo:** lo decidió el Desarrollador: el domicilio temporal forma parte de la historia clínica y hay que mantener la trazabilidad de los servicios.
+
+## A una guardia empezada no se le saca un Paciente
+
+- **Qué decía antes:** el Panel podía arrastrar una guardia con check-in a otra fila de la vista por Paciente y sacarle un Paciente de la lista, y el Asistente se enteraba al confirmar el Reporte Diario, con un aviso que le pedía volver y entrar por otro Paciente.
+- **Qué dice ahora:** la base rechaza sacar o cambiar un Paciente de una guardia con check-in, y el Panel no ofrece arrastrarla. El aviso salió; si el Backend llegara a rechazar el reporte por eso, la aplicación muestra la falla del sistema.
+- **Motivo:** lo decidió el Desarrollador: la solución no es poner un mensaje, sino que no sea posible que pase lo que no tiene que pasar.

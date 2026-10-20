@@ -299,7 +299,7 @@ INSERT INTO public.asistentes (
   ('30000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
    '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
-   'activo', 'dependencia', CURRENT_DATE - 220, NULL,
+   'activo', 'monotributo', CURRENT_DATE - 220, NULL,
    40, '20000002', ARRAY['directa', 'intermediacion'], 'cuil', '20200000022', 'masculino'),
 
   ('30000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
@@ -328,32 +328,24 @@ INSERT INTO public.asistente_lugares (asistente_id, lugar_id, prestadora_id) VAL
   ('30000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111'),
   ('30000000-0000-4000-8000-000000000004', 'a1000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111');
 
--- Los datos de plata van en dos columnas distintas y no en una sola, porque quien
--- está por monotributo cobra por hora (`valor_hora`) y quien está en relación de
--- dependencia cobra un sueldo que no se mueve con las horas (`sueldo_basico`).
--- Cada uno lleva el que le corresponde y el otro va en blanco: si se llenaran los
--- dos, la pantalla de Pagos a Asistentes podría mostrar bien un número que en
--- realidad está mal cargado.
+-- Lo que cobra cada uno. Todos son independientes —en Careonys el Asistente no es
+-- empleado— y cobran por hora, con un valor inventado.
 INSERT INTO public.remuneraciones_asistente (
-  asistente_id, prestadora_id, valor_hora, sueldo_basico
+  asistente_id, prestadora_id, valor_hora
 ) VALUES
-  ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 4500.00, NULL),
-  ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', NULL, 980000.00),
-  ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 5200.00, NULL),
-  ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 4200.00, NULL);
+  ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 4500.00),
+  ('30000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 4800.00),
+  ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 5200.00),
+  ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 4200.00);
 
 -- Lo reservado del Legajo del Asistente. Solo se carga donde hay algo que decir: la causa de
--- la baja de Delia, que es la única dada de baja, y un puntaje de riesgo en Ana,
--- que está por monotributo y trabaja 40 horas para una sola Prestadora — el caso
--- que la pantalla de Score de Riesgo existe para mostrar. Los otros dos no tienen
--- fila, que es el estado normal de un Asistente al que nunca se le cargó nada.
+-- la baja de Delia, que es la única dada de baja. Los otros tres no tienen fila, que es el
+-- estado normal de un Asistente al que nunca se le cargó nada.
 INSERT INTO public.datos_reservados_asistente (
-  asistente_id, prestadora_id, causal_baja, score_riesgo_reclasificacion, indicadores_riesgo
+  asistente_id, prestadora_id, causal_baja
 ) VALUES
-  ('30000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   NULL, 45, '{"exclusividad_facturacion": 1, "horas_semanales_promedio": 1, "horario_fijo_impuesto": 1}'::jsonb),
   ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
-   'renuncia', 0, '{}'::jsonb);
+   'renuncia');
 
 
 -- ----------------------------------------------------------------------------
@@ -892,12 +884,11 @@ VALUES
 -- laboral en `escalas_legales` (regla 10 de `CLAUDE.md`: ningún porcentaje
 -- vive en el código).
 --
--- QUÉ CASO CUBRE CADA UNO. Están elegidos para que se vean los cinco caminos
+-- QUÉ CASO CUBRE CADA UNO. Están elegidos para que se vean los cuatro caminos
 -- distintos que sabe recorrer el generador:
 --   * importe fijo mensual con moneda propia
 --   * porcentaje sobre el bruto, que no lleva moneda
 --   * importe por hora trabajada
---   * concepto que alcanza solo a una forma de vínculo
 --   * concepto atado a una escala legal todavía no cargada, que el generador
 --     tiene que saltear e informar en vez de estimar
 
@@ -918,11 +909,6 @@ VALUES
   -- de quien no hizo ninguna en el mes.
   ('6c000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    'Refrigerio por hora', 'suma', 'monto_por_hora', 'propio', 300, NULL, NULL, 'todos', 30),
-
-  -- Solo para quien está en relación de dependencia. A un monotributista no
-  -- se le tiene que descontar: es el caso que prueba el filtro por vínculo.
-  ('6c000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
-   'Aportes del trabajador', 'resta', 'porcentaje', 'propio', 17, NULL, NULL, 'dependencia', 40),
 
   -- Atado a una escala legal que hoy no está cargada (`escalas_legales` está
   -- vacía hasta que la complete un abogado, pendiente #130). Tiene que quedar

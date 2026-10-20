@@ -23,7 +23,6 @@ const ZONAS = [
   'CABA', 'San Isidro', 'Vicente López', 'Tigre', 'Quilmes', 'Lomas de Zamora', 'La Matanza', 'Morón', 'San Martín', 'Avellaneda',
 ];
 const CAUSALES_BAJA = ['renuncia', 'mutuo_acuerdo', 'periodo_de_prueba'];
-const CATEGORIAS_CCT = ['Asistencia y Cuidado de Personas — Categoría A', 'Asistencia y Cuidado de Personas — Categoría B'];
 
 function slug(nombre) {
   return nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, '.');
@@ -41,7 +40,6 @@ const NOMBRES_ASISTENTES = [
 ];
 
 function construirAsistente(nombre, idx) {
-  const esDependencia = idx % 5 === 2 || idx % 5 === 4; // ~40% dependencia
   const zonas = [ZONAS[idx % 10], ZONAS[(idx + 4) % 10]];
   const canalesOpciones = [['directo', 'intermediacion'], ['directo'], ['intermediacion'], ['directo', 'intermediacion']];
   const canales = canalesOpciones[idx % 4];
@@ -66,11 +64,11 @@ function construirAsistente(nombre, idx) {
     email: `alas.para.escribir.2026+asistente.demo.${slug(nombre)}@gmail.com`,
     // Los primeros dieciocho nombres de la lista son de mujer.
     ...identidadInventada(30500000 + idx, idx < 18 ? 'femenino' : 'masculino'),
-    tipo_vinculo: esDependencia ? 'dependencia' : 'monotributo',
-    categoria_cct: esDependencia ? CATEGORIAS_CCT[idx % 2] : null,
-    valor_hora: esDependencia ? null : 3500 + (idx % 6) * 450,
-    sueldo_basico: esDependencia ? 950000 + (idx % 5) * 65000 : null,
-    horas_semanales: esDependencia ? 30 + (idx % 4) * 6 : null,
+    // Todos independientes: en Careonys el Asistente no es empleado. Cobra por hora, con un
+    // valor inventado.
+    tipo_vinculo: 'monotributo',
+    valor_hora: 3500 + (idx % 6) * 450,
+    horas_semanales: idx % 3 === 0 ? 24 + (idx % 4) * 6 : null,
     claveTipo: CLAVES_TIPO[idx % CLAVES_TIPO.length],
     zonas,
     canales,
@@ -180,9 +178,7 @@ async function main() {
     await supabase.from('remuneraciones_asistente').insert({
       asistente_id: asistenteId,
       prestadora_id: PRESTADORA_ID,
-      categoria_cct: perfil.categoria_cct,
       valor_hora: perfil.valor_hora,
-      sueldo_basico: perfil.sueldo_basico,
     }).throwOnError();
     // Por qué se lo dio de baja también va aparte, con su propio permiso
     // (`ver_datos_reservados_asistente`). Solo se carga a quien tiene una baja.

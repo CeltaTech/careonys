@@ -2606,7 +2606,7 @@ export const T = {
       cierre_servicio_motivo_internacion: 'Internación',
       cierre_servicio_motivo_baja_del_cliente: 'Baja por el Cliente',
       cierre_servicio_motivo_corte_de_pago: 'Falta de pago o cobertura',
-      cierre_servicio_motivo_mudanza_fuera_de_zona: 'Cambio de domicilio fuera de zona',
+      cierre_servicio_motivo_mudanza_fuera_de_zona: 'Mudanza fuera de zona',
       cierre_servicio_motivo_otro: 'Otro',
       cierre_servicio_motivo_detalle: 'Detalle',
       cierre_servicio_falta_motivo: 'Elija el motivo del cierre.',

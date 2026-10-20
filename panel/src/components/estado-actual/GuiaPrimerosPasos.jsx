@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
-import { usePuestaEnMarcha } from '../../context/PuestaEnMarchaContext';
+import { usePuestaEnMarchaAlDia } from '../../context/PuestaEnMarchaContext';
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { PropuestaDesdePlanilla } from './PropuestaDesdePlanilla';
@@ -13,27 +13,24 @@ import '../../styles/molde-paginas.css';
    guardias vacía, sin ningún indicio de qué cargar primero.
 
    QUÉ HACE ESTE ARCHIVO Y QUÉ NO. Pinta, y nada más. Qué falta lo contesta
-   `context/PuestaEnMarchaContext.jsx`, que es el único lugar donde esa pregunta está escrita:
-   acá se leía antes, cuando esta guía era su único consumidor, pero además la reclama la franja
-   del Layout y la usa la entrada del Panel para decidir a dónde va. La misma pregunta escrita
-   tres veces se habría despegado en tres respuestas distintas.
+   `context/PuestaEnMarchaContext.jsx`: primero los tres pasos de la configuración inicial
+   —datos, zonas y precios—, y recién con esos completos, los de la gente. La misma respuesta
+   apaga los botones que cargan Asistentes o Clientes.
 
    Y LEE PLANILLAS. Lo que la Prestadora ya tiene escrito no se vuelve a tipear: la lectura de
    planilla del producto —la misma de la pantalla de importación— cuelga acá abajo, en
    `PropuestaDesdePlanilla`, y propone la configuración inicial a partir del archivo. No crea
    nada: quien confirma sigue siendo una persona, en la pantalla de importación.
 
-   QUIÉN LA VE. Sólo Admin_prestadora o Superadmin — el Coordinador nunca, ni siquiera cuando
-   falta algo, porque no puede completar ninguno de los pasos. Ese candado vive adentro del
-   contexto, que con un Coordinador contesta que no falta nada.
-
-   ADMIN_PRESTADORA VS. SUPERADMIN DE VISITA. Quien entra con su propia Prestadora puede tocar
-   cada paso; un Superadmin mirando por un permiso de acceso ve exactamente lo mismo
-   pero sin botones de acción — la guía es de la Prestadora que visita, no un trabajo para él. */
+   QUIÉN LA VE. Sólo Admin_prestadora o Superadmin. Un Superadmin mirando por un permiso de acceso
+   ve exactamente lo mismo pero sin botones de acción — la guía es de la Prestadora que visita,
+   no un trabajo para él. */
 
 export function GuiaPrimerosPasos() {
   const { t } = useLocale();
-  const { estado, pasos, faltan, completos, informativo, recargar } = usePuestaEnMarcha();
+  const { estado, veLaGuia, pasos, faltan, completos, informativo, recargar } = usePuestaEnMarchaAlDia();
+
+  if (!veLaGuia) return null;
 
   if (estado === 'cargando') {
     return (
@@ -58,7 +55,7 @@ export function GuiaPrimerosPasos() {
 
   // Se apaga sola cuando ya está todo: sin botón de «descartar» a mano, porque no hay nada que
   // descartar una vez que no falta nada.
-  if (completos) return null;
+  if (completos || pasos.length === 0) return null;
 
   const completados = pasos.length - faltan.length;
   const porcentaje = Math.round((completados / pasos.length) * 100);

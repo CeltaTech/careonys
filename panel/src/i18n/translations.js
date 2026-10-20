@@ -42,6 +42,7 @@ export const T = {
         correo_de_esta_prestadora: 'Email en uso. Ingrese otro.',
         correo_de_otra_cuenta: 'Email en uso. Ingrese otro.',
         sin_etapas_incorporacion: 'Esta Prestadora todavía no tiene etapas de incorporación configuradas. Se definen en Configuración > Reclutamiento.',
+        configuracion_inicial_incompleta: 'Complete la configuración inicial antes de cargar Asistentes o Clientes.',
         faltan_datos: 'Faltan datos obligatorios. Revise el formulario e intente nuevamente.',
         token_invalido: 'Este enlace no es válido. Solicite un enlace nuevo.',
         token_vencido: 'Este enlace venció. Solicite un enlace nuevo.',
@@ -978,8 +979,9 @@ export const T = {
       alertas_ia_sin_resolver: 'Alertas de IA sin resolver',
     },
     // Guía de primeros pasos de una Prestadora nueva. Vive como sección de Configuración
-    // (`pages/configuracion/PuestaEnMarcha.jsx`), y cubre otros cinco pasos que el checklist de arriba (`onboarding`), que sigue
-    // viviendo en el Resumen del mes.
+    // (`pages/configuracion/PuestaEnMarcha.jsx`) y tiene dos etapas: la configuración inicial
+    // (datos, zonas, precios), sin la cual no se cargan Asistentes ni Clientes, y después la gente
+    // (Asistentes, tipos, Clientes, equipo).
     //
     // Cada paso tiene cuatro textos, y el cuarto es el que pidió el Desarrollador: la
     // CONSECUENCIA, o sea qué deja de funcionar mientras eso falte. No es una amenaza ni un
@@ -992,9 +994,6 @@ export const T = {
       paso_datos_titulo: 'Completar los datos de la Prestadora',
       paso_datos_cta: 'Completar datos',
       paso_datos_consecuencia: 'Mientras falten, los mensajes de la Prestadora salen sin un contacto al que responder.',
-      paso_modalidad_titulo: 'Seleccione la modalidad de trabajo',
-      paso_modalidad_cta: 'Seleccionar modalidad',
-      paso_modalidad_consecuencia: 'Mientras no haya ninguna activa, el menú del Panel queda casi vacío: la mayoría de las secciones depende de la modalidad elegida.',
       paso_zonas_titulo: 'Cargar las zonas de cobertura',
       paso_zonas_cta: 'Cargar zonas',
       paso_zonas_consecuencia: 'Sin zonas cargadas, el formulario público de la Prestadora no tiene ninguna para ofrecer y nadie puede pedir el servicio desde ahí.',
@@ -2999,6 +2998,7 @@ export const T = {
         correo_de_esta_prestadora: 'Email in use. Enter a different one.',
         correo_de_otra_cuenta: 'Email in use. Enter a different one.',
         sin_etapas_incorporacion: 'This Provider does not have onboarding stages set up yet. They are defined under Settings > Recruitment.',
+        configuracion_inicial_incompleta: 'Complete the initial setup before adding Assistants or Clients.',
         faltan_datos: 'Required data is missing. Check the form and try again.',
         token_invalido: 'This link is not valid. Request a new link.',
         token_vencido: 'This link has expired. Request a new link.',
@@ -3915,9 +3915,6 @@ export const T = {
       paso_datos_titulo: 'Complete the Provider details',
       paso_datos_cta: 'Complete details',
       paso_datos_consecuencia: 'Until they are added, the messages the system sends on behalf of the Provider go out with no contact to reply to.',
-      paso_modalidad_titulo: 'Choose your work model',
-      paso_modalidad_cta: 'Choose work model',
-      paso_modalidad_consecuencia: 'While none is active, the Panel menu stays almost empty: most sections depend on the chosen work model.',
       paso_zonas_titulo: 'Add coverage zones',
       paso_zonas_cta: 'Add zones',
       paso_zonas_consecuencia: 'With no zones added, the Provider public form has none to offer and nobody can request service through it.',
@@ -5899,6 +5896,7 @@ export const T = {
         correo_de_esta_prestadora: 'E-mail em uso. Informe outro.',
         correo_de_otra_cuenta: 'E-mail em uso. Informe outro.',
         sin_etapas_incorporacion: 'Esta Prestadora ainda não possui etapas de incorporação configuradas. Elas se definem em Configuração > Recrutamento.',
+        configuracion_inicial_incompleta: 'Conclua a configuração inicial antes de cadastrar Assistentes ou Clientes.',
         faltan_datos: 'Faltam dados obrigatórios. Revise o formulário e tente novamente.',
         token_invalido: 'Este link não é válido. Solicite um novo link.',
         token_vencido: 'Este link expirou. Solicite um novo link.',
@@ -6815,9 +6813,6 @@ export const T = {
       paso_datos_titulo: 'Completar os dados da Prestadora',
       paso_datos_cta: 'Completar dados',
       paso_datos_consecuencia: 'Enquanto faltarem, as mensagens que o sistema envia em nome da Prestadora saem sem um contato para responder.',
-      paso_modalidad_titulo: 'Selecionar o modelo de trabalho',
-      paso_modalidad_cta: 'Selecionar modelo',
-      paso_modalidad_consecuencia: 'Enquanto nenhum estiver ativo, o menu do Painel fica quase vazio: a maioria das seções depende do modelo escolhido.',
       paso_zonas_titulo: 'Cadastrar as zonas de cobertura',
       paso_zonas_cta: 'Cadastrar zonas',
       paso_zonas_consecuencia: 'Sem zonas cadastradas, o formulário público da Prestadora não tem nenhuma a oferecer e ninguém consegue pedir o serviço por ali.',

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { usePermisos } from '../../context/PermisosContext';
+import { usePuestaEnMarcha } from '../../context/PuestaEnMarchaContext';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { guardarPlanillaAnalizada } from '../../lib/planillaAnalizada';
 import { mensajeDeError } from '../../lib/errores';
@@ -14,8 +15,8 @@ import '../../styles/molde-paginas.css';
 /* Arrancar la configuración inicial desde una planilla que la Prestadora ya tiene.
    ==========================================================================
 
-   POR QUÉ EXISTE. La guía de primeros pasos pide ocho cosas, y una Prestadora que ya venía
-   trabajando las tiene casi todas escritas en una planilla. Pedirle que las vuelva a tipear de
+   POR QUÉ EXISTE. La guía de primeros pasos pide cargar Asistentes y Clientes, y una Prestadora
+   que ya venía trabajando los tiene escritos en una planilla. Pedirle que las vuelva a tipear de
    a una es convertir cada exigencia en un formulario más, que es justo lo contrario de lo que
    tiene que hacer el producto.
 
@@ -34,6 +35,7 @@ import '../../styles/molde-paginas.css';
    NO CREA NADA. Al continuar se sigue a la pantalla de importación, que es donde están los dos
    frenos humanos: revisar el mapeo y conformar el resultado real. Lo leído viaja en memoria
    (`lib/planillaAnalizada.js`) para no leer el archivo —ni preguntarle a la IA— dos veces.
+   Leer se puede siempre; continuar a importar, sólo con la configuración inicial completa.
 
    QUIÉN LO VE. Sólo quien puede importar (`importar_datos_masivos`), y nunca un Superadmin de
    visita: la guía es de la Prestadora, no un trabajo para él. */
@@ -44,6 +46,7 @@ export function PropuestaDesdePlanilla() {
   const { t } = useLocale();
   const { puede, cargado } = usePermisos();
   const navegar = useNavigate();
+  const { cargaDeGenteBloqueada } = usePuestaEnMarcha();
 
   const [tipo, setTipo] = useState('asistente');
   const [archivo, setArchivo] = useState(null);
@@ -164,7 +167,9 @@ export function PropuestaDesdePlanilla() {
             <Button variant="secondary" onClick={empezarDeNuevo}>
               {textos.planilla_otra}
             </Button>
-            <Button onClick={continuarAImportacion}>{textos.planilla_continuar}</Button>
+            <Button onClick={continuarAImportacion} disabled={cargaDeGenteBloqueada}>
+              {textos.planilla_continuar}
+            </Button>
           </div>
         </div>
       )}

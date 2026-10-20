@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { usePermisos } from '../context/PermisosContext';
+import { usePuestaEnMarchaAlDia } from '../context/PuestaEnMarchaContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -53,6 +54,8 @@ export function Importacion() {
   const modal = useModalAccesible(() => setConfirmandoRechazo(false));
   const { t, locale } = useLocale();
   const { puede, cargado } = usePermisos();
+  // Sin la configuración inicial completa no se importa gente: los botones se ven, apagados.
+  const { cargaDeGenteBloqueada } = usePuestaEnMarchaAlDia();
   const { generos } = useGeneros(usePrestadoraActual());
 
   const [tipo, setTipo] = useState('asistente');
@@ -304,7 +307,7 @@ export function Importacion() {
               />
             </div>
             <div className="molde-acciones">
-              <Button type="submit" disabled={cargando}>
+              <Button type="submit" disabled={cargando || cargaDeGenteBloqueada}>
                 {cargando ? t.importacion.analizando : t.importacion.analizar}
               </Button>
             </div>
@@ -392,7 +395,7 @@ export function Importacion() {
               <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
                 {t.importacion.volver}
               </Button>
-              <Button onClick={handleConfirmar} disabled={cargando}>
+              <Button onClick={handleConfirmar} disabled={cargando || cargaDeGenteBloqueada}>
                 {cargando ? t.importacion.confirmando : t.importacion.confirmar}
               </Button>
             </div>

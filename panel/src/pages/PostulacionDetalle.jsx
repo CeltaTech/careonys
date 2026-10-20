@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { usePuestaEnMarchaAlDia } from '../context/PuestaEnMarchaContext';
 import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
@@ -33,6 +34,8 @@ const API_URL = import.meta.env.VITE_API_URL;
 export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  // Sin la configuración inicial completa no se da de alta al Asistente: el botón se ve, apagado.
+  const { cargaDeGenteBloqueada } = usePuestaEnMarchaAlDia();
   const confirmarDestructivo = useConfirmarDestructivo();
   const navigate = useNavigate();
   const prestadoraId = usePrestadoraActual();
@@ -328,7 +331,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
                   <Button
                     variant="secondary"
                     onClick={handleIniciarVerificacion}
-                    disabled={iniciandoVerificacion || !tipoAsistenteId}
+                    disabled={iniciandoVerificacion || !tipoAsistenteId || cargaDeGenteBloqueada}
                   >
                     {iniciandoVerificacion ? t.comun.guardando : t.postulaciones.iniciar_verificacion}
                   </Button>

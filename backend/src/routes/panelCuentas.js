@@ -15,6 +15,7 @@ import {
   errorDeLaIdentidad,
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { configuracionInicialDe, exigirConfiguracionInicial } from '../utils/configuracionInicial.js';
 import {
   ACCION_DESACTIVACION_DE_CUENTA,
   registrarActividad,
@@ -91,11 +92,22 @@ panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res)
   }
 });
 
-// PRD_08 (docs/PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24): qué modalidades de
-// trabajo (directa/intermediacion) tiene activas la Prestadora, para que el menú
-// del Panel muestre solo los grupos que correspondan. Lectura disponible para cualquier rol
-// logueado (igual que permisos-efectivos) — activar/desactivar sigue siendo exclusivo de
-// admin_prestadora vía PATCH /api/panel/configuracion/modalidades (panelConfiguracion.js).
+// Qué modalidades de trabajo (directa/intermediacion) tiene activas la Prestadora, para que el
+// menú del Panel muestre solo los grupos que correspondan. Lectura disponible para cualquier rol
+// logueado (igual que permisos-efectivos). El Panel no las cambia: las habilita CeltaTech en
+// `prestadora_modalidades` según el plan, y acá sólo se leen.
+// Cuánto le falta a la configuración inicial de la Prestadora de la sesión. Lo pide el Panel para
+// la guía de primeros pasos y para apagar los botones de alta, y contesta con la misma función que
+// el candado de las rutas que crean gente (`utils/configuracionInicial.js`). Cualquier rol del
+// Panel lo puede leer: un Coordinador con el alta habilitada necesita saber por qué no puede.
+panelCuentasRouter.get('/configuracion-inicial', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  try {
+    res.json(await configuracionInicialDe(req));
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
 panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res) => {
   if (!req.usuarioPanel.prestadoraId) {
     return res.json({ modalidades: [] });
@@ -115,7 +127,7 @@ panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res
 // de incorporación en etapas_incorporacion_asistente, ya no hay 5 etapas fijas para todas).
 // La primera etapa (menor "orden") queda aprobada de entrada porque ya se cumplió: es la
 // postulación misma, que ya pasó.
-panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, async (req, res) => {
+panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, exigirConfiguracionInicial, async (req, res) => {
   // `tipo_asistente_id` es obligatorio: el tipo decide si a esta persona se le va a exigir
   // Matrícula vigente para poder atender. Lo elige quien aprueba, mirando la postulación —
   // no se adivina a partir del texto que la persona escribió en el formulario público.
@@ -232,7 +244,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 // por defecto y, a diferencia de /asistente, no genera filas en `verificaciones_asistente`
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
-panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), async (req, res) => {
+panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), exigirConfiguracionInicial, async (req, res) => {
   const { nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, valor_hora, horas_semanales, modalidades } = req.body;
   try {
     // Con la llave maestra: el permiso se le puede dar a quien coordina, y `asistentes` y

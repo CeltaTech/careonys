@@ -18,6 +18,7 @@ import { obtenerGeocodificador } from '../geocodificacion/index.js';
 import { resolverLocalidades } from '../utils/localidadesDeLaImportacion.js';
 import { proponerConfiguracionInicial } from '../utils/propuestaConfiguracionInicial.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { exigirConfiguracionInicial } from '../utils/configuracionInicial.js';
 import { FICHA_DOMICILIO, conSusFichas } from '../utils/fichaDelPaciente.js';
 import { informeDeFilasNoCargadas } from '../utils/informeDeFilasNoCargadas.js';
 
@@ -205,6 +206,9 @@ panelImportacionRouter.post(
   '/confirmar',
   requiereRolPanel,
   requierePermiso('importar_datos_masivos'),
+  // Ni Asistentes ni Clientes entran por planilla mientras la Prestadora no completó su
+  // configuración inicial: es el mismo candado que el alta a mano.
+  exigirConfiguracionInicial,
   async (req, res) => {
     const { tipo, filas, mapeo, archivoNombre } = req.body;
     if (!['asistente', 'cliente'].includes(tipo) || !Array.isArray(filas) || !mapeo) {

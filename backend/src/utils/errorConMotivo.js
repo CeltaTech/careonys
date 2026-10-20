@@ -34,6 +34,10 @@ const ESTADO_POR_MOTIVO = {
   correo_de_esta_prestadora: 409,
   correo_de_otra_cuenta: 409,
   sin_etapas_incorporacion: 409,
+  // Dar de alta un Asistente o un Cliente en una Prestadora que todavía no completó su
+  // configuración inicial (`utils/configuracionInicial.js`). Es 409 porque el pedido está bien
+  // armado y choca con el estado de la Prestadora, y se arregla completando la configuración.
+  configuracion_inicial_incompleta: 409,
   faltan_datos: 400,
   password_debil: 400,
   token_invalido: 400,

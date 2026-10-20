@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermisos } from '../context/PermisosContext';
+import { usePuestaEnMarchaAlDia } from '../context/PuestaEnMarchaContext';
 import { esAdminDePrestadora, esAdminOSuperior } from '../lib/roles';
 import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
 import { nombreTipo } from '../lib/tiposAsistente';
@@ -40,6 +41,8 @@ export function Asistentes() {
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
   const puedeAltaManual = esAdmin || puede('alta_manual_asistente');
+  // Sin la configuración inicial completa no se carga gente: el botón se ve, apagado.
+  const { cargaDeGenteBloqueada } = usePuestaEnMarchaAlDia();
   // Los Asistentes desactivados los ve sólo el Administrador, y la elección no se recuerda: cada
   // vez que se abre el Padrón, se abre en los activos.
   const veDesactivados = esAdminDePrestadora(usuario?.rol);
@@ -116,7 +119,7 @@ export function Asistentes() {
         <Button variant="secondary" onClick={() => navigate('/documentacion')}>
           {tl.documentacion_pendiente}
         </Button>
-        {puedeAltaManual && <Button onClick={abrirAlta}>{tl.incorporar}</Button>}
+        {puedeAltaManual && <Button onClick={abrirAlta} disabled={cargaDeGenteBloqueada}>{tl.incorporar}</Button>}
       </Cabecera>
       {aviso && <Alert variant="success">{aviso}</Alert>}
 
@@ -225,7 +228,7 @@ export function Asistentes() {
           }
           accionVacio={
             filas.length === 0 && puedeAltaManual && !desactivados
-              ? <Button onClick={abrirAlta}>{tl.incorporar}</Button>
+              ? <Button onClick={abrirAlta} disabled={cargaDeGenteBloqueada}>{tl.incorporar}</Button>
               : undefined
           }
         >

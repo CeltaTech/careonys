@@ -25,6 +25,7 @@ const MIGRACIONES_POSTERIORES = [
   '20270101000000_frases_aprobadas_de_la_entrevista_y_la_guardia_sin_cerrar.sql',
   '20270102000000_el_acceso_a_la_entrevista_se_habilita.sql',
   '20270109000000_el_acceso_es_por_nombre_de_usuario.sql',
+  '20270114000000_el_numero_concuerda_con_la_cantidad.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;

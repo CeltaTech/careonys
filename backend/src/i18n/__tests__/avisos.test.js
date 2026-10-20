@@ -208,6 +208,46 @@ test('una clave que no existe se avisa, no se devuelve vacía', () => {
   assert.throws(() => mensajeDelSistema('un_aviso_que_no_existe', 'es-AR'), /un_aviso_que_no_existe/);
 });
 
+// Los minutos y los días que configura la Prestadora, o que salen de una cuenta, pueden ser uno.
+// Con uno la frase va en singular y con dos en plural, en los tres idiomas.
+test('el número de la frase concuerda con la cantidad', () => {
+  const guardia = { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] };
+  const conCantidad = (n) => ({
+    guardia_sin_cerrar: { ...guardia, asistente: 'Marta', minutosDeAtraso: n, salidaMarcada: true, veces: 1 },
+    guardia_sin_cerrar_respaldo: { ...guardia, minutosDeAtraso: n },
+    escalada_a_todos_los_coordinadores: { minutos: n },
+    escalada_a_la_administracion: { minutos: n },
+    alerta_temprana_sin_resolver: { ...guardia, origen: 'un origen', motivo: 'no contesta', minutos: n },
+    alerta_temprana_respaldo: { ...guardia, minutos: n },
+    incidente_relevo_sin_resolver: { ...guardia, minutos: n },
+    incidente_relevo_respaldo: { ...guardia, minutos: n },
+    incidente_relevo_fase_automatica: {
+      ...guardia, minutosUmbral: n, contactados: 0, sinNivel: false, sinOrden: false, quedaElFamiliar: false,
+    },
+    vencimiento_documentos: {
+      etiqueta: 'la Matrícula', dias: n, documentos: [{ nombre: 'Marta', fechaVencimiento: '2026-10-08' }],
+    },
+    activacion_cuenta: {
+      nombre: 'Marta', link: 'https://ejemplo.test/activar', dias: n, empresa: 'Cuidados del Sur', producto: 'P',
+    },
+  });
+  const SINGULAR = /\b1 (minuto|minute|día|dia|day)\b/;
+  const PLURAL_CON_UNO = /\b1 (minutos|minutes|días|dias|days)\b/;
+  const PLURAL = /\b2 (minutos|minutes|días|dias|days)\b/;
+  for (const idioma of IDIOMAS_DEL_CATALOGO) {
+    for (const [clave, datos] of Object.entries(conCantidad(1))) {
+      const todo = Object.values(mensajeDelSistema(clave, idioma, datos)).join('\n');
+      assert.match(todo, SINGULAR, `${clave} en ${idioma} con uno: ${todo}`);
+      assert.doesNotMatch(todo, PLURAL_CON_UNO, `${clave} en ${idioma} con uno: ${todo}`);
+      assert.ok(!todo.includes('[falta:'), `${clave} en ${idioma} con uno: ${todo}`);
+    }
+    for (const [clave, datos] of Object.entries(conCantidad(2))) {
+      const todo = Object.values(mensajeDelSistema(clave, idioma, datos)).join('\n');
+      assert.match(todo, PLURAL, `${clave} en ${idioma} con dos: ${todo}`);
+    }
+  }
+});
+
 test('cuando se sabe quién deja la guardia, el Cliente lee los dos nombres', () => {
   const turno = { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] };
   for (const idioma of IDIOMAS_DEL_CATALOGO) {

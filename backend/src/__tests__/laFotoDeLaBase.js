@@ -21,7 +21,10 @@ let texto;
 
 /** El texto entero de la foto. */
 export function laFoto() {
-  texto ??= readFileSync(RUTA_DE_LA_FOTO, 'utf8');
+  // Los renglones se leen terminados en `\n` aunque el archivo llegue con `\r\n`: Git en Windows
+  // convierte los finales de línea al sacar una copia nueva del repositorio, y con `\r` el `$$;`
+  // que cierra cada función y el `;` al final de cada renglón dejaban de encontrarse.
+  texto ??= readFileSync(RUTA_DE_LA_FOTO, 'utf8').replace(/\r\n/g, '\n');
   return texto;
 }
 

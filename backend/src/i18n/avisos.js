@@ -40,13 +40,21 @@ function unirNombres(nombres, conjuncion, siNoHayNinguno) {
   return [limpios.slice(0, -1).join(', '), limpios.at(-1)].filter(Boolean).join(` ${conjuncion} `);
 }
 
+/* El número de la frase concuerda con la cantidad: con uno sale `<clave>_uno` —«1 minuto»,
+   «1 day»— y con cualquier otra, la clave tal cual. Es el mismo par que ya usan
+   `comun.asistente_uno` y los demás `_uno`, para las frases cuyo número no se conoce de antemano
+   porque lo configura la Prestadora o sale de una cuenta. */
+function segunCantidad(clave, cantidad) {
+  return Number(cantidad) === 1 ? `${clave}_uno` : clave;
+}
+
 /* Cuánto hace, en la unidad que se entiende de un vistazo. Por debajo de dos horas se dice en
    minutos y por encima en horas: «185 minutos» obliga a hacer la cuenta justo cuando quien lee
    tiene que decidir rápido. */
 function enMinutosUHoras(minutos, t) {
   const redondeado = Math.round(minutos);
   return redondeado < 120
-    ? `${redondeado} ${t('comun.minutos')}`
+    ? `${redondeado} ${t(segunCantidad('comun.minutos', redondeado))}`
     : `${Math.round(redondeado / 60)} ${t('comun.horas')}`;
 }
 
@@ -244,7 +252,7 @@ const ARMADORES = {
   }),
 
   guardia_sin_cerrar_respaldo: (t, d) => ({
-    texto: t('guardia_sin_cerrar_respaldo.texto', {
+    texto: t(segunCantidad('guardia_sin_cerrar_respaldo.texto', Math.round(d.minutosDeAtraso)), {
       fecha: d.fecha,
       horaInicio: d.horaInicio,
       horaFin: d.horaFin,
@@ -257,11 +265,11 @@ const ARMADORES = {
   // Los dos escalones que siguen. El asunto dice los minutos porque el cuerpo es el mismo que ya
   // recibió quien coordina: sin eso, quien lo lee no sabe por qué le está llegando a él.
   escalada_a_todos_los_coordinadores: (t, d) => ({
-    asunto: t('escalada_a_todos_los_coordinadores.asunto', { minutos: d.minutos }),
+    asunto: t(segunCantidad('escalada_a_todos_los_coordinadores.asunto', d.minutos), { minutos: d.minutos }),
   }),
 
   escalada_a_la_administracion: (t, d) => ({
-    asunto: t('escalada_a_la_administracion.asunto', { minutos: d.minutos }),
+    asunto: t(segunCantidad('escalada_a_la_administracion.asunto', d.minutos), { minutos: d.minutos }),
   }),
 
   alerta_temprana_sin_resolver: (t, d) => ({
@@ -270,7 +278,7 @@ const ARMADORES = {
     // vistazo un aviso que dio una persona de una cuenta que sacó el sistema.
     texto: [
       lineaGuardia(t, d),
-      t('alerta_temprana_sin_resolver.detalle', {
+      t(segunCantidad('alerta_temprana_sin_resolver.detalle', Math.round(d.minutos)), {
         origen: d.origen,
         motivo: d.motivo ?? '—',
         minutos: Math.round(d.minutos),
@@ -281,7 +289,7 @@ const ARMADORES = {
   alerta_temprana_respaldo: (t, d) => ({
     texto: [
       lineaGuardia(t, d),
-      t('alerta_temprana_respaldo.demora', { minutos: Math.round(d.minutos) }),
+      t(segunCantidad('alerta_temprana_respaldo.demora', Math.round(d.minutos)), { minutos: Math.round(d.minutos) }),
     ].join('\n'),
   }),
 
@@ -320,21 +328,21 @@ const ARMADORES = {
     asunto: t('incidente_relevo_sin_resolver.asunto'),
     texto: [
       lineaGuardia(t, d),
-      t('incidente_relevo_sin_resolver.demora', { minutos: Math.round(d.minutos) }),
+      t(segunCantidad('incidente_relevo_sin_resolver.demora', Math.round(d.minutos)), { minutos: Math.round(d.minutos) }),
     ].join('\n'),
   }),
 
   incidente_relevo_respaldo: (t, d) => ({
     texto: [
       lineaGuardia(t, d),
-      t('incidente_relevo_respaldo.demora', { minutos: Math.round(d.minutos) }),
+      t(segunCantidad('incidente_relevo_respaldo.demora', Math.round(d.minutos)), { minutos: Math.round(d.minutos) }),
     ].join('\n'),
   }),
 
   incidente_relevo_fase_automatica: (t, d) => ({
     asunto: t('incidente_relevo_fase_automatica.asunto'),
     texto: [
-      `${lineaGuardia(t, d)} ${t('incidente_relevo_fase_automatica.sin_resolver_desde', { minutosUmbral: d.minutosUmbral })}`,
+      `${lineaGuardia(t, d)} ${t(segunCantidad('incidente_relevo_fase_automatica.sin_resolver_desde', d.minutosUmbral), { minutosUmbral: d.minutosUmbral })}`,
       d.sinNivel || d.sinOrden
         ? t('incidente_relevo_fase_automatica.sin_orden')
         : d.contactados > 0
@@ -508,7 +516,7 @@ const ARMADORES = {
       etiqueta: d.etiqueta,
       cuantos: d.documentos.length,
     }),
-    texto: `${t('vencimiento_documentos.encabezado', { etiqueta: d.etiqueta, dias: d.dias })}\n\n${
+    texto: `${t(segunCantidad('vencimiento_documentos.encabezado', d.dias), { etiqueta: d.etiqueta, dias: d.dias })}\n\n${
       d.documentos
         .map((x) => t('vencimiento_documentos.linea', {
           nombre: x.nombre,
@@ -530,7 +538,7 @@ const ARMADORES = {
   activacion_cuenta: (t, d) => {
     const saludo = t('comun.saludo', { nombre: d.nombre });
     const cuerpo = t('activacion_cuenta.cuerpo', { empresa: d.empresa });
-    const pieDelMensaje = t('activacion_cuenta.pie_de_aviso', { dias: d.dias });
+    const pieDelMensaje = t(segunCantidad('activacion_cuenta.pie_de_aviso', d.dias), { dias: d.dias });
     const marca = t('comun.marca', { producto: d.producto });
     return {
       asunto: t('activacion_cuenta.asunto', { empresa: d.empresa }),

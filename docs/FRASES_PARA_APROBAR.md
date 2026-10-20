@@ -8,21 +8,19 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 
 ## Panel (13)
 
-### 41. Todavía no es la hora de la entrevista
+### 72. Es la hora de la entrevista y no hay sala
 
 | | |
 |---|---|
-| **Texto actual** | El acceso se habilita {{anticipo}} minutos antes de la hora. |
-| **Texto propuesto** | La sala se abre minutos antes de la hora. Vuelva a abrir este enlace el día y la hora de la cita. |
-| **Propuesta corta** | «Acceso habilitado {{anticipo}} minutos antes.» |
+| **Texto actual** | Todavía no es la hora. El acceso se habilita {{anticipo}} minutos antes de la hora. |
+| **Propuesta corta** | Título «Acceso no disponible»; texto «Responda al email para coordinar una nueva fecha.» (el mismo de la ficha 40). |
 | **¿Aparece hoy?** | sí |
-| **Por qué** | el título ya dice «Todavía no es la hora»; volver a abrir el enlace es obvio. |
-| **Qué cambió** | imperativo en lugar de «conviene». |
+| **Por qué** | le dice que espere, y esperar no lo arregla. Hoy les pasa a las dos Prestadoras: ninguna cargó la dirección de la videollamada. |
 | **Quién lo lee** | el postulante. |
-| **Dónde está** | página de la entrevista, debajo de «Todavía no es la hora». |
-| **Qué estaba haciendo** | abrió el enlace antes de tiempo. |
-| **Qué pasó** | faltan más de 15 minutos. La página no se actualiza sola. También sale si ya es la hora pero la Prestadora no cargó la dirección de la videollamada. |
-| **Qué puede hacer después** | volver a abrir el enlace cerca de la hora. |
+| **Dónde está** | página de la entrevista que abre el enlace del email. |
+| **Qué estaba haciendo** | abrió el enlace a la hora de la entrevista. |
+| **Qué pasó** | la entrevista tiene sala, pero la Prestadora no cargó la dirección de la videollamada. |
+| **Qué puede hacer después** | responder el email. |
 | **Cómo se muestra** | texto fijo. |
 | **Decisión** |  |
 

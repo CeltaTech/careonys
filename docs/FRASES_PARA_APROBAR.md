@@ -4,57 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 41 fichas.** Panel 17, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 38 fichas.** Panel 14, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (17)
-
-### 35. Valor del tope semanal
-
-| | |
-|---|---|
-| **Texto actual** | Umbral del tope semanal (0 a 1) |
-| **Propuesta corta** | «Desde qué parte del tope se considera cerca (0,1 a 1)» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | va en paralelo a las etiquetas vecinas («Hasta cuántos kilómetros se considera cerca», y corrige el rango. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Configuración → El cuidado, tarjeta «Cómo se ordena la lista de candidatos» → «Ver y cambiar cada número», tabla «Los topes». |
-| **Qué estaba haciendo** | revisaba los números con que el sistema ordena a los candidatos para una guardia. |
-| **Qué pasó** | es el nombre de un valor. Viene en 0,75: cuando las horas del Asistente en la semana llegan a esa parte de su tope, el sistema lo baja en la lista de candidatos. No le impide tomar la guardia. |
-| **Qué puede hacer después** | cambiar el número y guardar. |
-| **Cómo se muestra** | etiqueta. |
-| **Decisión** | Aprobada: «Cerca del máximo de horas desde (%)», en porcentaje, 75 de fábrica, cada Prestadora define el suyo. |
-
-### 37. Paso de la guía: sumar a alguien del equipo
-
-| | |
-|---|---|
-| **Texto actual** | Agregar un Coordinador |
-| **Propuesta corta** | «Agregar un Coordinador» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | ya es corta y dice lo que completa el paso. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Configuración → Puesta en marcha, tarjeta «Guía de primeros pasos», último paso. |
-| **Qué estaba haciendo** | revisaba qué le falta a la Prestadora para empezar a trabajar. |
-| **Qué pasó** | es el nombre del paso. El sistema lo da por hecho cuando hay al menos un Coordinador; agregar a otra persona de la administración no lo completa. |
-| **Qué puede hacer después** | tocar el botón de la ficha 38. |
-| **Cómo se muestra** | texto fijo (título del paso). |
-| **Decisión** |  |
-
-### 38. Botón para sumar a alguien del equipo
-
-| | |
-|---|---|
-| **Texto actual** | Agregar usuario |
-| **Propuesta corta** | «Agregar Coordinador» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | igual que los otros pasos («Cargar Asistente», «Cargar Cliente») y que lo que hace la página. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Configuración → Puesta en marcha, «Guía de primeros pasos», al lado del paso de la ficha 37. |
-| **Qué estaba haciendo** | revisaba la guía. |
-| **Qué pasó** | el botón aparece mientras no haya ningún Coordinador. |
-| **Qué puede hacer después** | tocarlo; lleva a Usuarios del Panel. |
-| **Cómo se muestra** | botón. |
-| **Decisión** |  |
+## Panel (14)
 
 ### 40. Enlace de entrevista que ya no sirve
 

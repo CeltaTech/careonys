@@ -2741,6 +2741,38 @@ button.panel-kpi-card[aria-pressed='true'] {
   margin-top: 3px;
 }
 
+/* Una fila que se toca entera y lleva a otro lugar, como una lista de ajustes: el fondo se
+   extiende un poco hacia los costados para que el resaltado no quede pegado al texto. */
+.panel-fila-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-fila-tocable {
+  align-items: center;
+  margin: 0 -8px;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-radius: var(--radio-control);
+  cursor: pointer;
+}
+
+.panel-fila-tocable:hover {
+  background: var(--superficie-hover);
+}
+
+.panel-fila-tocable:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: -2px;
+}
+
+.panel-fila-flecha {
+  flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--texto-secundario);
+}
+
 /* El candado de lo que trae el producto y no se edita ni se borra (components/ui/Candado.jsx). */
 .panel-candado {
   display: inline-flex;

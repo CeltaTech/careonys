@@ -97,7 +97,11 @@ export default function ClaveNueva() {
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setCambiada(true);
     } catch (err) {
-      setError(mensajeDeError(err, t, 'cambiar la contraseña'));
+      // El enlace vencido tiene frase propia acá: la del catálogo la comparte la activación, y
+      // aquí lo que se vuelve a pedir es el cambio de contraseña.
+      setError(err?.motivo === 'token_vencido'
+        ? t.auth.clave_nueva_plazo_vencido
+        : mensajeDeError(err, t, 'cambiar la contraseña'));
       if (MOTIVOS_SIN_REINTENTO.includes(err?.motivo)) setMotivoSinReintento(err.motivo);
     } finally {
       setEnviando(false);

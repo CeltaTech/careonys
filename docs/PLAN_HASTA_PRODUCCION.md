@@ -201,8 +201,8 @@ desde las pantallas.
 nulo, así que sólo alcanza al personal de CeltaTech, y tiene cero filas. Y no es inmutable: la
 llave maestra puede borrarlo.
 
-**El registro clínico ya no se pisa.** Cada alta, corrección o baja de `indicaciones_medicacion` y
-`rangos_referencia_vitales` deja una copia en `versiones_registro_clinico`, con autor, momento y
+**El registro clínico ya no se pisa.** Cada alta, corrección o baja de `indicaciones_medicacion`,
+`rangos_referencia_vitales` y `domicilios_temporales_paciente` deja una copia en `versiones_registro_clinico`, con autor, momento y
 nota aclaratoria, y ese historial no lo edita ni lo borra nadie. Mientras el backend escriba con la
 llave maestra, lo que se corrige desde el Panel queda sin autor: eso se arregla con el paso 9.
 

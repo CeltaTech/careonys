@@ -584,7 +584,10 @@ RLS). Resumen de las tablas:
 - **`domicilios_temporales_paciente`** — dónde se atiende al Paciente durante una temporada en
   que no está en su casa: el verano en la casa de un hijo, una internación, una mudanza
   mientras arreglan el departamento. Mientras dura, **reemplaza** a la dirección de la Ficha de Persona del Paciente;
-  no conviven. La carga y la da de baja el Panel, no el Cliente. Dos períodos del mismo
+  no conviven. La carga, la edita y la termina el Panel, no el Cliente. **No se borra**: forma
+  parte de la historia clínica, cada alta y cada modificación queda en
+  `versiones_registro_clinico`, y si el Paciente pasa a otro domicilio temporal se agrega uno
+  nuevo. Dos períodos del mismo
   Paciente no pueden compartir ni un día (restricción `domicilios_temp_sin_superposicion`),
   para que "¿dónde se lo atiende hoy?" tenga siempre una sola respuesta. Quién contesta esa
   pregunta está escrito una sola vez (regla 12), en la función

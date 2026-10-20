@@ -552,3 +552,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** trababa todo turno con fecha de hoy en adelante.
 - **Qué dice ahora:** traba el turno que no tiene registrado el fin del turno ni un cierre hecho desde el Panel, sea de la fecha que sea, y la serie vigente. Los cancelados y los ausentes no traban. Vale también para los Asistentes, que ahora se desactivan desde su Legajo.
 - **Motivo:** lo decidió el Desarrollador: un turno cuenta como terminado si tiene registrado el fin del turno o un cierre hecho desde el Panel; la fecha no dice si quedó algo por resolver.
+
+## El domicilio temporal no se borra
+
+- **Qué decía antes:** el Panel podía borrar un domicilio temporal, y del período no quedaba constancia.
+- **Qué dice ahora:** el domicilio temporal no se borra por ninguna vía; lo mal cargado se edita, cada alta y cada modificación queda en el historial clínico, y si el Paciente pasa a otro domicilio temporal se agrega uno nuevo.
+- **Motivo:** lo decidió el Desarrollador: el domicilio temporal forma parte de la historia clínica y hay que mantener la trazabilidad de los servicios.

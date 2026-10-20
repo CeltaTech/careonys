@@ -1,6 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { hoyISO } from '../../lib/horarios';
 import { conMotivoDeDomicilioTemporal } from '../../lib/domiciliosTemporales';
@@ -11,7 +10,7 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
-import { DOMICILIO_VACIO, palabrasDelDomicilio, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
+import { DOMICILIO_VACIO, palabrasDelDomicilio, partesDesdeFila, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
 import { domicilioEscrito } from '../../lib/domicilioEscrito';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import '../../styles/molde-paginas.css';
@@ -24,10 +23,13 @@ import '../hojaDeTarjetas.css';
 // usan el check-in y la aplicación del Asistente (regla 12 de CLAUDE.md §7). Si se resolviera
 // otra vez en el navegador, el día que cambie la regla esta pantalla contestaría distinto que
 // el resto del sistema.
+//
+// Un domicilio temporal no se borra: forma parte de la historia clínica. Lo mal cargado se edita,
+// y la base guarda cada versión en `versiones_registro_clinico`. Si el Paciente pasa a otro
+// domicilio temporal, se agrega uno nuevo.
 export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
-  const confirmarDestructivo = useConfirmarDestructivo();
   const catalogoDeLugares = useCatalogoDeLugares();
 
   const [periodos, setPeriodos] = useState([]);
@@ -36,6 +38,8 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const [error, setError] = useState(null);
 
   const [mostrandoForm, setMostrandoForm] = useState(false);
+  // El período que se está editando; nulo cuando el formulario carga uno nuevo.
+  const [editandoId, setEditandoId] = useState(null);
   const [domicilio, setDomicilio] = useState(DOMICILIO_VACIO);
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
@@ -94,6 +98,21 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     setFechaInicio(hoyISO());
     setFechaFin('');
     setErrorForm(null);
+    setEditandoId(null);
+  }
+
+  function abrirEditar(periodo) {
+    setErrorFila(null);
+    setTerminandoId(null);
+    setDomicilio(partesDesdeFila(periodo));
+    setLat(periodo.lat == null ? '' : String(periodo.lat));
+    setLng(periodo.lng == null ? '' : String(periodo.lng));
+    setMotivo(periodo.motivo ?? '');
+    setFechaInicio(periodo.fecha_inicio ?? '');
+    setFechaFin(periodo.fecha_fin ?? '');
+    setErrorForm(null);
+    setEditandoId(periodo.id);
+    setMostrandoForm(true);
   }
 
   async function handleGuardar() {
@@ -108,11 +127,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     setGuardando(true);
     setErrorForm(null);
 
-    const { error: errorInsert } = await supabase.from('domicilios_temporales_paciente').insert({
-      // De la misma Prestadora que el Paciente, siempre: la base lo exige con una clave
-      // foránea sobre las dos columnas juntas.
-      prestadora_id: paciente.prestadora_id,
-      paciente_id: paciente.id,
+    const datos = {
       domicilio: renglon,
       ...partesParaGuardar(domicilio),
       lat: Number(lat),
@@ -120,11 +135,22 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
       motivo: motivo.trim(),
       fecha_inicio: fechaInicio,
       fecha_fin: fechaFin || null,
-    });
+    };
+
+    const tabla = supabase.from('domicilios_temporales_paciente');
+    const { error: errorGuardar } = editandoId
+      ? await tabla.update(datos).eq('id', editandoId)
+      : await tabla.insert({
+          // De la misma Prestadora que el Paciente, siempre: la base lo exige con una clave
+          // foránea sobre las dos columnas juntas.
+          prestadora_id: paciente.prestadora_id,
+          paciente_id: paciente.id,
+          ...datos,
+        });
 
     setGuardando(false);
-    if (errorInsert) {
-      setErrorForm(explicar(errorInsert));
+    if (errorGuardar) {
+      setErrorForm(explicar(errorGuardar));
       return;
     }
 
@@ -157,26 +183,6 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     }
 
     setTerminandoId(null);
-    recargar();
-  }
-
-  async function borrarPeriodo(periodo) {
-    if (!(await confirmarDestructivo(t.domicilios_temporales.confirmar_borrado))) return;
-
-    setFilaEnCurso(periodo.id);
-    setErrorFila(null);
-
-    const { error: errorDelete } = await supabase
-      .from('domicilios_temporales_paciente')
-      .delete()
-      .eq('id', periodo.id);
-
-    setFilaEnCurso(null);
-    if (errorDelete) {
-      setErrorFila(explicar(errorDelete));
-      return;
-    }
-
     recargar();
   }
 
@@ -217,7 +223,15 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
               <div className="panel-tarjeta-titulo">
                 <h2>{t.domicilios_temporales.titulo}</h2>
                 {puedeEditar && !mostrandoForm && (
-                  <Button variant="secondary" onClick={() => setMostrandoForm(true)}>{t.domicilios_temporales.agregar}</Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      limpiarForm();
+                      setMostrandoForm(true);
+                    }}
+                  >
+                    {t.domicilios_temporales.agregar}
+                  </Button>
                 )}
               </div>
 
@@ -257,13 +271,17 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                               <>
                                 <Button
                                   variant="secondary"
+                                  onClick={() => abrirEditar(p)}
+                                  disabled={filaEnCurso === p.id || guardando || editandoId === p.id}
+                                >
+                                  {t.comun.editar}
+                                </Button>{' '}
+                                <Button
+                                  variant="secondary"
                                   onClick={() => abrirTerminar(p)}
                                   disabled={filaEnCurso === p.id || terminandoId === p.id}
                                 >
                                   {t.domicilios_temporales.terminar}
-                                </Button>{' '}
-                                <Button variant="secondary" onClick={() => borrarPeriodo(p)} disabled={filaEnCurso === p.id}>
-                                  {t.comun.borrar}
                                 </Button>
                               </>
                             )}
@@ -308,7 +326,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
             {puedeEditar && mostrandoForm && (
               <section className="panel-tarjeta">
                 <div className="panel-tarjeta-titulo">
-                  <h2>{t.domicilios_temporales.nuevo_titulo}</h2>
+                  <h2>{editandoId ? t.domicilios_temporales.editar_titulo : t.domicilios_temporales.nuevo_titulo}</h2>
                 </div>
                 {errorForm && <Alert variant="error">{errorForm}</Alert>}
                 <div className="molde-formgrid">

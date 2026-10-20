@@ -4,9 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 28 fichas.** Panel 4, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 27 fichas.** Panel 3, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (4)
+## Panel (3)
 
 ### 43. Falta cómo recibe el trabajo
 
@@ -55,22 +55,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué puede hacer después** | ver el documento o el papel firmado, armar un consentimiento nuevo o cambiar el Pagador. |
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
-
-### 71. Confirmar el borrado de un domicilio temporal
-
-| | |
-|---|---|
-| **Texto actual** | ¿Borrar este domicilio temporal? No quedará constancia del período. Si el período ya terminó, use «Terminar el período». |
-| **Propuesta corta** | «¿Borrar este domicilio temporal? No quedará constancia. Si ya terminó, use «Terminar el período» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | la salida alternativa no es obvia y la persona puede usarla; se acorta el resto. |
-| **Quién lo lee** | la coordinación de la Prestadora que puede editar los datos del Paciente. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Pacientes» → «Domicilios temporales», botón «Borrar» de un renglón. |
-| **Qué estaba haciendo** | tocó «Borrar». |
-| **Qué pasó** | el sistema pregunta antes de borrar, porque el período desaparece sin constancia. |
-| **Qué puede hacer después** | confirmar o cancelar; si cancela, puede usar «Terminar el período». |
-| **Cómo se muestra** | ventana emergente. |
-| **Decisión** |  |
 
 ## Aplicación del Asistente (18)
 

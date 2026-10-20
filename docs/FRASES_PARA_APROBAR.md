@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 26 fichas.** Panel 3, aplicación del Asistente 17, aplicación del Cliente 4, Base 2.
+**Total: 25 fichas.** Panel 3, aplicación del Asistente 16, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (17)
-
-### 4. No se puede cerrar sin relevo
-
-| | |
-|---|---|
-| **Texto actual** | No puede cerrar esta guardia hasta que llegue el relevo. Si es urgente, avise al Coordinador. |
-| **Propuesta corta** | «Espere al relevo. Si es urgente, avise al Coordinador.» |
-| **¿Aparece hoy?** | no |
-| **Por qué** | es un aviso para un caso que hoy no existe. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | una guardia en curso, en lugar del botón «Cerrar la guardia». |
-| **Qué estaba haciendo** | quería cerrar la guardia para irse. |
-| **Qué pasó** | la guardia está marcada para no cerrarse hasta que llegue el relevo. No se pudo confirmar quién o qué pone esa marca. |
-| **Qué puede hacer después** | avisar al Coordinador por fuera de la aplicación. |
-| **Cómo se muestra** | franja fija en lugar del botón. |
-| **Decisión** |  |
+## Aplicación del Asistente (16)
 
 ### 8. Falta la matrícula
 

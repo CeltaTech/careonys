@@ -22,7 +22,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | es el nombre de un valor. Viene en 0,75: cuando las horas del Asistente en la semana llegan a esa parte de su tope, el sistema lo baja en la lista de candidatos. No le impide tomar la guardia. |
 | **Qué puede hacer después** | cambiar el número y guardar. |
 | **Cómo se muestra** | etiqueta. |
-| **Decisión** |  |
+| **Decisión** | Aprobada: «Cerca del máximo de horas desde (%)», en porcentaje, 75 de fábrica, cada Prestadora define el suyo. |
 
 ### 37. Paso de la guía: sumar a alguien del equipo
 

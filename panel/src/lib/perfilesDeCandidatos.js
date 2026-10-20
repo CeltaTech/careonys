@@ -201,6 +201,32 @@ export const TOPES_QUE_SE_PUEDEN_TOCAR = {
 };
 
 /**
+ * Los topes que se guardan como proporción y se muestran como porcentaje entero.
+ *
+ * La Prestadora ve 75 y escribe entre 10 y 100; lo guardado sigue siendo 0,75, así que la base,
+ * el Backend y `revisarCambios` no cambian. La conversión vive acá y en ningún otro lado.
+ */
+const TOPES_EN_PORCENTAJE = new Set(['proporcion_horas_para_avisar']);
+
+/** Los bordes de un tope tal como se muestran: en porcentaje entero si corresponde. */
+export function bordeEnPantalla(clave, borde) {
+  if (!TOPES_EN_PORCENTAJE.has(clave)) return { ...borde, paso: 'any' };
+  return { minimo: Math.round(borde.minimo * 100), maximo: Math.round(borde.maximo * 100), paso: 1 };
+}
+
+/** El valor guardado de un tope, tal como se muestra. Un casillero vacío queda vacío. */
+export function topeEnPantalla(clave, valor) {
+  if (!TOPES_EN_PORCENTAJE.has(clave) || valor === '' || valor === null || valor === undefined) return valor;
+  return Math.round(Number(valor) * 100);
+}
+
+/** Lo escrito en pantalla, tal como se guarda: el porcentaje vuelve a proporción, entero. */
+export function topeGuardado(clave, escrito) {
+  if (!TOPES_EN_PORCENTAJE.has(clave) || escrito === '') return escrito;
+  return Math.round(Number(escrito)) / 100;
+}
+
+/**
  * Los cuatro niveles con los que la Prestadora pondera cada situación, de menos a más.
  *
  * Es lo único que ve: «No importa», «Poco», «Bastante», «Mucho». Lo guardado sigue siendo un

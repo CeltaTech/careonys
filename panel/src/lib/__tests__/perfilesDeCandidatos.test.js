@@ -12,6 +12,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   NIVELES,
+  bordeEnPantalla,
+  topeEnPantalla,
+  topeGuardado,
   NOMBRES_DE_PERFIL,
   PERFILES,
   PERFIL_POR_DEFECTO,
@@ -256,5 +259,34 @@ describe('el techo de la continuidad se cuenta en veces', () => {
   it('un techo guardado como puntaje ya no se toma', () => {
     const { pesos } = pesosYTopesDe({ perfil: 'continuidad', pesos: { continuidad_maxima: 200 }, topes: {} });
     expect(pesos.continuidad_maxima).toBe(60);
+  });
+});
+
+describe('el aviso de horas se ve en porcentaje y se guarda en proporción', () => {
+  const clave = 'proporcion_horas_para_avisar';
+
+  it('de fábrica se ve 75, entre 10 y 100, de a uno', () => {
+    expect(topeEnPantalla(clave, TOPES[clave])).toBe(75);
+    expect(bordeEnPantalla(clave, TOPES_QUE_SE_PUEDEN_TOCAR[clave])).toEqual({ minimo: 10, maximo: 100, paso: 1 });
+  });
+
+  it('lo escrito vuelve a proporción, entero, y pasa la revisión del Backend', () => {
+    expect(topeGuardado(clave, 60)).toBe(0.6);
+    expect(topeGuardado(clave, 60.4)).toBe(0.6);
+    expect(revisarCambios('continuidad', {}, { [clave]: topeGuardado(clave, 10) }).ok).toBe(true);
+    expect(revisarCambios('continuidad', {}, { [clave]: topeGuardado(clave, 5) }).ok).toBe(false);
+  });
+
+  it('la Prestadora que lo cambia lo guarda para sí, y la que no, sigue con el de fábrica', () => {
+    const propia = soloLoQueCorreDelPerfil('continuidad', {}, { ...TOPES, [clave]: topeGuardado(clave, 60) });
+    expect(propia.topes).toEqual({ [clave]: 0.6 });
+    expect(pesosYTopesDe({ perfil: 'continuidad', topes: propia.topes }).topes[clave]).toBe(0.6);
+    expect(pesosYTopesDe({ perfil: 'continuidad', topes: {} }).topes[clave]).toBe(0.75);
+  });
+
+  it('los demás topes no se convierten', () => {
+    expect(topeEnPantalla('km_cerca', 15)).toBe(15);
+    expect(topeGuardado('km_cerca', 15)).toBe(15);
+    expect(bordeEnPantalla('km_cerca', TOPES_QUE_SE_PUEDEN_TOCAR.km_cerca).paso).toBe('any');
   });
 });

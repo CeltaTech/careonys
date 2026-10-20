@@ -15,8 +15,11 @@ import {
   TOPES_QUE_SE_PUEDEN_TOCAR,
   PESOS,
   TOPES,
+  bordeEnPantalla,
   nivelMasCercano,
   pesoDeNivel,
+  topeEnPantalla,
+  topeGuardado,
 } from '../../lib/perfilesDeCandidatos';
 import '../../styles/molde-paginas.css';
 
@@ -223,19 +226,20 @@ function TablaDeNumeros({ titulo, bordes, valores, nombreDe, alCambiar, t, child
           </tr>
         </thead>
         <tbody>
-          {Object.entries(bordes).map(([clave, borde]) => {
+          {Object.entries(bordes).map(([clave, bordeGuardado]) => {
             const nombre = nombreDe(clave);
+            const borde = bordeEnPantalla(clave, bordeGuardado);
             return (
               <tr key={clave}>
                 <td><b>{nombre}</b></td>
                 <td>
                   <input
                     type="number"
-                    step="any"
+                    step={borde.paso}
                     min={borde.minimo}
                     max={borde.maximo}
-                    value={valores[clave] ?? ''}
-                    onChange={(e) => alCambiar(clave, e.target.value === '' ? '' : Number(e.target.value))}
+                    value={topeEnPantalla(clave, valores[clave]) ?? ''}
+                    onChange={(e) => alCambiar(clave, e.target.value === '' ? '' : topeGuardado(clave, Number(e.target.value)))}
                     aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.calculo_col_valor, nombre })}
                   />
                 </td>

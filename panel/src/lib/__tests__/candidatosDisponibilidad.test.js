@@ -13,7 +13,7 @@
  * falla la primera.
  */
 import { describe, expect, it } from 'vitest';
-import { candidatosParaGuardia, estaDisponible, MOTIVO } from '../candidatos';
+import { candidatosParaGuardia, estaDisponible, MOTIVO, topeSemanalDe } from '../candidatos';
 
 const HUECO = {
   id: 'g-1',
@@ -90,5 +90,21 @@ describe('estaDisponible', () => {
     expect(estaDisponible({ disponible: true })).toBe(true);
     expect(estaDisponible({})).toBe(true);
     expect(estaDisponible(null)).toBe(true);
+  });
+});
+
+describe('topeSemanalDe', () => {
+  const topes = { horas_semanales: 48 };
+
+  it('si el Asistente acepta menos que la Prestadora, manda el del Asistente', () => {
+    expect(topeSemanalDe({ horas_semanales: 40 }, topes)).toBe(40);
+  });
+
+  it('si el Asistente acepta más que la Prestadora, manda el de la Prestadora', () => {
+    expect(topeSemanalDe({ horas_semanales: 60 }, topes)).toBe(48);
+  });
+
+  it('sin el dato del Asistente, manda el de la Prestadora', () => {
+    expect(topeSemanalDe({}, topes)).toBe(48);
   });
 });

@@ -260,12 +260,14 @@ export function limitesDeSemana(fechaISO, diaInicio = TOPES.dia_inicio_semana) {
 }
 
 /**
- * El tope semanal que le corresponde a este Asistente: el suyo si lo tiene cargado, y si no el
- * general. Un tope por persona es más justo que uno igual para todos, y la columna ya existe.
+ * El tope semanal que le corresponde a este Asistente: el menor entre lo que él acepta trabajar
+ * (su Legajo) y el máximo que fija la Prestadora. Si no tiene el suyo cargado, manda el de ella.
  */
 export function topeSemanalDe(asistente, topes = TOPES) {
   const propio = Number(asistente?.horas_semanales);
-  return Number.isFinite(propio) && propio > 0 ? propio : topes.horas_semanales;
+  return Number.isFinite(propio) && propio > 0
+    ? Math.min(propio, topes.horas_semanales)
+    : topes.horas_semanales;
 }
 
 /**

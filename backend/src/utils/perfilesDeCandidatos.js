@@ -110,9 +110,9 @@ export const PESOS = {
 /** Los topes y umbrales. Valores de fábrica. */
 export const TOPES = {
   /**
-   * Horas semanales máximas. Es el valor de respaldo: si el Asistente tiene cargado su propio
-   * `asistentes.horas_semanales`, manda el suyo (ver `topeSemanalDe`). Un tope por persona es
-   * más justo que uno igual para todos, y esa columna ya existe.
+   * Horas semanales máximas que fija la Prestadora. Si el Asistente tiene cargadas en
+   * `asistentes.horas_semanales` las que él acepta trabajar, manda el menor de los dos (ver
+   * `topeSemanalDe`).
    */
   horas_semanales: 48,
 

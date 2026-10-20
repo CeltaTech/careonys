@@ -1339,11 +1339,17 @@ elegir qué pasa cuando vencen, y el corte que ordena el software conectado.
 **Y lo de la relación de dependencia sale también, a un módulo de sueldos y jornales.** El
 Asistente es monotributista o trabajador independiente: se lo contrata para una tarea, y la
 contratación termina porque se completó, porque se canceló o porque él desistió. Ahí no hay
-liquidación final, telegrama, notificación ni cese. Hoy el Legajo ofrece el vínculo
-«Dependencia», la solapa «Vínculo y Cese» con esos documentos y los conceptos de liquidación con
-alcance por vínculo; todo eso es de sueldos y jornales, y lo usa la Prestadora que tenga
-empleados en relación de dependencia. Sus mensajes también se redactan acá: en el Panel, «No se
-encontró el cese».
+liquidación final, telegrama, notificación ni cese. El código ya salió del producto y está en el
+estante, en `Codigos-utiles\vinculo-laboral-cese-y-riesgo-de-dependencia`. En la base quedó lo
+que usaba, sin que el producto lo lea ni lo escriba: la tabla `ceses`, la tabla `formulas_cese`,
+el depósito `documentos-cese`, las filas de `escalas_legales` del cese y del riesgo de
+dependencia, las columnas `categoria_cct` y `sueldo_basico` de `remuneraciones_asistente`,
+`causal_baja`, `score_riesgo_reclasificacion` e `indicadores_riesgo` de
+`datos_reservados_asistente`, `aplica_a` de `conceptos_liquidacion`, el valor `dependencia` en las
+restricciones de `asistentes.tipo_vinculo`, `textos_consentimiento.modalidad`,
+`conceptos_liquidacion.aplica_a` y `liquidaciones_asistente.tipo_vinculo`, y los textos de
+consentimiento de esa modalidad. Esperan al módulo de sueldos y jornales, o a la decisión de
+borrarlos con una migración.
 
 **Los mensajes de cobros y facturación se redactan acá, no antes.** Salieron de la revisión de
 frases porque se van con el módulo: en el Panel, más de una pasarela de cobro conectada, pasarela

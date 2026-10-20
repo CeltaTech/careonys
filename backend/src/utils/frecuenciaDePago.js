@@ -8,9 +8,9 @@
 // primeras cosas que se arreglan— no tenía dónde anotarse.
 //
 // LAS DOS COSAS QUE NO SON LO MISMO, Y ESTA ES LA SEGUNDA. Con qué se mide el trabajo —por
-// hora, por guardia, por semana o por mes— está en `formaDePago.js`. Cada cuánto se cobra es
-// esto. Son independientes: se le puede pagar por hora y cobrar por mes, o tener sueldo
-// mensual y cobrar cada quince días.
+// hora, por guardia o por semana— está en `formaDePago.js`. Cada cuánto se cobra es
+// esto. Son independientes: se le puede pagar por hora y cobrar por mes, o por semana y
+// cobrar cada quince días.
 //
 // Y ESTE ARCHIVO NO TOCA UN SOLO IMPORTE. Sólo dice desde qué día hasta qué día va cada
 // período y qué día se paga. Cuánto se paga adentro de ese período lo sigue resolviendo
@@ -216,22 +216,4 @@ export function periodosQueTocan(desde, hasta, frecuencia, topeDeVueltas = 1000)
 export function fechaDePagoDe(periodo, frecuencia) {
   const regla = frecuenciaDePagoDe(frecuencia);
   return enTexto(correrDias(periodo.hasta, regla.dias_hasta_el_pago));
-}
-
-/**
- * Cuántos días de mes representa este período, para lo que se paga por mes.
- *
- * Hace falta porque un sueldo mensual cobrado por semana no es un sueldo por semana: las
- * cuatro o cinco liquidaciones de un mes tienen que sumar ese sueldo y no cuatro. Entonces la
- * parte que se paga sale de los días del período sobre los días del mes al que pertenecen, y
- * no sobre los días del período, que daría el sueldo entero cada vez.
- *
- * Un período que cruza dos meses se mide contra el mes en que empieza. Los meses tienen entre
- * 28 y 31 días, así que la alternativa —partir el período y medir cada mitad contra su mes—
- * cambia el resultado en centavos y obliga a explicar por qué dos semanas iguales pagaron
- * distinto. Se mide contra uno solo, y el mes en que el período empieza es el que contiene la
- * mayor parte del trabajo cuando el corte cae cerca del fin de mes.
- */
-export function diasDelMesDelPeriodo(periodo) {
-  return Number(ultimoDiaDelMesDe(periodo.desde).slice(8, 10));
 }

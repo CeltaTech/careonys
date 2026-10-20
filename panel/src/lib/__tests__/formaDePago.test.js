@@ -27,25 +27,20 @@ import {
 
 describe('con qué se le mide el trabajo a cada persona', () => {
   it('usa la unidad que se eligió en el Legajo del Asistente', () => {
-    expect(unidadDeMedicionDe({ unidad_medicion: 'guardia', tipo_vinculo: 'dependencia' })).toBe(UNIDADES.GUARDIA);
+    expect(unidadDeMedicionDe({ unidad_medicion: 'guardia' })).toBe(UNIDADES.GUARDIA);
   });
 
-  it('a un Legajo del Asistente cargado antes le deduce la unidad del vínculo, como hacía el sistema antes', () => {
-    expect(unidadDeMedicionDe({ tipo_vinculo: 'dependencia' })).toBe(UNIDADES.MES);
-    expect(unidadDeMedicionDe({ tipo_vinculo: 'monotributo' })).toBe(UNIDADES.HORA);
-  });
-
-  it('ante un vínculo que no conoce, mide por hora', () => {
-    expect(unidadDeMedicionDe({ tipo_vinculo: 'lo_que_sea' })).toBe(UNIDADES.HORA);
+  it('un Legajo del Asistente que no eligió ninguna se mide por hora', () => {
+    expect(unidadDeMedicionDe({})).toBe(UNIDADES.HORA);
     expect(unidadDeMedicionDe(null)).toBe(UNIDADES.HORA);
   });
 
-  it('descarta una unidad inventada y vuelve a deducirla', () => {
-    expect(unidadDeMedicionDe({ unidad_medicion: 'quincena', tipo_vinculo: 'dependencia' })).toBe(UNIDADES.MES);
+  it('descarta una unidad que no existe y mide por hora', () => {
+    expect(unidadDeMedicionDe({ unidad_medicion: 'quincena' })).toBe(UNIDADES.HORA);
+    expect(unidadDeMedicionDe({ unidad_medicion: 'mes' })).toBe(UNIDADES.HORA);
   });
 
-  it('el monto fijo es el de semana y el de mes, no el de hora ni el de guardia', () => {
-    expect(esMontoFijo(UNIDADES.MES)).toBe(true);
+  it('el monto fijo es el de semana, no el de hora ni el de guardia', () => {
     expect(esMontoFijo(UNIDADES.SEMANA)).toBe(true);
     expect(esMontoFijo(UNIDADES.HORA)).toBe(false);
     expect(esMontoFijo(UNIDADES.GUARDIA)).toBe(false);
@@ -54,11 +49,10 @@ describe('con qué se le mide el trabajo a cada persona', () => {
 
 describe('cuánto vale una unidad', () => {
   it('busca el valor en la columna que le corresponde a esa unidad', () => {
-    const pago = { valor_hora: 100, valor_guardia: 200, valor_semana: 300, sueldo_basico: 400 };
+    const pago = { valor_hora: 100, valor_guardia: 200, valor_semana: 300 };
     expect(valorDeLaUnidad(pago, UNIDADES.HORA)).toBe(100);
     expect(valorDeLaUnidad(pago, UNIDADES.GUARDIA)).toBe(200);
     expect(valorDeLaUnidad(pago, UNIDADES.SEMANA)).toBe(300);
-    expect(valorDeLaUnidad(pago, UNIDADES.MES)).toBe(400);
   });
 
   // No sabemos cuánto cobra y no le pagamos nada son dos cosas distintas, y de la diferencia
@@ -132,7 +126,7 @@ describe('cuántos días del período estuvo la persona', () => {
 });
 
 describe('cuántas unidades se pagan en el período', () => {
-  const MARZO = { diasDelPeriodo: 31, diasDeLaPersona: 31 };
+  const MARZO = { diasDeLaPersona: 31 };
 
   it('por hora, las horas que hizo', () => {
     expect(unidadesDelPeriodo({ unidad: UNIDADES.HORA, acumulado: { horas: 176, guardias: 22 }, ...MARZO })).toBe(176);
@@ -147,25 +141,14 @@ describe('cuántas unidades se pagan en el período', () => {
     expect(unidadesDelPeriodo({ unidad: UNIDADES.GUARDIA, acumulado: {}, ...MARZO })).toBe(0);
   });
 
-  it('por mes, el período entero es uno', () => {
-    expect(unidadesDelPeriodo({ unidad: UNIDADES.MES, ...MARZO })).toBe(1);
-  });
-
-  it('por mes, media persona a mitad de mes', () => {
-    expect(
-      unidadesDelPeriodo({ unidad: UNIDADES.MES, diasDelPeriodo: 30, diasDeLaPersona: 15 })
-    ).toBe(0.5);
-  });
-
   it('por semana, los días divididos por siete', () => {
-    expect(unidadesDelPeriodo({ unidad: UNIDADES.SEMANA, diasDelPeriodo: 28, diasDeLaPersona: 28 })).toBe(4);
-    expect(unidadesDelPeriodo({ unidad: UNIDADES.SEMANA, diasDelPeriodo: 31, diasDeLaPersona: 31 }))
+    expect(unidadesDelPeriodo({ unidad: UNIDADES.SEMANA, diasDeLaPersona: 28 })).toBe(4);
+    expect(unidadesDelPeriodo({ unidad: UNIDADES.SEMANA, diasDeLaPersona: 31 }))
       .toBe(31 / DIAS_DE_UNA_SEMANA);
   });
 
-  // Dividir por cero da infinito, y un infinito multiplicado por el sueldo sale impreso.
-  it('un período sin días no explota', () => {
-    expect(unidadesDelPeriodo({ unidad: UNIDADES.MES, diasDelPeriodo: 0, diasDeLaPersona: 0 })).toBe(0);
+  it('una unidad que no existe no paga nada', () => {
+    expect(unidadesDelPeriodo({ unidad: 'mes', ...MARZO })).toBe(0);
   });
 });
 

@@ -35,7 +35,7 @@
   `admin` renombrado a `admin_prestadora` en dato y código sin transición pendiente), Bloque 3
   (filtrado de tenant en rutas backend con Service Role Key) y Bloque 4 (`configuracion_prestadora`
   reemplazando la configuración singleton — confirmado en `backend/src/routes/panelConfiguracion.js:34-41`
-  — y hardcodeos de marca sacados de `generarDocumentoCese.js`/`calcularCese.js`) ya están
+  — y hardcodeos de marca sacados de los documentos generados) ya están
   aplicados y verificados contra Supabase real. Desde entonces se sumó el modo "dentro de una
   Prestadora" (ver `TenantSessionContext.jsx`), que va más allá de lo que pedía el Bloque 4;
   nació con el rol comercial `admin_plataforma` y después pasó a ser la **sesión de soporte
@@ -67,7 +67,7 @@ con más permiso técnico pueda operar sin exponer ese poder a un Admin_prestado
 "neófito").
 
 Ningún rol de Asistente/Cliente debe tener acceso, ni siquiera de solo lectura, a
-`escalas_legales`, `ceses`, `ausencias` ni a datos laborales internos de otros Asistentes.
+`escalas_legales`, `ausencias` ni a datos laborales internos de otros Asistentes.
 
 **Actualizado 2026-07-10:** el rol antes descripto acá como "Administrador de prestadora"
 (futuro) ya está implementado — es el mismo rol de la tabla de arriba, renombrado de
@@ -125,9 +125,9 @@ Etapa 2 — Panel de administración
   - **Reclutamiento e incorporación** — postulaciones, entrevistas, verificación de identidad
     con las dos fotos, referencias laborales, documentación y Matrícula.
     Falta únicamente la pantalla pública del formulario de postulación.
-  - **Padrón y gestión del personal** — vínculo dual monotributo/dependencia, ceses con las
-    trece causales, simulador de vínculo, score de riesgo de reclasificación, ausencias y
-    cobertura, liquidaciones y pagos a Asistentes.
+  - **Padrón y gestión del personal** — Asistentes monotributistas o independientes, ausencias y
+    cobertura, liquidaciones y pagos a Asistentes. La relación de dependencia y el cese son de un
+    módulo de sueldos y jornales.
   - **Clientes, Pacientes y Servicios** — Ficha del cliente, personas autorizadas con qué ve cada una,
     instrucciones que firma el titular, y el Servicio contratado con su continuidad.
   - **Guardias** — series y guardias, asignaciones de turno, cobertura, grilla, acciones masivas, guardias sin

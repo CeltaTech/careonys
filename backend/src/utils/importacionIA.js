@@ -35,7 +35,7 @@ export const CAMPOS_IMPORTACION = {
     'nombre', 'telefono', 'email', 'documento', 'dni', 'genero', 'tipo_asistente',
     'domicilio', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilio${parte}`),
     'dondeAceptaTrabajar',
-    'tipo_vinculo', 'categoria_cct', 'valor_hora', 'sueldo_basico', 'horas_semanales',
+    'valor_hora', 'horas_semanales',
   ],
   cliente: [
     'nombreContacto', 'apellidoContacto', 'documentoContacto', 'dniContacto', 'generoContacto',

@@ -19,7 +19,6 @@ import {
   FRECUENCIAS,
   FRECUENCIA_DE_PAGO,
   diaDeLaSemanaDe,
-  diasDelMesDelPeriodo,
   fechaDePagoDe,
   frecuenciaDePagoDe,
   periodoQueContiene,
@@ -202,27 +201,4 @@ describe('que ningún día quede sin período ni en dos', () => {
       }
     });
   }
-});
-
-describe('el sueldo mensual cobrado por semana', () => {
-  it('se mide contra los días del mes, no contra los del período', () => {
-    // Si se midiera contra los del período, una semana daría 7/7 y se pagaría el sueldo
-    // entero cada semana: cuatro sueldos por mes.
-    expect(diasDelMesDelPeriodo({ desde: '2026-09-12', hasta: '2026-09-18' })).toBe(30);
-    expect(diasDelMesDelPeriodo({ desde: '2026-02-02', hasta: '2026-02-08' })).toBe(28);
-  });
-
-  it('las semanas de un mes suman el sueldo entero, no más', () => {
-    // Treinta días de septiembre repartidos en semanas de siete: la suma de las partes tiene
-    // que dar uno, que es un sueldo. El último período cruza a octubre y su parte se recorta,
-    // porque lo que se paga son los días del mes que caen adentro.
-    const periodos = periodosQueTocan('2026-09-01', '2026-09-30', POR_SEMANA);
-    const diasDeSeptiembre = (p) => {
-      const desde = p.desde < '2026-09-01' ? '2026-09-01' : p.desde;
-      const hasta = p.hasta > '2026-09-30' ? '2026-09-30' : p.hasta;
-      return (Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86400000 + 1;
-    };
-    const total = periodos.reduce((suma, p) => suma + diasDeSeptiembre(p) / 30, 0);
-    expect(total).toBeCloseTo(1, 10);
-  });
 });

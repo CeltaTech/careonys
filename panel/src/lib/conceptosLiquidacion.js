@@ -26,9 +26,6 @@ export const UNIDADES = ['monto_fijo_mensual', 'porcentaje', 'monto_por_hora'];
 /** De dónde sale el número: de la Prestadora, o de una escala legal vigente. */
 export const ORIGENES = ['propio', 'escala_legal'];
 
-/** A quién le corresponde el concepto, según su tipo de vínculo. */
-export const ALCANCES = ['todos', 'dependencia', 'monotributo'];
-
 /**
  * Qué campos tienen sentido para un concepto armado así. Los que dan `false` no se muestran
  * y se guardan vacíos.
@@ -56,7 +53,6 @@ export function loQueFaltaDelConcepto(concepto = {}) {
   if (!SIGNOS.includes(concepto.signo)) falta.push('signo');
   if (!UNIDADES.includes(concepto.unidad)) falta.push('unidad');
   if (!ORIGENES.includes(concepto.origen_valor)) falta.push('origen_valor');
-  if (!ALCANCES.includes(concepto.aplica_a)) falta.push('aplica_a');
 
   // Un valor en cero no es un dato faltante: es un concepto que hoy no descuenta nada. Por
   // eso se pregunta si el campo está vacío, no si el número da falso.
@@ -84,7 +80,6 @@ export function conceptoParaGuardar(concepto = {}) {
     signo: concepto.signo,
     unidad: concepto.unidad,
     origen_valor: concepto.origen_valor,
-    aplica_a: concepto.aplica_a,
     valor: campos.valor ? numero(concepto.valor) : null,
     escala_tipo: campos.escala_tipo ? String(concepto.escala_tipo).trim() : null,
     moneda: campos.moneda ? concepto.moneda : null,

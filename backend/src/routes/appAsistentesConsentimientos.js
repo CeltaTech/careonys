@@ -30,17 +30,15 @@ export const appAsistentesConsentimientosRouter = Router();
 // agregan acá y en el catálogo de la base — no se repite la lista en otro lado.
 const CLAVES = ['seguimiento_ubicacion'];
 
-// asistentes.tipo_vinculo habla de la forma de contratación; el catálogo habla
-// de la modalidad legal. Un solo lugar traduce entre las dos (CLAUDE.md §7.12).
-function modalidadDeVinculo(tipoVinculo) {
-  return tipoVinculo === 'dependencia' ? 'dependencia' : 'autonomo';
-}
+// La modalidad legal con la que se busca el texto en el catálogo. El Asistente
+// trabaja siempre como independiente, así que es una sola.
+const MODALIDAD = 'autonomo';
 
 // Devuelve { asistente, jurisdiccion } o null si falta algo para poder decidir.
 async function contextoDelAsistente(db, usuarioAsistente) {
   const { data: asistente } = await db
     .from('asistentes')
-    .select('id, prestadora_id, tipo_vinculo')
+    .select('id, prestadora_id')
     .eq('id', usuarioAsistente.asistenteId)
     .maybeSingle();
   if (!asistente) return null;
@@ -101,7 +99,7 @@ appAsistentesConsentimientosRouter.get('/', requiereRolAsistente, async (req, re
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
 
-  const modalidad = modalidadDeVinculo(contexto.asistente.tipo_vinculo);
+  const modalidad = MODALIDAD;
   const items = [];
 
   for (const clave of CLAVES) {
@@ -168,7 +166,7 @@ appAsistentesConsentimientosRouter.post('/', requiereRolAsistente, async (req, r
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
 
-  const modalidad = modalidadDeVinculo(contexto.asistente.tipo_vinculo);
+  const modalidad = MODALIDAD;
   const texto = await textoVigente(db, {
     jurisdiccion: contexto.jurisdiccion,
     clave,

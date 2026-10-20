@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ALCANCES,
   ORIGENES,
   SIGNOS,
   UNIDADES,
@@ -18,7 +17,6 @@ const IMPORTE_PROPIO = {
   signo: 'suma',
   unidad: 'monto_fijo_mensual',
   origen_valor: 'propio',
-  aplica_a: 'todos',
   valor: '15000',
   moneda: 'ARS',
   orden: 10,
@@ -80,8 +78,8 @@ describe('loQueFaltaDelConcepto', () => {
   });
 
   it('los valores que la base no acepta se marcan como faltantes', () => {
-    const inventado = { ...IMPORTE_PROPIO, signo: 'multiplica', unidad: 'por_guardia', aplica_a: 'jubilados' };
-    expect(loQueFaltaDelConcepto(inventado)).toEqual(['signo', 'unidad', 'aplica_a']);
+    const inventado = { ...IMPORTE_PROPIO, signo: 'multiplica', unidad: 'por_guardia' };
+    expect(loQueFaltaDelConcepto(inventado)).toEqual(['signo', 'unidad']);
   });
 });
 
@@ -93,7 +91,6 @@ describe('conceptoParaGuardar', () => {
       signo: 'suma',
       unidad: 'monto_fijo_mensual',
       origen_valor: 'propio',
-      aplica_a: 'todos',
       valor: 15000,
       escala_tipo: null,
       moneda: 'ARS',
@@ -133,13 +130,10 @@ describe('los valores tienen su texto en los tres idiomas', () => {
     ['signo_', SIGNOS],
     ['unidad_', UNIDADES],
     ['origen_', ORIGENES],
-    // El alcance no reusa los nombres de vínculo del Padrón: ahí "monotributo" nombra un
-    // vínculo y acá nombra a quiénes les toca el concepto, que es una frase distinta.
-    ['alcance_', ALCANCES],
   ];
 
   for (const idioma of IDIOMAS) {
-    it(`${idioma} nombra cada signo, unidad, origen y alcance`, () => {
+    it(`${idioma} nombra cada signo, unidad y origen`, () => {
       for (const [prefijo, valores] of listas) {
         for (const valor of valores) {
           expect(T[idioma].pagos_asistentes[`${prefijo}${valor}`]).toBeTruthy();

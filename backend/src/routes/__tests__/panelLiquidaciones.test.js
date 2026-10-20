@@ -130,15 +130,15 @@ const ASISTENTE_POR_HORA = {
   nombre: 'Asistente de prueba',
   tipo_vinculo: 'monotributo',
   valor_hora: 1500,
-  sueldo_basico: null,
 };
 
-const ASISTENTE_EN_DEPENDENCIA = {
+// Agosto de 2026 tiene 31 días, que es el período de `liquidar`: por semana, 31/7 de 70.000.
+const ASISTENTE_POR_SEMANA = {
   id: 'a-2',
   nombre: 'Otra asistente de prueba',
-  tipo_vinculo: 'dependencia',
-  valor_hora: null,
-  sueldo_basico: 900000,
+  tipo_vinculo: 'monotributo',
+  unidad_medicion: 'semana',
+  valor_semana: 70000,
 };
 
 function liquidar(asistente, acumulado, extras = {}) {
@@ -193,7 +193,7 @@ describe('las horas del mes', () => {
   });
 });
 
-describe('la base: sueldo o valor por hora', () => {
+describe('la base: valor por hora o por semana', () => {
   it('quien cobra por hora: las horas por su valor', () => {
     const { liquidacion, items } = liquidar(ASISTENTE_POR_HORA, { guardias: 10, horas: 80 });
     assert.equal(liquidacion.base_unidad, 'valor_hora');
@@ -205,18 +205,18 @@ describe('la base: sueldo o valor por hora', () => {
     assert.equal(items[0].monto, 120000);
   });
 
-  it('quien está en relación de dependencia cobra su sueldo, no las horas', () => {
-    // El mismo mes con las mismas horas que arriba tiene que dar el sueldo y nada más: para
+  it('quien cobra por semana cobra los días del período, no las horas', () => {
+    // El mismo mes con las mismas horas que arriba tiene que dar las semanas y nada más: para
     // esa persona las horas son un control, no la cuenta.
-    const { liquidacion } = liquidar(ASISTENTE_EN_DEPENDENCIA, { guardias: 10, horas: 80 });
-    assert.equal(liquidacion.base_unidad, 'sueldo_basico');
-    assert.equal(liquidacion.bruto, 900000);
+    const { liquidacion } = liquidar(ASISTENTE_POR_SEMANA, { guardias: 10, horas: 80 });
+    assert.equal(liquidacion.base_unidad, 'valor_semana');
+    assert.equal(liquidacion.bruto, 310000);
     assert.equal(liquidacion.horas, 80);
   });
 
-  it('el sueldo se paga aunque no haya hecho ninguna guardia', () => {
-    const { liquidacion } = liquidar(ASISTENTE_EN_DEPENDENCIA, { guardias: 0, horas: 0 });
-    assert.equal(liquidacion.bruto, 900000);
+  it('la semana se paga aunque no haya hecho ninguna guardia', () => {
+    const { liquidacion } = liquidar(ASISTENTE_POR_SEMANA, { guardias: 0, horas: 0 });
+    assert.equal(liquidacion.bruto, 310000);
     assert.equal(liquidacion.guardias_contadas, 0);
   });
 
@@ -245,31 +245,22 @@ describe('las otras dos unidades de medición: la guardia y la semana', () => {
     assert.equal(liquidacion.base_unidad, 'valor_semana');
     assert.equal(liquidacion.bruto, 310000);
   });
-
-  it('la unidad elegida en el Legajo del Asistente manda sobre la que se deduciría del vínculo', () => {
-    const { liquidacion } = liquidar(
-      { ...ASISTENTE_EN_DEPENDENCIA, unidad_medicion: 'hora', valor_hora: 1500 },
-      { guardias: 10, horas: 80 }
-    );
-    assert.equal(liquidacion.base_unidad, 'valor_hora');
-    assert.equal(liquidacion.bruto, 120000);
-  });
 });
 
 describe('a quien cobra un monto fijo y entró o se fue a mitad de camino', () => {
-  const ENTRO_A_MITAD = { ...ASISTENTE_EN_DEPENDENCIA, fecha_alta: '2026-08-17' };
+  const ENTRO_A_MITAD = { ...ASISTENTE_POR_SEMANA, fecha_alta: '2026-08-17' };
 
   it('de fábrica se le paga la parte de los días que estuvo', () => {
-    // Del 17 al 31 hay 15 días de 31, y quince treintaiunavos de 900.000 son 435.483,87.
+    // Del 17 al 31 hay 15 días, y quince séptimos de 70.000 son 150.000.
     const { liquidacion } = liquidar(ENTRO_A_MITAD, { guardias: 5, horas: 40 });
-    assert.equal(liquidacion.bruto, 435483.87);
+    assert.equal(liquidacion.bruto, 150000);
   });
 
   it('si la Prestadora apagó el prorrateo, cobra el monto entero', () => {
     const { liquidacion } = liquidar(ENTRO_A_MITAD, { guardias: 5, horas: 40 }, {
       reglaDePago: { prorratear_monto_fijo: false },
     });
-    assert.equal(liquidacion.bruto, 900000);
+    assert.equal(liquidacion.bruto, 310000);
   });
 
   it('a quien cobra por hora el prorrateo no le cambia nada: cobra lo que hizo', () => {
@@ -326,10 +317,10 @@ describe('las horas de más', () => {
 
   it('se le pagan también a quien cobra un monto fijo', () => {
     const { liquidacion } = liquidar(
-      { ...ASISTENTE_EN_DEPENDENCIA, valor_hora_extra: 3000 },
+      { ...ASISTENTE_POR_SEMANA, valor_hora_extra: 3000 },
       { guardias: 10, horas: 80, horasExtra: 2 }
     );
-    assert.equal(liquidacion.bruto, 906000);
+    assert.equal(liquidacion.bruto, 316000);
   });
 });
 
@@ -341,7 +332,6 @@ describe('los conceptos que pone la Prestadora', () => {
     unidad: 'porcentaje',
     origen_valor: 'propio',
     valor: 10,
-    aplica_a: 'todos',
   };
 
   it('un porcentaje se aplica sobre el bruto', () => {
@@ -358,20 +348,13 @@ describe('los conceptos que pone la Prestadora', () => {
 
   it('un monto por hora se aplica sobre las horas, y uno fijo es un importe plano', () => {
     const conceptos = [
-      { id: 'c-2', nombre: 'Adicional por hora', signo: 'suma', unidad: 'monto_por_hora', origen_valor: 'propio', valor: 50, aplica_a: 'todos' },
-      { id: 'c-3', nombre: 'Adelanto entregado', signo: 'resta', unidad: 'monto_fijo_mensual', origen_valor: 'propio', valor: 20000, aplica_a: 'todos' },
+      { id: 'c-2', nombre: 'Adicional por hora', signo: 'suma', unidad: 'monto_por_hora', origen_valor: 'propio', valor: 50 },
+      { id: 'c-3', nombre: 'Adelanto entregado', signo: 'resta', unidad: 'monto_fijo_mensual', origen_valor: 'propio', valor: 20000 },
     ];
     const { liquidacion } = liquidar(ASISTENTE_POR_HORA, { guardias: 10, horas: 80 }, { conceptos });
     assert.equal(liquidacion.total_sumas, 4000);
     assert.equal(liquidacion.total_restas, 20000);
     assert.equal(liquidacion.neto, 104000);
-  });
-
-  it('un concepto de dependencia no le entra a quien factura por monotributo', () => {
-    const soloDependencia = { ...aporte, id: 'c-4', aplica_a: 'dependencia' };
-    const { liquidacion, items } = liquidar(ASISTENTE_POR_HORA, { guardias: 10, horas: 80 }, { conceptos: [soloDependencia] });
-    assert.equal(items.length, 1);
-    assert.equal(liquidacion.neto, 120000);
   });
 
   it('el nombre del concepto se copia al renglón, no se busca después', () => {
@@ -390,7 +373,6 @@ describe('los conceptos que salen de una escala legal', () => {
     origen_valor: 'escala_legal',
     escala_tipo: 'aporte_de_prueba',
     valor: null,
-    aplica_a: 'todos',
   };
 
   function escalas(filas) {
@@ -537,7 +519,7 @@ describe('generar el mes', () => {
       { id: 'a-1', nombre: 'Asistente de prueba', estado: 'activo', tipo_vinculo: 'monotributo', fecha_alta: '2020-01-01', fecha_baja: null },
     ]);
     respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [
-      remuneracion ?? { asistente_id: 'a-1', valor_hora: 1500, sueldo_basico: null },
+      remuneracion ?? { asistente_id: 'a-1', valor_hora: 1500 },
     ]);
     // Sin fila: es la configuración de fábrica, que es el caso corriente.
     respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => configuracionPago);
@@ -606,8 +588,7 @@ describe('generar el mes', () => {
         origen_valor: 'escala_legal',
         escala_tipo: 'aporte_de_prueba',
         valor: null,
-        aplica_a: 'todos',
-      },
+          },
     ]);
     const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
     assert.equal(cuerpo.generadas, 1);
@@ -706,7 +687,6 @@ describe('generar el mes', () => {
       remuneracion: {
         asistente_id: 'a-1',
         valor_hora: 1500,
-        sueldo_basico: null,
         frecuencia_pago: { cada_cuanto: 'mes' },
       },
     });
@@ -910,7 +890,7 @@ describe('con qué credencial entra cada ruta', () => {
     respuestas.set('GET /rest/v1/asistentes', () => [
       { id: 'a-1', nombre: 'Asistente importado de prueba', estado: 'activo', tipo_vinculo: 'monotributo', fecha_alta: '2020-01-01', fecha_baja: null },
     ]);
-    respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [{ asistente_id: 'a-1', valor_hora: 1500, sueldo_basico: null }]);
+    respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [{ asistente_id: 'a-1', valor_hora: 1500 }]);
     respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => []);
     respuestas.set('GET /rest/v1/conceptos_liquidacion', () => []);
     respuestas.set('GET /rest/v1/escalas_legales', () => []);

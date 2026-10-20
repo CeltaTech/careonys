@@ -11,7 +11,6 @@ import { useMonedaActual } from '../hooks/useMonedaActual';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { llamarApiLiquidaciones } from '../lib/apiLiquidaciones';
 import {
-  ALCANCES,
   ORIGENES,
   SIGNOS,
   UNIDADES,
@@ -669,7 +668,6 @@ function ConceptosTab() {
               <th>{t.pagos_asistentes.col_signo}</th>
               <th>{t.pagos_asistentes.col_unidad}</th>
               <th>{t.pagos_asistentes.conceptos_col_valor}</th>
-              <th>{t.pagos_asistentes.conceptos_col_alcance}</th>
               <th>{t.pagos_asistentes.conceptos_col_activo}</th>
               <th></th>
             </tr>
@@ -687,7 +685,6 @@ function ConceptosTab() {
                     ? `${t.pagos_asistentes.origen_escala_legal} · ${c.escala_tipo}`
                     : formatearValor(c.valor, c.unidad, c.moneda, locale)}
                 </td>
-                <td>{traducirValor(t.pagos_asistentes, `alcance_${c.aplica_a}`)}</td>
                 <td>
                   <span className={claseBadge(c.activo ? 'activo' : 'inactivo')}>
                     {c.activo ? t.comun.si : t.comun.no}
@@ -744,7 +741,6 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
     origen_valor: concepto.origen_valor ?? 'propio',
     valor: concepto.valor ?? '',
     escala_tipo: concepto.escala_tipo ?? '',
-    aplica_a: concepto.aplica_a ?? 'todos',
     orden: concepto.orden ?? 100,
   });
   const [guardando, setGuardando] = useState(false);
@@ -880,20 +876,6 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
               </div>
             </>
           )}
-
-          <FormField
-            label={t.pagos_asistentes.conceptos_col_alcance}
-            name="concepto_alcance"
-            type="select"
-            value={datos.aplica_a}
-            onChange={(e) => cambiar('aplica_a', e.target.value)}
-          >
-            {ALCANCES.map((alcance) => (
-              <option key={alcance} value={alcance}>
-                {traducirValor(t.pagos_asistentes, `alcance_${alcance}`)}
-              </option>
-            ))}
-          </FormField>
 
           <FormField
             label={t.pagos_asistentes.concepto_orden}

@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
-import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
+import { generarConstanciaAusencia, descargarPDF } from '../../lib/constanciaDeAusencia';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { guardiasAfectadas, guardiasSinCubrir, sumarLasYaCubiertas } from '../../lib/guardiasAfectadas';
 import { diasComputados } from '../../lib/diasDeAusencia';

@@ -6,15 +6,7 @@
 // días, el mes cerrado. Acá eso llega hecho y esta cuenta no se entera de dónde salieron los
 // bordes. Quien no cambió nada sigue liquidando el mes calendario, exactamente igual que antes.
 //
-// POR QUÉ EXISTE ESTE ARCHIVO. Esta cuenta vivía adentro de la ruta del backend que genera las
-// liquidaciones, que era el único lugar que la necesitaba. Dejó de serlo: el Simulador de
-// Vínculo compara lo que cuesta por mes la misma persona bajo monotributo y bajo dependencia,
-// y esa comparación es exactamente esta cuenta hecha dos veces. Escrita de nuevo del lado del
-// Panel serían dos cuentas que empiezan iguales y se separan el día que alguien corrija una
-// sola, y entonces la liquidación de marzo y la proyección que la anunció dirían cosas
-// distintas.
-//
-// Por eso vive acá, del lado del Panel, y el backend usa una copia generada
+// Vive acá, del lado del Panel, y el backend usa una copia generada
 // (`backend/src/utils/calcularLiquidacion.js`, ver `scripts/copias_entre_apps.mjs`). Es la
 // misma forma que ya tiene `escalasLegales.js`, que decide qué escala rige a una fecha.
 //
@@ -34,14 +26,12 @@
 import {
   COLUMNA_DEL_VALOR,
   diasCubiertos,
-  diasEntre,
   reglaDePagoDe,
   unidadDeMedicionDe,
   unidadesDelPeriodo,
   valorDeLaHoraExtra,
   valorDeLaUnidad,
 } from './formaDePago.js';
-import { diasDelMesDelPeriodo } from './frecuenciaDePago.js';
 
 const ES_UN_DIA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -115,10 +105,6 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
   const cuantas = unidadesDelPeriodo({
     unidad,
     acumulado,
-    diasDelPeriodo: diasEntre(desde, hasta),
-    // El sueldo mensual se reparte sobre los días del mes y no sobre los del período: si no, a
-    // quien cobra los viernes se le pagaría el sueldo entero cada viernes.
-    diasDelMes: diasDelMesDelPeriodo({ desde, hasta }),
     diasDeLaPersona: diasCubiertos({
       desde,
       hasta,
@@ -175,8 +161,6 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
   let totalRestas = 0;
 
   for (const concepto of conceptos) {
-    if (concepto.aplica_a !== 'todos' && concepto.aplica_a !== asistente.tipo_vinculo) continue;
-
     let valorAplicado;
     if (concepto.origen_valor === 'escala_legal') {
       const escala = escalasPorTipo.get(concepto.escala_tipo);

@@ -259,8 +259,8 @@ CREATE TABLE remuneraciones_asistente (
   asistente_id  UUID PRIMARY KEY REFERENCES asistentes(id) ON DELETE CASCADE,
   prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
   valor_hora    NUMERIC(12,2),   -- si monotributo
-  sueldo_basico NUMERIC(12,2),   -- si dependencia
-  categoria_cct TEXT,            -- categoría CCT 743/16, solo si dependencia
+  sueldo_basico NUMERIC(12,2),   -- sin uso en el producto: es de sueldos y jornales
+  categoria_cct TEXT,            -- sin uso en el producto: es de sueldos y jornales
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -280,10 +280,10 @@ antes de contestar, y escribir queda reservado a la administración de la Presta
 CREATE TABLE datos_reservados_asistente (
   asistente_id                  UUID PRIMARY KEY REFERENCES asistentes(id) ON DELETE CASCADE,
   prestadora_id                 UUID NOT NULL REFERENCES prestadoras(id),
-  causal_baja                   TEXT,      -- ver enum causal_cese
-  score_riesgo_reclasificacion  INTEGER NOT NULL DEFAULT 0
+  causal_baja                   TEXT,      -- sin uso en el producto: es de sueldos y jornales
+  score_riesgo_reclasificacion  INTEGER NOT NULL DEFAULT 0  -- sin uso en el producto
     CHECK (score_riesgo_reclasificacion >= 0 AND score_riesgo_reclasificacion <= 100),
-  indicadores_riesgo            JSONB NOT NULL DEFAULT '{}'::jsonb,
+  indicadores_riesgo            JSONB NOT NULL DEFAULT '{}'::jsonb,  -- sin uso en el producto
   motivo_exclusion_directo      TEXT,      -- NULL mientras la modalidad esté activa en `canales`
   motivo_exclusion_intermediacion        TEXT,      -- ídem
   created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -764,7 +764,8 @@ CREATE TABLE guardias_cobertura (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Las 13 causales exactas de PRD_02B_Gestion_Personal.md sección 5.2 — no improvisar nombres
+-- causal_cese y ceses siguen en la base y el producto no los lee ni los escribe: el cese es de
+-- un módulo de sueldos y jornales (ver docs/PLAN_HASTA_PRODUCCION.md, «relación de dependencia»)
 CREATE TYPE causal_cese AS ENUM (
   'renuncia', 'mutuo_acuerdo', 'despido_con_justa_causa', 'despido_sin_causa',
   'abandono_de_trabajo', 'muerte_del_trabajador', 'muerte_del_empleador',
@@ -777,7 +778,7 @@ CREATE TABLE ceses (
   asistente_id UUID NOT NULL REFERENCES asistentes(id),
   fecha_cese DATE NOT NULL,
   causal causal_cese NOT NULL,
-  detalle_calculo JSONB,           -- desglose completo, ver PRD_02B sección 5.3
+  detalle_calculo JSONB,           -- desglose completo del cálculo
   monto_total NUMERIC(14,2),       -- NULL si la causal remite a cálculo manual del abogado
   documentos_generados JSONB,      -- rutas a PDFs generados (liquidación, telegrama, etc.)
   revisado_por_abogado BOOLEAN DEFAULT FALSE,
@@ -813,10 +814,8 @@ CREATE TABLE calificaciones_asistente (
 ```
 
 Ver `supabase/migrations/` para el DDL de esta tabla, con su RLS completa. Si hace falta saber
-si está efectivamente aplicada, se consulta la base real, no este documento. No confundir con
-`vínculo`/`cese` (arriba) — son conceptos independientes: vínculo/cese es "¿sigue siendo
-parte del Padrón de la Prestadora?", esta tabla es "¿qué opinaron los Clientes
-de su trabajo?", y una calificación mala nunca afecta al primero de forma automática.
+si está efectivamente aplicada, se consulta la base real, no este documento. Una calificación
+mala nunca afecta de forma automática la permanencia del Asistente en el Padrón.
 
 **Nota de alcance jurisdiccional (ver pendiente #30):** el razonamiento de riesgo legal
 detrás de "nunca acción automática" se apoya en el marco de riesgo legal de `CLAUDE.md`

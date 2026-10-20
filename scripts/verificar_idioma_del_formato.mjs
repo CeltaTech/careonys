@@ -98,7 +98,7 @@ const DECLARA_IDIOMA_FIJO = /^\s*(?:export\s+)?const\s+IDIOMA_DEL_DOCUMENTO\s*=/
 // La plata armada a mano en vez de pedírsela a `formatearImporte`.
 const IMPORTE_A_MANO = /style\s*:\s*(?:'currency'|"currency")/;
 
-// Los tres lugares donde sí se arma un importe, con el motivo al lado. Es una
+// Los dos lugares donde sí se arma un importe, con el motivo al lado. Es una
 // lista corta a propósito: si se hace larga, lo que hay que revisar es por qué
 // tanta pantalla le da forma a la plata por su cuenta.
 const IMPORTES_DECLARADOS = new Map([
@@ -106,8 +106,6 @@ const IMPORTES_DECLARADOS = new Map([
    'es el punto único: la función que todos usan para mostrar plata.'],
   ['pwa-clientes/src/lib/dinero.js',
    'es la copia declarada del punto único (ver scripts/copias_entre_apps.mjs).'],
-  ['panel/src/lib/generarDocumentoCese.js',
-   'arma papeles que se firman, en idioma fijo; el punto único da forma en el idioma de quien mira, que acá no sirve.'],
 ]);
 
 // ── El recorrido ───────────────────────────────────────────────────────────

@@ -66,7 +66,6 @@ const PERMISO_LECTURA = 'ver_pagos_asistente';
 const SIGNOS = ['suma', 'resta'];
 const UNIDADES_CONCEPTO = ['monto_fijo_mensual', 'porcentaje', 'monto_por_hora'];
 const ORIGENES_VALOR = ['propio', 'escala_legal'];
-const DESTINATARIOS = ['todos', 'dependencia', 'monotributo'];
 
 // PostgREST corta cualquier respuesta a mil filas. Un mes de guardias de una Prestadora
 // mediana pasa ese número sin esfuerzo, y la liquidación que saliera de una lista cortada
@@ -99,9 +98,9 @@ const soloAdministracion = exigirAdministracion('La Prestadora no habilitó esta
 /**
  * Si el vínculo de esa persona estaba en pie en algún momento del período que se liquida.
  *
- * Hace falta porque quien está en relación de dependencia cobra su sueldo aunque no haya
- * hecho ninguna guardia: sin este control, al generar un período anterior a su ingreso le
- * saldría una liquidación de un sueldo que nunca se le pagó. Las fechas son de tipo `date`,
+ * Hace falta porque quien cobra por semana cobra los días que estuvo aunque no haya hecho
+ * ninguna guardia: sin este control, al generar un período anterior a su ingreso le saldría
+ * una liquidación de un trabajo que nunca hizo. Las fechas son de tipo `date`,
  * o sea texto `AAAA-MM-DD`, que se compara igual que un número.
  */
 export function vinculoVigenteEnElPeriodo(asistente, periodo) {
@@ -188,9 +187,6 @@ function loQueEstaMalEnElConcepto(cuerpo) {
   if (!SIGNOS.includes(cuerpo.signo)) return 'El concepto tiene que sumar o restar';
   if (!UNIDADES_CONCEPTO.includes(cuerpo.unidad)) return 'La unidad del concepto no es una de las previstas';
   if (!ORIGENES_VALOR.includes(cuerpo.origen_valor)) return 'El valor del concepto sale de la Prestadora o de una escala legal';
-  if (cuerpo.aplica_a !== undefined && !DESTINATARIOS.includes(cuerpo.aplica_a)) {
-    return 'El concepto se aplica a todos, a dependencia o a monotributo';
-  }
   if (cuerpo.origen_valor === 'propio' && (cuerpo.valor === null || cuerpo.valor === undefined || Number.isNaN(Number(cuerpo.valor)))) {
     return 'Un concepto propio de la Prestadora necesita su valor';
   }
@@ -217,7 +213,6 @@ function camposDelConcepto(cuerpo) {
     origen_valor: cuerpo.origen_valor,
     valor: esPropio ? Number(cuerpo.valor) : null,
     escala_tipo: esPropio ? null : String(cuerpo.escala_tipo).trim(),
-    aplica_a: cuerpo.aplica_a ?? 'todos',
     activo: cuerpo.activo ?? true,
     orden: cuerpo.orden ?? 100,
   };
@@ -400,7 +395,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   // Prestadora, en vez de colgada del Legajo, por lo mismo que los nombres de más arriba.
   const { data: remuneraciones, error: errorRemuneraciones } = await supabase
     .from('remuneraciones_asistente')
-    .select('asistente_id, unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra, frecuencia_pago')
+    .select('asistente_id, unidad_medicion, valor_hora, valor_guardia, valor_semana, valor_hora_extra, frecuencia_pago')
     .eq('prestadora_id', prestadoraId);
   if (errorRemuneraciones) return responderError(res, errorRemuneraciones);
   const pagoPorAsistente = new Map((remuneraciones || []).map((r) => [r.asistente_id, r]));
@@ -435,7 +430,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
 
   // Entra quien trabajó en el mes —aunque después se haya dado de baja, porque el trabajo que
   // hizo se le paga igual— y también quien está activo sin haber hecho ninguna guardia,
-  // siempre que su vínculo estuviera en pie: el de dependencia cobra su sueldo lo mismo.
+  // siempre que su vínculo estuviera en pie: el que cobra por semana cobra esos días lo mismo.
   const aLiquidar = asistentes.filter(
     (a) => acumuladoDelMes.has(a.id) || (a.estado === 'activo' && vinculoVigenteEnElPeriodo(a, periodo))
   );

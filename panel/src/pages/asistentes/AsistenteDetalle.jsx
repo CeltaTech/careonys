@@ -12,9 +12,6 @@ import { PerfilTab } from './PerfilTab';
 import { VerificacionTab } from './VerificacionTab';
 import { CertificadoTab } from './CertificadoTab';
 import { MatriculasTab } from './MatriculasTab';
-import { VinculoCeseTab } from './VinculoCeseTab';
-import { SimuladorVinculoTab } from './SimuladorVinculoTab';
-import { ScoreRiesgoTab } from './ScoreRiesgoTab';
 import { DatosBancariosTab } from './DatosBancariosTab';
 import { GuardiasTab } from './GuardiasTab';
 import { EvaluacionesTab } from './EvaluacionesTab';
@@ -125,9 +122,6 @@ export function AsistenteDetalle() {
         {tab === 'verificacion' && <VerificacionTab asistente={asistente} />}
         {tab === 'certificado' && <CertificadoTab asistente={asistente} />}
         {tab === 'matriculas' && esAdmin && <MatriculasTab asistente={asistente} />}
-        {tab === 'vinculo_cese' && esAdmin && <VinculoCeseTab asistente={asistente} onActualizado={recargar} />}
-        {tab === 'simulador' && esAdmin && <SimuladorVinculoTab asistente={asistente} />}
-        {tab === 'score_riesgo' && esAdmin && <ScoreRiesgoTab asistente={asistente} onActualizado={recargar} />}
         {tab === 'datos_bancarios' && (esAdmin || puede('ver_datos_bancarios_asistente')) && (
           <DatosBancariosTab asistente={asistente} />
         )}

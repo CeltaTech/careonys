@@ -73,8 +73,8 @@ describe('pestanasDelAsistente', () => {
     }
   });
 
-  it('el Coordinador no alcanza ninguna pestaña de datos laborales ni reservados', () => {
-    for (const pestana of ['matriculas', 'vinculo_cese', 'simulador', 'score_riesgo']) {
+  it('el Coordinador no alcanza la pestaña de matrículas', () => {
+    for (const pestana of ['matriculas']) {
       expect(PESTANAS_COORDINADOR).not.toContain(pestana);
     }
   });

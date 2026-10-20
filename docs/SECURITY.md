@@ -443,8 +443,7 @@ decisión de producto sobre esto todavía.
 
 ## Datos sensibles — qué nunca se loguea ni va en URL/GET
 
-- Sueldos, honorarios, montos de `ceses`.
-- Causales de cese.
+- Lo que cobra cada Asistente, honorarios.
 - Certificados médicos, antecedentes penales.
 - Fotos de identidad del Asistente (la del documento y la de la cara), en el depósito
   `fotos-identidad`.

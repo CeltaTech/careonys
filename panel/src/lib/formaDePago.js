@@ -1,14 +1,12 @@
 // ---------------------------------------------------------------------------
 // formaDePago.js — con qué se mide el trabajo de cada Asistente, y qué es una hora extra
 //
-// POR QUÉ EXISTE ESTE ARCHIVO. Hasta ahora la forma de pago no existía: la deducía el código
-// del tipo de vínculo. Quien estaba en relación de dependencia cobraba un sueldo fijo, y
-// cualquier otro cobraba horas por valor hora. No había manera de pagarle a alguien por
-// guardia ni por semana, y sobre todo no había manera de pagarle una hora de más: la
-// Asistente que se quedaba tres horas después de su turno no cobraba nada por ellas.
+// POR QUÉ EXISTE ESTE ARCHIVO. A cada Asistente se le paga por hora, por guardia o por semana, y
+// la hora de más se le paga aparte: la Asistente que se queda tres horas después de su turno
+// cobra esas horas.
 //
-// LAS DOS COSAS QUE NO SON LO MISMO. Con qué se mide el trabajo —por hora, por guardia, por
-// semana o por mes— es esto. Cada cuánto se le paga —los viernes, a treinta días— es otra
+// LAS DOS COSAS QUE NO SON LO MISMO. Con qué se mide el trabajo —por hora, por guardia o por
+// semana— es esto. Cada cuánto se le paga —los viernes, a treinta días— es otra
 // cosa, se arregla con cada persona y no cambia ni un centavo de esta cuenta. Acá está sólo
 // la medición.
 //
@@ -31,7 +29,6 @@ export const UNIDADES = {
   HORA: 'hora',
   GUARDIA: 'guardia',
   SEMANA: 'semana',
-  MES: 'mes',
 };
 
 export const UNIDADES_POSIBLES = Object.values(UNIDADES);
@@ -41,19 +38,6 @@ export const COLUMNA_DEL_VALOR = {
   [UNIDADES.HORA]: 'valor_hora',
   [UNIDADES.GUARDIA]: 'valor_guardia',
   [UNIDADES.SEMANA]: 'valor_semana',
-  [UNIDADES.MES]: 'sueldo_basico',
-};
-
-/**
- * Qué unidad le corresponde a un Legajo del Asistente que todavía no eligió ninguna.
- *
- * Es exactamente lo que hacía el código antes de que la forma de pago se pudiera elegir, y
- * está acá para que un Legajo del Asistente cargado antes siga liquidando igual que el mes pasado. Ningún
- * Legajo del Asistente nuevo pasa por esto: la unidad se elige al cargarlo.
- */
-export const UNIDAD_POR_VINCULO = {
-  dependencia: UNIDADES.MES,
-  monotributo: UNIDADES.HORA,
 };
 
 /** Un día tiene una sola forma de contarse; una semana, siete días. No es una decisión. */
@@ -111,19 +95,18 @@ export function soloLoQueCorreDelPago(regla) {
 
 /** Un monto fijo se paga esté la persona o no; lo demás se paga por lo que hizo. */
 export function esMontoFijo(unidad) {
-  return unidad === UNIDADES.SEMANA || unidad === UNIDADES.MES;
+  return unidad === UNIDADES.SEMANA;
 }
 
 /**
  * Con qué se le mide el trabajo a esta persona.
  *
- * Recibe el Legajo del Asistente entero —lo que cobra y su vínculo vienen juntos en la mano de quien liquida—
- * porque un Legajo del Asistente que todavía no eligió unidad se resuelve mirando el vínculo.
+ * Un Legajo del Asistente que todavía no eligió ninguna se mide por hora.
  */
 export function unidadDeMedicionDe(asistente) {
   const elegida = asistente?.unidad_medicion;
   if (UNIDADES_POSIBLES.includes(elegida)) return elegida;
-  return UNIDAD_POR_VINCULO[asistente?.tipo_vinculo] ?? UNIDADES.HORA;
+  return UNIDADES.HORA;
 }
 
 /**
@@ -165,8 +148,8 @@ function enMedianoche(fecha) {
 /**
  * Cuántos días del período estuvo esta persona en la Prestadora.
  *
- * Sin prorrateo el período cuenta entero, que es lo que hacía el sistema hasta ahora: el
- * sueldo fijo se pagaba completo sin mirar desde cuándo estaba.
+ * Sin prorrateo el período cuenta entero: el monto fijo se paga completo sin mirar desde
+ * cuándo estaba.
  */
 export function diasCubiertos({ desde, hasta, fechaAlta, fechaBaja, prorratear }) {
   if (!prorratear) return diasEntre(desde, hasta);
@@ -178,24 +161,11 @@ export function diasCubiertos({ desde, hasta, fechaAlta, fechaBaja, prorratear }
 /**
  * Cuántas unidades se le pagan a esta persona en el período, y de ahí sale el importe.
  *
- * Por hora y por guardia, lo que hizo. Por semana, los días que estuvo divididos por siete. Por
- * mes, los días que estuvo divididos por los días del mes.
- *
- * DIVIDIR POR LOS DÍAS DEL MES Y NO POR LOS DEL PERÍODO NO ES UN DETALLE. Desde que el período
- * dejó de ser siempre el mes calendario, los dos números pueden no coincidir: a alguien con
- * sueldo mensual que cobra los viernes se le liquidan cuatro o cinco períodos de siete días por
- * mes. Dividiendo por los días del período, cada semana daría 7/7 = 1, o sea el sueldo entero
- * cada viernes. Dividiendo por los del mes, las semanas suman un sueldo y nada más.
- *
- * `diasDelMes` sale de `diasDelMesDelPeriodo` en `frecuenciaDePago.js`. Cuando no viene, se usan
- * los del período, que es lo correcto justamente en el caso de siempre: con período mensual los
- * dos números son el mismo.
+ * Por hora y por guardia, lo que hizo. Por semana, los días que estuvo divididos por siete.
  */
-export function unidadesDelPeriodo({ unidad, acumulado, diasDelPeriodo, diasDelMes, diasDeLaPersona }) {
+export function unidadesDelPeriodo({ unidad, acumulado, diasDeLaPersona }) {
   if (unidad === UNIDADES.HORA) return acumulado?.horas ?? 0;
   if (unidad === UNIDADES.GUARDIA) return acumulado?.guardias ?? 0;
   if (unidad === UNIDADES.SEMANA) return diasDeLaPersona / DIAS_DE_UNA_SEMANA;
-  const divisor = diasDelMes ?? diasDelPeriodo;
-  if (!divisor) return 0;
-  return diasDeLaPersona / divisor;
+  return 0;
 }

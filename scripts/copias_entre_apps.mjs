@@ -227,11 +227,6 @@ export const GRUPOS = [
     copias: ['backend/src/utils/alarmasTomadas.js'],
   },
   {
-    que: 'cómo se llama y dónde se guarda cada documento generado del legajo',
-    original: 'panel/src/lib/documentosDeCese.js',
-    copias: ['backend/src/utils/documentosDeCese.js'],
-  },
-  {
     que: 'qué fotos verifican la identidad de un Asistente y dónde se guardan',
     original: 'panel/src/lib/fotosDeIdentidad.js',
     copias: ['backend/src/utils/fotosDeIdentidad.js'],

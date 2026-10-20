@@ -1,7 +1,7 @@
 // Cuántos días duró una ausencia.
 //
 // La columna `ausencias.dias_computados` existe desde el primer día, la constancia de ausencia la
-// imprime (`generarDocumentoCese.js:195`) y no la escribía nadie: el documento que se le entrega a
+// imprime (`constanciaDeAusencia.js`) y no la escribía nadie: el documento que se le entrega a
 // una persona salía sin el único número que le importa.
 //
 // ES UN HECHO, NO UNA INTERPRETACIÓN LEGAL. Acá se cuenta cuánto duró la ausencia, y nada más.

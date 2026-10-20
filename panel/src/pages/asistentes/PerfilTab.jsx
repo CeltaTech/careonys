@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePermisos } from '../../context/PermisosContext';
-import { useEmpresa } from '../../context/EmpresaContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import {
@@ -22,7 +21,6 @@ import {
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
-import { useMonedaActual } from '../../hooks/useMonedaActual';
 import { supabase } from '../../lib/supabaseClient';
 import { subirPapel, direccionParaMirar, TIPOS_ACEPTADOS, TAMANO_MAXIMO } from '../../lib/papelesDelLegajo';
 import { Button } from '../../components/ui/Button';
@@ -34,7 +32,6 @@ import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio'
 import { partesDesdeFila, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
-import { generarCertificadoTrabajo, generarCertificadoRemuneracionesServicios, descargarPDF } from '../../lib/generarDocumentoCese';
 import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
 import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
@@ -63,9 +60,7 @@ const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'genero', 'documento_tipo', 'document
 export function PerfilTab({ asistente, onActualizado }) {
   const { t, locale } = useLocale();
   const { usuario } = useAuth();
-  const { empresa } = useEmpresa();
   const esAdmin = esAdminOSuperior(usuario?.rol);
-  const moneda = useMonedaActual();
   const { puede } = usePermisos();
   const puedeEditarIdentidad = esAdmin || puede('editar_identidad_asistente');
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
@@ -102,14 +97,10 @@ export function PerfilTab({ asistente, onActualizado }) {
     domicilio: partesDesdeFila(asistente),
     tipo_asistente_id: asistente.tipo_asistente_id || '',
     estado: asistente.estado,
-    tipo_vinculo: asistente.tipo_vinculo,
-    categoria_cct: asistente.categoria_cct || '',
-    // Con qué se mide el trabajo de esta persona. Un Legajo del Asistente cargado antes no eligió ninguna, y lo que
-    // le corresponde es exactamente lo que el código deducía antes de su vínculo: así nadie
-    // cambia de forma de pago sin que alguien lo haya decidido.
+    // Con qué se mide el trabajo de esta persona. Un Legajo del Asistente que todavía no eligió
+    // ninguna se mide por hora, que es como se liquida mientras nadie decida otra cosa.
     unidad_medicion: unidadDeMedicionDe(asistente),
     valor_hora: asistente.valor_hora || '',
-    sueldo_basico: asistente.sueldo_basico || '',
     valor_guardia: asistente.valor_guardia || '',
     valor_semana: asistente.valor_semana || '',
     valor_hora_extra: asistente.valor_hora_extra || '',
@@ -334,7 +325,6 @@ export function PerfilTab({ asistente, onActualizado }) {
            domicilio ya cargado que esa pantalla nunca llegó a mostrar. */
         domicilio: renglonDelDomicilio(form.domicilio, catalogoDeLugares.lugares) || null,
         ...partesParaGuardar(form.domicilio),
-        tipo_vinculo: form.tipo_vinculo,
         horas_semanales: form.horas_semanales || null,
         // La columna se llama `canales` de antes y no se renombra (regla 13). La palabra del
         // producto, acá y en toda la pantalla, es modalidad de trabajo.
@@ -368,10 +358,8 @@ export function PerfilTab({ asistente, onActualizado }) {
           {
             asistente_id: asistente.id,
             prestadora_id: asistente.prestadora_id,
-            categoria_cct: form.categoria_cct || null,
             unidad_medicion: form.unidad_medicion,
             valor_hora: form.valor_hora || null,
-            sueldo_basico: form.sueldo_basico || null,
             valor_guardia: form.valor_guardia || null,
             valor_semana: form.valor_semana || null,
             valor_hora_extra: form.valor_hora_extra || null,
@@ -415,14 +403,6 @@ export function PerfilTab({ asistente, onActualizado }) {
     setGuardando(false);
     setGuardado(true);
     onActualizado();
-  }
-
-  function descargarCertificadoTrabajo() {
-    descargarPDF(generarCertificadoTrabajo({ asistente, nombreEmpresa: empresa?.nombre ?? '' }), `certificado-trabajo-${asistente.nombre}.pdf`);
-  }
-
-  function descargarCertificadoRemuneraciones() {
-    descargarPDF(generarCertificadoRemuneracionesServicios({ asistente, nombreEmpresa: empresa?.nombre ?? '', moneda }), `certificado-remuneraciones-${asistente.nombre}.pdf`);
   }
 
   return (
@@ -566,7 +546,6 @@ export function PerfilTab({ asistente, onActualizado }) {
             <b>{new Date(asistente.fecha_alta).toLocaleDateString(locale)}</b>
           </div>
         </div>
-        {asistente.estado === 'cesado' && <Alert variant="info">{t.asistentes.cese.ya_cesado}</Alert>}
       </section>
 
       {(estadoEspecialidades !== 'listo' || especialidadesDelTipo.length > 0) && form.tipo_asistente_id && (
@@ -612,17 +591,7 @@ export function PerfilTab({ asistente, onActualizado }) {
             <h2>{t.asistentes.tabs.perfil_vinculo}</h2>
           </div>
           <div className="molde-formgrid">
-            <FormField label={t.asistentes.col_vinculo} name="tipo_vinculo" type="select" value={form.tipo_vinculo} onChange={(e) => set('tipo_vinculo', e.target.value)}>
-              <option value="monotributo">{t.asistentes.vinculo_monotributo}</option>
-              <option value="dependencia">{t.asistentes.vinculo_dependencia}</option>
-            </FormField>
-
-            {form.tipo_vinculo === 'dependencia' && (
-              <FormField label={t.asistentes.categoria_cct} name="categoria_cct" value={form.categoria_cct} onChange={(e) => set('categoria_cct', e.target.value)} />
-            )}
-
-            {/* Con qué se mide el trabajo ya no lo deduce el código del vínculo: lo elige quien
-                carga el Legajo del Asistente. Se muestra el valor de la unidad elegida y no los cuatro, porque
+            {/* Con qué se mide el trabajo lo elige quien carga el Legajo del Asistente. Se muestra el valor de la unidad elegida y no los cuatro, porque
                 cuatro casillas de importe al lado invitan a llenar la que no se usa, y un valor
                 cargado que no se paga es una pregunta cada vez que alguien abre el Legajo del Asistente. */}
             <FormField label={t.asistentes.unidad_medicion} name="unidad_medicion" type="select" value={form.unidad_medicion} onChange={(e) => set('unidad_medicion', e.target.value)}>
@@ -732,22 +701,6 @@ export function PerfilTab({ asistente, onActualizado }) {
       <div className="molde-acciones">
         <Button onClick={guardar} disabled={guardando || !puedeEditarIdentidad}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
       </div>
-
-      {esAdmin && (
-        <section className="panel-tarjeta">
-          <div className="panel-tarjeta-titulo">
-            <h2>{t.asistentes.documentos.titulo}</h2>
-          </div>
-          <div className="molde-acciones">
-            <Button variant="secondary" onClick={descargarCertificadoTrabajo}>
-              {t.asistentes.documentos.certificado_trabajo}
-            </Button>
-            <Button variant="secondary" onClick={descargarCertificadoRemuneraciones}>
-              {t.asistentes.documentos.certificado_remuneraciones}
-            </Button>
-          </div>
-        </section>
-      )}
 
       {esAdmin && <DocumentosVencimiento asistenteId={asistente.id} />}
     </div>

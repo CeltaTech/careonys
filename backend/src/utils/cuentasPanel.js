@@ -358,7 +358,7 @@ const FILAS_DE_UNA_PERSONA_AUTORIZADA = [
 export async function crearAsistenteDirecto({
   nombre, telefono, email, documento, documento_tipo, documento_numero, documento_pais, dni, genero,
   domicilio, domicilioPartido, tipo_asistente_id, tipo_asistente, lugares, estado,
-  tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
+  valor_hora, horas_semanales, modalidades,
   prestadoraId, usuarioPanelId, importacionId, db,
 }) {
   if (!nombre || !email) {
@@ -424,7 +424,6 @@ export async function crearAsistenteDirecto({
       ...ubicacion,
       tipo_asistente_id: tipoAsistenteId,
       estado: estado || 'activo',
-      tipo_vinculo: tipo_vinculo || 'monotributo',
       horas_semanales: horas_semanales || null,
       // La columna se llama `canales` de antes y no se renombra (regla 13 de CLAUDE.md §7).
       ...(modalidadesElegidas && { canales: modalidadesElegidas }),
@@ -444,13 +443,11 @@ export async function crearAsistenteDirecto({
     // Lo que cobra el Asistente va a su propia tabla, no a su Legajo: ahí la base exige el
     // permiso `ver_pagos_asistente` antes de mostrarlo. Si el alta no trae ningún importe no
     // se crea la fila — una fila vacía no dice nada distinto de que no haya fila.
-    if (categoria_cct || valor_hora || sueldo_basico) {
+    if (valor_hora) {
       const { error: errorRemuneracion } = await db.from('remuneraciones_asistente').insert({
         asistente_id: asistenteId,
         prestadora_id: prestadoraId,
-        categoria_cct: categoria_cct || null,
         valor_hora: valor_hora || null,
-        sueldo_basico: sueldo_basico || null,
       });
       if (errorRemuneracion) throw new Error(errorRemuneracion.message);
     }

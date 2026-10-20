@@ -1173,7 +1173,18 @@ del Panel, y lo hace aunque tenga una sola.
 
 ## Reclutamiento
 
-**Esta sección esperaba la fusión, y ya no.** El reclutamiento es un módulo común a las dos
+**Al llegar acá se vuelve a analizar entera contra Match.** Match tiene un reclutamiento más
+desarrollado que el de acá —formulario de alta por pasos en la web y en el teléfono, papeles
+adjuntos revisados uno por uno, resolución con motivo obligatorio e historial— y lo que sigue se
+escribió sin mirarlo.
+
+**La modalidad se decide en el reclutamiento.** El postulante dice en qué modalidades se ofrece
+—Prestación directa, Match o las dos, entre las que la Prestadora tiene habilitadas— y la
+Prestadora lo habilita o no en cada una como uno de los pasos del reclutamiento. No es una casilla
+que se configura después en el Legajo. Hoy el código hace otra cosa: al pasar de postulación a
+Asistente le pone todas las habilitadas de la Prestadora, sin que nadie lo elija.
+
+El reclutamiento es un módulo común a las dos
 modalidades y la base de Asistentes de cada Prestadora es una sola para las dos; lo que faltaba
 para poder construirlo son las listas de opciones por Prestadora y los formularios declarados, y **las
 dos ya están construidas** —`listas_de_opciones` y `opciones_de_lista`, con su

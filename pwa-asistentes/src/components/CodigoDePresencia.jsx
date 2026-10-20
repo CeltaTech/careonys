@@ -56,8 +56,8 @@ export default function CodigoDePresencia({ t, pedirCodigo }) {
         const imagen = await QRCode.toDataURL(nuevo.codigo, { width: 220, margin: 1 });
         if (vivoRef.current) setQrDataUrl(imagen);
       } catch {
-        // Sin la imagen quedan los seis dígitos, que es lo que de verdad se compara. No es un
-        // error que valga la pena mostrar: el pase se puede hacer tipeando.
+        // Los seis dígitos no se muestran nunca: se podrían dictar por teléfono a alguien que no
+        // está en la casa. Sin la imagen, el Asistente pide autorización a quien coordina.
         if (vivoRef.current) setQrDataUrl(null);
       }
       if (renovacionRef.current) clearTimeout(renovacionRef.current);
@@ -78,7 +78,7 @@ export default function CodigoDePresencia({ t, pedirCodigo }) {
   }, [pedir]);
 
   // La cuenta regresiva es sólo para que quien mira sepa que la pantalla está viva y que el
-  // número de arriba se va a cambiar solo. Quien renueva es el temporizador de `pedir`.
+  // QR de arriba se va a cambiar solo. Quien renueva es el temporizador de `pedir`.
   useEffect(() => {
     if (!codigo?.segundos) return undefined;
     const reloj = setInterval(() => setRestan((n) => (n > 0 ? n - 1 : 0)), 1000);
@@ -108,7 +108,6 @@ export default function CodigoDePresencia({ t, pedirCodigo }) {
     <div className="guardia-card">
       <p className="guardia-card-detalle">{t.codigo_de_presencia.instrucciones}</p>
       {qrDataUrl && <img className="codigo-de-presencia-qr" src={qrDataUrl} alt={t.codigo_de_presencia.qr_alt} />}
-      <p className="codigo-de-presencia-numero">{codigo.codigo}</p>
       <p className="guardia-card-detalle">
         {restan > 0 ? t.codigo_de_presencia.se_renueva.replace('{segundos}', restan) : t.codigo_de_presencia.renovando}
       </p>

@@ -554,18 +554,6 @@ a {
   margin: 10px auto;
 }
 
-/* Los seis dígitos, con las letras separadas porque un número que se lee en voz alta se dicta
-   de a un dígito. */
-.codigo-de-presencia-numero {
-  font-family: var(--font-display);
-  font-size: 27px;
-  font-weight: 750;
-  letter-spacing: 0.35em;
-  text-align: center;
-  color: var(--tinta);
-  margin: 0 0 10px;
-}
-
 /* ---------- Badges ---------- */
 
 .badge {

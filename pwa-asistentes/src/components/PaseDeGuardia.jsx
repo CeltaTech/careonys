@@ -24,7 +24,7 @@ const SONDEO_MS = 4000;
  * HAY DOS CAMINOS Y UN PISO:
  *
  *   Plan A — lo muestra quien está en la casa: el Cliente, o el Asistente que se va cuando hay
- *   relevo. Se lee con la cámara o se tipea; las dos cosas terminan en el mismo pedido.
+ *   relevo. Se lee sólo con la cámara: si se pudiera tipear, se podría dictar por teléfono.
  *
  *   Plan B — no puede leer el código QR. El Asistente pide autorización eligiendo el motivo: queda
  *   anotado desde dónde, a qué hora y por qué la pidió, y el pedido aparece en el Panel. Quien coordina hace
@@ -45,7 +45,6 @@ const SONDEO_MS = 4000;
 export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancelar }) {
   // codigo · pedido · esperando · sin_comprobar
   const [paso, setPaso] = useState('codigo');
-  const [codigo, setCodigo] = useState('');
   const [motivo, setMotivo] = useState('');
   const [detalle, setDetalle] = useState('');
   // Lo que salió mal en el último intento de comprobar. Es una advertencia y no un error: siempre queda
@@ -95,7 +94,6 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
         const resultado = await onListo(comprobacion);
         if (resultado && resultado.ok === false && vivoRef.current) {
           setAdvertencia(resultado.mensaje);
-          setCodigo('');
           // La cámara se apagó para mandar el pedido; si el código no sirvió, hay que volver a
           // prenderla para que se pueda intentar de nuevo sin salir y entrar de la pantalla.
           if (paso === 'codigo') setIntento((n) => n + 1);
@@ -124,14 +122,14 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
           (leido) => {
             if (!leyendoRef.current || cancelado) return;
             leyendoRef.current = false;
-            setCodigo(String(leido ?? '').trim());
             entregar({ codigo: String(leido ?? '').trim() });
           },
           () => {},
         );
       } catch {
         // Sin cámara, sin permiso, o el navegador no la deja usar acá. No se avisa nada: abajo
-        // está el mismo código para tipear, que es exactamente lo mismo con más trabajo.
+        // está el pedido de autorización. El código no se tipea, porque se podría dictar por
+        // teléfono desde lejos.
         leyendoRef.current = false;
       }
     })();
@@ -247,31 +245,6 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
     </button>
   );
 
-  const campoDelCodigo = (
-    <>
-      <div className="form-field">
-        <label htmlFor="pase-codigo">{t.pase_de_guardia.codigo_label}</label>
-        <input
-          id="pase-codigo"
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          value={codigo}
-          onChange={(e) => setCodigo(e.target.value)}
-          disabled={enviando}
-        />
-      </div>
-      <button
-        type="button"
-        className="btn btn-primary btn-full"
-        onClick={() => entregar({ codigo: codigo.trim() })}
-        disabled={enviando || !codigo.trim()}
-      >
-        {enviando ? t.pase_de_guardia.confirmando : t.pase_de_guardia.confirmar_codigo}
-      </button>
-    </>
-  );
-
   return (
     <div className="guardia-card">
       <p className="guardia-card-paciente">{titulo}</p>
@@ -283,8 +256,6 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
         <>
           <p className="guardia-card-detalle">{t.pase_de_guardia.instrucciones}</p>
           <div id={LECTOR_ID} className="lector-camara" />
-          <p className="guardia-card-detalle pwa-card-pie">{t.pase_de_guardia.o_tipear}</p>
-          {campoDelCodigo}
           <button
             type="button"
             className="btn btn-secondary btn-full pwa-card-pie"

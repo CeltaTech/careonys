@@ -1184,6 +1184,11 @@ Prestadora lo habilita o no en cada una como uno de los pasos del reclutamiento.
 que se configura después en el Legajo. Hoy el código hace otra cosa: al pasar de postulación a
 Asistente le pone todas las habilitadas de la Prestadora, sin que nadie lo elija.
 
+**Primero el Certificado de Aptitud, después Activo.** El certificado es lo que cierra la
+verificación, y recién con él se lo pasa a Activo. Hoy el código lo tiene al revés: el certificado
+sólo se emite si el Asistente ya está Activo, se lo puede pasar a Activo sin ningún certificado, y
+si después vuelve a Inactivo el certificado sigue figurando vigente en la aplicación del Cliente.
+
 El reclutamiento es un módulo común a las dos
 modalidades y la base de Asistentes de cada Prestadora es una sola para las dos; lo que faltaba
 para poder construirlo son las listas de opciones por Prestadora y los formularios declarados, y **las

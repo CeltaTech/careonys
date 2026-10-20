@@ -22,7 +22,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | no se guardó: un Asistente sin ninguna modalidad no puede recibir guardias. |
 | **Qué puede hacer después** | marcar Prestación directa, Match o las dos, y guardar. |
 | **Cómo se muestra** | franja. |
-| **Decisión** |  |
+| **Decisión** | queda para después de la mudanza: se decide con el reclutamiento. |
 
 ### 47. Asistente no Activo para el certificado
 
@@ -38,7 +38,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | el Asistente está Inactivo o Cesado. El botón «Emitir Certificado» queda apagado. |
 | **Qué puede hacer después** | ir a «Perfil», pasarlo a Activo y volver. |
 | **Cómo se muestra** | franja. |
-| **Decisión** |  |
+| **Decisión** | queda para después de la mudanza: se decide con el reclutamiento. |
 
 ### 49. Consentimiento firmado por otra persona
 

@@ -12,14 +12,21 @@ const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencid
 
 // Los motivos que acá tienen frase propia. Las del catálogo las comparten otras pantallas —la
 // activación, el pase de guardia—, y acá lo que se vuelve a pedir es el cambio de contraseña o el
-// código que llegó por WhatsApp. El tope por hora de envíos se dice igual que el de intentos.
+// código que llegó por WhatsApp. El tope por hora de envíos se dice igual que el de intentos, y
+// los dos dicen cuántos minutos esperar.
 const FRASE_PROPIA = {
   token_vencido: (t) => t.auth.clave_nueva_plazo_vencido,
   codigo_incorrecto: (t) => t.auth.clave_nueva_codigo_incorrecto,
   codigo_vencido: (t) => t.auth.clave_nueva_codigo_vencido,
-  demasiados_intentos: (t) => t.auth.clave_nueva_demasiados_intentos,
-  demasiados_pedidos: (t) => t.auth.clave_nueva_demasiados_intentos,
+  demasiados_intentos: (t, err) => fraseDeEspera(t, err?.minutos),
+  demasiados_pedidos: (t, err) => fraseDeEspera(t, err?.minutos),
 };
+
+function fraseDeEspera(t, minutos) {
+  if (!Number.isInteger(minutos) || minutos < 1) return t.auth.clave_nueva_demasiados_intentos;
+  if (minutos === 1) return t.auth.clave_nueva_demasiados_intentos_minutos_uno;
+  return t.auth.clave_nueva_demasiados_intentos_minutos.replace('{minutos}', minutos);
+}
 
 // Donde se elige la clave nueva, con el enlace que llegó por correo.
 //
@@ -108,7 +115,7 @@ export default function ClaveNueva() {
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setCambiada(true);
     } catch (err) {
-      setError(FRASE_PROPIA[err?.motivo]?.(t) ?? mensajeDeError(err, t, 'cambiar la contraseña'));
+      setError(FRASE_PROPIA[err?.motivo]?.(t, err) ?? mensajeDeError(err, t, 'cambiar la contraseña'));
       if (MOTIVOS_SIN_REINTENTO.includes(err?.motivo)) setMotivoSinReintento(err.motivo);
     } finally {
       setEnviando(false);

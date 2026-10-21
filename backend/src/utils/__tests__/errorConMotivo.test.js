@@ -116,6 +116,16 @@ describe('responderError', () => {
     assert.equal(JSON.stringify(capturado.cuerpo).includes('auth.users'), false);
   });
 
+  it('los minutos de espera viajan con el motivo, para que la pantalla diga cuánto esperar', () => {
+    const { res, capturado } = respuestaFalsa();
+    const err = new ErrorConMotivo('demasiados_intentos');
+    err.minutos = 7;
+    sinRuido(() => responderError(res, err));
+
+    assert.equal(capturado.estado, 429);
+    assert.equal(capturado.cuerpo.minutos, 7);
+  });
+
   it('sin motivo contesta un código y nunca una frase', () => {
     const { res, capturado } = respuestaFalsa();
     sinRuido(() => responderError(res, new Error('cualquier cosa'), 400));

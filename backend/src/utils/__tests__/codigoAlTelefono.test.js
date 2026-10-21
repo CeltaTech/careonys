@@ -160,6 +160,15 @@ async function motivoDe(promesa) {
   }
 }
 
+async function errorDe(promesa) {
+  try {
+    await promesa;
+  } catch (err) {
+    return err;
+  }
+  assert.fail('tenía que rechazar');
+}
+
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
@@ -275,6 +284,29 @@ describe('el tope de intentos', () => {
     assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/codigos_al_telefono'), false);
   });
 
+  it('el rechazo dice cuántos minutos esperar: los del bloqueo entero al agotarlo', async () => {
+    process.env.MINUTOS_DEL_CODIGO_AL_TELEFONO = '10';
+    prepararComprobacion({ fila: filaDelCodigo({ codigo_expira_en: enMinutos(1) }), intentos: INTENTOS_MAXIMOS + 1 });
+
+    const err = await errorDe(
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: '000000' }),
+    );
+
+    assert.equal(err.motivo, 'demasiados_intentos');
+    assert.equal(err.minutos, 10);
+  });
+
+  it('y durante el bloqueo, los que le quedan, redondeados para arriba', async () => {
+    prepararComprobacion({ fila: filaDelCodigo({ codigo_expira_en: enMinutos(3.5) }), intentos: INTENTOS_MAXIMOS + 2 });
+
+    const err = await errorDe(
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: '000000' }),
+    );
+
+    assert.equal(err.motivo, 'demasiados_intentos');
+    assert.equal(err.minutos, 4);
+  });
+
   it('justo en el tope todavía entra', async () => {
     // El control roto a propósito, del otro lado del borde.
     prepararComprobacion({ fila: filaDelCodigo(), intentos: INTENTOS_MAXIMOS });
@@ -357,6 +389,28 @@ describe('el tope de pedidos por hora', () => {
     assert.equal(motivo, 'demasiados_pedidos');
     // Y no se emitió ninguno: el tope tiene que frenar antes de escribir.
     assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/codigos_al_telefono'), false);
+  });
+
+  it('el tope dice cuántos minutos faltan para que el pedido más viejo cumpla la hora', async () => {
+    conPlantillaAprobada();
+    conPedidosEnLaHora(topeDeCodigosPorHora());
+    respuestas.set('GET /rest/v1/pedidos_de_codigo_al_telefono', [{ pedido_en: enMinutos(-45) }]);
+
+    const err = await errorDe(mandarCodigoAlTelefono({ usuario, uso: USO_VERIFICAR }));
+
+    assert.equal(err.motivo, 'demasiados_pedidos');
+    assert.equal(err.minutos, 15);
+    todoConElTrabajoDeLaPrestadora();
+  });
+
+  it('y si la base no dice cuándo fue el más viejo, la hora entera', async () => {
+    conPlantillaAprobada();
+    conPedidosEnLaHora(topeDeCodigosPorHora());
+
+    const err = await errorDe(mandarCodigoAlTelefono({ usuario, uso: USO_VERIFICAR }));
+
+    assert.equal(err.motivo, 'demasiados_pedidos');
+    assert.equal(err.minutos, 60);
   });
 
   it('un pedido por debajo del tope sí sale', async () => {

@@ -178,6 +178,31 @@ async function pedidosEnLaUltimaHora({ prestadoraId, verificador, db }) {
   return Number.isFinite(count) ? count : Number.POSITIVE_INFINITY;
 }
 
+// Cuántos minutos enteros faltan hasta ese momento, redondeando para arriba y nunca menos de uno:
+// quien espera tiene que saber cuánto, y decirle «0 minutos» lo haría intentar antes de tiempo.
+function minutosQueFaltan(hasta) {
+  const ms = Date.parse(hasta) - Date.now();
+  return Number.isFinite(ms) ? Math.max(1, Math.ceil(ms / 60000)) : 1;
+}
+
+// Cuándo se libera un lugar del tope por hora: cuando el pedido más viejo de la ventana cumple la
+// hora. Si la base no contesta se dice la hora entera, que es lo más que puede faltar.
+async function minutosHastaQueSeLibreElTope({ prestadoraId, verificador, db }) {
+  const desde = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { data, error } = await db
+    .from('pedidos_de_codigo_al_telefono')
+    .select('pedido_en')
+    .eq('prestadora_id', prestadoraId)
+    .eq('telefono_verificador', verificador)
+    .gte('pedido_en', desde)
+    .order('pedido_en', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.pedido_en) return 60;
+  return minutosQueFaltan(new Date(Date.parse(data.pedido_en) + 60 * 60 * 1000).toISOString());
+}
+
 /**
  * Manda un código al teléfono de esta persona y deja la fila con la que después se comprueba.
  *
@@ -205,7 +230,9 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
 async function emitirYMandar({ db, usuario, uso, numero, plantilla }) {
   const verificador = verificadorDelTelefono(numero);
   if ((await pedidosEnLaUltimaHora({ prestadoraId: usuario.prestadora_id, verificador, db })) >= topeDeCodigosPorHora()) {
-    throw new ErrorConMotivo('demasiados_pedidos', 'Se alcanzó el tope de códigos por hora para ese número');
+    const err = new ErrorConMotivo('demasiados_pedidos', 'Se alcanzó el tope de códigos por hora para ese número');
+    err.minutos = await minutosHastaQueSeLibreElTope({ prestadoraId: usuario.prestadora_id, verificador, db });
+    throw err;
   }
 
   // Los códigos anteriores del mismo acto se dan por anulados antes de emitir el nuevo: pedir dos
@@ -306,14 +333,18 @@ async function tomarElCodigo({ db, prestadoraId, usuarioId, uso, codigo }) {
     // duraría lo que le quedara al código —a veces segundos, a veces casi diez minutos— y la
     // pantalla no podría decir cuánto esperar. Se corre una sola vez, en el intento que pasa el
     // tope: los que siguen no lo estiran. Vencido, el código deja lugar a uno nuevo.
+    const err = new ErrorConMotivo('demasiados_intentos');
     if (intentos === INTENTOS_MAXIMOS + 1) {
+      err.minutos = minutosDeVidaDelCodigo();
       await db
         .from('codigos_al_telefono')
-        .update({ codigo_expira_en: vencimientoEnMinutos(minutosDeVidaDelCodigo()) })
+        .update({ codigo_expira_en: vencimientoEnMinutos(err.minutos) })
         .eq('prestadora_id', prestadoraId)
         .eq('id', fila.id);
+    } else {
+      err.minutos = minutosQueFaltan(fila.codigo_expira_en);
     }
-    throw new ErrorConMotivo('demasiados_intentos');
+    throw err;
   }
 
   if (!codigoCoincide(codigo, fila.codigo_verificador)) throw new ErrorConMotivo('codigo_incorrecto');

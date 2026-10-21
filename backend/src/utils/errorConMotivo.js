@@ -227,5 +227,7 @@ export function responderError(res, error, estadoPorOmision = 500) {
   // Lo que la pantalla necesita para decir qué hacer: todos los motivos y los turnos de cada uno.
   if (error?.motivo && Array.isArray(error.motivos)) cuerpo.motivos = error.motivos;
   if (error?.motivo && Array.isArray(error.turnos)) cuerpo.turnos = error.turnos;
+  // Cuánto hay que esperar antes de volver a probar, para que la pantalla lo diga con el número.
+  if (error?.motivo && Number.isInteger(error.minutos)) cuerpo.minutos = error.minutos;
   return res.status(estado).json(cuerpo);
 }

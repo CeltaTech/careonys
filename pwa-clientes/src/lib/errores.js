@@ -129,6 +129,8 @@ export function errorDeLaRespuesta(respuesta, datos) {
   // desactivación—, la pantalla los necesita para decir qué hacer con cada uno.
   if (Array.isArray(datos?.motivos)) error.motivos = datos.motivos;
   if (Array.isArray(datos?.turnos)) error.turnos = datos.turnos;
+  // Cuánto hay que esperar antes de volver a probar, cuando el backend lo sabe.
+  if (Number.isInteger(datos?.minutos)) error.minutos = datos.minutos;
   return error;
 }
 

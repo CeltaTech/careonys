@@ -294,7 +294,7 @@ export const T = {
       cerrar_si: 'Sí, cerrar',
       cerrar_ok: 'Guardia cerrada.',
       cerrar_falta_reporte: 'Falta el Reporte Diario.',
-      cerrar_faltan_reportes: 'Antes de cerrar la guardia falta el Reporte Diario de: {nombres}.',
+      cerrar_faltan_reportes: 'Falta el Reporte Diario de: {nombres}.',
       fuera_de_rango: 'El check-in se hizo lejos del domicilio del Paciente. Se registró igual y el Coordinador recibe un mensaje.',
       // Pendiente #113 — el pase de guardia. Misma idea que fuera_de_rango: el pase nunca traba
       // el check-in ni el check-out, así que esto es una advertencia y no un error.
@@ -310,7 +310,6 @@ export const T = {
       ubicacion_no_disponible: 'No se pudo obtener la ubicación en este momento.',
       cargar_reporte: 'Cargar Reporte Diario',
       cargar_reporte_de: 'Cargar el Reporte Diario de {nombre}',
-      un_reporte_por_paciente: 'Cargue el Reporte Diario de cada Paciente para cerrar la guardia.',
       ver_reportes_anteriores: 'Ver reportes anteriores',
       // Cuando el turno cubre a más de una persona hay un botón igual por cada una. En la
       // pantalla se distinguen por el nombre que tienen arriba; dichos en voz alta serían
@@ -994,7 +993,7 @@ export const T = {
       cerrar_si: 'Yes, close it',
       cerrar_ok: 'Shift closed.',
       cerrar_falta_reporte: 'The Daily Report is missing.',
-      cerrar_faltan_reportes: 'Before closing the shift, the Daily Report is still missing for: {nombres}.',
+      cerrar_faltan_reportes: 'The Daily Report is missing for: {nombres}.',
       fuera_de_rango: 'Check-in was made far from the Patient\'s address. It was recorded anyway and the Coordinator gets a message.',
       quedo_sin_comprobar: 'It was recorded as unverified. The Coordinator will see it on their list and may call to confirm it.',
       sin_conexion_sin_comprobar: 'With no connection the code cannot be checked, so this will be recorded as unverified once the signal is back. The Coordinator will see it on their list.',
@@ -1004,7 +1003,6 @@ export const T = {
       ubicacion_no_disponible: 'The location could not be obtained right now.',
       cargar_reporte: 'Fill Daily Report',
       cargar_reporte_de: "Fill {nombre}'s Daily Report",
-      un_reporte_por_paciente: 'Fill in the Daily Report for each Patient to close the shift.',
       ver_reportes_anteriores: 'View previous reports',
       ver_reportes_anteriores_de: 'View previous reports for {nombre}',
       tiempo_transcurrido: 'Time since check-in',
@@ -1641,7 +1639,7 @@ export const T = {
       cerrar_si: 'Sim, encerrar',
       cerrar_ok: 'Plantão encerrado.',
       cerrar_falta_reporte: 'Falta o Relatório Diário.',
-      cerrar_faltan_reportes: 'Antes de encerrar o plantão ainda falta o Relatório Diário de: {nombres}.',
+      cerrar_faltan_reportes: 'Falta o Relatório Diário de: {nombres}.',
       fuera_de_rango: 'O check-in foi feito longe do endereço do Paciente. Foi registrado mesmo assim e o Coordenador recebe uma mensagem.',
       quedo_sin_comprobar: 'Ficou registrado sem verificação. O Coordenador vai vê-lo na sua lista e pode ligar para confirmar.',
       sin_conexion_sin_comprobar: 'Sem conexão não é possível verificar o código, então isto vai ser registrado sem verificação quando o sinal voltar. O Coordenador vai vê-lo na sua lista.',
@@ -1651,7 +1649,6 @@ export const T = {
       ubicacion_no_disponible: 'Não foi possível obter a localização neste momento.',
       cargar_reporte: 'Preencher Relatório Diário',
       cargar_reporte_de: 'Preencher o Relatório Diário de {nombre}',
-      un_reporte_por_paciente: 'Preencha o Relatório Diário de cada Paciente para encerrar o plantão.',
       ver_reportes_anteriores: 'Ver relatórios anteriores',
       ver_reportes_anteriores_de: 'Ver relatórios anteriores de {nombre}',
       tiempo_transcurrido: 'Tempo desde o check-in',

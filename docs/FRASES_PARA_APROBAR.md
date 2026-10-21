@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (7)
-
-### 20. Un Reporte Diario por Paciente
-
-| | |
-|---|---|
-| **Texto actual** | Cargue el Reporte Diario de cada Paciente para cerrar la guardia. |
-| **Propuesta corta** | «Falta un Reporte Diario por Paciente para cerrar.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | tiene el mismo corte que la ficha 19. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | una guardia con varios Pacientes, debajo de los botones de cada Reporte Diario. |
-| **Qué estaba haciendo** | marcó el check-in y a algún Paciente le falta el reporte. |
-| **Qué pasó** | mientras falte alguno, «Cerrar la guardia» no aparece. |
-| **Qué puede hacer después** | cargar el reporte de cada Paciente que falte. |
-| **Cómo se muestra** | texto fijo debajo de los botones. |
-| **Decisión** |  |
+## Aplicación del Asistente (6)
 
 ### 21. Explicación del aviso de emergencia
 

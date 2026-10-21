@@ -572,9 +572,9 @@ export default function GuardiaActiva() {
                   {sonVarios ? con(t.guardia_activa.cargar_reporte_de, { nombre: p.nombre }) : t.guardia_activa.cargar_reporte}
                 </Link>
               ))}
-              <p className="guardia-card-detalle">
-                {sonVarios ? t.guardia_activa.un_reporte_por_paciente : t.guardia_activa.cerrar_falta_reporte}
-              </p>
+              {/* Con un solo Paciente, el botón dice lo que falta y el de cerrar aparece solo cuando
+                  el reporte está: no hace falta ninguna frase debajo. */}
+              {sonVarios && <p className="guardia-card-detalle">{t.guardia_activa.un_reporte_por_paciente}</p>}
             </>
           )}
 

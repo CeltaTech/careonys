@@ -2783,6 +2783,8 @@ export const T = {
       marcar_atendida: 'Marcar atendida',
       atendida_el: 'Atendida el',
       nadie_la_atiende: 'Nadie la está atendiendo',
+      contratante: 'Contratante',
+      contratante_sin_telefono: 'Sin teléfono cargado',
     },
     contenidos: {
       titulo: 'Contenidos',
@@ -5680,6 +5682,8 @@ export const T = {
       marcar_atendida: 'Mark as attended',
       atendida_el: 'Attended on',
       nadie_la_atiende: 'No one is handling it',
+      contratante: 'Contracting party',
+      contratante_sin_telefono: 'No phone on file',
     },
     contenidos: {
       titulo: 'Content',
@@ -8568,6 +8572,8 @@ export const T = {
       marcar_atendida: 'Marcar como atendida',
       atendida_el: 'Atendida em',
       nadie_la_atiende: 'Ninguém está atendendo',
+      contratante: 'Contratante',
+      contratante_sin_telefono: 'Sem telefone cadastrado',
     },
     contenidos: {
       titulo: 'Conteúdos',

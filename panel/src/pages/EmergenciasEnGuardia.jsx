@@ -195,6 +195,22 @@ function DetalleDeEmergencia({ emergencia, laTieneOtraPersona, onClose, onAtendi
 
         <p style={{ whiteSpace: 'pre-wrap' }}>{emergencia.detalle}</p>
 
+        {/* A quién llama Coordinación: el Contratante, con cada teléfono listo para marcar. Si
+            quien mira no tiene permiso para ver Personas, el Backend no lo manda y no se muestra. */}
+        {emergencia.guardia?.contratante && (
+          <p>
+            <b>{t.emergencias.contratante}:</b> {emergencia.guardia.contratante.nombre}
+            {emergencia.guardia.contratante.telefonos.length === 0
+              ? ` — ${t.emergencias.contratante_sin_telefono}`
+              : emergencia.guardia.contratante.telefonos.map((telefono) => (
+                  <span key={telefono}>
+                    {' — '}
+                    <a href={`tel:${telefono.replace(/[^\d+]/g, '')}`}>{telefono}</a>
+                  </span>
+                ))}
+          </p>
+        )}
+
         {emergencia.atendida_at ? (
           <Alert variant="info">
             <p>

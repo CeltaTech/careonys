@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (6)
-
-### 21. Explicación del aviso de emergencia
-
-| | |
-|---|---|
-| **Texto actual** | La Prestadora recibe este aviso en el momento. Si necesita atención médica o de seguridad, llame primero al número de emergencias: este aviso no reemplaza esa llamada. |
-| **Propuesta corta** | «Si hay riesgo, llame primero al número de emergencias.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | que le llega a la Prestadora ya lo dice el botón. Lo que no puede faltar es que el aviso no reemplaza la llamada. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | una guardia en curso → «Avisar una emergencia», arriba del casillero «¿Qué está pasando?». |
-| **Qué estaba haciendo** | iba a avisar una emergencia. |
-| **Qué pasó** | no es un error; aparece siempre. |
-| **Qué puede hacer después** | escribir qué pasa y tocar «Enviar el aviso», o cancelar. |
-| **Cómo se muestra** | texto fijo. |
-| **Decisión** |  |
+## Aplicación del Asistente (5)
 
 ### 22. Cambió el texto de un permiso
 

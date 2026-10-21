@@ -40,7 +40,7 @@ export const panelEmergenciasRouter = Router();
    juntos—, y una consulta anidada sobre una clave así depende de que PostgREST la resuelva; dos
    consultas más no cuestan nada acá, donde el tope es de doscientas filas, y no se rompen el día
    que alguien agregue otra relación entre esas dos tablas. */
-async function conNombres(emergencias, usuarioPanel) {
+async function conNombres(emergencias, usuarioPanel, db) {
   const guardiaIds = [...new Set(emergencias.map((e) => e.guardia_id))];
   if (guardiaIds.length === 0) return [];
 
@@ -64,12 +64,14 @@ async function conNombres(emergencias, usuarioPanel) {
       ? acotarAPrestadora(supabase.from('asistentes').select('id, nombre').in('id', asistenteIds), usuarioPanel)
       : Promise.resolve({ data: [] }),
     pacienteIds.length
-      ? acotarAPrestadora(supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', pacienteIds), usuarioPanel)
+      ? acotarAPrestadora(supabase.from('pacientes').select(`id, cliente_id, ${FICHA_NOMBRE}`).in('id', pacienteIds), usuarioPanel)
       : Promise.resolve({ data: [] }),
   ]);
 
   const nombreAsistente = new Map((asistentes ?? []).map((a) => [a.id, a.nombre]));
   const nombrePaciente = new Map(conSusFichas(pacientes).map((p) => [p.id, p.nombre]));
+  const clienteDelPaciente = new Map((pacientes ?? []).map((p) => [p.id, p.cliente_id]));
+  const contratantes = await contratantesDeLosClientes(db, [...new Set(clienteDelPaciente.values())].filter(Boolean));
 
   return emergencias.map((emergencia) => {
     const guardia = porGuardia.get(emergencia.guardia_id) ?? null;
@@ -81,9 +83,46 @@ async function conNombres(emergencias, usuarioPanel) {
         hora_fin: guardia.hora_fin,
         asistente: nombreAsistente.get(guardia.asistente_id) ?? null,
         paciente: nombrePaciente.get(guardia.paciente_id) ?? null,
+        contratante: contratantes.get(clienteDelPaciente.get(guardia.paciente_id)) ?? null,
       },
     };
   });
+}
+
+/* A quién llama Coordinación cuando entra una emergencia: el Contratante del Cliente, con los
+   teléfonos de su Ficha de Persona que siguen en uso. Se lee con la credencial de quien pide, así
+   que la base decide: quien no tiene permiso para ver Personas no recibe ni el nombre ni el
+   número, y la emergencia se muestra igual. Un Contratante sin teléfono cargado viene con la
+   lista vacía. */
+async function contratantesDeLosClientes(db, clienteIds) {
+  const porCliente = new Map();
+  if (clienteIds.length === 0) return porCliente;
+
+  const { data: clientes } = await db.from('clientes').select('id, contratante_persona_id').in('id', clienteIds);
+  const personaIds = [...new Set((clientes ?? []).map((c) => c.contratante_persona_id).filter(Boolean))];
+  if (personaIds.length === 0) return porCliente;
+
+  const [{ data: personas }, { data: telefonos }] = await Promise.all([
+    db.from('personas').select('id, nombre_visible').in('id', personaIds),
+    db
+      .from('telefonos_de_la_persona')
+      .select('persona_id, telefono')
+      .in('persona_id', personaIds)
+      .is('fuera_de_uso_at', null)
+      .order('created_at', { ascending: true }),
+  ]);
+
+  const nombre = new Map((personas ?? []).map((p) => [p.id, p.nombre_visible]));
+  for (const cliente of clientes ?? []) {
+    if (!nombre.has(cliente.contratante_persona_id)) continue;
+    porCliente.set(cliente.id, {
+      nombre: nombre.get(cliente.contratante_persona_id),
+      telefonos: (telefonos ?? [])
+        .filter((t) => t.persona_id === cliente.contratante_persona_id)
+        .map((t) => t.telefono),
+    });
+  }
+  return porCliente;
 }
 
 /* De quién es la información de salud que se va a entregar: los pacientes de cada guardia con
@@ -138,7 +177,7 @@ panelEmergenciasRouter.get('/', requiereRolPanel, exigirOrganizacionActiva, asyn
   }
 
   try {
-    res.json({ emergencias: await conNombres(emergencias, req.usuarioPanel) });
+    res.json({ emergencias: await conNombres(emergencias, req.usuarioPanel, db) });
   } catch (e) {
     responderError(res, e);
   }

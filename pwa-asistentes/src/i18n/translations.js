@@ -54,12 +54,12 @@ export const T = {
         // Los del pase de guardia (pendiente #113). Ninguno de los cuatro deja al Asistente
         // afuera: los tres primeros se ven adentro del pase, que se queda abierto para volver a
         // intentar o para entrar igual eligiendo un motivo.
-        codigo_incorrecto: 'QR incorrecto.',
+        codigo_incorrecto: 'Este QR no corresponde.',
         codigo_vencido: 'El código venció. Solicite un código nuevo a la Prestadora.',
         // Dos frases que se parecen y dicen cosas distintas (pendiente #177). Los intentos son de
         // esta llegada y no del código: que la Prestadora suelte uno nuevo ya no los devuelve, y
         // la salida es el piso de siempre. El tope de pedidos por minuto sí se arregla esperando.
-        demasiados_pedidos: 'Hizo demasiados intentos en poco tiempo. Espere un minuto e intente nuevamente, o elija un motivo para continuar sin comprobar.',
+        demasiados_pedidos: 'Demasiados intentos. Espere un minuto o elija un motivo.',
         ya_comprobada: 'Esta llegada ya quedó comprobada.',
         // Los del descargo ante una calificación. Se escribe una sola vez, así que el segundo
         // intento no es un choque de datos: es que ya está dicho lo que había para decir.
@@ -790,9 +790,9 @@ export const T = {
         matricula_sin_matricula: 'No licence uploaded.',
         matricula_vencida: 'Licence expired.',
         matricula_sin_verificar: 'The licence has been uploaded, but the Provider has not checked it yet. Until then, shifts cannot be taken.',
-        codigo_incorrecto: 'Incorrect QR code.',
+        codigo_incorrecto: 'This QR code does not match.',
         codigo_vencido: 'The code has expired. Request a new code from the Provider.',
-        demasiados_pedidos: 'You made too many attempts in a short time. Wait a minute and try again, or choose a reason to continue without checking.',
+        demasiados_pedidos: 'Too many attempts. Wait a minute or choose a reason.',
         ya_comprobada: 'This arrival has already been verified.',
         descargo_vacio: 'The reply is empty. Write the reply before saving it.',
         descargo_ya_cargado: 'This rating already has its reply written, and a reply cannot be edited.',
@@ -1436,9 +1436,9 @@ export const T = {
         matricula_sin_matricula: 'Sem registro profissional enviado.',
         matricula_vencida: 'Registro profissional vencido.',
         matricula_sin_verificar: 'O registro foi enviado, mas a Prestadora ainda não o comprovou. Até então não é possível assumir plantões.',
-        codigo_incorrecto: 'QR incorreto.',
+        codigo_incorrecto: 'Este QR não corresponde.',
         codigo_vencido: 'O código expirou. Solicite um novo código à Prestadora.',
-        demasiados_pedidos: 'Você fez tentativas demais em pouco tempo. Aguarde um minuto e tente novamente, ou escolha um motivo para continuar sem verificar.',
+        demasiados_pedidos: 'Tentativas demais. Aguarde um minuto ou escolha um motivo.',
         ya_comprobada: 'Esta chegada já foi verificada.',
         descargo_vacio: 'A resposta está vazia. Escreva a resposta antes de salvá-la.',
         descargo_ya_cargado: 'Esta avaliação já tem a sua resposta escrita, e uma resposta não se edita.',

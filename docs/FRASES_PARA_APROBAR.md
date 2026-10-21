@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 21 fichas.** Panel 3, aplicación del Asistente 12, aplicación del Cliente 4, Base 2.
+**Total: 20 fichas.** Panel 3, aplicación del Asistente 11, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (12)
-
-### 12. Código vencido
-
-| | |
-|---|---|
-| **Texto actual** | El código venció. Solicite un código nuevo a la Prestadora. |
-| **Propuesta corta** | «Código de verificación vencido. Abra otra vez el enlace del correo para recibir uno nuevo.» |
-| **¿Aparece hoy?** | no: ninguna Prestadora tiene aprobado el mensaje que lleva el código al teléfono. |
-| **Por qué** | el código no lo da la Prestadora: llega por mensaje al teléfono de la persona, y abrir el enlace otra vez manda uno nuevo. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | página «Contraseña nueva», a la que se llega con el enlace del correo para recuperar la contraseña, botón para confirmar. |
-| **Qué estaba haciendo** | escribía el código de verificación que le llegó al teléfono. |
-| **Qué pasó** | pasaron los 10 minutos que dura ese código. |
-| **Qué puede hacer después** | abrir otra vez el enlace del correo, que sigue sirviendo, y le llega un código nuevo. |
-| **Cómo se muestra** | franja arriba del formulario. |
-| **Decisión** |  |
+## Aplicación del Asistente (11)
 
 ### 13. Demasiados intentos con el código
 

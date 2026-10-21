@@ -8,6 +8,7 @@ import {
   sumarIntento,
   seAgotaronLosIntentos,
   vencimientoEnMinutos,
+  INTENTOS_MAXIMOS,
 } from './codigoDeUnSoloUso.js';
 import { enviarWhatsAppPorPlantilla } from './whatsapp.js';
 
@@ -300,7 +301,20 @@ async function tomarElCodigo({ db, prestadoraId, usuarioId, uso, codigo }) {
   if (estaVencido(fila.codigo_expira_en)) throw new ErrorConMotivo('codigo_vencido');
 
   const intentos = await sumarIntento({ tabla: 'codigos_al_telefono', id: fila.id, prestadoraId });
-  if (seAgotaronLosIntentos(intentos)) throw new ErrorConMotivo('demasiados_intentos');
+  if (seAgotaronLosIntentos(intentos)) {
+    // EL BLOQUEO DURA LO MISMO QUE VIVE UN CÓDIGO, contado desde el intento que lo agotó. Sin esto
+    // duraría lo que le quedara al código —a veces segundos, a veces casi diez minutos— y la
+    // pantalla no podría decir cuánto esperar. Se corre una sola vez, en el intento que pasa el
+    // tope: los que siguen no lo estiran. Vencido, el código deja lugar a uno nuevo.
+    if (intentos === INTENTOS_MAXIMOS + 1) {
+      await db
+        .from('codigos_al_telefono')
+        .update({ codigo_expira_en: vencimientoEnMinutos(minutosDeVidaDelCodigo()) })
+        .eq('prestadora_id', prestadoraId)
+        .eq('id', fila.id);
+    }
+    throw new ErrorConMotivo('demasiados_intentos');
+  }
 
   if (!codigoCoincide(codigo, fila.codigo_verificador)) throw new ErrorConMotivo('codigo_incorrecto');
 

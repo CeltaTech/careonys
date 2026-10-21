@@ -10,6 +10,17 @@ const API_URL = import.meta.env.VITE_API_URL;
 // sirve nunca, así que el formulario se retira en vez de invitar a un intento que va a fallar.
 const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
 
+// Los motivos que acá tienen frase propia. Las del catálogo las comparten otras pantallas —la
+// activación, el pase de guardia—, y acá lo que se vuelve a pedir es el cambio de contraseña o el
+// código que llegó por WhatsApp. El tope por hora de envíos se dice igual que el de intentos.
+const FRASE_PROPIA = {
+  token_vencido: (t) => t.auth.clave_nueva_plazo_vencido,
+  codigo_incorrecto: (t) => t.auth.clave_nueva_codigo_incorrecto,
+  codigo_vencido: (t) => t.auth.clave_nueva_codigo_vencido,
+  demasiados_intentos: (t) => t.auth.clave_nueva_demasiados_intentos,
+  demasiados_pedidos: (t) => t.auth.clave_nueva_demasiados_intentos,
+};
+
 // Donde se elige la clave nueva, con el enlace que llegó por correo.
 //
 // Es la hermana de `ActivarCuenta`: el mismo formulario contra otra puerta del backend. Se escriben
@@ -97,11 +108,7 @@ export default function ClaveNueva() {
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setCambiada(true);
     } catch (err) {
-      // El enlace vencido tiene frase propia acá: la del catálogo la comparte la activación, y
-      // aquí lo que se vuelve a pedir es el cambio de contraseña.
-      setError(err?.motivo === 'token_vencido'
-        ? t.auth.clave_nueva_plazo_vencido
-        : mensajeDeError(err, t, 'cambiar la contraseña'));
+      setError(FRASE_PROPIA[err?.motivo]?.(t) ?? mensajeDeError(err, t, 'cambiar la contraseña'));
       if (MOTIVOS_SIN_REINTENTO.includes(err?.motivo)) setMotivoSinReintento(err.motivo);
     } finally {
       setEnviando(false);

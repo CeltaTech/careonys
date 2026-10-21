@@ -243,6 +243,35 @@ describe('el tope de intentos', () => {
 
     assert.equal(motivo, 'demasiados_intentos');
     // Y no se tomó: un código que se rechazó por el tope tiene que seguir sin usarse.
+    assert.equal(
+      llamadas.some((l) => l.clave === 'PATCH /rest/v1/codigos_al_telefono' && l.cuerpo?.verificado_en),
+      false,
+    );
+  });
+
+  it('el intento que agota el tope bloquea el código por los minutos que vive uno', async () => {
+    process.env.MINUTOS_DEL_CODIGO_AL_TELEFONO = '10';
+    prepararComprobacion({ fila: filaDelCodigo({ codigo_expira_en: enMinutos(1) }), intentos: INTENTOS_MAXIMOS + 1 });
+
+    await motivoDe(
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: '000000' }),
+    );
+
+    const bloqueo = llamadas.find((l) => l.clave === 'PATCH /rest/v1/codigos_al_telefono' && l.cuerpo?.codigo_expira_en);
+    assert.ok(bloqueo, 'tenía que correr el vencimiento');
+    const minutos = (new Date(bloqueo.cuerpo.codigo_expira_en).getTime() - Date.now()) / 60000;
+    assert.ok(minutos > 9.9 && minutos <= 10, `el bloqueo tenía que ser de 10 minutos y fue de ${minutos}`);
+    todoConElTrabajoDeLaPrestadora();
+  });
+
+  it('los intentos durante el bloqueo no lo estiran', async () => {
+    prepararComprobacion({ fila: filaDelCodigo(), intentos: INTENTOS_MAXIMOS + 2 });
+
+    const motivo = await motivoDe(
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: '000000' }),
+    );
+
+    assert.equal(motivo, 'demasiados_intentos');
     assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/codigos_al_telefono'), false);
   });
 

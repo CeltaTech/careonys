@@ -246,12 +246,22 @@ async function cambiarAdentro(db, token, claveNueva, codigo) {
   const puerta = await puertaAbiertaParaLaCuenta(cuenta);
   if (!puerta && (await elTelefonoSirveDeSegundoFactor(cuenta))) {
     if (!codigo) throw new ErrorConMotivo('faltan_datos');
-    await comprobarCodigoDelTelefono({
-      prestadoraId: cuenta.prestadora_id,
-      usuarioId: fila.usuario_id,
-      uso: USO_RECUPERAR,
-      codigo,
-    });
+    try {
+      await comprobarCodigoDelTelefono({
+        prestadoraId: cuenta.prestadora_id,
+        usuarioId: fila.usuario_id,
+        uso: USO_RECUPERAR,
+        codigo,
+      });
+    } catch (err) {
+      // EL CÓDIGO VENCIDO SE REEMPLAZA SOLO. La pantalla avisa que salió otro por WhatsApp, y así
+      // la persona no tiene que volver a abrir el enlace del correo. Si el nuevo no pudo salir
+      // —tope por hora, vía caída—, sube ese motivo y no el vencimiento, que prometería un envío.
+      if (err?.motivo === 'codigo_vencido') {
+        await mandarCodigoAlTelefono({ usuario: cuenta, uso: USO_RECUPERAR });
+      }
+      throw err;
+    }
   }
 
   const { data: usuarioId, error: errorClave } = await db.rpc('poner_clave_con_codigo', {

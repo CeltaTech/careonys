@@ -160,6 +160,12 @@ export const T = {
       clave_nueva_guardando: 'Guardando…',
       clave_nueva_exito: 'La contraseña quedó cambiada. Ya se puede entrar con la nueva.',
       clave_nueva_plazo_vencido: 'Plazo vencido. Vuelva a solicitar el cambio de contraseña.',
+
+      clave_nueva_codigo_incorrecto: 'Código incorrecto.',
+
+      clave_nueva_codigo_vencido: 'Código vencido. Le enviamos otro por WhatsApp.',
+
+      clave_nueva_demasiados_intentos: 'Demasiados intentos. Aguarde unos minutos e intente nuevamente.',
       mi_clave: 'Contraseña',
       mi_clave_titulo: 'Cambiar la contraseña',
       mi_clave_actual: 'Contraseña actual',
@@ -782,6 +788,12 @@ export const T = {
       clave_nueva_guardando: 'Saving…',
       clave_nueva_exito: 'The password has been changed. You can now sign in with the new one.',
       clave_nueva_plazo_vencido: 'Time limit expired. Request the password change again.',
+
+      clave_nueva_codigo_incorrecto: 'Incorrect code.',
+
+      clave_nueva_codigo_vencido: 'Code expired. We sent you another one by WhatsApp.',
+
+      clave_nueva_demasiados_intentos: 'Too many attempts. Wait a few minutes and try again.',
       mi_clave: 'Password',
       mi_clave_titulo: 'Change your password',
       mi_clave_actual: 'Current password',
@@ -1353,6 +1365,12 @@ export const T = {
       clave_nueva_guardando: 'Guardando…',
       clave_nueva_exito: 'A senha foi alterada. Já é possível entrar com a nova.',
       clave_nueva_plazo_vencido: 'Prazo vencido. Solicite novamente a alteração da senha.',
+
+      clave_nueva_codigo_incorrecto: 'Código incorreto.',
+
+      clave_nueva_codigo_vencido: 'Código vencido. Enviamos outro pelo WhatsApp.',
+
+      clave_nueva_demasiados_intentos: 'Tentativas demais. Aguarde alguns minutos e tente novamente.',
       mi_clave: 'Senha',
       mi_clave_titulo: 'Alterar a senha',
       mi_clave_actual: 'Senha atual',

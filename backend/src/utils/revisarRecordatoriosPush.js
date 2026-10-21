@@ -5,6 +5,7 @@ import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { guardiasEnLicenciaAdentro } from './guardiaDeLicencia.js';
 
 // Recorre los 3 eventos de push a Asistentes listados en
 // docs/PRD_04_05_App_Servicio.md:115 ("Nueva guardia asignada, mensajes del coordinador,
@@ -167,7 +168,7 @@ async function revisarMensajesCoordinador(db, prestadoraId) {
 async function revisarRecordatoriosGuardiaProxima(db, prestadoraId, minutosAntes, ahora) {
   const { data: guardias, error } = await db
     .from('guardias')
-    .select('id, asistente_id, fecha, hora_inicio')
+    .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, checkin_at')
     .eq('prestadora_id', prestadoraId)
     .is('push_recordatorio_enviado_at', null)
     .is('checkin_at', null)
@@ -181,11 +182,19 @@ async function revisarRecordatoriosGuardiaProxima(db, prestadoraId, minutosAntes
   if (!guardias?.length) return;
 
   const limite = new Date(ahora.getTime() + minutosAntes * 60_000);
+  const proximas = guardias.filter((guardia) => {
+    const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
+    return inicio.getTime() <= limite.getTime() && inicio.getTime() >= ahora.getTime();
+  });
+  if (!proximas.length) return;
+
+  // Durante la licencia no tiene guardias, así que tampoco recordatorio. No se marca como
+  // enviado: si el Coordinador anota la vuelta a tiempo, el recordatorio sale en la próxima vuelta.
+  const deLicencia = await guardiasEnLicenciaAdentro(db, prestadoraId, proximas);
   const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
 
-  for (const guardia of guardias) {
-    const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
-    if (inicio.getTime() > limite.getTime() || inicio.getTime() < ahora.getTime()) continue;
+  for (const guardia of proximas) {
+    if (deLicencia.has(guardia.id)) continue;
 
     const { titulo, cuerpo } = mensajeDelSistema('recordatorio_de_guardia', idioma, {
       fecha: guardia.fecha,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { agregarACola, nuevoId, pendientesDeGuardia } from '../lib/colaOffline';
@@ -197,6 +197,7 @@ function tiempoTranscurrido(desde) {
 
 export default function GuardiaActiva() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { t, locale } = useLocale();
   const seVe = useSeVe();
   const [guardia, setGuardia] = useState(null);
@@ -256,7 +257,12 @@ export default function GuardiaActiva() {
         setTipo(elTipo ?? null);
         setTareas(lasTareas ?? null);
       })
-      .catch((e) => setError(mensajeDeError(e, t, 'cargar la guardia')));
+      .catch((e) => {
+        // La guardia ya no es suya —la cubrió otro o cae en su licencia—: vuelve al inicio, que
+        // ya no la muestra, en vez de quedarse mirando un cartel.
+        if (e?.status === 404) navigate('/', { replace: true });
+        else setError(mensajeDeError(e, t, 'cargar la guardia'));
+      });
   }
 
   async function revisarPendientes() {
@@ -357,6 +363,10 @@ export default function GuardiaActiva() {
       // puerta y tiene que poder intentar otra cosa ahí mismo, sin volver a empezar.
       if (MOTIVOS_DEL_CODIGO.includes(e.motivo)) return { ok: false, mensaje: mensajeDeError(e, t) };
       setPasandoCheckin(false);
+      if (e?.status === 404) {
+        navigate('/', { replace: true });
+        return { ok: true };
+      }
       // Los dos fallos de ubicación se cuentan distinto: el que se arregla desde la configuración
       // del teléfono y el que no se arregla desde ningún lado. La clave del error es la clave de
       // la frase, así que un fallo nuevo se explica agregando su texto y nada más.

@@ -66,9 +66,6 @@ export const T = {
         descargo_vacio: 'El descargo está vacío. Escriba el descargo antes de guardarlo.',
         descargo_ya_cargado: 'Esta calificación ya tiene su descargo escrito, y un descargo no se edita.',
         calificacion_no_encontrada: 'Esa calificación ya no está.',
-        // La guardia de alguien que tiene una licencia registrada y todavía no tiene sustituto.
-        // No se dice de qué licencia se trata ni de quién: eso es del legajo (CLAUDE.md §6).
-        guardia_de_cobertura_sin_sustituto: 'No puede iniciar esta guardia: cae dentro de su licencia y todavía no tiene Asistente sustituto. Avise al Coordinador.',
         // Los de la cuenta adonde se le paga. Ninguna de estas frases repite lo que se escribió:
         // es el dato sensible, y una advertencia se lee en voz alta o queda a la vista de otro.
         identificador_vacio: 'Falta el número de la cuenta.',
@@ -799,7 +796,6 @@ export const T = {
         descargo_vacio: 'The reply is empty. Write the reply before saving it.',
         descargo_ya_cargado: 'This rating already has its reply written, and a reply cannot be edited.',
         calificacion_no_encontrada: 'That rating is no longer there.',
-        guardia_de_cobertura_sin_sustituto: 'You cannot start this shift: it falls within your leave and has no substitute Assistant yet. Notify the Coordinator.',
         identificador_vacio: 'The account number is missing.',
         identificador_invalido: 'That account number is not valid. Enter it exactly as the bank gives it, with no spaces.',
         nombre_del_banco_invalido: 'That bank name is not valid.',
@@ -1447,7 +1443,6 @@ export const T = {
         descargo_vacio: 'A resposta está vazia. Escreva a resposta antes de salvá-la.',
         descargo_ya_cargado: 'Esta avaliação já tem a sua resposta escrita, e uma resposta não se edita.',
         calificacion_no_encontrada: 'Essa avaliação não está mais lá.',
-        guardia_de_cobertura_sin_sustituto: 'Não é possível iniciar este plantão: ele está dentro da sua licença e ainda não tem Assistente substituto. Avise o Coordenador.',
         identificador_vacio: 'Falta o número da conta.',
         identificador_invalido: 'O número da conta não é válido. Escreve-se tal como o banco o fornece, sem espaços.',
         nombre_del_banco_invalido: 'O nome do banco não é válido.',

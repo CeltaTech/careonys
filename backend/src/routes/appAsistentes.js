@@ -47,7 +47,7 @@ import {
 } from '../utils/conversacionIntermediacion.js';
 import { direccionDeVideollamada } from '../utils/videollamada.js';
 import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
-import { faltaElSustituto, MOTIVO_SIN_SUSTITUTO } from '../utils/guardiaSinSustituto.js';
+import { guardiasEnLicencia } from '../utils/guardiaDeLicencia.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
 import { horaDelHecho } from '../utils/horaDelHecho.js';
@@ -116,6 +116,11 @@ function manejarErrorMulter(err, req, res, next) {
 
 // La guardia, si es de este Asistente. Si la base no la deja ver, para quien pide no existe: es de
 // otra persona o de otra Prestadora. La Prestadora de la fila es la que usa todo lo que sigue.
+//
+// Tampoco existe la que cae en una licencia y todavía no empezó: durante la licencia el Asistente
+// no tiene guardias, y la única forma de recuperarlas es que el Coordinador anote la vuelta
+// (`utils/guardiaDeLicencia.js`). Como todas las rutas que tocan una guardia pasan por acá, no
+// queda ningún otro camino para marcar la llegada a una de esas.
 async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
   const { data } = await db
     .from('guardias')
@@ -123,7 +128,8 @@ async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
     .eq('id', guardiaId)
     .eq('asistente_id', usuarioAsistente.asistenteId)
     .maybeSingle();
-  return data;
+  if (!data) return null;
+  return (await guardiasEnLicencia(data.prestadora_id, [data])).has(data.id) ? null : data;
 }
 
 // ============================================================================
@@ -669,9 +675,15 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   }
 
   try {
+    // Las que caen en una licencia no se muestran: durante la licencia no tiene guardias.
+    const { asistenteId, prestadoraId } = req.usuarioAsistente;
+    const propias = (data ?? []).map((g) => ({ ...g, asistente_id: asistenteId }));
+    const deLicencia = await guardiasEnLicencia(prestadoraId, propias);
+    const visibles = (data ?? []).filter((g) => !deLicencia.has(g.id));
+
     const visibilidad = await visibilidadDelPedido(req);
     const db = clienteDelPedido(req);
-    const guardias = await conPacientes(db, req.usuarioAsistente.prestadoraId, data ?? [], camposDePacienteParaElAsistente(visibilidad));
+    const guardias = await conPacientes(db, prestadoraId, visibles, camposDePacienteParaElAsistente(visibilidad));
     res.json({ guardias: await conDomicilioDelDia(db, guardias) });
   } catch (e) {
     responderError(res, e);
@@ -688,6 +700,12 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     .maybeSingle();
 
   if (error || !data) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+  const deLicencia = await guardiasEnLicencia(req.usuarioAsistente.prestadoraId, [
+    { ...data, asistente_id: req.usuarioAsistente.asistenteId },
+  ]);
+  if (deLicencia.has(data.id)) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
 
@@ -825,17 +843,6 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     // yaRegistrado: true — permite que el cliente offline (Fase 9) distinga "ya se había
     // sincronizado antes" de un error real, y dé la acción encolada por sincronizada.
     return res.status(400).json({ error: 'Esta guardia ya tiene check-in registrado', yaRegistrado: true });
-  }
-
-  // Una guardia tapada por una licencia registrada no arranca hasta que tenga sustituto asignado
-  // (docs/PRD_02B_Gestion_Personal.md:187). Es el único lugar de todo el producto que pasa una
-  // guardia a `activa`, así que la guarda va acá. El motivo viaja como código y la frase la arma
-  // la pantalla en su idioma; el texto de acá es para el registro, no para nadie.
-  if (await faltaElSustituto(guardia)) {
-    return res.status(400).json({
-      error: 'Esta guardia todavía no tiene Asistente sustituto asignado',
-      motivo: MOTIVO_SIN_SUSTITUTO,
-    });
   }
 
   // Un solo check-in para todo el turno, aunque el turno cubra a varias personas: el Asistente

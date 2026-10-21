@@ -81,8 +81,8 @@ estado de aviso. La fecha de fin la pone la base.
 de golpe —el borde son 24 horas—; el incidente de turno sin cubrir, con horas para abrirlo y horas
 entre recordatorios configurables por Prestadora; el incidente que **no se cierra solo** si nadie
 fue, y espera a que una persona elija cómo terminó; la alerta temprana cuando llega la hora de
-inicio sin marca de salida, sin aviso de demora y sin llegada registrada; y la guarda que impide que
-una guardia de cobertura arranque sin sustituto asignado.
+inicio sin marca de salida, sin aviso de demora y sin llegada registrada; y que el Asistente de licencia no
+vea las guardias que caen en esos días.
 
 **La estructura de zonas, completa y cargada en las dos puntas.** `lugares`, `zona_lugares`,
 `asistente_lugares` y `usuario_lugares`. Lo guardado son siempre lugares, nunca zonas: la zona es

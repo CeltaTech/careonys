@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (9)
-
-### 16. Guardia sin sustituto
-
-| | |
-|---|---|
-| **Texto actual** | No puede iniciar esta guardia: cae dentro de su licencia y todavía no tiene Asistente sustituto. Avise al Coordinador. |
-| **Propuesta corta** | «Guardia en su licencia, sin sustituto. Avise al Coordinador.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | queda la instrucción porque no es obvia: la pantalla no ofrece ninguna salida. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Inicio → «Próxima guardia» → «Registrar inicio» → «Marcar check-in». |
-| **Qué estaba haciendo** | empezaba la guardia. |
-| **Qué pasó** | ese día cae en una licencia suya y no hay sustituto. |
-| **Qué puede hacer después** | salir por el menú de abajo y avisar al Coordinador. |
-| **Cómo se muestra** | franja que ocupa toda la pantalla de la guardia. |
-| **Decisión** |  |
+## Aplicación del Asistente (8)
 
 ### 19. Falta el Reporte Diario para cerrar
 

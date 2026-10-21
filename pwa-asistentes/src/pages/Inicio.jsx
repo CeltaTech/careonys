@@ -49,6 +49,16 @@ export default function Inicio() {
     pedirGuardias();
   }, [pedirPerfil, pedirGuardias]);
 
+  // La lista cambia sin que el Asistente toque nada —una licencia esconde guardias, una vuelta
+  // anotada las devuelve—, así que se vuelve a pedir cada vez que vuelve a mirar el teléfono.
+  useEffect(() => {
+    const alVolverAMirar = () => {
+      if (document.visibilityState === 'visible') pedirGuardias();
+    };
+    document.addEventListener('visibilitychange', alVolverAMirar);
+    return () => document.removeEventListener('visibilitychange', alVolverAMirar);
+  }, [pedirGuardias]);
+
   const siguiente = guardias ? guardiaQueSigue(guardias) : null;
   const enCurso = estaEnCurso(siguiente);
 

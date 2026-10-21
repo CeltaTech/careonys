@@ -81,6 +81,11 @@ Flujo:
 6. Al cerrar la ausencia (`fecha_fin`), se recalculan `dias_computados`.
 7. Se notifica a Coordinador y Cliente del cambio de Asistente asignado.
 
+Durante la licencia, el Asistente no tiene guardias: las que caen en esos días no aparecen en su
+aplicación, no puede abrirlas ni empezarlas y no le llega su recordatorio. Quedan con el
+Coordinador, entre las guardias por cubrir. Si el Coordinador lo convoca antes, anota la vuelta en
+el Panel y las guardias desde ese día vuelven a aparecer (`backend/src/utils/guardiaDeLicencia.js`).
+
 ## Constancia de ausencia
 
 Desde la solapa de ausencias se descarga en PDF la constancia de ausencia justificada, armada con
@@ -104,4 +109,4 @@ crear un ítem de navegación de primer nivel separado.
 
 - [ ] Toda consulta a `escalas_legales` usa la fecha del hecho, no la fecha actual
 - [ ] RLS: `escalas_legales`/`ausencias`/`guardias_cobertura` invisibles para `asistente`/`cliente`
-- [ ] Ninguna guardia de cobertura queda sin Asistente sustituto asignado antes de "Activa"
+- [ ] Ninguna guardia que cae en una licencia aparece en la aplicación del Asistente que está de licencia

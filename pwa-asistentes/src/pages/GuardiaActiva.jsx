@@ -185,7 +185,7 @@ function esErrorDeRed(error) {
 // lo deja sin nada que apretar. El resto de los motivos —falta el Reporte Diario, la guardia no
 // se puede cerrar todavía— hablan de otra cosa y sí cierran, porque no se arreglan tipeando de
 // nuevo.
-const MOTIVOS_DEL_CODIGO = ['codigo_incorrecto', 'codigo_vencido', 'demasiados_intentos', 'demasiados_pedidos'];
+const MOTIVOS_DEL_CODIGO = ['codigo_incorrecto', 'codigo_vencido', 'demasiados_pedidos'];
 
 function tiempoTranscurrido(desde) {
   const ms = Date.now() - new Date(desde).getTime();

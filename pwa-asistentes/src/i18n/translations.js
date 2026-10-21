@@ -59,7 +59,6 @@ export const T = {
         // Dos frases que se parecen y dicen cosas distintas (pendiente #177). Los intentos son de
         // esta llegada y no del código: que la Prestadora suelte uno nuevo ya no los devuelve, y
         // la salida es el piso de siempre. El tope de pedidos por minuto sí se arregla esperando.
-        demasiados_intentos: 'Superó la cantidad de intentos. Elija un motivo para continuar sin comprobar el código.',
         demasiados_pedidos: 'Hizo demasiados intentos en poco tiempo. Espere un minuto e intente nuevamente, o elija un motivo para continuar sin comprobar.',
         ya_comprobada: 'Esta llegada ya quedó comprobada.',
         // Los del descargo ante una calificación. Se escribe una sola vez, así que el segundo
@@ -793,7 +792,6 @@ export const T = {
         matricula_sin_verificar: 'The licence has been uploaded, but the Provider has not checked it yet. Until then, shifts cannot be taken.',
         codigo_incorrecto: 'Incorrect QR code.',
         codigo_vencido: 'The code has expired. Request a new code from the Provider.',
-        demasiados_intentos: 'You exceeded the number of attempts. Choose a reason to continue without checking the code.',
         demasiados_pedidos: 'You made too many attempts in a short time. Wait a minute and try again, or choose a reason to continue without checking.',
         ya_comprobada: 'This arrival has already been verified.',
         descargo_vacio: 'The reply is empty. Write the reply before saving it.',
@@ -1440,7 +1438,6 @@ export const T = {
         matricula_sin_verificar: 'O registro foi enviado, mas a Prestadora ainda não o comprovou. Até então não é possível assumir plantões.',
         codigo_incorrecto: 'QR incorreto.',
         codigo_vencido: 'O código expirou. Solicite um novo código à Prestadora.',
-        demasiados_intentos: 'Você excedeu o número de tentativas. Escolha um motivo para continuar sem verificar o código.',
         demasiados_pedidos: 'Você fez tentativas demais em pouco tempo. Aguarde um minuto e tente novamente, ou escolha um motivo para continuar sem verificar.',
         ya_comprobada: 'Esta chegada já foi verificada.',
         descargo_vacio: 'A resposta está vazia. Escreva a resposta antes de salvá-la.',

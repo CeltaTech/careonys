@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 20 fichas.** Panel 3, aplicación del Asistente 11, aplicación del Cliente 4, Base 2.
+**Total: 19 fichas.** Panel 3, aplicación del Asistente 10, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (11)
-
-### 13. Demasiados intentos con el código
-
-| | |
-|---|---|
-| **Texto actual** | Superó la cantidad de intentos. Elija un motivo para continuar sin comprobar el código. |
-| **Propuesta corta** | «Sin más intentos. Elija un motivo para continuar.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | aquí la salida no es obvia, porque no sirve pedir otro código. Por eso queda la instrucción. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | recuadro «Pase de guardia» o «Pase de guardia para el cierre», botón «Confirmar». |
-| **Qué estaba haciendo** | probaba códigos. |
-| **Qué pasó** | pasó los 5 intentos permitidos. Que la Prestadora suelte otro código no los devuelve. |
-| **Qué puede hacer después** | «Entrar igual» o «Cerrar igual», elegir un motivo y tocar «Continuar sin comprobar», o cancelar. |
-| **Cómo se muestra** | franja dentro del recuadro. |
-| **Decisión** |  |
+## Aplicación del Asistente (10)
 
 ### 14. Demasiados pedidos en poco tiempo
 

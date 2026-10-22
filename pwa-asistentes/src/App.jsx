@@ -15,6 +15,7 @@ import GuardiaActiva from './pages/GuardiaActiva';
 import ReporteDiario from './pages/ReporteDiario';
 import MiPerfil from './pages/MiPerfil';
 import MiClave from './pages/MiClave';
+import TextoDeConsentimiento from './pages/TextoDeConsentimiento';
 import MisCalificaciones from './pages/MisCalificaciones';
 import Contenidos from './pages/Contenidos';
 import Mensajes from './pages/Mensajes';
@@ -101,6 +102,8 @@ function Rutas() {
           }
         />
         <Route path="perfil" element={<MiPerfil />} />
+        {/* El texto completo de un permiso, abierto desde la tarjeta Privacidad de Perfil. */}
+        <Route path="privacidad/:clave" element={<TextoDeConsentimiento />} />
         {/* Cambiar la propia clave estando adentro. No lleva guardián más allá de la sesión:
             cualquiera que entró puede cambiar la suya, y la pantalla pide la actual antes. */}
         <Route path="mi-clave" element={<MiClave />} />

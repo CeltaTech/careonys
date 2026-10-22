@@ -463,6 +463,14 @@ const ARMADORES = {
   vuelta_de_coordinador_sin_confirmar: (t, d) => preguntaDeVuelta(t, d, 'vuelta_de_coordinador_sin_confirmar',
     d.nombre ?? ''),
 
+  plazo_ubicacion_sin_aceptar: (t, d) => {
+    const nombre = d.nombre ?? t('comun.un_asistente');
+    return {
+      asunto: t('plazo_ubicacion_sin_aceptar.asunto', { nombre }),
+      texto: t(segunCantidad('plazo_ubicacion_sin_aceptar.texto', d.dias), { nombre, dias: d.dias }),
+    };
+  },
+
   cobertura_objetada: (t, d) => ({
     asunto: t('cobertura_objetada.asunto', { nombre: d.nombre ?? t('comun.un_asistente') }),
     texto: t('cobertura_objetada.cuerpo', { nombre: d.nombre ?? t('comun.un_asistente') }),

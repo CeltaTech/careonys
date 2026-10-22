@@ -55,6 +55,7 @@ import { avisarElPrimerCobroQueViene } from './utils/avisoPrevioAlCobro.js';
 import { suspenderLosQueAgotaronLaGracia } from './utils/periodoDeGracia.js';
 import { recordarLosEnlacesDeActivacion } from './utils/activacionCuenta.js';
 import { avisarLosCambiosDeEmail } from './utils/avisosDeEmailCambiado.js';
+import { avisarLosPlazosDeUbicacionVencidos } from './utils/plazoDeLaUbicacion.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
@@ -306,6 +307,10 @@ programar(recordarLosEnlacesDeActivacion, UNA_HORA_MS, { conLaPrestadora: true }
 
 // El aviso al email anterior de una cuenta cuyo email cambió. Lo anota la base al hacer el cambio.
 programar(avisarLosCambiosDeEmail, CINCO_MINUTOS_MS, { conLaPrestadora: true });
+
+// El aviso a la Prestadora por cada Asistente que dejó vencer el plazo para aceptar el registro de
+// su ubicación durante el turno. El plazo se cuenta en días; se mira cada hora, como el de arriba.
+programar(avisarLosPlazosDeUbicacionVencidos, UNA_HORA_MS, { conLaPrestadora: true });
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no
 // atrapada en cualquiera de las 129 rutas (Regla 12): nunca se expone el stack ni detalle

@@ -1905,7 +1905,7 @@ appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsiste
 // Ping de ubicación en vivo durante una guardia activa — el Cliente lo lee vía Supabase
 // Realtime, nunca por HTTP (PRD_04_05_App_Servicio.md, mapa en tiempo real de la Pantalla
 // del Paciente).
-appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exigeVisible('asistente_ubicacion_en_vivo'), async (req, res) => {
+appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async (req, res) => {
   const { lat, lng } = req.body || {};
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });

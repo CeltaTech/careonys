@@ -10,7 +10,6 @@ import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { quedoSinCerrar } from '../lib/guardiaSinCerrar';
 import { nombresDeLaTarjeta } from '../lib/nombresDeLaGuardia';
-import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
 import CoberturasQueCubro from '../components/CoberturasQueCubro';
 import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
 
@@ -25,8 +24,6 @@ import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
 //   2. LO QUE ESPERA SEÑAL EN ESTE TELÉFONO, que sale de la cola guardada en el aparato. No
 //      depende del backend: cuando el backend no contesta es justamente cuando más importa, porque
 //      es lo que le dice a la persona que lo que hizo no se perdió.
-//
-// La advertencia de consentimiento es su propia zona desde antes y se ocupa de lo suyo.
 
 export default function MisGuardias() {
   const { t } = useLocale();
@@ -90,7 +87,6 @@ export default function MisGuardias() {
 
   return (
     <div>
-      <AvisoConsentimientoPendiente />
       {/* El título va siempre, también cuando algo falló y cuando no hay ninguna guardia. Sin él,
           la pantalla no tiene encabezado y quien la recorre con un lector de pantalla no sabe
           dónde está. */}

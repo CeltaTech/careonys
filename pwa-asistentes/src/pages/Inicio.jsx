@@ -8,7 +8,6 @@ import { hoyISO } from '../lib/horarios';
 import { guardiaQueSigue, estaEnCurso } from '../lib/proximaGuardia';
 import { nombresDeLaTarjeta, cuandoEsLaGuardia } from '../lib/nombresDeLaGuardia';
 import { con } from '../lib/textos';
-import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
 
 // La primera pantalla: el saludo y la guardia que sigue. Las dos tarjetas piden sus datos por
 // separado, cada una con sus cuatro estados, para que una que falla no se lleve a la otra.
@@ -64,8 +63,6 @@ export default function Inicio() {
 
   return (
     <div>
-      <AvisoConsentimientoPendiente />
-
       {/* El saludo lleva a Mi Perfil: es donde están sus datos, la clave y la salida. */}
       {errorPerfil ? (
         <div className="pwa-card">

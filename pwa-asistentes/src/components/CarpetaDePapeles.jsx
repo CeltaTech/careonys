@@ -95,7 +95,14 @@ export default function CarpetaDePapeles() {
           Va arriba porque es lo que contesta la pregunta con la que se entra: ¿estoy bien? */}
       {papeles.length > 0 && (
         <div className={CLASE_DEL_RESUMEN[carpeta.resumen] ?? 'alert'}>
-          {tp[`resumen_${carpeta.resumen}`]}
+          {/* Lo vencido se nombra, un renglón por documento: decir «hay alguno» obliga a buscarlo. */}
+          {carpeta.resumen === 'vencida'
+            ? ordenados
+                .filter((papel) => papel.estado === 'vencido')
+                .map((papel) => (
+                  <div key={papel.tipo_documento_id}>{con(tp.resumen_vencida, { documento: papel.nombre })}</div>
+                ))
+            : tp[`resumen_${carpeta.resumen}`]}
         </div>
       )}
 
@@ -104,7 +111,8 @@ export default function CarpetaDePapeles() {
           {ordenados.map((papel) => (
             <li key={papel.tipo_documento_id}>
               <strong>{papel.nombre}</strong> · {tp[`estado_${papel.estado}`]}
-              {papel.fecha_vencimiento && ` · ${con(tp.vence_el, { fecha: fecha(papel.fecha_vencimiento) })}`}
+              {papel.fecha_vencimiento && papel.estado !== 'vencido' && ` · ${con(tp.vence_el, { fecha: fecha(papel.fecha_vencimiento) })}`}
+              {papel.fecha_vencimiento && papel.estado === 'vencido' && ` ${con(tp.vencio_el, { fecha: fecha(papel.fecha_vencimiento) })}`}
               {!papel.requiere_vencimiento && ` · ${tp.sin_vencimiento}`}
             </li>
           ))}

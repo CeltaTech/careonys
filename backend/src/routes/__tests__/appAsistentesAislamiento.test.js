@@ -149,7 +149,7 @@ describe('la decisión de consentimiento que ya tomó', () => {
     respuestas.set('GET /rest/v1/asistentes', [
       { id: LEGAJO, prestadora_id: PRESTADORA, tipo_vinculo: 'monotributo' },
     ]);
-    respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR' }]);
+    respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR', control_de_ubicacion_en_el_turno: true }]);
     respuestas.set('GET /rest/v1/textos_consentimiento', [
       { id: 't-1', version: 1, idioma: 'es-AR', titulo: 'Título inventado', cuerpo: 'Cuerpo inventado',
         puntos_clave: [], es_borrador: false },

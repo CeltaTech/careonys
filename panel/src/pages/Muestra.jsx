@@ -42,7 +42,7 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 // (`CLAUDE.md` §6). Los nombres son de fantasía y los tonos cubren los cinco casos.
 const FILAS_DE_MENTIRA = [
   { id: 1, nombre: 'Ana Ficticia', detalle: 'Guardia de mañana', tono: TONO.EXITO, estado: 'Al día' },
-  { id: 2, nombre: 'Bruno Inventado', detalle: 'Guardia de tarde', tono: TONO.ATENCION, estado: 'Falta el papel' },
+  { id: 2, nombre: 'Bruno Inventado', detalle: 'Guardia de tarde', tono: TONO.ATENCION, estado: 'Falta el documento' },
   { id: 3, nombre: 'Carla Imaginaria', detalle: 'Guardia de noche', tono: TONO.CRITICO, estado: 'Vencido' },
   { id: 4, nombre: 'Darío Supuesto', detalle: 'Sin asignar', tono: TONO.INFO, estado: 'Mensaje enviado' },
   { id: 5, nombre: 'Elena Hipotética', detalle: '—', tono: TONO.NEUTRO, estado: 'Sin datos' },

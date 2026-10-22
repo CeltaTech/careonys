@@ -127,6 +127,27 @@ describe('la configuración de la Prestadora', () => {
     assert.equal(cambio.url.searchParams.get('id'), `eq.${PRESTADORA}`);
   });
 
+  it('la ubicación del Asistente se guarda con los días del plazo, en su propia fila', async () => {
+    const datos = { control_de_ubicacion_en_el_turno: true, minutos_entre_controles_de_ubicacion: 5, dias_para_aceptar_la_ubicacion: 30 };
+    const { estado } = await pedir('PATCH', '/ubicacion-del-asistente', datos);
+    assert.equal(estado, 200);
+    const cambio = unaSola('PATCH /rest/v1/prestadoras');
+    conElTrabajoDeLaPrestadora(cambio);
+    assert.equal(cambio.url.searchParams.get('id'), `eq.${PRESTADORA}`);
+    assert.deepEqual(JSON.parse(cambio.cuerpo), datos);
+  });
+
+  it('la ubicación del Asistente no se guarda con un plazo fuera de 1 a 365 días', async () => {
+    for (const dias of [0, 366, 2.5, undefined, '30']) {
+      llamadas = [];
+      const { estado } = await pedir('PATCH', '/ubicacion-del-asistente', {
+        control_de_ubicacion_en_el_turno: true, minutos_entre_controles_de_ubicacion: 5, dias_para_aceptar_la_ubicacion: dias,
+      });
+      assert.equal(estado, 400, `pasó con ${dias}`);
+      assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/prestadoras').length, 0);
+    }
+  });
+
   it('la revisión con IA de los reportes se lee con el trabajo de la Prestadora', async () => {
     const { estado } = await pedir('GET', '/alertas-ia');
     assert.equal(estado, 200);

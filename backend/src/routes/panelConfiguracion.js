@@ -823,6 +823,53 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Cómo se toma la ubicación del Asistente. En las dos formas el viaje se sigue de forma
+//     continua; la Prestadora elige si además se controla cada tantos minutos durante la
+//     guardia. Mismo patrón que /aviso-previo-guardia. ---
+export const LIMITES_MINUTOS_CONTROL_UBICACION = { minimo: 1, maximo: 60 };
+// Los días que tiene el Asistente para aceptar el control durante el turno.
+export const LIMITES_DIAS_PARA_ACEPTAR_LA_UBICACION = { minimo: 1, maximo: 365 };
+
+const dentroDe = (valor, { minimo, maximo }) => Number.isInteger(valor) && valor >= minimo && valor <= maximo;
+
+panelConfiguracionRouter.get('/ubicacion-del-asistente', async (req, res) => {
+  const { data, error } = await clienteDelPedido(req)
+    .from('prestadoras')
+    .select('control_de_ubicacion_en_el_turno, minutos_entre_controles_de_ubicacion, dias_para_aceptar_la_ubicacion')
+    .single();
+  if (error) return responderError(res, error);
+  res.json(data);
+});
+
+panelConfiguracionRouter.patch('/ubicacion-del-asistente', async (req, res) => {
+  const {
+    control_de_ubicacion_en_el_turno: controlEnElTurno,
+    minutos_entre_controles_de_ubicacion: minutos,
+    dias_para_aceptar_la_ubicacion: dias,
+  } = req.body ?? {};
+  if (
+    typeof controlEnElTurno !== 'boolean'
+    || !dentroDe(minutos, LIMITES_MINUTOS_CONTROL_UBICACION)
+    || !dentroDe(dias, LIMITES_DIAS_PARA_ACEPTAR_LA_UBICACION)
+  ) {
+    return responderError(res, new ErrorConMotivo('faltan_datos', 'ubicación del asistente: datos inválidos'));
+  }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  const { error } = await enLaPrestadora(prestadoraId, 'ubicación del asistente', (dbDelTrabajo) =>
+    dbDelTrabajo
+      .from('prestadoras')
+      .update({
+        control_de_ubicacion_en_el_turno: controlEnElTurno,
+        minutos_entre_controles_de_ubicacion: minutos,
+        dias_para_aceptar_la_ubicacion: dias,
+      })
+      .eq('id', prestadoraId)
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
 // --- Revisión con IA de los reportes (IA Nivel 2): palabras clave que disparan la revisión
 //     inmediata, cuántos reportes se miran y a quién se entera de cada nivel de alerta.
 //     Hasta ahora las palabras clave solo se podían cambiar por SQL directo contra la base, y

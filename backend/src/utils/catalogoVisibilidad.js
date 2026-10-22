@@ -31,10 +31,8 @@
 //   - Los mensajes del sistema al teléfono. A quién le llega cada uno ya se decide en la
 //     configuración de mensajes (`catalogoAvisos.js`). Poner acá otra casilla que decidiera lo
 //     mismo dejaría la misma regla escrita en dos lugares (CLAUDE.md §7 regla 12).
-//   - El consentimiento del Asistente para el seguimiento de ubicación. Eso no es una
-//     preferencia de la Prestadora sino una decisión de la persona, y tiene su propio circuito
-//     (`/consentimientos` en la aplicación del Asistente). Apagar acá la ubicación en vivo la
-//     apaga para toda la Prestadora; el consentimiento sigue rigiendo por persona, encima.
+//   - Cómo se toma la ubicación del Asistente. No es un sí o un no sino una de dos formas, con
+//     sus minutos, y vive en la fila de la Prestadora (Configuración › Las aplicaciones).
 
 export const APLICACIONES = ['clientes', 'asistentes'];
 
@@ -152,13 +150,6 @@ export const CATALOGO_VISIBILIDAD = [
     app: 'asistentes',
     descripcion: 'Adjuntar una foto al Reporte Diario',
     ayuda: 'Sirve para dejar constancia de una lesión o de una comida. También es una cámara adentro de la casa de otra persona, y no toda Prestadora la quiere.',
-    de_fabrica: true,
-  },
-  {
-    clave: 'asistente_ubicacion_en_vivo',
-    app: 'asistentes',
-    descripcion: 'Compartir su ubicación durante la guardia',
-    ayuda: 'Es la otra cara del interruptor del mapa del Cliente: acá se decide si el teléfono la manda. Apagado, no se manda ninguna ubicación aunque el Cliente tenga el mapa encendido. El check-in y el check-out no dependen de esto.',
     de_fabrica: true,
   },
   {

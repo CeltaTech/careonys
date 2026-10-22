@@ -1140,13 +1140,15 @@ INSERT INTO public.consentimientos_asistente
 VALUES ('9d000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
         '30000000-0000-4000-8000-000000000001', 'seguimiento_ubicacion',
         (SELECT id FROM public.textos_consentimiento
-          WHERE clave = 'seguimiento_ubicacion' AND idioma = 'es-AR' ORDER BY version DESC LIMIT 1),
-        1, 'es-AR', 'Texto de prueba del consentimiento de seguimiento de ubicación.', 'otorgado'),
+          WHERE clave = 'seguimiento_ubicacion' AND idioma = 'es-AR' AND vigente_hasta IS NULL
+            AND control_de_ubicacion_en_el_turno ORDER BY version DESC LIMIT 1),
+        2, 'es-AR', 'Texto de prueba del consentimiento de seguimiento de ubicación.', 'otorgado'),
        ('9d000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000003', 'seguimiento_ubicacion',
         (SELECT id FROM public.textos_consentimiento
-          WHERE clave = 'seguimiento_ubicacion' AND idioma = 'es-AR' ORDER BY version DESC LIMIT 1),
-        1, 'es-AR', 'Texto de prueba del consentimiento de seguimiento de ubicación.', 'otorgado');
+          WHERE clave = 'seguimiento_ubicacion' AND idioma = 'es-AR' AND vigente_hasta IS NULL
+            AND control_de_ubicacion_en_el_turno ORDER BY version DESC LIMIT 1),
+        2, 'es-AR', 'Texto de prueba del consentimiento de seguimiento de ubicación.', 'otorgado');
 
 -- Calificación del Cliente al Asistente. El Asistente la lee y puede
 -- contestarla; el Cliente lee la que escribió.

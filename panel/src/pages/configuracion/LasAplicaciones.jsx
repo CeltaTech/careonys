@@ -16,7 +16,7 @@ import '../../styles/molde-paginas.css';
    llega al teléfono de ninguna manera. Esconderlo en el maquetado sería dejarlo viajando, y
    cualquiera que sepa mirar por debajo lo vería igual (tarea 65).
 
-   LA LISTA NO SE ESCRIBE ACÁ. Las dieciocho interruptores, con su nombre y su explicación, viven
+   LA LISTA NO SE ESCRIBE ACÁ. Los interruptores, con su nombre y su explicación, viven
    en `backend/src/utils/catalogoVisibilidad.js`, que es el único lugar donde se agrega o se
    saca una (CLAUDE.md §7 regla 12). Esta pantalla dibuja lo que le llega: un interruptor nuevo
    aparece sola, sin tocar este archivo.
@@ -33,6 +33,154 @@ import '../../styles/molde-paginas.css';
 const APLICACIONES = ['clientes', 'asistentes'];
 
 export function ConfiguracionAplicaciones() {
+  return (
+    <>
+      <QueMuestranLasAplicaciones />
+      <UbicacionDelAsistente />
+    </>
+  );
+}
+
+/* Cómo se toma la ubicación del Asistente. Hay viaje en las dos formas: desde «Salgo ahora»
+   hasta el check-in se sigue continuo. La diferencia es la guardia: con «Viaje y turno» se hace
+   un control cada tantos minutos, que anota sólo si estaba dentro o fuera del domicilio; con
+   «Sólo viaje» no hay control, y queda la ubicación del check-in y del check-out. */
+function UbicacionDelAsistente() {
+  const { t } = useLocale();
+  const [enElTurno, setEnElTurno] = useState(true);
+  const [minutos, setMinutos] = useState('');
+  const [errorMinutos, setErrorMinutos] = useState(null);
+  const [dias, setDias] = useState('');
+  const [errorDias, setErrorDias] = useState(null);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const datos = await llamarApi('/ubicacion-del-asistente');
+      setEnElTurno(datos.control_de_ubicacion_en_el_turno);
+      setMinutos(datos.minutos_entre_controles_de_ubicacion);
+      setDias(datos.dias_para_aceptar_la_ubicacion);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  function minutosValidos(valor) {
+    const n = Number(valor);
+    return Number.isInteger(n) && n >= 1 && n <= 60;
+  }
+
+  function diasValidos(valor) {
+    const n = Number(valor);
+    return Number.isInteger(n) && n >= 1 && n <= 365;
+  }
+
+  async function guardar() {
+    // Con «Sólo viaje» los dos campos están escondidos y guardan lo que tenían.
+    const faltaMinutos = enElTurno && !minutosValidos(minutos);
+    const faltaDias = enElTurno && !diasValidos(dias);
+    setErrorMinutos(faltaMinutos ? t.configuracion.ubicacion_minutos_fuera_de_rango : null);
+    setErrorDias(faltaDias ? t.configuracion.ubicacion_dias_fuera_de_rango : null);
+    if (faltaMinutos || faltaDias) {
+      const primero = faltaMinutos ? 'minutos_entre_controles_de_ubicacion' : 'dias_para_aceptar_la_ubicacion';
+      document.getElementById(`field-${primero}`)?.focus();
+      return;
+    }
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/ubicacion-del-asistente', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          control_de_ubicacion_en_el_turno: enElTurno,
+          minutos_entre_controles_de_ubicacion: Number(minutos),
+          dias_para_aceptar_la_ubicacion: Number(dias),
+        }),
+      });
+      setGuardado(true);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.ubicacion_titulo}</h2>
+      </div>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        <>
+          {error && <Alert variant="error">{error}</Alert>}
+          {guardado && <Alert variant="info">{t.configuracion.visibilidad_guardado}</Alert>}
+          <div className="molde-formgrid">
+            <FormField
+              label={t.configuracion.ubicacion_forma}
+              name="control_de_ubicacion_en_el_turno"
+              type="select"
+              value={enElTurno ? 'viaje_y_turno' : 'solo_viaje'}
+              onChange={(e) => { setEnElTurno(e.target.value === 'viaje_y_turno'); setGuardado(false); }}
+            >
+              <option value="viaje_y_turno">{t.configuracion.ubicacion_viaje_y_turno}</option>
+              <option value="solo_viaje">{t.configuracion.ubicacion_solo_viaje}</option>
+            </FormField>
+            {enElTurno && (
+              <>
+                <FormField
+                  label={t.configuracion.ubicacion_minutos}
+                  name="minutos_entre_controles_de_ubicacion"
+                  type="number"
+                  min="1"
+                  max="60"
+                  unidad={t.configuracion.escalada_repetir_emergencia_unidad}
+                  value={minutos}
+                  error={errorMinutos}
+                  onChange={(e) => {
+                    setMinutos(e.target.value);
+                    setGuardado(false);
+                    if (minutosValidos(e.target.value)) setErrorMinutos(null);
+                  }}
+                />
+                <FormField
+                  label={t.configuracion.ubicacion_dias}
+                  name="dias_para_aceptar_la_ubicacion"
+                  type="number"
+                  min="1"
+                  max="365"
+                  unidad={t.configuracion.ubicacion_dias_unidad}
+                  value={dias}
+                  error={errorDias}
+                  onChange={(e) => {
+                    setDias(e.target.value);
+                    setGuardado(false);
+                    if (diasValidos(e.target.value)) setErrorDias(null);
+                  }}
+                />
+              </>
+            )}
+          </div>
+          <div className="molde-acciones">
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        </>
+      </EstadoLista>
+    </section>
+  );
+}
+
+function QueMuestranLasAplicaciones() {
   const { t } = useLocale();
   const [interruptores, setInterruptores] = useState([]);
   const [elegido, setElegido] = useState({});

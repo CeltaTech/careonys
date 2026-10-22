@@ -60,6 +60,7 @@
 //   vuelta_de_ausencia_sin_confirmar    → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 //   vuelta_de_coordinador_sin_confirmar → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 //   cobertura_objetada             → routes/appAsistentes.js (notificarCoordinador)
+//   plazo_ubicacion_sin_aceptar    → utils/plazoDeLaUbicacion.js (notificarCoordinador)
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
 // `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
 // piden a un Asistente lo define el catálogo de cada Prestadora.
@@ -109,6 +110,12 @@ export const CATALOGO_MENSAJES = [
   {
     evento: 'cobertura_objetada',
     descripcion: 'Un Asistente avisó que no puede cubrir el turno fijo que se le asignó durante una ausencia',
+    admite_whatsapp: true,
+    admite_cliente: false,
+  },
+  {
+    evento: 'plazo_ubicacion_sin_aceptar',
+    descripcion: 'Venció el plazo y un Asistente no aceptó el registro de su ubicación durante el turno',
     admite_whatsapp: true,
     admite_cliente: false,
   },

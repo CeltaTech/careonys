@@ -188,6 +188,7 @@ const DATOS_MINIMOS = {
   vuelta_de_ausencia_sin_confirmar: { nombre: 'Rita Solano', fecha: '2026-10-14', veces: 2 },
   vuelta_de_coordinador_sin_confirmar: { nombre: 'Marcos Peña', fecha: '2026-10-14', veces: 1 },
   cobertura_objetada: { nombre: 'Rita Solano' },
+  plazo_ubicacion_sin_aceptar: { nombre: 'Rita Solano', dias: 30 },
   guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 5, veces: 1,

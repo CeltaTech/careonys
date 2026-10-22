@@ -69,6 +69,7 @@ export default function Layout() {
       </header>
       <main className="pwa-body">
         <Outlet context={{ avisarSinResponder: setSinResponder, sinResponder }} />
+
         {/* La única mención del producto en toda la aplicación, y al pie. Va siempre: es el
             crédito de quién hizo el software, no una función que se venda. */}
         <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>

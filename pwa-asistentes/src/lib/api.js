@@ -120,8 +120,6 @@ export const api = {
   consentimientos: (idioma) => pedido(`/consentimientos?idioma=${encodeURIComponent(idioma)}`),
   decidirConsentimiento: (clave, decision, idioma) =>
     pedido('/consentimientos', { method: 'POST', body: JSON.stringify({ clave, decision, idioma }) }),
-  retirarConsentimiento: (clave, motivo) =>
-    pedido('/consentimientos/retirar', { method: 'POST', body: JSON.stringify({ clave, motivo }) }),
   // La Matrícula. Se carga en un solo envío —datos y archivo juntos— porque un
   // archivo sin su dueño es un papel suelto que nadie va a mirar.
   matricula: () => pedido('/matricula'),

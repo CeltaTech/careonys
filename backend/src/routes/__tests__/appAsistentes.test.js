@@ -307,6 +307,19 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
     });
   }
 
+  it('al llegar se borra el punto del viaje: del viaje no queda nada guardado', async () => {
+    await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
+    });
+    const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/guardias');
+    assert.ok(escritura, 'la llegada tiene que quedar marcada');
+    assert.equal(escritura.cuerpo.ubicacion_actual_lat, null);
+    assert.equal(escritura.cuerpo.ubicacion_actual_lng, null);
+    assert.equal(escritura.cuerpo.ubicacion_actual_at, null);
+  });
+
   it('el motivo que el teléfono mandó de más queda en el detalle, no se pierde', async () => {
     await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
       lat: LAT,

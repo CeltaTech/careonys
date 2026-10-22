@@ -82,6 +82,9 @@ export const api = {
   // dos exige ubicación: sin GPS se manda igual y lo único que se pierde es la estimación.
   registrarSalida: (id, datos) => pedido(`/guardias/${id}/salida`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   avisarDemora: (id, datos) => pedido(`/guardias/${id}/aviso-demora`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  // El último punto del viaje al domicilio, para el mapa del Cliente. No es un acto de la persona
+  // y no va a la cola: un punto viejo no le sirve a nadie, lo reemplaza el siguiente.
+  ubicacionDelViaje: (id, punto) => pedido(`/guardias/${id}/ubicacion`, { method: 'PATCH', body: JSON.stringify(punto) }),
   // Lo que pasa durante la guardia y no admite esperar al cierre. Manda el momento en que pasó,
   // porque si el aviso queda en la cola sin conexión lo que importa es esa hora y no la de la
   // sincronización.

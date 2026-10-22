@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { supabase } from '../lib/supabaseClient';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { horaDelMomento } from '../lib/horarios';
@@ -12,6 +11,10 @@ import DomicilioTemporal from '../components/DomicilioTemporal';
 import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 import TarjetaAcciones from '../components/TarjetaAcciones';
+
+// Lo mismo que espera la aplicación del Asistente entre un punto y el siguiente: pedir más
+// seguido no traería nada nuevo.
+const CADA_CUANTO_SE_REFRESCA_MS = 20000;
 
 function segundosDesde(fecha) {
   return Math.max(0, Math.floor((Date.now() - new Date(fecha).getTime()) / 1000));
@@ -24,10 +27,6 @@ export default function PacienteDetalle() {
   const { puedeVer } = usePersonasAutorizadas();
   // El resumen de alertas pregunta lo mismo que la ruta que las abre, con la misma función.
   const seEntraA = (pantalla) => pantallaPermitida(pantalla, seVe, puedeVer);
-  // Se resuelve acá, como un sí o un no, porque además de decidir si se dibuja el mapa
-  // decide si conviene abrir la escucha en vivo de la guardia: sin mapa no hay nada que
-  // hacer con esas posiciones.
-  //
   // Son las dos decisiones de siempre, y acá no pasan por el mapa de pantallas porque esto no
   // es una pantalla: es un bloque adentro de ésta. La Prestadora puede no ofrecer el
   // seguimiento en vivo, y el titular puede habérselo negado a una de sus personas autorizadas.
@@ -35,7 +34,6 @@ export default function PacienteDetalle() {
   const veAlertas = seEntraA('alertas');
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
-  const [ubicacion, setUbicacion] = useState(null);
   const [, setTick] = useState(0);
 
   function cargar() {
@@ -51,47 +49,37 @@ export default function PacienteDetalle() {
   }, [id]);
 
   const guardiaActiva = datos?.guardiaActiva;
+  // La guardia que viene es la única que puede estar en viaje: el mapa sigue al Asistente desde
+  // «Salgo ahora» hasta que escanea la entrada, y ahí el punto se borra.
+  const guardiaProxima = datos?.guardiaProxima;
+  const enViaje = Boolean(guardiaProxima?.salida_checkin_at);
+  const ubicacion = enViaje && veUbicacionEnVivo && guardiaProxima.ubicacion_actual_lat && guardiaProxima.ubicacion_actual_lng
+    ? { lat: guardiaProxima.ubicacion_actual_lat, lng: guardiaProxima.ubicacion_actual_lng, at: guardiaProxima.ubicacion_actual_at }
+    : null;
+
+  // Mientras hay una guardia por venir, la pantalla se vuelve a pedir cada tanto: así se entera
+  // de «Salgo ahora», de cada punto nuevo y de la llegada sin que el Cliente recargue. Se le pide
+  // al backend y no a la base en vivo porque el backend manda sólo las columnas que este Cliente
+  // puede ver; la fila de la guardia lleva además el punto de salida, que no viaja a este teléfono.
+  // Un refresco que falla deja lo último que se vio: la hora de la posición dice cuán vieja es.
+  useEffect(() => {
+    if (!guardiaProxima?.id) return undefined;
+    const reloj = setInterval(() => {
+      api.paciente(id).then(setDatos).catch(() => {});
+    }, CADA_CUANTO_SE_REFRESCA_MS);
+    return () => clearInterval(reloj);
+  }, [guardiaProxima?.id, id]);
 
   useEffect(() => {
-    if (!veUbicacionEnVivo || !guardiaActiva?.id) {
-      setUbicacion(null);
-      return;
-    }
-    if (guardiaActiva.ubicacion_actual_lat && guardiaActiva.ubicacion_actual_lng) {
-      setUbicacion({
-        lat: guardiaActiva.ubicacion_actual_lat,
-        lng: guardiaActiva.ubicacion_actual_lng,
-        at: guardiaActiva.ubicacion_actual_at,
-      });
-    }
-    const canal = supabase
-      .channel(`guardia-ubicacion-${guardiaActiva.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'guardias', filter: `id=eq.${guardiaActiva.id}` },
-        (payload) => {
-          const fila = payload.new;
-          if (fila.ubicacion_actual_lat && fila.ubicacion_actual_lng) {
-            setUbicacion({ lat: fila.ubicacion_actual_lat, lng: fila.ubicacion_actual_lng, at: fila.ubicacion_actual_at });
-          }
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(canal);
-    };
-  }, [guardiaActiva?.id, veUbicacionEnVivo]);
-
-  useEffect(() => {
-    if (!ubicacion) return;
+    if (!ubicacion) return undefined;
     const intervalo = setInterval(() => setTick((v) => v + 1), 5000);
     return () => clearInterval(intervalo);
-  }, [ubicacion]);
+  }, [ubicacion?.at]);
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (datos === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
-  const { paciente, guardiaProxima, alertasActivas } = datos;
+  const { paciente, alertasActivas } = datos;
   const guardia = guardiaActiva || guardiaProxima;
   const asistente = guardia?.asistentes;
 
@@ -142,10 +130,10 @@ export default function PacienteDetalle() {
               </div>
               {guardiaActiva && !guardiaActiva.checkin_at && <div className="mini mini-abajo">{t.paciente.checkin_pendiente}</div>}
               {enCamino && <div className="mini mini-abajo">{t.paciente.en_camino}</div>}
-              {/* A qué hora se estima que llega (pendiente #101). Es una hora y nada más: el Cliente
-                  nunca ve por dónde va quien viene. El punto del que salió el Asistente es casi
-                  siempre su casa, y eso no viaja a este teléfono — el backend lo usa para la cuenta y
-                  manda sólo el resultado.
+              {/* A qué hora se estima que llega (pendiente #101). El punto del que salió el
+                  Asistente es casi siempre su casa, y eso no viaja a este teléfono — el backend lo
+                  usa para la cuenta y manda sólo el resultado. Por dónde va lo muestra el mapa de
+                  abajo, si la Prestadora lo tiene prendido.
 
                   Se dice «alrededor de» a propósito: una hora dicha en seco se lee como una promesa,
                   y quien espera a alguien que cuida a su madre la anota en la cabeza como si lo fuera.
@@ -165,9 +153,10 @@ export default function PacienteDetalle() {
         )}
       </section>
 
-      {/* Apagado el mapa, el Cliente sigue viendo que el Asistente llegó y que se fue: lo
-          que desaparece es el recorrido, el título incluido. */}
-      {guardiaActiva && veUbicacionEnVivo && (
+      {/* El mapa es del viaje: aparece con «Salgo ahora» y se va al escanear la entrada. Apagado,
+          el Cliente sigue viendo que el Asistente está en camino y la hora estimada: lo que
+          desaparece es el recorrido, el título incluido. */}
+      {!guardiaActiva && enViaje && veUbicacionEnVivo && (
         <section className="pwa-card">
           <h2>{t.paciente.ubicacion_en_vivo}</h2>
           {ubicacion ? (

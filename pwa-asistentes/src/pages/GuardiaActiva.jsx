@@ -9,7 +9,7 @@ import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { finDeGuardia } from '../lib/horarios';
-import { obtenerUbicacion, esFalloDeUbicacion } from '../lib/ubicacionDelTelefono';
+import { obtenerUbicacion, esFalloDeUbicacion, seguirUbicacion } from '../lib/ubicacionDelTelefono';
 import { useSeVe } from '../context/PerfilContext';
 import AntesDeLlegar from '../components/AntesDeLlegar';
 import DomicilioTemporal from '../components/DomicilioTemporal';
@@ -187,6 +187,10 @@ function esErrorDeRed(error) {
 // nuevo.
 const MOTIVOS_DEL_CODIGO = ['codigo_incorrecto', 'codigo_vencido', 'demasiados_pedidos'];
 
+// Cada cuánto, como mucho, se manda un punto del viaje. Para seguir a alguien que va en colectivo
+// o caminando, veinte segundos alcanzan, y no le gasta la batería ni los datos.
+const ESPACIO_ENTRE_PUNTOS_MS = 20000;
+
 function tiempoTranscurrido(desde) {
   const ms = Date.now() - new Date(desde).getTime();
   const minutos = Math.floor(ms / 60000);
@@ -311,6 +315,25 @@ export default function GuardiaActiva() {
     const intervalo = setInterval(() => redibujar((v) => v + 1), 30000);
     return () => clearInterval(intervalo);
   }, [guardia, checkinPendiente, cerradoPendiente]);
+
+  // El viaje al domicilio: desde «Salgo ahora» hasta escanear la entrada, el teléfono manda por
+  // dónde va para el mapa del Cliente. Espaciado, porque el GPS avisa varias veces por segundo y
+  // el mapa no necesita tanto. Si el backend contesta que no lo registra —sin consentimiento
+  // vigente—, deja de mandar. Una aplicación web sólo manda mientras está abierta en pantalla.
+  const enViaje = Boolean(guardia?.salida_checkin_at && !guardia?.checkin_at && !checkinPendiente);
+  useEffect(() => {
+    if (!enViaje) return;
+    let ultimoEnvio = 0;
+    let cortar = () => {};
+    cortar = seguirUbicacion((punto) => {
+      if (Date.now() - ultimoEnvio < ESPACIO_ENTRE_PUNTOS_MS) return;
+      ultimoEnvio = Date.now();
+      api.ubicacionDelViaje(id, punto)
+        .then((r) => { if (r?.ubicacion_registrada === false) cortar(); })
+        .catch(() => {});
+    });
+    return () => cortar();
+  }, [enViaje, id]);
 
   // Pasó la hora de fin y esta persona sigue adentro. Recién ahí la pantalla vuelve a preguntar,
   // porque es el único rato en que lo que muestra cambia sin que ella toque nada: primero para

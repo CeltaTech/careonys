@@ -24,7 +24,7 @@
  * una persona, deja ver sólo su Prestadora: si la guardia se buscara con la llave maestra, o sin el
  * filtro por Asistente, la prueba del aislamiento deja de pasar.
  */
-import { strict as assert } from 'node:assert';
+import { strict as assert } from 'node:assert';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
@@ -309,6 +309,63 @@ describe('salida — el acto de avisar que se sale, que es lo que da los minutos
     assert.ok(escritura.credencial, 'la salida se escribió sin credencial');
     assert.notEqual(escritura.credencial, 'Bearer clave-de-mentira', 'la salida se escribió con la llave maestra');
     assert.ok(escritura.url.includes(`id=eq.${GUARDIA}`), escritura.url);
+  });
+});
+
+// ============================================================================
+// El seguimiento del viaje: desde «Salgo ahora» hasta escanear la entrada
+// ============================================================================
+
+describe('ubicación del viaje — un solo punto, sólo entre la salida y la llegada', () => {
+  beforeEach(() => {
+    respuestas.set('POST /rest/v1/rpc/consentimiento_seguimiento_vigente', () => true);
+    respuestas.set('PATCH /rest/v1/guardias', ({ url }) =>
+      filaQuePasaLosFiltros(url, guardiasEnLaBase).map(({ id }) => ({ id }))
+    );
+  });
+
+  it('en viaje guarda el punto, filtrado a que siga en viaje', async () => {
+    guardiasEnLaBase[0].salida_checkin_at = haceUnRato(10);
+    const { estado, cuerpo } = await pedir('PATCH', `/guardias/${GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.ubicacion_registrada, true);
+
+    const [escritura] = guardiasActualizadas();
+    assert.equal(escritura.cuerpo.ubicacion_actual_lat, LAT);
+    assert.equal(escritura.cuerpo.ubicacion_actual_lng, LNG);
+    assert.ok(escritura.url.includes('salida_checkin_at=not.is.null'), escritura.url);
+    assert.ok(escritura.url.includes('checkin_at=is.null'), escritura.url);
+  });
+
+  it('antes de «Salgo ahora» no se guarda nada', async () => {
+    const { estado } = await pedir('PATCH', `/guardias/${GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
+    assert.equal(estado, 404);
+    assert.equal(guardiasActualizadas().length, 0);
+  });
+
+  it('después de escanear la entrada tampoco: el turno no deja coordenadas', async () => {
+    guardiasEnLaBase[0].salida_checkin_at = haceUnRato(30);
+    guardiasEnLaBase[0].checkin_at = haceUnRato(5);
+    guardiasEnLaBase[0].estado = 'activa';
+    const { estado } = await pedir('PATCH', `/guardias/${GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
+    assert.equal(estado, 404);
+    assert.equal(guardiasActualizadas().length, 0);
+  });
+
+  it('sin consentimiento vigente no se guarda, y la aplicación se entera', async () => {
+    respuestas.set('POST /rest/v1/rpc/consentimiento_seguimiento_vigente', () => false);
+    guardiasEnLaBase[0].salida_checkin_at = haceUnRato(10);
+    const { estado, cuerpo } = await pedir('PATCH', `/guardias/${GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.ubicacion_registrada, false);
+    assert.equal(guardiasActualizadas().length, 0);
+  });
+
+  it('la guardia de otra Prestadora no existe para este Asistente', async () => {
+    guardiasEnLaBase[1].salida_checkin_at = haceUnRato(10);
+    const { estado } = await pedir('PATCH', `/guardias/${GUARDIA_DE_OTRA_PRESTADORA}/ubicacion`, { lat: LAT, lng: LNG });
+    assert.equal(estado, 404);
+    assert.equal(guardiasActualizadas().length, 0);
   });
 });
 

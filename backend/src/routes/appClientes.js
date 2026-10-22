@@ -293,16 +293,9 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  // Dónde está el Asistente en este momento solo se pide si la Prestadora tiene prendido el
-  // mapa en vivo. Apagado, el dato ni siquiera sale de la base: el Cliente sigue viendo que
-  // llegó (`checkin_at`) y quién es, que es lo que no depende de seguirle el recorrido.
-  const columnasGuardiaActiva = columnasSegunVisibilidad([
-    'id', 'fecha', 'hora_inicio', 'hora_fin', 'estado', 'checkin_at',
-    ['ubicacion_actual_lat', 'cliente_ubicacion_en_vivo'],
-    ['ubicacion_actual_lng', 'cliente_ubicacion_en_vivo'],
-    ['ubicacion_actual_at', 'cliente_ubicacion_en_vivo'],
-    'asistente_id', 'asistentes(nombre, foto_url)',
-  ], visibilidad);
+  // Con la guardia empezada el mapa ya no va: el punto del viaje se borra al llegar, y del turno
+  // no se guardan coordenadas. El Cliente ve que llegó (`checkin_at`) y quién es.
+  const columnasGuardiaActiva = 'id, fecha, hora_inicio, hora_fin, estado, checkin_at, asistente_id, asistentes(nombre, foto_url)';
 
   // Las guardias de esta pantalla siguen con la llave maestra: la ruta no pide `persona_autorizada_guardias`
   // y la base sí, así que con la credencial de la persona, una persona autorizada sin ese acceso
@@ -317,13 +310,22 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     .limit(1)
     .maybeSingle();
 
+  // salida_checkin_at es lo que permite decirle al Cliente "en camino": el Asistente ya salió
+  // de su casa pero todavía no llegó al domicilio. Y por dónde va en el viaje sólo se pide si la
+  // Prestadora tiene prendido el mapa en vivo; apagado, el dato ni siquiera sale de la base.
+  const columnasGuardiaProxima = columnasSegunVisibilidad([
+    'id', 'fecha', 'hora_inicio', 'hora_fin', 'dias_hasta_el_fin', 'estado', 'salida_checkin_at',
+    ['ubicacion_actual_lat', 'cliente_ubicacion_en_vivo'],
+    ['ubicacion_actual_lng', 'cliente_ubicacion_en_vivo'],
+    ['ubicacion_actual_at', 'cliente_ubicacion_en_vivo'],
+    'asistente_id', 'asistentes(nombre, foto_url)',
+  ], visibilidad);
+
   let guardiaProxima = null;
   if (!guardiaActiva) {
     const { data } = await supabase
       .from('guardias')
-      // salida_checkin_at es lo que permite decirle al Cliente "en camino": el Asistente
-      // ya salió de su casa pero todavía no llegó al domicilio.
-      .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, salida_checkin_at, asistente_id, asistentes(nombre, foto_url)')
+      .select(columnasGuardiaProxima)
       .eq('prestadora_id', paciente.prestadora_id)
       .eq('paciente_id', paciente.id)
       .eq('estado', 'programada')
@@ -337,10 +339,11 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
 
   // A qué hora se estima que llega quien ya salió.
   //
-  // LO QUE VIAJA ES UNA HORA Y NADA MÁS. El Cliente lee «llega alrededor de las 14:45». Nunca ve
-  // por dónde va: el punto del que salió el Asistente es casi siempre su casa, y mandarlo al
-  // teléfono de un tercero sería entregar la ubicación de quien trabaja. Por eso las coordenadas
-  // se leen en una consulta aparte, quedan en una variable de este lado y no tocan la respuesta.
+  // EL PUNTO DE SALIDA NO VIAJA. El Cliente lee «llega alrededor de las 14:45». El punto del que
+  // salió el Asistente es casi siempre su casa, y mandarlo al teléfono de un tercero sería
+  // entregar la ubicación de quien trabaja. Por eso esas coordenadas se leen en una consulta
+  // aparte, quedan en una variable de este lado y no tocan la respuesta. Lo que sí puede viajar,
+  // con el mapa en vivo prendido, es el último punto del viaje (`ubicacion_actual_*`).
   //
   // Es una estimación, no una promesa, y así se dice en la pantalla. Cuando no se puede calcular
   // —salida sin GPS, domicilio sin coordenadas— viaja `null`, que la pantalla trata como «no se

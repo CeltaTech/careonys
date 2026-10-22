@@ -61,3 +61,20 @@ export function obtenerUbicacion() {
     );
   });
 }
+
+/**
+ * Sigue la ubicación del teléfono mientras dura el viaje al domicilio: llama a `alMoverse` con
+ * cada punto nuevo. Devuelve la función que corta el seguimiento.
+ *
+ * Los fallos no se cuentan: en el viaje un punto que no llegó lo reemplaza el siguiente, y el
+ * Asistente no tiene nada que hacer con eso.
+ */
+export function seguirUbicacion(alMoverse) {
+  if (!navigator.geolocation) return () => {};
+  const id = navigator.geolocation.watchPosition(
+    (posicion) => alMoverse({ lat: posicion.coords.latitude, lng: posicion.coords.longitude }),
+    () => {},
+    { enableHighAccuracy: true, timeout: ESPERA_MAXIMA_MS },
+  );
+  return () => navigator.geolocation.clearWatch(id);
+}

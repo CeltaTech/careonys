@@ -16,6 +16,7 @@ import {
   FALLOS_DE_UBICACION,
   esFalloDeUbicacion,
   obtenerUbicacion,
+  seguirUbicacion,
 } from '../ubicacionDelTelefono.js';
 
 /** El navegador de mentira: contesta lo que le digan y nada más. */
@@ -70,6 +71,30 @@ test('cuando el aparato contesta, lo que vuelve es el punto y nada más', async 
   };
   await conNavegador(geolocation, async () => {
     assert.deepEqual(await obtenerUbicacion(), { lat: 1.5, lng: -2.5 });
+  });
+});
+
+test('el seguimiento del viaje entrega cada punto y se corta con lo que devuelve', async () => {
+  let alMoverse;
+  const cortados = [];
+  const geolocation = {
+    watchPosition: (ok) => { alMoverse = ok; return 7; },
+    clearWatch: (id) => cortados.push(id),
+  };
+  await conNavegador(geolocation, async () => {
+    const puntos = [];
+    const cortar = seguirUbicacion((p) => puntos.push(p));
+    alMoverse({ coords: { latitude: 1.5, longitude: -2.5, accuracy: 7 } });
+    assert.deepEqual(puntos, [{ lat: 1.5, lng: -2.5 }]);
+    cortar();
+    assert.deepEqual(cortados, [7]);
+  });
+});
+
+test('sin geolocalización el seguimiento no arranca y cortarlo no rompe nada', async () => {
+  await conNavegador(null, async () => {
+    const cortar = seguirUbicacion(() => assert.fail('no hay de dónde sacar un punto'));
+    cortar();
   });
 });
 

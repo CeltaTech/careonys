@@ -909,6 +909,10 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
       checkin_lat: registraUbicacion ? lat : null,
       checkin_lng: registraUbicacion ? lng : null,
       estado: 'activa',
+      // Llegó: el punto del viaje ya no sirve, y del viaje no queda nada guardado.
+      ubicacion_actual_lat: null,
+      ubicacion_actual_lng: null,
+      ubicacion_actual_at: null,
     })
     .eq('id', guardia.id);
   if (error) {
@@ -977,8 +981,9 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
 // Los dos actos deliberados de antes de llegar (pendiente #101): «salgo ahora» y «voy
 // demorado».
 //
-// POR QUÉ SON DOS BOTONES Y NO UN SEGUIMIENTO. El sistema se apoya en el acto de la persona.
-// Quien avisa que sale, y quien avisa que va demorado y por qué, hizo algo, y eso lo protege.
+// LOS DOS BOTONES SON EL ACTO DE LA PERSONA. Quien avisa que sale, y quien avisa que va demorado
+// y por qué, hizo algo, y eso lo protege. El seguimiento que arranca con «Salgo ahora» (ruta
+// `/ubicacion`) es otra cosa: sólo mueve el mapa del Cliente y no cuenta como aviso de nadie.
 // Lo que el sistema calcula solo es un hecho, no un mérito de nadie, y por eso se guarda con
 // otro código de origen y no se mezcla nunca con el aviso que dio la persona.
 //
@@ -1902,9 +1907,10 @@ appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsiste
   res.json({ estado: fila?.estado ?? null });
 });
 
-// Ping de ubicación en vivo durante una guardia activa — el Cliente lo lee vía Supabase
-// Realtime, nunca por HTTP (PRD_04_05_App_Servicio.md, mapa en tiempo real de la Pantalla
-// del Paciente).
+// El último punto del viaje al domicilio: desde «Salgo ahora» hasta escanear la entrada. Se
+// guarda uno solo, que pisa al anterior, y el check-in lo borra. El Cliente lo lee vía Supabase
+// Realtime, nunca por HTTP. Durante la guardia esta ruta no escribe: lo del turno es otro
+// registro, sin coordenadas.
 appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async (req, res) => {
   const { lat, lng } = req.body || {};
   if (typeof lat !== 'number' || typeof lng !== 'number') {
@@ -1913,8 +1919,8 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async
 
   const db = clienteDelPedido(req);
   const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia || guardia.estado !== 'activa') {
-    return res.status(404).json({ error: 'Guardia activa no encontrada' });
+  if (!guardia || !guardia.salida_checkin_at || guardia.checkin_at) {
+    return res.status(404).json({ error: 'Guardia en viaje no encontrada' });
   }
 
   // El mapa en vivo es, literalmente, la ubicación de una persona: sin consentimiento vigente no
@@ -1924,19 +1930,20 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async
     return res.json({ ok: true, ubicacion_registrada: false });
   }
 
-  // Solo mientras la guardia siga activa: si se cerró entre la lectura de arriba y esta línea,
-  // el mapa del Cliente no tiene que seguir moviéndose. Y si no se escribió nada, se dice.
+  // Sólo mientras siga en viaje: si escaneó la entrada entre la lectura de arriba y esta línea,
+  // el punto que el check-in acaba de borrar no tiene que volver. Y si no se escribió nada, se dice.
   const { data: marcada, error } = await db
     .from('guardias')
     .update({ ubicacion_actual_lat: lat, ubicacion_actual_lng: lng, ubicacion_actual_at: new Date().toISOString() })
     .eq('id', guardia.id)
-    .eq('estado', 'activa')
+    .not('salida_checkin_at', 'is', null)
+    .is('checkin_at', null)
     .select('id');
   if (error) {
     return responderError(res, error);
   }
   if (!marcada?.length) {
-    return res.status(404).json({ error: 'Guardia activa no encontrada' });
+    return res.status(404).json({ error: 'Guardia en viaje no encontrada' });
   }
 
   res.json({ ok: true, ubicacion_registrada: true });

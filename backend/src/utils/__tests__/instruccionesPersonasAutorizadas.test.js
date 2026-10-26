@@ -148,12 +148,24 @@ describe('confirmar la instrucción con el código', () => {
     assert.equal(actualizaciones().some((a) => 'codigo_intentos' in a), false);
   });
 
-  it('agotado el tope no se compara nada, ni siquiera el código correcto', async () => {
+  it('el sexto intento no compara nada y bloquea por el tiempo de vida del código', async () => {
     instruccion.codigo_intentos = 5;
+    instruccion.codigo_expira_en = enUnRato(2);
     const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(resultado.ok, false);
     assert.equal(resultado.motivo, 'demasiados_intentos');
-    assert.equal(actualizaciones().length, 0, 'no se puede cerrar nada con el tope agotado');
+    assert.equal(resultado.minutos, 10);
+    assert.deepEqual(actualizaciones().map((a) => Object.keys(a)), [['codigo_expira_en']], 'sólo se corre el vencimiento: no se cierra nada');
+    assert.equal(instruccion.estado, 'pendiente_firma');
+  });
+
+  it('durante el bloqueo se informa cuánto falta, sin correrlo', async () => {
+    instruccion.codigo_intentos = 6;
+    instruccion.codigo_expira_en = enUnRato(3);
+    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA, codigo: '123456' });
+    assert.equal(resultado.motivo, 'demasiados_intentos');
+    assert.equal(resultado.minutos, 3);
+    assert.equal(actualizaciones().length, 0);
   });
 
   it('un código vencido no gasta ningún intento', async () => {
@@ -222,20 +234,24 @@ describe('pedir un código nuevo', () => {
     assert.equal(actualizaciones().length, 0);
   });
 
-  it('agotados los intentos, pedir otro código sigue sin devolverlos: la salida es otra', async () => {
-    // Cinco intentos gastados y el tope alcanzado.
-    instruccion.codigo_intentos = 5;
-    const antes = await confirmarConCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA, codigo: '123456' });
-    assert.equal(antes.motivo, 'demasiados_intentos');
+  it('durante el bloqueo no se emite ningún código, y se dice cuánto falta', async () => {
+    instruccion.codigo_intentos = 6;
+    instruccion.codigo_expira_en = enUnRato(4);
+    await assert.rejects(
+      () => pedirCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA }),
+      (error) => error.motivo === 'demasiados_intentos' && error.minutos === 4,
+    );
+    assert.equal(actualizaciones().length, 0);
+  });
 
-    // Se pide un código nuevo, que es lo que antes reiniciaba la cuenta.
+  it('pasado el bloqueo, el código nuevo trae los cinco intentos', async () => {
+    instruccion.codigo_intentos = 6;
+    instruccion.codigo_expira_en = haceUnRato(1);
     await pedirCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA }).catch(() => {});
-
-    // Y el código nuevo tampoco sirve: la salida es que la Prestadora cargue otra instrucción o
-    // que se cierre con la hoja firmada en papel, no probar cinco veces más.
-    const despues = await confirmarConCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA, codigo: '123456' });
-    assert.equal(despues.ok, false);
-    assert.equal(despues.motivo, 'demasiados_intentos');
+    const [emision] = actualizaciones();
+    assert.ok(emision, 'tiene que haberse escrito el código nuevo');
+    assert.equal(emision.codigo_intentos, 0);
+    assert.ok(new Date(emision.codigo_expira_en) > new Date());
   });
 });
 

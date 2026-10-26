@@ -354,6 +354,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/lib/textos.js', 'pwa-clientes/src/lib/textos.js'],
   },
   {
+    que: 'la frase de quien tiene que esperar antes de volver a probar',
+    original: 'panel/src/lib/fraseDeEspera.js',
+    copias: ['pwa-asistentes/src/lib/fraseDeEspera.js', 'pwa-clientes/src/lib/fraseDeEspera.js'],
+  },
+  {
     que: 'el mensaje emergente que avisa que algo salió bien y se va solo',
     original: 'panel/src/lib/mensajeEmergente.js',
     copias: ['pwa-asistentes/src/lib/mensajeEmergente.js', 'pwa-clientes/src/lib/mensajeEmergente.js'],

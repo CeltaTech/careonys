@@ -8,6 +8,7 @@ import {
   sumarIntento,
   seAgotaronLosIntentos,
   vencimientoEnMinutos,
+  minutosQueFaltan,
   INTENTOS_MAXIMOS,
 } from './codigoDeUnSoloUso.js';
 import { enviarWhatsAppPorPlantilla } from './whatsapp.js';
@@ -176,13 +177,6 @@ async function pedidosEnLaUltimaHora({ prestadoraId, verificador, db }) {
     return Number.POSITIVE_INFINITY;
   }
   return Number.isFinite(count) ? count : Number.POSITIVE_INFINITY;
-}
-
-// Cuántos minutos enteros faltan hasta ese momento, redondeando para arriba y nunca menos de uno:
-// quien espera tiene que saber cuánto, y decirle «0 minutos» lo haría intentar antes de tiempo.
-function minutosQueFaltan(hasta) {
-  const ms = Date.parse(hasta) - Date.now();
-  return Number.isFinite(ms) ? Math.max(1, Math.ceil(ms / 60000)) : 1;
 }
 
 // Cuándo se libera un lugar del tope por hora: cuando el pedido más viejo de la ventana cumple la

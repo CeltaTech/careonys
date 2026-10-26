@@ -13,9 +13,11 @@ import {
   codigoCoincide,
   codigoNuevoParaGuardar,
   estaVencido,
+  minutosQueFaltan,
   seAgotaronLosIntentos,
   sumarIntento,
   vencimientoEnMinutos,
+  INTENTOS_MAXIMOS,
 } from './codigoDeUnSoloUso.js';
 
 // Todo lo que le pasa a una instrucción sobre los accesos de las personas autorizadas: se carga, se firma
@@ -215,7 +217,7 @@ export async function pedirCodigo({ instruccionId, clienteId, prestadoraId }) {
 
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
-    .select('id, prestadora_id, estado')
+    .select('id, prestadora_id, estado, codigo_intentos, codigo_expira_en')
     .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('cliente_id', clienteId)
@@ -229,10 +231,21 @@ export async function pedirCodigo({ instruccionId, clienteId, prestadoraId }) {
   // El código nuevo no devuelve intentos: la cuenta es de esta instrucción y no del código de
   // turno (pendiente #177). El porqué, y por qué el caso legítimo del código vencido sigue
   // andando, está escrito una sola vez en `codigoDeUnSoloUso.js`.
+  //
+  // Salvo después del bloqueo. Agotados los intentos, la instrucción queda bloqueada hasta que
+  // vence el último código; mientras tanto no se manda otro, y pasado ese tiempo el código nuevo
+  // trae los cinco intentos. Es lo mismo que hace el código al teléfono.
+  const bloqueada = (instruccion.codigo_intentos ?? 0) > INTENTOS_MAXIMOS;
+  if (bloqueada && !estaVencido(instruccion.codigo_expira_en)) {
+    const err = new ErrorConMotivo('demasiados_intentos');
+    err.minutos = minutosQueFaltan(instruccion.codigo_expira_en);
+    throw err;
+  }
+
   const { codigo, campos } = codigoNuevoParaGuardar(vencimientoEnMinutos(VIGENCIA_DEL_CODIGO_MINUTOS));
   const { error } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
-    .update(campos)
+    .update(bloqueada ? { ...campos, codigo_intentos: 0 } : campos)
     .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId);
   if (error) throw new Error(error.message);
@@ -323,7 +336,19 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
     id: instruccionId,
     prestadoraId,
   });
-  if (seAgotaronLosIntentos(intentos)) return { ok: false, motivo: 'demasiados_intentos' };
+  // El sexto intento bloquea por el tiempo de vida de un código, igual que el código al teléfono;
+  // los que llegan durante el bloqueo sólo informan cuánto falta.
+  if (seAgotaronLosIntentos(intentos)) {
+    if (intentos === INTENTOS_MAXIMOS + 1) {
+      await supabase
+        .from('instrucciones_acceso_personas_autorizadas')
+        .update({ codigo_expira_en: vencimientoEnMinutos(VIGENCIA_DEL_CODIGO_MINUTOS) })
+        .eq('prestadora_id', prestadoraId)
+        .eq('id', instruccionId);
+      return { ok: false, motivo: 'demasiados_intentos', minutos: VIGENCIA_DEL_CODIGO_MINUTOS };
+    }
+    return { ok: false, motivo: 'demasiados_intentos', minutos: minutosQueFaltan(instruccion.codigo_expira_en) };
+  }
 
   if (!codigoCoincide(codigo, instruccion.codigo_verificador)) {
     return { ok: false, motivo: 'codigo_incorrecto' };

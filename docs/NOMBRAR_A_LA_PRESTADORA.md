@@ -787,26 +787,6 @@ autorizada —guardias, reportes, alertas, facturas, medicación—.
 
 ---
 
-## 37. Demasiados intentos con la instrucción
-
-**Ruta:** `errores.motivos.demasiados_intentos`
-
-**Texto de hoy:**
-> Se probó demasiadas veces con esta instrucción. Pedir un código nuevo ya no devuelve
-> intentos: hace falta que la Prestadora la cargue de nuevo, o firmarla en papel.
-
-**Dónde se ve:** Firmar instrucción (`/instruccion`).
-
-**Qué lo dispara:** se manda el código de verificación después de haber errado el tope de veces.
-
-**Quién lo lee:** el titular de la cuenta.
-
-**Archivo:** `pwa-clientes/src/lib/errores.js:156`
-
-**DECISIÓN:**
-
----
-
 ## 38. Acá no hay lista para elegir
 
 **Ruta:** `errores.motivos.intermediacion_no_habilitado`

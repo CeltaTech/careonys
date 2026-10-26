@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
+import { fraseDeEspera } from '../lib/fraseDeEspera';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -23,12 +24,6 @@ const FRASE_PROPIA = {
   demasiados_intentos: (t, err) => fraseDeEspera(t, err?.minutos),
   demasiados_pedidos: (t, err) => fraseDeEspera(t, err?.minutos),
 };
-
-function fraseDeEspera(t, minutos) {
-  if (!Number.isInteger(minutos) || minutos < 1) return t.auth.clave_nueva_demasiados_intentos;
-  if (minutos === 1) return t.auth.clave_nueva_demasiados_intentos_minutos_uno;
-  return t.auth.clave_nueva_demasiados_intentos_minutos.replace('{minutos}', minutos);
-}
 
 // Donde se elige la clave nueva, con el enlace que llegó por correo.
 //

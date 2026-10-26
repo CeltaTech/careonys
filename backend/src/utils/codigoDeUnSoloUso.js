@@ -80,6 +80,13 @@ export function estaVencido(expiraEn) {
   return new Date(expiraEn).getTime() < Date.now();
 }
 
+// Cuántos minutos enteros faltan hasta ese momento, redondeando para arriba y nunca menos de uno:
+// quien espera tiene que saber cuánto, y decirle «0 minutos» lo haría intentar antes de tiempo.
+export function minutosQueFaltan(hasta) {
+  const ms = Date.parse(hasta) - Date.now();
+  return Number.isFinite(ms) ? Math.max(1, Math.ceil(ms / 60000)) : 1;
+}
+
 // ---------------------------------------------------------------------------------------
 // Emitir un código nuevo NO devuelve intentos (pendiente #177)
 // ---------------------------------------------------------------------------------------
@@ -97,10 +104,11 @@ export function estaVencido(expiraEn) {
 // gastó ningún intento: el vencimiento se controla **antes** de contar, así que un código
 // vencido no cuesta nada y esa persona llega al código nuevo con los cinco enteros.
 //
-// Cuando de verdad se agotaron, la salida no es pedir otro código —eso es justamente lo que se
-// cerró— sino la que cada camino ya tenía: en la firma del titular, la Prestadora carga una
-// instrucción nueva o la cierra con la hoja firmada en papel; en el pase de guardia, el
-// Asistente entra igual eligiendo un motivo, que es el piso que nunca falla.
+// Cuando de verdad se agotaron, pedir otro código en el momento no sirve —eso es justamente lo
+// que se cerró—. En la firma del titular y en el código al teléfono el sexto intento bloquea por
+// el tiempo de vida de un código, como hacen las cuentas de Google y de Microsoft: pasado ese
+// tiempo, el código siguiente trae los cinco intentos. En el pase de guardia el Asistente entra
+// igual eligiendo un motivo, que es el piso que nunca falla.
 //
 // Devuelve el código en claro —que se muestra o se manda una sola vez— y las columnas que hay
 // que guardar. `codigo_intentos` no está en esa lista a propósito: no se toca al emitir.

@@ -39,7 +39,6 @@ export const T = {
         // Dos frases que se parecen y dicen cosas distintas (pendiente #177). Los intentos son de
         // la instrucción y no del código: pedir uno nuevo ya no los devuelve, así que esperar no
         // arregla nada y la salida es otra. El tope de pedidos por minuto sí se arregla esperando.
-        demasiados_intentos: 'Superó la cantidad de intentos para esta instrucción. Pida a la Prestadora que la cargue nuevamente o fírmela en papel.',
         demasiados_pedidos: 'Demasiadas solicitudes. Espere un minuto e intente nuevamente.',
         sin_codigo: 'Todavía no solicitó un código. Solicítelo e intente nuevamente.',
         ya_cerrada: 'Esa instrucción ya está firmada. No queda nada por confirmar.',
@@ -703,7 +702,6 @@ export const T = {
         sin_acceso: 'The account holder did not include this in what you can see. Any change is requested by them from the Provider.',
         codigo_incorrecto: 'The code is not correct. Check it and enter it again.',
         vencido: 'The code has expired. Request a new code.',
-        demasiados_intentos: 'You exceeded the number of attempts for this instruction. Ask the Provider to load it again, or sign it on paper.',
         demasiados_pedidos: 'Too many requests. Wait a minute and try again.',
         sin_codigo: 'You have not requested a code yet. Request one and try again.',
         ya_cerrada: 'That instruction is already signed. There is nothing left to confirm.',
@@ -1281,7 +1279,6 @@ export const T = {
         sin_acceso: 'O titular da conta não incluiu isto no que foi concedido. A mudança é ele quem pede à Prestadora.',
         codigo_incorrecto: 'O código não está correto. Verifique-o e informe-o novamente.',
         vencido: 'O código expirou. Solicite um novo código.',
-        demasiados_intentos: 'Você excedeu o número de tentativas para esta instrução. Peça à Prestadora que a carregue novamente ou assine-a em papel.',
         demasiados_pedidos: 'Muitas solicitações. Aguarde um minuto e tente novamente.',
         sin_codigo: 'Você ainda não solicitou um código. Solicite-o e tente novamente.',
         ya_cerrada: 'Essa instrução já está assinada. Não resta nada a confirmar.',

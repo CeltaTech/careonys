@@ -251,7 +251,7 @@ appClientesRouter.post('/instruccion/:instruccionId/confirmar', requiereRolClien
   });
 
   if (!resultado.ok) {
-    return res.status(400).json({ error: 'No se pudo confirmar', motivo: resultado.motivo });
+    return res.status(400).json({ error: 'No se pudo confirmar', motivo: resultado.motivo, minutos: resultado.minutos });
   }
   res.json({ ok: true });
 });

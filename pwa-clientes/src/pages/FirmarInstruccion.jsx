@@ -20,6 +20,13 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
 import { mensajeDeError } from '../lib/errores';
+import { fraseDeEspera } from '../lib/fraseDeEspera';
+
+// Agotados los intentos, la instrucción se bloquea unos minutos, igual que el cambio de
+// contraseña, y se dice lo mismo: cuánto esperar.
+function errorDeLaFirma(e, t, que) {
+  return e?.motivo === 'demasiados_intentos' ? fraseDeEspera(t, e.minutos) : mensajeDeError(e, t, que);
+}
 
 const LARGO_DEL_CODIGO = 6;
 
@@ -82,7 +89,7 @@ export default function FirmarInstruccion() {
       // llevaría a confirmar con uno vencido y a leer un error que no explica nada.
       setCodigo('');
     } catch (e) {
-      setErrorDelCodigo(mensajeDeError(e, t, 'pedir el código de la instrucción'));
+      setErrorDelCodigo(errorDeLaFirma(e, t, 'pedir el código de la instrucción'));
     } finally {
       setPidiendoCodigo(false);
     }
@@ -101,7 +108,7 @@ export default function FirmarInstruccion() {
       recargar();
       reloj.current = setTimeout(() => navigate(desde, { replace: true }), MS_ANTES_DE_VOLVER);
     } catch (e) {
-      setErrorDelCodigo(mensajeDeError(e, t, 'confirmar la instrucción'));
+      setErrorDelCodigo(errorDeLaFirma(e, t, 'confirmar la instrucción'));
     } finally {
       setConfirmando(false);
     }

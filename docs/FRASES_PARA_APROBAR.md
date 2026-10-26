@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 9 fichas.** Panel 3, aplicación del Cliente 4, Base 2.
+**Total: 8 fichas.** Panel 3, aplicación del Cliente 3, Base 2.
 
 ## Panel (3)
 
@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Cliente (4)
-
-### 5. Demasiados intentos con la instrucción
-
-| | |
-|---|---|
-| **Texto actual** | Superó la cantidad de intentos para esta instrucción. Pida a la Prestadora que la cargue nuevamente o fírmela en papel. |
-| **Propuesta corta** | «Sin intentos. Pida a la Prestadora que la cargue nuevamente o fírmela en papel.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | con ese código ya no hay salida, así que la segunda frase es la única instrucción que no sobra. |
-| **Quién lo lee** | el Cliente. |
-| **Dónde está** | «Instrucción sobre las personas autorizadas», tarjeta «Firmar». |
-| **Qué estaba haciendo** | confirmaba o pedía el código después de 5 intentos fallidos. |
-| **Qué pasó** | la instrucción quedó bloqueada. Pedir otro código no devuelve intentos. |
-| **Qué puede hacer después** | pedir a la Prestadora que la cargue nuevamente, o firmar en papel. |
-| **Cómo se muestra** | texto al pie del campo, o franja. |
-| **Decisión** |  |
+## Aplicación del Cliente (3)
 
 ### 9. Sin servicio contratado para ver el contacto
 

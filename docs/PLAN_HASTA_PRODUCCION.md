@@ -1420,6 +1420,8 @@ Falta que usted conteste dos cosas:
 - **Qué emergencias y qué plan de acción trae la lista de fábrica.** Los textos los aprueba usted, uno por uno.
 - **Qué acciones se pueden preparar**: avisar al Cliente, llamar al servicio de emergencias médicas, mandar a otro Asistente, u otras.
 
+Y algo que hoy está mal pensado y se corrige acá: **a qué número se llama.** `telefonos_de_emergencia` guarda un solo número por país, y la respuesta automática de WhatsApp lo da cuando alguien escribe una emergencia (`backend/src/utils/respuestaAutomaticaWhatsapp.js:126`). En Argentina el número cambia según el lugar y según la clase de emergencia —salud, policía, bomberos—, como señaló el Desarrollador con `https://www.argentina.gob.ar/tema/emergencias`. Hoy no hace daño solamente porque la tabla está vacía. Se corrige con la lista de emergencias, cuando se decida qué número corresponde a cada una y a cada lugar.
+
 **79.** Construirlo según lo contestado. El tablero del Panel cuenta como emergencia sólo lo que avisó una persona con el botón.
 
 **80.** El Panel se instala también en el teléfono, sin dejar de ser lo que es. En la computadora sigue igual. En el teléfono se instala desde el navegador, recibe avisos aunque no esté abierto y abre primero lo urgente del día —quién no llegó, qué guardia quedó sin cubrir, a quién mandar de reemplazo—, sin perder el resto. Es el mismo programa, con la misma dirección, la misma cuenta y los mismos permisos: no es una tercera aplicación. En el iPhone los avisos llegan sólo con el Panel instalado en la pantalla de inicio, igual que en las dos aplicaciones. Las alarmas del relevo que no llega se apoyan en estos avisos: sección «El Paciente nunca queda solo».

@@ -1,4 +1,4 @@
-import { enLaPrestadora, supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
 import { enviarPushAsistente } from './push.js';
 import { avisarPorWhatsapp } from './whatsapp.js';
@@ -40,12 +40,12 @@ export async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, envia
   // solo lugar. Acá sólo se mira si la Prestadora apagó el mensaje entero.
   if (config?.activo === false) return;
 
-  const { data: asistente } = await supabase
+  const { data: asistente } = await enLaPrestadora(prestadoraId, 'teléfono del Asistente para el respaldo', (db) => db
     .from('asistentes')
     .select('telefono')
     .eq('prestadora_id', prestadoraId)
     .eq('id', asistenteId)
-    .maybeSingle();
+    .maybeSingle());
   if (!asistente?.telefono) return;
 
   try {

@@ -116,7 +116,6 @@
                                  "backend/src/utils/revisarGuardiasSinCubrir.js",
                                  "backend/src/utils/revisarIncidentesTurnoSinCubrir.js",
                                  "backend/src/utils/revisarLlegadasDemoradas.js",
-                                 "backend/src/utils/revisarNotificacionesCoordinador.js",
-                                 "backend/src/utils/revisarRecordatoriosPush.js"
+                                 "backend/src/utils/revisarNotificacionesCoordinador.js"
                              ]
 }

@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 18 fichas.** Panel 3, aplicación del Asistente 9, aplicación del Cliente 4, Base 2.
+**Total: 12 fichas.** Panel 3, aplicación del Asistente 3, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (5)
-
-### 22. Cambió el texto de un permiso
-
-| | |
-|---|---|
-| **Texto actual** | El texto cambió desde su última respuesta. Léalo y responda nuevamente. |
-| **Propuesta corta** | «Texto modificado. Responda nuevamente.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | los botones «Acepto» y «No acepto» están al lado; «Léalo» sobra. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Perfil → «Permisos que dependen de usted». |
-| **Qué estaba haciendo** | entró a Perfil después de haber respondido el permiso. |
-| **Qué pasó** | la Prestadora cambió el texto; la respuesta anterior ya no vale. |
-| **Qué puede hacer después** | leer y tocar «Acepto» o «No acepto». |
-| **Cómo se muestra** | franja en tono neutro. |
-| **Decisión** |  |
+## Aplicación del Asistente (3)
 
 ### 24. La matrícula la carga la Prestadora
 
@@ -119,22 +103,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué estaba haciendo** | entró a Perfil. |
 | **Qué pasó** | mismo caso que la ficha 25, en una Prestadora que deja cargar la matrícula desde el teléfono. |
 | **Qué puede hacer después** | tocar «Cargar la matrícula», completar y guardar. |
-| **Cómo se muestra** | franja amarilla. |
-| **Decisión** |  |
-
-### 27. Papel por vencer
-
-| | |
-|---|---|
-| **Texto actual** | Un papel está por vencer. Entregue la renovación a la Prestadora antes de la fecha. |
-| **Propuesta corta** | «Papel por vencer. Entregue la renovación a la Prestadora.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | la fecha ya está en la lista. La instrucción queda porque no es obvia: el papel no se carga desde el teléfono. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Perfil → Papeles. |
-| **Qué estaba haciendo** | entró a Perfil. |
-| **Qué pasó** | al menos un papel entró en el plazo de aviso antes de vencer. |
-| **Qué puede hacer después** | llevarle el papel renovado a la Prestadora. |
 | **Cómo se muestra** | franja amarilla. |
 | **Decisión** |  |
 

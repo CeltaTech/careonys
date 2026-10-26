@@ -8,6 +8,7 @@ import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
 import { avisarAsignacionDeTurno, avisarAsignacionDeSerie } from '../utils/avisoAsignacionDeTurno.js';
 import { sugerirMotivoDelAviso } from '../utils/motivoSugeridoDelAviso.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { documentosDelBloqueo } from '../utils/erroresDeDocumentos.js';
 
 export const panelGuardiasRouter = Router();
 
@@ -188,8 +189,9 @@ panelGuardiasRouter.post('/aviso-cambio-asistente', requiereRolPanel, exigirOrga
    el celular y el Panel no los puede mandar. Al Cliente no se le avisa acá: el turno cambia de
    manos cuando el nuevo acepta.
 
-   Lo que la base rechaza vuelve como motivo, nunca con su texto: la Matrícula y la modalidad
-   llevan el mismo código que el Panel ya sabe convertir en frase. */
+   Lo que la base rechaza vuelve como motivo, nunca con su texto: los documentos pendientes y la
+   modalidad llevan el mismo código que el Panel ya sabe convertir en frase, y los documentos además
+   la lista de cuáles faltan. */
 const LO_QUE_RECHAZA_LA_BASE = [
   { patron: /guardia_no_encontrada/, estado: 404, motivo: 'guardia_no_encontrada' },
   { patron: /asistente_no_encontrado/, estado: 404, motivo: 'asistente_no_encontrado' },
@@ -202,33 +204,45 @@ const LO_QUE_RECHAZA_LA_BASE = [
 
 export function motivoDeLaAsignacion(error) {
   const texto = String(error?.message ?? '');
-  const matricula = /matricula_bloquea:([a-z_]+)/.exec(texto);
-  if (matricula) return { estado: 409, motivo: `matricula_bloquea:${matricula[1]}` };
+  const documentos = documentosDelBloqueo(error);
+  if (documentos) return { estado: 409, motivo: 'documentos_bloquean', documentos };
+  if (texto.includes('sin_permiso_para_asignar_con_documentos_pendientes')) {
+    return { estado: 403, motivo: 'sin_permiso_para_asignar_con_documentos_pendientes' };
+  }
   const modalidad = /modalidad_bloquea:([a-z_]+)/.exec(texto);
   if (modalidad) return { estado: 409, motivo: `modalidad_bloquea:${modalidad[1]}` };
   return LO_QUE_RECHAZA_LA_BASE.find((r) => r.patron.test(texto)) ?? null;
 }
 
+/** Contesta lo que la base rechazó, con el motivo y, si son documentos, cuáles. */
+function responderRechazo(req, res, error) {
+  const previsto = motivoDeLaAsignacion(error);
+  if (!previsto) return responderError(res, error);
+  console.error(`[${previsto.estado}] POST ${req.originalUrl} — ${previsto.motivo}:`, error.message);
+  const cuerpo = { error: previsto.motivo, motivo: previsto.motivo };
+  if (previsto.documentos) cuerpo.documentos = previsto.documentos;
+  return res.status(previsto.estado).json(cuerpo);
+}
+
+/* El motivo para asignar igual con documentos pendientes viaja sólo cuando la persona eligió
+   hacerlo. La base decide si tiene permiso y deja la excepción anotada. */
 panelGuardiasRouter.post('/:id/asignar', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const asistenteId = req.body?.asistente_id ?? null;
   if (asistenteId !== null && typeof asistenteId !== 'string') {
     return res.status(400).json({ error: 'Asistente no reconocido' });
   }
+  const motivoExcepcion = req.body?.motivo_excepcion;
+  if (motivoExcepcion !== undefined && motivoExcepcion !== null
+    && (typeof motivoExcepcion !== 'string' || !motivoExcepcion.trim())) {
+    return res.status(400).json({ error: 'motivo_excepcion_invalido', motivo: 'motivo_excepcion_invalido' });
+  }
 
   const db = clienteDelPedido(req);
-  const { data: resultado, error } = await db.rpc('asignar_turno', {
-    p_guardia_id: req.params.id,
-    p_asistente_id: asistenteId,
-  });
+  const parametros = { p_guardia_id: req.params.id, p_asistente_id: asistenteId };
+  if (typeof motivoExcepcion === 'string') parametros.p_motivo_excepcion = motivoExcepcion.trim();
+  const { data: resultado, error } = await db.rpc('asignar_turno', parametros);
 
-  if (error) {
-    const previsto = motivoDeLaAsignacion(error);
-    if (previsto) {
-      console.error(`[${previsto.estado}] POST ${req.originalUrl} — ${previsto.motivo}:`, error.message);
-      return res.status(previsto.estado).json({ error: previsto.motivo, motivo: previsto.motivo });
-    }
-    return responderError(res, error);
-  }
+  if (error) return responderRechazo(req, res, error);
 
   if (resultado?.sin_cambios) return res.json({ sinCambios: true });
 
@@ -266,14 +280,7 @@ panelGuardiasRouter.post('/series/:id/asignar', requiereRolPanel, exigirOrganiza
     p_asistente_id: asistenteId,
   });
 
-  if (error) {
-    const previsto = motivoDeLaAsignacion(error);
-    if (previsto) {
-      console.error(`[${previsto.estado}] POST ${req.originalUrl} — ${previsto.motivo}:`, error.message);
-      return res.status(previsto.estado).json({ error: previsto.motivo, motivo: previsto.motivo });
-    }
-    return responderError(res, error);
-  }
+  if (error) return responderRechazo(req, res, error);
 
   if (resultado?.sin_cambios) return res.json({ sinCambios: true });
 
@@ -315,14 +322,7 @@ panelGuardiasRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirOrgani
     p_hora_fin: horaFin,
   });
 
-  if (error) {
-    const previsto = motivoDeLaAsignacion(error);
-    if (previsto) {
-      console.error(`[${previsto.estado}] POST ${req.originalUrl} — ${previsto.motivo}:`, error.message);
-      return res.status(previsto.estado).json({ error: previsto.motivo, motivo: previsto.motivo });
-    }
-    return responderError(res, error);
-  }
+  if (error) return responderRechazo(req, res, error);
 
   // Con la llave maestra y acotada a mano, como el resto de esta ruta.
   const { data: guardias } = await acotarAPrestadora(

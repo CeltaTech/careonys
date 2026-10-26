@@ -22,17 +22,16 @@ import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { supabase } from '../../lib/supabaseClient';
-import { subirPapel, direccionParaMirar, TIPOS_ACEPTADOS, TAMANO_MAXIMO } from '../../lib/papelesDelLegajo';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { DocumentosDelAsistente } from './DocumentosDelAsistente';
 import { ElegirLugares } from '../../components/lugares/ElegirLugares';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { partesDesdeFila, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
-import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
 import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
 import { useTiposDeDocumento } from '../../hooks/useTiposDeDocumento';
@@ -57,7 +56,7 @@ const AVISO_DE_LA_BASE = {
 
 const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais'];
 
-export function PerfilTab({ asistente, onActualizado }) {
+export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) {
   const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const esAdmin = esAdminOSuperior(usuario?.rol);
@@ -702,178 +701,7 @@ export function PerfilTab({ asistente, onActualizado }) {
         <Button onClick={guardar} disabled={guardando || !puedeEditarIdentidad}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
       </div>
 
-      {esAdmin && <DocumentosVencimiento asistenteId={asistente.id} />}
+      {esAdmin && <DocumentosDelAsistente asistenteId={asistente.id} {...documentosDelAsistente} />}
     </div>
-  );
-}
-
-// Catálogo configurable por prestadora (Configuración > Documentos de Asistentes) — reemplaza
-// las 3 columnas fijas vencimiento_monotributo/art/seguro (ver, en
-// docs/PLAN_HASTA_PRODUCCION.md, el paso «El vencimiento de documentos avisa por el catálogo»,
-// y supabase/migrations/).
-function DocumentosVencimiento({ asistenteId }) {
-  const { t } = useLocale();
-  const prestadoraId = usePrestadoraActual();
-  const [tipos, setTipos] = useState([]);
-  const [valores, setValores] = useState({});
-  const [documentoIds, setDocumentoIds] = useState({});
-  const [rutas, setRutas] = useState({});
-  const [estado, setEstado] = useState('cargando');
-  const [error, setError] = useState(null);
-  const [guardandoTipoId, setGuardandoTipoId] = useState(null);
-  const [subiendoTipoId, setSubiendoTipoId] = useState(null);
-  const [abriendoTipoId, setAbriendoTipoId] = useState(null);
-
-  const recargar = useCallback(async () => {
-    setEstado('cargando');
-    setError(null);
-    const [{ data: tiposData, error: errorTipos }, { data: documentosData, error: errorDocumentos }] = await Promise.all([
-      supabase.from('tipos_documento_asistente').select('id, nombre, requiere_vencimiento').eq('activo', true).order('nombre'),
-      supabase.from('documentos_asistente').select('id, tipo_documento_id, fecha_vencimiento, ruta_archivo').eq('asistente_id', asistenteId),
-    ]);
-    if (errorTipos || errorDocumentos) {
-      setError(t.comun.error_generico);
-      setEstado('error');
-      return;
-    }
-    setTipos(tiposData ?? []);
-    const nuevosValores = {};
-    const nuevosIds = {};
-    const nuevasRutas = {};
-    for (const doc of documentosData ?? []) {
-      nuevosValores[doc.tipo_documento_id] = doc.fecha_vencimiento || '';
-      nuevosIds[doc.tipo_documento_id] = doc.id;
-      nuevasRutas[doc.tipo_documento_id] = doc.ruta_archivo || null;
-    }
-    setValores(nuevosValores);
-    setDocumentoIds(nuevosIds);
-    setRutas(nuevasRutas);
-    setEstado('listo');
-  }, [asistenteId, t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  // El renglón se guarda con lo que haya: la fecha de vencimiento, el papel, o los dos. Un papel
-  // recién subido viaja en `ruta` porque el estado todavía no se releyó.
-  async function guardarDocumento(tipoId, ruta) {
-    const fecha = valores[tipoId] || null;
-    const rutaArchivo = ruta === undefined ? rutas[tipoId] ?? null : ruta;
-    const { error: errorGuardar } = await supabase
-      .from('documentos_asistente')
-      .upsert(
-        { id: documentoIds[tipoId], asistente_id: asistenteId, tipo_documento_id: tipoId, fecha_vencimiento: fecha, ruta_archivo: rutaArchivo, prestadora_id: prestadoraId },
-        { onConflict: 'asistente_id,tipo_documento_id' },
-      );
-    if (errorGuardar) {
-      setError(t.comun.error_generico);
-      return false;
-    }
-    await recargar();
-    return true;
-  }
-
-  async function guardarVencimiento(tipoId) {
-    setGuardandoTipoId(tipoId);
-    setError(null);
-    await guardarDocumento(tipoId);
-    setGuardandoTipoId(null);
-  }
-
-  // Volver a presentar un papel no pisa el anterior: cada archivo lleva su propio identificador y
-  // el renglón apunta al último.
-  async function presentarPapel(tipoId, archivo) {
-    if (!archivo) return;
-    setSubiendoTipoId(tipoId);
-    setError(null);
-    if (archivo.size > TAMANO_MAXIMO || !TIPOS_ACEPTADOS.includes(archivo.type)) {
-      setError(t.asistentes.documentos.papel_rechazado);
-      setSubiendoTipoId(null);
-      return;
-    }
-    const ruta = await subirPapel({ prestadoraId, asistenteId, archivo });
-    if (!ruta) {
-      setError(t.comun.error_generico);
-      setSubiendoTipoId(null);
-      return;
-    }
-    await guardarDocumento(tipoId, ruta);
-    setSubiendoTipoId(null);
-  }
-
-  async function mirarPapel(tipoId) {
-    setAbriendoTipoId(tipoId);
-    setError(null);
-    const direccion = await direccionParaMirar(rutas[tipoId]);
-    setAbriendoTipoId(null);
-    if (!direccion) {
-      setError(t.comun.error_generico);
-      return;
-    }
-    window.open(direccion, '_blank', 'noopener,noreferrer');
-  }
-
-  return (
-    <section className="panel-tarjeta hoja-desplazable">
-      <div className="panel-tarjeta-titulo">
-        <h2>{t.asistentes.documentos.vencimientos_titulo}</h2>
-      </div>
-      {error && <Alert variant="error">{error}</Alert>}
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && tipos.length === 0} recargar={recargar} mensajeVacio={t.asistentes.documentos.vencimientos_sin_tipos}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.asistentes.documentos.vencimientos_col_tipo}</th>
-              <th>{t.asistentes.documentos.vencimientos_col_vencimiento}</th>
-              <th>{t.asistentes.documentos.vencimientos_col_papel}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {tipos.map((tipo) => (
-              <tr key={tipo.id}>
-                <td><b>{tipo.nombre}</b></td>
-                <td>
-                  {tipo.requiere_vencimiento ? (
-                    <input
-                      type="date"
-                      value={valores[tipo.id] || ''}
-                      onChange={(e) => setValores((v) => ({ ...v, [tipo.id]: e.target.value }))}
-                      aria-label={con(t.comun.campo_de_fila, { campo: t.asistentes.documentos.vencimientos_col_vencimiento, nombre: tipo.nombre })}
-                    />
-                  ) : '—'}
-                </td>
-                <td>
-                  <input
-                    type="file"
-                    accept={TIPOS_ACEPTADOS.join(',')}
-                    disabled={subiendoTipoId === tipo.id}
-                    onChange={(e) => {
-                      const archivo = e.target.files?.[0];
-                      e.target.value = '';
-                      presentarPapel(tipo.id, archivo);
-                    }}
-                    aria-label={con(t.comun.campo_de_fila, { campo: t.asistentes.documentos.vencimientos_col_papel, nombre: tipo.nombre })}
-                  />
-                  {rutas[tipo.id] && (
-                    <button type="button" className="panel-enlace" onClick={() => mirarPapel(tipo.id)} disabled={abriendoTipoId === tipo.id}>
-                      {t.asistentes.documentos.papel_mirar}
-                    </button>
-                  )}
-                </td>
-                <td>
-                  {tipo.requiere_vencimiento && (
-                    <button type="button" className="panel-enlace" onClick={() => guardarVencimiento(tipo.id)} disabled={guardandoTipoId === tipo.id}>
-                      {guardandoTipoId === tipo.id ? t.comun.guardando : t.comun.guardar}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
-    </section>
   );
 }

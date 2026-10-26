@@ -327,7 +327,8 @@ queda en `public` solamente si el navegador la llama a propósito, y entonces no
 identificador que la apunte a otra Prestadora** — hoy el Panel llama cuatro: `resolver`, que
 resuelve la Prestadora adentro con `prestadora_actual()`; `reasignar_guardia_por_emergencia`, que
 también la resuelve adentro, corre con los permisos de quien llama y es el único camino por el que
-una guardia empezada —la ausente— cambia de Asistente, con motivo y registro; y
+una guardia empezada —la ausente— cambia de Asistente, con motivo y registro, y con un
+segundo motivo cuando se la asigna igual a quien tiene documentos pendientes; y
 `domicilio_del_paciente_en` y `domicilios_de_pacientes_en`, que reciben pacientes y una fecha y
 corren con los permisos de quien llama, así que la protección por fila de cada tabla decide qué ve.
 `ausencias_que_tapan` sigue en `public`, recibe dos fechas y resuelve la Prestadora adentro, pero

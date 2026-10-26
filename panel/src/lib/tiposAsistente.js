@@ -14,7 +14,7 @@ export { esTipoGeneral, nombreTipo, nombreTarea, detalleTarea };
 // `tareas_tipo_asistente.clase`.
 export const CLASES_TAREA = ['habilitada', 'no_incluida', 'prohibida'];
 
-// El nombre de la matrícula que exige un tipo. Las tres de fábrica están
+// El nombre de la matrícula que exige una especialidad. Las de fábrica están
 // traducidas; una Prestadora puede escribir cualquier otra, y en ese caso se
 // muestra tal cual la escribió.
 export function nombreMatricula(tipoMatricula, t) {

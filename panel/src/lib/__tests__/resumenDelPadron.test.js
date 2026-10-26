@@ -61,17 +61,17 @@ describe('guardiasActivasPorAsistente', () => {
   });
 });
 
-const papel = (extra) => ({
+const documento = (extra) => ({
   asistente_id: 'a',
   fecha_vencimiento: '2026-12-31',
-  tipos_documento_asistente: { requiere_vencimiento: true },
+  tipos_documento_asistente: { vencimiento: 'fecha_del_documento' },
   ...extra,
 });
 
 describe('documentacionPorAsistente', () => {
-  it('muestra el papel que peor está, no el promedio', () => {
+  it('muestra el documento que peor está, no el promedio', () => {
     const estados = documentacionPorAsistente(
-      [papel({}), papel({ fecha_vencimiento: '2026-09-01' })],
+      [documento({}), documento({ fecha_vencimiento: '2026-09-01' })],
       30,
       AHORA,
     );
@@ -81,9 +81,9 @@ describe('documentacionPorAsistente', () => {
   it('distingue vigente, por vencer y vencido', () => {
     const estados = documentacionPorAsistente(
       [
-        papel({ asistente_id: 'lejos', fecha_vencimiento: '2027-06-01' }),
-        papel({ asistente_id: 'cerca', fecha_vencimiento: '2026-09-25' }),
-        papel({ asistente_id: 'paso', fecha_vencimiento: '2026-08-01' }),
+        documento({ asistente_id: 'lejos', fecha_vencimiento: '2027-06-01' }),
+        documento({ asistente_id: 'cerca', fecha_vencimiento: '2026-09-25' }),
+        documento({ asistente_id: 'paso', fecha_vencimiento: '2026-08-01' }),
       ],
       30,
       AHORA,
@@ -94,25 +94,25 @@ describe('documentacionPorAsistente', () => {
   });
 
   it('respeta la ventana de preaviso que configuró la Prestadora', () => {
-    const papeles = [papel({ fecha_vencimiento: '2026-10-20' })];
-    expect(documentacionPorAsistente(papeles, 30, AHORA).get('a')).toBe(
+    const documentos = [documento({ fecha_vencimiento: '2026-10-20' })];
+    expect(documentacionPorAsistente(documentos, 30, AHORA).get('a')).toBe(
       ESTADO_VENCIMIENTO.VIGENTE,
     );
-    expect(documentacionPorAsistente(papeles, 60, AHORA).get('a')).toBe(
+    expect(documentacionPorAsistente(documentos, 60, AHORA).get('a')).toBe(
       ESTADO_VENCIMIENTO.POR_VENCER,
     );
   });
 
   // Que no haya nada que vencer no es lo mismo que tener todo al día: se deja afuera del mapa
   // para que la pantalla diga otra cosa, en vez de afirmar algo que ninguna fila dice.
-  it('deja afuera a quien no tiene ningún papel con vencimiento', () => {
-    const estados = documentacionPorAsistente([papel({ fecha_vencimiento: null })], 30, AHORA);
+  it('deja afuera a quien no tiene ningún documento con vencimiento', () => {
+    const estados = documentacionPorAsistente([documento({ fecha_vencimiento: null })], 30, AHORA);
     expect(estados.has('a')).toBe(false);
   });
 
-  it('no mira el papel de un tipo que no vence', () => {
+  it('no mira el documento de un tipo que no vence', () => {
     const estados = documentacionPorAsistente(
-      [papel({ tipos_documento_asistente: { requiere_vencimiento: false } })],
+      [documento({ tipos_documento_asistente: { vencimiento: 'no_vence' } })],
       30,
       AHORA,
     );
@@ -120,17 +120,17 @@ describe('documentacionPorAsistente', () => {
   });
 
   // El tipo puede no haber venido en la consulta. La fecha sí está cargada, así que manda ella:
-  // descartar el papel por un dato que no se pidió sería esconder un vencimiento.
-  it('cuenta el papel aunque no haya venido su tipo', () => {
+  // descartar el documento por un dato que no se pidió sería esconder un vencimiento.
+  it('cuenta el documento aunque no haya venido su tipo', () => {
     const estados = documentacionPorAsistente(
-      [papel({ tipos_documento_asistente: null, fecha_vencimiento: '2026-08-01' })],
+      [documento({ tipos_documento_asistente: null, fecha_vencimiento: '2026-08-01' })],
       30,
       AHORA,
     );
     expect(estados.get('a')).toBe(ESTADO_VENCIMIENTO.VENCIDO);
   });
 
-  it('no se cae sin papeles', () => {
+  it('no se cae sin documentos', () => {
     expect(documentacionPorAsistente(undefined).size).toBe(0);
   });
 });
@@ -141,7 +141,7 @@ describe('los textos de la lista existen en los tres idiomas', () => {
     for (const clave of [
       'col_guardias_activas',
       'col_documentacion',
-      'documentacion_sin_papeles',
+      'documentacion_sin_vencimientos',
       'filtro_zona_todas',
       'filtro_rama_todas',
     ]) {

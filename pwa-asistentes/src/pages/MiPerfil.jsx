@@ -7,8 +7,6 @@ import { mensajeDeError } from '../lib/errores';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { traducirValor } from '../i18n/valores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
-import Matricula from '../components/Matricula';
-import CarpetaDePapeles from '../components/CarpetaDePapeles';
 import Consentimientos from '../components/Consentimientos';
 import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
 
@@ -179,17 +177,13 @@ export default function MiPerfil() {
         )}
       </section>
 
-      {/* La Matrícula va antes que las notificaciones porque es lo único de esta
-          pantalla que puede dejarlo sin trabajo. Si le corresponde y está trabada,
-          tiene que ser lo primero que vea. Si su tipo no requiere Matrícula, este
-          bloque no se dibuja. */}
-      <Matricula />
-
-      {/* Los papeles que le exige la Prestadora, y su Certificado de Aptitud. Van después de la
-          Matrícula por la misma razón por la que ella va primero: la Matrícula lo traba hoy, y
-          esto le avisa de lo que lo va a trabar. Si la Prestadora no exige ninguno y no hay
-          Certificado, este bloque no se dibuja. */}
-      <CarpetaDePapeles />
+      {/* Los documentos que le pide la Prestadora, la Matrícula entre ellos. Va antes que las
+          notificaciones porque es lo único de esta pantalla que puede dejarlo sin trabajo. */}
+      <section className="pwa-card">
+        <Link to="/documentos" className="btn btn-full">
+          {t.documentos.titulo}
+        </Link>
+      </section>
 
       <section className="pwa-card">
         <h2>{t.perfil.notificaciones_titulo}</h2>

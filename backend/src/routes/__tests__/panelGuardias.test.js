@@ -304,12 +304,40 @@ describe('asignar un turno', () => {
     assert.equal(asignacionPedida(), undefined);
   });
 
-  it('lo que la base rechaza vuelve como motivo, sin su texto', async () => {
-    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ rechazo: 'matricula_bloquea:vencida: tabla interna' }));
+  it('los documentos pendientes vuelven como motivo con cuáles, sin el texto de la base', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ rechazo: 'documentos_bloquean:Matrícula de enfermería, Seguro: tabla interna' }));
     const { estado, cuerpo } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO });
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'matricula_bloquea:vencida');
-    assert.doesNotMatch(JSON.stringify(cuerpo), /tabla interna/);
+    assert.deepEqual(cuerpo, {
+      error: 'documentos_bloquean',
+      motivo: 'documentos_bloquean',
+      documentos: ['Matrícula de enfermería', 'Seguro'],
+    });
+  });
+
+  it('el motivo de la excepción viaja a la base sólo cuando viene', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ sin_cambios: true }));
+    await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO, motivo_excepcion: '  Urgencia del Paciente  ' });
+    assert.deepEqual(asignacionPedida().cuerpo, {
+      p_guardia_id: GUARDIA, p_asistente_id: OTRO, p_motivo_excepcion: 'Urgencia del Paciente',
+    });
+  });
+
+  it('un motivo de excepción vacío no llega a la base', async () => {
+    const { estado, cuerpo } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO, motivo_excepcion: '   ' });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'motivo_excepcion_invalido');
+    assert.equal(asignacionPedida(), undefined);
+  });
+
+  it('asignar igual sin el permiso vuelve como 403 con su motivo', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ rechazo: 'sin_permiso_para_asignar_con_documentos_pendientes' }));
+    const { estado, cuerpo } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO, motivo_excepcion: 'Urgencia' });
+    assert.equal(estado, 403);
+    assert.deepEqual(cuerpo, {
+      error: 'sin_permiso_para_asignar_con_documentos_pendientes',
+      motivo: 'sin_permiso_para_asignar_con_documentos_pendientes',
+    });
   });
 });
 
@@ -370,12 +398,14 @@ describe('asignar un turno fijo', () => {
     assert.equal(cuerpo.motivo, 'serie_no_se_asigna');
   });
 
-  it('lo que la base rechaza vuelve como motivo, sin su texto', async () => {
-    respuestas.set('POST /rest/v1/rpc/asignar_serie', () => ({ rechazo: 'matricula_bloquea:vencida: tabla interna' }));
-    const { estado, cuerpo } = await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: OTRO });
+  it('los documentos pendientes vuelven como motivo, sin su texto, y sin excepción posible', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_serie', () => ({ rechazo: 'documentos_bloquean:Seguro: tabla interna' }));
+    const { estado, cuerpo } = await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: OTRO, motivo_excepcion: 'Urgencia' });
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'matricula_bloquea:vencida');
+    assert.equal(cuerpo.motivo, 'documentos_bloquean');
+    assert.deepEqual(cuerpo.documentos, ['Seguro']);
     assert.doesNotMatch(JSON.stringify(cuerpo), /tabla interna/);
+    assert.deepEqual(asignacionPedida().cuerpo, { p_serie_id: SERIE, p_asistente_id: OTRO });
   });
 });
 

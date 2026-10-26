@@ -5,7 +5,7 @@
 // QUÉ ES UN PERFIL PÚBLICO ACÁ. El Cliente que entra a la modalidad Match
 // mira gente que todavía no contrató. Lo que ve tiene que alcanzar para elegir
 // —qué es esa persona, en qué zonas trabaja, desde cuándo, cómo está su carpeta
-// de papeles y qué dijeron los Clientes anteriores— y no tiene que alcanzar para
+// de documentos y qué dijeron los Clientes anteriores— y no tiene que alcanzar para
 // ir a buscarla por fuera del producto. Eso segundo es justamente lo que el
 // Match vende, y se cobra aparte
 // (`accesos_intermediacion.saldo_contactos`).
@@ -116,14 +116,13 @@ export function perfilPublicoDeAsistente({
     // se puede decir sin que sea una calificación encubierta.
     antiguedad_meses: mesesDesde(asistente.fecha_alta, ahora),
     // La insignia de verificación es exactamente lo que ya se le cuenta al Cliente que
-    // contrató: cuentas y palabras de estado, nunca el nombre de un papel
+    // contrató: cuentas y palabras de estado, nunca el nombre de un documento
     // (`estadoDocumentalParaElCliente.js`).
     verificacion: documentacion
       ? {
           documentacion: documentacion.resumen,
-          matricula: documentacion.matricula,
-          papeles_exigidos: documentacion.papelesExigidos,
-          papeles_al_dia: documentacion.alDia,
+          documentos_exigidos: documentacion.documentosExigidos,
+          documentos_al_dia: documentacion.alDia,
         }
       : null,
     calificacion,

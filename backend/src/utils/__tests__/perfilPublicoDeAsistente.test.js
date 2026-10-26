@@ -84,20 +84,20 @@ describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
     assert.equal(perfil.antiguedad_meses, 30);
   });
 
-  it('la insignia de verificación repite lo que ya se le cuenta al Cliente, sin nombrar papeles', () => {
+  it('la insignia de verificación repite lo que ya se le cuenta al Cliente, sin nombrar documentos', () => {
     const perfil = perfilPublicoDeAsistente({
       asistente: ASISTENTE_COMPLETO,
       documentacion: {
         resumen: 'al_dia',
-        matricula: 'vigente_verificada',
-        papelesExigidos: 3,
+        documentosExigidos: 3,
         alDia: 3,
       },
       ahora: HOY,
     });
     assert.equal(perfil.verificacion.documentacion, 'al_dia');
-    assert.equal(perfil.verificacion.matricula, 'vigente_verificada');
-    assert.equal(perfil.verificacion.papeles_al_dia, 3);
+    assert.equal(perfil.verificacion.documentos_exigidos, 3);
+    assert.equal(perfil.verificacion.documentos_al_dia, 3);
+    assert.ok(!Object.hasOwn(perfil.verificacion, 'matricula'));
   });
 
   it('sin estado documental no se inventa ninguna insignia', () => {

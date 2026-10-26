@@ -534,6 +534,28 @@ const ARMADORES = {
     }`,
   }),
 
+  // Los documentos del Asistente, al celular de él: cuando la Prestadora revisa uno y cuando se le
+  // acerca o le llega el vencimiento.
+  documento_aprobado: (t, d) => ({
+    titulo: t('documento_aprobado.titulo', { documento: d.documento }),
+    cuerpo: t('documento_aprobado.cuerpo', { documento: d.documento }),
+  }),
+
+  documento_observado: (t, d) => ({
+    titulo: t('documento_observado.titulo', { documento: d.documento, motivo: d.motivo }),
+    cuerpo: t('documento_observado.cuerpo', { documento: d.documento, motivo: d.motivo }),
+  }),
+
+  documento_por_vencer: (t, d) => ({
+    titulo: t('documento_por_vencer.titulo', { documento: d.documento, fecha: d.fecha }),
+    cuerpo: t('documento_por_vencer.cuerpo', { documento: d.documento, fecha: d.fecha }),
+  }),
+
+  documento_vencido: (t, d) => ({
+    titulo: t('documento_vencido.titulo', { documento: d.documento, fecha: d.fecha }),
+    cuerpo: t('documento_vencido.cuerpo', { documento: d.documento, fecha: d.fecha }),
+  }),
+
   codigo_instruccion_personas_autorizadas: (t, d) => ({
     asunto: t('codigo_instruccion_personas_autorizadas.asunto', { remite: d.remite }),
     texto: t('codigo_instruccion_personas_autorizadas.texto', {

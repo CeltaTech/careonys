@@ -57,12 +57,6 @@ import {
   seSuperponen,
   horasDeDescansoEntre,
 } from './horarios';
-import {
-  BLOQUEO,
-  estadoDe,
-  matriculaQueMandaAl,
-  motivoDeBloqueo,
-} from './matricula';
 // Se reexporta más abajo: la cuenta es la misma del lado del backend, así que vive en un archivo
 // propio que se copia allá, y quien la importaba de acá la sigue encontrando.
 import { ausenciaQueTapa, ultimoDiaDeLaGuardia } from './ausenciaQueTapa';
@@ -89,11 +83,6 @@ export const MOTIVO = {
    * lista de candidatos; el tipo ni siquiera llega hasta este archivo (ver `ausenciaQueTapa`).
    */
   AUSENCIA: 'motivo_ausencia',
-  MATRICULA_OK: 'motivo_matricula_ok',
-  MATRICULA_VENCE: 'motivo_matricula_vence',
-  MATRICULA_FALTA: 'motivo_matricula_falta',
-  MATRICULA_VENCIDA: 'motivo_matricula_vencida',
-  MATRICULA_SIN_VERIFICAR: 'motivo_matricula_sin_verificar',
   /**
    * Uno por modalidad, en vez de uno solo con la modalidad adentro. La frase la arma la
    * pantalla reemplazando valores a secas, así que un `{modalidad}` le llegaría en crudo
@@ -107,8 +96,8 @@ export const MOTIVO = {
    * por qué, y no hace falta saberlo— ni sugiere qué hacer: sólo lo pone donde se ve.
    */
   NO_DISPONIBLE: 'motivo_no_disponible',
-  PAPELES_OK: 'motivo_papeles_ok',
-  PAPELES_VENCEN: 'motivo_papeles_vencen',
+  DOCUMENTOS_AL_DIA: 'motivo_documentos_al_dia',
+  DOCUMENTOS_POR_VENCER: 'motivo_documentos_por_vencer',
   CERCA: 'motivo_cerca',
   LEJOS: 'motivo_lejos',
   HORAS: 'motivo_horas',
@@ -158,7 +147,7 @@ const lista = (x) => (Array.isArray(x) ? x : []);
 // Todo lo que sigue está exportado a propósito. `avisosAsignacion.js` contesta una pregunta
 // distinta —"¿qué puede salir mal si le doy esta guardia a este Asistente?"— pero se apoya en
 // exactamente las mismas cuentas: si se pisa con otra guardia, cuánto descansa, cuántas horas
-// lleva en la semana, qué papeles vencen. Escribirlas dos veces sería garantizar que algún día
+// lleva en la semana, qué documentos vencen. Escribirlas dos veces sería garantizar que algún día
 // la lista de candidatos diga una cosa y la advertencia de confirmación diga otra sobre la misma
 // persona y la misma guardia — el error más difícil de encontrar, porque no rompe nada: solo
 // hace que nadie vuelva a confiar en la pantalla. Están escritas una sola vez, acá
@@ -275,7 +264,7 @@ export function topeSemanalDe(asistente, topes = TOPES) {
  *
  * Una guardia cuenta en la semana en la que **empieza**. La de las 22:00 del domingo que
  * termina el lunes a las 06:00 cuenta entera en la semana del domingo: partirla al medio sería
- * más exacto en el papel y mucho más difícil de entender para quien lee el número.
+ * más exacto en teoría y mucho más difícil de entender para quien lee el número.
  */
 export function cargaSemanal(guardia, guardiasDelAsistente, topes = TOPES) {
   const { desde, hasta } = limitesDeSemana(guardia.fecha, topes.dia_inicio_semana);
@@ -288,21 +277,10 @@ export function cargaSemanal(guardia, guardiasDelAsistente, topes = TOPES) {
 }
 
 /**
- * La Matrícula del Asistente que está vigente en un momento dado, o `null` si no tiene ninguna.
- *
- * La cuenta no está acá: vive en `lib/matricula.js`, junto con el resto de la regla de
- * Matrícula, porque la usan también las pantallas que no arman listas de candidatos. Esto es
- * solo el nombre con el que este archivo y `avisosAsignacion.js` la venían llamando.
- */
-export function matriculaVigenteAl(asistenteId, matriculas, momento, tipo = null) {
-  return matriculaQueMandaAl(asistenteId, matriculas, momento, tipo);
-}
-
-/**
- * El papel del Asistente que vence primero, o `null`. Los que no tienen fecha de vencimiento no
+ * El documento del Asistente que vence primero, o `null`. Los que no tienen fecha de vencimiento no
  * cuentan: no se sabe si vencen, y suponer que sí sería inventar.
  */
-export function papelQueVencePrimero(asistenteId, documentos) {
+export function documentoQueVencePrimero(asistenteId, documentos) {
   const conFecha = lista(documentos).filter(
     (d) => d.asistente_id === asistenteId && d.fecha_vencimiento
   );
@@ -340,10 +318,6 @@ export function vecesQueAtendio(asistenteId, pacienteIds, guardias, ahora) {
 }
 
 /**
- * Qué clave de traducción le corresponde a cada motivo de bloqueo de la Matrícula, y cuánto
- * resta. Los tres motivos vienen de `lib/matricula.js`, que es donde vive la regla.
- */
-/**
  * A cuántos kilómetros vive el Asistente del Paciente más cercano de esta guardia, o `null`.
  *
  * Devuelve `null` —y no un número grande, ni un cero— cuando falta cualquiera de los dos puntos:
@@ -373,15 +347,6 @@ export function kmHastaElPaciente(asistente, pacientes) {
   return menor;
 }
 
-const MOTIVO_DE_BLOQUEO = {
-  [BLOQUEO.SIN_MATRICULA]: { clave: MOTIVO.MATRICULA_FALTA, peso: 'matricula_falta' },
-  [BLOQUEO.VENCIDA]: { clave: MOTIVO.MATRICULA_VENCIDA, peso: 'matricula_vencida' },
-  [BLOQUEO.SIN_VERIFICAR]: {
-    clave: MOTIVO.MATRICULA_SIN_VERIFICAR,
-    peso: 'matricula_sin_verificar',
-  },
-};
-
 // ============================================================================
 // La lista de candidatos
 // ============================================================================
@@ -399,11 +364,6 @@ const MOTIVO_DE_BLOQUEO = {
  *                                     con `asistente_id`, `fecha_inicio` y `fecha_fin` y nada
  *                                     más: el tipo de ausencia no viaja (CLAUDE.md §6). Si no
  *                                     vienen, nadie se bloquea por ausencia
- *                    matriculas     → filas de `matriculas_asistente`
- *                    estadoMatricula→ filas de la vista `estado_matricula_asistente`: dicen si
- *                                     el tipo de cada Asistente exige Matrícula, cuál, y si la
- *                                     Prestadora es estricta. Si no vienen, nadie se bloquea
- *                                     por Matrícula.
  *                    documentos     → filas de `documentos_asistente`
  *                    pacientes      → filas de `pacientes` con `id`, `lat` y `lng`, para poder
  *                                     medir la distancia. Si no vienen, no se dice nada de la
@@ -450,9 +410,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   const asistentes = lista(datos.asistentes).filter(estaEnElPadron);
   const guardias = lista(datos.guardias);
   const ausencias = lista(datos.ausencias);
-  const matriculas = lista(datos.matriculas);
   const documentos = lista(datos.documentos);
-  const estadosMatricula = lista(datos.estadoMatricula);
 
   // Los Pacientes de este hueco, una sola vez para toda la lista: la distancia se mide contra
   // los mismos puntos para cada Asistente, y volver a filtrarlos por candidato sería recorrer
@@ -465,13 +423,11 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
       hueco,
       guardias,
       ausencias,
-      matriculas,
       documentos,
       pacientesDelHueco,
       ahora,
       pesos,
       topes,
-      estadoMatricula: estadoDe(asistente.id, estadosMatricula),
     })
   );
 
@@ -489,14 +445,14 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
 
 /** Todo lo que se mira de un solo Asistente. Devuelve el elemento de la lista, sin ordenar. */
 function evaluarAsistente(asistente, ctx) {
-  const { hueco, guardias, matriculas, documentos, ahora, pesos, topes } = ctx;
+  const { hueco, guardias, documentos, ahora, pesos, topes } = ctx;
 
   const aFavor = [];
   const enContra = [];
   let puntaje = 0;
   /* Las dos clases de «no» y por qué no son la misma.
      ------------------------------------------------------------------------------------------
-     `bloqueado` es el no de la BASE: la Matrícula y la modalidad de trabajo las hace cumplir un
+     `bloqueado` es el no de la BASE: los documentos y la modalidad de trabajo los hace cumplir un
      disparador, así que la asignación falla igual, se apriete lo que se apriete. Mostrar un botón
      encendido ahí sería mandar a alguien contra una pared.
 
@@ -521,7 +477,7 @@ function evaluarAsistente(asistente, ctx) {
 
   // El último día que ocupa la guardia. La de noche arranca a las 22:00 y termina a las 06:00
   // del día siguiente, así que "el día de la guardia" en realidad son dos, y las dos
-  // comprobaciones que miran el almanaque —la ausencia y la Matrícula— tienen que llegar hasta
+  // comprobaciones que miran el almanaque —la ausencia y los documentos— tienen que llegar hasta
   // el final y no quedarse en el comienzo. Es el mismo día que mira la base.
   const ultimoDia = ultimoDiaDeLaGuardia(hueco);
 
@@ -596,61 +552,16 @@ function evaluarAsistente(asistente, ctx) {
     suma(enContra, MOTIVO.NO_DISPONIBLE, null, pesos.no_disponible);
   }
 
-  // --- 3. Matrícula. Bloquea cuando el tipo de Asistente la exige y algo no está en orden.
-  //
-  //        La regla no se decide acá: se decide en la base, que además la hace cumplir en las
-  //        otras tres puertas (asignar, invitar, aceptar). Acá se la anticipa, para que el
-  //        motivo esté a la vista antes de que alguien elija a esta persona y se choque con
-  //        la pared. La cuenta vive una sola vez, en `lib/matricula.js`.
-  //
-  //        Se mira contra el día en que la guardia **termina**, no el que empieza: lo que
-  //        importa es que la Matrícula llegue hasta el final (ver `ultimoDiaDeLaGuardia`).
-  const bloqueoMatricula = motivoDeBloqueo(
-    asistente.id,
-    ctx.estadoMatricula,
-    matriculas,
-    ultimoDia
-  );
-
-  if (bloqueoMatricula) {
-    bloqueado = true;
-    const { clave, peso } = MOTIVO_DE_BLOQUEO[bloqueoMatricula];
-    suma(enContra, clave, null, pesos[peso]);
-  } else {
-    // No está bloqueado, pero puede estar por vencerse: eso se avisa y resta, nunca bloquea.
-    const matricula = matriculaVigenteAl(
-      asistente.id,
-      matriculas,
-      ultimoDia,
-      ctx.estadoMatricula?.tipo_matricula ?? null
-    );
-    if (matricula) {
-      const limiteDePreaviso = sumarDiasISO(hueco.fecha, topes.dias_aviso_vencimiento);
-      if (matricula.vigente_hasta && matricula.vigente_hasta <= limiteDePreaviso) {
-        suma(
-          enContra,
-          MOTIVO.MATRICULA_VENCE,
-          { fecha: matricula.vigente_hasta },
-          pesos.matricula_vence
-        );
-      } else {
-        suma(aFavor, MOTIVO.MATRICULA_OK, null, pesos.matricula_ok);
-      }
-    }
-    // Si no hay Matrícula y tampoco hay bloqueo, es que su tipo no la exige: no se dice nada.
-    // "Matrícula vigente" sería mentira y "no tiene Matrícula" sonaría a problema sin serlo.
-  }
-
-  // --- 4. Documentación. Si el Asistente no tiene ningún papel con vencimiento cargado no se
-  //        dice nada: "papeles al día" sería mentira, porque lo que pasa es que no hay papeles
+  // --- 4. Documentación. Si el Asistente no tiene ningún documento con vencimiento cargado no se
+  //        dice nada: "documentos al día" sería mentira, porque lo que pasa es que no hay documentos
   //        cargados, y no hay clave de traducción para esa tercera situación.
-  const papel = papelQueVencePrimero(asistente.id, documentos);
-  if (papel) {
+  const documento = documentoQueVencePrimero(asistente.id, documentos);
+  if (documento) {
     const limiteDePreaviso = sumarDiasISO(hueco.fecha, topes.dias_aviso_vencimiento);
-    if (papel.fecha_vencimiento <= limiteDePreaviso) {
-      suma(enContra, MOTIVO.PAPELES_VENCEN, { fecha: papel.fecha_vencimiento }, pesos.papeles_vencen);
+    if (documento.fecha_vencimiento <= limiteDePreaviso) {
+      suma(enContra, MOTIVO.DOCUMENTOS_POR_VENCER, { fecha: documento.fecha_vencimiento }, pesos.documentos_por_vencer);
     } else {
-      suma(aFavor, MOTIVO.PAPELES_OK, null, pesos.papeles_ok);
+      suma(aFavor, MOTIVO.DOCUMENTOS_AL_DIA, null, pesos.documentos_al_dia);
     }
   }
 

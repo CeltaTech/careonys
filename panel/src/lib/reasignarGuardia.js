@@ -1,9 +1,8 @@
 import { supabase } from './supabaseClient';
-import { mensajeDeBloqueo } from './matricula';
-import { mensajeDeModalidad } from './modalidades';
+import { documentosQueBloquean } from './documentos';
 import { mensajeDeError } from './errores';
 import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
-import { asignarTurno } from './asignarTurno';
+import { asignarTurno, mensajeDeLaAsignacion } from './asignarTurno';
 
 /* Cambiarle el Asistente a una guardia desde su detalle.
    =========================================================================================
@@ -33,34 +32,31 @@ import { asignarTurno } from './asignarTurno';
  * @param {string} fecha  En qué fecha queda. Puede ser la misma que ya tenía. En la emergencia no
  *                          se usa: la guardia ya empezó y su fecha no cambia.
  * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
- *                          acá no se sabe en qué idioma está, y hacen falta para las dos cosas
- *                          que nunca deben verse crudas: el rechazo por Matrícula vencida, el
+ *                          acá no se sabe en qué idioma está, y hacen falta para las cosas
+ *                          que nunca deben verse crudas: el rechazo por documentos pendientes, el
  *                          rechazo por modalidad de trabajo y cualquier otro error de la base.
  * @param {string} motivo  Por qué se la cubre. Sólo se usa en la emergencia, y ahí es obligatorio.
- * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
+ * @param {string | null} motivoExcepcion  Por qué se asigna igual con documentos pendientes.
+ * @returns {Promise<{ error: string | null, documentosPendientes: string[] | null }>}
  */
-export async function reasignarGuardia(guardia, asistenteId, fecha, t = null, motivo = '') {
+export async function reasignarGuardia(guardia, asistenteId, fecha, t = null, motivo = '', motivoExcepcion = null) {
   const estabaSinCobertura = guardia?.estado === 'ausente';
 
   // Un turno que ya está en curso y se quedó sin quien lo haga no espera respuesta: quien lo
   // cubre entra ahora. Todo lo demás se asigna y queda esperando que el Asistente acepte.
-  if (!estabaSinCobertura) return asignarConFecha(guardia, asistenteId, fecha, t);
+  if (!estabaSinCobertura) return asignarConFecha(guardia, asistenteId, fecha, t, motivoExcepcion);
 
-  const { error: errorUpdate } = await supabase.rpc('reasignar_guardia_por_emergencia', {
+  const argumentos = {
     p_guardia_id: guardia.id,
     p_asistente_id: asistenteId,
     p_motivo: motivo ?? '',
-  });
+  };
+  if (motivoExcepcion) argumentos.p_motivo_excepcion = motivoExcepcion;
+  const { error: errorUpdate } = await supabase.rpc('reasignar_guardia_por_emergencia', argumentos);
   if (errorUpdate) {
-    // Dos rechazos de la base pueden caer acá y ninguno se muestra crudo: la Matrícula vencida
-    // y la modalidad de trabajo en la que este Asistente no está. Cada uno tiene su frase y su
-    // "dónde se arregla".
-    return {
-      error:
-        mensajeDeBloqueo(errorUpdate, t?.matricula) ??
-        mensajeDeModalidad(errorUpdate, t?.modalidades) ??
-        mensajeDeError(errorUpdate, t),
-    };
+    // Los rechazos de la base no se muestran crudos: los documentos pendientes y la modalidad de
+    // trabajo tienen su frase.
+    return { error: mensajeDeLaAsignacion(errorUpdate, t), documentosPendientes: documentosQueBloquean(errorUpdate) };
   }
 
   const { error: errorIncidente } = await supabase
@@ -72,7 +68,7 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, t = null, mo
     })
     .eq('guardia_entrante_id', guardia.id)
     .is('resuelto_at', null);
-  if (errorIncidente) return { error: mensajeDeError(errorIncidente, t) };
+  if (errorIncidente) return { error: mensajeDeError(errorIncidente, t), documentosPendientes: null };
 
   if (guardia?.asistente_id !== asistenteId) {
     await avisarCambioDeAsistente({
@@ -82,32 +78,32 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, t = null, mo
     });
   }
 
-  return { error: null };
+  return { error: null, documentosPendientes: null };
 }
 
 /**
- * La fecha primero y la asignación después: la Matrícula se controla contra el día en que el
+ * La fecha primero y la asignación después: los documentos se controlan contra el día en que el
  * turno termina, y tiene que ser el día nuevo. Si la asignación no pasa, la fecha vuelve a la que
  * tenía, para que el turno no quede corrido sin que nadie lo haya pedido así.
  *
  * Elegir a quien ya lo tiene no lo vuelve a asignar: le quitaría el turno aceptado para
  * preguntarle otra vez si lo quiere.
  */
-export async function asignarConFecha(guardia, asistenteId, fecha, t = null) {
+export async function asignarConFecha(guardia, asistenteId, fecha, t = null, motivoExcepcion = null) {
   const cambiaFecha = Boolean(fecha) && fecha !== guardia.fecha;
   const cambiaAsistente = asistenteId !== (guardia.asistente_id ?? null) || Boolean(guardia.pendiente_asistente_id);
   const yaEsSuyo = asistenteId !== null && asistenteId === guardia.asistente_id;
 
   if (cambiaFecha) {
     const { error } = await supabase.from('guardias').update({ fecha }).eq('id', guardia.id);
-    if (error) return { error: mensajeDeError(error, t) };
+    if (error) return { error: mensajeDeError(error, t), documentosPendientes: null };
   }
 
-  if (!cambiaAsistente || yaEsSuyo) return { error: null };
+  if (!cambiaAsistente || yaEsSuyo) return { error: null, documentosPendientes: null };
 
-  const { error } = await asignarTurno(guardia.id, asistenteId, t);
+  const { error, documentosPendientes } = await asignarTurno(guardia.id, asistenteId, t, motivoExcepcion);
   if (error && cambiaFecha) {
     await supabase.from('guardias').update({ fecha: guardia.fecha }).eq('id', guardia.id);
   }
-  return { error };
+  return { error, documentosPendientes };
 }

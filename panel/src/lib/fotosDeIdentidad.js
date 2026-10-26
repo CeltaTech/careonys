@@ -11,9 +11,10 @@
    ninguna clave de etapa es la misma en dos Prestadoras y no hay ninguna que el código pueda
    nombrar. Las dos fotos son de la persona, no de una etapa: cuelgan del Asistente.
 
-   POR QUÉ TAMPOCO SON UN DOCUMENTO DEL LEGAJO. `documentos_asistente` lleva los que vencen y hay
-   que renovar —monotributo, seguro, antecedentes—, con un catálogo de tipos que también arma cada
-   Prestadora. Estas dos no vencen ni se renuevan: se sacan una vez, al incorporarse.
+   POR QUÉ TAMPOCO SON UN DOCUMENTO DEL LEGAJO. `documentos_asistente` lleva los que pide cada
+   Prestadora con su propio catálogo —matrícula, monotributo, seguro, antecedentes—, y cada uno se
+   carga, se aprueba u observa y, si vence, se renueva. Estas dos no salen de ningún catálogo ni se
+   renuevan: se sacan una vez, al incorporarse, y sirven para compararse entre sí.
 
    ESTE ARCHIVO SE COPIA AL BACKEND (`scripts/copias_entre_apps.mjs`) y no importa nada. La pantalla
    necesita saber qué formatos ofrecer y qué fotos mostrar; el backend, qué acepta y dónde lo guarda.

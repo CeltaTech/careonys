@@ -191,7 +191,6 @@ describe('aceptar', () => {
     ['asignacion_no_encontrada', 404, 'asignacion_no_encontrada'],
     ['asignacion_ya_respondida', 409, 'asignacion_ya_respondida'],
     ['guardia_ya_cubierta', 409, 'guardia_ya_cubierta'],
-    ['matricula_bloquea:vencida:', 409, 'matricula_vencida'],
   ]) {
     it(`si la base dice «${falla}», contesta ${motivo} y no deja salir el texto de la base`, async () => {
       respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => ({ falla }));
@@ -200,6 +199,19 @@ describe('aceptar', () => {
       assert.deepEqual(cuerpo, { error: motivo, motivo });
     });
   }
+
+  it('si lo frenan documentos pendientes, contesta 409 con cuáles y sin el texto de la base', async () => {
+    respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => ({
+      falla: 'documentos_bloquean:Seguro de mala praxis, Antecedentes penales: tabla interna',
+    }));
+    const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
+    assert.equal(estado, 409);
+    assert.deepEqual(cuerpo, {
+      error: 'documentos_bloquean',
+      motivo: 'documentos_bloquean',
+      documentos: ['Seguro de mala praxis', 'Antecedentes penales'],
+    });
+  });
 });
 
 // El aviso al Coordinador y al Cliente sale por el mismo camino que todos los avisos del backend,

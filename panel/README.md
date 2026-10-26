@@ -66,7 +66,7 @@ SEED_LOCAL_PASSWORD=<la que quiera> node scripts/poner_la_clave_de_la_siembra.mj
 
 Se vuelve a correr después de cada `db reset`. Es la misma variable que esperan
 `scripts/probar_aislamiento.mjs`, `scripts/probar_altas_con_sesion.mjs` y
-`scripts/probar_papeles_del_legajo.mjs`, así que conviene dejarla puesta en la ventana
+`scripts/probar_documentos_del_legajo.mjs`, así que conviene dejarla puesta en la ventana
 de línea de comandos con la que se trabaja.
 
 **Con quién entrar.** Todas las cuentas usan esa misma contraseña.

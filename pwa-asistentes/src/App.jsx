@@ -17,6 +17,8 @@ import MiPerfil from './pages/MiPerfil';
 import MiClave from './pages/MiClave';
 import TextoDeConsentimiento from './pages/TextoDeConsentimiento';
 import MisCalificaciones from './pages/MisCalificaciones';
+import Documentos from './pages/Documentos';
+import Documento from './pages/Documento';
 import Contenidos from './pages/Contenidos';
 import Mensajes from './pages/Mensajes';
 import Conversacion from './pages/Conversacion';
@@ -112,6 +114,8 @@ function Rutas() {
             trabajo del día, y esto se mira cada tanto. */}
         <Route path="calificaciones" element={<MisCalificaciones />} />
         <Route path="contenidos" element={<Contenidos />} />
+        <Route path="documentos" element={<Documentos />} />
+        <Route path="documentos/:tipoId" element={<Documento />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

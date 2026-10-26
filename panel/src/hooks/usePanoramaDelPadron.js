@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
-// usePanoramaDelPadron.js — las guardias y los papeles de todo el Padrón, en dos consultas
+// usePanoramaDelPadron.js — las guardias y los documentos de todo el Padrón, en dos consultas
 //
 // POR QUÉ DOS CONSULTAS Y NO UNA POR PERSONA
 // La lista de Asistentes muestra decenas de tarjetas. Preguntar por cada una sería preguntar
-// decenas de veces lo mismo: se piden las guardias del próximo mes y los papeles con
+// decenas de veces lo mismo: se piden las guardias del próximo mes y los documentos con
 // vencimiento de una sola vez, y las cuentas se hacen en `lib/resumenDelPadron.js`.
 //
 // POR QUÉ NO VOLTEA LA PANTALLA CUANDO FALLA
@@ -56,7 +56,7 @@ export function usePanoramaDelPadron() {
           .not('asistente_id', 'is', null),
         supabase
           .from('documentos_asistente')
-          .select('asistente_id, fecha_vencimiento, tipos_documento_asistente(requiere_vencimiento)')
+          .select('asistente_id, fecha_vencimiento, tipos_documento_asistente(vencimiento)')
           .not('fecha_vencimiento', 'is', null),
         diasDePreavisoDeLaPrestadora(prestadoraId),
       ]);

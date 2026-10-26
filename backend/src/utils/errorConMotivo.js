@@ -191,6 +191,25 @@ const ESTADO_POR_MOTIVO = {
   firma_no_sirve: 401,
   falta_la_firma: 409,
   ningun_asignado_puede_dar_la_via: 409,
+  // Los documentos del Asistente. El que no existe y el que es de otra Prestadora contestan lo
+  // mismo. Los datos mal cargados son 400. Prorrogar la gracia de un documento que nunca estuvo
+  // aprobado, o asignar un turno con documentos pendientes, es 409: el pedido está bien armado y
+  // choca con el estado de las cosas. Asignar igual sin el permiso para hacerlo es 403.
+  documento_no_encontrado: 404,
+  motivo_observacion_requerido: 400,
+  documento_sin_gracia: 409,
+  organismo_no_otorga_ese_documento: 400,
+  organismo_requerido: 400,
+  numero_requerido: 400,
+  dias_invalidos: 400,
+  tipo_de_documento_invalido: 400,
+  // Borrar un tipo del que ya hay documentos cargados: son del Legajo de alguien. Se apaga.
+  tipo_de_documento_en_uso: 409,
+  archivo_de_documento_invalido: 400,
+  documento_ya_vencido: 400,
+  documentos_bloquean: 409,
+  sin_permiso_para_asignar_con_documentos_pendientes: 403,
+  motivo_excepcion_invalido: 400,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.
@@ -229,5 +248,9 @@ export function responderError(res, error, estadoPorOmision = 500) {
   if (error?.motivo && Array.isArray(error.turnos)) cuerpo.turnos = error.turnos;
   // Cuánto hay que esperar antes de volver a probar, para que la pantalla lo diga con el número.
   if (error?.motivo && Number.isInteger(error.minutos)) cuerpo.minutos = error.minutos;
+  // Los nombres de los documentos que faltan, para que la pantalla diga cuáles.
+  if (error?.motivo && Array.isArray(error.documentos)) cuerpo.documentos = error.documentos;
+  // Desde qué fecha tiene que estar emitido un documento, para decirlo con la fecha.
+  if (error?.motivo && typeof error.fecha === 'string') cuerpo.fecha = error.fecha;
   return res.status(estado).json(cuerpo);
 }

@@ -2,13 +2,13 @@
 // resumenDelPadron.js — las dos cuentas que la lista de Asistentes hace de un vistazo
 //
 // QUÉ PROBLEMA RESUELVE
-// Para saber si un Asistente tiene los papeles al día o cuántos turnos le quedan por delante
+// Para saber si un Asistente tiene los documentos al día o cuántos turnos le quedan por delante
 // había que entrar a su Legajo del Asistente, de a uno. Con un Padrón de decenas de personas, eso es abrir y
 // cerrar decenas de Legajos del Asistente para contestar una pregunta que la lista puede contestar sola.
 //
 // POR QUÉ NO SE CUENTA ADENTRO DE LA PANTALLA
 // Son dos cuentas, no dos consultas: la de guardias se apoya en el semáforo
-// (`lib/semaforoGuardia.js`) y la de papeles en la regla de vencimientos
+// (`lib/semaforoGuardia.js`) y la de documentos en la regla de vencimientos
 // (`lib/reglaVencimientos.js`). Escribirlas adentro de la pantalla sería la tercera vez que
 // alguien decide qué es "activa" y la octava que alguien decide qué es "por vencer". Acá se
 // juntan los dos resultados y no se decide ninguno de los dos.
@@ -65,17 +65,17 @@ const GRAVEDAD = [
 ];
 
 /**
- * En qué estado está la documentación de cada Asistente: la del papel que peor esté.
+ * En qué estado está la documentación de cada Asistente: la del documento que peor esté.
  *
- * Se muestra el peor y no un promedio porque un solo papel vencido ya impide trabajar: promediarlo
+ * Se muestra el peor y no un promedio porque un solo documento vencido ya impide trabajar: promediarlo
  * con otros cinco al día diría "casi bien" de alguien que no puede tomar un turno.
  *
- * **Un Asistente sin papeles con vencimiento no aparece en el resultado**, y eso no es lo mismo
+ * **Un Asistente sin documentos con vencimiento no aparece en el resultado**, y eso no es lo mismo
  * que tenerlos al día: es que no hay nada que vencer o que nadie cargó nada. Mostrarlo como
  * vigente sería afirmar algo que ninguna fila dice.
  *
  * @param documentos  filas de `documentos_asistente` con `asistente_id`, `fecha_vencimiento` y,
- *                    si vino, `tipos_documento_asistente.requiere_vencimiento`.
+ *                    si vino, `tipos_documento_asistente.vencimiento`.
  * @param diasDePreaviso   la ventana de preaviso de la Prestadora.
  * @param desde       desde qué día se cuenta. Se pasa en las pruebas.
  * @returns `Map` de identificador de Asistente a una clave de `ESTADO_VENCIMIENTO`.
@@ -90,8 +90,8 @@ export function documentacionPorAsistente(
   for (const documento of lista(documentos)) {
     if (!documento?.asistente_id || !documento.fecha_vencimiento) continue;
     // El tipo puede no haber venido en la consulta; en ese caso manda la fecha, que está cargada.
-    // Lo que no se hace es descartar un papel por un dato que no se pidió.
-    if (documento.tipos_documento_asistente?.requiere_vencimiento === false) continue;
+    // Lo que no se hace es descartar un documento por un dato que no se pidió.
+    if (documento.tipos_documento_asistente?.vencimiento === 'no_vence') continue;
 
     const estado = estadoDeVencimiento(
       diasParaVencer(documento.fecha_vencimiento, desde),

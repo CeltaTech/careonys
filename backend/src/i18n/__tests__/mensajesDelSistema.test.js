@@ -207,6 +207,10 @@ const DATOS_MINIMOS = {
     etiqueta: 'Carnet sanitario', dias: 30,
     documentos: [{ nombre: 'Marta', fechaVencimiento: '2026-11-01' }],
   },
+  documento_aprobado: { documento: 'Carnet sanitario' },
+  documento_observado: { documento: 'Carnet sanitario', motivo: 'La imagen no se lee' },
+  documento_por_vencer: { documento: 'Carnet sanitario', fecha: '2026-11-01' },
+  documento_vencido: { documento: 'Carnet sanitario', fecha: '2026-11-01' },
   codigo_instruccion_personas_autorizadas: { codigo: '123456', minutos: 10, remite: 'Cuidados del Sur' },
   activacion_cuenta: {
     nombre: 'Elena', link: 'https://ejemplo/activar', codigo: 'cuidados-del-sur', dias: 7,

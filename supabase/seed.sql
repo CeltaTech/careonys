@@ -764,10 +764,10 @@ ON CONFLICT (prestadora_id) DO UPDATE SET
 -- Las Ramas son de cada Prestadora; Sandbox lleva las cinco de siempre y agrupa
 -- con ellas sus tipos, los de fábrica y el propio.
 
-INSERT INTO public.tipos_asistente (id, prestadora_id, clave, nombre, descripcion, requiere_matricula, tipo_matricula, activo, orden)
+INSERT INTO public.tipos_asistente (id, prestadora_id, clave, nombre, descripcion, activo, orden)
 VALUES
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   NULL, 'Asistente de compañía', 'Tipo propio de la Prestadora Sandbox.', false, NULL, true, 70);
+   NULL, 'Asistente de compañía', 'Tipo propio de la Prestadora Sandbox.', true, 70);
 
 INSERT INTO public.tareas_tipo_asistente (tipo_asistente_id, prestadora_id, clase, clave, texto, descripcion, orden)
 VALUES
@@ -843,30 +843,139 @@ UPDATE public.prestadoras
 SET dias_aviso_vencimiento_documentos = 45
 WHERE id = '11111111-1111-4111-8111-111111111111';
 
-INSERT INTO public.tipos_documento_asistente (id, prestadora_id, nombre, requiere_vencimiento, activo)
+-- La libreta tiene quince días de gracia, para que el vencido de Ana quede en
+-- gracia y se pueda prorrogar. Ninguno de los tres impide trabajar: los que sí
+-- son las matrículas, más abajo.
+INSERT INTO public.tipos_documento_asistente
+  (id, prestadora_id, nombre, vencimiento, lleva_numero, impide_trabajar, dias_de_gracia, activo)
 VALUES
   ('3d000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'Libreta sanitaria', true, true),
+   'Libreta sanitaria', 'fecha_del_documento', false, false, 15, true),
   ('3d000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
-   'Certificado de antecedentes', true, true),
+   'Certificado de antecedentes', 'fecha_del_documento', false, false, 0, true),
   ('3d000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
-   'Título', false, true);
+   'Título', 'no_vence', true, false, 0, true);
 
-INSERT INTO public.documentos_asistente (prestadora_id, asistente_id, tipo_documento_id, fecha_vencimiento)
+-- Las cuatro matrículas. En la nube las crea la migración de los documentos para
+-- cada Prestadora que ya existía; acá la base se arma vacía y la Prestadora nace
+-- después, así que se siembran con la misma forma: no vencen, llevan número,
+-- impiden trabajar y se piden sólo a su profesión.
+INSERT INTO public.tipos_documento_asistente
+  (id, prestadora_id, nombre, vencimiento, lleva_numero, impide_trabajar, activo)
 VALUES
-  -- Ana: vencido hace una semana. Es el que tiene que salir en rojo.
-  ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000001',
-   '3d000000-0000-4000-8000-000000000001', CURRENT_DATE - 7),
+  ('3d000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
+   'Matrícula de enfermería', 'no_vence', true, true, true),
+  ('3d000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111',
+   'Matrícula de medicina', 'no_vence', true, true, true),
+  ('3d000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111',
+   'Matrícula de kinesiología', 'no_vence', true, true, true),
+  ('3d000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111',
+   'Matrícula de acompañamiento terapéutico', 'no_vence', true, true, true);
+
+-- «Se pide a»: los tres de siempre a todos los tipos de Asistente que ve la
+-- Prestadora, los de fábrica y el propio; cada matrícula, a su profesión.
+INSERT INTO public.tipos_documento_por_tipo_asistente (prestadora_id, tipo_documento_id, tipo_asistente_id)
+SELECT '11111111-1111-4111-8111-111111111111', d.id, t.id
+  FROM (VALUES ('3d000000-0000-4000-8000-000000000001'::uuid),
+               ('3d000000-0000-4000-8000-000000000002'::uuid),
+               ('3d000000-0000-4000-8000-000000000003'::uuid)) AS d(id)
+ CROSS JOIN public.tipos_asistente t
+ WHERE t.prestadora_id IS NULL OR t.prestadora_id = '11111111-1111-4111-8111-111111111111';
+
+INSERT INTO public.tipos_documento_por_tipo_asistente (prestadora_id, tipo_documento_id, tipo_asistente_id)
+SELECT '11111111-1111-4111-8111-111111111111', m.documento, t.id
+  FROM (VALUES ('3d000000-0000-4000-8000-000000000004'::uuid, 'enfermero'),
+               ('3d000000-0000-4000-8000-000000000005'::uuid, 'medico'),
+               ('3d000000-0000-4000-8000-000000000006'::uuid, 'kinesiologo'),
+               ('3d000000-0000-4000-8000-000000000007'::uuid, 'acompanante_terapeutico')) AS m(documento, clave)
+  JOIN public.tipos_asistente t ON t.clave = m.clave AND t.prestadora_id IS NULL;
+
+-- «Otorgado por»: las matrículas, Nación y las jurisdicciones; los antecedentes,
+-- el Registro Nacional de Reincidencia.
+INSERT INTO public.organismos_por_tipo_documento (prestadora_id, tipo_documento_id, organismo_id)
+SELECT '11111111-1111-4111-8111-111111111111', d.id, o.id
+  FROM public.tipos_documento_asistente d
+  JOIN public.organismos_otorgantes o
+    ON o.pais = 'AR' AND o.nombre NOT IN ('Registro Nacional de Reincidencia', 'ARCA')
+ WHERE d.prestadora_id = '11111111-1111-4111-8111-111111111111'
+   AND d.nombre LIKE 'Matrícula de %';
+
+INSERT INTO public.organismos_por_tipo_documento (prestadora_id, tipo_documento_id, organismo_id)
+SELECT '11111111-1111-4111-8111-111111111111', '3d000000-0000-4000-8000-000000000002', o.id
+  FROM public.organismos_otorgantes o
+ WHERE o.pais = 'AR' AND o.nombre = 'Registro Nacional de Reincidencia';
+
+-- Los documentos cargados. Lo que carga la Prestadora entra aprobado y a nombre
+-- de quien lo revisó; lo que carga el Asistente entra en revisión. Quedan a la
+-- vista los cuatro estados que se guardan —aprobado, en revisión, observado y,
+-- por fecha, vencido— y la historia: la libreta de Bruno tiene una carga vieja
+-- observada debajo de la que vale.
+INSERT INTO public.documentos_asistente
+  (id, prestadora_id, asistente_id, tipo_documento_id, fecha_vencimiento, numero, organismo_id,
+   estado, motivo_observacion, cargado_por, revisado_por, revisado_at, created_at)
+VALUES
+  -- Ana: aprobado y vencido hace una semana. Es el que tiene que salir en rojo,
+  -- y el que queda en gracia.
+  ('3e000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+   '30000000-0000-4000-8000-000000000001', '3d000000-0000-4000-8000-000000000001',
+   CURRENT_DATE - 7, NULL, NULL,
+   'aprobado', NULL, '20000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002',
+   now() - interval '200 days', now() - interval '200 days'),
   -- Ana: le quedan 40 días. Adentro del plazo de 45 que configuró la Prestadora,
   -- pero afuera del de fábrica: es el que delata a una pantalla desincronizada.
-  ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000001',
-   '3d000000-0000-4000-8000-000000000002', CURRENT_DATE + 40),
-  -- Bruno: le quedan 10 días. Adentro del último tercio, o sea que apura.
-  ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000002',
-   '3d000000-0000-4000-8000-000000000001', CURRENT_DATE + 10),
+  ('3e000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
+   '30000000-0000-4000-8000-000000000001', '3d000000-0000-4000-8000-000000000002',
+   CURRENT_DATE + 40, NULL,
+   (SELECT id FROM public.organismos_otorgantes WHERE pais = 'AR' AND nombre = 'Registro Nacional de Reincidencia'),
+   'aprobado', NULL, '20000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002',
+   now() - interval '100 days', now() - interval '100 days'),
+  -- Ana: el título lo subió ella y la Prestadora se lo observó.
+  ('3e000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
+   '30000000-0000-4000-8000-000000000001', '3d000000-0000-4000-8000-000000000003',
+   NULL, 'T-4471', NULL,
+   'observado', 'La foto está cortada y no se lee el número.', '30000000-0000-4000-8000-000000000001',
+   '20000000-0000-4000-8000-000000000002', now() - interval '2 days', now() - interval '3 days'),
+  -- Bruno: una carga vieja observada, y encima la que vale, aprobada, a la que
+  -- le quedan 10 días: adentro del último tercio, o sea que apura.
+  ('3e000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
+   '30000000-0000-4000-8000-000000000002', '3d000000-0000-4000-8000-000000000001',
+   CURRENT_DATE + 10, NULL, NULL,
+   'observado', 'La fecha de vencimiento no coincide con la del documento.', '30000000-0000-4000-8000-000000000002',
+   '20000000-0000-4000-8000-000000000002', now() - interval '61 days', now() - interval '62 days'),
+  ('3e000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111',
+   '30000000-0000-4000-8000-000000000002', '3d000000-0000-4000-8000-000000000001',
+   CURRENT_DATE + 10, NULL, NULL,
+   'aprobado', NULL, '20000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002',
+   now() - interval '60 days', now() - interval '60 days'),
+  -- Bruno: los antecedentes los subió él y esperan revisión.
+  ('3e000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111',
+   '30000000-0000-4000-8000-000000000002', '3d000000-0000-4000-8000-000000000002',
+   CURRENT_DATE + 170,  NULL,
+   (SELECT id FROM public.organismos_otorgantes WHERE pais = 'AR' AND nombre = 'Registro Nacional de Reincidencia'),
+   'en_revision', NULL, '30000000-0000-4000-8000-000000000002', NULL, NULL,
+   now() - interval '1 day'),
   -- Clara: le queda medio año. Es el que tiene que quedarse callado.
-  ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000003',
-   '3d000000-0000-4000-8000-000000000001', CURRENT_DATE + 180);
+  ('3e000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111',
+   '30000000-0000-4000-8000-000000000003', '3d000000-0000-4000-8000-000000000001',
+   CURRENT_DATE + 180, NULL, NULL,
+   'aprobado', NULL, '20000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002',
+   now() - interval '30 days', now() - interval '30 days'),
+  -- Clara es enfermera: sin la matrícula aprobada no podría recibir turnos.
+  ('3e000000-0000-4000-8000-000000000008', '11111111-1111-4111-8111-111111111111',
+   '30000000-0000-4000-8000-000000000003', '3d000000-0000-4000-8000-000000000004',
+   NULL, 'MP-10003',
+   (SELECT id FROM public.organismos_otorgantes WHERE pais = 'AR' AND nombre = 'Ciudad Autónoma de Buenos Aires'),
+   'aprobado', NULL, '20000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002',
+   now() - interval '199 days', now() - interval '200 days');
+
+-- La gracia de la libreta de Ana, prorrogada diez días. Hasta cuándo lo calcula la base.
+INSERT INTO public.prorrogas_de_gracia_documento (prestadora_id, asistente_id, tipo_documento_id, dias, prorrogado_por)
+VALUES ('11111111-1111-4111-8111-111111111111', '30000000-0000-4000-8000-000000000001',
+        '3d000000-0000-4000-8000-000000000001', 10, '20000000-0000-4000-8000-000000000002');
+
+-- El aviso de «vencido» de esa libreta ya salió al teléfono de Ana.
+INSERT INTO public.avisos_de_documento_enviados (prestadora_id, documento_id, clase)
+VALUES ('11111111-1111-4111-8111-111111111111', '3e000000-0000-4000-8000-000000000001', 'vencido');
 
 
 -- ----------------------------------------------------------------------------
@@ -1099,30 +1208,103 @@ VALUES ('9a000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-0000000
        ('9a000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000003',
         '22222222-2222-4222-8222-222222222222', current_date - 100, current_date + 600);
 
--- Matrículas. La Prestadora va escrita, y la clave foránea compuesta contra
--- asistentes (id, prestadora_id) no deja que sea otra que la de su Asistente.
-INSERT INTO public.matriculas_asistente (id, prestadora_id, asistente_id, tipo, numero_matricula, vigente_desde, registrado_por)
-VALUES ('9b000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-        '30000000-0000-4000-8000-000000000001',
-        'enfermeria', 'MP-10001', current_date - 400, '20000000-0000-4000-8000-000000000003'),
-       ('9b000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
-        '50000000-0000-4000-8000-000000000003',
-        'enfermeria', 'MP-20002', current_date - 300, '50000000-0000-4000-8000-000000000002');
+-- Los documentos del Asistente de Cuidar del Sur. Los de Sandbox están en la
+-- sección 6 ter; éstos van acá, después de su Guardia, porque Elena recibe su
+-- tipo de Asistente recién ahora: sin tipo no se le pide ningún documento, y con
+-- tipo la vista de los documentos pedidos tiene algo que mostrar en esta
+-- Prestadora también. Los antecedentes vencen por plazo desde la emisión, que es
+-- el caso en que la fecha la calcula la base.
+UPDATE public.asistentes SET tipo_asistente_id = (
+  SELECT id FROM public.tipos_asistente WHERE prestadora_id IS NULL AND clave = 'cuidador'
+)
+WHERE id = '50000000-0000-4000-8000-000000000003';
 
--- La Matrícula vigente de quien sí la necesita. Clara Cabrera es la única del
--- poblado cuyo tipo de Asistente exige matrícula de enfermería, así que sin esta
--- fila la vista `estado_matricula_asistente` nunca devuelve una Matrícula
--- resuelta: las otras dos cuelgan de tipos que no la piden y el empalme las
--- descarta por tipo. Lleva vencimiento a propósito, para que `dias_para_vencer`
--- tenga algo que calcular.
-INSERT INTO public.matriculas_asistente (id, prestadora_id, asistente_id, tipo, numero_matricula,
-                                         vigente_desde, vigente_hasta, registrado_por,
-                                         verificada_at, verificada_por, metodo_verificacion)
-VALUES ('9b000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
-        '30000000-0000-4000-8000-000000000003',
-        'enfermeria', 'MP-10003', current_date - 200, current_date + 300,
-        '20000000-0000-4000-8000-000000000003',
-        now() - interval '199 days', '20000000-0000-4000-8000-000000000003', 'documento_a_la_vista');
+INSERT INTO public.tipos_documento_asistente
+  (id, prestadora_id, nombre, vencimiento, periodo_cantidad, periodo_unidad, lleva_numero,
+   impide_trabajar, dias_de_gracia, activo)
+VALUES
+  ('3d000000-0000-4000-8000-000000000011', '22222222-2222-4222-8222-222222222222',
+   'Libreta sanitaria', 'fecha_del_documento', NULL, NULL, false, false, 10, true),
+  ('3d000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222',
+   'Certificado de Antecedentes Penales', 'plazo_desde_emision', 6, 'mes', false, false, 0, true),
+  ('3d000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222',
+   'Matrícula de enfermería', 'no_vence', NULL, NULL, true, true, 0, true),
+  ('3d000000-0000-4000-8000-000000000014', '22222222-2222-4222-8222-222222222222',
+   'Matrícula de medicina', 'no_vence', NULL, NULL, true, true, 0, true),
+  ('3d000000-0000-4000-8000-000000000015', '22222222-2222-4222-8222-222222222222',
+   'Matrícula de kinesiología', 'no_vence', NULL, NULL, true, true, 0, true),
+  ('3d000000-0000-4000-8000-000000000016', '22222222-2222-4222-8222-222222222222',
+   'Matrícula de acompañamiento terapéutico', 'no_vence', NULL, NULL, true, true, 0, true);
+
+INSERT INTO public.tipos_documento_por_tipo_asistente (prestadora_id, tipo_documento_id, tipo_asistente_id)
+SELECT '22222222-2222-4222-8222-222222222222', d.id, t.id
+  FROM (VALUES ('3d000000-0000-4000-8000-000000000011'::uuid),
+               ('3d000000-0000-4000-8000-000000000012'::uuid)) AS d(id)
+ CROSS JOIN public.tipos_asistente t
+ WHERE t.prestadora_id IS NULL OR t.prestadora_id = '22222222-2222-4222-8222-222222222222';
+
+INSERT INTO public.tipos_documento_por_tipo_asistente (prestadora_id, tipo_documento_id, tipo_asistente_id)
+SELECT '22222222-2222-4222-8222-222222222222', m.documento, t.id
+  FROM (VALUES ('3d000000-0000-4000-8000-000000000013'::uuid, 'enfermero'),
+               ('3d000000-0000-4000-8000-000000000014'::uuid, 'medico'),
+               ('3d000000-0000-4000-8000-000000000015'::uuid, 'kinesiologo'),
+               ('3d000000-0000-4000-8000-000000000016'::uuid, 'acompanante_terapeutico')) AS m(documento, clave)
+  JOIN public.tipos_asistente t ON t.clave = m.clave AND t.prestadora_id IS NULL;
+
+INSERT INTO public.organismos_por_tipo_documento (prestadora_id, tipo_documento_id, organismo_id)
+SELECT '22222222-2222-4222-8222-222222222222', d.id, o.id
+  FROM public.tipos_documento_asistente d
+  JOIN public.organismos_otorgantes o
+    ON o.pais = 'AR' AND o.nombre NOT IN ('Registro Nacional de Reincidencia', 'ARCA')
+ WHERE d.prestadora_id = '22222222-2222-4222-8222-222222222222'
+   AND d.nombre LIKE 'Matrícula de %';
+
+INSERT INTO public.organismos_por_tipo_documento (prestadora_id, tipo_documento_id, organismo_id)
+SELECT '22222222-2222-4222-8222-222222222222', '3d000000-0000-4000-8000-000000000012', o.id
+  FROM public.organismos_otorgantes o
+ WHERE o.pais = 'AR' AND o.nombre = 'Registro Nacional de Reincidencia';
+
+INSERT INTO public.documentos_asistente
+  (id, prestadora_id, asistente_id, tipo_documento_id, fecha_emision, fecha_vencimiento, organismo_id,
+   estado, motivo_observacion, cargado_por, revisado_por, revisado_at, created_at)
+VALUES
+  -- La libreta aprobada, vencida hace veinte días: con diez de gracia, la
+  -- gracia propia ya terminó y queda la prórroga de más abajo.
+  ('3e000000-0000-4000-8000-000000000011', '22222222-2222-4222-8222-222222222222',
+   '50000000-0000-4000-8000-000000000003', '3d000000-0000-4000-8000-000000000011',
+   NULL, CURRENT_DATE - 20, NULL,
+   'aprobado', NULL, '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001',
+   now() - interval '400 days', now() - interval '400 days'),
+  -- La libreta nueva, que subió ella y espera revisión. Es la que vale ahora.
+  ('3e000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222',
+   '50000000-0000-4000-8000-000000000003', '3d000000-0000-4000-8000-000000000011',
+   NULL, CURRENT_DATE + 345, NULL,
+   'en_revision', NULL, '50000000-0000-4000-8000-000000000003', NULL, NULL,
+   now() - interval '1 hour'),
+  -- Los antecedentes, observados. El vencimiento lo calcula la base desde la emisión.
+  ('3e000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222',
+   '50000000-0000-4000-8000-000000000003', '3d000000-0000-4000-8000-000000000012',
+   CURRENT_DATE - 30, NULL,
+   (SELECT id FROM public.organismos_otorgantes WHERE pais = 'AR' AND nombre = 'Registro Nacional de Reincidencia'),
+   'observado', 'El certificado no trae el código de verificación.', '50000000-0000-4000-8000-000000000003',
+   '50000000-0000-4000-8000-000000000001', now() - interval '5 days', now() - interval '6 days');
+
+INSERT INTO public.prorrogas_de_gracia_documento (prestadora_id, asistente_id, tipo_documento_id, dias, prorrogado_por)
+VALUES ('22222222-2222-4222-8222-222222222222', '50000000-0000-4000-8000-000000000003',
+        '3d000000-0000-4000-8000-000000000011', 5, '50000000-0000-4000-8000-000000000001');
+
+INSERT INTO public.avisos_de_documento_enviados (prestadora_id, documento_id, clase)
+VALUES ('22222222-2222-4222-8222-222222222222', '3e000000-0000-4000-8000-000000000011', 'vencido');
+
+-- Un turno asignado con documentos pendientes en cada Prestadora. La fila es el
+-- registro de la excepción: quién, a quién, por qué y qué faltaba.
+INSERT INTO public.excepciones_por_documentos (prestadora_id, guardia_id, asistente_id, usuario_id, motivo, documentos)
+VALUES ('11111111-1111-4111-8111-111111111111', '70000000-0000-4000-8000-000000000007',
+        '30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003',
+        'No hay otra Asistente disponible para ese horario.', ARRAY['Libreta sanitaria']),
+       ('22222222-2222-4222-8222-222222222222', '80000000-0000-4000-8000-000000000001',
+        '50000000-0000-4000-8000-000000000003', '50000000-0000-4000-8000-000000000002',
+        'Reemplazo de último momento.', ARRAY['Libreta sanitaria']);
 
 -- Mensajes entre el Asistente y la Prestadora.
 INSERT INTO public.mensajes_asistente (id, prestadora_id, asistente_id, usuario_id, mensaje)

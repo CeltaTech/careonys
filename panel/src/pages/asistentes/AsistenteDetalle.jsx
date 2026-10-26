@@ -11,7 +11,6 @@ import { supabase } from '../../lib/supabaseClient';
 import { PerfilTab } from './PerfilTab';
 import { VerificacionTab } from './VerificacionTab';
 import { CertificadoTab } from './CertificadoTab';
-import { MatriculasTab } from './MatriculasTab';
 import { DatosBancariosTab } from './DatosBancariosTab';
 import { GuardiasTab } from './GuardiasTab';
 import { EvaluacionesTab } from './EvaluacionesTab';
@@ -19,6 +18,11 @@ import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
 import { DesactivarAsistenteModal } from './DesactivarAsistenteModal';
 import { mensajeDeError } from '../../lib/errores';
+import { useDocumentosDelAsistente } from '../../hooks/useDocumentosDelAsistente';
+import { documentosPendientes, graciaVigente } from '../../lib/documentos';
+import { hoyISO } from '../../lib/horarios';
+import { con } from '../../lib/textos';
+import { Alert } from '../../components/ui/Alert';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { Button } from '../../components/ui/Button';
 import { CAMPOS_PAGO, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/datosAparteDelAsistente';
@@ -39,6 +43,7 @@ export function AsistenteDetalle() {
   const [desactivando, setDesactivando] = useState(false);
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  const documentosDelAsistente = useDocumentosDelAsistente(id);
   const intermediacion = tieneModalidad(MODALIDAD.INTERMEDIACION);
 
   const recargar = useCallback(async () => {
@@ -76,6 +81,11 @@ export function AsistenteDetalle() {
     asistente.fecha_alta && `${t.asistentes.fecha_alta} ${new Date(asistente.fecha_alta).toLocaleDateString(locale)}`,
   ].filter(Boolean);
 
+  // La franja de documentos la ve todo el que abre el Legajo: quien asigna turnos tiene que saber
+  // que este Asistente no puede trabajar. Si la lista no se pudo leer, la franja no se muestra.
+  const pendientes = documentosDelAsistente.estado === 'listo' ? documentosPendientes(documentosDelAsistente.documentos) : [];
+  const gracia = pendientes.length ? graciaVigente(documentosDelAsistente.documentos, hoyISO()) : null;
+
   return (
     <div>
       <Cabecera titulo={asistente.nombre}>
@@ -99,6 +109,12 @@ export function AsistenteDetalle() {
       {datosDelAsistente.length > 0 && (
         <div className="panel-mini hoja-ficha-datos">{datosDelAsistente.join(' · ')}</div>
       )}
+      {pendientes.length > 0 && (
+        <Alert variant="warning">
+          {con(t.documentos_asistente.pendientes, { documentos: pendientes.join(', ') })}
+          {gracia && ` ${con(t.documentos_asistente.en_gracia, { fecha: new Date(`${gracia}T00:00:00`).toLocaleDateString(locale) })}`}
+        </Alert>
+      )}
 
       <section className="panel-tarjeta">
         <div className="panel-tabs" role="tablist">
@@ -118,10 +134,9 @@ export function AsistenteDetalle() {
       </section>
 
       <div className="panel-tab-contenido molde-pila">
-        {tab === 'perfil' && <PerfilTab asistente={asistente} onActualizado={recargar} />}
+        {tab === 'perfil' && <PerfilTab asistente={asistente} onActualizado={recargar} documentosDelAsistente={documentosDelAsistente} />}
         {tab === 'verificacion' && <VerificacionTab asistente={asistente} />}
         {tab === 'certificado' && <CertificadoTab asistente={asistente} />}
-        {tab === 'matriculas' && esAdmin && <MatriculasTab asistente={asistente} />}
         {tab === 'datos_bancarios' && (esAdmin || puede('ver_datos_bancarios_asistente')) && (
           <DatosBancariosTab asistente={asistente} />
         )}

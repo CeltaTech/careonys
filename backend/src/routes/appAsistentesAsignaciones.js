@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { errorDeDocumentos } from '../utils/erroresDeDocumentos.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
 import { aplicarReemplazoAceptado } from '../utils/coberturaDeAusencia.js';
 import { hoyISO } from '../utils/horarios.js';
@@ -35,43 +36,14 @@ export const appAsistentesAsignacionesRouter = Router();
 const LARGO_MAXIMO_DETALLE = 500;
 
 /**
- * Traduce el rechazo de un disparador de la base a un motivo que la pantalla sepa explicar.
- *
- * Cuando la Matrícula o la modalidad de trabajo frenan una asignación, la base levanta un
- * mensaje con esta forma exacta:
- *
- *     matricula_bloquea:vencida:
- *     modalidad_bloquea:intermediacion:
- *
- * Ese texto no puede llegar nunca a la pantalla. Acá se lo abre y se devuelve el código que las
- * traducciones convierten en una frase. Si el error es otra cosa, devuelve `null` y la ruta lo
- * trata como una falla común.
- *
- * El Panel hace esta misma lectura por su cuenta, en `panel/src/lib/matricula.js`: son dos
- * unidades que se despliegan por separado y no pueden compartir código.
- */
-function motivoDelBloqueo(error) {
-  const texto = String(error?.message ?? error ?? '');
-
-  const matricula = /matricula_bloquea:([a-z_]+)/.exec(texto);
-  if (matricula) return `matricula_${matricula[1]}`;
-
-  return null;
-}
-
-/**
- * Traduce lo que levanta la base al aceptar. Las frases salen de `aceptar_asignacion` y de los
- * disparadores de la Matrícula.
+ * Traduce lo que levanta la base al aceptar. Las frases salen de `aceptar_asignacion` y del
+ * control de documentos.
  */
 function motivoDeLaAceptacion(error) {
   const texto = String(error?.message ?? '');
   if (texto.includes('asignacion_no_encontrada')) return { estado: 404, motivo: 'asignacion_no_encontrada' };
   if (texto.includes('asignacion_ya_respondida')) return { estado: 409, motivo: 'asignacion_ya_respondida' };
   if (texto.includes('guardia_ya_cubierta')) return { estado: 409, motivo: 'guardia_ya_cubierta' };
-  // La Matrícula puede frenar la aceptación, y con razón: entre la
-  // asignación y esta respuesta pudo vencerse el papel que lo autoriza.
-  const bloqueo = motivoDelBloqueo(error);
-  if (bloqueo) return { estado: 409, motivo: bloqueo };
   return null;
 }
 
@@ -277,7 +249,9 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
     if (falla) {
       const previsto = motivoDeLaAceptacion(falla);
       if (previsto) return noSePudo(res, previsto.estado, previsto.motivo, falla.message);
-      return responderError(res, falla);
+      // Un documento pendiente puede frenar la aceptación, y con razón: entre la asignación y
+      // esta respuesta pudo vencerse. Viaja con los nombres de los que faltan.
+      return responderError(res, errorDeDocumentos(falla) ?? falla);
     }
     if (guardiaId) {
       await avisarSiReemplaza(req, guardiaId);

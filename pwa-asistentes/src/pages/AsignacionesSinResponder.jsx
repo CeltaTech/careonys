@@ -223,7 +223,14 @@ export default function AsignacionesSinResponder() {
     } catch (e) {
       // Casi siempre es que el turno ya no está disponible. Se explica y se vuelve a cargar la
       // lista, que es lo que lo deja al día.
-      setError(mensajeDeError(e, t, 'responder asignacion'));
+      // Si lo frenan documentos pendientes, se dice cuáles: «tiene documentos pendientes» sin
+      // nombrarlos lo manda a buscar a ciegas.
+      const mensaje = mensajeDeError(e, t, 'responder asignacion');
+      setError(
+        e?.motivo === 'documentos_bloquean' && e.documentos?.length
+          ? `${mensaje} ${con(t.documentos.pendientes, { documentos: e.documentos.join(', ') })}`
+          : mensaje,
+      );
     }
     setEnCurso(null);
     await cargar();

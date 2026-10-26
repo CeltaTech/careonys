@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------------------
-// probar_papeles_del_legajo.mjs — ¿el papel del legajo queda encerrado en su Prestadora?
+// probar_documentos_del_legajo.mjs — ¿el documento del legajo queda encerrado en su Prestadora?
 //
 // Uso, desde la raíz del producto, con la base local levantada:
-//   node scripts/probar_papeles_del_legajo.mjs
+//   node scripts/probar_documentos_del_legajo.mjs
 //
 // Devuelve 0 si el aislamiento aguanta y 1 si algo se filtró.
 //
 // POR QUÉ EXISTE
 //
-// El depósito «documentos-asistente» es el primero que el Panel escribe con el pase de la persona
-// que entró, y no con la llave de servicio del backend. Lo que lo aísla son sus políticas, no un
+// Al depósito «documentos-asistente» suben la administración y el propio Asistente, cada uno con
+// el pase de la persona que entró. Lo que lo aísla son sus políticas, no un
 // filtro escrito en una pantalla. Una política no se prueba leyéndola: se prueba entrando.
 //
 // Y LA RUTA EMPIEZA POR LA PRESTADORA a propósito. Empezando por la cuenta, el día que una misma
@@ -18,11 +18,11 @@
 //
 // QUÉ PRUEBA, con las dos Prestadoras que siembra `supabase/seed.sql` y datos cargados en las dos:
 //
-//   1. Cada administradora sube un papel a la carpeta de su propia Prestadora: tiene que entrar.
+//   1. Cada administradora sube un documento a la carpeta de su propia Prestadora: tiene que entrar.
 //   2. Cada una intenta subir a la carpeta de la otra: tiene que rebotar, en las dos direcciones.
 //   3. Cada una lista el depósito: ve el suyo y ninguno del otro, en las dos direcciones.
-//   4. Cada una pide un enlace temporal al papel de la otra: tiene que rebotar.
-//   5. Una Asistente con sesión no alcanza ninguno: no hay política que la alcance.
+//   4. Cada una pide un enlace temporal al documento de la otra: tiene que rebotar.
+//   5. Cada Asistente ve y sube en su propia carpeta, y no alcanza nada de la otra Prestadora.
 //
 // Una consulta que devuelve vacío no prueba nada, y por eso cada comprobación de «no ve» corre
 // contra un archivo que existe y que la otra sí ve.
@@ -106,7 +106,7 @@ async function entrar(base, llavePublica, email) {
   return cuerpo.access_token;
 }
 
-const CUERPO = Buffer.from('%PDF-1.4\n% papel de prueba\n');
+const CUERPO = Buffer.from('%PDF-1.4\n% documento de prueba\n');
 
 async function subir({ base, llavePublica, pase, ruta }) {
   const r = await fetch(`${base}/storage/v1/object/${DEPOSITO}/${ruta}`, {
@@ -149,9 +149,10 @@ async function principal() {
 
   // Las dos Prestadoras salen de la base, no escritas a mano: si la siembra cambia, esto sigue.
   const filas = consultarBase(`
-    SELECT u.prestadora_id, u.id, au.email, u.rol
+    SELECT u.prestadora_id, coalesce(a.id, u.id), au.email, u.rol
       FROM public.usuarios u
       JOIN auth.users au ON au.id = u.id
+      LEFT JOIN public.asistentes a ON a.usuario_id = u.id AND a.prestadora_id = u.prestadora_id
      WHERE u.rol IN ('admin_prestadora', 'asistente')
        AND u.prestadora_id IS NOT NULL
      ORDER BY u.prestadora_id, u.rol, au.email;`);
@@ -186,10 +187,10 @@ async function principal() {
     }
   }
 
-  console.log('\nCada administradora sube el papel a la carpeta de su propia Prestadora');
+  console.log('\nCada administradora sube el documento a la carpeta de su propia Prestadora');
   for (const lado of [una, otra]) {
     const estado = await subir({ base, llavePublica, pase: lado.pase, ruta: lado.ruta });
-    comprobar(`entra el papel de la Prestadora ${lado.prestadoraId.slice(0, 8)}`, estado === 200, `estado ${estado}`);
+    comprobar(`entra el documento de la Prestadora ${lado.prestadoraId.slice(0, 8)}`, estado === 200, `estado ${estado}`);
   }
 
   console.log('\nCada una intenta subir a la carpeta de la otra');
@@ -208,7 +209,7 @@ async function principal() {
     comprobar(`${quien.prestadoraId.slice(0, 8)} no ve ninguno de ${ajena.prestadoraId.slice(0, 8)}`, ajenos.length === 0, `vio ${ajenos.length}`);
   }
 
-  console.log('\nEl enlace temporal al papel ajeno');
+  console.log('\nEl enlace temporal al documento ajeno');
   for (const [quien, ajena] of [[una, otra], [otra, una]]) {
     const propia = await pedirEnlaceTemporal({ base, llavePublica, pase: quien.pase, ruta: quien.ruta });
     const impropia = await pedirEnlaceTemporal({ base, llavePublica, pase: quien.pase, ruta: ajena.ruta });
@@ -216,22 +217,64 @@ async function principal() {
     comprobar(`${quien.prestadoraId.slice(0, 8)} no obtiene el enlace al de ${ajena.prestadoraId.slice(0, 8)}`, impropia !== 200, `estado ${impropia}`);
   }
 
-  console.log('\nUna Asistente con sesión');
+  console.log('\nCada Asistente con sesión');
+  for (const [lado, ajena] of [[una, otra], [otra, una]]) {
+    const propios = await listar({ base, llavePublica, pase: lado.paseAsistente, carpeta: `${lado.prestadoraId}/${lado.asistente.id}` });
+    const ajenos = await listar({ base, llavePublica, pase: lado.paseAsistente, carpeta: `${ajena.prestadoraId}/${ajena.asistente.id}` });
+    const enlacePropio = await pedirEnlaceTemporal({ base, llavePublica, pase: lado.paseAsistente, ruta: lado.ruta });
+    const enlaceAjeno = await pedirEnlaceTemporal({ base, llavePublica, pase: lado.paseAsistente, ruta: ajena.ruta });
+    comprobar('ve el suyo', propios.length === 1, `vio ${propios.length}`);
+    comprobar('obtiene el enlace al suyo', enlacePropio === 200, `estado ${enlacePropio}`);
+    comprobar('no ve ninguno de la otra Prestadora', ajenos.length === 0, `vio ${ajenos.length}`);
+    comprobar('no obtiene el enlace al de la otra Prestadora', enlaceAjeno !== 200, `estado ${enlaceAjeno}`);
+
+    lado.rutaDelAsistente = `${lado.prestadoraId}/${lado.asistente.id}/${crypto.randomUUID()}.pdf`;
+    const sube = await subir({ base, llavePublica, pase: lado.paseAsistente, ruta: lado.rutaDelAsistente });
+    comprobar('sube a su propia carpeta', sube === 200, `estado ${sube}`);
+    const rutaAjena = `${ajena.prestadoraId}/${ajena.asistente.id}/${crypto.randomUUID()}.pdf`;
+    const subeAjena = await subir({ base, llavePublica, pase: lado.paseAsistente, ruta: rutaAjena });
+    comprobar('no sube a la carpeta de la otra Prestadora', subeAjena !== 200, `estado ${subeAjena}`);
+  }
+
+  // El Asistente borra sólo el archivo suelto: el que ninguna fila nombra. Al de la administradora
+  // se le anota su fila, y el que subió el Asistente queda suelto. Lo que dice si se borró es el
+  // listado de después, no la respuesta del borrado.
+  console.log('\nEl Asistente y el archivo suelto');
+  const nombreDe = (ruta) => ruta.split('/').pop();
+  for (const [lado, ajena] of [[una, otra], [otra, una]]) {
+    await borrar({ base, llavePublica, pase: lado.paseAsistente, ruta: ajena.rutaDelAsistente });
+  }
   for (const lado of [una, otra]) {
-    const vistos = await listar({ base, llavePublica, pase: lado.paseAsistente, carpeta: `${lado.prestadoraId}/${lado.asistente.id}` });
-    const enlace = await pedirEnlaceTemporal({ base, llavePublica, pase: lado.paseAsistente, ruta: lado.ruta });
-    comprobar('no alcanza el depósito por listado', vistos.length === 0, `vio ${vistos.length}`);
-    comprobar('no alcanza el depósito por enlace temporal', enlace !== 200, `estado ${enlace}`);
+    const quedan = await listar({ base, llavePublica, pase: lado.pase, carpeta: `${lado.prestadoraId}/${lado.asistente.id}` });
+    comprobar('no borra el suelto de la otra Prestadora', quedan.includes(nombreDe(lado.rutaDelAsistente)), `quedan ${quedan.length}`);
+  }
+  for (const lado of [una, otra]) {
+    consultarBase(`
+      INSERT INTO public.documentos_asistente (prestadora_id, asistente_id, tipo_documento_id, ruta_archivo)
+      SELECT '${lado.prestadoraId}', '${lado.asistente.id}', t.id, '${lado.ruta}'
+        FROM public.tipos_documento_asistente t
+       WHERE t.prestadora_id = '${lado.prestadoraId}'
+       LIMIT 1
+      RETURNING id;`);
+    const carpeta = `${lado.prestadoraId}/${lado.asistente.id}`;
+
+    await borrar({ base, llavePublica, pase: lado.paseAsistente, ruta: lado.ruta });
+    await borrar({ base, llavePublica, pase: lado.paseAsistente, ruta: lado.rutaDelAsistente });
+    const quedan = await listar({ base, llavePublica, pase: lado.pase, carpeta });
+    comprobar('no borra el archivo que tiene su fila', quedan.includes(nombreDe(lado.ruta)), `quedan ${quedan.length}`);
+    comprobar('borra el suelto de su carpeta', !quedan.includes(nombreDe(lado.rutaDelAsistente)), `quedan ${quedan.length}`);
+    consultarBase(`DELETE FROM public.documentos_asistente WHERE ruta_archivo = '${lado.ruta}' RETURNING id;`);
   }
 
   // Lo subido se borra por la API de archivos, que es el único camino: la base rechaza el borrado
   // directo de esa tabla para no dejar el archivo huérfano del renglón.
   for (const lado of [una, otra]) {
     await borrar({ base, llavePublica, pase: lado.pase, ruta: lado.ruta });
+    if (lado.rutaDelAsistente) await borrar({ base, llavePublica, pase: lado.pase, ruta: lado.rutaDelAsistente });
   }
 
   console.log(fallas === 0
-    ? `\n${verde('✓')} El papel del legajo queda encerrado en su Prestadora.`
+    ? `\n${verde('✓')} El documento del legajo queda encerrado en su Prestadora.`
     : `\n${rojo('✗')} ${fallas} comprobación(es) fallaron.`);
   process.exit(fallas === 0 ? 0 : 1);
 }

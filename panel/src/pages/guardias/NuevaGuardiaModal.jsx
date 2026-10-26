@@ -226,12 +226,18 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
       // El turno ya existe. Si la asignación no pasa, queda sin asignar y se dice por qué: volver
       // a guardar crearía otro igual.
-      const { error: errorAsignar } = asistenteId
+      // Si la frenaron los documentos, se devuelve cómo repetirla con el motivo de la excepción.
+      const { error: errorAsignar, documentosPendientes } = asistenteId
         ? await asignarTurno(guardia.id, asistenteId, t)
-        : { error: null };
+        : { error: null, documentosPendientes: null };
 
       setGuardando(false);
-      onCreada(errorAsignar);
+      onCreada(
+        errorAsignar,
+        documentosPendientes
+          ? { documentos: documentosPendientes, reintentar: (motivo) => asignarTurno(guardia.id, asistenteId, t, motivo) }
+          : null,
+      );
       return;
     }
 

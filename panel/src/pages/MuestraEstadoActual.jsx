@@ -102,8 +102,8 @@ export function MuestraEstadoActual() {
   const ctx = useMemo(
     () => ({
       ahora: new Date(),
-      asistentesConPapelPorVencer: new Set(['a2']),
-      asistentesConPapelVencido: new Set(['a3']),
+      asistentesConDocumentoPorVencer: new Set(['a2']),
+      asistentesConDocumentoVencido: new Set(['a3']),
       guardiasSinReporte: new Set(['g9']),
       diasDePreaviso: 30,
     }),

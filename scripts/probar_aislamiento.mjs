@@ -56,9 +56,6 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// Con qué dirección se le habla al servicio de acceso. Se importa de donde eso se decide, y no se
-// copia acá: una copia despegada dejaría la prueba entrando a cuentas que no existen.
-import { direccionDeAcceso } from '../backend/src/config/direccionDeAcceso.js';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -119,11 +116,13 @@ function consultarBase(sql) {
 }
 
 // Entra como esa persona en esa Prestadora. La siembra la conoce por su email, que es dato de
-// contacto; el servicio de acceso la conoce por `direccionDeAcceso` de su cuenta, así que primero
-// se busca qué cuenta tiene ese email en esa Prestadora.
-function cuentaDe(email, prestadoraId) {
+// contacto; el servicio de acceso la conoce por otra dirección, que no es la misma para todas:
+// coordinación, Asistentes y Clientes entran con `<cuenta>@acceso.careonys.invalid`, y
+// administración con su email tal cual. Por eso se le pregunta a la base con cuál entra esa cuenta,
+// en vez de armarla acá.
+function correoDeAccesoDe(email, prestadoraId) {
   const filas = consultarBase(
-    `select id from public.usuarios where lower(email) = lower('${email.replace(/'/g, "''")}') and prestadora_id = '${prestadoraId}'`,
+    `select u.email from auth.users u join public.usuarios p on p.id = u.id where lower(p.email) = lower('${email.replace(/'/g, "''")}') and prestadora_id = '${prestadoraId}'`,
   );
   if (filas.length !== 1) throw new Error(`No hay una sola cuenta con ${email} en esa Prestadora.`);
   return filas[0][0];
@@ -133,7 +132,7 @@ async function entrar(base, llavePublica, email, prestadoraId) {
   const r = await fetch(`${base}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { apikey: llavePublica, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: direccionDeAcceso(cuentaDe(email, prestadoraId)), password: CONTRASENA }),
+    body: JSON.stringify({ email: correoDeAccesoDe(email, prestadoraId), password: CONTRASENA }),
   });
   const cuerpo = await r.json().catch(() => ({}));
   if (!cuerpo.access_token) {
@@ -208,8 +207,8 @@ async function probarLaBase({ base, llavePublica }, idA, idB, sesiones) {
 // columna de Prestadora. Alcanza para el Panel, donde el aislamiento es entre
 // Organizaciones y nada más. No alcanza para las dos aplicaciones de teléfono,
 // donde hay dos líneas que cruzar y no una: la Prestadora ajena, y la persona
-// de al lado adentro de la propia Prestadora. Un Asistente que ve las
-// matrículas de su compañero no cruzó ninguna Prestadora y está mal igual.
+// de al lado adentro de la propia Prestadora. Un Asistente que ve los
+// documentos de su compañero no cruzó ninguna Prestadora y está mal igual.
 //
 // CÓMO SE COMPRUEBA. Para cada persona y cada tabla se calcula aparte, con una
 // consulta a la base que no pasa por ninguna política, el conjunto exacto de
@@ -278,6 +277,7 @@ const CLAVES = {
   configuracion_visibilidad_app: (f) => `${f.prestadora_id}~${f.clave}`,
   configuracion_alertas_ia: (f) => f.prestadora_id,
   configuracion_ausencia_automatica: (f) => f.prestadora_id,
+  documentos_pedidos_al_asistente: (f) => `${f.asistente_id}~${f.tipo_documento_id}`,
 };
 
 // Las dos tablas de configuración que tienen una sola fila por Prestadora no
@@ -314,7 +314,20 @@ const LO_QUE_VE_CADA_UNO = [
   ['certificados', `SELECT id FROM certificados WHERE asistente_id = '{p}'`,
     `SELECT id FROM certificados WHERE asistente_id IN (${ASISTENTES_DEL_CLIENTE})`],
 
-  ['matriculas_asistente', `SELECT id FROM matriculas_asistente WHERE asistente_id = '{p}'`, NADA],
+  // Los documentos del Legajo del Asistente: él ve los suyos, todas las cargas y no sólo la que
+  // vale, y ninguno de sus compañeros. El Cliente no ve ninguno.
+  ['documentos_asistente', `SELECT id FROM documentos_asistente WHERE asistente_id = '{p}'`, NADA],
+  // La configuración de los documentos la lee el Asistente para saber qué cargar: la de su
+  // Prestadora entera. El Cliente, nada.
+  ['tipos_documento_asistente', DE_SU_PRESTADORA('tipos_documento_asistente'), NADA],
+  ['tipos_documento_por_tipo_asistente', DE_SU_PRESTADORA('tipos_documento_por_tipo_asistente'), NADA],
+  ['organismos_por_tipo_documento', DE_SU_PRESTADORA('organismos_por_tipo_documento'), NADA],
+  // La vista no tiene `id`: la clave es Asistente y tipo de documento (ver CLAVES). Corre con los
+  // permisos de quien consulta, así que el Asistente sale con lo suyo y el Cliente con nada.
+  ['documentos_pedidos_al_asistente',
+    `SELECT asistente_id || '~' || tipo_documento_id FROM documentos_pedidos_al_asistente
+      WHERE asistente_id = '{p}'`,
+    NADA],
 
   ['mensajes_asistente', `SELECT id FROM mensajes_asistente WHERE asistente_id = '{p}'`, NADA],
 
@@ -417,6 +430,166 @@ async function probarLasDosAplicaciones({ base, llavePublica }, sesiones, person
     for (const p of problemas) console.log(rojo(`    - ${p}`));
   } else {
     console.log(verde('\n  Cada persona vio exactamente lo suyo, en las dos Prestadoras.'));
+  }
+  return problemas;
+}
+
+// ---------------------------------------------------------------------------
+// Primera puerta, tercer tramo: los documentos del Asistente
+//
+// El primer tramo sólo cuenta filas ajenas, y el segundo prueba con las cuentas
+// de teléfono, que no ven prórrogas ni excepciones. Acá las dos administradoras
+// se comparan contra el conjunto exacto de su Prestadora, tabla por tabla: una
+// fila de más es una filtración, una de menos es una política que rompe el
+// Legajo. Y cada una tiene que tener filas propias, porque una tabla vacía
+// pasa siempre.
+//
+// Después, los avisos ya enviados, que no los lee ninguna sesión de persona:
+// sólo el trabajo sin persona, con la Prestadora en su pase. Y al final el
+// depósito de los archivos, por la misma dirección que usan las aplicaciones.
+// ---------------------------------------------------------------------------
+
+const DOCUMENTOS_POR_PRESTADORA = [
+  ['documentos_asistente', `SELECT id FROM documentos_asistente WHERE prestadora_id = '{prest}'`],
+  ['tipos_documento_asistente', `SELECT id FROM tipos_documento_asistente WHERE prestadora_id = '{prest}'`],
+  ['tipos_documento_por_tipo_asistente', `SELECT id FROM tipos_documento_por_tipo_asistente WHERE prestadora_id = '{prest}'`],
+  ['organismos_por_tipo_documento', `SELECT id FROM organismos_por_tipo_documento WHERE prestadora_id = '{prest}'`],
+  ['prorrogas_de_gracia_documento', `SELECT id FROM prorrogas_de_gracia_documento WHERE prestadora_id = '{prest}'`],
+  ['excepciones_por_documentos', `SELECT id FROM excepciones_por_documentos WHERE prestadora_id = '{prest}'`],
+  ['documentos_pedidos_al_asistente',
+    `SELECT asistente_id || '~' || tipo_documento_id FROM documentos_pedidos_al_asistente WHERE prestadora_id = '{prest}'`],
+];
+
+async function probarLosDocumentos({ base, llavePublica }, sesiones, idA, idB, personas) {
+  console.log('\n== Los documentos del Asistente: cada administradora con lo suyo ==\n');
+  const problemas = [];
+
+  for (const [tabla, plantilla] of DOCUMENTOS_POR_PRESTADORA) {
+    const clave = CLAVES[tabla] || ((f) => f.id);
+    const detalle = [];
+    for (const [corto, token, propio, ajeno] of [
+      ['admin A', sesiones.adminA, idA, idB],
+      ['admin B', sesiones.adminB, idB, idA],
+    ]) {
+      const esperadas = new Set(consultarBase(`${plantilla.replaceAll('{prest}', propio)};`).map((f) => f[0]));
+      const ajenas = new Set(consultarBase(`${plantilla.replaceAll('{prest}', ajeno)};`).map((f) => f[0]));
+      const r = await fetch(`${base}/rest/v1/${tabla}?select=*&limit=1000`, {
+        headers: { apikey: llavePublica, Authorization: `Bearer ${token}` },
+      });
+      const cuerpo = r.ok ? await r.json().catch(() => []) : [];
+      const vistas = new Set(Array.isArray(cuerpo) ? cuerpo.map(clave) : []);
+      const deMas = [...vistas].filter((k) => !esperadas.has(k));
+      const deOtra = [...vistas].filter((k) => ajenas.has(k));
+      const deMenos = [...esperadas].filter((k) => !vistas.has(k));
+
+      if (!esperadas.size) problemas.push(`${tabla}: ${corto} no tiene filas propias en la base; la prueba no puede fallar ahí`);
+      if (!ajenas.size) problemas.push(`${tabla}: la otra Prestadora no tiene filas; no hay nada ajeno que esconder`);
+      if (deOtra.length) problemas.push(`${tabla}: ${corto} ve ${deOtra.length} fila(s) de la otra Prestadora`);
+      else if (deMas.length) problemas.push(`${tabla}: ${corto} ve ${deMas.length} fila(s) que no le corresponden`);
+      if (deMenos.length) {
+        problemas.push(`${tabla}: ${corto} no alcanza ${deMenos.length} fila(s) propias${r.ok ? '' : ` (la consulta devolvió ${r.status})`}`);
+      }
+      const texto = `${corto} ${vistas.size}/${esperadas.size}`;
+      detalle.push(deMas.length || deMenos.length || !esperadas.size ? rojo(texto) : gris(texto));
+    }
+    console.log(`  ${tabla.padEnd(38)} ${detalle.join('  ')}`);
+  }
+  console.log(gris('\n  Cada par es filas vistas / filas de su Prestadora.'));
+
+  // Los avisos ya enviados. Ninguna sesión de persona los alcanza; el trabajo sin persona ve los
+  // de la Prestadora que trae en su pase, y ninguno de la otra.
+  console.log('\n  Avisos de documento ya enviados:\n');
+  const avisosDe = (prest) => new Set(
+    consultarBase(`SELECT id FROM avisos_de_documento_enviados WHERE prestadora_id = '${prest}';`).map((f) => f[0]),
+  );
+  for (const [corto, propio, ajeno] of [['trabajo A', idA, idB], ['trabajo B', idB, idA]]) {
+    const esperadas = avisosDe(propio);
+    const ajenas = avisosDe(ajeno);
+    const reclamo = JSON.stringify({ role: 'trabajo_sin_persona', prestadora_id: propio }).replace(/'/g, "''");
+    const vistas = new Set(consultarBase(
+      `SET ROLE trabajo_sin_persona; SELECT set_config('request.jwt.claims', '${reclamo}', false); ` +
+      `SELECT id FROM public.avisos_de_documento_enviados;`,
+    ).map((f) => f[0]).filter((k) => esperadas.has(k) || ajenas.has(k)));
+    const deOtra = [...vistas].filter((k) => ajenas.has(k));
+    const deMenos = [...esperadas].filter((k) => !vistas.has(k));
+    if (!esperadas.size) problemas.push(`avisos_de_documento_enviados: ${corto} no tiene filas propias en la base`);
+    if (deOtra.length) problemas.push(`avisos_de_documento_enviados: ${corto} ve ${deOtra.length} fila(s) de la otra Prestadora`);
+    if (deMenos.length) problemas.push(`avisos_de_documento_enviados: ${corto} no alcanza ${deMenos.length} fila(s) propias`);
+    const texto = `${corto} ${vistas.size}/${esperadas.size}`;
+    console.log(`  ${'avisos_de_documento_enviados'.padEnd(38)} ${deOtra.length || deMenos.length || !esperadas.size ? rojo(texto) : gris(texto)}`);
+  }
+  for (const [corto, token] of [['admin A', sesiones.adminA], ['asis A', sesiones.asistenteA]]) {
+    const r = await fetch(`${base}/rest/v1/avisos_de_documento_enviados?select=id&limit=1000`, {
+      headers: { apikey: llavePublica, Authorization: `Bearer ${token}` },
+    });
+    const cuerpo = r.ok ? await r.json().catch(() => []) : [];
+    const cuantas = Array.isArray(cuerpo) ? cuerpo.length : 0;
+    if (cuantas) problemas.push(`avisos_de_documento_enviados: ${corto} lee ${cuantas} fila(s) con sesión de persona`);
+    console.log(`  ${`${corto}, con sesión de persona`.padEnd(38)} ${cuantas ? rojo(`${cuantas} fila(s)`) : gris(`${r.status}, ninguna fila`)}`);
+  }
+
+  // El depósito de archivos. La ruta es <Prestadora>/<Asistente>/archivo.
+  console.log('\n  Depósito documentos-asistente:\n');
+  const DEPOSITO = 'documentos-asistente';
+  const ARCHIVO = 'prueba-aislamiento.pdf';
+  const uno = (sql) => (consultarBase(sql)[0] || [null])[0];
+  const asisA = uno(`SELECT id FROM asistentes WHERE usuario_id = '${personas.find((p) => p.corto === 'asis A').id}' AND prestadora_id = '${idA}';`);
+  const asisB = uno(`SELECT id FROM asistentes WHERE usuario_id = '${personas.find((p) => p.corto === 'asis B').id}' AND prestadora_id = '${idB}';`);
+  const vecinoA = uno(`SELECT id FROM asistentes WHERE prestadora_id = '${idA}' AND id <> '${asisA}' ORDER BY id LIMIT 1;`);
+  const rutaA = `${idA}/${asisA}/${ARCHIVO}`;
+  const rutaB = `${idB}/${asisB}/${ARCHIVO}`;
+  const rutaVecino = `${idA}/${vecinoA}/${ARCHIVO}`;
+  const rutaCruzada = `${idB}/${asisB}/cruzado-${ARCHIVO}`;
+  const contenido = '%PDF-1.4\n% documento inventado para la prueba de aislamiento\n%%EOF\n';
+  const cabeza = (token) => ({ apikey: llavePublica, Authorization: `Bearer ${token}` });
+  const subir = (token, ruta) => fetch(`${base}/storage/v1/object/${DEPOSITO}/${ruta}`, {
+    method: 'POST', headers: { ...cabeza(token), 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: contenido,
+  });
+  const leer = (token, ruta) => fetch(`${base}/storage/v1/object/authenticated/${DEPOSITO}/${ruta}`, { headers: cabeza(token) });
+  const borrar = (token, ruta) => fetch(`${base}/storage/v1/object/${DEPOSITO}/${ruta}`, { method: 'DELETE', headers: cabeza(token) });
+  const existe = (ruta) => uno(`SELECT count(*) FROM storage.objects WHERE bucket_id = '${DEPOSITO}' AND name = '${ruta}';`) === '1';
+
+  const pasos = [
+    // [quién, qué, acción, ¿tiene que pasar?]
+    ['asis A', 'subir a su carpeta',               () => subir(sesiones.asistenteA, rutaA), true],
+    ['asis B', 'subir a su carpeta',               () => subir(sesiones.asistenteB, rutaB), true],
+    ['asis A', 'subir a la carpeta de un compañero', () => subir(sesiones.asistenteA, rutaVecino), false, rutaVecino],
+    ['asis A', 'subir a la carpeta de la otra Prestadora', () => subir(sesiones.asistenteA, rutaCruzada), false, rutaCruzada],
+    ['asis A', 'leer su archivo',                  () => leer(sesiones.asistenteA, rutaA), true],
+    ['admin A', 'leer el archivo de su Asistente', () => leer(sesiones.adminA, rutaA), true],
+    ['admin B', 'leer el archivo de su Asistente', () => leer(sesiones.adminB, rutaB), true],
+    ['asis A', 'leer el archivo de la otra Prestadora', () => leer(sesiones.asistenteA, rutaB), false],
+    ['asis B', 'leer el archivo de la otra Prestadora', () => leer(sesiones.asistenteB, rutaA), false],
+    ['admin A', 'leer el archivo de la otra Prestadora', () => leer(sesiones.adminA, rutaB), false],
+    ['admin B', 'leer el archivo de la otra Prestadora', () => leer(sesiones.adminB, rutaA), false],
+    ['cliente A', 'leer el archivo del Asistente',  () => leer(sesiones.clienteA, rutaA), false],
+  ];
+  try {
+    for (const [quien, que, accion, debePasar, rutaQueNoDebeQuedar] of pasos) {
+      const r = await accion();
+      const paso = r.ok && (!rutaQueNoDebeQuedar || existe(rutaQueNoDebeQuedar));
+      const etiqueta = `${quien} ${debePasar ? 'debe poder' : 'intenta'} ${que}`.padEnd(52);
+      if (paso === debePasar) {
+        console.log(`  ${etiqueta} ${verde(`${r.status}  ${debePasar ? 'bien' : 'bloqueado'}`)}`);
+      } else {
+        problemas.push(`depósito: ${quien} ${debePasar ? 'no pudo' : 'pudo'} ${que} (${r.status})`);
+        console.log(`  ${etiqueta} ${rojo(`${r.status}  ${debePasar ? 'FALLÓ' : 'PASÓ'}`)}`);
+      }
+    }
+  } finally {
+    // Se limpia siempre, con la administradora de cada Prestadora, que es quien puede borrar.
+    for (const [token, ruta] of [[sesiones.adminA, rutaA], [sesiones.adminA, rutaVecino], [sesiones.adminB, rutaB], [sesiones.adminB, rutaCruzada]]) {
+      if (existe(ruta)) await borrar(token, ruta);
+    }
+    const quedaron = uno(`SELECT count(*) FROM storage.objects WHERE bucket_id = '${DEPOSITO}' AND name LIKE '%${ARCHIVO}';`);
+    if (quedaron !== '0') problemas.push(`depósito: quedaron ${quedaron} archivo(s) de prueba sin borrar`);
+  }
+
+  if (problemas.length) {
+    console.log(rojo(`\n  ${problemas.length} problema(s):`));
+    for (const p of problemas) console.log(rojo(`    - ${p}`));
+  } else {
+    console.log(verde('\n  Cada Prestadora vio exactamente sus documentos, y nada de la otra.'));
   }
   return problemas;
 }
@@ -599,6 +772,7 @@ async function principal() {
 
   const problemas = await probarLaBase(entorno, idA, idB, sesiones);
   problemas.push(...(await probarLasDosAplicaciones(entorno, sesiones, personas)));
+  problemas.push(...(await probarLosDocumentos(entorno, sesiones, idA, idB, personas)));
   let respuestasVacias = [];
 
   if (await backendLevantado(entorno.backend)) {

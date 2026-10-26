@@ -108,7 +108,7 @@ export function trabajaEnModalidad(asistente, modalidad) {
  *
  * Ese texto no puede llegar nunca a la pantalla: no está traducido y para quien lo
  * lee es un error de sistema, no una explicación. Acá se lo abre y la pantalla arma
- * la frase. Mismo criterio que `lib/matricula.js`, que resuelve lo suyo igual.
+ * la frase. Mismo criterio que `lib/documentos.js`, que resuelve lo suyo igual.
  *
  * @returns `{ motivo: 'bloquea' | 'no_habilitada', modalidad: 'directa' }` o `null`.
  */

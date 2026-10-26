@@ -27,9 +27,12 @@ const MIGRACIONES_POSTERIORES = [
   '20270109000000_el_acceso_es_por_nombre_de_usuario.sql',
   '20270114000000_el_numero_concuerda_con_la_cantidad.sql',
   '20270125000000_el_aviso_del_plazo_de_la_ubicacion.sql',
+  '20270126000000_los_documentos_del_asistente.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;
+// La otra forma de sembrar: `(NULL, '<clave>', '<json>')`, con la Prestadora delante y sin el tipo.
+const SIEMBRA_CON_PRESTADORA = /\(NULL,\s*'([^']+)',\s*'(\{[^\n]*?\})'\)/g;
 const BORRADO = /DELETE FROM public\.mensajes_del_sistema\s+WHERE prestadora_id IS NULL AND clave = '([^']+)'/g;
 
 /** Lo que hace cada migración posterior, en orden: `{ clave, fila }` siembra, `{ clave }` borra. */
@@ -48,6 +51,11 @@ function cambiosPosteriores() {
           admite_texto_propio: admite !== 'false',
           i18n: JSON.parse(i18n),
         },
+      })),
+      ...[...texto.matchAll(SIEMBRA_CON_PRESTADORA)].map((m) => ({
+        donde: m.index,
+        clave: m[1],
+        fila: { clave: m[1], prestadora_id: null, activo: true, admite_texto_propio: true, i18n: JSON.parse(m[2]) },
       })),
     ];
     return cambios.sort((a, b) => a.donde - b.donde);

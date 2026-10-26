@@ -8,6 +8,7 @@ import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { prestadoraVisible, prestadoraVisibleOContestar } from '../utils/prestadoraVisible.js';
 import { personasDelPanel, responsableDelReclutamiento } from '../utils/responsableDelReclutamiento.js';
 import {
+  ACCION_BORRADO_DE_DATOS,
   ACCION_CAMBIO_DE_MONEDA,
   ACCION_CAMBIO_DE_PERMISOS,
   ACCION_MODIFICACION_CRITICA,
@@ -1817,34 +1818,253 @@ panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => 
   res.json({ ok: true });
 });
 
-// --- Catálogo de tipos de documento de Asistente (vencimientos a trackear) + plazo de preaviso
-//     configurable por prestadora (pendiente #18 punto 1, docs/PLAN_HASTA_PRODUCCION.md — ver
-//     supabase/migrations/). El plazo vive en la tabla "prestadoras",
-//     que por RLS sólo superadmin puede modificar: se lee con la credencial de quien pide, y
-//     el cambio va con la maestra sobre la Prestadora que la base deja ver. ---
-panelConfiguracionRouter.get('/documentos-tipo', async (req, res) => {
-  const db = clienteDelPedido(req);
+// --- Los tipos de documento que la Prestadora le pide a sus Asistentes, con a quién se le pide
+//     cada uno («Se pide a»: tipos de Asistente) y quién lo otorga («Otorgado por»: organismos),
+//     más el plazo de preaviso de vencimiento.
+//
+//     Los tipos y sus dos listas se escriben con la credencial de quien pide: la base sólo deja
+//     gestionarlos a la administración, y sólo los de su Prestadora. El plazo vive en la tabla
+//     "prestadoras", que por RLS sólo modifica superadmin: se lee con la credencial de quien pide,
+//     y el cambio va con el trabajo de la Prestadora que la base deja ver. ---
 
-  const [{ data: tipos, error: errorTipos }, { data: prestadora, error: errorPrestadora }] = await Promise.all([
-    db.from('tipos_documento_asistente').select('*').order('nombre'),
-    db.from('prestadoras').select('dias_aviso_vencimiento_documentos').single(),
+const COLUMNAS_DEL_TIPO_DE_DOCUMENTO =
+  'id, nombre, activo, vencimiento, periodo_cantidad, periodo_unidad, lleva_numero, requisitos, ' +
+  'enlace_para_obtenerlo, impide_trabajar, dias_de_gracia';
+
+// Los tres valores los fija una restricción de la base; acá se repiten como validación de
+// entrada, para contestar un motivo en vez de un error de la base.
+const FORMAS_DE_VENCER = ['no_vence', 'fecha_del_documento', 'plazo_desde_emision'];
+
+function textoOpcional(valor) {
+  if (valor === undefined) return undefined;
+  if (valor === null) return null;
+  if (typeof valor !== 'string') throw new ErrorConMotivo('tipo_de_documento_invalido');
+  return valor.trim() || null;
+}
+
+function booleanoOpcional(valor) {
+  if (valor === undefined) return undefined;
+  if (typeof valor !== 'boolean') throw new ErrorConMotivo('tipo_de_documento_invalido');
+  return valor;
+}
+
+function listaDeIds(valor) {
+  if (valor === undefined) return undefined;
+  if (!Array.isArray(valor) || valor.some((id) => typeof id !== 'string' || !id)) {
+    throw new ErrorConMotivo('tipo_de_documento_invalido');
+  }
+  return [...new Set(valor)];
+}
+
+/**
+ * Las columnas del tipo que vinieron en el cuerpo, validadas. `actual` es la fila de hoy cuando se
+ * modifica: el vencimiento y su plazo se validan juntos, con lo que llega encima de lo que había.
+ */
+function columnasDelTipo(cuerpo, actual = null) {
+  const cambios = {};
+
+  if (cuerpo.nombre !== undefined) {
+    const nombre = textoOpcional(cuerpo.nombre);
+    if (!nombre) throw new ErrorConMotivo('faltan_datos');
+    cambios.nombre = nombre;
+  }
+  for (const campo of ['requisitos', 'enlace_para_obtenerlo']) {
+    const valor = textoOpcional(cuerpo[campo]);
+    if (valor !== undefined) cambios[campo] = valor;
+  }
+  for (const campo of ['activo', 'lleva_numero', 'impide_trabajar']) {
+    const valor = booleanoOpcional(cuerpo[campo]);
+    if (valor !== undefined) cambios[campo] = valor;
+  }
+  if (cuerpo.dias_de_gracia !== undefined) {
+    if (!Number.isInteger(cuerpo.dias_de_gracia) || cuerpo.dias_de_gracia < 0) {
+      throw new ErrorConMotivo('tipo_de_documento_invalido');
+    }
+    cambios.dias_de_gracia = cuerpo.dias_de_gracia;
+  }
+
+  const tocaElVencimiento = ['vencimiento', 'periodo_cantidad', 'periodo_unidad'].some((c) => cuerpo[c] !== undefined);
+  if (tocaElVencimiento || !actual) {
+    const vencimiento = cuerpo.vencimiento ?? actual?.vencimiento ?? 'no_vence';
+    if (!FORMAS_DE_VENCER.includes(vencimiento)) throw new ErrorConMotivo('tipo_de_documento_invalido');
+    cambios.vencimiento = vencimiento;
+    if (vencimiento === 'plazo_desde_emision') {
+      const cantidad = cuerpo.periodo_cantidad !== undefined ? cuerpo.periodo_cantidad : actual?.periodo_cantidad;
+      const unidad = cuerpo.periodo_unidad !== undefined ? cuerpo.periodo_unidad : actual?.periodo_unidad;
+      if (!Number.isInteger(cantidad) || cantidad <= 0 || typeof unidad !== 'string' || !unidad) {
+        throw new ErrorConMotivo('tipo_de_documento_invalido');
+      }
+      cambios.periodo_cantidad = cantidad;
+      cambios.periodo_unidad = unidad;
+    } else {
+      // Sin plazo desde la emisión no hay plazo: la base exige que los dos queden vacíos.
+      cambios.periodo_cantidad = null;
+      cambios.periodo_unidad = null;
+    }
+  }
+
+  return cambios;
+}
+
+/** Los ids de tipos de Asistente que esta Prestadora puede elegir: los generales y los suyos. */
+async function tiposDeAsistenteElegibles(db, prestadoraId) {
+  const { data, error } = await db
+    .from('tipos_asistente')
+    .select('id')
+    .or(`prestadora_id.is.null,prestadora_id.eq.${prestadoraId}`);
+  if (error) throw error;
+  return (data ?? []).map((fila) => fila.id);
+}
+
+async function organismosElegibles(db) {
+  const { data, error } = await db.from('organismos_otorgantes').select('id').eq('activo', true);
+  if (error) throw error;
+  return (data ?? []).map((fila) => fila.id);
+}
+
+/**
+ * Reemplaza la lista entera de una de las dos tablas que cuelgan del tipo. Cada id se comprueba
+ * contra lo que la Prestadora puede elegir: uno que no está es un dato mal cargado.
+ */
+async function reemplazarLista(db, { tabla, columna, prestadoraId, tipoDocumentoId, ids, elegibles }) {
+  if (ids.some((id) => !elegibles.includes(id))) throw new ErrorConMotivo('tipo_de_documento_invalido');
+  const { data: anteriores, error: errorAnteriores } = await db
+    .from(tabla)
+    .select(columna)
+    .eq('tipo_documento_id', tipoDocumentoId);
+  if (errorAnteriores) throw errorAnteriores;
+  const filas = (lista) =>
+    lista.map((id) => ({ prestadora_id: prestadoraId, tipo_documento_id: tipoDocumentoId, [columna]: id }));
+
+  const { error: errorBorrado } = await db.from(tabla).delete().eq('tipo_documento_id', tipoDocumentoId);
+  if (errorBorrado) throw errorBorrado;
+  if (!ids.length) return;
+  const { error } = await db.from(tabla).insert(filas(ids));
+  if (error) {
+    // La lista no queda vacía a mitad de camino: vuelve la que estaba.
+    const previa = (anteriores ?? []).map((f) => f[columna]);
+    if (previa.length) {
+      const { error: errorReponer } = await db.from(tabla).insert(filas(previa));
+      if (errorReponer) console.error(`No se pudo reponer ${tabla} del tipo ${tipoDocumentoId}:`, errorReponer.message);
+    }
+    throw error;
+  }
+}
+
+/** Las dos listas del cuerpo, si vinieron, guardadas. Devuelve qué listas cambió. */
+async function guardarListas(db, { prestadoraId, tipoDocumentoId, tipoAsistenteIds, organismoIds }) {
+  const cambiadas = [];
+  if (tipoAsistenteIds !== undefined) {
+    await reemplazarLista(db, {
+      tabla: 'tipos_documento_por_tipo_asistente',
+      columna: 'tipo_asistente_id',
+      prestadoraId,
+      tipoDocumentoId,
+      ids: tipoAsistenteIds,
+      elegibles: await tiposDeAsistenteElegibles(db, prestadoraId),
+    });
+    cambiadas.push('tipo_asistente_ids');
+  }
+  if (organismoIds !== undefined) {
+    await reemplazarLista(db, {
+      tabla: 'organismos_por_tipo_documento',
+      columna: 'organismo_id',
+      prestadoraId,
+      tipoDocumentoId,
+      ids: organismoIds,
+      elegibles: await organismosElegibles(db),
+    });
+    cambiadas.push('organismo_ids');
+  }
+  return cambiadas;
+}
+
+/** Los tipos con las dos listas que cuelgan de cada uno. */
+async function tiposConSusListas(db, filtroId = null) {
+  let consulta = db.from('tipos_documento_asistente').select(COLUMNAS_DEL_TIPO_DE_DOCUMENTO).order('nombre');
+  if (filtroId) consulta = consulta.eq('id', filtroId);
+  const { data: tipos, error } = await consulta;
+  if (error) throw error;
+  if (!tipos?.length) return [];
+
+  const ids = tipos.map((t) => t.id);
+  const [{ data: porTipoAsistente, error: e1 }, { data: porOrganismo, error: e2 }] = await Promise.all([
+    db.from('tipos_documento_por_tipo_asistente').select('tipo_documento_id, tipo_asistente_id').in('tipo_documento_id', ids),
+    db.from('organismos_por_tipo_documento').select('tipo_documento_id, organismo_id').in('tipo_documento_id', ids),
   ]);
-  if (errorTipos) return responderError(res, errorTipos);
-  if (errorPrestadora) return responderError(res, errorPrestadora);
-  res.json({ tipos, dias_aviso_vencimiento_documentos: prestadora.dias_aviso_vencimiento_documentos });
+  if (e1) throw e1;
+  if (e2) throw e2;
+
+  return tipos.map((tipo) => ({
+    ...tipo,
+    tipo_asistente_ids: (porTipoAsistente ?? []).filter((f) => f.tipo_documento_id === tipo.id).map((f) => f.tipo_asistente_id),
+    organismo_ids: (porOrganismo ?? []).filter((f) => f.tipo_documento_id === tipo.id).map((f) => f.organismo_id),
+  }));
+}
+
+// La unidad del plazo es una clave del catálogo de períodos: una que no existe la frena la base.
+function errorDelTipo(error) {
+  if (error?.code === '23503' || error?.code === '23514') return new ErrorConMotivo('tipo_de_documento_invalido', error.message);
+  return error;
+}
+
+panelConfiguracionRouter.get('/documentos-tipo', async (req, res) => {
+  try {
+    const db = clienteDelPedido(req);
+    const [tipos, { data: prestadora, error: errorPrestadora }] = await Promise.all([
+      tiposConSusListas(db),
+      db.from('prestadoras').select('dias_aviso_vencimiento_documentos').single(),
+    ]);
+    if (errorPrestadora) throw errorPrestadora;
+    res.json({ tipos, dias_aviso_vencimiento_documentos: prestadora.dias_aviso_vencimiento_documentos });
+  } catch (error) {
+    return responderError(res, error);
+  }
 });
 
 panelConfiguracionRouter.post('/documentos-tipo', async (req, res) => {
-  const { nombre, requiere_vencimiento } = req.body;
-  if (!nombre) return res.status(400).json({ error: 'Falta nombre' });
   const db = clienteDelPedido(req);
-  const prestadoraId = await prestadoraVisibleOContestar(db, res);
-  if (!prestadoraId) return;
-  const { error } = await db
-    .from('tipos_documento_asistente')
-    .insert({ nombre, requiere_vencimiento: requiere_vencimiento ?? true, prestadora_id: prestadoraId });
-  if (error) return responderError(res, error);
-  res.json({ ok: true });
+  try {
+    const cuerpo = req.body ?? {};
+    if (!textoOpcional(cuerpo.nombre ?? null)) throw new ErrorConMotivo('faltan_datos');
+    const columnas = columnasDelTipo(cuerpo);
+    const tipoAsistenteIds = listaDeIds(cuerpo.tipo_asistente_ids);
+    const organismoIds = listaDeIds(cuerpo.organismo_ids);
+
+    const prestadoraId = await prestadoraVisible(db);
+
+    const { data: tipo, error } = await db
+      .from('tipos_documento_asistente')
+      .insert({ ...columnas, prestadora_id: prestadoraId })
+      .select('id')
+      .single();
+    if (error) throw errorDelTipo(error);
+
+    try {
+      // Sin «Se pide a», se le pide a todos los tipos de Asistente que la Prestadora puede elegir.
+      await guardarListas(db, {
+        prestadoraId,
+        tipoDocumentoId: tipo.id,
+        tipoAsistenteIds: tipoAsistenteIds ?? await tiposDeAsistenteElegibles(db, prestadoraId),
+        organismoIds,
+      });
+    } catch (errorListas) {
+      // Un tipo sin sus listas no queda a medias: se borra y se contesta el error de las listas.
+      await db.from('tipos_documento_asistente').delete().eq('id', tipo.id);
+      throw errorListas;
+    }
+
+    await registrarActividad(req.usuarioPanel, ACCION_MODIFICACION_CRITICA, {
+      tablaAfectada: 'tipos_documento_asistente',
+      registroId: tipo.id,
+      camposCambiados: [...Object.keys(columnas), 'tipo_asistente_ids', ...(organismoIds ? ['organismo_ids'] : [])],
+    });
+
+    const [creado] = await tiposConSusListas(db, tipo.id);
+    res.status(201).json({ tipo: creado });
+  } catch (error) {
+    return responderError(res, error);
+  }
 });
 
 panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) => {
@@ -1862,37 +2082,88 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
   res.json({ ok: true });
 });
 
-// --- Qué tan estricto es el control de matrícula en esta prestadora.
-//     Mismo motivo que el plazo de preaviso de más arriba: el dato vive en la tabla "prestadoras",
-//     que por RLS solo superadmin puede modificar. El navegador no la puede escribir ni aunque
-//     lo intente; el backend sí, porque usa la service role key y acota siempre a la prestadora
-//     de quien pide. Los dos valores posibles los fija una restricción de la base
-//     (`prestadoras_modo_control_matricula_check`) — acá se repiten como
-//     validación de entrada, no como fuente de verdad. ---
-const MODOS_DE_CONTROL_MATRICULA = ['flexible', 'estricto'];
+// Declarada después de `/documentos-tipo/plazo-aviso`, para que «plazo-aviso» no se lea como un id.
+panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
+  const db = clienteDelPedido(req);
+  try {
+    const cuerpo = req.body ?? {};
+    const { data: actual, error: errorActual } = await db
+      .from('tipos_documento_asistente')
+      .select('id, prestadora_id, vencimiento, periodo_cantidad, periodo_unidad')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (errorActual) throw errorActual;
+    if (!actual) throw new ErrorConMotivo('documento_no_encontrado');
 
-panelConfiguracionRouter.get('/modo-control-matricula', async (req, res) => {
-  const { data, error } = await clienteDelPedido(req)
-    .from('prestadoras')
-    .select('modo_control_matricula')
-    .single();
-  if (error) return responderError(res, error);
-  res.json({ modo: data.modo_control_matricula });
+    const columnas = columnasDelTipo(cuerpo, actual);
+    const tipoAsistenteIds = listaDeIds(cuerpo.tipo_asistente_ids);
+    const organismoIds = listaDeIds(cuerpo.organismo_ids);
+
+    if (Object.keys(columnas).length) {
+      const { error } = await db.from('tipos_documento_asistente').update(columnas).eq('id', actual.id);
+      if (error) throw errorDelTipo(error);
+    }
+    const listas = await guardarListas(db, {
+      prestadoraId: actual.prestadora_id,
+      tipoDocumentoId: actual.id,
+      tipoAsistenteIds,
+      organismoIds,
+    });
+
+    const camposCambiados = [...Object.keys(columnas), ...listas];
+    if (camposCambiados.length) {
+      await registrarActividad(req.usuarioPanel, ACCION_MODIFICACION_CRITICA, {
+        tablaAfectada: 'tipos_documento_asistente',
+        registroId: actual.id,
+        camposCambiados,
+      });
+    }
+
+    const [tipo] = await tiposConSusListas(db, actual.id);
+    res.json({ tipo });
+  } catch (error) {
+    return responderError(res, error);
+  }
 });
 
-panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
-  const { modo } = req.body;
-  if (!MODOS_DE_CONTROL_MATRICULA.includes(modo)) {
-    return res.status(400).json({ error: 'modo debe ser flexible o estricto' });
+// Borrar un tipo borra sus dos listas. Si ya hay documentos cargados de ese tipo, la base no lo
+// deja borrar —son del Legajo de alguien—, y se contesta que está en uso: se apaga con `activo`.
+panelConfiguracionRouter.delete('/documentos-tipo/:id', async (req, res) => {
+  try {
+    const { data, error } = await clienteDelPedido(req)
+      .from('tipos_documento_asistente')
+      .delete()
+      .eq('id', req.params.id)
+      .select('id');
+    if (error) {
+      if (error.code === '23503') throw new ErrorConMotivo('tipo_de_documento_en_uso', error.message);
+      throw error;
+    }
+    if (!data?.length) throw new ErrorConMotivo('documento_no_encontrado');
+    await registrarActividad(req.usuarioPanel, ACCION_BORRADO_DE_DATOS, {
+      tablaAfectada: 'tipos_documento_asistente',
+      registroId: req.params.id,
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    return responderError(res, error);
   }
-  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
-  if (!prestadoraId) return;
-  // Con el trabajo de la Prestadora: la fila de la Prestadora sólo la modifica superadmin por RLS.
-  const { error } = await enLaPrestadora(prestadoraId, 'configuración de la Prestadora', (dbDelTrabajo) =>
-    dbDelTrabajo.from('prestadoras').update({ modo_control_matricula: modo }).eq('id', prestadoraId)
-  );
-  if (error) return responderError(res, error);
-  res.json({ ok: true });
+});
+
+// Los organismos que pueden otorgar un documento: un catálogo del producto, igual para todas las
+// Prestadoras, que la base deja leer a cualquiera con sesión.
+panelConfiguracionRouter.get('/organismos-otorgantes', async (req, res) => {
+  try {
+    const { data, error } = await clienteDelPedido(req)
+      .from('organismos_otorgantes')
+      .select('id, nombre, pais, enlace_comprobacion')
+      .eq('activo', true)
+      .order('orden');
+    if (error) throw error;
+    res.json({ organismos: data ?? [] });
+  } catch (error) {
+    return responderError(res, error);
+  }
 });
 
 // --- Catálogo de motivos de aviso previo de guardia, configurable por prestadora. Mismo patrón
@@ -2093,18 +2364,6 @@ panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
       segundos_codigo_en_pantalla,
     });
   if (error) return responderError(res, error);
-  res.json({ ok: true });
-});
-
-panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
-  const { nombre, requiere_vencimiento, activo } = req.body;
-  const { data, error } = await clienteDelPedido(req)
-    .from('tipos_documento_asistente')
-    .update({ nombre, requiere_vencimiento, activo })
-    .eq('id', req.params.id)
-    .select('id');
-  if (error) return responderError(res, error);
-  if (!data?.length) return res.status(404).json({ error: 'No se encontró ese tipo de documento' });
   res.json({ ok: true });
 });
 

@@ -12,7 +12,7 @@ import EnlaceAlMapa from '../components/EnlaceAlMapa';
 // El perfil público de una persona de la vidriera, antes de contratarla.
 //
 // Es la misma persona que el Cliente que ya contrató ve en «Asistente Asignado», y por eso el
-// estado de los papeles lo dibuja el mismo componente: decir una cosa acá y otra allá sobre la
+// estado de los documentos lo dibuja el mismo componente: decir una cosa acá y otra allá sobre la
 // misma carpeta de documentos sería inventar una verificación distinta según quién mire.
 //
 // LAS OPINIONES VAN SIN QUIÉN LAS ESCRIBIÓ. Quien calificó es un Cliente, y su nombre no es
@@ -223,9 +223,8 @@ export default function PerfilPublicoAsistente() {
       {verificacion && (
         <EstadoDocumental
           resumen={verificacion.documentacion}
-          matricula={verificacion.matricula}
-          alDia={verificacion.papeles_al_dia}
-          papelesExigidos={verificacion.papeles_exigidos}
+          alDia={verificacion.documentos_al_dia}
+          documentosExigidos={verificacion.documentos_exigidos}
           t={t}
         />
       )}

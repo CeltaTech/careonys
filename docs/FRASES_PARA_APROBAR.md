@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 12 fichas.** Panel 3, aplicación del Asistente 3, aplicación del Cliente 4, Base 2.
+**Total: 9 fichas.** Panel 3, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -55,56 +55,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué puede hacer después** | ver el documento o el papel firmado, armar un consentimiento nuevo o cambiar el Pagador. |
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
-
-## Aplicación del Asistente (3)
-
-### 24. La matrícula la carga la Prestadora
-
-| | |
-|---|---|
-| **Texto actual** | La Prestadora carga las matrículas. Entréguele el papel o el archivo. |
-| **Propuesta corta** | «Entregue la matrícula a la Prestadora.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | el cartel ya dice que no puede tomar guardias. Falta una sola cosa: a quién dársela. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Perfil → Matrícula. |
-| **Qué estaba haciendo** | entró a Perfil. |
-| **Qué pasó** | no tiene matrícula vigente y su Prestadora no permite cargarla desde el teléfono. |
-| **Qué puede hacer después** | llevarle el papel a la Prestadora. |
-| **Cómo se muestra** | franja roja. |
-| **Decisión** |  |
-
-### 25. Renovar la matrícula a través de la Prestadora
-
-| | |
-|---|---|
-| **Texto actual** | Entregue la renovación a la Prestadora antes de esa fecha para seguir tomando guardias. |
-| **Propuesta corta** | «Entregue la renovación a la Prestadora.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | el plazo ya está en la frase anterior. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Perfil → Matrícula. |
-| **Qué estaba haciendo** | entró a Perfil. |
-| **Qué pasó** | la matrícula está por vencer y su Prestadora la carga desde la oficina. |
-| **Qué puede hacer después** | llevarle la renovación a la Prestadora. |
-| **Cómo se muestra** | franja amarilla. |
-| **Decisión** |  |
-
-### 26. Renovar la matrícula a tiempo
-
-| | |
-|---|---|
-| **Texto actual** | Cargue la renovación antes de esa fecha para seguir tomando guardias. |
-| **Propuesta corta** | «Cargue la renovación.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | el plazo ya está en la frase anterior. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Perfil → Matrícula. |
-| **Qué estaba haciendo** | entró a Perfil. |
-| **Qué pasó** | mismo caso que la ficha 25, en una Prestadora que deja cargar la matrícula desde el teléfono. |
-| **Qué puede hacer después** | tocar «Cargar la matrícula», completar y guardar. |
-| **Cómo se muestra** | franja amarilla. |
-| **Decisión** |  |
 
 ## Aplicación del Cliente (4)
 

@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// reglaVencimientos.js — cuándo un papel está por vencer, decidido una sola vez
+// reglaVencimientos.js — cuándo un documento está por vencer, decidido una sola vez
 //
 // POR QUÉ EXISTE
-// La misma pregunta —"¿este papel está vencido, está por vencer o está bien?"—
+// La misma pregunta —"¿este documento está vencido, está por vencer o está bien?"—
 // la hacían siete lugares distintos, cada uno con su propia cuenta y con el
 // número 30 escrito a mano: el Estado actual, la pantalla de Documentación, el
 // tablero, el buscador de candidatos, la solapa de Matrículas, la pantalla del
@@ -48,7 +48,7 @@ export const URGENCIA = {
 /**
  * Las tres palabras con las que las listas muestran un vencimiento.
  *
- * Son menos que las cuatro urgencias a propósito: en una tabla de papeles, "conviene renovar" y
+ * Son menos que las cuatro urgencias a propósito: en una tabla de documentos, "conviene renovar" y
  * "renovalo ya" se pintan del mismo color y se filtran juntos, así que se muestran igual. La
  * diferencia entre esos dos sigue existiendo donde sí sirve: en el cartel de una sola Matrícula.
  */
@@ -100,7 +100,7 @@ export function diasParaVencer(fechaVencimiento, desde = new Date()) {
 /**
  * Hasta qué día hay que mirar para traer todo lo que vence dentro de la ventana de aviso.
  *
- * Sirve para pedirle a la base solo lo que interesa, en vez de traer todos los papeles y
+ * Sirve para pedirle a la base solo lo que interesa, en vez de traer todos los documentos y
  * descartarlos después. Devuelve el día en `AAAA-MM-DD`, listo para comparar contra la base.
  */
 export function fechaLimiteDeAviso(diasAviso = DIAS_AVISO_POR_DEFECTO, desde = new Date()) {

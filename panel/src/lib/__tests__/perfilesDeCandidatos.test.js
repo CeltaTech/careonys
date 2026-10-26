@@ -174,7 +174,7 @@ describe('la ponderación por niveles', () => {
     expect(pesoDeNivel('continuidad_por_vez', 'mucho')).toBe(30);
     expect(pesoDeNivel('sin_continuidad', 'poco')).toBe(-3);
     expect(pesoDeNivel('sin_continuidad', 'mucho')).toBe(-13);
-    expect(pesoDeNivel('papeles_ok', 'mucho')).toBe(13);
+    expect(pesoDeNivel('documentos_al_dia', 'mucho')).toBe(13);
     expect(pesoDeNivel('descanso_corto', 'mucho')).toBe(-63);
     expect(Object.is(pesoDeNivel('lejos', 'no_importa'), 0)).toBe(true);
   });
@@ -195,7 +195,7 @@ describe('la ponderación por niveles', () => {
   it('los bloqueos y el techo de la continuidad no se ponderan', () => {
     expect(SITUACIONES_PONDERABLES).not.toContain('continuidad_maxima');
     expect(SITUACIONES_PONDERABLES).not.toContain('ocupado');
-    expect(SITUACIONES_PONDERABLES).toHaveLength(13);
+    expect(SITUACIONES_PONDERABLES).toHaveLength(11);
   });
 
   it('cada nivel se reconoce a sí mismo', () => {

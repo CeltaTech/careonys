@@ -89,9 +89,8 @@ export default function AsistenteAsignado() {
       {documentacion && (
         <EstadoDocumental
           resumen={documentacion.resumen}
-          matricula={documentacion.matricula}
           alDia={documentacion.alDia}
-          papelesExigidos={documentacion.papelesExigidos}
+          documentosExigidos={documentacion.documentosExigidos}
           t={t}
         />
       )}

@@ -570,3 +570,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el Panel podía correr de día o de horario una guardia activa o completada, y cambiarle el Asistente a una ausente arrastrándola o desde Continuidad sin decir por qué ni dejar quién lo hizo.
 - **Qué dice ahora:** la base rechaza cambiar Asistente, día u horario de una guardia empezada. La única excepción es cubrir una ausente, por una sola función que pide el motivo y deja registro de quién, cuándo, la guardia, el Asistente anterior, el nuevo y el motivo. El Panel sólo ofrece ese camino, con el motivo obligatorio y sin tocar la fecha.
 - **Motivo:** lo decidió el Desarrollador: una guardia empezada no cambia de Asistente salvo una emergencia, y de esa emergencia tiene que quedar registro de todo.
+
+## La foto inicial de la base vuelve a ser la que se aplicó
+
+- **Qué decía antes:** la foto inicial de la base estaba editada a mano después de aplicada, y la base armada desde cero en la máquina local fallaba al construirse.
+- **Qué dice ahora:** la foto quedó como se aplicó, y lo que se le había cambiado entra por una migración nueva, adelante, que deja la base armada desde cero igual a la que está en vivo.
+- **Motivo:** una migración aplicada no se edita jamás: se corrige con otra adelante (`celtatech/CLAUDE.md`, sección 9).

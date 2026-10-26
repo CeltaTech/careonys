@@ -136,11 +136,34 @@ describe('asignarTurno', () => {
     expect(llamadasAlBackend).toEqual([{ ruta: '/guardias/g1/asignar', cuerpo: { asistente_id: null } }]);
   });
 
-  it('la Matrícula vencida vuelve con su frase, no con el código de la base', async () => {
-    respuestaDelBackend = Object.assign(new Error('x'), { motivo: 'matricula_bloquea:vencida:' });
-    const { error } = await asignarTurno('g1', ANA, t);
-    expect(error).toBeTruthy();
-    expect(error).not.toContain('matricula_bloquea');
+  it('los documentos pendientes vuelven con su frase y con la lista, no con el código', async () => {
+    respuestaDelBackend = Object.assign(new Error('x'), {
+      motivo: 'documentos_bloquean',
+      documentos: ['Certificado de antecedentes', 'Seguro'],
+    });
+    const { error, documentosPendientes } = await asignarTurno('g1', ANA, t);
+    expect(error).toBe('Documentos pendientes: Certificado de antecedentes, Seguro.');
+    expect(documentosPendientes).toEqual(['Certificado de antecedentes', 'Seguro']);
+  });
+
+  it('el rechazo de la base por documentos también se lee', async () => {
+    respuestaDelBackend = Object.assign(new Error('documentos_bloquean:Seguro:'), {});
+    const { error, documentosPendientes } = await asignarTurno('g1', ANA, t);
+    expect(error).not.toContain('documentos_bloquean');
+    expect(documentosPendientes).toEqual(['Seguro']);
+  });
+
+  it('el motivo de la excepción viaja en el pedido', async () => {
+    await asignarTurno('g1', ANA, t, 'Lo cubre por única vez');
+    expect(llamadasAlBackend).toEqual([
+      { ruta: '/guardias/g1/asignar', cuerpo: { asistente_id: ANA, motivo_excepcion: 'Lo cubre por única vez' } },
+    ]);
+  });
+
+  it('cualquier otro rechazo no trae documentos', async () => {
+    respuestaDelBackend = Object.assign(new Error('x'), { motivo: 'guardia_no_se_asigna' });
+    const { documentosPendientes } = await asignarTurno('g1', ANA, t);
+    expect(documentosPendientes).toBeNull();
   });
 
   it('un turno que ya no se asigna vuelve con la frase de su motivo', async () => {

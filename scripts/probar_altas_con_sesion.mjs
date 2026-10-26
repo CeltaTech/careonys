@@ -74,9 +74,6 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// Con qué dirección se le habla al servicio de acceso. Se importa de donde eso se decide, y no se
-// copia acá: una copia despegada dejaría la prueba entrando a cuentas que no existen.
-import { direccionDeAcceso } from '../backend/src/config/direccionDeAcceso.js';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -132,11 +129,13 @@ function consultarBase(sql) {
 }
 
 // Entra como esa persona en esa Prestadora. La siembra la conoce por su email, que es dato de
-// contacto; el servicio de acceso la conoce por `direccionDeAcceso` de su cuenta, así que primero
-// se busca qué cuenta tiene ese email en esa Prestadora.
-function cuentaDe(email, prestadoraId) {
+// contacto; el servicio de acceso la conoce por otra dirección, que no es la misma para todas:
+// coordinación, Asistentes y Clientes entran con `<cuenta>@acceso.careonys.invalid`, y
+// administración con su email tal cual. Por eso se le pregunta a la base con cuál entra esa cuenta,
+// en vez de armarla acá.
+function correoDeAccesoDe(email, prestadoraId) {
   const filas = consultarBase(
-    `select id from public.usuarios where lower(email) = lower('${email.replace(/'/g, "''")}') and prestadora_id = '${prestadoraId}'`,
+    `select u.email from auth.users u join public.usuarios p on p.id = u.id where lower(p.email) = lower('${email.replace(/'/g, "''")}') and prestadora_id = '${prestadoraId}'`,
   );
   if (filas.length !== 1) throw new Error(`No hay una sola cuenta con ${email} en esa Prestadora.`);
   return filas[0][0];
@@ -146,7 +145,7 @@ async function entrar(base, llavePublica, email, prestadoraId) {
   const r = await fetch(`${base}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { apikey: llavePublica, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: direccionDeAcceso(cuentaDe(email, prestadoraId)), password: CONTRASENA }),
+    body: JSON.stringify({ email: correoDeAccesoDe(email, prestadoraId), password: CONTRASENA }),
   });
   const cuerpo = await r.json().catch(() => ({}));
   if (!cuerpo.access_token) {
@@ -166,7 +165,7 @@ function anclas() {
        WHERE razon_social ILIKE '%Sandbox%' OR nombre_fantasia ILIKE '%Sandbox%'
        LIMIT 1
     ),
-    -- Un Asistente al que la Matrícula no le frene la Guardia, porque si lo
+    -- Un Asistente al que los documentos no le frenen la Guardia, porque si lo
     -- frena el alta rebota por ese otro motivo y la prueba diría que hay un
     -- problema de permisos donde no lo hay. Y de esos, primero el que trabaje
     -- en más de una modalidad: es el único con el que se puede probar el
@@ -176,7 +175,7 @@ function anclas() {
         FROM public.asistentes a
        WHERE a.prestadora_id = (SELECT id FROM p)
          AND a.estado = 'activo'
-         AND interno.motivo_bloqueo_matricula(a.id, CURRENT_DATE) IS NULL
+         AND cardinality(interno.documentos_que_bloquean(a.id, CURRENT_DATE, NULL, NULL)) = 0
          AND 'directa' = ANY(a.canales)
        ORDER BY coalesce(array_length(a.canales, 1), 0) DESC, a.id
        LIMIT 1
@@ -193,7 +192,7 @@ function anclas() {
   const faltan = [
     !prestadora && 'la Prestadora de pruebas',
     !paciente && 'un Paciente suyo',
-    !asistente && 'un Asistente suyo con la Matrícula al día y que trabaje en directa',
+    !asistente && 'un Asistente suyo sin documentos que le impidan trabajar y que trabaje en directa',
   ].filter(Boolean);
 
   if (faltan.length) {
@@ -251,7 +250,7 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
     {
       tabla: 'guardias',
       disparadores:
-        'exigir_matricula_en_guardia → interno.motivo_bloqueo_matricula, y '
+        'trg_exigir_documentos_en_guardia → interno.documentos_que_bloquean, y '
         + 'fn_modalidad_de_la_guardia → interno.asistente_trabaja_en_modalidad',
       fila: {
         prestadora_id: d.prestadora,
@@ -284,7 +283,7 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
       elCaso = {
         tabla: 'asignaciones_de_turno',
         disparadores:
-          'exigir_matricula_en_asignacion → interno.motivo_bloqueo_matricula, y '
+          'trg_exigir_documentos_en_asignacion → interno.documentos_que_bloquean, y '
           + 'fn_modalidad_en_asignacion → interno.asistente_trabaja_en_modalidad',
         fila: {
           prestadora_id: d.prestadora,
@@ -491,6 +490,13 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
     throw new Error(`No encontré el Legajo del Asistente de ${ASISTENTE} en la Prestadora de pruebas.`);
   }
 
+  // Un compañero de la misma Prestadora: en su Legajo el Asistente de la sesión no puede escribir.
+  const [[otroAsistente]] = consultarBase(`
+    SELECT a.id FROM public.asistentes a
+     WHERE a.prestadora_id = '${d.prestadora}' AND a.id <> '${asistenteDeLaSesion}'
+     ORDER BY a.id LIMIT 1;
+  `);
+
   const problemas = [];
   const bien = (t, n) => { console.log(verde(`  ✓ ${t}`)); if (n) console.log(gris(`      ${n}`)); };
   const mal = (t, n) => { console.log(rojo(`  ✗ ${t}`)); console.log(rojo(`      ${n}`)); problemas.push(`${t} — ${n}`); };
@@ -599,41 +605,168 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
     `UPDATE public.configuracion_ausencias SET updated_at = '${comoEstaba}' WHERE prestadora_id = '${d.prestadora}';`,
   );
 
-  // ---- Y lo de cada Asistente lo escribe el dueño de su Legajo del Asistente, y nadie más --
-  const hoy = new Date().toISOString().slice(0, 10);
-  const matricula = (asistente) => ({
-    prestadora_id: d.prestadora, asistente_id: asistente, tipo: 'enfermeria',
-    numero_matricula: 'PRUEBA-ESCRITURA', vigente_desde: hoy,
-    registrado_por: usuarioDelAsistente, cargada_por_el_asistente: true,
+  // ---- Y los documentos de cada Asistente: él los carga en revisión, la administración aprobados --
+  // Cada carga es una fila nueva. Las de la prueba llevan un número que ninguna fila sembrada usa,
+  // y se borran al terminar, pase lo que pase.
+  const NUMERO_DE_PRUEBA = 'PRUEBA-ESCRITURA';
+  const borrarLosDocumentosDePrueba = () => consultarBase(
+    `DELETE FROM public.documentos_asistente WHERE numero = '${NUMERO_DE_PRUEBA}';`,
+  );
+  const tipoDocumento = Object.fromEntries(consultarBase(
+    `SELECT nombre, id FROM public.tipos_documento_asistente WHERE prestadora_id = '${d.prestadora}';`,
+  ));
+  const organismo = Object.fromEntries(consultarBase(
+    `SELECT nombre, id FROM public.organismos_otorgantes WHERE pais = 'AR';`,
+  ));
+  const [[usuarioDeLaAdministracion]] = consultarBase(
+    `SELECT id FROM public.usuarios WHERE lower(email) = lower('${ADMINISTRADORA}') AND prestadora_id = '${d.prestadora}';`,
+  );
+  const TITULO = tipoDocumento['Título'];
+  const ANTECEDENTES = tipoDocumento['Certificado de antecedentes'];
+  const LIBRETA = tipoDocumento['Libreta sanitaria'];
+  const REINCIDENCIA = organismo['Registro Nacional de Reincidencia'];
+  const ARCA = organismo.ARCA;
+  if (!TITULO || !ANTECEDENTES || !LIBRETA || !REINCIDENCIA || !ARCA || !usuarioDeLaAdministracion) {
+    throw new Error('Faltan en la base los tipos de documento u organismos de la siembra. Corré "npx supabase db reset --local".');
+  }
+  const unaFila = (sql) => (consultarBase(sql)[0] || []);
+  const queDijo = (r) => {
+    const c = r.cuerpo || {};
+    return `${r.estado} ${c.code || ''} ${c.message || ''}`.trim();
+  };
+  const documento = (asistente, extra) => ({
+    prestadora_id: d.prestadora, asistente_id: asistente, numero: NUMERO_DE_PRUEBA, ...extra,
   });
 
-  const matriculaPropia = await pedir(entorno, delAsistente, 'POST', 'matriculas_asistente', matricula(asistenteDeLaSesion));
-  if (matriculaPropia.ok) {
-    consultarBase("DELETE FROM public.matriculas_asistente WHERE numero_matricula = 'PRUEBA-ESCRITURA';");
-    bien('el Asistente SÍ carga la Matrícula de su propio Legajo del Asistente', 'asistente_carga_su_matricula');
-  } else {
-    const c = matriculaPropia.cuerpo || {};
-    mal('el Asistente SÍ carga la Matrícula de su propio Legajo del Asistente',
-        `${matriculaPropia.estado} ${c.code || ''} ${c.message || ''}`.trim());
+  try {
+    borrarLosDocumentosDePrueba();
+
+    // El Título no vence: aunque llegue una fecha de vencimiento, completar_documento_asistente la
+    // borra. Si la fila quedara con la fecha, el disparador no corrió.
+    const delAsistentePropio = await pedir(entorno, delAsistente, 'POST', 'documentos_asistente',
+      documento(asistenteDeLaSesion, {
+        tipo_documento_id: TITULO, estado: 'en_revision', cargado_por: usuarioDelAsistente,
+        fecha_vencimiento: '2099-12-31',
+      }));
+    if (delAsistentePropio.ok) {
+      const [estado, vence] = unaFila(
+        `SELECT estado, coalesce(fecha_vencimiento::text, 'sin fecha') FROM public.documentos_asistente
+          WHERE numero = '${NUMERO_DE_PRUEBA}' AND asistente_id = '${asistenteDeLaSesion}';`,
+      );
+      if (estado === 'en_revision' && vence === 'sin fecha') {
+        bien('el Asistente SÍ carga un documento suyo, y entra en revisión',
+             'asistente_carga_sus_documentos; completar_documento_asistente borró el vencimiento de un documento que no vence');
+      } else {
+        mal('el Asistente SÍ carga un documento suyo, y entra en revisión', `quedó ${estado}, vencimiento ${vence}`);
+      }
+    } else {
+      mal('el Asistente SÍ carga un documento suyo, y entra en revisión', queDijo(delAsistentePropio));
+    }
+
+    const delAsistenteAprobado = await pedir(entorno, delAsistente, 'POST', 'documentos_asistente',
+      documento(asistenteDeLaSesion, {
+        tipo_documento_id: TITULO, estado: 'aprobado', cargado_por: usuarioDelAsistente,
+        revisado_por: usuarioDelAsistente,
+      }));
+    if (delAsistenteAprobado.ok) {
+      mal('el Asistente NO se aprueba su propio documento', 'la base lo dejó cargarlo aprobado');
+    } else {
+      bien('el Asistente NO se aprueba su propio documento', `rebotó con ${delAsistenteAprobado.estado}`);
+    }
+
+    if (otroAsistente) {
+      const delAsistenteAjeno = await pedir(entorno, delAsistente, 'POST', 'documentos_asistente',
+        documento(otroAsistente, { tipo_documento_id: TITULO, estado: 'en_revision', cargado_por: usuarioDelAsistente }));
+      if (delAsistenteAjeno.ok) {
+        mal('el Asistente NO carga un documento de otro Asistente', 'la base lo dejó escribir en el Legajo del Asistente de otro');
+      } else {
+        bien('el Asistente NO carga un documento de otro Asistente', `rebotó con ${delAsistenteAjeno.estado}`);
+      }
+    }
+
+    // La administración carga aprobado, con el organismo que otorga ese documento.
+    const deLaAdministracionAprobado = await pedir(entorno, deLaAdministracion, 'POST', 'documentos_asistente',
+      documento(asistenteDeLaSesion, {
+        tipo_documento_id: ANTECEDENTES, organismo_id: REINCIDENCIA, fecha_vencimiento: '2099-06-30',
+        estado: 'aprobado', cargado_por: usuarioDeLaAdministracion,
+        revisado_por: usuarioDeLaAdministracion, revisado_at: new Date().toISOString(),
+      }));
+    if (deLaAdministracionAprobado.ok) {
+      const [estado, vence] = unaFila(
+        `SELECT estado, fecha_vencimiento FROM public.documentos_asistente
+          WHERE numero = '${NUMERO_DE_PRUEBA}' AND tipo_documento_id = '${ANTECEDENTES}';`,
+      );
+      if (estado === 'aprobado' && vence === '2099-06-30') {
+        bien('la administración SÍ carga un documento aprobado', 'admin_prestadora_gestiona_documentos_asistente; completar_documento_asistente sin 42501');
+      } else {
+        mal('la administración SÍ carga un documento aprobado', `quedó ${estado}, vencimiento ${vence}`);
+      }
+    } else {
+      mal('la administración SÍ carga un documento aprobado', queDijo(deLaAdministracionAprobado));
+    }
+
+    // Un organismo que no otorga ese documento: lo frena el disparador, no la política.
+    const conOrganismoAjeno = await pedir(entorno, deLaAdministracion, 'POST', 'documentos_asistente',
+      documento(asistenteDeLaSesion, {
+        tipo_documento_id: ANTECEDENTES, organismo_id: ARCA, fecha_vencimiento: '2099-06-30',
+        estado: 'aprobado', cargado_por: usuarioDeLaAdministracion, revisado_por: usuarioDeLaAdministracion,
+      }));
+    if (!conOrganismoAjeno.ok && /organismo_no_otorga_ese_documento/.test(conOrganismoAjeno.cuerpo?.message || '')) {
+      bien('la base NO acepta un organismo que no otorga ese documento', 'completar_documento_asistente → organismo_no_otorga_ese_documento');
+    } else {
+      mal('la base NO acepta un organismo que no otorga ese documento', queDijo(conOrganismoAjeno) || 'la base lo aceptó');
+    }
+  } finally {
+    borrarLosDocumentosDePrueba();
   }
 
-  const [[otroAsistente]] = consultarBase(`
-    SELECT a.id FROM public.asistentes a
-     WHERE a.prestadora_id = '${d.prestadora}' AND a.id <> '${asistenteDeLaSesion}'
-     ORDER BY a.id LIMIT 1;
-  `);
-  if (otroAsistente) {
-    const matriculaAjena = await pedir(entorno, delAsistente, 'POST', 'matriculas_asistente', matricula(otroAsistente));
-    if (matriculaAjena.ok) {
-      consultarBase("DELETE FROM public.matriculas_asistente WHERE numero_matricula = 'PRUEBA-ESCRITURA';");
-      mal('el Asistente NO carga la Matrícula de otro Asistente', 'la base lo dejó escribir en el Legajo del Asistente de otro');
+  // ---- Y la gracia la prorroga la administración, y la base calcula hasta cuándo --------
+  // La libreta de Ana venció y estaba aprobada: tiene gracia. El Título nunca estuvo aprobado:
+  // no tiene gracia que prorrogar.
+  const DIAS_DE_PRUEBA = 3;
+  const borrarLasProrrogasDePrueba = () => consultarBase(
+    `DELETE FROM public.prorrogas_de_gracia_documento
+      WHERE asistente_id = '${asistenteDeLaSesion}' AND dias = ${DIAS_DE_PRUEBA}
+        AND created_at > now() - interval '10 minutes';`,
+  );
+  const [[esperado]] = consultarBase(
+    `SELECT (GREATEST(interno.gracia_hasta('${asistenteDeLaSesion}', '${LIBRETA}', CURRENT_DATE), CURRENT_DATE) + ${DIAS_DE_PRUEBA})::text;`,
+  );
+  try {
+    const prorroga = (tipo) => ({
+      prestadora_id: d.prestadora, asistente_id: asistenteDeLaSesion, tipo_documento_id: tipo,
+      dias: DIAS_DE_PRUEBA, prorrogado_por: usuarioDeLaAdministracion,
+    });
+    const prorrogada = await pedir(entorno, deLaAdministracion, 'POST', 'prorrogas_de_gracia_documento', prorroga(LIBRETA));
+    const hasta = prorrogada.filas[0]?.hasta;
+    if (prorrogada.ok && esperado && hasta === esperado) {
+      bien('la administración SÍ prorroga la gracia, y la base calcula hasta cuándo',
+           `calcular_prorroga_de_gracia → interno.gracia_hasta sin 42501: hasta el ${hasta}`);
     } else {
-      bien('el Asistente NO carga la Matrícula de otro Asistente', `rebotó con ${matriculaAjena.estado}`);
+      mal('la administración SÍ prorroga la gracia, y la base calcula hasta cuándo',
+          prorrogada.ok ? `quedó hasta ${hasta}, se esperaba ${esperado}` : queDijo(prorrogada));
     }
+
+    const sinGracia = await pedir(entorno, deLaAdministracion, 'POST', 'prorrogas_de_gracia_documento', prorroga(TITULO));
+    if (!sinGracia.ok && /documento_sin_gracia/.test(sinGracia.cuerpo?.message || '')) {
+      bien('la base NO prorroga un documento que nunca estuvo aprobado', 'calcular_prorroga_de_gracia → documento_sin_gracia');
+    } else {
+      mal('la base NO prorroga un documento que nunca estuvo aprobado', queDijo(sinGracia) || 'la base la aceptó');
+    }
+
+    const delAsistenteProrroga = await pedir(entorno, delAsistente, 'POST', 'prorrogas_de_gracia_documento',
+      { ...prorroga(LIBRETA), prorrogado_por: usuarioDelAsistente });
+    if (delAsistenteProrroga.ok) {
+      mal('el Asistente NO se prorroga la gracia', 'la base lo dejó');
+    } else {
+      bien('el Asistente NO se prorroga la gracia', `rebotó con ${delAsistenteProrroga.estado}`);
+    }
+  } finally {
+    borrarLasProrrogasDePrueba();
   }
 
   // ---- Y adónde se le paga lo informa él: lo carga, lo corrige y lo saca ----
-  // Mismo molde que la Matrícula, que es el precedente de lo que el Asistente
+  // Mismo molde que los documentos, que son el precedente de lo que el Asistente
   // escribe en su propio Legajo del Asistente. La cuenta es inventada, como todo lo que se
   // siembra acá, y se borra al terminar.
   const [[paisDeLaPrestadora]] = consultarBase(

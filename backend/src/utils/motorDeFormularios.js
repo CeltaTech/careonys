@@ -99,7 +99,7 @@ function mismoValor(izquierda, derecha) {
  * @param expresion  la condición escrita en la declaración.
  * @param bloque     los valores cargados en el bloque que se está mirando.
  * @param contexto   lo que se sabe alrededor: la opción elegida con sus propiedades, o los datos
- *                   de otras partes del formulario. `{ tipo_asistente: { requiere_matricula: true } }`
+ *                   de otras partes del formulario. `{ tipo_asistente: { recibe_solo_sus_tareas: true } }`
  * @returns true, false, o false si la condición no se entiende.
  */
 export function condicionSeCumple(expresion, bloque = {}, contexto = {}) {

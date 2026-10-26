@@ -98,7 +98,7 @@ describe('fechaLimiteDeAviso', () => {
 
   it('lo que trae la consulta y lo que clasifica la regla no se contradicen', () => {
     // El límite es el último día que la consulta trae. Ese día tiene que quedar clasificado
-    // como "por vencer" y el siguiente como "vigente": si no, la lista mostraría un papel en
+    // como "por vencer" y el siguiente como "vigente": si no, la lista mostraría un documento en
     // verde que solo está ahí porque estaba por vencer.
     const limite = fechaLimiteDeAviso(30, HOY);
     expect(estadoDeVencimiento(diasParaVencer(limite, HOY), 30)).toBe(ESTADO_VENCIMIENTO.POR_VENCER);

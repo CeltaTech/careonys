@@ -3,7 +3,7 @@ import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido, supabase } from '../db/connection.js';
 import { laViaBloquea, laViaFrenteALosAsignados } from '../utils/medicacionIndicaciones.js';
-import { extensionDeArchivo, rutaDeMatriculaNueva, rutaDelPapelFirmado } from '../utils/archivosSubidos.js';
+import { extensionDeArchivo, rutaDelPapelFirmado } from '../utils/archivosSubidos.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { FICHA_NOMBRE, conSuFicha } from '../utils/fichaDelPaciente.js';
@@ -21,11 +21,6 @@ import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 // Cliente eligió firmar en papel se imprime desde acá, y al subir el documento firmado queda cerrada.
 // La base lo exige igual: el disparador que acepta la indicación se niega sin firma.
 //
-// matriculas_asistente no tiene rutas CRUD
-// acá: el Panel la gestiona directo vía supabase-js bajo RLS (mismo criterio que
-// autorizaciones_monitoreo_paciente/rangos_referencia_vitales — RLS ya lo permite a
-// admin_prestadora). Esta ruta solo resuelve el archivo de evidencia de matrícula.
-//
 // CON LA CREDENCIAL DE QUIEN PIDE. El enlace temporal al archivo se pide a la base con
 // `clienteDelPedido(req)`, no con la llave maestra: el depósito sólo da enlaces a archivos cuya
 // ruta empieza por la Prestadora de quien pide, así que no hace falta comparar la ruta a mano. La bandeja
@@ -37,7 +32,7 @@ import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 //   de la consulta).
 // - Aceptar y rechazar: la base deja modificar una indicación sólo a la administración, y acá
 //   también la revisa el Coordinador (`indicaciones_medicacion`, modificar).
-// - Subir el archivo de matrícula y el documento firmado: el depósito no le deja escribir al
+// - Subir el documento firmado: el depósito no le deja escribir al
 //   Coordinador (`prescripciones-medicacion`, alta y reemplazo).
 
 export const panelMedicacionRouter = Router();
@@ -338,36 +333,6 @@ panelMedicacionRouter.get('/:id/papel-firmado', requiereRolPanel, async (req, re
   if (errorEnlace) return responderError(res, errorEnlace);
   res.json({ url: data.signedUrl });
 });
-
-// Va con la llave maestra: ver el encabezado.
-panelMedicacionRouter.post(
-  '/matriculas/:asistenteId/archivo',
-  requiereRolPanel,
-  upload.single('archivo'),
-  manejarErrorMulter,
-  async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
-    }
-
-    const { data: asistente } = await supabase
-      .from('asistentes')
-      .select('id, prestadora_id')
-      .eq('id', req.params.asistenteId)
-      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-      .maybeSingle();
-    if (!asistente) return res.status(404).json({ error: 'Asistente no encontrado' });
-
-    const ruta = rutaDeMatriculaNueva(asistente.prestadora_id, asistente.id, extensionDeArchivo(req.file.mimetype));
-
-    const { error } = await supabase.storage
-      .from(BUCKET)
-      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
-    if (error) return responderError(res, error);
-
-    res.json({ archivoUrl: ruta });
-  }
-);
 
 panelMedicacionRouter.get('/archivo-url', requiereRolPanel, async (req, res) => {
   const ruta = req.query.ruta;

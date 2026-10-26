@@ -143,7 +143,6 @@ export function TiposAsistenteTab() {
               <tr>
                 <th>{t.configuracion.tipos_col_nombre}</th>
                 <th>{t.configuracion.tipos_col_rama}</th>
-                <th>{t.configuracion.tipos_col_matricula}</th>
                 <th>{t.configuracion.tipos_col_activo}</th>
                 <th></th>
               </tr>
@@ -170,11 +169,6 @@ export function TiposAsistenteTab() {
                         </option>
                       ))}
                     </select>
-                  </td>
-                  <td>
-                    {tipo.requiere_matricula
-                      ? nombreMatricula(tipo.tipo_matricula, t)
-                      : t.configuracion.tipos_sin_matricula}
                   </td>
                   <td>
                     {esTipoGeneral(tipo) ? (

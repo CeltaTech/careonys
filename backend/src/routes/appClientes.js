@@ -669,8 +669,8 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 // la puerta.
 //
 // Y el estado documental agregado, que arma `utils/estadoDocumentalParaElCliente.js`: cuántos
-// papeles exige esta Prestadora y cuántos están al día, más cómo está la Matrícula. Cuentas y
-// nada más: de acá no sale el nombre de ningún tipo de documento ni el número de una Matrícula.
+// documentos se le piden al Asistente y cuántos están al día. Cuentas y nada más: de acá no sale
+// el nombre de ningún tipo de documento ni su número.
 // ============================================================================
 
 appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req, res) => {
@@ -724,42 +724,28 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
     .limit(1)
     .maybeSingle();
 
-  // El estado documental, agregado. El Cliente ve cuánto se cumplió de lo que la Prestadora
-  // exige, y nunca qué papel es cuál: el nombre de un tipo de documento puede ser dato de
-  // salud. Las cuatro consultas van juntas porque ninguna depende de la anterior.
+  // El estado documental, agregado. El Cliente ve cuánto se cumplió de lo que la Prestadora le
+  // pide al Asistente, y nunca qué documento es cuál: el nombre de un tipo de documento puede ser
+  // dato de salud. Las dos consultas van juntas porque ninguna depende de la otra.
   //
-  // Los papeles y la Matrícula siguen con la llave maestra: la base no le deja ver a un Cliente
-  // los documentos de nadie —y está bien, porque de acá no sale ninguno—, y lo que se entrega es
-  // la cuenta, no el papel.
-  const [{ data: tiposExigidos }, { data: documentos }, { data: matricula }, { data: prestadora }] =
-    await Promise.all([
-      supabase
-        .from('tipos_documento_asistente')
-        .select('id, requiere_vencimiento')
-        .eq('prestadora_id', paciente.prestadora_id)
-        .eq('activo', true),
-      supabase
-        .from('documentos_asistente')
-        .select('tipo_documento_id, fecha_vencimiento')
-        .eq('prestadora_id', paciente.prestadora_id)
-        .eq('asistente_id', guardia.asistente_id),
-      supabase
-        .from('estado_matricula_asistente')
-        .select('requiere_matricula, matricula_id, vigente_hasta, verificada_at')
-        .eq('asistente_id', guardia.asistente_id)
-        .eq('prestadora_id', paciente.prestadora_id)
-        .maybeSingle(),
-      db
-        .from('prestadoras')
-        .select('dias_aviso_vencimiento_documentos')
-        .eq('id', paciente.prestadora_id)
-        .maybeSingle(),
-    ]);
+  // Los documentos siguen con la llave maestra: la base no le deja ver a un Cliente los documentos
+  // de nadie —y está bien, porque de acá no sale ninguno—, y lo que se entrega es la cuenta, no el
+  // documento.
+  const [{ data: documentos }, { data: prestadora }] = await Promise.all([
+    supabase
+      .from('documentos_pedidos_al_asistente')
+      .select('estado, fecha_vencimiento')
+      .eq('prestadora_id', paciente.prestadora_id)
+      .eq('asistente_id', guardia.asistente_id),
+    db
+      .from('prestadoras')
+      .select('dias_aviso_vencimiento_documentos')
+      .eq('id', paciente.prestadora_id)
+      .maybeSingle(),
+  ]);
 
   const documentacion = estadoDocumentalParaElCliente({
-    tiposExigidos: tiposExigidos || [],
     documentos: documentos || [],
-    matricula: matricula || null,
     diasAviso: prestadora?.dias_aviso_vencimiento_documentos ?? undefined,
   });
 
@@ -1282,47 +1268,33 @@ async function exigeVidriera() {
 
 /**
  * El estado documental de varios Asistentes de una vez, con las mismas reglas que el de uno
- * solo. Tres consultas para toda la lista y no tres por persona: con veinte perfiles serían
- * sesenta viajes a la base para contestar una pantalla.
+ * solo. Dos consultas para toda la lista y no dos por persona: con veinte perfiles serían
+ * cuarenta viajes a la base para contestar una pantalla.
  */
 async function documentacionDeVarios(prestadoraId, asistenteIds) {
   if (!asistenteIds.length) return new Map();
 
-  // Con la llave maestra: los tipos de documento, los documentos y la matrícula no tienen política
-  // que deje leerlos a un Cliente, y son de Asistentes que no la atienden.
-  const [{ data: tiposExigidos }, { data: documentos }, { data: matriculas }, { data: prestadora }] =
-    await Promise.all([
-      supabase
-        .from('tipos_documento_asistente')
-        .select('id, requiere_vencimiento')
-        .eq('prestadora_id', prestadoraId)
-        .eq('activo', true),
-      supabase
-        .from('documentos_asistente')
-        .select('asistente_id, tipo_documento_id, fecha_vencimiento')
-        .eq('prestadora_id', prestadoraId)
-        .in('asistente_id', asistenteIds),
-      supabase
-        .from('estado_matricula_asistente')
-        .select('asistente_id, requiere_matricula, matricula_id, vigente_hasta, verificada_at')
-        .eq('prestadora_id', prestadoraId)
-        .in('asistente_id', asistenteIds),
-      supabase
-        .from('prestadoras')
-        .select('dias_aviso_vencimiento_documentos')
-        .eq('id', prestadoraId)
-        .maybeSingle(),
-    ]);
+  // Con la llave maestra: los documentos no tienen política que deje leerlos a un Cliente, y son
+  // de Asistentes que no la atienden.
+  const [{ data: documentos }, { data: prestadora }] = await Promise.all([
+    supabase
+      .from('documentos_pedidos_al_asistente')
+      .select('asistente_id, estado, fecha_vencimiento')
+      .eq('prestadora_id', prestadoraId)
+      .in('asistente_id', asistenteIds),
+    supabase
+      .from('prestadoras')
+      .select('dias_aviso_vencimiento_documentos')
+      .eq('id', prestadoraId)
+      .maybeSingle(),
+  ]);
 
   const porAsistente = new Map();
-  const matriculaDe = new Map((matriculas || []).map((m) => [m.asistente_id, m]));
   for (const id of asistenteIds) {
     porAsistente.set(
       id,
       estadoDocumentalParaElCliente({
-        tiposExigidos: tiposExigidos || [],
         documentos: (documentos || []).filter((d) => d.asistente_id === id),
-        matricula: matriculaDe.get(id) || null,
         diasAviso: prestadora?.dias_aviso_vencimiento_documentos ?? undefined,
       })
     );

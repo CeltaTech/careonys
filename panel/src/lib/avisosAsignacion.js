@@ -17,7 +17,7 @@
 //
 // "¿Quién sirve para este hueco?" y "¿qué puede salir mal con este?" son dos preguntas
 // distintas, pero se contestan mirando exactamente lo mismo: si se pisa con otra guardia,
-// cuánto va a descansar, cuántas horas lleva en la semana, qué papeles y qué Matrícula
+// cuánto va a descansar, cuántas horas lleva en la semana, qué documentos
 // vencen. Si esas cuentas estuvieran escritas dos veces, tarde o temprano dirían cosas
 // distintas sobre la misma persona y la misma guardia: la lista de candidatos mostrando a
 // alguien arriba de todo y, dos clics después, un cartel diciendo que se pisa con otra
@@ -39,8 +39,7 @@ import {
   descansoMasCorto,
   cargaSemanal,
   topeSemanalDe,
-  matriculaVigenteAl,
-  papelQueVencePrimero,
+  documentoQueVencePrimero,
 } from './candidatos';
 
 /** Las claves de traducción que devuelve este archivo. Viven en `t.guardias.avisos`. */
@@ -50,7 +49,6 @@ export const ADVERTENCIA = {
   DESCANSO: 'descanso',
   HORAS_EXTRA: 'horas_extra',
   DOCUMENTACION: 'documentacion',
-  MATRICULA: 'matricula',
 };
 
 const redondear = (n) => Math.round(n * 10) / 10;
@@ -58,30 +56,11 @@ const hhmm = (h) => (typeof h === 'string' ? h.slice(0, 5) : h);
 const lista = (x) => (Array.isArray(x) ? x : []);
 
 /**
- * La Matrícula que hay que mirar para esta asignación.
- *
- * Primero la que está vigente hoy. Si no hay ninguna vigente, se toma la última que tuvo —la de
- * vencimiento más lejano—, porque la advertencia necesita una fecha para mostrar. Si el Asistente no
- * tiene ninguna Matrícula registrada, no hay advertencia: eso no es "algo que vence", es que falta
- * el papel entero, y de eso ya avisa `candidatos.js` con `motivo_matricula_falta`.
- */
-function matriculaAMirar(asistenteId, matriculas, ahora) {
-  const vigente = matriculaVigenteAl(asistenteId, matriculas, ahora);
-  if (vigente) return vigente;
-
-  const propias = lista(matriculas).filter(
-    (h) => h.asistente_id === asistenteId && h.vigente_hasta
-  );
-  if (!propias.length) return null;
-  return propias.reduce((mejor, h) => (h.vigente_hasta > mejor.vigente_hasta ? h : mejor));
-}
-
-/**
  * Qué puede salir mal si esta Guardia se le asigna a este Asistente.
  *
  * @param guardia      la fila de `guardias` que se va a asignar.
  * @param asistenteId  a quién se le va a dar.
- * @param datos        `{ asistentes, guardias, ausencias, matriculas, documentos, ahora }` — lo mismo
+ * @param datos        `{ asistentes, guardias, ausencias, documentos }` — lo mismo
  *                     que recibe `candidatosParaGuardia`, para que la pantalla pase el mismo
  *                     objeto en los dos lugares y no tenga que armar dos.
  * @param opciones     `{ topes }` — para pisar los topes sin tocar este archivo.
@@ -93,7 +72,6 @@ export function advertenciasDeAsignacion(guardia, asistenteId, datos = {}, opcio
   if (!guardia || !asistenteId) return [];
 
   const topes = { ...TOPES, ...(opciones.topes ?? {}) };
-  const ahora = datos.ahora ?? new Date();
   const advertencias = [];
 
   const asistente =
@@ -148,32 +126,21 @@ export function advertenciasDeAsignacion(guardia, asistenteId, datos = {}, opcio
     });
   }
 
-  // A partir de acá, la pregunta es siempre la misma: ¿este papel llega vivo hasta el final de
+  // A partir de acá, la pregunta es siempre la misma: ¿este documento llega vivo hasta el final de
   // la guardia? Por eso se compara contra el día en que la guardia TERMINA y no contra el día
-  // en que empieza: un papel que vence en el medio de una guardia de noche es exactamente el
+  // en que empieza: un documento que vence en el medio de una guardia de noche es exactamente el
   // caso que hay que avisar, y comparar contra el inicio lo dejaría pasar.
   const ultimoDia = ultimoDiaDeLaGuardia(guardia);
 
   // --- 4. Documentación que vence antes o durante la guardia.
-  const papel = papelQueVencePrimero(asistenteId, datos.documentos);
-  if (papel && papel.fecha_vencimiento <= ultimoDia) {
+  const documento = documentoQueVencePrimero(asistenteId, datos.documentos);
+  if (documento && documento.fecha_vencimiento <= ultimoDia) {
     advertencias.push({
       clave: ADVERTENCIA.DOCUMENTACION,
-      valores: { fecha: papel.fecha_vencimiento },
+      valores: { fecha: documento.fecha_vencimiento },
       // Grave si ya está vencido antes de que la guardia arranque: ahí no es "se le vence en el
-      // medio", es que trabaja el turno entero con el papel caído.
-      grave: papel.fecha_vencimiento < guardia.fecha,
-    });
-  }
-
-  // --- 5. Matrícula que vence antes o durante la guardia. Mismo criterio que los papeles,
-  //        y pesa más: sin Matrícula vigente no puede administrar medicación.
-  const matricula = matriculaAMirar(asistenteId, datos.matriculas, ahora);
-  if (matricula?.vigente_hasta && matricula.vigente_hasta <= ultimoDia) {
-    advertencias.push({
-      clave: ADVERTENCIA.MATRICULA,
-      valores: { fecha: matricula.vigente_hasta },
-      grave: matricula.vigente_hasta < guardia.fecha,
+      // medio", es que trabaja el turno entero con el documento caído.
+      grave: documento.fecha_vencimiento < guardia.fecha,
     });
   }
 

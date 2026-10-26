@@ -107,7 +107,7 @@ describe('motivoDeModalidadDelError', () => {
   });
 
   it('no se confunde con otros errores', () => {
-    expect(motivoDeModalidadDelError({ message: 'matricula_bloquea:vencida:' })).toBeNull();
+    expect(motivoDeModalidadDelError({ message: 'documentos_bloquean:Seguro:' })).toBeNull();
     expect(motivoDeModalidadDelError({ code: '23505' })).toBeNull();
     expect(motivoDeModalidadDelError(null)).toBeNull();
   });

@@ -153,10 +153,10 @@ export const CATALOGO_VISIBILIDAD = [
     de_fabrica: true,
   },
   {
-    clave: 'asistente_carga_su_matricula',
+    clave: 'asistente_carga_sus_documentos',
     app: 'asistentes',
-    descripcion: 'Cargar su matrícula y el archivo desde el teléfono',
-    ayuda: 'Apagada, la matrícula la carga la Prestadora desde el Panel después de verla en original. Lo que el Asistente carga queda igual pendiente de verificación.',
+    descripcion: 'Cargar sus documentos desde el teléfono',
+    ayuda: 'Apagada, los documentos los carga la Prestadora desde el Panel. Lo que el Asistente carga queda en revisión hasta que la Prestadora lo aprueba.',
     de_fabrica: true,
   },
 ];

@@ -73,12 +73,6 @@ describe('pestanasDelAsistente', () => {
     }
   });
 
-  it('el Coordinador no alcanza la pestaña de matrículas', () => {
-    for (const pestana of ['matriculas']) {
-      expect(PESTANAS_COORDINADOR).not.toContain(pestana);
-    }
-  });
-
   it('lo que ve el Coordinador es un subconjunto de lo que ve el Admin', () => {
     for (const pestana of PESTANAS_COORDINADOR) {
       expect(PESTANAS, `${pestana} no está en la lista completa`).toContain(pestana);

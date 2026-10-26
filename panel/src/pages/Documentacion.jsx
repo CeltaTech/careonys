@@ -25,10 +25,14 @@ export function Documentacion() {
     setEstado('cargando');
     setError(null);
 
+    // Sólo el último documento cargado de cada Asistente y tipo: cada carga es una fila nueva, y
+    // leer la tabla entera mostraría como vencido el documento que ya se renovó. La vista no trae
+    // el nombre ni el estado del Asistente, así que se piden aparte por sus identificadores.
     const [{ data: docsData, error: errorDocs }, diasDePreaviso] = await Promise.all([
       supabase
-        .from('documentos_asistente')
-        .select('id, fecha_vencimiento, tipos_documento_asistente(nombre, requiere_vencimiento), asistentes(nombre, estado)')
+        .from('documentos_pedidos_al_asistente')
+        .select('documento_id, asistente_id, nombre, fecha_vencimiento')
+        .eq('estado', 'aprobado')
         .not('fecha_vencimiento', 'is', null),
       diasDePreavisoDeLaPrestadora(prestadoraId),
     ]);
@@ -39,14 +43,27 @@ export function Documentacion() {
       return;
     }
 
+    const idsDeAsistentes = [...new Set((docsData ?? []).map((d) => d.asistente_id))];
+    const { data: asistentesData, error: errorAsistentes } = idsDeAsistentes.length
+      ? await supabase.from('asistentes').select('id, nombre, estado').in('id', idsDeAsistentes)
+      : { data: [], error: null };
+
+    if (errorAsistentes) {
+      setError(mensajeDeError(errorAsistentes, t));
+      setEstado('error');
+      return;
+    }
+
+    const asistentePorId = new Map((asistentesData ?? []).map((a) => [a.id, a]));
+
     const filasConEstado = (docsData ?? [])
-      .filter((d) => d.tipos_documento_asistente?.requiere_vencimiento && d.asistentes?.estado === 'activo')
+      .filter((d) => asistentePorId.get(d.asistente_id)?.estado === 'activo')
       .map((d) => {
         const dias = diasParaVencer(d.fecha_vencimiento);
         return {
-          id: d.id,
-          asistente_nombre: d.asistentes?.nombre || '—',
-          tipo_nombre: d.tipos_documento_asistente?.nombre || '—',
+          id: d.documento_id,
+          asistente_nombre: asistentePorId.get(d.asistente_id)?.nombre || '—',
+          tipo_nombre: d.nombre || '—',
           fecha_vencimiento: d.fecha_vencimiento,
           dias,
           estado_documento: estadoDeVencimiento(dias, diasDePreaviso),

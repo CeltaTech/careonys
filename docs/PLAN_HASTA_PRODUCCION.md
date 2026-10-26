@@ -1426,17 +1426,6 @@ Y algo que hoy está mal pensado y se corrige acá: **a qué número se llama.**
 
 **80.** El Panel se instala también en el teléfono, sin dejar de ser lo que es. En la computadora sigue igual. En el teléfono se instala desde el navegador, recibe avisos aunque no esté abierto y abre primero lo urgente del día —quién no llegó, qué guardia quedó sin cubrir, a quién mandar de reemplazo—, sin perder el resto. Es el mismo programa, con la misma dirección, la misma cuenta y los mismos permisos: no es una tercera aplicación. En el iPhone los avisos llegan sólo con el Panel instalado en la pantalla de inicio, igual que en las dos aplicaciones. Las alarmas del relevo que no llega se apoyan en estos avisos: sección «El Paciente nunca queda solo».
 
-**81.** Un solo mecanismo para todos los documentos del Asistente, y la Matrícula pasa a ser uno más. Hoy son dos caminos para el mismo problema: la Matrícula se sube desde el teléfono, la Prestadora la verifica, guarda cada renovación y puede impedir trabajar (`matriculas_asistente`); los demás documentos sólo los carga la Prestadora, sin verificación, y la renovación pisa la anterior (`documentos_asistente`). Textual del Desarrollador: *«Ante el mismo problema, la misma solución. Y si esta solución no sirve se cambia por una que sirva para todos, solo en caso de imposibilidad se habilita una excepción»*. Queda así, y se aplica de a un cambio, cada uno mirado por él antes del siguiente:
-
-- Todos los documentos se guardan igual: archivo, vencimiento, número cuando lo tiene, quién lo cargó, verificación con su método, y una fila por carga, así la renovación no pisa la anterior.
-- **Cada documento dice a qué tipos de Asistente se le pide** —de fábrica, a todos—, que es como hoy se pide la Matrícula.
-- **Cada documento dice si sin él no se trabaja**, y eso lo decide la Prestadora documento por documento (contestado por el Desarrollador: *«si»*). El que impide trabajar se rige por lo que hoy rige a la Matrícula: tiene que estar vigente y aprobado.
-- **El Asistente carga el documento y la Prestadora lo aprueba; recién aprobado se da por bueno** (textual del Desarrollador: *«el asistente carga el documento y la prestadora los aprueba, recien cuando esta aprobado se da por bueno»*). Vale para todos, Matrícula incluida: deja de existir el control que permitía dar por bueno uno sin verificar.
-- En el teléfono, cada documento con el mismo botón para subir la foto; el aviso de vencido dice qué documento y «Suba la renovación».
-- En el Panel, una sola forma de verificar todos los documentos.
-- En Configuración, una sola opción para permitir que el Asistente cargue sus documentos, que vale para todos.
-- Las matrículas cargadas pasan al lugar nuevo sin perder ninguna, con sus archivos.
-
 **Usted, al terminar de configurar las dos aplicaciones** — El nombre de la sección Perfil → Privacidad de la aplicación del Asistente. Tiene que abarcar todas las condiciones de trabajo que el Asistente aceptó. Textual del Desarrollador: *«deberia ser algo que abarque todas las condiciones de trabajo que el asistente acepto»*.
 
 ---
@@ -1446,10 +1435,6 @@ Y algo que hoy está mal pensado y se corrige acá: **a qué número se llama.**
 **82. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
 
 **83.** Que el cálculo de candidatos lo use.
-
-**84. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
-
-**85.** Construir la verificación según lo contestado.
 
 **86. Usted** — Las ramas. Decidido por el Desarrollador, textual: *«cada prestadora puede disponer cuales tiene, pero no las puede inventar»*. Hoy es al revés: cada Prestadora agrega, edita y borra las suyas, porque así lo pidió el 8 de octubre —*«Tanto las ramas como las tareas y el detalle de las mismas se deben poder agregar, editar y borrar. Cada prestadora dispone su set.»*—. Antes de tocar nada se vuelve sobre el tema con él: algo no está bien, y hay que encontrar el documento con el que se trabajó ese día y releerlo.
 

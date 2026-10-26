@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { llamarApiPanel } from './apiPanel';
-import { mensajeDeBloqueo } from './matricula';
+import { documentosQueBloquean, mensajeDeDocumentos } from './documentos';
 import { mensajeDeModalidad } from './modalidades';
 import { mensajeDeError } from './errores';
 import { con } from './textos';
@@ -14,23 +14,30 @@ import { con } from './textos';
    el backend sólo por los avisos al celular, que el Panel no puede mandar.
 
    Lo usan la reasignación desde el detalle de la guardia y el arrastre en la grilla: un solo
-   lugar para las dos (regla del punto único de verdad, CeltaTech §8). */
+   lugar para las dos (regla del punto único de verdad, CeltaTech §8).
+
+   Si el Asistente tiene documentos pendientes, la asignación vuelve con la lista en
+   `documentosPendientes`, y quien tiene el permiso «Asignar con documentos pendientes» puede
+   repetirla con un motivo. Sólo un turno de guardia puntual: un turno fijo nunca. */
 
 /**
  * @param {string} guardiaId
  * @param {string | null} asistenteId  A quién se le asigna, o `null` para dejarlo sin asignar.
  * @param {object} t  Los textos del idioma en que está el Panel.
- * @returns {Promise<{ error: string | null }>}
+ * @param {string | null} motivoExcepcion  Por qué se asigna igual con documentos pendientes.
+ * @returns {Promise<{ error: string | null, documentosPendientes: string[] | null }>}
  */
-export async function asignarTurno(guardiaId, asistenteId, t = null) {
+export async function asignarTurno(guardiaId, asistenteId, t = null, motivoExcepcion = null) {
+  const cuerpo = { asistente_id: asistenteId ?? null };
+  if (motivoExcepcion) cuerpo.motivo_excepcion = motivoExcepcion;
   try {
     await llamarApiPanel(`/guardias/${guardiaId}/asignar`, {
       method: 'POST',
-      body: JSON.stringify({ asistente_id: asistenteId ?? null }),
+      body: JSON.stringify(cuerpo),
     });
-    return { error: null };
+    return { error: null, documentosPendientes: null };
   } catch (e) {
-    return { error: mensajeDeLaAsignacion(e, t) };
+    return { error: mensajeDeLaAsignacion(e, t), documentosPendientes: documentosQueBloquean(e) };
   }
 }
 
@@ -77,10 +84,10 @@ export async function moverTurnoAOtroPaciente(guardiaId, { pacienteId, fecha = n
   }
 }
 
-// La Matrícula y la modalidad vuelven como motivo, con el mismo código que levanta la base, y
-// tienen su frase con su «dónde se arregla». Lo demás, con la frase de su motivo o de su situación.
-function mensajeDeLaAsignacion(e, t) {
-  return mensajeDeBloqueo(e?.motivo, t?.matricula) ?? mensajeDeModalidad(e?.motivo, t?.modalidades) ?? mensajeDeError(e, t);
+// Los documentos pendientes y la modalidad vuelven como motivo, con el mismo código que levanta la
+// base, y tienen su frase. Lo demás, con la frase de su motivo o de su situación.
+export function mensajeDeLaAsignacion(e, t) {
+  return mensajeDeDocumentos(e, t) ?? mensajeDeModalidad(e?.motivo ?? e, t?.modalidades) ?? mensajeDeError(e, t);
 }
 
 /**

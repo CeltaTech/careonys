@@ -70,9 +70,11 @@ export function seArrastra(guardia) {
  * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
  *                          acá no se sabe en qué idioma está, y hacen falta para que ningún
  *                          error de la base llegue crudo a la pantalla.
- * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
+ * @param {string | null} motivoExcepcion  Por qué se asigna igual con documentos pendientes.
+ * @returns {Promise<{ error: string | null, documentosPendientes?: string[] | null }>} El motivo si
+ *          algo falló, o null si salió todo; y los documentos, si la asignación la frenaron ellos.
  */
-export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, horaInicio, horaFin }, t = null) {
+export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, horaInicio, horaFin }, t = null, motivoExcepcion = null) {
   if (!guardia?.id || !seArrastra(guardia)) return { error: null };
 
   if (!VISTAS.includes(vista)) {
@@ -93,7 +95,7 @@ export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, ho
   // Del lado de los Asistentes. Si se la soltó en su misma fila, sólo cambian el día o la hora.
   if (fila === filaDeGuardia(guardia)) return moverEnElCalendario(guardia, { fecha, horaInicio, horaFin }, t);
 
-  // La hora se corre antes de asignar, y la fecha la corre la asignación: la Matrícula se mira
+  // La hora se corre antes de asignar, y la fecha la corre la asignación: los documentos se miran
   // contra el día nuevo.
   if (horaInicio && horaFin) {
     const { error } = await supabase
@@ -105,7 +107,7 @@ export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, ho
 
   const asistenteId = fila === FILA_SIN_CUBRIR ? null : fila;
 
-  return asignarConFecha(guardia, asistenteId, fecha, t);
+  return asignarConFecha(guardia, asistenteId, fecha, t, motivoExcepcion);
 }
 
 /** Correr una guardia de día o de hora sin cambiarle quién la hace. */

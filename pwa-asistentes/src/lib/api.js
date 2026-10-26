@@ -28,6 +28,10 @@ async function pedido(ruta, opciones = {}) {
     // Cuando falta un reporte, el backend dice de quiénes falta. Con un turno que cubre a
     // tres personas, "falta un reporte" no le dice al Asistente cuál le quedó pendiente.
     if (datos.pacientesSinReporte) error.pacientesSinReporte = datos.pacientesSinReporte;
+    // Un documento ya vencido trae la fecha después de la cual tiene que estar emitido el nuevo,
+    // y un turno que no se puede aceptar trae qué documentos lo impiden.
+    if (datos.fecha) error.fecha = datos.fecha;
+    if (datos.documentos) error.documentos = datos.documentos;
     throw error;
   }
   return datos;
@@ -61,10 +65,25 @@ function conElActo(datos) {
 
 export const api = {
   perfil: () => pedido('/perfil'),
-  // Sus papeles y su Certificado. Va aparte de `/perfil` porque `/perfil` lo pide la aplicación
-  // al arrancar y esto lo mira quien entró a Mi Perfil.
-  papeles: () => pedido('/perfil/papeles'),
-  // El interruptor de disponibilidad. No lleva el identificador de nadie: la sesión decide sobre
+  // Sus documentos, con cuántos lleva enviados de cuántos le exige su Prestadora. Va aparte de
+  // `/perfil` porque `/perfil` lo pide la aplicación al arrancar y esto lo mira quien entró a
+  // Documentos.
+  documentos: () => pedido('/documentos'),
+  // Un tipo de documento con lo que hace falta para cargarlo: requisitos, enlace, organismos que
+  // lo otorgan, qué fecha lleva y si lleva número.
+  tipoDeDocumento: (tipoDocumentoId) => pedido(`/documentos/tipo/${encodeURIComponent(tipoDocumentoId)}`),
+  // Un documento, en un solo envío —datos y archivo juntos—: un archivo sin su dueño queda
+  // suelto y nadie lo va a mirar. Lo que se manda entra en revisión.
+  enviarDocumento: (tipoDocumentoId, { organismoId, fechaEmision, fechaVencimiento, numero, archivo }) => {
+    const formData = new FormData();
+    formData.append('tipo_documento_id', tipoDocumentoId);
+    if (organismoId) formData.append('organismo_id', organismoId);
+    if (fechaEmision) formData.append('fecha_emision', fechaEmision);
+    if (fechaVencimiento) formData.append('fecha_vencimiento', fechaVencimiento);
+    if (numero) formData.append('numero', numero);
+    if (archivo) formData.append('archivo', archivo);
+    return pedido('/documentos', { method: 'POST', body: formData });
+  },  // El interruptor de disponibilidad. No lleva el identificador de nadie: la sesión decide sobre
   // en quién se escribe, y lo que vuelve es lo que quedó guardado, no lo que se mandó.
   cambiarDisponibilidad: (disponible) =>
     pedido('/perfil/disponibilidad', { method: 'PATCH', body: JSON.stringify({ disponible }) }),
@@ -123,18 +142,6 @@ export const api = {
   consentimientos: (idioma) => pedido(`/consentimientos?idioma=${encodeURIComponent(idioma)}`),
   decidirConsentimiento: (clave, decision, idioma) =>
     pedido('/consentimientos', { method: 'POST', body: JSON.stringify({ clave, decision, idioma }) }),
-  // La Matrícula. Se carga en un solo envío —datos y archivo juntos— porque un
-  // archivo sin su dueño es un papel suelto que nadie va a mirar.
-  matricula: () => pedido('/matricula'),
-  cargarMatricula: ({ numeroMatricula, vigenteDesde, vigenteHasta, archivo }) => {
-    const formData = new FormData();
-    if (numeroMatricula) formData.append('numeroMatricula', numeroMatricula);
-    formData.append('vigenteDesde', vigenteDesde);
-    if (vigenteHasta) formData.append('vigenteHasta', vigenteHasta);
-    if (archivo) formData.append('archivo', archivo);
-    return pedido('/matricula', { method: 'POST', body: formData });
-  },
-  archivoDeMatricula: (ruta) => pedido(`/matricula/archivo-url?ruta=${encodeURIComponent(ruta)}`),
   // Los turnos que se le asignaron y todavía no respondió, con la lista de motivos de rechazo de
   // su Prestadora. Rechazar pide uno de esos motivos, y el detalle cuando el motivo lo pide.
   asignaciones: () => pedido('/asignaciones'),

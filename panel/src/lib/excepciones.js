@@ -20,7 +20,7 @@
 // contador de arriba no pueden contradecirse tampoco: si el chip está rojo por "llegó tarde",
 // está sí o sí adentro del contador "tarde".
 //
-// Las dos que necesitan datos de afuera —papeles por vencer y reportes que faltan— no se
+// Las dos que necesitan datos de afuera —documentos por vencer y reportes que faltan— no se
 // pueden contestar mirando la guardia sola, así que se resuelven con dos conjuntos que la
 // pantalla arma una vez y pasa en `ctx`. La cuenta sigue estando escrita una sola vez.
 
@@ -32,23 +32,22 @@ import { SITUACION, UMBRALES, situacionDeGuardia } from './semaforoGuardia';
  *
  *   ahora                        → Date. Sirve para congelar el reloj en las pruebas.
  *   umbrales                     → los de `semaforoGuardia.js`, si la Prestadora los cambió.
- *   asistentesConPapelPorVencer  → Set de ids de Asistentes con un papel próximo a vencer.
- *   asistentesConPapelVencido    → Set de ids de Asistentes con un papel ya vencido.
+ *   asistentesConDocumentoPorVencer  → Set de ids de Asistentes con un documento próximo a vencer.
+ *   asistentesConDocumentoVencido    → Set de ids de Asistentes con un documento ya vencido.
  *   guardiasSinReporte           → Set de ids de guardias terminadas sin reporte cargado.
  *   diasDePreaviso                    → con cuántos días de anticipación avisa esta Prestadora.
- *   asistentesConMatriculaTrabada→ Set de ids de Asistentes que hoy no pueden tomar guardias.
- *   asistentesConMatriculaPorVencer → Set de ids con la matrícula cerca de vencer.
+ *   asistentesConDocumentosPendientes → Set de ids de Asistentes a los que un documento que
+ *                                  impide trabajar hoy no los deja tomar guardias.
  */
 export function contextoVacio() {
   return {
     ahora: new Date(),
     umbrales: undefined,
-    asistentesConPapelPorVencer: new Set(),
-    asistentesConPapelVencido: new Set(),
+    asistentesConDocumentoPorVencer: new Set(),
+    asistentesConDocumentoVencido: new Set(),
     guardiasSinReporte: new Set(),
     diasDePreaviso: 0,
-    asistentesConMatriculaTrabada: new Set(),
-    asistentesConMatriculaPorVencer: new Set(),
+    asistentesConDocumentosPendientes: new Set(),
   };
 }
 
@@ -110,41 +109,38 @@ export const EXCEPCIONES = [
     id: 'documentacion',
     claveEtiqueta: 'exc_documentacion',
     parametros: (ctx) => ({ dias: ctx?.diasDePreaviso ?? 0 }),
-    // Mira las guardias que todavía van a pasar: un papel que vence no cambia nada de lo que
+    // Mira las guardias que todavía van a pasar: un documento que vence no cambia nada de lo que
     // ya ocurrió, pero sí invalida lo que está por venir.
     aplica: (g, ctx) => {
       if (!g?.asistente_id) return false;
       const s = situacionDeGuardia(g, ctx);
       if (s === SITUACION.CANCELADA || s === SITUACION.COMPLETADA) return false;
       return (
-        conjunto(ctx?.asistentesConPapelPorVencer).has(g.asistente_id) ||
-        conjunto(ctx?.asistentesConPapelVencido).has(g.asistente_id)
+        conjunto(ctx?.asistentesConDocumentoPorVencer).has(g.asistente_id) ||
+        conjunto(ctx?.asistentesConDocumentoVencido).has(g.asistente_id)
       );
     },
-    // Rojo solo si el papel ya venció. Por vencer es naranja: para eso avisa con anticipación.
+    // Rojo solo si el documento ya venció. Por vencer es naranja: para eso avisa con anticipación.
     esCritica: (guardias, ctx) =>
-      guardias.some((g) => conjunto(ctx?.asistentesConPapelVencido).has(g.asistente_id)),
+      guardias.some((g) => conjunto(ctx?.asistentesConDocumentoVencido).has(g.asistente_id)),
   },
   {
-    id: 'matricula',
-    claveEtiqueta: 'exc_matricula',
+    id: 'documentos_pendientes',
+    claveEtiqueta: 'exc_documentos_pendientes',
     parametros: () => ({}),
-    /* Va aparte de "papeles" aunque las dos hablen de vencimientos, y la diferencia es grande:
-       un papel vencido es una alerta —la guardia se hace igual—, mientras que una matrícula sin
-       vigencia la base directamente no la deja asignar. Contarlas juntas mezclaría "hay que
-       reclamar un certificado" con "esta guardia no se puede cubrir con esta persona". */
+    /* Va aparte de "documentos por vencer" aunque las dos hablen de documentos, y la diferencia
+       es grande: uno por vencer todavía sirve, mientras que uno que impide trabajar y falta, está
+       observado o venció —pasada la gracia— hace que la base no deje asignar. Contarlas juntas
+       mezclaría "hay que reclamar un documento" con "esta guardia no se puede cubrir con esta
+       persona". */
     aplica: (g, ctx) => {
       if (!g?.asistente_id) return false;
       const s = situacionDeGuardia(g, ctx);
       if (s === SITUACION.CANCELADA || s === SITUACION.COMPLETADA) return false;
-      return (
-        conjunto(ctx?.asistentesConMatriculaTrabada).has(g.asistente_id) ||
-        conjunto(ctx?.asistentesConMatriculaPorVencer).has(g.asistente_id)
-      );
+      return conjunto(ctx?.asistentesConDocumentosPendientes).has(g.asistente_id);
     },
-    // Rojo solo cuando ya está trabado. Por vencer todavía se resuelve con una llamada.
-    esCritica: (guardias, ctx) =>
-      guardias.some((g) => conjunto(ctx?.asistentesConMatriculaTrabada).has(g.asistente_id)),
+    // Siempre rojo: el Asistente no puede tomar esa guardia.
+    esCritica: (guardias) => guardias.length > 0,
   },
   {
     id: 'reportes',
@@ -153,7 +149,7 @@ export const EXCEPCIONES = [
     aplica: (g, ctx) =>
       situacionDeGuardia(g, ctx) === SITUACION.COMPLETADA &&
       conjunto(ctx?.guardiasSinReporte).has(g.id),
-    // Nunca rojo. Falta un papel, no falta una persona: se reclama, no se corre.
+    // Nunca rojo. Falta un documento, no falta una persona: se reclama, no se corre.
     esCritica: () => false,
   },
 ];

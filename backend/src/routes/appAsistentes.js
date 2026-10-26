@@ -21,7 +21,6 @@ import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestado
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { estadoDeLaExtension } from '../utils/estadoDeLaExtension.js';
-import { carpetaDelAsistente, estadoDelCertificado } from '../utils/carpetaDelAsistente.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import {
   MOTIVOS_SIN_COMPROBAR,
@@ -249,14 +248,19 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
 
-  // Es la misma consulta que hace `/perfil/papeles`, y se escribe igual.
-  const { data: certificado } = await db
-    .from('certificados')
-    .select('activo, fecha_emision, fecha_vencimiento')
-    .eq('asistente_id', req.usuarioAsistente.asistenteId)
-    .order('fecha_emision', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Su Certificado de Aptitud, el último, y con cuántos días de anticipación lo da por vencer su
+  // Prestadora: el teléfono calcula el estado con esos días y no con unos fijos. La base le deja
+  // ver al Asistente una sola Prestadora, la suya.
+  const [{ data: certificado }, { data: prestadora }] = await Promise.all([
+    db
+      .from('certificados')
+      .select('activo, fecha_emision, fecha_vencimiento')
+      .eq('asistente_id', req.usuarioAsistente.asistenteId)
+      .order('fecha_emision', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    db.from('prestadoras').select('dias_aviso_vencimiento_documentos').maybeSingle(),
+  ]);
 
   // La marca de su Prestadora viaja con el perfil, no en una dirección aparte:
   // el encabezado la necesita ni bien la persona entra, que es cuando la
@@ -292,68 +296,20 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // haber internet para pedirlo.
   const emergencias = { telefono: await telefonoParaEmergencias(req.usuarioAsistente.prestadoraId) };
 
-  res.json({ perfil: { ...perfil, zonas }, certificado: certificado || null, marca, visibilidad, intermediacion, emergencias });
-});
-
-// Su carpeta de papeles, y su Certificado de Aptitud.
-//
-// VA APARTE DE `/perfil` A PROPÓSITO. `/perfil` lo pide la aplicación entera al arrancar, para
-// saber de qué Prestadora es la marca del encabezado: todo lo que se le cuelgue ahí lo paga cada
-// arranque, y esto lo mira quien entró a Mi Perfil.
-//
-// Y ACÁ SÍ VAN LOS NOMBRES DE LOS PAPELES. Al Cliente se le dan cuentas y nunca cuál papel es
-// cuál (`celtatech/CLAUDE.md` §6); el dueño de la carpeta necesita saber qué le falta para ir a
-// buscarlo. La sesión decide de quién es la carpeta: el identificador no viaja en el pedido.
-appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res) => {
-  const asistenteId = req.usuarioAsistente.asistenteId;
-  const prestadoraId = req.usuarioAsistente.prestadoraId;
-  const db = clienteDelPedido(req);
-
-  // Los papeles exigidos y los cargados siguen con la llave maestra, y por eso con el filtro de la
-  // Prestadora: la base todavía no tiene una política que le deje leerlos al Asistente. El
-  // certificado y los días de aviso van con la credencial de quien pide.
-  const [{ data: tiposExigidos }, { data: documentos }, { data: certificado }, { data: prestadora }] =
-    await Promise.all([
-      supabase
-        .from('tipos_documento_asistente')
-        .select('id, nombre, requiere_vencimiento')
-        .eq('prestadora_id', prestadoraId)
-        .eq('activo', true)
-        .order('nombre'),
-      supabase
-        .from('documentos_asistente')
-        .select('tipo_documento_id, fecha_vencimiento')
-        .eq('prestadora_id', prestadoraId)
-        .eq('asistente_id', asistenteId),
-      db
-        .from('certificados')
-        .select('activo, fecha_emision, fecha_vencimiento')
-        .eq('asistente_id', asistenteId)
-        .order('fecha_emision', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      // La base le deja ver al Asistente una sola Prestadora, la suya.
-      db
-        .from('prestadoras')
-        .select('dias_aviso_vencimiento_documentos')
-        .maybeSingle(),
-    ]);
-
-  const diasAviso = prestadora?.dias_aviso_vencimiento_documentos ?? undefined;
-
   res.json({
-    carpeta: carpetaDelAsistente({
-      tiposExigidos: tiposExigidos || [],
-      documentos: documentos || [],
-      diasAviso,
-    }),
-    certificado: estadoDelCertificado(certificado || null, { diasAviso }),
+    perfil: { ...perfil, zonas },
+    certificado: certificado || null,
+    dias_aviso_vencimiento_documentos: prestadora?.dias_aviso_vencimiento_documentos ?? null,
+    marca,
+    visibilidad,
+    intermediacion,
+    emergencias,
   });
 });
 
 // Adónde se le paga, para que él mismo compruebe que está bien escrito.
 //
-// VA APARTE DE `/perfil` POR EL MISMO MOTIVO QUE LOS PAPELES: `/perfil` se paga en cada arranque
+// VA APARTE DE `/perfil` A PROPÓSITO: `/perfil` se paga en cada arranque
 // de la aplicación, y esto lo mira quien entró a mirarlo. Además es un dato sensible, y un dato
 // sensible que viaja en cada arranque viaja muchas más veces de las que hace falta.
 //

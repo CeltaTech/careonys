@@ -28,6 +28,10 @@ import { mensajeDeError } from '../lib/errores';
 import { useUmbrales } from '../context/UmbralesContext';
 import { usePedidosDeAutorizacion } from '../context/PedidosDeAutorizacionContext';
 import { SolicitudDeIngresoModal } from './guardias/SolicitudDeIngresoModal';
+import { AsignarConDocumentosModal } from './guardias/AsignarConDocumentosModal';
+import { useAuth } from '../context/AuthContext';
+import { usePermisos } from '../context/PermisosContext';
+import { esAdminOSuperior } from '../lib/roles';
 // Las dos vienen del punto único de verdad de las fechas. Esta pantalla tenía su propia copia de
 // `hoyISO`, escrita con `toISOString()` a secas, que devuelve el día en huso cero: quien mira
 // desde Buenos Aires después de las nueve de la noche abría la lista en el día siguiente, y las
@@ -69,6 +73,13 @@ export function Guardias() {
   // Por qué no salió lo último que se hizo sobre una guardia. Va aparte del error de carga: la
   // lista sigue a la vista, y el error de carga sólo se ve cuando la lista no se pudo traer.
   const [aviso, setAviso] = useState(null);
+  // Si lo último que no salió fue una asignación frenada por documentos pendientes: cuáles son y
+  // cómo repetirla con el motivo. Con el permiso, el aviso ofrece «Asignar igual».
+  const [excepcion, setExcepcion] = useState(null);
+  const [asignandoIgual, setAsignandoIgual] = useState(false);
+  const { usuario } = useAuth();
+  const { puede } = usePermisos();
+  const puedeAsignarIgual = esAdminOSuperior(usuario?.rol) || puede('asignar_con_documentos_pendientes');
   // El rango de fechas arranca en hoy, o en el día que pide el enlace que trajo hasta acá —el de un
   // turno que no deja desactivar una cuenta—. Se calcula una sola vez, al abrir la pantalla.
   const [parametros] = useSearchParams();
@@ -208,9 +219,16 @@ export function Guardias() {
 
   // El turno nuevo puede haberse creado y no haberse podido asignar: queda sin asignar, y se
   // dice por qué.
-  function cerrarYRecargar(motivo = null) {
+  function cerrarYRecargar(motivo = null, pendiente = null) {
     setMostrarNueva(false);
-    setAviso(motivo);
+    avisarResultado({ error: motivo, documentosPendientes: pendiente?.documentos ?? null }, pendiente?.reintentar);
+  }
+
+  // Lo que dejó una operación sobre una guardia: el motivo si no salió y, si la frenaron los
+  // documentos, cómo repetirla con el motivo de la excepción.
+  function avisarResultado({ error: falla, documentosPendientes }, reintentar) {
+    setAviso(falla);
+    setExcepcion(falla && documentosPendientes && reintentar ? { documentos: documentosPendientes, reintentar } : null);
     recargar();
   }
 
@@ -229,9 +247,10 @@ export function Guardias() {
     if (!guardiaActual) return;
     if (!(await confirmaElCambio(guardiaActual, asistenteId))) return;
 
-    const { error: falla } = await reasignarGuardia(guardiaActual, asistenteId, fecha, t, motivo);
-    setAviso(falla);
-    recargar();
+    const resultado = await reasignarGuardia(guardiaActual, asistenteId, fecha, t, motivo);
+    avisarResultado(resultado, (motivoExcepcion) =>
+      reasignarGuardia(guardiaActual, asistenteId, fecha, t, motivo, motivoExcepcion),
+    );
   }
 
   // Y lo mismo con arrastrar una guardia a otra celda de la grilla: lo que eso significa está en
@@ -255,9 +274,8 @@ export function Guardias() {
       if (!(await pedirConfirmacion(pedidoDeConfirmacionDelMovimiento(guardiaActual, origen, destino, t)))) return;
     }
 
-    const { error: falla } = await moverGuardia(guardiaActual, movimiento, t);
-    setAviso(falla);
-    recargar();
+    const resultado = await moverGuardia(guardiaActual, movimiento, t);
+    avisarResultado(resultado, (motivoExcepcion) => moverGuardia(guardiaActual, movimiento, t, motivoExcepcion));
   }
 
   const tl = t.guardias.listado;
@@ -326,7 +344,19 @@ export function Guardias() {
           </div>
         )}
 
-        {aviso && <Alert variant="error">{aviso}</Alert>}
+        {aviso && (
+          <Alert variant="error">
+            {aviso}
+            {excepcion && puedeAsignarIgual && (
+              <>
+                {' '}
+                <Button variant="secondary" onClick={() => setAsignandoIgual(true)}>
+                  {t.documentos_asistente.asignar_igual}
+                </Button>
+              </>
+            )}
+          </Alert>
+        )}
 
         <EstadoLista
           estado={estadoCarga}
@@ -399,6 +429,20 @@ export function Guardias() {
       </section>
 
       {mostrarNueva && <NuevaGuardiaModal onClose={() => setMostrarNueva(false)} onCreada={cerrarYRecargar} />}
+
+      {asignandoIgual && excepcion && (
+        <AsignarConDocumentosModal
+          documentos={excepcion.documentos}
+          reintentar={excepcion.reintentar}
+          onClose={() => setAsignandoIgual(false)}
+          onAsignado={() => {
+            setAsignandoIgual(false);
+            setAviso(null);
+            setExcepcion(null);
+            recargar();
+          }}
+        />
+      )}
 
       {solicitudAbierta && (
         <SolicitudDeIngresoModal

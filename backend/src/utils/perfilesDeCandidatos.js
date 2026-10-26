@@ -63,19 +63,6 @@ export const PESOS = {
    */
   ausencia: -1000,
 
-  /** Tiene la Matrícula que su tipo le exige, vigente y comprobada. */
-  matricula_ok: 8,
-  /** La tiene bien, pero está por vencerse. Resta y se avisa; no bloquea. */
-  matricula_vence: -10,
-  /**
-   * Los tres motivos que sí bloquean. Restan lo mismo que estar ocupado y por el mismo motivo:
-   * el número no decide nada —el bloqueo ya lo decidió la base—, solo los manda al fondo de la
-   * lista para que no se mezclen con los que sí pueden tomar la guardia.
-   */
-  matricula_falta: -1000,
-  matricula_vencida: -1000,
-  matricula_sin_verificar: -1000,
-
   /**
    * El Asistente no trabaja en la modalidad de esta guardia. Bloquea, y resta lo mismo que los
    * demás bloqueos por el mismo motivo: el número no decide nada, solo lo manda al fondo.
@@ -92,8 +79,8 @@ export const PESOS = {
    */
   no_disponible: -1000,
 
-  papeles_ok: 5,
-  papeles_vencen: -10,
+  documentos_al_dia: 5,
+  documentos_por_vencer: -10,
 
   /**
    * Vive cerca de la casa del Paciente. Suma parecido a estar libre y bastante menos que la
@@ -142,7 +129,7 @@ export const TOPES = {
   proporcion_horas_para_avisar: 0.75,
 
   /**
-   * Con cuántos días de anticipación se avisa que un papel o una Matrícula vence.
+   * Con cuántos días de anticipación se avisa que un documento vence.
    *
    * No se configura acá: ya se configura una vez para todo el producto, en Configuración →
    * documentos. Dos lugares para el mismo número terminan en dos plazos distintos.
@@ -176,10 +163,8 @@ export const PESOS_QUE_SE_PUEDEN_TOCAR = {
   continuidad_por_vez: { minimo: 0, maximo: 60 },
   sin_continuidad: { minimo: -60, maximo: 0 },
   libre: { minimo: 0, maximo: 60 },
-  matricula_ok: { minimo: 0, maximo: 60 },
-  matricula_vence: { minimo: -60, maximo: 0 },
-  papeles_ok: { minimo: 0, maximo: 60 },
-  papeles_vencen: { minimo: -60, maximo: 0 },
+  documentos_al_dia: { minimo: 0, maximo: 60 },
+  documentos_por_vencer: { minimo: -60, maximo: 0 },
   cerca: { minimo: 0, maximo: 60 },
   lejos: { minimo: -60, maximo: 0 },
   horas_cerca_del_tope: { minimo: -120, maximo: 0 },

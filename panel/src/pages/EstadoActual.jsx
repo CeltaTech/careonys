@@ -15,14 +15,12 @@ import { excepcionPorId, resumenDeExcepciones } from '../lib/excepciones';
 import { estaSinCubrir } from '../lib/cobertura';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { hoyISO, sumarDias } from '../lib/horarios';
-import { COLUMNAS_ESTADO_MATRICULA } from '../lib/matricula';
+import { impideTrabajarHoy } from '../lib/documentos';
 import {
   ESTADO_VENCIMIENTO,
-  URGENCIA,
   diasParaVencer,
   estadoDeVencimiento,
   fechaLimiteDeAviso,
-  urgenciaDeVencimiento,
 } from '../lib/reglaVencimientos';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { ESTADO_ACTIVO } from '../lib/candidatos';
@@ -219,7 +217,7 @@ export function EstadoActual() {
     const desde = sumarDias(hoy, -DIAS_HACIA_ATRAS);
     const hasta = sumarDias(hoy, DIAS_HACIA_ADELANTE);
     const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
-    const limitePapeles = fechaLimiteDeAviso(diasDePreaviso);
+    const limiteDocumentos = fechaLimiteDeAviso(diasDePreaviso);
 
     const [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas] = await Promise.all([
       supabase.from('guardias').select('*').gte('fecha', desde).lte('fecha', hasta),
@@ -229,8 +227,11 @@ export function EstadoActual() {
         .from('documentos_asistente')
         .select('asistente_id, fecha_vencimiento')
         .not('fecha_vencimiento', 'is', null)
-        .lte('fecha_vencimiento', limitePapeles),
-      supabase.from('estado_matricula_asistente').select(COLUMNAS_ESTADO_MATRICULA),
+        .lte('fecha_vencimiento', limiteDocumentos),
+      supabase
+        .from('documentos_pedidos_al_asistente')
+        .select('asistente_id, impide_trabajar, estado, fecha_vencimiento, gracia_hasta')
+        .eq('impide_trabajar', true),
       supabase
         .from('servicios')
         .select(CONSULTA_SERVICIOS)
@@ -258,15 +259,15 @@ export function EstadoActual() {
     const pacientesPorGuardia = await cargarPacientesDeGuardias((gs.data ?? []).map((g) => g.id));
     const guardias = conPacientes(gs.data ?? [], pacientesPorGuardia, nombresPaciente);
 
-    // Papeles: vencido es rojo, por vencer es naranja. La regla es la de Documentación.
+    // Documentos: vencido es rojo, por vencer es naranja. La regla es la de Documentación.
     const porVencer = new Set();
     const vencidos = new Set();
-    let hayPapelVencido = false;
+    let hayDocumentoVencido = false;
     for (const d of ds.data ?? []) {
-      const estadoPapel = estadoDeVencimiento(diasParaVencer(d.fecha_vencimiento), diasDePreaviso);
-      if (estadoPapel === ESTADO_VENCIMIENTO.VENCIDO) {
+      const estadoDocumento = estadoDeVencimiento(diasParaVencer(d.fecha_vencimiento), diasDePreaviso);
+      if (estadoDocumento === ESTADO_VENCIMIENTO.VENCIDO) {
         vencidos.add(d.asistente_id);
-        hayPapelVencido = true;
+        hayDocumentoVencido = true;
       } else porVencer.add(d.asistente_id);
     }
 
@@ -298,17 +299,9 @@ export function EstadoActual() {
       }
     }
 
-    const matriculaTrabada = new Set();
-    const matriculaPorVencer = new Set();
+    const documentosPendientes = new Set();
     for (const fila of em.data ?? []) {
-      if (fila.motivo_bloqueo) {
-        matriculaTrabada.add(fila.asistente_id);
-        continue;
-      }
-      if (fila.requiere_matricula !== true) continue;
-      if (urgenciaDeVencimiento(fila.dias_para_vencer, diasDePreaviso) !== URGENCIA.NINGUNA) {
-        matriculaPorVencer.add(fila.asistente_id);
-      }
+      if (impideTrabajarHoy(fila, hoy)) documentosPendientes.add(fila.asistente_id);
     }
 
     const servicios = sv.data ?? [];
@@ -327,18 +320,17 @@ export function EstadoActual() {
       nombresPaciente,
       emergenciasSinAtender: emg.count ?? 0,
       asistentesActivos: (as.data ?? []).filter((a) => a.estado === ESTADO_ACTIVO).length,
-      papelesPorVencer: (ds.data ?? []).length,
-      hayPapelVencido,
+      documentosPorVencer: (ds.data ?? []).length,
+      hayDocumentoVencido,
       alertasSinResolver: al.count ?? 0,
       incidenciasAbiertas: incAbiertas.count ?? 0,
       incidencias: inc.data ?? [],
       ctxExtra: {
-        asistentesConPapelPorVencer: porVencer,
-        asistentesConPapelVencido: vencidos,
+        asistentesConDocumentoPorVencer: porVencer,
+        asistentesConDocumentoVencido: vencidos,
         guardiasSinReporte: sinReporte,
         diasDePreaviso,
-        asistentesConMatriculaTrabada: matriculaTrabada,
-        asistentesConMatriculaPorVencer: matriculaPorVencer,
+        asistentesConDocumentosPendientes: documentosPendientes,
       },
     });
     setEstado('listo');
@@ -542,8 +534,8 @@ export function EstadoActual() {
             a="/documentacion"
             titulo={tx.documentacion_por_vencer}
             detalle={con(tx.en_los_proximos_dias, { dias: datos.ctxExtra.diasDePreaviso })}
-            cantidad={datos.papelesPorVencer}
-            tono={datos.hayPapelVencido ? TONO.CRITICO : TONO.ATENCION}
+            cantidad={datos.documentosPorVencer}
+            tono={datos.hayDocumentoVencido ? TONO.CRITICO : TONO.ATENCION}
           />
           <FilaAlerta
             a="/alertas"

@@ -8,6 +8,7 @@ import { useSeVe } from '../context/PerfilContext';
 import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
 import { useAuth } from '../context/AuthContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
+import { mensajeDeError } from '../lib/errores';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
 
@@ -28,6 +29,56 @@ function ListaDeAccesos({ titulo, claves, etiquetas, vacio }) {
         </ul>
       )}
     </>
+  );
+}
+
+// Quiénes son las personas autorizadas del titular, y el botón para agregar otra. Sólo lo ve el
+// titular: el backend no se lo contesta a nadie más.
+function PersonasAutorizadasDelTitular() {
+  const { t } = useLocale();
+  const textos = t.alta_persona;
+  const [personas, setPersonas] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let activo = true;
+    api
+      .personasAutorizadas()
+      .then(({ personas: lista }) => {
+        if (activo) setPersonas(lista);
+      })
+      .catch((e) => {
+        if (activo) setError(mensajeDeError(e, t, 'personas autorizadas'));
+      });
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  return (
+    <section className="pwa-card">
+      <h2>{textos.lista_titulo}</h2>
+      {error ? (
+        <div className="alert alert-error" role="alert">{error}</div>
+      ) : personas === null ? (
+        <div className="estado-cargando" role="status">{t.comun.cargando}</div>
+      ) : personas.length === 0 ? (
+        <p className="guardia-card-detalle">{textos.lista_vacia}</p>
+      ) : (
+        <ul className="lista-tareas">
+          {personas.map((p) => (
+            <li key={p.usuarioId}>
+              {p.dni ? `${p.nombre} — ${textos.dni.replace('{dni}', p.dni)}` : p.nombre}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="pwa-acciones pwa-acciones-sola">
+        <Link to="/personas-autorizadas/nueva" className="btn">
+          {textos.titulo}
+        </Link>
+      </div>
+    </section>
   );
 }
 
@@ -182,6 +233,8 @@ export default function MiPerfil() {
           )}
         </section>
       )}
+
+      {perfil.esTitular && <PersonasAutorizadasDelTitular />}
 
       <section className="pwa-card">
         <h2>{t.perfil.notificaciones_titulo}</h2>

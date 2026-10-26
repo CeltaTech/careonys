@@ -6,7 +6,7 @@ import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { contactoDeLaPrestadora } from '../utils/contactoDeLaPrestadora.js';
-import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
+import { visibilidadDelPedido, visibilidadDeLaPrestadora, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { esFechaISO, semanaQueContiene } from '../utils/fechas.js';
@@ -14,7 +14,15 @@ import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
 import { FICHA_NOMBRE, PARTES_DEL_DOMICILIO, fichaCon, conSuFicha, conSusFichas } from '../utils/fichaDelPaciente.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import { accesosDelPedido, exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } from '../utils/accesosDePersonasAutorizadas.js';
-import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesPersonasAutorizadas.js';
+import {
+  instruccionPendiente,
+  pedirCodigo,
+  confirmarConCodigo,
+  crearInstruccion,
+  personasAutorizadasConSusAccesos,
+} from '../utils/instruccionesPersonasAutorizadas.js';
+import { invitarPersonaAutorizada } from '../utils/cuentasPanel.js';
+import { mezclarAccesosConCatalogo } from '../utils/catalogoPersonasAutorizadas.js';
 import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { ARCHIVOS_DE_LA_PIEZA, conArchivosEnOrden, enlaceDelArchivo } from '../utils/archivosDeContenidos.js';
@@ -203,13 +211,83 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
 });
 
 // ============================================================================
-// La instrucción sobre los accesos de las personas autorizadas, del lado del titular
+// Las personas autorizadas, del lado del titular
 //
-// Acá el titular no configura nada: lee lo que pidió y lo confirma. Quién entra como persona autorizada y qué
-// ve cada uno lo carga la Prestadora, como siempre. Esta es la firma, y nada más.
+// Las anota él desde acá o la Prestadora desde el Panel. Las dos puertas terminan en lo mismo:
+// una autorización con las personas anotadas, que rige recién cuando el titular la firma.
 //
 // Y firma esta hoja y ninguna otra. Careonys no es un sistema para firmar documentos.
 // ============================================================================
+
+// Lo que necesita la pantalla para anotar a alguien: quiénes ya están, qué se le puede dar y qué
+// géneros se pueden elegir en el país de la Prestadora.
+appClientesRouter.get('/personas-autorizadas', requiereRolCliente, soloElTitular, async (req, res) => {
+  try {
+    const { clienteId, prestadoraId } = req.usuarioCliente;
+    const [personas, generos] = await Promise.all([
+      personasAutorizadasConSusAccesos({ clienteId, prestadoraId }),
+      generosDelPais(prestadoraId),
+    ]);
+    // Con la maestra, como todo lo de las personas autorizadas.
+    const catalogo = mezclarAccesosConCatalogo({
+      filasGuardadas: [],
+      visibilidad: await visibilidadDeLaPrestadora(supabase, prestadoraId),
+    }).map(({ clave, descripcion, de_fabrica, topado }) => ({ clave, descripcion, de_fabrica, topado }));
+
+    res.json({
+      personas: personas.map(({ usuarioId, nombre, dni }) => ({ usuarioId, nombre, dni })),
+      catalogo,
+      generos,
+    });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// El titular anota a una persona y le arma ahí mismo la autorización para firmar.
+appClientesRouter.post('/personas-autorizadas', requiereRolCliente, soloElTitular, async (req, res) => {
+  const { nombre, apellido, documento, genero, email, accesos } = req.body || {};
+  const { id, clienteId, prestadoraId } = req.usuarioCliente;
+
+  try {
+    // Con la maestra: la cuenta nueva y la Ficha no las puede crear el titular con su sesión.
+    const { miembroId } = await invitarPersonaAutorizada({
+      db: supabase,
+      email,
+      nombre,
+      apellido,
+      documento,
+      genero,
+      clienteId,
+      prestadoraId,
+      invitadoPor: id,
+    });
+    const instruccion = await crearInstruccion({
+      clienteId,
+      prestadoraId,
+      cargadaPor: id,
+      accesosPedidos: accesos ? { [miembroId]: accesos } : undefined,
+    });
+    res.json({ ok: true, instruccion });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+async function generosDelPais(prestadoraId) {
+  const { data: prestadora } = await supabase
+    .from('prestadoras')
+    .select('pais')
+    .eq('id', prestadoraId)
+    .maybeSingle();
+  const { data, error } = await supabase
+    .from('catalogo_generos')
+    .select('codigo')
+    .eq('pais', prestadora?.pais)
+    .eq('activo', true);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((fila) => fila.codigo);
+}
 
 appClientesRouter.get('/instruccion-pendiente', requiereRolCliente, soloElTitular, async (req, res) => {
   res.json({

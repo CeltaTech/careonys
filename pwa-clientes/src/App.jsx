@@ -24,6 +24,7 @@ import Contenidos from './pages/Contenidos';
 import MiPerfil from './pages/MiPerfil';
 import MiClave from './pages/MiClave';
 import FirmarInstruccion from './pages/FirmarInstruccion';
+import AgregarPersonaAutorizada from './pages/AgregarPersonaAutorizada';
 import CodigoParaElAsistente from './pages/CodigoParaElAsistente';
 import BuscarAsistentes from './pages/BuscarAsistentes';
 import PerfilPublicoAsistente from './pages/PerfilPublicoAsistente';
@@ -231,6 +232,8 @@ function Rutas() {
             quien no tiene ninguna ve que no hay ninguna. Adivinarlo acá dejaría al titular
             afuera de su propia pantalla mientras el perfil todavía viaja. */}
         <Route path="instruccion" element={<FirmarInstruccion />} />
+        {/* Sin guardián por lo mismo: el backend sólo se la contesta al titular. */}
+        <Route path="personas-autorizadas/nueva" element={<AgregarPersonaAutorizada />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

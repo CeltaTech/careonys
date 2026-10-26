@@ -1,11 +1,11 @@
-// El renglón que le recuerda al titular que quedó una instrucción sin firmar.
+// El renglón que le avisa al titular que la Prestadora armó una autorización de acceso para firmar.
+// Cuando la arma él mismo, la firma ahí mismo y este renglón no llega a aparecer.
 //
-// NO BLOQUEA NI INTERRUMPE, A PROPÓSITO. Lo que el titular pidió ya rige desde que la Prestadora
-// lo cargó: lo que falta es la constancia firmada. Un cartel que tape la pantalla, o que obligue a
-// firmar para seguir, estaría mintiendo sobre qué pasa si no se firma.
+// NO BLOQUEA NI INTERRUMPE, A PROPÓSITO. Hasta la firma sigue rigiendo lo anterior: no hay nada
+// trabado, así que un cartel que tape la pantalla estaría mintiendo.
 //
 // SÓLO LO VE EL TITULAR, y sólo cuando hay algo pendiente. Para las personas autorizadas no existe: la
-// instrucción no es suya y no hay nada que puedan hacer con ella.
+// autorización no es suya y no hay nada que puedan hacer con ella.
 //
 // Se dibuja en la pantalla principal y en Mi Perfil. La lista de Pacientes se saltea sola cuando
 // hay uno solo, así que las dos son «la pantalla principal» según el Cliente, y la advertencia tiene que

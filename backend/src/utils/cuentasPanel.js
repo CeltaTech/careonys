@@ -4,7 +4,6 @@ import { invitarActivacionCuenta } from './activacionCuenta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from './celularDeUnaSolaPersona.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
-import { CATALOGO_PERSONAS_AUTORIZADAS } from './catalogoPersonasAutorizadas.js';
 import { acotarAUsuariosDelPanel, laCuentaDelPanelEstaAlAlcance } from '../middleware/alcancePrestadora.js';
 import { APROBADAS, filasDeIncorporacion } from './etapasDeIncorporacion.js';
 import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
@@ -517,15 +516,19 @@ export async function revertirClienteImportada(db, clienteId, prestadoraId) {
 // `crearCuentaConPerfil` igual que cualquier otro rol de login propio, y en vez de una fila en
 // `clientes` (eso es solo para el titular) crea la fila en `personas_autorizadas` que la vincula.
 //
-// Y le deja escritos los diez accesos en su valor de fábrica, que es lo mismo que veía el
-// personas autorizadas antes de que esto existiera: todo menos calificar al Asistente y pedir medicación.
-// No es un adorno — la función de la base niega cuando no encuentra fila, así que una persona
-// recién anotada y sin filas no vería absolutamente nada y nadie sabría por qué. Después, si el
-// titular quiere darle menos, lo pide por escrito y se carga la instrucción.
-export async function invitarPersonaAutorizada({ db, email, nombre, telefono, clienteId, prestadoraId, invitadoPor }) {
-  if (!nombre || !email || !clienteId) {
-    throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email, clienteId)');
+// La persona queda en el Directorio de Personas, buscada por su CUIL: si ya tiene Ficha se usa esa,
+// y si no se crea. El DNI no se pide aparte: son los ocho dígitos del medio del CUIL.
+//
+// No se le escribe ningún acceso. Anotada no ve nada: los accesos rigen recién cuando el titular
+// firma la autorización que la nombra, y armarla es lo que hace quien llama después de esto.
+export async function invitarPersonaAutorizada({
+  db, email, nombre, apellido, documento, genero, telefono, clienteId, prestadoraId, invitadoPor,
+}) {
+  if (!nombre || !apellido || !email || !clienteId) {
+    throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, apellido, email, clienteId)');
   }
+  const cuil = soloElNumero(documento);
+  if (!cuil) throw new ErrorConMotivo('falta_el_documento', 'Falta el CUIL');
 
   // Y el Cliente tiene que ser de esta Prestadora. Sin esto, un número de Cliente de otra alcanza
   // para meterle a alguien adentro de las personas autorizadas de un Paciente ajeno, con acceso a sus
@@ -535,26 +538,39 @@ export async function invitarPersonaAutorizada({ db, email, nombre, telefono, cl
     throw new ErrorConMotivo('cliente_de_otra_prestadora', `cliente ${clienteId} fuera de la Prestadora`);
   }
 
+  // La Ficha va antes que la cuenta: un CUIL mal escrito vuelve sin dejar una cuenta a medio hacer.
+  const persona = await fichaPorDocumento(db, {
+    prestadoraId,
+    documento: cuil,
+    dni: cuil.slice(2, 10).replace(/^0+/, ''),
+    genero,
+    nombre,
+    apellido,
+    email,
+    telefono,
+    deQuien: 'persona_autorizada',
+  });
+
+  // La misma persona no se anota dos veces en el mismo Cliente. La base lo exige igual con su
+  // índice único; esto es para contestar con el motivo y no con el error crudo.
+  const { data: yaEsta } = await db
+    .from('personas_autorizadas')
+    .select('usuario_id')
+    .eq('cliente_id', clienteId)
+    .eq('persona_id', persona.id)
+    .maybeSingle();
+  if (yaEsta) throw new ErrorConMotivo('ya_es_persona_autorizada', 'Ya está anotada en este Cliente');
+
   let miembroId;
   try {
     ({ userId: miembroId } = await crearCuentaConPerfil({
-      email, nombre, telefono, rol: 'cliente', prestadoraId, enviarActivacion: true,
+      email, nombre: `${nombre} ${apellido}`, telefono, rol: 'cliente', prestadoraId, enviarActivacion: true,
     }));
 
     const { error: errorMiembro } = await db
       .from('personas_autorizadas')
-      .insert({ usuario_id: miembroId, cliente_id: clienteId, email, creado_por: invitadoPor });
+      .insert({ usuario_id: miembroId, cliente_id: clienteId, persona_id: persona.id, email, creado_por: invitadoPor });
     if (errorMiembro) throw new Error(errorMiembro.message);
-
-    const { error: errorAccesos } = await db
-      .from('permisos_personas_autorizadas')
-      .insert(CATALOGO_PERSONAS_AUTORIZADAS.map((cosa) => ({
-        cliente_id: clienteId,
-        usuario_id: miembroId,
-        clave: cosa.clave,
-        permitido: cosa.de_fabrica,
-      })));
-    if (errorAccesos) throw new Error(errorAccesos.message);
 
     return { miembroId };
   } catch (error) {
@@ -784,6 +800,15 @@ const MOTIVOS_DEL_DOCUMENTO = {
     falta_el_genero: 'falta_el_genero',
     genero_no_corresponde: 'genero_no_reconocido',
     23505: 'legajo_repetido',
+  },
+  persona_autorizada: {
+    falta_el_documento: 'falta_el_documento',
+    numero_no_valido: 'numero_no_valido',
+    falta_el_dni: 'falta_el_dni',
+    dni_no_coincide: 'dni_no_coincide',
+    falta_el_genero: 'falta_el_genero',
+    genero_no_corresponde: 'genero_no_reconocido',
+    23505: 'documento_repetido',
   },
 };
 

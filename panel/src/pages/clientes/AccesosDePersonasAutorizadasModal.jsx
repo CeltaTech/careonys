@@ -17,7 +17,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
    Prestadora qué puede ver cada una de sus Personas autorizadas, la Prestadora lo carga acá, y al guardar
    el backend arma el documento en castellano con eso escrito. El titular lo firma —en papel o
    confirmándolo desde su aplicación—, y así, el día que alguien diga «yo nunca autoricé eso»,
-   está la instrucción con nombre, fecha y firma. Por eso el documento aparece DESPUÉS de
+   está la autorización con nombre, fecha y firma. Por eso el documento aparece DESPUÉS de
    guardar: lo escribe el backend, que es el único que sabe qué quedó guardado.
 
    LA LISTA NO SE ESCRIBE ACÁ. Las once casillas, con su descripción y su ayuda, viven en
@@ -25,7 +25,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
    saca una. Esta pantalla dibuja lo que le llega, en el orden que le llega: una casilla nueva
    aparece sola, sin tocar este archivo.
 
-   SE MANDA UNA SOLA INSTRUCCIÓN CON TODO. No una por persona ni una por casilla: lo que el
+   SE MANDA UNA SOLA AUTORIZACIÓN CON TODO. No una por persona ni una por casilla: lo que el
    titular firma es el estado completo de sus Personas autorizadas en una fecha. Guardar de a pedacitos
    dejaría al titular firmando algo distinto de lo que rige. */
 
@@ -55,7 +55,7 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
   const [error, setError] = useState(null);
   const [documento, setDocumento] = useState(null);
 
-  /* Con el documento en pantalla la instrucción ya se guardó, así que cerrar tiene que avisarle
+  /* Con el documento en pantalla la autorización ya se guardó, así que cerrar tiene que avisarle
      a la pantalla de atrás para que se vuelva a leer: si sólo cerrara, la tabla seguiría
      mostrando los accesos viejos y el cartel de la firma pendiente no aparecería. */
   const cerrar = useCallback(() => {
@@ -88,7 +88,7 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
         (miembro.accesos ?? []).map((acceso) => [
           acceso.clave,
           // Lo que la Prestadora tiene apagado para toda su aplicación no lo enciende ningún
-          // atajo: ese tope no lo puede levantar la instrucción de un Cliente.
+          // atajo: ese tope no lo puede levantar la autorización de un Cliente.
           acceso.topado ? false : modo === 'todo' || !ACCIONES_QUE_ESCRIBEN.includes(acceso.clave),
         ]),
       ),
@@ -201,8 +201,14 @@ export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false,
           )}
         </div>
 
+        {/* El pie de firma sale sólo en el papel: en la aplicación se firma con el código. */}
         <div id="area-imprimible">
           <div className="documento-instruccion">{texto}</div>
+          <div className="documento-firmas">
+            <div>{t.clientes.personas_autorizadas.pie_firma}</div>
+            <div>{t.clientes.personas_autorizadas.pie_aclaracion}</div>
+            <div>{t.clientes.personas_autorizadas.pie_fecha}</div>
+          </div>
         </div>
 
         <div className="panel-modal-acciones no-imprimir">
@@ -219,9 +225,9 @@ export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false,
 /* Registrar que llegó el documento firmado.
    ==========================================================================
 
-   El archivo es opcional a propósito: lo que cierra la instrucción es que la Prestadora declare
+   El archivo es opcional a propósito: lo que cierra la autorización es que la Prestadora declare
    que el titular firmó, y hay Prestadoras que archivan el papel afuera del sistema. Obligar a
-   subirlo dejaría instrucciones firmadas sin poder registrarse, que es peor que registrarlas
+   subirlo dejaría autorizaciones firmadas sin poder registrarse, que es peor que registrarlas
    sin adjunto. */
 export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, onRegistrado }) {
   const { t } = useLocale();

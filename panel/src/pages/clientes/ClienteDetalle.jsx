@@ -564,6 +564,7 @@ export function ClienteDetalle() {
       {mostrarInvitarPersonasAutorizadas && (
         <InvitarPersonaAutorizadaModal
           clienteId={cliente.id}
+          prestadoraId={cliente.prestadora_id}
           onClose={() => setMostrarInvitarPersonasAutorizadas(false)}
           onInvitado={() => {
             setMostrarInvitarPersonasAutorizadas(false);

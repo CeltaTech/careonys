@@ -60,6 +60,10 @@ export const api = {
   // Son dos pedidos porque son dos momentos: el código se pide cuando la persona ya leyó.
   pedirCodigoDeInstruccion: (id) => pedido(`/instruccion/${id}/codigo`, { method: 'POST' }),
   confirmarInstruccion: (id, codigo) => pedido(`/instruccion/${id}/confirmar`, { method: 'POST', body: JSON.stringify({ codigo }) }),
+  // Las personas autorizadas, sólo para el titular: quiénes son, y el catálogo de accesos y los
+  // géneros para el alta. Agregar una no da ningún acceso: arma la autorización que él firma.
+  personasAutorizadas: () => pedido('/personas-autorizadas'),
+  agregarPersonaAutorizada: (datos) => pedido('/personas-autorizadas', { method: 'POST', body: JSON.stringify(datos) }),
   // El pase de guardia (pendiente #113): el código que se le muestra al Asistente que llega. No
   // lleva el Paciente adentro porque el código es del Cliente entero, y quiénes son sus personas
   // autorizadas lo resuelve el backend con la sesión de quien pide, nunca con un dato de este teléfono.

@@ -20,48 +20,93 @@ import {
   INTENTOS_MAXIMOS,
 } from './codigoDeUnSoloUso.js';
 
-// Todo lo que le pasa a una instrucción sobre los accesos de las personas autorizadas: se carga, se firma
-// —desde la aplicación con un código, o en papel—, o se anula porque llegó otra.
+// Todo lo que le pasa a una autorización de acceso de las personas autorizadas: se arma, se firma
+// —desde la aplicación con un código, o con el documento firmado que sube la Prestadora—, o se
+// anula porque llegó otra.
 //
-// LOS PERMISOS RIGEN DESDE QUE SE CARGA, NO DESDE QUE SE FIRMA. Es a propósito y es lo que se
-// aprobó: si hay una urgencia —una separación, una pelea— la Prestadora corta el acceso en el
-// momento y el papel se regulariza después. Mientras tanto la instrucción queda en
-// `pendiente_firma`, que es un estado normal y no un error, y la pantalla del Panel lo muestra
-// para que nadie se olvide de cerrarlo.
+// LOS PERMISOS RIGEN DESDE LA FIRMA. Al armarla, los accesos que pide quedan guardados en la
+// misma autorización (`accesos_pedidos`), y recién al firmarse pasan a
+// `permisos_personas_autorizadas`. Hasta entonces sigue rigiendo lo anterior, y una persona recién
+// anotada no tiene ningún acceso.
 //
-// UNA SOLA PENDIENTE POR CLIENTE. Si llega una instrucción nueva antes de que se firme la
+// UNA SOLA PENDIENTE POR CLIENTE. Si llega una autorización nueva antes de que se firme la
 // anterior, la anterior se anula: lo último que pidió el titular es lo que vale, y dos pendientes
 // a la vez dejarían al titular firmando algo que ya no rige. La base lo exige además con un índice
-// único, así que esto no es la única defensa.
+// único, así que esto no es la única defensa. Por eso la nueva parte de lo que pedía la pendiente,
+// y no de lo que rige: si no, anotar a una segunda persona borraría lo pedido para la primera.
 //
 // EL CÓDIGO ES DE UN SOLO USO Y SE GUARDA SU IDENTIFICADOR DE VERIFICACIÓN, NUNCA EL CÓDIGO. Cómo se arma, cómo se
 // compara y cuántos intentos se toleran está una sola vez, en `codigoDeUnSoloUso.js`: es el mismo
 // mecanismo que usan la recuperación de acceso y el pase de guardia.
 const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
 
-// Quiénes son las personas autorizadas de este Cliente, sin el titular. El titular también tiene
-// fila —apuntando a sí mismo, que es lo que deja resolver de una consulta a qué Cliente pertenece
-// alguien—, pero él no entra en esta cuenta: ve todo siempre, y ninguna instrucción le puede
-// quitar nada, ni siquiera una suya.
-async function personasAutorizadasDelCliente(clienteId, prestadoraId) {
+// Quiénes son las personas autorizadas de este Cliente. El nombre y el DNI salen de su Ficha de
+// Persona, que es donde se guardan una sola vez. El titular no tiene fila acá: ve todo siempre, y
+// ninguna autorización le puede quitar nada, ni siquiera una suya.
+async function personasAutorizadasDelCliente(clienteId) {
   const { data, error } = await supabase
     .from('personas_autorizadas')
-    .select('usuario_id, email, created_at, usuarios!personas_autorizadas_usuario_id_fkey(nombre)')
+    .select('usuario_id, persona_id, email, created_at, personas(nombre, apellido, dni)')
     .eq('cliente_id', clienteId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
 
-  // La fila del titular guarda su cuenta, y `clienteId` es el Legajo: para reconocerla hay que
-  // pedir de qué cuenta cuelga ese Legajo.
-  const cuentaDelTitular = await cuentaDeLaFila('clientes', clienteId, prestadoraId);
+  return (data ?? []).map((fila) => ({
+    usuarioId: fila.usuario_id,
+    personaId: fila.persona_id,
+    email: fila.email,
+    nombre: [fila.personas?.nombre, fila.personas?.apellido].filter(Boolean).join(' ') || null,
+    dni: fila.personas?.dni ?? null,
+  }));
+}
 
-  return (data ?? [])
-    .filter((fila) => fila.usuario_id !== cuentaDelTitular)
-    .map((fila) => ({
-      usuarioId: fila.usuario_id,
-      email: fila.email,
-      nombre: fila.usuarios?.nombre ?? null,
-    }));
+// Lo último que se pidió para cada persona: lo que pide la autorización pendiente, si hay una, y
+// si no lo que rige. Es de donde parte una autorización nueva, para que cambiar a una persona no
+// les cambie nada a las demás.
+async function ultimoPedidoPorPersona(clienteId, prestadoraId) {
+  const pendiente = await instruccionPendiente(clienteId, prestadoraId);
+  if (pendiente) return pendiente.accesos_pedidos ?? {};
+
+  const { data: filas, error } = await supabase
+    .from('permisos_personas_autorizadas')
+    .select('usuario_id, clave, permitido')
+    .eq('cliente_id', clienteId);
+  if (error) throw new Error(error.message);
+
+  const porPersona = {};
+  for (const fila of filas ?? []) {
+    porPersona[fila.usuario_id] ??= {};
+    porPersona[fila.usuario_id][fila.clave] = Boolean(fila.permitido);
+  }
+  return porPersona;
+}
+
+// Lo que la autorización firmada pide pasa a regir: reemplaza entero lo anterior. Una persona que
+// se retiró mientras la autorización esperaba firma no recibe nada.
+async function aplicarLosAccesosPedidos({ clienteId, instruccionId, accesosPedidos }) {
+  const presentes = new Set((await personasAutorizadasDelCliente(clienteId)).map((persona) => persona.usuarioId));
+  const ahora = new Date().toISOString();
+
+  const filas = Object.entries(accesosPedidos ?? {})
+    .filter(([usuarioId]) => presentes.has(usuarioId))
+    .flatMap(([usuarioId, accesos]) => Object.entries(accesos).map(([clave, permitido]) => ({
+      cliente_id: clienteId,
+      usuario_id: usuarioId,
+      clave,
+      permitido: Boolean(permitido),
+      instruccion_id: instruccionId,
+      updated_at: ahora,
+    })));
+
+  const { error: errorBorrar } = await supabase
+    .from('permisos_personas_autorizadas')
+    .delete()
+    .eq('cliente_id', clienteId);
+  if (errorBorrar) throw new Error(errorBorrar.message);
+
+  if (filas.length === 0) return;
+  const { error } = await supabase.from('permisos_personas_autorizadas').insert(filas);
+  if (error) throw new Error(error.message);
 }
 
 async function nombreDe(usuarioId, prestadoraId) {
@@ -75,13 +120,13 @@ async function nombreDe(usuarioId, prestadoraId) {
   return data?.nombre ?? null;
 }
 
-// Carga la instrucción que el titular pidió: arma el documento, lo guarda tal cual, deja los
-// accesos rigiendo y devuelve la instrucción pendiente de firma.
+// Arma la autorización con las personas anotadas hoy: el documento se guarda tal cual, junto con
+// los accesos que pide, y queda pendiente de firma. No cambia ningún acceso: eso pasa al firmarse.
 //
-// `accesosPedidos` viene del Panel con la forma `{ <usuarioId>: { <clave>: true/false } }`. Lo que
-// llegue de una persona que no está en las personas autorizadas se ignora, y lo que falte de una que sí está se
-// completa con el valor de fábrica: guardar sólo lo que vino dejaría filas ausentes, y una fila
-// ausente para la base significa «no».
+// `accesosPedidos` tiene la forma `{ <usuarioId>: { <clave>: true/false } }` y trae lo que cambia.
+// Las personas que no vienen ahí conservan lo último que se pidió para ellas. Lo que llegue de una
+// persona que no está anotada se ignora, y lo que falte de una que sí está se completa con el
+// valor de fábrica: la autorización dice entero qué puede cada una.
 export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, accesosPedidos }) {
   if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
 
@@ -97,10 +142,9 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
     throw new ErrorConMotivo('no_encontrado', 'Cliente no encontrado');
   }
 
-  const personas = await personasAutorizadasDelCliente(clienteId, prestadoraId);
-  if (personas.length === 0) {
-    throw new ErrorConMotivo('persona_autorizada_vacio', 'Este Cliente no tiene ninguna persona autorizada anotada');
-  }
+  // Sin ninguna persona también se arma: es la autorización que retira a la última.
+  const personas = await personasAutorizadasDelCliente(clienteId);
+  const anterior = await ultimoPedidoPorPersona(clienteId, prestadoraId);
 
   // Con la maestra, como todo este archivo: lo llama el Panel, y la base no le deja leer a
   // Superadmin la configuración de la aplicación.
@@ -112,9 +156,10 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
     .eq('id', prestadoraId)
     .maybeSingle();
 
-  const decidido = personas.map((persona) => ({
-    ...persona,
-    filas: accesosParaGuardar({ pedido: accesosPedidos?.[persona.usuarioId], visibilidad }),
+  const pedidos = Object.fromEntries(personas.map((persona) => {
+    const pedido = { ...anterior[persona.usuarioId], ...accesosPedidos?.[persona.usuarioId] };
+    const filas = accesosParaGuardar({ pedido, visibilidad });
+    return [persona.usuarioId, Object.fromEntries(filas.map((fila) => [fila.clave, fila.permitido]))];
   }));
 
   const texto = textoDeLaInstruccion({
@@ -122,11 +167,10 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
     titular: {
       nombre: await nombreDe(await cuentaDeLaFila('clientes', clienteId, prestadoraId), prestadoraId),
     },
-    cargadaPor: { nombre: await nombreDe(cargadaPor, prestadoraId) },
-    personas: decidido.map((persona) => ({
+    personas: personas.map((persona) => ({
       nombre: persona.nombre,
-      email: persona.email,
-      accesos: Object.fromEntries(persona.filas.map((fila) => [fila.clave, fila.permitido])),
+      dni: persona.dni,
+      accesos: pedidos[persona.usuarioId],
     })),
   });
 
@@ -151,24 +195,11 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
       documento_texto: texto,
       documento_verificador: verificadorDelDocumento(texto),
       documento_idioma: IDIOMA_DEL_DOCUMENTO,
+      accesos_pedidos: pedidos,
     })
     .select('id, estado, documento_texto, documento_verificador, created_at')
     .single();
   if (errorInstruccion) throw new Error(errorInstruccion.message);
-
-  const filas = decidido.flatMap((persona) => persona.filas.map((fila) => ({
-    cliente_id: clienteId,
-    usuario_id: persona.usuarioId,
-    clave: fila.clave,
-    permitido: fila.permitido,
-    instruccion_id: instruccion.id,
-    updated_at: new Date().toISOString(),
-  })));
-
-  const { error: errorPermisos } = await supabase
-    .from('permisos_personas_autorizadas')
-    .upsert(filas, { onConflict: 'cliente_id,usuario_id,clave' });
-  if (errorPermisos) throw new Error(errorPermisos.message);
 
   return instruccion;
 }
@@ -180,7 +211,7 @@ export async function instruccionPendiente(clienteId, prestadoraId) {
 
   const { data } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
-    .select('id, documento_texto, documento_idioma, created_at')
+    .select('id, documento_texto, documento_idioma, accesos_pedidos, created_at')
     .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .eq('estado', 'pendiente_firma')
@@ -314,7 +345,7 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
 
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
-    .select('id, estado, codigo_verificador, codigo_expira_en')
+    .select('id, cliente_id, estado, codigo_verificador, codigo_expira_en, accesos_pedidos')
     .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('cliente_id', clienteId)
@@ -370,6 +401,12 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
     .eq('estado', 'pendiente_firma');
   if (error) throw new Error(error.message);
 
+  await aplicarLosAccesosPedidos({
+    clienteId: instruccion.cliente_id,
+    instruccionId,
+    accesosPedidos: instruccion.accesos_pedidos,
+  });
+
   return { ok: true };
 }
 
@@ -378,7 +415,7 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
 export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archivoUrl }) {
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
-    .select('id, estado')
+    .select('id, cliente_id, estado, accesos_pedidos')
     .eq('id', instruccionId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
@@ -400,12 +437,18 @@ export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archi
     .eq('id', instruccionId)
     .eq('estado', 'pendiente_firma');
   if (error) throw new Error(error.message);
+
+  await aplicarLosAccesosPedidos({
+    clienteId: instruccion.cliente_id,
+    instruccionId,
+    accesosPedidos: instruccion.accesos_pedidos,
+  });
 }
 
 // Las diez claves con lo decidido para cada persona autorizada, que es lo que dibuja la pantalla
 // del Panel. Se devuelve siempre el catálogo entero, tenga o no fila guardada cada clave.
 export async function personasAutorizadasConSusAccesos({ clienteId, prestadoraId }) {
-  const personas = await personasAutorizadasDelCliente(clienteId, prestadoraId);
+  const personas = await personasAutorizadasDelCliente(clienteId);
   if (personas.length === 0) return [];
 
   const { data: filas } = await supabase
@@ -413,12 +456,16 @@ export async function personasAutorizadasConSusAccesos({ clienteId, prestadoraId
     .select('usuario_id, clave, permitido')
     .eq('cliente_id', clienteId);
 
-  // Con la maestra, por lo mismo que al crear la instrucción.
+  // Con la maestra, por lo mismo que al crear la autorización.
   const visibilidad = await visibilidadDeLaPrestadora(supabase, prestadoraId);
   const porPersona = new Map(personas.map((persona) => [persona.usuarioId, []]));
   for (const fila of filas ?? []) {
     porPersona.get(fila.usuario_id)?.push(fila);
   }
+
+  // `accesos` es lo que rige; `pedido`, lo último que se pidió, que es de donde parte la próxima
+  // autorización. Difieren mientras hay una esperando firma, o con una persona recién anotada.
+  const anterior = await ultimoPedidoPorPersona(clienteId, prestadoraId);
 
   return personas.map((persona) => ({
     ...persona,
@@ -426,5 +473,9 @@ export async function personasAutorizadasConSusAccesos({ clienteId, prestadoraId
       filasGuardadas: porPersona.get(persona.usuarioId),
       visibilidad,
     }),
+    pedido: Object.fromEntries(
+      accesosParaGuardar({ pedido: anterior[persona.usuarioId], visibilidad })
+        .map((fila) => [fila.clave, fila.permitido]),
+    ),
   }));
 }

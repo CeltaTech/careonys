@@ -1,11 +1,11 @@
 // Catálogo único de qué se le puede dar, y qué se le puede negar, a cada persona anotada en el
 // personas autorizadas de un Cliente.
 //
-// CÓMO SE DECIDE, QUE NO ES UN DETALLE. El titular no configura nada por su cuenta: le dice a la
-// Prestadora quiénes son sus personas autorizadas y qué puede ver cada una, la Prestadora lo carga, el sistema
-// arma el documento con eso escrito en castellano y el titular lo firma. Así, el día que alguien
-// diga «yo nunca autoricé eso», está la instrucción con nombre, fecha y firma. La constancia y el
-// estado vigente viven en la base.
+// CÓMO SE DECIDE, QUE NO ES UN DETALLE. Quiénes son las personas autorizadas y qué puede ver cada
+// una lo carga el titular desde la aplicación o la Prestadora desde el Panel; el sistema arma la
+// autorización con eso escrito en castellano y nada rige hasta que el titular la firma. Así, el
+// día que alguien diga «yo nunca autoricé eso», está el documento con nombre, fecha y firma. La
+// constancia y el estado vigente viven en la base.
 //
 // ESTE ES EL ÚNICO LUGAR DONDE SE AGREGA UN ACCESO NUEVO. La tabla `permisos_personas_autorizadas`
 // guarda solamente lo decidido para cada persona; la lista de qué se puede decidir vive acá,
@@ -25,15 +25,16 @@
 // LA CLAVE NO SE RENOMBRA NUNCA. Queda escrita adentro de filas que ya existen y adentro del texto
 // de documentos que alguien firmó: cambiarla es perder la instrucción que el titular ya dio.
 //
-// EL VALOR DE FÁBRICA. Las personas autorizadas ven todo, y las dos acciones de escritura —calificar y pedir
-// medicación— vienen apagadas. El Cliente que no pida ningún cambio no nota ninguno.
+// EL VALOR DE FÁBRICA. Es lo que viene marcado al armar una autorización: ver todo, y las dos
+// acciones de escritura —calificar y pedir medicación— apagadas. No es lo que rige sin firma: una
+// persona sin autorización firmada no tiene ningún acceso, igual que para la base.
 //
 // EL TITULAR NO ENTRA EN ESTA CUENTA. Firmó la prestación y ve todo, siempre. No hay instrucción
 // que le pueda quitar nada, ni siquiera una suya. Por eso `accesosDelTitular()` no consulta filas.
 //
 // QUÉ NO ESTÁ ACÁ, A PROPÓSITO:
-//   - Sumar o quitar personas autorizadas. Eso lo hace la Prestadora desde el Panel. Estos accesos
-//     dicen qué ve quien ya está anotado, no quién está anotado.
+//   - Sumar o quitar personas autorizadas. Estos accesos dicen qué ve quien ya está anotado, no
+//     quién está anotado.
 //   - Los mensajes al teléfono. A quién le llega cada uno se decide en Configuración › Avisos
 //     (`catalogoAvisos.js`), y poner acá otra casilla dejaría la misma regla en dos lugares.
 //   - Cualquier cosa que la Prestadora tenga apagada para toda su aplicación. Ver abajo.
@@ -119,8 +120,8 @@ export function cosaDelCatalogo(clave) {
   return CATALOGO_PERSONAS_AUTORIZADAS.find((cosa) => cosa.clave === clave) ?? null;
 }
 
-// Lo que rige mientras nadie haya pedido ningún cambio: las personas autorizadas ven todo, y las dos acciones de
-// escritura vienen apagadas.
+// Lo que viene marcado al armar una autorización: ver todo, y las dos acciones de escritura
+// apagadas.
 export function accesosDeFabrica() {
   return Object.fromEntries(CATALOGO_PERSONAS_AUTORIZADAS.map((cosa) => [cosa.clave, cosa.de_fabrica]));
 }
@@ -155,13 +156,14 @@ function conElTopeDeLaPrestadora(accesos, visibilidad) {
 // (utils/__tests__/catalogoPersonasAutorizadas.test.js).
 //
 // Una fila guardada de una clave que ya no está en el catálogo se ignora: la lista de arriba manda,
-// y un acceso retirado del producto no debe reaparecer por una fila vieja.
+// y un acceso retirado del producto no debe reaparecer por una fila vieja. Una clave sin fila es
+// «no», como para la base: rige sólo lo que se firmó.
 export function accesosEfectivos({ esTitular, filasGuardadas, visibilidad }) {
   if (esTitular) {
     return conElTopeDeLaPrestadora(accesosDelTitular(), visibilidad);
   }
 
-  const efectivos = accesosDeFabrica();
+  const efectivos = Object.fromEntries(CLAVES_DE_PERSONAS_AUTORIZADAS.map((clave) => [clave, false]));
   for (const fila of filasGuardadas ?? []) {
     if (Object.hasOwn(efectivos, fila.clave)) {
       efectivos[fila.clave] = Boolean(fila.permitido);
@@ -184,7 +186,8 @@ export function mezclarAccesosConCatalogo({ filasGuardadas, visibilidad }) {
   return CATALOGO_PERSONAS_AUTORIZADAS.map((cosa) => {
     const fila = porClave.get(cosa.clave);
     const topado = Boolean(cosa.interruptor) && dePrestadora[cosa.interruptor] === false;
-    const decidido = fila ? Boolean(fila.permitido) : cosa.de_fabrica;
+    // Sin fila no hay nada firmado, y no rige nada.
+    const decidido = fila ? Boolean(fila.permitido) : false;
 
     return {
       clave: cosa.clave,

@@ -23,7 +23,7 @@ import {
 } from '../utils/registroDeActividad.js';
 import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
 import { RESULTADO_PENDIENTE } from '../utils/referenciasLaborales.js';
-import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
+import { requierePermiso, permisosEfectivos, tienePermiso } from '../utils/permisos.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import {
@@ -269,8 +269,11 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizaci
 // parte de administrar los datos de ese Cliente, como siempre.
 //
 // Qué ve cada uno es otra cosa, y tiene permiso propio —'configurar_accesos_de_personas_autorizadas'—
-// porque no es un dato que se corrige: es una instrucción que el titular dio y firmó, y cada
-// Prestadora decide quién de los suyos la puede cargar. De fábrica, sólo el Admin.
+// porque no es un dato que se corrige: es una autorización que el titular firma, y cada
+// Prestadora decide quién de los suyos la puede armar. De fábrica, sólo el Admin.
+//
+// Toda alta y todo retiro arman una autorización nueva con las personas que quedan. Nada de eso
+// rige hasta que el titular la firma.
 // ============================================================================
 
 // El Cliente de este pedido, acotado a la Prestadora de quien pregunta. Si es de otra, para él no
@@ -298,17 +301,17 @@ panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas', requiereRolPa
       instruccionPendiente(cliente.id, cliente.prestadora_id),
       ultimaInstruccionCerrada(cliente.id, cliente.prestadora_id),
     ]);
-    // `pendiente` es un estado normal, no un error: los accesos ya rigen y lo que falta es la
-    // firma. La pantalla lo muestra para que nadie se olvide de cerrarlo. Y cuando no hay ninguna
-    // pendiente, muestra la última que sí se firmó, que es lo que rige hoy.
+    // `pendiente` es un estado normal, no un error: hasta que el titular la firme sigue rigiendo
+    // lo anterior. La pantalla lo muestra para que nadie se olvide de cerrarlo. Y cuando no hay
+    // ninguna pendiente, muestra la última que sí se firmó, que es lo que rige hoy.
     res.json({ miembros, instruccionPendiente: pendiente, ultimaInstruccion: ultima });
   } catch (error) {
     responderError(res, error);
   }
 });
 
-// Carga la instrucción que el titular pidió. Los accesos rigen desde acá; la firma viene después,
-// por la aplicación o en papel.
+// Arma la autorización que el titular pidió. Los accesos rigen recién cuando la firma, por la
+// aplicación o en papel.
 panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas/instruccion', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_de_personas_autorizadas'), async (req, res) => {
   const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
@@ -624,7 +627,7 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador/papel/:documentoId/archivo',
 });
 
 panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
-  const { nombre, email, telefono } = req.body || {};
+  const { nombre, apellido, documento, genero, email, telefono, accesos } = req.body || {};
 
   const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
@@ -632,18 +635,33 @@ panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas', requiereRolP
   }
 
   try {
-    // Con la llave maestra: la ruta pide 'editar_datos_cliente', y `permisos_personas_autorizadas`
-    // sólo deja escribir a quien tiene 'configurar_accesos_de_personas_autorizadas'.
+    // Con la llave maestra, como el resto de las personas autorizadas.
     const { miembroId } = await invitarPersonaAutorizada({
       db: supabase,
       email,
       nombre,
+      apellido,
+      documento,
+      genero,
       telefono,
       clienteId: cliente.id,
       prestadoraId: cliente.prestadora_id,
       invitadoPor: req.usuarioPanel.id,
     });
-    res.json({ ok: true, usuarioId: miembroId });
+
+    // La autorización que la nombra, para que el titular la firme. Qué puede ver lo elige sólo
+    // quien tiene el permiso de configurar accesos; para cualquier otro sale con lo de fábrica.
+    const puedeElegirAccesos = await tienePermiso({
+      db: clienteDelPedido(req),
+      accion: 'configurar_accesos_de_personas_autorizadas',
+    });
+    const instruccion = await crearInstruccion({
+      clienteId: cliente.id,
+      prestadoraId: cliente.prestadora_id,
+      cargadaPor: req.usuarioPanel.id,
+      accesosPedidos: puedeElegirAccesos && accesos ? { [miembroId]: accesos } : undefined,
+    });
+    res.json({ ok: true, usuarioId: miembroId, instruccion });
   } catch (error) {
     responderError(res, error);
   }
@@ -665,6 +683,13 @@ panelCuentasRouter.delete('/cliente/:clienteId/personas_autorizadas/:usuarioId',
     });
     // Es un cambio de membresía y se anota con su nombre. El motivo no entra: es contenido.
     if (desactivada) {
+      // Sin ella, la autorización vigente ya no dice la verdad: se arma una nueva con las que
+      // quedan, para que el titular la firme.
+      await crearInstruccion({
+        clienteId: cliente.id,
+        prestadoraId: cliente.prestadora_id,
+        cargadaPor: req.usuarioPanel.id,
+      });
       await registrarActividad(req.usuarioPanel, ACCION_DESACTIVACION_DE_CUENTA, {
         tablaAfectada: 'usuarios',
         registroId: req.params.usuarioId,

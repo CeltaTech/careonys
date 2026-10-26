@@ -1,10 +1,9 @@
-// Qué le toca ver a quien está usando esta aplicación, y si el titular tiene una instrucción
-// sin firmar.
+// Qué le toca ver a quien está usando esta aplicación, y si el titular tiene una autorización de
+// acceso para firmar.
 //
-// CADA PERSONA AUTORIZADA VE LO SUYO. El titular le dice a la Prestadora qué puede ver cada
-// persona autorizada de un Cliente, la Prestadora lo carga, el sistema arma
-// el documento en castellano y el titular lo firma. La aplicación recibe eso resuelto: un objeto
-// plano clave → verdadero o falso.
+// CADA PERSONA AUTORIZADA VE LO SUYO. Qué puede ver cada una lo dice la autorización de acceso
+// que firma el titular, la arme él desde esta aplicación o la Prestadora desde el Panel, y rige
+// desde la firma. La aplicación recibe eso resuelto: un objeto plano clave → verdadero o falso.
 //
 // POR QUÉ ESTÁ ACÁ Y NO EN `PerfilContext.jsx`, QUE PIDE EL MISMO `/perfil`. Aquel archivo es
 // idéntico en las dos aplicaciones —está declarado como copia en `scripts/copias_entre_apps.mjs`

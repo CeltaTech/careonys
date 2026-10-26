@@ -378,7 +378,10 @@ VALUES
   ('c0000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'fisica', 'Jorge', 'López', 'cuil', '20222002002', '22200200', 'masculino',
    NULL, NULL, 'a1000000-0000-4000-8000-000000000003', 'cliente.lopez@sandbox.local'),
   ('c0000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'fisica', 'Claudia', 'Morales', 'cuil', '27263003018', '26300301', 'femenino',
-   NULL, NULL, 'a1000000-0000-4000-8000-000000000005', 'cliente.morales@sandbox.local');
+   NULL, NULL, 'a1000000-0000-4000-8000-000000000005', 'cliente.morales@sandbox.local'),
+  -- La persona autorizada del Cliente Gómez.
+  ('c0000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111', 'fisica', 'Marcela', 'Gómez', 'cuil', '27301112225', '30111222', 'femenino',
+   NULL, NULL, 'a1000000-0000-4000-8000-000000000001', 'marcela.gomez@sandbox.local');
 
 -- Los teléfonos de contacto del Directorio. Una Ficha puede tener varios, y el primero tiene dos a
 -- propósito: así la base de pruebas ejercita el caso de varios y no sólo el de uno.
@@ -414,18 +417,14 @@ INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_
   ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003',
    '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000006', 'intermediacion', 'otro', 'c0000000-0000-4000-8000-000000000001');
 
--- Quién está anotado en las personas autorizadas de cada Cliente. El titular figura acá también, con su fila
--- apuntando a sí mismo: es lo que deja resolver de una sola consulta a qué Cliente pertenece
--- alguien que inició sesión, sea el titular o no.
+-- Quién está anotado en las personas autorizadas de cada Cliente, con su Ficha de Persona, que es
+-- de donde sale el DNI que dice la autorización. El titular no figura acá: se lo reconoce por su
+-- fila en `clientes`, y ve todo siempre.
 --
 -- Estar anotado dice quién entra, no qué ve. Qué ve cada persona sale de
--- `permisos_personas_autorizadas`, más abajo, y para el titular no sale de ningún lado: ve todo
--- siempre, y eso no se configura.
-INSERT INTO public.personas_autorizadas (usuario_id, cliente_id, email) VALUES
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 'cliente.gomez@sandbox.local'),
-  ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', 'cliente.lopez@sandbox.local'),
-  ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', 'cliente.morales@sandbox.local'),
-  ('40000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000001', 'marcela.gomez@sandbox.local');
+-- `permisos_personas_autorizadas`, más abajo.
+INSERT INTO public.personas_autorizadas (usuario_id, cliente_id, persona_id, email) VALUES
+  ('40000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000007', 'marcela.gomez@sandbox.local');
 
 -- Lo que la titular del Cliente Gómez pidió por escrito para Marcela: que acompañe el cuidado
 -- y no vea el dinero ni el recorrido del Asistente en el mapa. Es el caso más común de la vida

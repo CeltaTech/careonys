@@ -85,13 +85,17 @@ describe('accesosEfectivos', () => {
     assert.ok(Object.values(suyos).every((valor) => valor === true));
   });
 
-  it('sin ninguna fila guardada, rige lo de fábrica', () => {
-    assert.deepEqual(accesosEfectivos({ esTitular: false, filasGuardadas: [] }), accesosDeFabrica());
-    assert.deepEqual(accesosEfectivos({ esTitular: false, filasGuardadas: null }), accesosDeFabrica());
-    assert.deepEqual(accesosEfectivos({ esTitular: false }), accesosDeFabrica());
+  it('sin ninguna fila guardada no rige nada, igual que para la base', () => {
+    // Una persona recién anotada no tiene nada firmado. Si acá rigiera lo de fábrica, la
+    // aplicación le mostraría lo que la base le niega.
+    for (const filasGuardadas of [[], null, undefined]) {
+      const efectivos = accesosEfectivos({ esTitular: false, filasGuardadas });
+      assert.deepEqual(Object.keys(efectivos), CLAVES_DE_PERSONAS_AUTORIZADAS);
+      assert.ok(Object.values(efectivos).every((valor) => valor === false));
+    }
   });
 
-  it('lo que el titular pidió le gana a lo de fábrica, en los dos sentidos', () => {
+  it('rige lo firmado, en los dos sentidos', () => {
     const efectivos = accesosEfectivos({
       esTitular: false,
       filasGuardadas: [
@@ -101,7 +105,7 @@ describe('accesosEfectivos', () => {
     });
     assert.equal(efectivos.persona_autorizada_dinero, false);
     assert.equal(efectivos.persona_autorizada_califica_al_asistente, true);
-    assert.equal(efectivos.persona_autorizada_reportes, true);
+    assert.equal(efectivos.persona_autorizada_reportes, false);
   });
 
   it('una fila vieja de un acceso retirado del producto no reaparece', () => {
@@ -109,7 +113,8 @@ describe('accesosEfectivos', () => {
       esTitular: false,
       filasGuardadas: [{ clave: 'persona_autorizada_algo_que_ya_no_existe', permitido: true }],
     });
-    assert.deepEqual(efectivos, accesosDeFabrica());
+    assert.ok(!Object.hasOwn(efectivos, 'persona_autorizada_algo_que_ya_no_existe'));
+    assert.ok(Object.values(efectivos).every((valor) => valor === false));
   });
 
   it('devuelve siempre verdadero o falso, nunca lo que vino de la base', () => {
@@ -146,10 +151,10 @@ describe('mezclarAccesosConCatalogo', () => {
     const mezclados = mezclarAccesosConCatalogo({ filasGuardadas: [] });
     assert.equal(mezclados.length, CATALOGO_PERSONAS_AUTORIZADAS.length);
     assert.ok(mezclados.every((cosa) => cosa.configurado === false));
-    assert.ok(mezclados.every((cosa) => cosa.permitido === cosa.de_fabrica));
+    assert.ok(mezclados.every((cosa) => cosa.permitido === false));
   });
 
-  it('distingue lo que ya se instruyó de lo que rige mientras tanto', () => {
+  it('distingue lo firmado de lo que no tiene fila', () => {
     const mezclados = mezclarAccesosConCatalogo({
       filasGuardadas: [{ clave: 'persona_autorizada_dinero', permitido: false }],
     });
@@ -160,7 +165,7 @@ describe('mezclarAccesosConCatalogo', () => {
 
     const reportes = mezclados.find((cosa) => cosa.clave === 'persona_autorizada_reportes');
     assert.equal(reportes.configurado, false);
-    assert.equal(reportes.permitido, true);
+    assert.equal(reportes.permitido, false);
   });
 
   it('avisa cuál casilla la apagó la Prestadora, para que la pantalla lo pueda explicar', () => {

@@ -29,6 +29,8 @@ import { verificadorDelCodigo } from '../codigoDeUnSoloUso.js';
 const INSTRUCCION = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const CLIENTE = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const PRESTADORA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const PERSONA = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+const PERSONA_RETIRADA = '99999999-9999-9999-9999-999999999999';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. */
 const respuestas = new Map();
@@ -98,9 +100,17 @@ beforeEach(() => {
     codigo_verificador: verificadorDelCodigo('123456'),
     codigo_expira_en: enUnRato(10),
     codigo_intentos: 0,
+    cliente_id: CLIENTE,
+    accesos_pedidos: {
+      [PERSONA]: { persona_autorizada_dinero: true },
+      [PERSONA_RETIRADA]: { persona_autorizada_dinero: true },
+    },
   };
 
   respuestas.set('GET /rest/v1/instrucciones_acceso_personas_autorizadas', () => [instruccion]);
+  respuestas.set('GET /rest/v1/personas_autorizadas', () => [{ usuario_id: PERSONA, persona_id: 'p1', email: 'p@ejemplo.local', personas: null }]);
+  respuestas.set('DELETE /rest/v1/permisos_personas_autorizadas', () => []);
+  respuestas.set('POST /rest/v1/permisos_personas_autorizadas', () => []);
   respuestas.set('PATCH /rest/v1/instrucciones_acceso_personas_autorizadas', ({ cuerpo }) => {
     Object.assign(instruccion, cuerpo);
     return [instruccion];
@@ -130,6 +140,25 @@ describe('confirmar la instrucción con el código', () => {
     assert.equal(cierre.cerrada_como, 'confirmada_en_la_app');
     assert.equal(cierre.codigo_verificador, null);
     assert.equal(cierre.codigo_expira_en, null);
+  });
+
+  it('al firmarse, lo pedido pasa a regir, y quien se retiró mientras esperaba no recibe nada', async () => {
+    await confirmarConCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA, codigo: '123456' });
+
+    const claves = llamadas.map((l) => l.clave);
+    const borrado = claves.indexOf('DELETE /rest/v1/permisos_personas_autorizadas');
+    const alta = claves.indexOf('POST /rest/v1/permisos_personas_autorizadas');
+    assert.ok(borrado !== -1 && alta > borrado, 'lo anterior se borra entero antes de escribir lo nuevo');
+
+    const filas = llamadas[alta].cuerpo;
+    assert.deepEqual(filas.map((f) => [f.usuario_id, f.clave, f.permitido, f.instruccion_id]), [
+      [PERSONA, 'persona_autorizada_dinero', true, INSTRUCCION],
+    ]);
+  });
+
+  it('un código incorrecto no toca lo que rige', async () => {
+    await confirmarConCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA, codigo: '000000' });
+    assert.ok(!llamadas.some((l) => l.clave.endsWith('/permisos_personas_autorizadas')));
   });
 
   it('el intento lo suma la base en un solo paso, no el backend leyendo y escribiendo', async () => {

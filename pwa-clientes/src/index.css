@@ -769,6 +769,52 @@ a {
   color: var(--tinta);
 }
 
+/* La hoja entera: la marca de la Prestadora arriba, el título y el texto. Adentro de la tarjeta
+   el texto ya no lleva recuadro propio: la tarjeta es la hoja. */
+.documento-autorizacion .documento-instruccion {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+}
+
+.documento-marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.documento-marca .nombre-prestadora {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--tinta);
+  margin: 0;
+}
+
+.documento-titulo {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+
+/* Reenviar el código: algo que se toca de vez en cuando, así que va como enlace y no como botón. */
+.btn-enlace {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-top: 10px;
+  color: var(--info-texto);
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn-enlace:disabled {
+  color: var(--gris);
+  cursor: default;
+}
+
 /* El aviso de instrucción pendiente lleva adentro un botón, y en un teléfono el texto y el botón
    no entran en el mismo renglón: se apilan, y el botón queda alineado a la izquierda con el
    texto en vez de estirarse de punta a punta como si fuera lo principal de la pantalla. */

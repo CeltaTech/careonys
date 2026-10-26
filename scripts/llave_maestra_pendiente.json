@@ -20,7 +20,6 @@
                              "backend/src/routes/__tests__/appAsistentesAislamiento.test.js",
                              "backend/src/routes/__tests__/appAsistentesAntesDeLlegar.test.js",
                              "backend/src/routes/__tests__/appAsistentesDatosBancarios.test.js",
-                             "backend/src/routes/__tests__/appAsistentesPapeles.test.js",
                              "backend/src/routes/__tests__/appClientesCertificado.test.js",
                              "backend/src/routes/__tests__/appClientesFacturas.test.js",
                              "backend/src/routes/__tests__/correoDeLaPrestadora.test.js",
@@ -118,7 +117,6 @@
                                  "backend/src/utils/revisarIncidentesTurnoSinCubrir.js",
                                  "backend/src/utils/revisarLlegadasDemoradas.js",
                                  "backend/src/utils/revisarNotificacionesCoordinador.js",
-                                 "backend/src/utils/revisarRecordatoriosPush.js",
-                                 "backend/src/utils/vencimientos.js"
+                                 "backend/src/utils/revisarRecordatoriosPush.js"
                              ]
 }

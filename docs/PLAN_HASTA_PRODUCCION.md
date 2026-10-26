@@ -1502,6 +1502,14 @@ una copia de trabajo**, que no es un archivo del repositorio y por eso el barrid
 
 **99. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 
+**136. Usted** — Abierto el 2026-10-25. Borrar la llave de la cuenta vieja de Backblaze, la del depósito `aurevia-backups-mirror`, que quedó escrita a la vista. El respaldo diario ya no la usa: escribe en la cuenta nueva, a nombre de cuentas@celtatech.com. Hoy no se pudo porque la cuenta bloqueó el ingreso por intentos fallidos. Se cierra cuando la llave ya no figure en **Application Keys**. Qué se hace con esa cuenta y con los respaldos viejos lo decide usted aparte.
+
+**137.** Abierto el 2026-10-25. El respaldo diario no borra nunca los respaldos viejos, y los dos depósitos tienen 10 GB gratis. Decidir cuántos días se guardan y programar el borrado de lo anterior. Se cierra cuando el respaldo borre solo lo que pasó ese plazo.
+
+**138.** Abierto el 2026-10-25. El respaldo diario informa «12 depósitos, 0 copiados, 0 ya estaban»: no copia ningún archivo. Averiguar si es porque los depósitos están vacíos o porque falla. Se cierra con una corrida que copie archivos de prueba a los dos destinos.
+
+**139. Usted** — Abierto el 2026-10-25. Railway y Cloudflare están a nombre de su correo personal. Pasarlos a cuentas@celtatech.com. Se cierra cuando ninguno de los dos dependa de su correo personal.
+
 ---
 
 ## Marca y dominio por Prestadora

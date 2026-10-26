@@ -140,6 +140,10 @@ for (const app of APPS) {
       // Los dieciséis caracteres de antes, sin pasar al renglón anterior.
       const antes = fuentes.slice(Math.max(0, m.index - 16), m.index);
       if (!antes.slice(antes.lastIndexOf('\n') + 1).includes('traducirValor(')) return true;
+      /* `traducirValor(t.generos, codigo)`: la clave entera viene en una variable, sin comienzo
+         fijo que la forma 2 pueda juntar. Es buscar adentro del grupo, igual que el corchete. */
+      const despues = fuentes.slice(m.index + m[0].length).match(/^\s*,\s*(\S)/);
+      if (despues && !['`', "'", '"'].includes(despues[1])) return true;
     }
     return false;
   };

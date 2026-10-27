@@ -111,19 +111,15 @@ import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
 /**
  * Los nombres de estos Clientes, para las listas que se muestran en pantalla.
  *
- * Se buscan aparte en vez de traerlos colgados de la factura, y siempre dentro de la Prestadora
- * de quien pide.
+ * Se buscan aparte en vez de traerlos colgados de la factura, con la credencial de quien pide: un
+ * Cliente que la base no le deja ver —el pendiente de conformidad— sale sin nombre.
  */
-async function nombresDeClientes(prestadoraId, ids) {
+async function nombresDeClientes(db, ids) {
   const unicos = [...new Set(ids)];
   if (unicos.length === 0) return new Map();
-  // Con la llave maestra: la política restrictiva `oculta_pendientes_de_conformidad` de `clientes`
-  // (`NOT pendiente_conformidad`) le esconde a todos los roles los Clientes pendientes de
-  // conformidad, y sus facturas y saldos se mostraban con el nombre. Se decide aparte.
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('clientes')
     .select('id, personas!clientes_contratante_de_la_misma_prestadora(nombre_visible)')
-    .eq('prestadora_id', prestadoraId)
     .in('id', unicos);
   if (error) throw new Error(error.message);
   return new Map((data || []).map((f) => [f.id, f.personas?.nombre_visible ?? null]));
@@ -226,7 +222,7 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
 
   let nombres;
   try {
-    nombres = await nombresDeClientes(prestadoraId, vigentes.map((a) => a.cliente_id));
+    nombres = await nombresDeClientes(clienteDelPedido(req), vigentes.map((a) => a.cliente_id));
   } catch (e) {
     return responderError(res, e);
   }
@@ -257,7 +253,7 @@ panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, veElEstadoDeCuenta
 
   let nombres;
   try {
-    nombres = await nombresDeClientes(req.usuarioPanel.prestadoraId, (data || []).map((e) => e.cliente_id));
+    nombres = await nombresDeClientes(db, (data || []).map((e) => e.cliente_id));
   } catch (e) {
     return responderError(res, e);
   }
@@ -293,7 +289,7 @@ panelCobrosRouter.get('/saldos', requiereRolPanel, veElEstadoDeCuenta, async (re
 
   let nombres;
   try {
-    nombres = await nombresDeClientes(req.usuarioPanel.prestadoraId, (data || []).map((s) => s.cliente_id));
+    nombres = await nombresDeClientes(db, (data || []).map((s) => s.cliente_id));
   } catch (e) {
     return responderError(res, e);
   }
@@ -340,7 +336,7 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
   // no la necesita ninguna pantalla, y lo que no viaja no se filtra.
   let factura;
   try {
-    nombres = await nombresDeClientes(prestadoraId, [saldo.cliente_id]);
+    nombres = await nombresDeClientes(db, [saldo.cliente_id]);
     factura = await facturaVisible(db, saldo.factura_id);
   } catch (e) {
     return responderError(res, e);
@@ -400,14 +396,11 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // Cada Cliente trae su Prestadora: es la que se escribe en su factura.
-  // Con la llave maestra: la política restrictiva `oculta_pendientes_de_conformidad` de
-  // `clientes` y de `pacientes` (`NOT pendiente_conformidad`) le esconde a todos los roles las
-  // Clientes y los Pacientes pendientes de conformidad, que esta tanda facturaba. Se decide aparte.
-  const { data: clientes, error: errorClientes } = await supabase
+  // Cada Cliente trae su Prestadora: es la que se escribe en su factura. Los pendientes de
+  // conformidad no los devuelve la base, y no se facturan.
+  const { data: clientes, error: errorClientes } = await db
     .from('clientes')
     .select(`id, prestadora_id, dias_hasta_el_vencimiento, pacientes(id, ${FICHA_NOMBRE})`)
-    .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorClientes) return responderError(res, errorClientes);
 
@@ -628,7 +621,7 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
 
   let nombres;
   try {
-    nombres = await nombresDeClientes(req.usuarioPanel.prestadoraId, (data || []).map((s) => s.cliente_id));
+    nombres = await nombresDeClientes(db, (data || []).map((s) => s.cliente_id));
   } catch (e) {
     return responderError(res, e);
   }

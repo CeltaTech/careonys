@@ -201,9 +201,6 @@ const CON_LA_MAESTRA = [
   '/configuracion_facturacion_clientes',
   '/opciones_de_lista',
   '/personas',
-  // Los nombres de los Clientes y los Clientes que se facturan: la base esconde los pendientes de
-  // conformidad a todos los roles, y esta ruta los mostraba y los facturaba.
-  '/clientes',
 ];
 
 /** Todas las consultas a la base que hizo la ruta con la credencial de quien pide. */
@@ -229,16 +226,12 @@ function todoConLaCredencialDeQuienPide(minimo) {
   }
 }
 
-/**
- * Los Clientes se leen con la llave maestra y atados a la Prestadora de la sesión: así aparecen
- * también los pendientes de conformidad, que la base esconde a todos los roles.
- */
-function clientesConLaMaestraYLaPrestadora() {
+/** Los Clientes se leyeron, y con la credencial de quien pide: los pendientes de conformidad los esconde la base. */
+function clientesConLaCredencialDeQuienPide() {
   const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/clientes');
   assert.ok(lecturas.length > 0, 'la ruta tiene que haber leído los Clientes');
   for (const lectura of lecturas) {
-    assert.equal(lectura.credencial, 'Bearer clave-de-mentira', 'los Clientes van con la llave maestra');
-    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), `sin la Prestadora: ${lectura.url}`);
+    assert.equal(lectura.credencial, credencialEnviada, 'los Clientes no fueron con la credencial de quien pide');
   }
 }
 
@@ -407,7 +400,7 @@ describe('el estado de cuenta que llegó de afuera', () => {
     await pedir('GET', '/estados-de-cuenta');
 
     todoConLaCredencialDeQuienPide(1);
-    clientesConLaMaestraYLaPrestadora();
+    clientesConLaCredencialDeQuienPide();
   });
 
   it('sin ningún aviso todavía, la lista viene vacía y no se inventa nada', async () => {
@@ -518,7 +511,7 @@ describe('la lista de saldos', () => {
     await pedir('GET', '/saldos?periodo=2026-08');
 
     todoConLaCredencialDeQuienPide(1);
-    clientesConLaMaestraYLaPrestadora();
+    clientesConLaCredencialDeQuienPide();
   });
 
   it('quien no es del Panel no entra', async () => {
@@ -1226,7 +1219,7 @@ describe('generar las facturas de un período', () => {
     await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
 
     todoConLaCredencialDeQuienPide(4);
-    clientesConLaMaestraYLaPrestadora();
+    clientesConLaCredencialDeQuienPide();
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
     assert.equal(factura.cuerpo.prestadora_id, PRESTADORA);
     const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');

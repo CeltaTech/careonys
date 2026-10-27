@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
-import { supabase, clienteDelPedido } from '../db/connection.js';
+import { supabase, enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
@@ -68,12 +68,16 @@ export const appClientesRouter = Router();
 // Prestadora. Por eso esas consultas no llevan el filtro de la Prestadora de la sesión; los filtros
 // que quedan dicen de qué Paciente, de qué factura o de qué hilo se habla.
 //
-// LO QUE SIGUE CON LA LLAVE MAESTRA, Y POR QUÉ. Cada consulta que queda con `supabase` lo dice en
-// su renglón. Son de dos clases: lo que la base no le deja ver a un Cliente y la pantalla sí
-// muestra —la vidriera del Match, que es gente que todavía no lo atendió, y el estado
+// LO QUE VA CON EL TRABAJO DE LA PRESTADORA, Y POR QUÉ. Cada consulta que entra con `enLaPrestadora`
+// lo dice en su renglón. Son de dos clases: lo que la base no le deja ver a un Cliente y la
+// pantalla sí muestra —la vidriera del Match, que es gente que todavía no lo atendió, y el estado
 // documental agregado—, y lo que hoy se contesta a una persona autorizada sin el acceso que la base
-// pide para esa tabla —las guardias en la pantalla del Paciente—. Pasarlas a la credencial
-// cambiaría lo que ve la persona, y eso no se decide acá.
+// pide para esa tabla —las guardias en la pantalla del Paciente—. Pasarlas a la credencial de la
+// persona cambiaría lo que ve, y eso no se decide acá. La base las acota a la Prestadora; lo
+// que las acota al Cliente es el Paciente ya comprobado, o el filtro por el Cliente que llevan.
+//
+// Queda una sola con la llave maestra: el alta de una persona autorizada, porque crear su cuenta
+// y su Ficha no lo puede hacer el titular con su sesión.
 
 // pacientes.medicacion_habitual queda deprecado: la medicación vigente se deriva de
 // indicaciones_medicacion (estado='aceptada'), nunca de este JSONB suelto.
@@ -226,12 +230,11 @@ appClientesRouter.get('/personas-autorizadas', requiereRolCliente, soloElTitular
     const { clienteId, prestadoraId } = req.usuarioCliente;
     const [personas, generos] = await Promise.all([
       personasAutorizadasConSusAccesos({ clienteId, prestadoraId }),
-      generosDelPais(prestadoraId),
+      generosDelPais(clienteDelPedido(req), prestadoraId),
     ]);
-    // Con la maestra, como todo lo de las personas autorizadas.
     const catalogo = mezclarAccesosConCatalogo({
       filasGuardadas: [],
-      visibilidad: await visibilidadDeLaPrestadora(supabase, prestadoraId),
+      visibilidad: await visibilidadDeLaPrestadora(clienteDelPedido(req), prestadoraId),
     }).map(({ clave, descripcion, de_fabrica, topado }) => ({ clave, descripcion, de_fabrica, topado }));
 
     res.json({
@@ -274,13 +277,13 @@ appClientesRouter.post('/personas-autorizadas', requiereRolCliente, soloElTitula
   }
 });
 
-async function generosDelPais(prestadoraId) {
-  const { data: prestadora } = await supabase
+async function generosDelPais(db, prestadoraId) {
+  const { data: prestadora } = await db
     .from('prestadoras')
     .select('pais')
     .eq('id', prestadoraId)
     .maybeSingle();
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('catalogo_generos')
     .select('codigo')
     .eq('pais', prestadora?.pais)
@@ -371,92 +374,23 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  // Con la guardia empezada el mapa ya no va: el punto del viaje se borra al llegar, y del turno
-  // no se guardan coordenadas. El Cliente ve que llegó (`checkin_at`) y quién es.
-  const columnasGuardiaActiva = 'id, fecha, hora_inicio, hora_fin, estado, checkin_at, asistente_id, asistentes(nombre, foto_url)';
-
-  // Las guardias de esta pantalla siguen con la llave maestra: la ruta no pide `persona_autorizada_guardias`
-  // y la base sí, así que con la credencial de la persona, una persona autorizada sin ese acceso
-  // dejaría de ver quién está en la casa. El Paciente ya salió comprobado contra el Cliente.
-  const { data: guardiaActiva } = await supabase
-    .from('guardias')
-    .select(columnasGuardiaActiva)
-    .eq('prestadora_id', paciente.prestadora_id)
-    .eq('paciente_id', paciente.id)
-    .eq('estado', 'activa')
-    .order('fecha', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  // salida_checkin_at es lo que permite decirle al Cliente "en camino": el Asistente ya salió
-  // de su casa pero todavía no llegó al domicilio. Y por dónde va en el viaje sólo se pide si la
-  // Prestadora tiene prendido el mapa en vivo; apagado, el dato ni siquiera sale de la base.
-  const columnasGuardiaProxima = columnasSegunVisibilidad([
-    'id', 'fecha', 'hora_inicio', 'hora_fin', 'dias_hasta_el_fin', 'estado', 'salida_checkin_at',
-    ['ubicacion_actual_lat', 'cliente_ubicacion_en_vivo'],
-    ['ubicacion_actual_lng', 'cliente_ubicacion_en_vivo'],
-    ['ubicacion_actual_at', 'cliente_ubicacion_en_vivo'],
-    'asistente_id', 'asistentes(nombre, foto_url)',
-  ], visibilidad);
-
-  let guardiaProxima = null;
-  if (!guardiaActiva) {
-    const { data } = await supabase
-      .from('guardias')
-      .select(columnasGuardiaProxima)
-      .eq('prestadora_id', paciente.prestadora_id)
-      .eq('paciente_id', paciente.id)
-      .eq('estado', 'programada')
-      .gte('fecha', new Date().toISOString().slice(0, 10))
-      .order('fecha', { ascending: true })
-      .order('hora_inicio', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    guardiaProxima = data || null;
+  // Las guardias y las alertas de esta pantalla van con el trabajo de la Prestadora: la ruta no
+  // pide `persona_autorizada_guardias` ni `persona_autorizada_alertas` y la base sí, así que con
+  // la credencial de la persona, una persona autorizada sin esos accesos dejaría de ver quién
+  // está en la casa. El Paciente ya salió comprobado contra el Cliente, con su propio acceso.
+  let resumen;
+  try {
+    resumen = await enLaPrestadora(paciente.prestadora_id, 'la pantalla del Paciente', (dbTrabajo) =>
+      resumenDelPaciente(dbTrabajo, paciente, visibilidad)
+    );
+  } catch (e) {
+    return responderError(res, e);
   }
+  const { guardiaActiva, guardiaProxima, llegadaEstimadaAt, alertasActivas } = resumen;
 
-  // A qué hora se estima que llega quien ya salió.
-  //
-  // EL PUNTO DE SALIDA NO VIAJA. El Cliente lee «llega alrededor de las 14:45». El punto del que
-  // salió el Asistente es casi siempre su casa, y mandarlo al teléfono de un tercero sería
-  // entregar la ubicación de quien trabaja. Por eso esas coordenadas se leen en una consulta
-  // aparte, quedan en una variable de este lado y no tocan la respuesta. Lo que sí puede viajar,
-  // con el mapa en vivo prendido, es el último punto del viaje (`ubicacion_actual_*`).
-  //
-  // Es una estimación, no una promesa, y así se dice en la pantalla. Cuando no se puede calcular
-  // —salida sin GPS, domicilio sin coordenadas— viaja `null`, que la pantalla trata como «no se
-  // sabe»: una hora inventada parece confiable y nadie la vuelve a mirar.
-  let llegadaEstimadaAt = null;
-  if (guardiaProxima?.salida_checkin_at) {
-    const { data: conSuPuntoDeSalida } = await supabase
-      .from('guardias')
-      .select('id, fecha, paciente_id, salida_checkin_at, salida_lat, salida_lng')
-      .eq('id', guardiaProxima.id)
-      .eq('prestadora_id', paciente.prestadora_id)
-      .maybeSingle();
-    // Con la llave maestra, por el mismo motivo que las guardias de arriba.
-    const estimada = await llegadaEstimadaDeGuardia(supabase, paciente.prestadora_id, conSuPuntoDeSalida);
-    llegadaEstimadaAt = estimada ? estimada.toISOString() : null;
-  }
-
-  // Las alertas de la revisión automática solo se consultan si esta Prestadora las muestra.
-  // Apagadas, la revisión sigue corriendo y el Coordinador se sigue enterando igual — lo que
-  // cambia es que no viajan al teléfono del Cliente.
-  //
-  // Siguen con la llave maestra por el mismo motivo que las guardias: esta pantalla no pide
-  // `persona_autorizada_alertas` y la base sí. Y como son dato de salud, queda anotado quién las leyó antes
-  // de responder; si no se puede anotar, no se entregan.
-  let alertasActivas = [];
+  // Las alertas son dato de salud: queda anotado quién las leyó antes de responder; si no se
+  // puede anotar, no se entregan.
   if (visibilidad.cliente_alertas_de_la_revision) {
-    const { data } = await supabase
-      .from('alertas')
-      .select('id, nivel, descripcion, created_at')
-      .eq('prestadora_id', paciente.prestadora_id)
-      .eq('paciente_id', paciente.id)
-      .is('resuelta_at', null)
-      .order('created_at', { ascending: false });
-    alertasActivas = data || [];
-
     try {
       await anotarConsultaAHce(
         req.usuarioCliente,
@@ -478,6 +412,90 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     alertasActivas,
   });
 });
+
+/** La guardia de ahora o la que sigue, cuándo llega quien ya salió, y las alertas sin resolver. */
+async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
+  // Con la guardia empezada el mapa ya no va: el punto del viaje se borra al llegar, y del turno
+  // no se guardan coordenadas. El Cliente ve que llegó (`checkin_at`) y quién es.
+  const columnasGuardiaActiva = 'id, fecha, hora_inicio, hora_fin, estado, checkin_at, asistente_id, asistentes(nombre, foto_url)';
+
+  const { data: guardiaActiva, error: errorActiva } = await dbTrabajo
+    .from('guardias')
+    .select(columnasGuardiaActiva)
+    .eq('paciente_id', paciente.id)
+    .eq('estado', 'activa')
+    .order('fecha', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (errorActiva) throw errorActiva;
+
+  // salida_checkin_at es lo que permite decirle al Cliente "en camino": el Asistente ya salió
+  // de su casa pero todavía no llegó al domicilio. Y por dónde va en el viaje sólo se pide si la
+  // Prestadora tiene prendido el mapa en vivo; apagado, el dato ni siquiera sale de la base.
+  const columnasGuardiaProxima = columnasSegunVisibilidad([
+    'id', 'fecha', 'hora_inicio', 'hora_fin', 'dias_hasta_el_fin', 'estado', 'salida_checkin_at',
+    ['ubicacion_actual_lat', 'cliente_ubicacion_en_vivo'],
+    ['ubicacion_actual_lng', 'cliente_ubicacion_en_vivo'],
+    ['ubicacion_actual_at', 'cliente_ubicacion_en_vivo'],
+    'asistente_id', 'asistentes(nombre, foto_url)',
+  ], visibilidad);
+
+  let guardiaProxima = null;
+  if (!guardiaActiva) {
+    const { data, error } = await dbTrabajo
+      .from('guardias')
+      .select(columnasGuardiaProxima)
+      .eq('paciente_id', paciente.id)
+      .eq('estado', 'programada')
+      .gte('fecha', new Date().toISOString().slice(0, 10))
+      .order('fecha', { ascending: true })
+      .order('hora_inicio', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    guardiaProxima = data || null;
+  }
+
+  // A qué hora se estima que llega quien ya salió.
+  //
+  // EL PUNTO DE SALIDA NO VIAJA. El Cliente lee «llega alrededor de las 14:45». El punto del que
+  // salió el Asistente es casi siempre su casa, y mandarlo al teléfono de un tercero sería
+  // entregar la ubicación de quien trabaja. Por eso esas coordenadas se leen en una consulta
+  // aparte, quedan en una variable de este lado y no tocan la respuesta. Lo que sí puede viajar,
+  // con el mapa en vivo prendido, es el último punto del viaje (`ubicacion_actual_*`).
+  //
+  // Es una estimación, no una promesa, y así se dice en la pantalla. Cuando no se puede calcular
+  // —salida sin GPS, domicilio sin coordenadas— viaja `null`, que la pantalla trata como «no se
+  // sabe»: una hora inventada parece confiable y nadie la vuelve a mirar.
+  let llegadaEstimadaAt = null;
+  if (guardiaProxima?.salida_checkin_at) {
+    const { data: conSuPuntoDeSalida, error } = await dbTrabajo
+      .from('guardias')
+      .select('id, fecha, paciente_id, salida_checkin_at, salida_lat, salida_lng')
+      .eq('id', guardiaProxima.id)
+      .maybeSingle();
+    if (error) throw error;
+    const estimada = await llegadaEstimadaDeGuardia(dbTrabajo, paciente.prestadora_id, conSuPuntoDeSalida);
+    llegadaEstimadaAt = estimada ? estimada.toISOString() : null;
+  }
+
+  // Las alertas de la revisión automática solo se consultan si esta Prestadora las muestra.
+  // Apagadas, la revisión sigue corriendo y el Coordinador se sigue enterando igual — lo que
+  // cambia es que no viajan al teléfono del Cliente.
+  let alertasActivas = [];
+  if (visibilidad.cliente_alertas_de_la_revision) {
+    const { data, error } = await dbTrabajo
+      .from('alertas')
+      .select('id, nivel, descripcion, created_at')
+      .eq('paciente_id', paciente.id)
+      .is('resuelta_at', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    alertasActivas = data || [];
+  }
+
+  return { guardiaActiva, guardiaProxima, llegadaEstimadaAt, alertasActivas };
+}
 
 // ============================================================================
 // Las guardias de la semana — la pregunta "¿quién viene el jueves?"
@@ -616,20 +634,26 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
   // turno: el Cliente vería en la historia de su padre lo que se escribió sobre el vecino de
   // cuarto.
   //
-  // Sigue con la llave maestra: cada reporte trae su guardia pegada (`guardias!inner`), y la base
-  // sólo muestra guardias a quien tiene `persona_autorizada_guardias`. Con la credencial de la persona, una
-  // persona autorizada con los reportes y sin las guardias vería la lista vacía.
+  // Con el trabajo de la Prestadora, porque cada reporte trae su guardia pegada (`guardias!inner`)
+  // y la base sólo muestra guardias a quien tiene `persona_autorizada_guardias`. Con la credencial
+  // de la persona, una persona autorizada con los reportes y sin las guardias vería la lista vacía.
+  // El acceso a los reportes ya lo pidió la ruta, y el Paciente salió comprobado contra el Cliente.
   const columnas = columnasDelReporte(visibilidad);
 
-  const { data, error } = await supabase
-    .from('reportes')
-    .select(columnas)
-    .eq('prestadora_id', paciente.prestadora_id)
-    .eq('paciente_id', paciente.id)
-    .order('created_at', { ascending: false })
-    .limit(60);
-  if (error) {
-    return responderError(res, error);
+  let data;
+  try {
+    data = await enLaPrestadora(paciente.prestadora_id, 'los reportes del Paciente', async (dbTrabajo) => {
+      const { data: filas, error } = await dbTrabajo
+        .from('reportes')
+        .select(columnas)
+        .eq('paciente_id', paciente.id)
+        .order('created_at', { ascending: false })
+        .limit(60);
+      if (error) throw error;
+      return filas;
+    });
+  } catch (e) {
+    return responderError(res, e);
   }
 
   // Los rangos normales solo tienen sentido junto a los valores: sin signos vitales en
@@ -665,17 +689,22 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
   }
 
   // El filtro por Paciente no sobra aunque el reporte se pida por su id: sin él, quien conozca
-  // el id de un reporte de otro Paciente lo leería pidiéndolo por esta dirección. Sigue con la
-  // llave maestra por el mismo motivo que la lista: la guardia pegada al reporte.
-  const { data, error } = await supabase
-    .from('reportes')
-    .select(columnasDelReporte(visibilidad))
-    .eq('id', req.params.reporteId)
-    .eq('prestadora_id', paciente.prestadora_id)
-    .eq('paciente_id', paciente.id)
-    .maybeSingle();
-  if (error) {
-    return responderError(res, error);
+  // el id de un reporte de otro Paciente lo leería pidiéndolo por esta dirección. Con el trabajo
+  // de la Prestadora por el mismo motivo que la lista: la guardia pegada al reporte.
+  let data;
+  try {
+    data = await enLaPrestadora(paciente.prestadora_id, 'un reporte del Paciente', async (dbTrabajo) => {
+      const { data: fila, error } = await dbTrabajo
+        .from('reportes')
+        .select(columnasDelReporte(visibilidad))
+        .eq('id', req.params.reporteId)
+        .eq('paciente_id', paciente.id)
+        .maybeSingle();
+      if (error) throw error;
+      return fila;
+    });
+  } catch (e) {
+    return responderError(res, e);
   }
   if (!data) {
     return res.status(404).json({ error: 'Reporte no encontrado' });
@@ -759,18 +788,37 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  // La última guardia sigue con la llave maestra: esta ruta no pide `persona_autorizada_guardias` y la base
-  // sí, así que con la credencial de la persona una persona autorizada sin ese acceso se quedaría sin
-  // saber quién lo atiende.
-  const { data: guardia } = await supabase
-    .from('guardias')
-    .select('id, estado, asistente_id')
-    .eq('prestadora_id', paciente.prestadora_id)
-    .eq('paciente_id', paciente.id)
-    .not('asistente_id', 'is', null)
-    .order('fecha', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // La última guardia, con el trabajo de la Prestadora, porque esta ruta no pide
+  // `persona_autorizada_guardias` y la base sí, así que con la credencial de la persona una persona
+  // autorizada sin ese acceso se quedaría sin saber quién lo atiende.
+  //
+  // Y los documentos, con el trabajo de la Prestadora, porque la base no le deja ver a un Cliente
+  // los documentos de nadie —y está bien, porque de acá no sale ninguno—: lo que se entrega es la
+  // cuenta, no el documento.
+  let guardia;
+  let documentos;
+  try {
+    ({ guardia, documentos } = await enLaPrestadora(paciente.prestadora_id, 'el Asistente del Paciente', async (dbTrabajo) => {
+      const { data: ultima, error } = await dbTrabajo
+        .from('guardias')
+        .select('id, estado, asistente_id')
+        .eq('paciente_id', paciente.id)
+        .not('asistente_id', 'is', null)
+        .order('fecha', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!ultima?.asistente_id) return { guardia: ultima, documentos: [] };
+      const { data: docs, error: errorDocs } = await dbTrabajo
+        .from('documentos_pedidos_al_asistente')
+        .select('estado, fecha_vencimiento')
+        .eq('asistente_id', ultima.asistente_id);
+      if (errorDocs) throw errorDocs;
+      return { guardia: ultima, documentos: docs };
+    }));
+  } catch (e) {
+    return responderError(res, e);
+  }
 
   if (!guardia?.asistente_id) {
     return res.json({ asistente: null, certificado: null, documentacion: null, evaluaciones: [], guardiaId: null });
@@ -804,23 +852,12 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
 
   // El estado documental, agregado. El Cliente ve cuánto se cumplió de lo que la Prestadora le
   // pide al Asistente, y nunca qué documento es cuál: el nombre de un tipo de documento puede ser
-  // dato de salud. Las dos consultas van juntas porque ninguna depende de la otra.
-  //
-  // Los documentos siguen con la llave maestra: la base no le deja ver a un Cliente los documentos
-  // de nadie —y está bien, porque de acá no sale ninguno—, y lo que se entrega es la cuenta, no el
-  // documento.
-  const [{ data: documentos }, { data: prestadora }] = await Promise.all([
-    supabase
-      .from('documentos_pedidos_al_asistente')
-      .select('estado, fecha_vencimiento')
-      .eq('prestadora_id', paciente.prestadora_id)
-      .eq('asistente_id', guardia.asistente_id),
-    db
-      .from('prestadoras')
-      .select('dias_aviso_vencimiento_documentos')
-      .eq('id', paciente.prestadora_id)
-      .maybeSingle(),
-  ]);
+  // dato de salud.
+  const { data: prestadora } = await db
+    .from('prestadoras')
+    .select('dias_aviso_vencimiento_documentos')
+    .eq('id', paciente.prestadora_id)
+    .maybeSingle();
 
   const documentacion = estadoDocumentalParaElCliente({
     documentos: documentos || [],
@@ -873,15 +910,25 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
   // nombre cuando son varios, para que dos calificaciones del mismo turno no queden colgadas de
   // Pacientes distintos según el orden en que la base devuelva las filas.
   //
-  // Esta búsqueda sigue con la llave maestra: trae la guardia pegada, y la base sólo muestra
-  // guardias a quien tiene `persona_autorizada_guardias`, que esta ruta no pide. Con la credencial de la
-  // persona, una persona autorizada que puede calificar y no ver la agenda no encontraría el turno.
-  const { data: filas } = await supabase
-    .from('guardia_pacientes')
-    .select(`paciente_id, pacientes!inner(cliente_id, ${FICHA_NOMBRE}), guardias!inner(id, asistente_id, prestadora_id)`)
-    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
-    .eq('guardia_id', req.params.guardiaId)
-    .eq('pacientes.cliente_id', req.usuarioCliente.clienteId);
+  // Esta búsqueda va con el trabajo de la Prestadora, porque trae la guardia pegada y la base sólo
+  // muestra guardias a quien tiene `persona_autorizada_guardias`, que esta ruta no pide. Con la
+  // credencial de la persona, una persona autorizada que puede calificar y no ver la agenda no
+  // encontraría el turno. El filtro por el Cliente no sobra: el trabajo ve todos los turnos de la
+  // Prestadora, y la calificación sólo se ofrece sobre los de sus Pacientes.
+  let filas;
+  try {
+    filas = await enLaPrestadora(req.usuarioCliente.prestadoraId, 'el turno a calificar', async (dbTrabajo) => {
+      const { data, error } = await dbTrabajo
+        .from('guardia_pacientes')
+        .select(`paciente_id, pacientes!inner(cliente_id, ${FICHA_NOMBRE}), guardias!inner(id, asistente_id, prestadora_id)`)
+        .eq('guardia_id', req.params.guardiaId)
+        .eq('pacientes.cliente_id', req.usuarioCliente.clienteId);
+      if (error) throw error;
+      return data;
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
   const fila = (filas ?? [])
     .slice()
     .sort((a, b) => (a.pacientes?.persona?.nombre_visible ?? '').localeCompare(b.pacientes?.persona?.nombre_visible ?? ''))[0];
@@ -984,22 +1031,29 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
 
 appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
   if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
-  // Sigue con la llave maestra por la forma de cobro pegada: la base sólo le deja ver al Cliente
-  // las formas que la Prestadora ofrece hoy, y un acceso contratado con una que ya no se ofrece
-  // perdería el dato de si se renueva solo.
-  const { data, error } = await supabase
-    .from('accesos_intermediacion')
-    .select(
-      // La moneda viaja con el importe y no se deduce: un importe suelto se lee en la moneda de
-      // quien mira, y la Prestadora puede estar en otro país.
-      'id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
-        'formas_de_cobro_intermediacion(renueva_sola)'
-    )
-    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
-    .eq('cliente_id', req.usuarioCliente.clienteId)
-    .eq('paciente_id', req.params.pacienteId)
-    .maybeSingle();
-  if (error) return responderError(res, error);
+  // Con el trabajo de la Prestadora, por la forma de cobro pegada: la base sólo le deja ver al
+  // Cliente las formas que la Prestadora ofrece hoy, y un acceso contratado con una que ya no se
+  // ofrece perdería el dato de si se renueva solo. El filtro por el Cliente es el que acota.
+  let data;
+  try {
+    data = await enLaPrestadora(req.usuarioCliente.prestadoraId, 'el acceso al Match', async (dbTrabajo) => {
+      const { data: fila, error } = await dbTrabajo
+        .from('accesos_intermediacion')
+        .select(
+          // La moneda viaja con el importe y no se deduce: un importe suelto se lee en la moneda de
+          // quien mira, y la Prestadora puede estar en otro país.
+          'id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
+            'formas_de_cobro_intermediacion(renueva_sola)'
+        )
+        .eq('cliente_id', req.usuarioCliente.clienteId)
+        .eq('paciente_id', req.params.pacienteId)
+        .maybeSingle();
+      if (error) throw error;
+      return fila;
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
   // La pantalla necesita saber si hay renovación que apagar para decidir si ofrece la baja, y no
   // tiene por qué recibir la forma de cobro entera para eso.
   const acceso = data
@@ -1321,14 +1375,13 @@ const TOPE_DE_LA_VIDRIERA = 60;
 const TOPE_DE_OPINIONES = 30;
 
 /** Quién entra en la vidriera: de esta Prestadora, activo, en Match y tomando trabajo.
- *  Con la llave maestra: la base sólo le deja ver al Cliente los Asistentes que ya la atienden,
- *  y la vidriera muestra justamente a los que todavía no. Lo mismo vale para su documentación y
- *  sus calificaciones públicas, más abajo. */
-function poolDeLaPrestadora(prestadoraId) {
-  return supabase
+ *  Con el trabajo de la Prestadora (`dbTrabajo`), porque la base sólo le deja ver al Cliente los
+ *  Asistentes que ya la atienden, y la vidriera muestra justamente a los que todavía no. Lo mismo
+ *  vale para su documentación y sus calificaciones públicas, más abajo. */
+function poolDeLaPrestadora(dbTrabajo) {
+  return dbTrabajo
     .from('asistentes')
     .select(COLUMNAS_PERFIL_PUBLICO)
-    .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activo')
     .eq('disponible', true)
     .is('deleted_at', null)
@@ -1349,23 +1402,23 @@ async function exigeVidriera() {
  * solo. Dos consultas para toda la lista y no dos por persona: con veinte perfiles serían
  * cuarenta viajes a la base para contestar una pantalla.
  */
-async function documentacionDeVarios(prestadoraId, asistenteIds) {
+async function documentacionDeVarios(dbTrabajo, asistenteIds) {
   if (!asistenteIds.length) return new Map();
 
-  // Con la llave maestra: los documentos no tienen política que deje leerlos a un Cliente, y son
-  // de Asistentes que no la atienden.
-  const [{ data: documentos }, { data: prestadora }] = await Promise.all([
-    supabase
+  // Con el trabajo de la Prestadora: los documentos no tienen política que deje leerlos a un
+  // Cliente, y son de Asistentes que no la atienden.
+  const [{ data: documentos, error }, { data: prestadora, error: errorPrestadora }] = await Promise.all([
+    dbTrabajo
       .from('documentos_pedidos_al_asistente')
       .select('asistente_id, estado, fecha_vencimiento')
-      .eq('prestadora_id', prestadoraId)
       .in('asistente_id', asistenteIds),
-    supabase
+    dbTrabajo
       .from('prestadoras')
       .select('dias_aviso_vencimiento_documentos')
-      .eq('id', prestadoraId)
       .maybeSingle(),
   ]);
+  if (error) throw error;
+  if (errorPrestadora) throw errorPrestadora;
 
   const porAsistente = new Map();
   for (const id of asistenteIds) {
@@ -1381,16 +1434,16 @@ async function documentacionDeVarios(prestadoraId, asistenteIds) {
 }
 
 /** Las calificaciones públicas de varios Asistentes, o un mapa vacío si acá no se califica. */
-async function calificacionesDeVarios(prestadoraId, asistenteIds, visibilidad) {
+async function calificacionesDeVarios(dbTrabajo, asistenteIds, visibilidad) {
   if (!visibilidad.cliente_califica_al_asistente || !asistenteIds.length) return new Map();
-  // Con la llave maestra: son las calificaciones que dejaron otros Clientes, y la base sólo le
-  // deja ver a cada una las suyas.
-  const { data } = await supabase
+  // Con el trabajo de la Prestadora: son las calificaciones que dejaron otros Clientes, y la base
+  // sólo le deja ver a cada uno las suyas.
+  const { data, error } = await dbTrabajo
     .from('calificaciones_asistente')
     .select('asistente_id, estrellas')
-    .eq('prestadora_id', prestadoraId)
     .eq('visible_publica', true)
     .in('asistente_id', asistenteIds);
+  if (error) throw error;
 
   const porAsistente = new Map();
   for (const id of asistenteIds) {
@@ -1418,7 +1471,12 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
 
     // Las opciones de los filtros salen del pool y no de una lista escrita: un lugar en el que
     // no trabaja nadie no se ofrece, porque elegirlo devolvería siempre vacío.
-    const { data: todos } = await poolDeLaPrestadora(prestadoraId);
+    const vidriera = (trabajo, hacer) => enLaPrestadora(prestadoraId, trabajo, hacer);
+    const todos = await vidriera('la vidriera del Match', async (dbTrabajo) => {
+      const { data, error } = await poolDeLaPrestadora(dbTrabajo);
+      if (error) throw error;
+      return data;
+    });
     const tiposOfrecidos = [...new Set((todos || []).map((a) => a.tipo_asistente_id).filter(Boolean))];
 
     // Dónde trabaja cada uno. Está en la tabla que cruza a la persona con cada lugar, así que el
@@ -1435,19 +1493,22 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
     const lugarElegido = req.query.zona ? String(req.query.zona) : null;
     const delLugar = (id) => !lugarElegido || (lugaresPorAsistente.get(id) || []).includes(lugarElegido);
 
-    let consulta = poolDeLaPrestadora(prestadoraId).limit(TOPE_DE_LA_VIDRIERA);
-    if (req.query.tipo) consulta = consulta.eq('tipo_asistente_id', String(req.query.tipo));
+    const { asistentes, documentacion, calificaciones } = await vidriera('la vidriera del Match', async (dbTrabajo) => {
+      let consulta = poolDeLaPrestadora(dbTrabajo).limit(TOPE_DE_LA_VIDRIERA);
+      if (req.query.tipo) consulta = consulta.eq('tipo_asistente_id', String(req.query.tipo));
 
-    const { data: todosLosAsistentes, error } = await consulta;
-    if (error) return responderError(res, error);
-    const asistentes = (todosLosAsistentes || []).filter((a) => delLugar(a.id));
+      const { data: todosLosAsistentes, error } = await consulta;
+      if (error) throw error;
+      const delPool = (todosLosAsistentes || []).filter((a) => delLugar(a.id));
 
-    const ids = asistentes.map((a) => a.id);
-    const [documentacion, calificaciones, tipos] = await Promise.all([
-      documentacionDeVarios(prestadoraId, ids),
-      calificacionesDeVarios(prestadoraId, ids, visibilidad),
-      tiposDeLaVidriera(clienteDelPedido(req), tiposOfrecidos),
-    ]);
+      const ids = delPool.map((a) => a.id);
+      const [docs, califs] = await Promise.all([
+        documentacionDeVarios(dbTrabajo, ids),
+        calificacionesDeVarios(dbTrabajo, ids, visibilidad),
+      ]);
+      return { asistentes: delPool, documentacion: docs, calificaciones: califs };
+    });
+    const tipos = await tiposDeLaVidriera(clienteDelPedido(req), tiposOfrecidos);
 
     const nombreDe = new Map(lugaresOfrecidos.map((l) => [l.id, l.nombre]));
     const perfiles = asistentes.map((asistente) =>
@@ -1486,34 +1547,44 @@ appClientesRouter.get('/intermediacion/asistentes/:id', requiereRolCliente, asyn
 
     // Se busca adentro del pool y no en la tabla entera: quien no está en la vidriera no tiene
     // perfil público, aunque alguien pruebe la dirección con su identificador.
-    const { data: asistente } = await poolDeLaPrestadora(prestadoraId)
-      .eq('id', req.params.id)
-      .maybeSingle();
+    // Todo lo de la persona, con el trabajo de la Prestadora, por lo mismo que la vidriera; las
+    // opiniones escritas, además, son de otros Clientes, que la base no le deja ver a éste.
+    const perfil = await enLaPrestadora(prestadoraId, 'un perfil de la vidriera del Match', async (dbTrabajo) => {
+      const { data: delPool, error } = await poolDeLaPrestadora(dbTrabajo)
+        .eq('id', req.params.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!delPool) return null;
+
+      const [docs, califs] = await Promise.all([
+        documentacionDeVarios(dbTrabajo, [delPool.id]),
+        calificacionesDeVarios(dbTrabajo, [delPool.id], visibilidad),
+      ]);
+
+      // Las opiniones escritas, sin quién las escribió: quien calificó es un Cliente, y su
+      // nombre no es parte de lo que se publica. Van sólo las que la Prestadora dejó públicas.
+      let escritas = [];
+      if (visibilidad.cliente_califica_al_asistente) {
+        const { data, error: errorOpiniones } = await dbTrabajo
+          .from('calificaciones_asistente')
+          .select('id, estrellas, comentario, created_at')
+          .eq('asistente_id', delPool.id)
+          .eq('visible_publica', true)
+          .order('created_at', { ascending: false })
+          .limit(TOPE_DE_OPINIONES);
+        if (errorOpiniones) throw errorOpiniones;
+        escritas = data || [];
+      }
+      return { asistente: delPool, documentacion: docs, calificaciones: califs, opiniones: escritas };
+    });
     // El que no existe y el que está fuera de la vidriera contestan lo mismo: desde afuera se
     // tienen que ver iguales.
-    if (!asistente) throw new ErrorConMotivo('no_encontrado');
+    if (!perfil) throw new ErrorConMotivo('no_encontrado');
+    const { asistente, documentacion, calificaciones, opiniones } = perfil;
 
-    const [documentacion, calificaciones, tipos] = await Promise.all([
-      documentacionDeVarios(prestadoraId, [asistente.id]),
-      calificacionesDeVarios(prestadoraId, [asistente.id], visibilidad),
-      tiposDeLaVidriera(clienteDelPedido(req), asistente.tipo_asistente_id ? [asistente.tipo_asistente_id] : []),
-    ]);
-
-    // Las opiniones escritas, sin quién las escribió: quien calificó es un Cliente, y su
-    // nombre no es parte de lo que se publica. Van sólo las que la Prestadora dejó públicas.
-    let opiniones = [];
-    if (visibilidad.cliente_califica_al_asistente) {
-      // Con la llave maestra: son opiniones de otros Clientes, que la base no le deja ver a ésta.
-      const { data } = await supabase
-        .from('calificaciones_asistente')
-        .select('id, estrellas, comentario, created_at')
-        .eq('prestadora_id', prestadoraId)
-        .eq('asistente_id', asistente.id)
-        .eq('visible_publica', true)
-        .order('created_at', { ascending: false })
-        .limit(TOPE_DE_OPINIONES);
-      opiniones = data || [];
-    }
+    const tipos = await tiposDeLaVidriera(
+      clienteDelPedido(req), asistente.tipo_asistente_id ? [asistente.tipo_asistente_id] : []
+    );
 
     // Con la credencial del Cliente, por lo mismo que en la vidriera.
     const dondeTrabaja = await nombresDeLugares(
@@ -1648,15 +1719,18 @@ async function conversacionDelCliente(req) {
 appClientesRouter.get('/intermediacion/conversaciones', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera();
-    // Con la llave maestra: el hilo trae el nombre y la foto del Asistente, y la base no le deja
-    // ver al Cliente un Asistente que todavía no lo atiende, que es el caso de la vidriera.
-    const { data, error } = await supabase
-      .from('conversaciones_intermediacion')
-      .select('id, asistente_id, ultimo_mensaje_at, asistentes(id, nombre, foto_url)')
-      .eq('prestadora_id', req.usuarioCliente.prestadoraId)
-      .eq('cliente_id', req.usuarioCliente.clienteId)
-      .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false });
-    if (error) return responderError(res, error);
+    // Con el trabajo de la Prestadora: el hilo trae el nombre y la foto del Asistente, y la base no
+    // le deja ver al Cliente un Asistente que todavía no lo atiende, que es el caso de la vidriera.
+    // El filtro por el Cliente es el que acota a sus hilos.
+    const data = await enLaPrestadora(req.usuarioCliente.prestadoraId, 'los hilos del Cliente', async (dbTrabajo) => {
+      const { data: filas, error } = await dbTrabajo
+        .from('conversaciones_intermediacion')
+        .select('id, asistente_id, ultimo_mensaje_at, asistentes(id, nombre, foto_url)')
+        .eq('cliente_id', req.usuarioCliente.clienteId)
+        .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return filas;
+    });
 
     const hilos = data || [];
     // Cuántos mensajes sin leer tiene cada hilo, en una sola consulta para toda la lista. Sólo
@@ -1695,9 +1769,11 @@ appClientesRouter.get('/intermediacion/conversaciones', requiereRolCliente, asyn
 appClientesRouter.post('/intermediacion/asistentes/:id/conversacion', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera();
-    const { data: asistente } = await poolDeLaPrestadora(req.usuarioCliente.prestadoraId)
-      .eq('id', req.params.id)
-      .maybeSingle();
+    const asistente = await enLaPrestadora(req.usuarioCliente.prestadoraId, 'abrir un hilo del Match', async (dbTrabajo) => {
+      const { data, error } = await poolDeLaPrestadora(dbTrabajo).eq('id', req.params.id).maybeSingle();
+      if (error) throw error;
+      return data;
+    });
     if (!asistente) throw new ErrorConMotivo('no_encontrado');
 
     const conversacion = await conversacionDeLaPareja({
@@ -1722,11 +1798,13 @@ appClientesRouter.get('/intermediacion/conversaciones/:id', requiereRolCliente, 
     // el hilo entero, que es lo que hace falta al abrirlo.
     const desde = desdeCuando(req.query?.desde);
 
-    // El nombre y la foto del Asistente, con la llave maestra: la base no le deja ver al Cliente
-    // un Asistente que todavía no la atiende.
+    // El nombre y la foto del Asistente, con el trabajo de la Prestadora: la base no le deja ver al
+    // Cliente un Asistente que todavía no lo atiende.
     const [mensajes, { data: asistente }, enCurso, base] = await Promise.all([
       mensajesDeLaConversacion({ conversacion, desde, db: clienteDelPedido(req) }),
-      supabase.from('asistentes').select('id, nombre, foto_url').eq('id', conversacion.asistente_id).eq('prestadora_id', conversacion.prestadora_id).maybeSingle(),
+      enLaPrestadora(conversacion.prestadora_id, 'el Asistente de un hilo', (dbTrabajo) =>
+        dbTrabajo.from('asistentes').select('id, nombre, foto_url').eq('id', conversacion.asistente_id).maybeSingle()
+      ),
       videollamadaEnCurso(conversacion),
       direccionDeVideollamada(conversacion.prestadora_id),
     ]);

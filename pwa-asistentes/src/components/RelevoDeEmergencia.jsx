@@ -205,11 +205,7 @@ export default function RelevoDeEmergencia({ t, locale, guardiaId, alPedir }) {
           }}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {fase === 'apretando'
-            ? tr.siga_apretando
-            : soltoAntes
-              ? con(tr.mantener, { segundos: MANTENER_MS / 1000 })
-              : tr.boton}
+          {soltoAntes ? con(tr.mantener, { segundos: MANTENER_MS / 1000 }) : tr.boton}
         </button>
       )}
 

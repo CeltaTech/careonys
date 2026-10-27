@@ -393,7 +393,6 @@ export const T = {
     relevo_emergencia: {
       boton: 'Relevo de emergencia',
       mantener: 'Mantenga presionado {segundos} segundos',
-      siga_apretando: 'Siga apretando…',
       cuenta: 'Pidiendo el relevo en {segundos}…',
       enviando: 'Pidiendo el relevo…',
       avisado: 'Relevo pedido a las {hora}. La Prestadora ya lo tiene.',
@@ -1048,7 +1047,6 @@ export const T = {
     relevo_emergencia: {
       boton: 'Emergency relief',
       mantener: 'Hold for {segundos} seconds',
-      siga_apretando: 'Keep holding…',
       cuenta: 'Requesting relief in {segundos}…',
       enviando: 'Requesting relief…',
       avisado: 'Relief requested at {hora}. The Provider already has it.',
@@ -1675,7 +1673,6 @@ export const T = {
     relevo_emergencia: {
       boton: 'Rendição de emergência',
       mantener: 'Mantenha pressionado por {segundos} segundos',
-      siga_apretando: 'Continue pressionando…',
       cuenta: 'Pedindo a rendição em {segundos}…',
       enviando: 'Pedindo a rendição…',
       avisado: 'Rendição pedida às {hora}. A Prestadora já a tem.',

@@ -109,7 +109,7 @@ export function InvitarPersonaAutorizadaModal({ clienteId, prestadoraId, onClose
   }
 
   if (documento) {
-    return <DocumentoDeLaInstruccion texto={documento} onCerrar={cerrar} recienGuardado />;
+    return <DocumentoDeLaInstruccion texto={documento} onCerrar={cerrar} />;
   }
 
   return (

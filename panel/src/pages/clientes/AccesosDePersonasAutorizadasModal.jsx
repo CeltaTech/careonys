@@ -112,7 +112,7 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
   }
 
   if (documento) {
-    return <DocumentoDeLaInstruccion texto={documento} onCerrar={cerrar} recienGuardado />;
+    return <DocumentoDeLaInstruccion texto={documento} onCerrar={cerrar} />;
   }
 
   return (
@@ -183,7 +183,7 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
    Se imprime con el mismo mecanismo que el informe para la Obra Social: `#area-imprimible` es
    lo único que la hoja conserva (ver la regla `@media print` de `index.css`), y los botones
    llevan `no-imprimir` para no salir en el papel que alguien va a firmar. */
-export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false, onCerrar }) {
+export function DocumentoDeLaInstruccion({ texto, fecha, onCerrar }) {
   const { t, locale } = useLocale();
   const modal = useModalAccesible(onCerrar);
 
@@ -192,7 +192,6 @@ export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false,
       <div className="panel-modal panel-modal-ancho" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <div className="no-imprimir">
           <h2 id={modal.idTitulo}>{t.clientes.personas_autorizadas.documento_titulo}</h2>
-          {recienGuardado && <Alert variant="success">{t.clientes.personas_autorizadas.documento_guardado}</Alert>}
           {fecha && (
             <dl className="panel-detalle-lista">
               <dt>{t.clientes.personas_autorizadas.documento_fecha}</dt>

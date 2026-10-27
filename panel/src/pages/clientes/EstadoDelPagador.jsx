@@ -59,7 +59,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
         `/cuentas/cliente/${clienteId}/pagador/consentimiento`,
         { method: 'POST' },
       );
-      setDocumentoAVer({ texto: consentimiento.documento_texto, recienGuardado: true });
+      setDocumentoAVer({ texto: consentimiento.documento_texto });
       await recargar();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -285,7 +285,6 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
       {documentoAVer && (
         <DocumentoDelConsentimiento
           texto={documentoAVer.texto}
-          recienGuardado={documentoAVer.recienGuardado}
           onCerrar={() => setDocumentoAVer(null)}
         />
       )}
@@ -322,7 +321,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
    El Panel no lo arma ni lo retoca: lo muestra. Se imprime con el mismo mecanismo que el resto
    —`#area-imprimible` es lo único que la hoja conserva—, y los botones llevan `no-imprimir` para
    no salir en el papel que alguien va a firmar. */
-function DocumentoDelConsentimiento({ texto, recienGuardado = false, onCerrar }) {
+function DocumentoDelConsentimiento({ texto, onCerrar }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onCerrar);
   const textos = t.clientes.pagador;
@@ -332,7 +331,6 @@ function DocumentoDelConsentimiento({ texto, recienGuardado = false, onCerrar })
       <div className="panel-modal panel-modal-ancho" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <div className="no-imprimir">
           <h2 id={modal.idTitulo}>{textos.documento_titulo}</h2>
-          {recienGuardado && <Alert variant="success">{textos.documento_guardado}</Alert>}
         </div>
 
         <div id="area-imprimible">

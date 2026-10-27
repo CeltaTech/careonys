@@ -46,6 +46,7 @@ import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
+const ESPERA_FIRMA = 'pendiente_firma';
 
 /* Qué ve, en una línea, cada Persona autorizada.
    ==========================================================================
@@ -109,6 +110,12 @@ export function ClienteDetalle() {
   // se resuelve.
   const location = useLocation();
   const [tab, setTab] = useState(location.state?.solapa ?? 'contacto');
+  // Los documentos de este Cliente que esperan una firma. La autorización de acceso llega con las
+  // Personas autorizadas; el consentimiento del Pagador y el de la medicación se preguntan acá.
+  const [pagadorSinFirmar, setPagadorSinFirmar] = useState(false);
+  const [medicacionSinFirmar, setMedicacionSinFirmar] = useState(false);
+  // Adónde llevó el botón de la documentación pendiente, para dejarlo a la vista al llegar.
+  const [irA, setIrA] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -162,10 +169,58 @@ export function ClienteDetalle() {
     }
   }, [id, t]);
 
+  const recargarDocumentosSinFirmar = useCallback(async () => {
+    const [pagador, medicacion] = await Promise.all([
+      supabase.from('consentimientos_pagador').select('id').eq('cliente_id', id).eq('estado', ESPERA_FIRMA).limit(1),
+      supabase
+        .from('consentimientos_medicacion')
+        .select('id, indicaciones_medicacion!consentimientos_medicacion_indicacion_id_prestadora_id_fkey!inner(cliente_id)')
+        .eq('indicaciones_medicacion.cliente_id', id)
+        .eq('estado', ESPERA_FIRMA)
+        .limit(1),
+    ]);
+    // Si la pregunta falla, el botón no aparece: el documento sigue a la vista donde se resuelve.
+    setPagadorSinFirmar(!pagador.error && pagador.data.length > 0);
+    setMedicacionSinFirmar(!medicacion.error && medicacion.data.length > 0);
+  }, [id]);
+
   useEffect(() => {
     recargar();
     recargarPersonasAutorizadas();
-  }, [recargar, recargarPersonasAutorizadas]);
+    recargarDocumentosSinFirmar();
+  }, [recargar, recargarPersonasAutorizadas, recargarDocumentosSinFirmar]);
+
+  // El destino aparece recién cuando su solapa terminó de dibujarse, y el del Pagador además
+  // después de su propia carga: se lo busca en cuanto existe.
+  useEffect(() => {
+    if (!irA) return undefined;
+    const buscar = setInterval(() => {
+      const destino = document.getElementById(irA);
+      if (!destino) return;
+      clearInterval(buscar);
+      destino.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      destino.classList.add('destino-que-llama');
+      destino.addEventListener('animationend', () => destino.classList.remove('destino-que-llama'), { once: true });
+      setIrA(null);
+    }, 100);
+    const rendirse = setTimeout(() => clearInterval(buscar), 3000);
+    return () => {
+      clearInterval(buscar);
+      clearTimeout(rendirse);
+    };
+  }, [irA, tab]);
+
+  function irALaDocumentacionPendiente() {
+    if (instruccionPendiente) {
+      setTab('personas_autorizadas');
+      setIrA('pendiente-autorizacion');
+    } else if (pagadorSinFirmar && puedeEditarCliente) {
+      setTab('contacto');
+      setIrA('pendiente-pagador');
+    } else {
+      navigate('/medicacion');
+    }
+  }
 
   async function quitarPersonaAutorizada(usuarioId) {
     // La cuenta de la persona no se borra: se desactiva, y guarda el motivo.
@@ -257,9 +312,17 @@ export function ClienteDetalle() {
     `${t.clientes.col_fecha_alta}: ${new Date(cliente.created_at).toLocaleDateString(locale)}`,
   ].filter(Boolean);
 
+  const hayDocumentacionPendiente =
+    Boolean(instruccionPendiente) || (pagadorSinFirmar && puedeEditarCliente) || medicacionSinFirmar;
+
   return (
     <div>
       <Cabecera titulo={persona?.nombre_visible || '—'}>
+        {hayDocumentacionPendiente && (
+          <button type="button" className="btn boton-que-llama" onClick={irALaDocumentacionPendiente}>
+            {t.clientes.documentacion_pendiente}
+          </button>
+        )}
         <Button variant="secondary" onClick={() => navigate('/clientes')}>
           <span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}
         </Button>
@@ -355,7 +418,11 @@ export function ClienteDetalle() {
           </section>
           {/* Si el Pagador elegido firmó y qué papeles faltan, siempre a la vista. Avisa, no bloquea. */}
           {formContacto && puedeEditarCliente && (
-            <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
+            <EstadoDelPagador
+              clienteId={cliente.id}
+              puedeRegistrar={puedeRegistrarConsentimiento}
+              onRecargado={recargarDocumentosSinFirmar}
+            />
           )}
           </>
         )}
@@ -421,24 +488,20 @@ export function ClienteDetalle() {
 
         {tab === 'personas_autorizadas' && (
           <>
-            {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
-                no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
-                caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió
-                firmado—, porque son lo único que queda por hacer. */}
+            {/* La instrucción cargada y todavía sin firmar: los dos caminos de cierre —imprimir el
+                papel, o registrar que ya volvió firmado—, que son lo único que queda por hacer. Lo
+                anuncia el botón de la documentación pendiente, así que acá no lleva texto. */}
             {instruccionPendiente && (
-              <Alert variant="warning">
-                {con(t.clientes.personas_autorizadas.instruccion_pendiente, {
-                  fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(locale),
-                })}{' '}
+              <div id="pendiente-autorizacion" className="molde-acciones">
                 <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
                   {t.clientes.personas_autorizadas.ver_documento}
-                </Button>{' '}
+                </Button>
                 {puedeEditarCliente && (
-                  <Button variant="secondary" onClick={() => setPapelAConfirmar(instruccionPendiente)}>
+                  <Button onClick={() => setPapelAConfirmar(instruccionPendiente)}>
                     {t.clientes.personas_autorizadas.registrar_papel}
                   </Button>
                 )}
-              </Alert>
+              </div>
             )}
             <section className="panel-tarjeta hoja-desplazable">
             <div className="panel-tarjeta-titulo">

@@ -4,26 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 9 fichas.** Panel 4, aplicación del Cliente 3, Base 2.
+**Total: 8 fichas.** Panel 3, aplicación del Cliente 3, Base 2.
 
-## Panel (4)
-
-### 53. Última autorización firmada
-
-| | |
-|---|---|
-| **Texto actual** | Última autorización firmada: {fecha} ({como}). — donde {como} es «confirmada por el titular desde su aplicación» o «documento firmado». |
-| **Propuesta** | «Última autorización firmada: {fecha}, {como}.» con {como}: «desde la aplicación del titular» o «con el documento impreso». |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | la firma en la aplicación ya no es una confirmación: es firma con código. Y «documento firmado» repite lo que dice el renglón. Las dos formas quedan cortas y paralelas. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Personas autorizadas», renglón arriba de la lista. |
-| **Qué estaba haciendo** | abrió la solapa. |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | renglón de texto. |
-| **Decisión** |  |
-
+## Panel (3)
 
 ### 43. Falta cómo recibe el trabajo
 

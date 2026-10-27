@@ -220,25 +220,6 @@ export async function instruccionPendiente(clienteId, prestadoraId) {
   return data ?? null;
 }
 
-// La última que quedó firmada, para que la pantalla del Panel diga desde cuándo rige lo que rige y
-// cómo se cerró. Las anuladas no cuentan: son las que quedaron a mitad de camino cuando llegó una
-// instrucción nueva, y nadie las firmó nunca.
-export async function ultimaInstruccionCerrada(clienteId, prestadoraId) {
-  if (!clienteId || !prestadoraId) return null;
-
-  const { data } = await supabase
-    .from('instrucciones_acceso_personas_autorizadas')
-    .select('id, documento_texto, documento_idioma, created_at, cerrada_en, cerrada_como')
-    .eq('prestadora_id', prestadoraId)
-    .eq('cliente_id', clienteId)
-    .eq('estado', 'cerrada')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return data ?? null;
-}
-
 // El código que el titular necesita para confirmar desde la aplicación. Va al teléfono cuando la
 // Prestadora tiene WhatsApp configurado, y si no —o si el envío falla— al correo, que es el único
 // canal que siempre existe. Nunca se pierde la confirmación por un problema de un canal; mismo

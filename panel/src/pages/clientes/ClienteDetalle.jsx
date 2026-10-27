@@ -98,7 +98,6 @@ export function ClienteDetalle() {
   const [estadoPersonasAutorizadas, setEstadoPersonasAutorizadas] = useState('cargando');
   const [errorPersonasAutorizadas, setErrorPersonasAutorizadas] = useState(null);
   const [instruccionPendiente, setInstruccionPendiente] = useState(null);
-  const [ultimaInstruccion, setUltimaInstruccion] = useState(null);
   const [mostrarInvitarPersonasAutorizadas, setMostrarInvitarPersonasAutorizadas] = useState(false);
   // Guarda a quién se estaba mirando al abrir la ventana de accesos, para que esa persona
   // quede a la vista. `null` es la ventana cerrada.
@@ -153,7 +152,6 @@ export function ClienteDetalle() {
       const miembros = resultado.miembros ?? [];
       setPersonasAutorizadas(miembros);
       setInstruccionPendiente(resultado.instruccionPendiente ?? null);
-      setUltimaInstruccion(resultado.ultimaInstruccion ?? null);
       setEstadoPersonasAutorizadas(miembros.length ? 'listo' : 'vacio');
     } catch (err) {
       setErrorPersonasAutorizadas(mensajeDeError(err, t));
@@ -448,14 +446,6 @@ export function ClienteDetalle() {
                 </Button>
               )}
             </div>
-            {!instruccionPendiente && ultimaInstruccion && (
-              <div className="panel-mini">
-                {con(t.clientes.personas_autorizadas.ultima_instruccion, {
-                  fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
-                  como: t.clientes.personas_autorizadas[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
-                })}
-              </div>
-            )}
 
             {estadoPersonasAutorizadas === 'cargando' && <p className="molde-vacio">{t.comun.cargando}</p>}
             {estadoPersonasAutorizadas === 'error' && <p className="molde-vacio">{errorPersonasAutorizadas || t.comun.error_generico}</p>}

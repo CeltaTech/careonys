@@ -30,7 +30,6 @@ import {
   personasAutorizadasConSusAccesos,
   crearInstruccion,
   instruccionPendiente,
-  ultimaInstruccionCerrada,
   cerrarConPapelFirmado,
 } from '../utils/instruccionesPersonasAutorizadas.js';
 import {
@@ -296,15 +295,13 @@ panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas', requiereRolPa
   }
 
   try {
-    const [miembros, pendiente, ultima] = await Promise.all([
+    const [miembros, pendiente] = await Promise.all([
       personasAutorizadasConSusAccesos({ clienteId: cliente.id, prestadoraId: cliente.prestadora_id }),
       instruccionPendiente(cliente.id, cliente.prestadora_id),
-      ultimaInstruccionCerrada(cliente.id, cliente.prestadora_id),
     ]);
     // `pendiente` es un estado normal, no un error: hasta que el titular la firme sigue rigiendo
-    // lo anterior. La pantalla lo muestra para que nadie se olvide de cerrarlo. Y cuando no hay
-    // ninguna pendiente, muestra la última que sí se firmó, que es lo que rige hoy.
-    res.json({ miembros, instruccionPendiente: pendiente, ultimaInstruccion: ultima });
+    // lo anterior. La pantalla lo muestra para que nadie se olvide de cerrarlo.
+    res.json({ miembros, instruccionPendiente: pendiente });
   } catch (error) {
     responderError(res, error);
   }

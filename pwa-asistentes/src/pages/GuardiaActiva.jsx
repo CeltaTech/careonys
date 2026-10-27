@@ -16,6 +16,7 @@ import DomicilioTemporal from '../components/DomicilioTemporal';
 import EmergenciaEnGuardia from '../components/EmergenciaEnGuardia';
 import DescansoEnGuardia from '../components/DescansoEnGuardia';
 import ExtensionDeTurno from '../components/ExtensionDeTurno';
+import RelevoDeEmergencia from '../components/RelevoDeEmergencia';
 import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import PaseDeGuardia from '../components/PaseDeGuardia';
 import CodigoDePresencia from '../components/CodigoDePresencia';
@@ -682,13 +683,7 @@ export default function GuardiaActiva() {
           {/* El rato de más, cuando terminó el turno y el relevo no llegó. Va antes que el resto
               porque en ese momento es lo único que esta persona está esperando ver, y se dibuja
               solo si hay una extensión abierta: en un turno que termina normal no aparece nada. */}
-          <ExtensionDeTurno
-            t={t}
-            locale={locale}
-            guardiaId={id}
-            extension={extension}
-            alAvisar={() => cargar()}
-          />
+          <ExtensionDeTurno t={t} locale={locale} extension={extension} />
 
           {/* Lo que no admite esperar al cierre. Queda al final del bloque de la guardia en curso
               y no arriba de todo: el lugar de arriba es para lo que se hace siempre, y esto se usa
@@ -713,6 +708,16 @@ export default function GuardiaActiva() {
               alCambiar={() => revisarPendientes()}
             />
           )}
+
+          {/* El Relevo de emergencia, último y apartado de los botones de todos los días: es el
+              único que deja a esta persona irse a mitad del turno, y no se tiene que poder apretar
+              al pasar. Está mientras dura la guardia, y se puede pedir más de una vez. */}
+          <RelevoDeEmergencia
+            t={t}
+            locale={locale}
+            guardiaId={id}
+            alPedir={() => revisarPendientes()}
+          />
         </section>
       )}
 

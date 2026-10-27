@@ -271,7 +271,7 @@ se muestran lo decide el servidor.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:92`
+**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:42`
 
 **DECISIÓN:**
 
@@ -291,46 +291,26 @@ renglón de la lista de pasos.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:92`
+**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:42`
 
 **DECISIÓN:**
 
 ---
 
-## 13. Qué es «no puedo continuar»
+## 14. El Relevo de emergencia quedó pedido
 
-**Ruta:** `extension.explicacion`
+**Ruta:** `relevo_emergencia.avisado`
 
 **Texto de hoy:**
-> Esto le llega a la Prestadora con la máxima urgencia. No la libera del turno: sirve para que
-> sepan que necesita que la releven ya.
+> Relevo pedido a las {hora}. La Prestadora ya lo tiene.
 
-**Dónde se ve:** pantalla de la Guardia en curso, bloque de turno extendido.
+**Dónde se ve:** pantalla de la Guardia en curso, al pie, sobre el botón «Relevo de emergencia».
 
-**Qué lo dispara:** la persona aprieta «No puedo continuar». Es lo que lee antes de confirmar.
+**Qué lo dispara:** el pedido ya salió. Confirma la hora.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:114`
-
-**DECISIÓN:**
-
----
-
-## 14. El «no puedo continuar» quedó avisado
-
-**Ruta:** `extension.avisado`
-
-**Texto de hoy:**
-> Aviso enviado a las {hora}. La Prestadora ya lo tiene.
-
-**Dónde se ve:** pantalla de la Guardia en curso, bloque de turno extendido.
-
-**Qué lo dispara:** el aviso ya salió. Confirma la hora.
-
-**Quién lo lee:** el Asistente.
-
-**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:101`
+**Archivo:** `pwa-asistentes/src/components/RelevoDeEmergencia.jsx:177`
 
 **DECISIÓN:**
 

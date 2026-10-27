@@ -65,7 +65,7 @@ function mandar(item) {
   if (item.tipo === 'salida') return api.registrarSalida(item.guardiaId, datos);
   if (item.tipo === 'aviso_demora') return api.avisarDemora(item.guardiaId, datos);
   if (item.tipo === 'emergencia') return api.avisarEmergencia(item.guardiaId, datos);
-  if (item.tipo === 'no_puede_continuar') return api.noPuedeContinuar(item.guardiaId, datos);
+  if (item.tipo === 'relevo_de_emergencia') return api.relevoDeEmergencia(item.guardiaId, datos);
   if (item.tipo === 'descanso_empezar') return api.empezarDescanso(item.guardiaId, datos);
   if (item.tipo === 'descanso_terminar') return api.terminarDescanso(item.guardiaId, datos);
   // Un tipo que esta versión no conoce no se manda a ningún lado: adivinar la dirección sería

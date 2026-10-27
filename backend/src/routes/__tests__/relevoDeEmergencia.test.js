@@ -93,7 +93,7 @@ after(() => {
 });
 
 async function desdeElTelefono(id, cuerpo) {
-  const respuesta = await fetch(`${RAIZ}/api/app-asistentes/guardias/${id}/no-puedo-continuar`, {
+  const respuesta = await fetch(`${RAIZ}/api/app-asistentes/guardias/${id}/relevo-de-emergencia`, {
     method: 'POST',
     headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
     body: JSON.stringify(cuerpo ?? {}),
@@ -441,12 +441,12 @@ describe('la extensión que viaja con el turno', () => {
     assert.equal(cuerpo.extension, null);
   });
 
-  it('con extensión abierta viaja desde cuándo, si ya avisó, y los pasos de la búsqueda', async () => {
+  it('con extensión abierta viaja desde cuándo y los pasos de la búsqueda, y nada del Relevo de emergencia', async () => {
     extensionesEnLaBase[0].desde_at = '2026-09-16T06:00:00.000Z';
     const { estado, cuerpo } = await verElTurno();
     assert.equal(estado, 200);
     assert.equal(cuerpo.extension.desdeAt, '2026-09-16T06:00:00.000Z');
-    assert.equal(cuerpo.extension.noPuedeContinuarAt, null);
+    assert.deepEqual(Object.keys(cuerpo.extension).sort(), ['desdeAt', 'pasos']);
     assert.deepEqual(cuerpo.extension.pasos, ['sin_novedades']);
   });
 

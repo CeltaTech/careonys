@@ -4,8 +4,8 @@ import { pasosDeLaBusqueda } from './extensionDeTurno.js';
 /* Lo que se le muestra a la que quedó de más.
    ==========================================================================
 
-   Tres cosas, y ninguna más: desde qué hora está de más, cuándo avisó por última vez que no puede
-   continuar, y en qué anda la búsqueda del relevo.
+   Dos cosas, y ninguna más: desde qué hora está de más y en qué anda la búsqueda del relevo. El
+   Relevo de emergencia es otro caso y no se cuenta acá.
 
    SIN NINGÚN NOMBRE. Quién faltó, quién viene, a quién se le asignó el turno: nada de eso se le
    cuenta. No es información que le sirva —no puede llamar a nadie desde adentro de un turno— y
@@ -52,7 +52,6 @@ async function leerLaExtension(db, { guardiaId, prestadoraId }) {
   }
   if (!extension) return null;
 
-  const noPuedeContinuarAt = await ultimoRelevoDeEmergencia(db, { guardiaId, prestadoraId, desde: extension.desde_at });
   const relevo = await elRelevo(db, extension.relevo_guardia_id, prestadoraId);
   const { coordinacionAvisada, escalado } = await comoVaElMensaje(db, {
     guardiaId,
@@ -62,32 +61,8 @@ async function leerLaExtension(db, { guardiaId, prestadoraId }) {
 
   return {
     desdeAt: extension.desde_at,
-    noPuedeContinuarAt,
     pasos: pasosDeLaBusqueda({ relevo, coordinacionAvisada, escalado }),
   };
-}
-
-/**
- * La última vez que pidió el Relevo de emergencia desde que quedó de más. Se puede pedir más de una
- * vez, y cada pedido es una emergencia de la guardia con su hora.
- */
-async function ultimoRelevoDeEmergencia(db, { guardiaId, prestadoraId, desde }) {
-  const { data, error } = await db
-    .from('emergencias_guardia')
-    .select('reportado_at')
-    .eq('guardia_id', guardiaId)
-    .eq('prestadora_id', prestadoraId)
-    .eq('relevo_de_emergencia', true)
-    .gte('reportado_at', desde)
-    .order('reportado_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error(`Error leyendo el relevo de emergencia del turno ${guardiaId}:`, error.message);
-    return null;
-  }
-  return data?.reportado_at ?? null;
 }
 
 async function elRelevo(db, relevoId, prestadoraId) {

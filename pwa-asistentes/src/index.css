@@ -1068,3 +1068,65 @@ p {
     animation: none;
   }
 }
+
+/* ---------- Relevo de emergencia ---------- */
+
+/* Separado del resto por una línea y un espacio: no es un botón de todos los días. */
+.relevo-emergencia {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--linea);
+}
+
+/* Mientras se lo mantiene apretado se va llenando de izquierda a derecha, para que se vea que
+   está contando y cuánto falta. */
+.btn-relevo-emergencia {
+  border-color: var(--rojo-peligro);
+  color: var(--mal-texto);
+  font-weight: 600;
+  padding: 14px 13px;
+  background: linear-gradient(to right, var(--mal-fondo) var(--progreso, 0%), var(--blanco) var(--progreso, 0%));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.btn-relevo-emergencia:hover:not(:disabled) {
+  background: linear-gradient(to right, var(--mal-fondo) var(--progreso, 0%), var(--blanco) var(--progreso, 0%));
+}
+
+/* La cuenta late una vez por segundo, junto con el sonido. */
+.relevo-emergencia-cuenta {
+  padding: 14px;
+  border-radius: 7px;
+  border: 2px solid var(--rojo-peligro);
+  color: var(--mal-texto);
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+  animation: relevo-emergencia-latido 1s steps(1) infinite;
+}
+
+.relevo-emergencia-cuenta p {
+  margin: 0 0 12px;
+}
+
+@keyframes relevo-emergencia-latido {
+  0% {
+    background: var(--rojo-peligro);
+    color: var(--blanco);
+  }
+  50% {
+    background: var(--mal-fondo);
+    color: var(--mal-texto);
+  }
+}
+
+/* Sin parpadeo para quien lo pidió así: queda encendido fijo, que igual no pasa inadvertido. */
+@media (prefers-reduced-motion: reduce) {
+  .relevo-emergencia-cuenta {
+    animation: none;
+    background: var(--mal-fondo);
+  }
+}

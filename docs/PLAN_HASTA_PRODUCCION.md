@@ -383,16 +383,6 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   mensaje «No tiene permiso para verificar el registro de accesos». Cierre: una migración nueva los
   renombra y el mensaje sale del catálogo aprobado.
 
-**8.** **El botón del Relevo de emergencia en la aplicación del Asistente.** El backend ya lo
-guarda con la credencial del Asistente, como una emergencia de la guardia, y le hace sonar la
-alarma al Coordinador. La aplicación todavía lo muestra sólo durante una extensión del turno y una
-sola vez (`pwa-asistentes/src/components/ExtensionDeTurno.jsx`). Pasa a estar **en cualquier
-momento de la guardia en curso, y se puede apretar más de una vez**. Espera el sí del Desarrollador
-para tocar la interfaz.
-
-**Comprobación:** en la aplicación, con una guardia en curso y sin extensión, el botón está y cada
-toque le llega al Coordinador.
-
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
 **La base ya está.** `backend/src/db/connection.js` entrega **el cliente de quien está pidiendo**
@@ -635,10 +625,6 @@ sólo lo de su zona. El Administrador sigue viendo todo, y una emergencia que ll
 Coordinadores la ve cualquiera. Se les avisa a las Prestadoras antes de publicarlo. Fuera de eso,
 nadie que use el producto nota nada, salvo que a partir de acá un error de programación no puede
 filtrar datos de otra Prestadora.
-
-**La excepción es el Relevo de emergencia** (paso 8), que cambia lo que hace porque así se decidió
-para que el Paciente nunca quede solo. Sus textos y su pantalla esperan la aprobación del
-Desarrollador como cualquier otro.
 
 ---
 
@@ -930,7 +916,7 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
 - **El relevo confirma antes de ir**, con la anticipación que fija la Prestadora. Si no confirma,
   el Coordinador recibe una alarma temprana.
 - **El Relevo de emergencia** se puede pedir en cualquier momento de la guardia, más de una vez,
-  y no la cierra: le hace sonar la alarma al Coordinador. Falta su botón en la aplicación (paso 8).
+  y no la cierra: le hace sonar la alarma al Coordinador.
 - **Si el Asistente no vino o se fue**, se detecta por la ubicación fuera sin aviso, por la
   aplicación cerrada, por el botón «Paciente sin Asistente» del Cliente o porque el relevo no
   encontró a nadie —y entonces entra con el código QR del Cliente—. Queda como «Egreso sin

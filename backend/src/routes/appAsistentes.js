@@ -728,7 +728,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     .maybeSingle();
 
   // Si su turno ya terminó y el relevo no llegó, ella sigue adentro. La pantalla tiene que
-  // decírselo, mostrarle cómo va la búsqueda y darle por dónde avisar que no puede continuar.
+  // decírselo y mostrarle cómo va la búsqueda.
   // Viene en blanco en la enorme mayoría de los turnos, que es lo normal.
   const extension = await estadoDeLaExtension({
     guardiaId: data.id,
@@ -1215,10 +1215,11 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   res.json({ ok: true, reportadoAt });
 });
 
-/* «No puedo continuar»: el Relevo de emergencia.
+/* El Relevo de emergencia.
    --------------------------------------------------------------------------
    Se puede apretar en cualquier momento de la guardia en curso, también en el rato de más en que
-   se quedó esperando el relevo, y más de una vez: cada vez es un hecho con su hora.
+   se quedó esperando el relevo, y más de una vez: cada vez es un hecho con su hora. No es lo mismo
+   que el relevo que no llega al terminar el turno, y no cuelga de esa extensión.
 
    NO LA LIBERA, Y ESO NO ES UN DESCUIDO. Irse deja al Paciente solo, y eso la expone a ella: el
    producto no puede ofrecerle un botón que la meta en un problema. La guardia no se cierra: queda
@@ -1232,7 +1233,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
    LO QUE ESCRIBIÓ NO SALE HACIA AFUERA. El aviso dice que pasó y de qué guardia; el texto se lee
    entrando al Panel (`celtatech/CLAUDE.md` §6). Y el detalle es opcional: quien está en el medio
    de algo puede no estar en condiciones de escribir nada. */
-appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
   const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia) {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { exigeDePersonasAutorizadas } from '../utils/accesosDePersonasAutorizadas.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
@@ -21,16 +21,14 @@ import { comprobarFirma } from './llaveDelDispositivo.js';
 // en papel, y entonces la indicación entra igual con la firma pendiente y el Panel no la puede
 // aceptar hasta subir el documento firmado. Lo firmado se guarda entero: texto, identificador de verificación e idioma.
 //
-// CON LA CREDENCIAL DE QUIEN PIDE. La lectura entra a la base con `clienteDelPedido(req)`, no con
-// la llave maestra: la base le contesta al Cliente sólo lo de su Prestadora y sólo si el permiso de sus personas autorizadas
-// les deja ver la medicación. Por eso no lleva el filtro de la Prestadora de la sesión.
+// CON LA CREDENCIAL DE QUIEN PIDE. Todo entra a la base con `clienteDelPedido(req)`, no con la
+// llave maestra: la base le contesta al Cliente sólo lo de su Prestadora y sólo si el permiso de
+// sus personas autorizadas les deja ver la medicación. Por eso no lleva el filtro de la Prestadora
+// de la sesión.
 //
-// EL ALTA SIGUE CON LA MAESTRA. El alta devuelve la fila recién creada, y la base sólo devuelve
-// lo que quien pide puede leer: una persona autorizada a la que se le dejó pedir medicación pero
-// no verla recibiría un rechazo en vez del alta (políticas `cliente_carga_indicaciones_de_sus_pacientes`
-// y `cliente_lee_indicaciones_de_sus_pacientes`). Hasta que eso se resuelva, el alta, el archivo y
-// lo firmado van con la maestra y con la Prestadora escrita; el Paciente, en cambio, se lee con la
-// credencial de quien pide.
+// El alta entra por `pedir_medicacion`, que guarda la indicación y lo firmado en una sola operación
+// y no devuelve la fila: a una persona autorizada que puede pedir medicación pero no verla, la base
+// no le devolvería lo que acaba de cargar. Si la firma no entra, la indicación tampoco.
 
 export const appClientesMedicacionRouter = Router();
 
@@ -156,23 +154,21 @@ appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible
   });
 });
 
-// El documento firmado, para quien firmó. Que lo pueda ver lo decide la base al dejarle leer el
-// consentimiento con su credencial; el enlace sale con la maestra porque el papel vive afuera de
-// la carpeta del Paciente, que es la única que el depósito le abre al Cliente.
+// El documento firmado, para quien firmó. Que lo pueda ver lo decide la base: el depósito le abre
+// el papel a quien puede leer el consentimiento que lo cita.
 appClientesMedicacionRouter.get('/indicacion/:indicacionId/papel-firmado', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), exigeDePersonasAutorizadas('persona_autorizada_medicacion'), async (req, res) => {
-  const { data: consentimiento, error } = await clienteDelPedido(req)
+  const db = clienteDelPedido(req);
+  const { data: consentimiento, error } = await db
     .from('consentimientos_medicacion')
-    .select('archivo_firmado_url, prestadora_id')
+    .select('archivo_firmado_url')
     .eq('indicacion_id', req.params.indicacionId)
     .eq('cerrado_como', 'papel_firmado')
     .not('archivo_firmado_url', 'is', null)
     .maybeSingle();
   if (error) return responderError(res, error);
-  if (!consentimiento || consentimiento.prestadora_id !== req.usuarioCliente.prestadoraId) {
-    return responderError(res, new ErrorConMotivo('no_encontrado'));
-  }
+  if (!consentimiento) return responderError(res, new ErrorConMotivo('no_encontrado'));
 
-  const { data, error: errorEnlace } = await supabase.storage.from(BUCKET).createSignedUrl(consentimiento.archivo_firmado_url, 60);
+  const { data, error: errorEnlace } = await db.storage.from(BUCKET).createSignedUrl(consentimiento.archivo_firmado_url, 60);
   if (errorEnlace) return responderError(res, errorEnlace);
   res.json({ url: data.signedUrl });
 });
@@ -187,7 +183,6 @@ appClientesMedicacionRouter.post(
   upload.single('prescripcion'),
   manejarErrorMulter,
   async (req, res) => {
-    let indicacionCreada = null;
     try {
       // El Paciente se lee con la credencial de quien pide: la Prestadora con la que se arma la
       // ruta y se da el alta es la de la fila que la base ya le dejó ver.
@@ -232,61 +227,32 @@ appClientesMedicacionRouter.post(
       if (req.file) {
         const extension = extensionDeArchivo(req.file.mimetype);
         const ruta = `${paciente.prestadora_id}/${paciente.id}/prescripcion-${Date.now()}.${extension}`;
-        const { error: errorUpload } = await supabase.storage
+        // Sin reemplazar: la ruta lleva la hora, y el depósito no le deja al Cliente pisar un archivo.
+        const { error: errorUpload } = await db.storage
           .from(BUCKET)
-          .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+          .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
         if (errorUpload) throw errorUpload;
         prescripcionArchivoUrl = ruta;
       }
 
-      const { data, error } = await supabase
-        .from('indicaciones_medicacion')
-        .insert({
-          prestadora_id: paciente.prestadora_id,
-          paciente_id: paciente.id,
-          cliente_id: paciente.cliente_id,
-          medicamento,
-          dosis,
-          frecuencia,
-          via_administracion_id: via.id,
-          prescripcion_archivo_url: prescripcionArchivoUrl,
-          fecha_desde: fechaDesde,
-          fecha_hasta: fechaHasta || null,
-          solicitado_por: req.usuarioCliente.id,
-        })
-        .select('id, estado')
-        .single();
-      if (error) throw error;
-      indicacionCreada = data;
-
-      if (documento) {
-        const ahora = new Date().toISOString();
-        const enLaApp = firma === 'app';
-        const { error: errorFirma } = await supabase.from('consentimientos_medicacion').insert({
-          prestadora_id: paciente.prestadora_id,
-          indicacion_id: data.id,
-          documento_texto: documento.texto,
-          documento_verificador: documento.verificador,
-          documento_idioma: documento.idioma,
-          estado: enLaApp ? 'cerrado' : 'pendiente_firma',
-          cerrado_como: enLaApp ? 'confirmado_en_la_app' : null,
-          cerrado_en: enLaApp ? ahora : null,
-          cerrado_desde: enLaApp ? 'app_clientes' : null,
-          cargado_por: req.usuarioCliente.id,
-        });
-        if (errorFirma) throw errorFirma;
-      }
-
-      res.json({ indicacion: { ...data, firma: documento ? (firma === 'app' ? 'cerrado' : 'pendiente_firma') : null } });
-    } catch (err) {
       // Una indicación sin la firma que se pidió no queda: o entran las dos, o ninguna.
-      if (indicacionCreada) {
-        await supabase
-          .from('indicaciones_medicacion')
-          .delete()
-          .eq('id', indicacionCreada.id)
-          .eq('prestadora_id', req.usuarioCliente.prestadoraId);
-      }
+      const { data: id, error } = await db.rpc('pedir_medicacion', {
+        p_paciente: paciente.id,
+        p_medicamento: medicamento,
+        p_dosis: dosis,
+        p_frecuencia: frecuencia,
+        p_via: via.id,
+        p_prescripcion: prescripcionArchivoUrl,
+        p_desde: fechaDesde,
+        p_hasta: fechaHasta || null,
+        p_documento: documento
+          ? { texto: documento.texto, verificador: documento.verificador, idioma: documento.idioma, en_la_app: firma === 'app' }
+          : null,
+      });
+      if (error) throw error;
+
+      res.json({ indicacion: { id, estado: 'pendiente', firma: documento ? (firma === 'app' ? 'cerrado' : 'pendiente_firma') : null } });
+    } catch (err) {
       responderError(res, err);
     }
   }

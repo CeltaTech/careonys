@@ -335,9 +335,11 @@ corren con los permisos de quien llama, así que la protección por fila de cada
 hoy no la llama nadie. Además el Panel lee
 `cuenta_desactivada` como columna calculada de `asistentes`: recibe la fila que la consulta ya le
 dejó ver y contesta falso si es de otra Prestadora. Y el backend, con la credencial
-de quien pide, llama tres más: `tiene_permiso_la_sesion` y `permisos_efectivos_de_la_sesion`, que
-no reciben a nadie y contestan los permisos de quien inició sesión, y `reactivar_la_cuenta`, que
-recibe una cuenta y sólo la reactiva si quien pide es el Administrador de esa misma Prestadora.
+de quien pide, llama cuatro más: `tiene_permiso_la_sesion` y `permisos_efectivos_de_la_sesion`, que
+no reciben a nadie y contestan los permisos de quien inició sesión; `reactivar_la_cuenta`, que
+recibe una cuenta y sólo la reactiva si quien pide es el Administrador de esa misma Prestadora; y
+`pedir_medicacion`, que corre con los permisos de quien llama, toma la Prestadora y el Cliente del
+Paciente que la base le deja ver, y guarda la indicación y lo firmado en una sola operación.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial. Toda función nueva de política

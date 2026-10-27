@@ -857,6 +857,15 @@ mano no existe para ninguno. Falta decidir cómo se llaman, en pantalla, la carg
 sección, cuyo título habla sólo de archivos. Cierre: cada cosa que se migra entra por las dos
 formas, por el mismo lote y la misma revisión.
 
+Un Servicio que ya estaba en curso entra completo: con sus guardias y con los Asistentes asignados
+a cada una. **Los Clientes heredados que tienen un Servicio en curso se tratan aparte y primero.**
+Existen desde que entran y se opera con ellos desde el primer momento. La Prestadora no puede
+rechazar esa tanda: sólo puede resolver lo que traba su regularización, y mientras no lo resuelva
+quedan encendidas todas las alarmas que correspondan. La revisión con rechazo queda para lo que no
+tiene un Servicio en curso. Cierre: un Cliente heredado con su Servicio, sus guardias y sus
+Asistentes entra, se ve y se opera; no se puede rechazar; y cada cosa que falta enciende su alarma
+hasta que se resuelve.
+
 ---
 
 ## El Paciente nunca queda solo

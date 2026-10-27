@@ -434,9 +434,7 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   escala (`backend/src/utils/revisarNotificacionesCoordinador.js`, `revisarEmergencias`). Mientras
   una emergencia está en el escalón de todos, cualquier Coordinador la lee entera, y quien la toma
   atiende esa guardia con toda su información mientras la tenga
-  (la función `interno.guardias_a_la_vista_por_una_alarma`). La lista de
-  emergencias del Panel ya lee con la credencial de quien pide (`backend/src/routes/panelEmergencias.js`);
-  los nombres y marcarla atendida siguen con la maestra.
+  (la función `interno.guardias_a_la_vista_por_una_alarma`).
 - **La tabla sin política se escribe acá, no antes.** `codigos_de_presencia` (el QR de la
   llegada y del pase de guardia, `utils/comprobacionDePresencia.js`) sólo tiene permiso para la
   maestra: hoy nadie más la alcanza, y el día que la maestra salga deja de andar. Lleva su política

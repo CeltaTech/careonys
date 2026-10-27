@@ -14,19 +14,15 @@
  *      información sensible (`celtatech/CLAUDE.md` §6): el mensaje dice de qué guardia se trata y
  *      nada más, y el texto se lee entrando al Panel.
  *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. El aviso desde el teléfono va entero con
- *      la credencial de quien avisa. La bandeja del Panel, de quién es cada
- *      guardia y la anotación de quién vio el detalle van con la credencial de quien pide. Los
- *      nombres y marcarla atendida siguen con la llave de servicio, y ahí lo que separa una
- *      Prestadora de otra son los filtros escritos en la consulta.
+ *      la credencial de quien avisa, y todo lo del Panel —la bandeja, los nombres, la anotación de
+ *      quién vio el detalle y marcarla atendida— con la credencial de quien pide.
  *   4. QUE SE PIERDA EL MOMENTO EN QUE PASÓ. El aviso puede quedar media hora en la cola sin
  *      conexión, y esa media hora es justamente el dato.
  *
- * La base falsa honra los filtros de la dirección a propósito: si alguien saca el filtro por
- * Prestadora donde todavía va escrito, las pruebas de aislamiento dejan de pasar. E imita la
- * protección por fila en lo único que hace falta: con la credencial de quien pide contesta sólo lo
- * de su Prestadora, y con la llave de servicio contesta todo. Si a la bandeja se le cayera el filtro
- * de la Prestadora, la emergencia ajena aparecería. La protección por fila en sí no se ve acá: la prueba
- * `scripts/probar_aislamiento.mjs` contra una base de verdad.
+ * La base falsa imita la protección por fila en lo único que hace falta: con la credencial de
+ * quien pide contesta sólo lo de su Prestadora, y con la llave de servicio contesta todo. Si alguna
+ * consulta volviera a la llave maestra, la emergencia ajena aparecería. La protección por fila en
+ * sí no se ve acá: la prueba `scripts/probar_aislamiento.mjs` contra una base de verdad.
  *
  * Los datos son inventados.
  */
@@ -218,7 +214,8 @@ beforeEach(() => {
     filasQuePasanLosFiltros(url, emergenciasEnLaBase)
   );
   respuestas.set('POST /rest/v1/emergencias_guardia', () => [{ id: EMERGENCIA }]);
-  respuestas.set('PATCH /rest/v1/emergencias_guardia', () => []);
+  // Devuelve las filas que modificó: si la base no deja tocar ninguna, contesta vacío.
+  respuestas.set('PATCH /rest/v1/emergencias_guardia', ({ url }) => filasQuePasanLosFiltros(url, emergenciasEnLaBase));
   respuestas.set('GET /rest/v1/asistentes', ({ url }) =>
     filasQuePasanLosFiltros(url, [{ id: USUARIO, prestadora_id: PRESTADORA, nombre: 'Marta Ledesma' }])
   );
@@ -405,22 +402,16 @@ describe('la bandeja del Panel', () => {
     assert.equal(cuerpo.emergencias[0].guardia.fecha, '2026-09-15');
   });
 
-  // La lista va con la credencial de quien pide, y cuáles ve lo decide la base: el Coordinador, su
-  // zona, las que llegaron a todos y las que tiene tomadas. Los nombres siguen con la llave maestra
-  // y el filtro de la Prestadora escrito en la consulta.
-  it('la lista va con la credencial de quien pide, y los nombres con la llave maestra', async () => {
+  // Todo va con la credencial de quien pide, y cuáles ve lo decide la base: el Coordinador, su
+  // zona, las que llegaron a todos y las que tiene tomadas.
+  it('la lista y los nombres van con la credencial de quien pide', async () => {
     await enElPanel('/');
     const consultadas = llamadas.filter((l) => l.clave.startsWith('GET /rest/v1/'));
-    for (const tabla of ['emergencias_guardia', 'guardia_pacientes']) {
+    for (const tabla of ['emergencias_guardia', 'guardia_pacientes', 'guardias', 'asistentes', 'pacientes']) {
       const consulta = consultadas.find((l) => l.clave.endsWith(`/${tabla}`));
       assert.ok(consulta, `tiene que haberse consultado ${tabla}`);
       assert.equal(consulta.credencial, credencialEnviada, `${tabla} no fue con la credencial de quien pide`);
-    }
-    for (const tabla of ['guardias', 'asistentes', 'pacientes']) {
-      const consulta = consultadas.find((l) => l.clave.endsWith(`/${tabla}`));
-      assert.ok(consulta, `tiene que haberse consultado ${tabla}`);
-      assert.notEqual(consulta.credencial, credencialEnviada, `${tabla} fue con la credencial de quien pide`);
-      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${tabla} sin filtro de Prestadora: ${consulta.url}`);
+      assert.equal(consulta.url.includes('prestadora_id='), false, `${tabla} con filtro de Prestadora escrito: ${consulta.url}`);
     }
   });
 
@@ -436,15 +427,15 @@ describe('la bandeja del Panel', () => {
     assert.equal(cuerpo.emergencias.length, 0);
   });
 
-  it('la que llegó a todos trae su guardia aunque no sea de su zona', async () => {
-    // La guardia de otra zona no se le ve con su credencial; el nombre y la fecha salen igual.
-    emergenciasEnLaBase = [emergenciaDePrueba({ guardia_id: GUARDIA_DE_OTRO_ASISTENTE })];
+  it('la guardia que la base no le deja ver no se busca por otro lado', async () => {
+    // Si la base no le muestra la guardia, la emergencia sale sin ella: no se completa con la
+    // llave maestra.
     respuestas.set('GET /rest/v1/guardias', ({ url, credencial }) =>
       credencial === credencialEnviada ? [] : filasQuePasanLosFiltros(url, guardiasEnLaBase));
     const { estado, cuerpo } = await enElPanel('/');
     assert.equal(estado, 200);
     assert.equal(cuerpo.emergencias.length, 1);
-    assert.equal(cuerpo.emergencias[0].guardia.fecha, '2026-09-15');
+    assert.equal(cuerpo.emergencias[0].guardia, null);
   });
 
   it('antes de entregar el detalle queda anotado quién lo vio, con su credencial', async () => {
@@ -489,7 +480,18 @@ describe('la bandeja del Panel', () => {
     assert.equal(escritura.cuerpo.atendida_por, USUARIO);
     assert.ok(escritura.cuerpo.atendida_at);
     assert.equal(escritura.cuerpo.atendida_nota, 'Llamé al Cliente y mandé un sustituto.');
-    assert.ok(escritura.url.includes(`prestadora_id=eq.${PRESTADORA}`), escritura.url);
+    assert.equal(escritura.credencial, credencialEnviada);
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/emergencias_guardia');
+    assert.equal(lectura.credencial, credencialEnviada);
+  });
+
+  it('si la base no la deja atender, contesta que no tiene permiso', async () => {
+    // Fuera de su zona y sin haberla tomado: la política no deja modificar la fila, y la base no
+    // da error, sino que no modifica ninguna.
+    respuestas.set('PATCH /rest/v1/emergencias_guardia', () => []);
+    const { estado, cuerpo } = await enElPanel(`/${EMERGENCIA}/atencion`, 'POST', { nota: 'algo' });
+    assert.equal(estado, 403);
+    assert.equal(cuerpo.motivo, 'sin_permiso');
   });
 
   it('la nota es opcional, y en blanco se guarda en blanco y no como texto vacío', async () => {

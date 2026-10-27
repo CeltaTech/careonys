@@ -352,9 +352,9 @@ reactiva si quien pide es el Administrador de esa misma Prestadora; `pedir_medic
 con los permisos de quien llama, toma la Prestadora y el Cliente del Paciente que la base le deja
 ver, y guarda la indicación y lo firmado en una sola operación;
 `asistentes_asignados_al_paciente`, que devuelve sólo quiénes tienen guardia con un Paciente de la
-Prestadora de quien pide, en todas las zonas, y sólo al personal del Panel; y
-`revisar_indicacion_medicacion` y `cerrar_firma_medicacion_en_papel`, que le dejan al personal del
-Panel aceptar o rechazar una indicación y cerrar su firma en papel, tocando sólo el estado, el
+Prestadora de quien pide, en todas las zonas, y sólo al Administrador y a los Coordinadores; y
+`revisar_indicacion_medicacion` y `cerrar_firma_medicacion_en_papel`, que le dejan al
+Administrador y a los Coordinadores aceptar o rechazar una indicación y cerrar su firma en papel, tocando sólo el estado, el
 motivo y quién y cuándo, y sólo sobre Pacientes cuya información de salud alcanza.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa

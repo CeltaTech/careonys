@@ -16,7 +16,7 @@ uno están explicados en la introducción de `docs/CUMPLIMIENTO_NORMATIVO.md`.
 | **28(3)(f)** | El encargado asiste al responsable en la evaluación de impacto | **En obra** — paso 129 |
 | **28(10)** | Si el encargado determina fines propios, pasa a ser responsable | **Cumple**: no se entrenan modelos con datos de los Clientes — paso 130 |
 | **30(2)** | Registro de actividades del encargado. La exención del 30(5) no aplica porque se tratan datos del art. 9 | **En obra** — paso 129 |
-| **32(1)(b)** | Confidencialidad, integridad, disponibilidad y resiliencia permanentes | **En obra** — plan de aislamiento |
+| **32(1)(b)** | Confidencialidad, integridad, disponibilidad y resiliencia permanentes | **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md` |
 | **32(1)(d)** | **Verificar periódicamente la eficacia** de las medidas | **En obra** — paso 129. Es lo que convierte la prueba de aislamiento en obligación legal |
 | **33(2)** | El encargado avisa al responsable sin dilación indebida, **sin umbral** | **En obra** — paso 124 |
 | **33(5)** | Documentar toda violación, se notifique o no | **En obra** — paso 124 |

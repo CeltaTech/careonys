@@ -20,9 +20,9 @@ la introducción de `docs/CUMPLIMIENTO_NORMATIVO.md`.
 | **164.312(b)** | Registro que examine la actividad sobre los sistemas con datos de salud | **En obra** — paso 9. Hoy se registran escrituras, no lecturas |
 | **164.308(a)(1)(ii)(D)** «Required» | **Revisar** periódicamente los registros, con constancia | **En obra** — paso 121 |
 | **164.308(a)(1)(ii)(A)** | Análisis de riesgos | **En obra** — paso 129, con el Apéndice C de NIST SP 800-66r2, que enumera el acceso entre clientes como amenaza |
-| **164.306(a)(2)** | Protección frente a amenazas razonablemente anticipadas | **En obra** — plan de aislamiento completo |
+| **164.306(a)(2)** | Protección frente a amenazas razonablemente anticipadas | **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md` |
 | **164.308(a)(7)(ii)(A)(B)(C)** «Required» | Copia exacta y recuperable, restauración, modo de emergencia | **En obra** — paso 126 |
-| **164.308(a)(4)** y mínimo necesario **164.502(b)** | Acceso acotado a lo necesario | **En obra** — plan de aislamiento, tramos 1 a 4 |
+| **164.308(a)(4)** y mínimo necesario **164.502(b)** | Acceso acotado a lo necesario | **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`, pasos 9 y 10 |
 | **164.312(d)** | Verificación de identidad de quien accede | **Cumple parcialmente**: entrada con usuario y contraseña, sin segundo factor. La entrada con token está guardada en el estante de CeltaTech (`Codigos-utiles`) — paso 125 |
 | **164.410** | El business associate notifica la brecha al covered entity | **En obra** — paso 124, construido para 24 horas |
 | **164.402(2)** | Presunción de brecha salvo evaluación de cuatro factores, con carga de la prueba de la empresa | **En obra** — paso 124 |

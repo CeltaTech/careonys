@@ -60,7 +60,9 @@ Brasil figura en dos:
 
 - **Consentimiento expreso para datos de salud** (LGPD art. 11). **Cumple** la estructura; **en
   obra** los textos por país — paso 127.
-- **Corrección por nota aclaratoria, nunca por sobreescritura.** **En obra** — tramo 7.
+- **Corrección por nota aclaratoria, nunca por sobreescritura.** **Cumple** en `indicaciones_medicacion`, `rangos_referencia_vitales` y
+  `domicilios_temporales_paciente`: cada corrección deja su versión con nota aclaratoria, y nadie
+  la edita ni la borra. Lo corregido desde el Panel todavía queda sin autor — **en obra**, paso 9.
 
 ### Las obligaciones particulares
 
@@ -70,8 +72,8 @@ Brasil figura en dos:
   **solidariamente y queda equiparado al responsable** cuando incumple la ley o se aparta de las
   instrucciones recibidas. Un aislamiento que falle es exactamente ese supuesto, y abre el catálogo
   entero del art. 52: multa, suspensión de la base hasta seis meses y prohibición de tratar. Es, con
-  el art. 11(4) argentino, la razón legal del plan de aislamiento. **En obra** — plan de
-  aislamiento.
+  el art. 11(4) argentino, la razón legal del aislamiento entre Organizaciones. **En obra** — sección «Los cimientos»
+  de `docs/PLAN_HASTA_PRODUCCION.md`.
 
 ### Transferencia internacional
 

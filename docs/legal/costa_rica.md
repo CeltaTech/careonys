@@ -51,7 +51,7 @@ texto compara con «los diez países», son los de Latinoamérica relevados en e
 - **Costa Rica: transmitir «por medio de mecanismos inseguros» es falta, sin que haga falta daño.**
   El art. 29.b del reglamento tipifica como falta leve recolectar, almacenar y transmitir así. Es
   el enganche directo entre una debilidad del software y la responsabilidad de la Prestadora, y no
-  espera a que se filtre nada. **En obra** — plan de aislamiento.
+  espera a que se filtre nada. **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`.
 - **Costa Rica no tiene niveles de seguridad: tiene un modelo de riesgo.** No existen los niveles
   básico, medio y alto. El art. 35 del reglamento enumera siete factores de riesgo y el art. 36
   siete acciones, entre ellas —inciso c— **poder declarar el motor de base de datos y su versión**.

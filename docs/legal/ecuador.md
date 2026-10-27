@@ -26,7 +26,9 @@ texto compara con «los diez países», son los de Latinoamérica relevados en e
 
 - **Consentimiento expreso para datos de salud.** **Cumple** la estructura; **en obra** los textos
   por país — paso 127.
-- **Corrección por nota aclaratoria, nunca por sobreescritura.** **En obra** — tramo 7.
+- **Corrección por nota aclaratoria, nunca por sobreescritura.** **Cumple** en `indicaciones_medicacion`, `rangos_referencia_vitales` y
+  `domicilios_temporales_paciente`: cada corrección deja su versión con nota aclaratoria, y nadie
+  la edita ni la borra. Lo corregido desde el Panel todavía queda sin autor — **en obra**, paso 9.
 - **Plazo de conservación y anonimización al vencer** (art. 31). **En obra** — paso 122.
 
 ### Las obligaciones particulares

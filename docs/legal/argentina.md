@@ -113,8 +113,8 @@ Notas de aplicación (mismo principio que el resto del documento, `celtatech/CLA
 
 > La estructura descrita acá
 > vive como dato en `formulas_cese` (jurisdicción `AR`). El código que la interpretaba salió del
-> producto y está en `celtatech/Codigos-utiles/vinculo-laboral-cese-y-riesgo-de-dependencia` — este documento describe en lenguaje humano lo que esas
-> filas codifican, no fija ningún valor nuevo. Pendiente de revisión por un abogado
+> producto y está en `celtatech/Codigos-utiles/vinculo-laboral-cese-y-riesgo-de-dependencia` — hoy el producto no calcula ningún cese. Este documento describe en lenguaje humano lo que esas
+> filas codifican y qué hace ese código cuando se lo vuelve a poner, no fija ningún valor nuevo. Pendiente de revisión por un abogado
 > laboralista, igual que el resto de este documento (ver nota al inicio).
 
 El cálculo de indemnización por cese de un Asistente en relación de dependencia depende de
@@ -135,7 +135,7 @@ Composición por causal (Argentina):
 - **Renuncia**: sin monto a pagar por la Prestadora; solo informa el preaviso que el
   Asistente le adeudaría a su empleador si correspondiera.
 - **Mutuo acuerdo** (art. 241 LCT): sin cálculo automático — el monto se define por acuerdo
-  entre las partes, el sistema solo lo registra.
+  entre las partes, y ese código sólo lo registra.
 - **Período de prueba** (art. 92 bis LCT): sin indemnización si la antigüedad está dentro
   del período de prueba vigente; si lo excede, exige revisión de abogado (probablemente
   corresponda otra causal).
@@ -148,7 +148,7 @@ Composición por causal (Argentina):
 - **Muerte del trabajador** (art. 248 LCT) / **muerte del empleador** (art. 249 LCT): la
   mitad de la indemnización por antigüedad; exige revisión de abogado en ambos casos. Muerte
   del empleador solo aplica cuando el vínculo es de dependencia directa con el Cliente, no
-  con la Prestadora — el sistema lo advierte si no es así.
+  con la Prestadora — ese código lo advierte si no es así.
 
 Quedan fuera de este cálculo automático, en cualquier jurisdicción (no dependen de la ley de
 un país en particular): incapacidad absoluta, jubilación, fin de contrato comercial, muerte
@@ -157,7 +157,7 @@ de la persona cuidada.
 ### Sin fórmula cargada para una jurisdicción
 
 Si una Prestadora opera en un país sin fila en `formulas_cese` para la causal elegida, el
-sistema nunca aproxima con la fórmula de otro país (mismo principio que las advertencias de
+código del estante nunca aproxima con la fórmula de otro país (mismo principio que las advertencias de
 este documento, `celtatech/CLAUDE.md`, sección «El riesgo legal»): devuelve `requiereRevisionAbogado: true`, sin monto
 calculado, y una advertencia indicando que la legislación de esa jurisdicción todavía no fue
 investigada.
@@ -224,13 +224,13 @@ Lo demás de Argentina:
   exige medidas técnicas y organizativas contra la adulteración, la pérdida y **la consulta o
   tratamiento no autorizado**, y el 9(2) prohíbe registrar datos en bancos que no reúnan condiciones
   técnicas de integridad y seguridad. La medida contra la consulta no autorizada es el aislamiento:
-  **en obra**, plan de aislamiento.
+  **en obra**, sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`.
 - **Resolución AAIP 47/2018.** Medidas de seguridad recomendadas y contenido del informe de
   incidente. No es obligatoria, pero es el estándar contra el que mide la autoridad. **En obra** —
   pasos 9, 13, 124 y 125.
 - **Ley 26.529.** Historia clínica cronológica, foliada y completa, propiedad del paciente, con
   copia entregada dentro de las 48 horas y conservación de **diez años como mínimo**. **En obra** —
-  tramos 4, 5 y 7.
+  el autor de cada corrección, paso 9; la copia en plazo, paso 123; la conservación, paso 122.
 - **El art. 4(7) manda destruir, y la Ley 26.529 manda guardar diez años.** No es contradicción sino
   dos relojes: el dato deja de ser necesario y se destruye, salvo el que una ley obliga a conservar.
   La consecuencia de producto es que la conservación se parametriza por tipo de dato, con el plazo
@@ -266,7 +266,9 @@ Argentina figura en dos:
 
 - **Consentimiento expreso para datos de salud** (Ley 25.326 art. 8). **Cumple** la estructura;
   **en obra** los textos por país — paso 127.
-- **Corrección por nota aclaratoria, nunca por sobreescritura.** **En obra** — tramo 7.
+- **Corrección por nota aclaratoria, nunca por sobreescritura.** **Cumple** en `indicaciones_medicacion`, `rangos_referencia_vitales` y
+  `domicilios_temporales_paciente`: cada corrección deja su versión con nota aclaratoria, y nadie
+  la edita ni la borra. Lo corregido desde el Panel todavía queda sin autor — **en obra**, paso 9.
 
 ### Las obligaciones particulares
 

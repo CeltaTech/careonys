@@ -30,7 +30,7 @@ texto compara con «los diez países», son los de Latinoamérica relevados en e
   que se acumulan — **quién** accede (sólo quien lo necesita para su función), **cuánta**
   información recibe y **por cuánto tiempo** conserva ese acceso. El tercero es el que casi
   siempre falta. Y el deber recae expresamente sobre el custodio, no sólo sobre la Prestadora.
-  **En obra** — plan de aislamiento.
+  **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`.
 - **Registro de accesos con identidad y período de todas las personas que ingresaron** (Decreto
   285 art. 35 num. 12). La norma panameña pide sólo dos datos: quién ingresó y en qué período; no
   exige anotar la operación ni el registro tocado. Aun así conviene anotar la operación, porque el

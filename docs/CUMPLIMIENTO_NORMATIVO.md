@@ -81,7 +81,7 @@ Países Bajos y Portugal suman lo propio en su documento.
    que se acumulan — **quién** accede (sólo quien lo necesita para su función), **cuánta**
    información recibe y **por cuánto tiempo** conserva ese acceso. El tercero es el que casi
    siempre falta. Y el deber recae expresamente sobre el custodio, no sólo sobre la Prestadora.
-   **En obra** — plan de aislamiento.
+   **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`.
 3. **Registro de accesos con identidad y período de todas las personas que ingresaron** (Panamá
    Decreto 285 art. 35 num. 12; Costa Rica reglamento art. 47). La norma panameña pide sólo dos
    datos: quién ingresó y en qué período; no exige anotar la operación ni el registro tocado. Aun
@@ -89,7 +89,10 @@ Países Bajos y Portugal suman lo propio en su documento.
    de toda violación y sin eso es imposible. **En obra** — paso 9. Hoy no se cumple: el registro
    anota escrituras, no lecturas.
 4. **Corrección por nota aclaratoria, nunca por sobreescritura** (Brasil; Argentina; Uruguay
-   Decreto 242/017 art. 13; Ecuador). **En obra** — tramo 7.
+   Decreto 242/017 art. 13; Ecuador). **Cumple** en `indicaciones_medicacion`,
+   `rangos_referencia_vitales` y `domicilios_temporales_paciente`: cada corrección deja su versión
+   con nota aclaratoria, y nadie la edita ni la borra. Lo corregido desde el Panel todavía queda sin
+   autor — **en obra**, paso 9.
 5. **Plazo de conservación y anonimización al vencer** (Costa Rica Ley art. 6.1, Panamá Decreto
    art. 7, Ecuador art. 31). **En obra** — paso 122.
 
@@ -106,7 +109,7 @@ Ninguno es ley, y todos los pide el mercado.
 | Marco | Qué es | Qué dice sobre separar clientes | Estado |
 |---|---|---|---|
 | **BSI C5:2026** | Dictamen de auditor, no certificación. Condición legal en Alemania por §393 SGB V | `OPS-30.01B` exige políticas de separación atadas a un modelo documentado de capas, con medidas por capa, monitoreo y acción ante desvíos, y cubre **cliente-de-cliente y cliente-del-proveedor**. `OPS-31.02B`: datos «segura y estrictamente separados». `OPS-31.03B`: revisión ante cambios y **al menos anual**. `OPS-15.01B`: identificación del acceso **a nivel de cliente**. `COS-06.01B`: separación de red | **En obra** — pasos 9, 125 y 129 |
-| **ISO/IEC 27017:2015** | Se audita junto con ISO/IEC 27001 | `CLD.9.5.1` — separación lógica de datos, aplicaciones, sistemas operativos, almacenamiento y red, **y separar la administración del proveedor de los recursos de los clientes** | **En obra** — plan de aislamiento |
+| **ISO/IEC 27017:2015** | Se audita junto con ISO/IEC 27001 | `CLD.9.5.1` — separación lógica de datos, aplicaciones, sistemas operativos, almacenamiento y red, **y separar la administración del proveedor de los recursos de los clientes** | **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md` |
 | **CSA CCM v4** | Cuestionario de mercado | `IVS-06` — el acceso del proveedor y el de cada cliente segmentados, monitoreados y restringidos respecto de otros clientes | **En obra** |
 | **SOC 2** | Atestación, no certificación | `CC6.1` es genérico. **No existe una regla de SOC 2 que diga «aísle a sus clientes»**: los controles los define la empresa. Sirve igual, porque es el sustituto de mercado del derecho de auditoría que HIPAA no da | No obtenido |
 | **PCI DSS 4.0, Apéndice A1** | Aplica sólo si se procesan tarjetas | El único marco con separación entre clientes dura y con plazo: A1.1.1 a A1.1.3, y **A1.1.4 confirmación de la eficacia de la separación lógica al menos cada seis meses mediante pruebas de penetración**, exigible desde el 31 de marzo de 2025 | **No alcanza** hoy: el cobro lo hacen pasarelas de terceros |

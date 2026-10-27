@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePermisos } from '../../context/PermisosContext';
@@ -105,7 +105,10 @@ export function ClienteDetalle() {
   const [documentoAVer, setDocumentoAVer] = useState(null);
   const [papelAConfirmar, setPapelAConfirmar] = useState(null);
   const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
-  const [tab, setTab] = useState('contacto');
+  // Quien llega desde un documento pendiente de la Situación operativa entra en la solapa donde
+  // se resuelve.
+  const location = useLocation();
+  const [tab, setTab] = useState(location.state?.solapa ?? 'contacto');
 
   const recargar = useCallback(async () => {
     setEstado('cargando');

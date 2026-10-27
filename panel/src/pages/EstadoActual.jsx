@@ -65,6 +65,29 @@ const EXCEPCION_SIN_CUBRIR = 'sin_cubrir';
 const EXCEPCION_TARDE = 'tarde';
 const EXCEPCIONES_CON_RENGLON_PROPIO = new Set([EXCEPCION_SIN_CUBRIR, 'documentacion']);
 
+/* Un documento de un Cliente que espera la firma. Los tres guardan la espera igual. */
+const ESPERA_FIRMA = 'pendiente_firma';
+
+/* Los documentos de un Cliente sin firmar, un renglón por Cliente y por lugar donde se
+   resuelven: la autorización de acceso y el consentimiento del Pagador en la Ficha del cliente,
+   abierta en la solapa del primero que falte; el de la medicación, en Medicación. */
+function documentosDeClientesSinFirmar({ autorizaciones, consentimientosPagador, consentimientosMedicacion }) {
+  const renglones = new Map();
+  const sumar = (clienteId, a, solapa) => {
+    const clave = `${clienteId}|${a}`;
+    const renglon = renglones.get(clave) ?? { clave, clienteId, a, solapa, cantidad: 0 };
+    renglon.cantidad += 1;
+    renglones.set(clave, renglon);
+  };
+  for (const fila of autorizaciones) sumar(fila.cliente_id, `/clientes/${fila.cliente_id}`, 'personas_autorizadas');
+  for (const fila of consentimientosPagador) sumar(fila.cliente_id, `/clientes/${fila.cliente_id}`, 'contacto');
+  for (const fila of consentimientosMedicacion) {
+    const clienteId = fila.indicaciones_medicacion?.cliente_id;
+    if (clienteId) sumar(clienteId, '/medicacion', null);
+  }
+  return [...renglones.values()];
+}
+
 /* El color de cada modalidad en la dona. */
 const COLOR_MODALIDAD = {
   [MODALIDAD.DIRECTA]: 'var(--verde-exito)',
@@ -177,9 +200,9 @@ function Kpi({ icono, etiqueta, numero, a, textoEnlace, resaltada = false }) {
   );
 }
 
-function FilaAlerta({ a, titulo, detalle, cantidad, tono }) {
+function FilaAlerta({ a, estado, titulo, detalle, cantidad, tono }) {
   return (
-    <Link className="panel-fila-alerta" to={a}>
+    <Link className="panel-fila-alerta" to={a} state={estado}>
       <div>
         <b>{titulo}</b>
         {detalle && <span className="panel-mini">{detalle}</span>}
@@ -219,7 +242,7 @@ export function EstadoActual() {
     const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
     const limiteDocumentos = fechaLimiteDeAviso(diasDePreaviso);
 
-    const [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas] = await Promise.all([
+    const [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas, au, cp, cm] = await Promise.all([
       supabase.from('guardias').select('*').gte('fecha', desde).lte('fecha', hasta),
       supabase.from('asistentes').select('id, estado'),
       supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
@@ -245,10 +268,16 @@ export function EstadoActual() {
         .order('iniciado_at', { ascending: false })
         .limit(INCIDENCIAS_A_LA_VISTA),
       supabase.from('incidentes_relevo').select('id', { count: 'exact', head: true }).is('resuelto_at', null),
+      supabase.from('instrucciones_acceso_personas_autorizadas').select('cliente_id').eq('estado', ESPERA_FIRMA),
+      supabase.from('consentimientos_pagador').select('cliente_id').eq('estado', ESPERA_FIRMA),
+      supabase
+        .from('consentimientos_medicacion')
+        .select('indicaciones_medicacion!consentimientos_medicacion_indicacion_id_prestadora_id_fkey(cliente_id)')
+        .eq('estado', ESPERA_FIRMA),
     ]);
 
     // Un número que no se pudo leer no se muestra como cero: la página entera pasa a error.
-    const fallida = [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas].find((r) => r.error);
+    const fallida = [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas, au, cp, cm].find((r) => r.error);
     if (fallida) {
       setError(mensajeDeError(fallida.error, t));
       setEstado('error');
@@ -312,8 +341,29 @@ export function EstadoActual() {
       return;
     }
 
+    const documentosDeClientes = documentosDeClientesSinFirmar({
+      autorizaciones: au.data ?? [],
+      consentimientosPagador: cp.data ?? [],
+      consentimientosMedicacion: cm.data ?? [],
+    });
+    const idsDeClientes = [...new Set(documentosDeClientes.map((d) => d.clienteId))];
+    let nombresDeClientes = {};
+    if (idsDeClientes.length > 0) {
+      const { data: clientes, error: errorClientes } = await supabase
+        .from('clientes')
+        .select('id, personas!clientes_contratante_de_la_misma_prestadora(nombre_visible)')
+        .in('id', idsDeClientes);
+      if (errorClientes) {
+        setError(mensajeDeError(errorClientes, t));
+        setEstado('error');
+        return;
+      }
+      nombresDeClientes = Object.fromEntries((clientes ?? []).map((c) => [c.id, c.personas?.nombre_visible]));
+    }
+
     setDatos({
       hoy,
+      documentosDeClientes: documentosDeClientes.map((d) => ({ ...d, nombre: nombresDeClientes[d.clienteId] })),
       guardias,
       servicios,
       contactos,
@@ -558,6 +608,17 @@ export function EstadoActual() {
               titulo={con(tx[exc.claveEtiqueta], exc.parametros)}
               cantidad={exc.cantidad}
               tono={exc.critica ? TONO.CRITICO : TONO.ATENCION}
+            />
+          ))}
+          {datos.documentosDeClientes.map((d) => (
+            <FilaAlerta
+              key={d.clave}
+              a={d.a}
+              estado={d.solapa ? { solapa: d.solapa } : undefined}
+              titulo={tx.exc_documentos_pendientes}
+              detalle={d.nombre}
+              cantidad={d.cantidad}
+              tono={TONO.ATENCION}
             />
           ))}
         </Tarjeta>

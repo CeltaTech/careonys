@@ -371,7 +371,7 @@ export const T = {
       confirmar: 'Enviar el aviso',
       enviando: 'Enviando el aviso…',
       reportada: 'Aviso enviado a las {hora}. La Prestadora ya lo tiene.',
-      sin_conexion: 'Sin conexión: el aviso quedó guardado en el teléfono y todavía no lo recibió nadie. Se envía solo cuando vuelva la señal. Mientras tanto, avise por otro medio.',
+      sin_conexion: 'Sin conexión. Avise por otro medio.',
       llamar_a_la_prestadora: 'Llamar a {{prestadora}}',
     },
     // El rato de más: terminó el turno y el relevo no llegó. Los pasos de la búsqueda se cuentan
@@ -396,7 +396,7 @@ export const T = {
       cuenta: 'Solicitando relevo en {segundos}…',
       enviando: 'Relevo solicitado',
       avisado: 'Relevo solicitado a las {hora}.',
-      sin_conexion: 'Sin conexión: el pedido quedó guardado en el teléfono y todavía no lo recibió nadie. Se envía solo cuando vuelva la señal. Mientras tanto, avise por otro medio.',
+      sin_conexion: 'Sin conexión. Avise por otro medio.',
     },
     // El descanso adentro de una guardia larga. El texto dice con todas las letras que esto no es
     // una falta: sin esa frase, nadie aprieta el botón y el dato no existe.
@@ -1029,7 +1029,7 @@ export const T = {
       confirmar: 'Send the notice',
       enviando: 'Sending the notice…',
       reportada: 'Notice sent at {hora}. The Provider already has it.',
-      sin_conexion: 'No connection: the notice is saved on the phone and nobody has received it yet. It will be sent on its own once the signal is back. In the meantime, report it by another means.',
+      sin_conexion: 'No connection. Report it by another means.',
       llamar_a_la_prestadora: 'Call {{prestadora}}',
     },
     extension: {
@@ -1050,7 +1050,7 @@ export const T = {
       cuenta: 'Requesting relief in {segundos}…',
       enviando: 'Relief requested',
       avisado: 'Relief requested at {hora}.',
-      sin_conexion: 'No connection: the request is saved on the phone and nobody has received it yet. It will be sent on its own once the signal is back. In the meantime, report it by another means.',
+      sin_conexion: 'No connection. Report it by another means.',
     },
     descanso: {
       boton_empezar: 'Start a rest period',
@@ -1655,7 +1655,7 @@ export const T = {
       confirmar: 'Enviar o aviso',
       enviando: 'Enviando o aviso…',
       reportada: 'Aviso enviado às {hora}. A Prestadora já o tem.',
-      sin_conexion: 'Sem conexão: o aviso ficou salvo no telefone e ninguém o recebeu ainda. É enviado sozinho quando o sinal voltar. Enquanto isso, avise por outro meio.',
+      sin_conexion: 'Sem conexão. Avise por outro meio.',
       llamar_a_la_prestadora: 'Ligar para {{prestadora}}',
     },
     extension: {
@@ -1676,7 +1676,7 @@ export const T = {
       cuenta: 'Solicitando rendição em {segundos}…',
       enviando: 'Rendição solicitada',
       avisado: 'Rendição solicitada às {hora}.',
-      sin_conexion: 'Sem conexão: o pedido ficou salvo no telefone e ninguém o recebeu ainda. É enviado sozinho quando o sinal voltar. Enquanto isso, avise por outro meio.',
+      sin_conexion: 'Sem conexão. Avise por outro meio.',
     },
     descanso: {
       boton_empezar: 'Começar um descanso',

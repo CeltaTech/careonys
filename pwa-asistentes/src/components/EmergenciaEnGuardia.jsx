@@ -83,7 +83,7 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {/* Salió: se dice la hora y que el Coordinador ya lo tiene. Quedó en la cola: se dice que
-          todavía no lo recibió nadie y que conviene avisar por otro medio. Son dos situaciones
+          no hay conexión y que avise por otro medio. Son dos situaciones
           distintas y no se cuentan con el mismo cartel. */}
       {reportado && (
         <div className={reportado.enviado ? 'alert alert-info' : 'alert alert-error'} role="alert">

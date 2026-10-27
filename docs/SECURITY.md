@@ -444,8 +444,8 @@ rota y cuándo se rotó por última vez. Sin ningún valor adentro, y no se le a
 
 ## Cumplimiento normativo
 
-Está en `docs/CUMPLIMIENTO_NORMATIVO.md`, con el artículo de cada norma y el estado del producto
-frente a ella. Lo que falta construir, en `docs/PLAN_HASTA_PRODUCCION.md`. Acá no se
+Lo de cada país está en su documento, en `docs/legal/<país>.md`, con el artículo de cada norma y el
+estado del producto frente a ella; lo que no es de un país, en `docs/CUMPLIMIENTO_NORMATIVO.md`. Lo que falta construir, en `docs/PLAN_HASTA_PRODUCCION.md`. Acá no se
 duplica ninguna de las dos cosas.
 
 Lo que no espera: Careonys trata datos de salud, así que lo alcanzan HIPAA en Estados Unidos, el

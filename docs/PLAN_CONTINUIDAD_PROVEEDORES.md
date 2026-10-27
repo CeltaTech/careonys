@@ -60,7 +60,15 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
 
 1. El código del backend es un repo Git estándar (`backend/`), sin nada específico de
    Railway salvo variables de entorno — ver `backend/.env.example` para la lista completa.
-2. Alternativas equivalentes: Render, Fly.io, un VPS propio con PM2 o Docker.
+2. Alternativas equivalentes: Render, Fly.io, un VPS propio con PM2 o Docker. **El plan del
+   proveedor nuevo no puede dormir el servicio por inactividad:** las tareas programadas corren
+   adentro del mismo proceso (`programar()` en `backend/src/server.js`), y un servicio dormido no
+   las corre. En Railway hoy no duerme (`sleepApplication: false`, comprobado con
+   `railway status --json`).
+   La dirección del backend todavía es la que asigna Railway
+   (`careonys-backend-production-e7ee.up.railway.app`, la que comprueba
+   `.github/workflows/deploy-backend.yml`), no una de `careonys.com`: al mudarse cambia, y con
+   ella todo lo del punto siguiente.
 3. Pasos para migrar: crear el proyecto nuevo en el proveedor elegido, cargar las mismas
    variables de entorno (`backend/.env.example` como checklist), apuntar el mismo repo de
    GitHub (o hacer deploy manual del código), y actualizar la URL del backend en:

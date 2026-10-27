@@ -118,7 +118,7 @@ No es una decisión sino un documento completo puesto a su nombre. Si no es suyo
 revisar es el documento entero, no un renglón.
 
 - `docs/PRD_07_Modalidad_Match.md:3` — el planteo entero de la modalidad Match. **La parte de cómo se cobra el contacto no se contesta acá: ya está escrita en la sección de la modalidad Match**, más abajo.
-- `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:168` — qué se hace si cae un proveedor.
+- `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:176` — qué se hace si cae un proveedor.
 
 ### 6. Cómo se elige construir, que no se ve en ninguna pantalla
 
@@ -347,8 +347,8 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
   pedirla y guardarla—. Y no hay refugio geográfico: el art. 1 bis lit. b) aplica la ley chilena al
   encargado que trabaja para un responsable establecido en Chile, esté donde esté.
 
-**Comprobación:** por cada país donde haya una Prestadora dada de alta, `docs/CUMPLIMIENTO_NORMATIVO.md`
-nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
+**Comprobación:** por cada país donde haya una Prestadora dada de alta, su documento en
+`docs/legal/<país>.md` nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
 
 **6.** **Lo que queda del segundo nivel de aislamiento, el que Chile exige.** La regla ya está
 escrita en la base (la política `la_informacion_de_salud_la_ve_quien_atiende` y la función
@@ -1649,7 +1649,7 @@ lo que dejaron los cimientos y se suman sin tocarlo. Hacerlas antes no ahorra na
 hacerlas después cuesta lo mismo.
 
 **Lo que sí es condición:** antes de dar de alta una Prestadora real de un país, ese país tiene que
-tener cargado lo suyo. La lista por país, con artículo, está en `docs/CUMPLIMIENTO_NORMATIVO.md`.
+tener cargado lo suyo. Lo de cada país, con artículo, está en su documento, en `docs/legal/<país>.md`.
 
 **121.** **La revisión del registro de accesos, que es lo que casi nadie hace.** El 45 CFR
 164.308(a)(1)(ii)(D) es «Required», no «Addressable»: hay que **revisar** los registros, con

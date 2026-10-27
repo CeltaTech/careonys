@@ -393,14 +393,15 @@ sacarla.
 salud, así que lo alcanzan HIPAA en Estados Unidos, el Reglamento General de Protección de
 Datos y las normas nacionales en Europa, y las diez leyes de protección de datos y de historia
 clínica de los países latinoamericanos donde se vende. Qué exige cada una, con artículo, y en qué
-estado está el producto frente a ella, está en `docs/CUMPLIMIENTO_NORMATIVO.md`; qué hay que
+estado está el producto frente a ella, está en el documento de cada país, en `docs/legal/<país>.md`,
+y lo que no es de un país en `docs/CUMPLIMIENTO_NORMATIVO.md`; qué hay que
 construir para llegar, en `docs/PLAN_HASTA_PRODUCCION.md`. **Ninguna afirmación de
 cumplimiento se escribe sin artículo citado, y no se afirma ninguna certificación**: de HIPAA no
 existe certificación de ninguna clase, y de protección de datos europea tampoco.
 
 **Los datos están alojados en São Paulo.** Para todo país que no sea Brasil eso es transferencia
 internacional, y para Alemania y Francia hoy impide vender. Antes de dar de alta una Prestadora de
-un país nuevo, el documento de cumplimiento tiene que decir qué habilita alojar allá los datos de
+un país nuevo, el documento de ese país en `docs/legal/` tiene que decir qué habilita alojar allá los datos de
 salud de ese país.
 
 **Ninguna palabra de Careonys entra en un módulo** —Prestadora, Guardia, Paciente, Servicio— si el

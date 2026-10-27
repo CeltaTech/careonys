@@ -1,15 +1,14 @@
-# Riesgo legal — El Salvador
+# Legislación — El Salvador
 
 > **Placeholder — sin investigar todavía.** Este archivo existe únicamente para cumplir la
-> condición de proceso de `CLAUDE.md` §3: "antes de habilitar Careonys para una Prestadora
-> real de un país determinado, debe existir el documento legal de esa jurisdicción... aunque
-> sea mínimo." Hoy no tiene contenido real — no se investigó todavía la legislación de
+> regla de `celtatech/CLAUDE.md`, sección «El riesgo legal»: «Antes de vender en un país nuevo, ese país tiene que
+> tener su documento, aunque sea corto.» Hoy no tiene contenido real — no se investigó todavía la legislación de
 > El Salvador.
 >
 > **Mientras este archivo no tenga la tabla de advertencias completa, el sistema debe
 > tratarlo como si no existiera** — no corresponde mostrar ninguna advertencia legal para
-> Prestadoras de esta jurisdicción hasta que se complete (ver `CLAUDE.md` §3: "si la
-> jurisdicción no tiene documento legal cargado, no se muestra advertencia").
+> Prestadoras de esta jurisdicción hasta que se complete (`celtatech/CLAUDE.md`, sección «El riesgo legal»: «Si el país no tiene
+> documento, no hay aviso.»).
 
 ## Qué falta completar acá
 
@@ -21,7 +20,7 @@ Antes de dar de alta la primera Prestadora real de El Salvador, completar:
    jurisdicción cuándo una relación de prestación de servicios se reclasifica como relación
    de dependencia.
 2. **Tabla de advertencias** (jurisdicción → función → texto), una fila por cada función de
-   gestión de Asistentes de `CLAUDE.md` §3: penalización de inasistencias o inconductas,
+   gestión de Asistentes de `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`, sección «Riesgo legal»: penalización de inasistencias o inconductas,
    rankings, puntuaciones por aceptación de guardia, puntuaciones por calificación de
    Cliente/Paciente, límite de oportunidades futuras por rechazos, niveles/categorías/
    jerarquías por servicio, horarios fijos — y cualquier otra que se agregue después.
@@ -32,5 +31,4 @@ Antes de dar de alta la primera Prestadora real de El Salvador, completar:
 
 En el momento en que se detecte la primera Prestadora real con jurisdicción
 El Salvador (no Sandbox, no datos de prueba), este documento deja de ser opcional — hay que
-completarlo antes de habilitar esa Prestadora, según la condición de proceso de
-`CLAUDE.md` §3.
+completarlo antes de habilitar esa Prestadora, según `celtatech/CLAUDE.md`, sección «El riesgo legal».

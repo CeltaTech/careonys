@@ -4,17 +4,14 @@
  *   node --test backend/src/routes/__tests__/panelAusencias.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. La ruta (`../panelAusencias.js`) entra a la base y al depósito con
- * la llave maestra, todavía: la política `coordinador_gestiona_ausencias_de_su_zona` le deja a
- * quien coordina sólo las ausencias de su zona, y esta ruta le alcanzaba todas las de su
- * Prestadora. Entonces lo que separa una Prestadora de otra es el filtro escrito en cada consulta
- * de la ausencia, y lo que hay que sostener acá es que ese filtro esté y que quien coordina siga
- * pudiendo lo que podía.
+ * la credencial de quien pide, y es la base la que decide qué ausencias alcanza: el Administrador,
+ * las de su Prestadora; quien coordina, las de su zona (`coordinador_gestiona_ausencias_de_su_zona`).
+ * Lo que hay que sostener acá es que ninguna consulta vuelva a la llave maestra.
  *
- * La base es de mentira y contesta por HTTP como la de verdad. Con la llave maestra contesta las
- * ausencias que pide el filtro de la Prestadora de la dirección, y todas si no hay filtro; con la
- * credencial de quien pide imita la política de la zona, que a quien coordina en esta prueba no le
- * deja ninguna. Con el sistema roto —una consulta sin el filtro, o de vuelta con la credencial de
- * quien pide— la prueba de la ausencia ajena o las de quien coordina dan al revés.
+ * La base es de mentira y contesta por HTTP como la de verdad. Con la credencial de quien pide imita
+ * la política: las ausencias de su Prestadora, y a quien coordina sólo si el Asistente es de su
+ * zona. Con la llave maestra contesta todas, sin mirar a nadie. Con el sistema roto —una consulta de
+ * vuelta con la llave maestra— la ausencia ajena y la de otra zona aparecen y la prueba falla.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -35,6 +32,7 @@ const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
 const respuestas = new Map();
 let llamadas = [];
 let rolDelUsuario = 'admin_prestadora';
+let asistenteEnLaZona = true;
 
 const baseFalsa = createServer((req, res) => {
   let crudo = '';
@@ -126,27 +124,20 @@ function unaAusencia(cambios = {}) {
 
 /** Las ausencias que hay en la base, para leerlas o escribirlas. */
 function ausenciasEnLaBase(...filas) {
-  const contestar = (credencial, url) => {
-    if (credencial !== LLAVE_MAESTRA) {
-      // La política de la zona: quien coordina en esta prueba no alcanza a este Asistente.
-      if (rolDelUsuario === 'coordinador') return [];
-      return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
-    }
-    const filtro = url.match(/prestadora_id=eq\.([^&]+)/);
-    return filtro ? filas.filter((fila) => fila.prestadora_id === decodeURIComponent(filtro[1])) : filas;
+  const contestar = (credencial) => {
+    if (credencial === LLAVE_MAESTRA) return filas;
+    if (rolDelUsuario === 'coordinador' && !asistenteEnLaZona) return [];
+    return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
   };
   respuestas.set('GET /rest/v1/ausencias', contestar);
-  respuestas.set('PATCH /rest/v1/ausencias', (credencial, url) =>
-    contestar(credencial, url).map((fila) => ({ id: fila.id })));
-}
-
-function consultasDeAusencias() {
-  return llamadas.filter((l) => l.clave.endsWith(' /rest/v1/ausencias'));
+  respuestas.set('PATCH /rest/v1/ausencias', (credencial) =>
+    contestar(credencial).map((fila) => ({ id: fila.id })));
 }
 
 beforeEach(() => {
   llamadas = [];
   rolDelUsuario = 'admin_prestadora';
+  asistenteEnLaZona = true;
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
@@ -154,8 +145,15 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/registro_actividad', () => []);
 });
 
+/** Nada de lo que hizo la ruta fue con la llave maestra. */
+function conLaCredencialDeQuienPide() {
+  for (const llamada of llamadas) {
+    assert.notEqual(llamada.credencial, LLAVE_MAESTRA, `${llamada.clave} fue con la llave maestra`);
+  }
+}
+
 describe('subir el certificado de una ausencia', () => {
-  it('quien coordina sube el certificado de cualquier ausencia de su Prestadora, como antes', async () => {
+  it('quien coordina sube el certificado de una ausencia de su zona', async () => {
     rolDelUsuario = 'coordinador';
     ausenciasEnLaBase(unaAusencia());
 
@@ -165,20 +163,18 @@ describe('subir el certificado de una ausencia', () => {
     assert.equal(cuerpo.ok, true);
     const subida = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/'));
     assert.equal(subida.clave, `POST /storage/v1/object/certificados-medicos/${PRESTADORA}/${AUSENCIA}/certificado.pdf`);
-    assert.equal(subida.credencial, LLAVE_MAESTRA);
+    conLaCredencialDeQuienPide();
   });
 
-  it('la ausencia se lee y se escribe atada a la Prestadora de quien pide', async () => {
+  it('la ausencia de otra zona no existe para quien coordina, y nada se sube', async () => {
+    rolDelUsuario = 'coordinador';
+    asistenteEnLaZona = false;
     ausenciasEnLaBase(unaAusencia());
 
-    await subir(AUSENCIA);
+    const { estado } = await subir(AUSENCIA);
 
-    const consultas = consultasDeAusencias();
-    assert.equal(consultas.length, 2);
-    for (const consulta of consultas) {
-      assert.equal(consulta.credencial, LLAVE_MAESTRA, `${consulta.clave} no fue con la llave maestra`);
-      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${consulta.clave} sin la Prestadora: ${consulta.url}`);
-    }
+    assert.equal(estado, 404);
+    assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
   });
 
   it('la ausencia de otra Prestadora no existe para ésta, y nada se sube a su nombre', async () => {
@@ -192,7 +188,7 @@ describe('subir el certificado de una ausencia', () => {
 });
 
 describe('el enlace temporal del certificado', () => {
-  it('quien coordina ve el certificado de cualquier ausencia de su Prestadora, como antes', async () => {
+  it('quien coordina ve el certificado de una ausencia de su zona', async () => {
     rolDelUsuario = 'coordinador';
     ausenciasEnLaBase(unaAusencia());
 
@@ -200,11 +196,18 @@ describe('el enlace temporal del certificado', () => {
 
     assert.equal(estado, 200);
     assert.ok(cuerpo.url.includes(`/object/sign/certificados-medicos/${PRESTADORA}/${AUSENCIA}/certificado.pdf`));
-    const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.equal(pedidoDeEnlace.credencial, LLAVE_MAESTRA);
-    for (const consulta of consultasDeAusencias()) {
-      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
-    }
+    conLaCredencialDeQuienPide();
+  });
+
+  it('la ausencia de otra zona no recibe enlace', async () => {
+    rolDelUsuario = 'coordinador';
+    asistenteEnLaZona = false;
+    ausenciasEnLaBase(unaAusencia());
+
+    const { estado } = await pedirDireccion(AUSENCIA);
+
+    assert.equal(estado, 404);
+    assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
   });
 
   it('la ausencia de otra Prestadora no recibe enlace', async () => {

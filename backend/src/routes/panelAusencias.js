@@ -2,20 +2,19 @@ import { Router } from 'express';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { supabase, clienteDelPedido } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { hastaDondeCubrir } from '../utils/coberturaDeAusencia.js';
 import { avisarAsignacionDeAusencia } from '../utils/avisoAsignacionDeTurno.js';
 import { hoyISO } from '../utils/horarios.js';
 
-// CON LA LLAVE MAESTRA, TODAVÍA. La ausencia, el depósito y el enlace temporal van con la llave
-// maestra, después de comprobar que la ausencia es de la Prestadora de quien pide. En la base, la
-// política `coordinador_gestiona_ausencias_de_su_zona` le deja a quien coordina sólo las ausencias
-// de los Asistentes de su zona, y la del depósito (`certificados_los_alcanza_quien_ve_la_ausencia`)
-// pide una ausencia que quien pide vea; esta ruta le mostraba a quien coordina todas las de la
-// Prestadora. Si eso se estrecha se decide aparte.
+// CON LA CREDENCIAL DE QUIEN PIDE. La base decide qué ausencias alcanza: el Administrador, todas
+// las de su Prestadora; quien coordina, las de los Asistentes de su zona
+// (`coordinador_gestiona_ausencias_de_su_zona`). El depósito pide una ausencia que quien pide vea
+// (`certificados_los_alcanza_quien_ve_la_ausencia`). Una ausencia que la base no devuelve se
+// contesta como inexistente.
 
 export const panelAusenciasRouter = Router();
 
@@ -42,13 +41,12 @@ function clienteR2() {
   });
 }
 
-async function ausenciaDeLaPrestadora(ausenciaId, usuarioPanel) {
-  // Con la llave maestra: la política `coordinador_gestiona_ausencias_de_su_zona` le deja a quien
-  // coordina sólo las ausencias de su zona (`coordinador_alcanza_asistente`), y esta ruta le
-  // alcanzaba todas las de la Prestadora. Se decide aparte.
-  let query = supabase.from('ausencias').select('id, prestadora_id, asistente_id').eq('id', ausenciaId);
-  query = acotarAPrestadora(query, usuarioPanel);
-  const { data } = await query.maybeSingle();
+async function ausenciaVisible(db, ausenciaId) {
+  const { data } = await db
+    .from('ausencias')
+    .select('id, prestadora_id, asistente_id, certificado_url')
+    .eq('id', ausenciaId)
+    .maybeSingle();
   return data;
 }
 
@@ -70,7 +68,8 @@ panelAusenciasRouter.post(
       return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
     }
 
-    const ausencia = await ausenciaDeLaPrestadora(req.params.id, req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const ausencia = await ausenciaVisible(db, req.params.id);
     if (!ausencia) {
       return res.status(404).json({ error: 'Ausencia no encontrada' });
     }
@@ -78,10 +77,7 @@ panelAusenciasRouter.post(
     const extension = extensionDeArchivo(req.file.mimetype);
     const ruta = `${ausencia.prestadora_id}/${ausencia.id}/certificado.${extension}`;
 
-    // Con la llave maestra: la política del depósito `certificados_los_alcanza_quien_ve_la_ausencia`
-    // pide una ausencia que quien pide vea, y a quien coordina sólo le deja las de su zona. Se
-    // decide aparte. La ruta empieza por la Prestadora de la ausencia, ya comprobada.
-    const { error: errorSubida } = await supabase.storage
+    const { error: errorSubida } = await db.storage
       .from(BUCKET)
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
     if (errorSubida) {
@@ -105,14 +101,11 @@ panelAusenciasRouter.post(
     // El archivo ya está subido: lo único que falta es que la ausencia lo apunte. Si esa fila ya
     // no está, el certificado queda arriba sin dueño y nadie lo va a encontrar nunca — así que
     // eso se dice, no se contesta que salió todo bien.
-    // Con la llave maestra: por `coordinador_gestiona_ausencias_de_su_zona` quien coordina sólo
-    // escribe las ausencias de su zona. Se decide aparte.
-    let apuntar = supabase
+    const { data: apuntada, error: errorUpdate } = await db
       .from('ausencias')
       .update({ certificado_url: ruta })
-      .eq('id', ausencia.id);
-    apuntar = acotarAPrestadora(apuntar, req.usuarioPanel);
-    const { data: apuntada, error: errorUpdate } = await apuntar.select('id');
+      .eq('id', ausencia.id)
+      .select('id');
     if (errorUpdate) {
       return responderError(res, errorUpdate);
     }
@@ -125,25 +118,18 @@ panelAusenciasRouter.post(
 );
 
 panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
-  const ausencia = await ausenciaDeLaPrestadora(req.params.id, req.usuarioPanel);
+  const db = clienteDelPedido(req);
+  const ausencia = await ausenciaVisible(db, req.params.id);
   if (!ausencia) {
     return res.status(404).json({ error: 'Ausencia no encontrada' });
   }
-
-  // Con la llave maestra, por la misma política `coordinador_gestiona_ausencias_de_su_zona`. Se
-  // decide aparte.
-  let consultaCertificado = supabase.from('ausencias').select('certificado_url').eq('id', ausencia.id);
-  consultaCertificado = acotarAPrestadora(consultaCertificado, req.usuarioPanel);
-  const { data: fila } = await consultaCertificado.single();
-  if (!fila?.certificado_url) {
+  if (!ausencia.certificado_url) {
     return res.status(404).json({ error: 'Esta ausencia no tiene certificado cargado' });
   }
 
-  // Con la llave maestra, por la política del depósito
-  // `certificados_los_alcanza_quien_ve_la_ausencia`. Se decide aparte.
-  const { data, error } = await supabase.storage
+  const { data, error } = await db.storage
     .from(BUCKET)
-    .createSignedUrl(fila.certificado_url, 60);
+    .createSignedUrl(ausencia.certificado_url, 60);
   if (error) {
     return responderError(res, error);
   }
@@ -164,9 +150,12 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
 
    Lo que ya tiene sustituto vigente no se vuelve a cubrir: apretar dos veces no duplica nada.
 
-   Con la llave maestra, igual que el resto de esta ruta: la ausencia se busca acotada a la
-   Prestadora de quien pide, y el sustituto se comprueba contra esa misma Prestadora antes de
-   escribir nada.
+   Con la credencial de quien pide, salvo la asignación al sustituto. La política
+   `coordinador_gestiona_asignaciones_de_su_zona` le deja a quien coordina asignarle sólo a un
+   Asistente de su zona, y el padrón entero lo ve (`coordinador_lee_el_padron_de_asistentes`):
+   hoy elige sustituto entre todos. Hasta que se decida si puede elegir uno de otra zona, la
+   asignación y su aviso van con la llave maestra, después de que la base le dejó ver la ausencia
+   y el sustituto.
 
    Contesta las guardias que quedaron cubiertas, que hasta que el sustituto acepte son ninguna. */
 panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
@@ -179,19 +168,19 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   } = req.body ?? {};
   if (!asistenteSustitutoId) return res.status(400).json({ error: 'Falta el Asistente que cubre' });
 
-  let consulta = supabase
+  const db = clienteDelPedido(req);
+  const { data: ausencia, error } = await db
     .from('ausencias')
     .select('id, prestadora_id, asistente_id, fecha_inicio, fecha_fin, fecha_vuelta_real')
-    .eq('id', req.params.id);
-  consulta = acotarAPrestadora(consulta, req.usuarioPanel);
-  const { data: ausencia, error } = await consulta.maybeSingle();
+    .eq('id', req.params.id)
+    .maybeSingle();
   if (error) return responderError(res, error);
   if (!ausencia?.asistente_id) return res.status(404).json({ error: 'Ausencia no encontrada' });
   if (ausencia.asistente_id === asistenteSustitutoId) {
     return res.status(400).json({ error: 'El sustituto no puede ser el mismo Asistente ausente' });
   }
 
-  const { data: sustituto } = await supabase
+  const { data: sustituto } = await db
     .from('asistentes')
     .select('id')
     .eq('id', asistenteSustitutoId)
@@ -206,7 +195,7 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   const hasta = hastaDondeCubrir(ausencia, hoy);
   if (desde > hasta) return res.json({ guardia_ids: [] });
 
-  let consultaGuardias = supabase
+  let consultaGuardias = db
     .from('guardias')
     .select('id, serie_id')
     .eq('prestadora_id', ausencia.prestadora_id)
@@ -218,7 +207,7 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   const { data: guardias, error: errorGuardias } = await consultaGuardias;
   if (errorGuardias) return responderError(res, errorGuardias);
 
-  const { data: vigentes, error: errorVigentes } = await supabase
+  const { data: vigentes, error: errorVigentes } = await db
     .from('coberturas_de_ausencia')
     .select('serie_id')
     .eq('prestadora_id', ausencia.prestadora_id)
@@ -231,7 +220,7 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   const aCubrir = [...new Set((guardias ?? []).map((g) => g.serie_id ?? null))].filter((s) => !yaCubiertas.has(s));
   if (!aCubrir.length) return res.json({ guardia_ids: [] });
 
-  const { error: errorAlta } = await supabase.from('coberturas_de_ausencia').insert(
+  const { error: errorAlta } = await db.from('coberturas_de_ausencia').insert(
     aCubrir.map((serieId) => ({
       prestadora_id: ausencia.prestadora_id,
       ausencia_id: ausencia.id,
@@ -246,7 +235,8 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   if (errorAlta) return responderError(res, errorAlta);
 
   // Una sola asignación por sustituto y ausencia: si ya tenía una esperando respuesta, las
-  // coberturas nuevas entran en esa y no se le vuelve a avisar.
+  // coberturas nuevas entran en esa y no se le vuelve a avisar. Con la llave maestra: ver el
+  // encabezado.
   const { data: pendiente, error: errorPendiente } = await supabase
     .from('asignaciones_de_turno')
     .select('id')

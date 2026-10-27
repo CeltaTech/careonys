@@ -7,8 +7,8 @@ import { MODALIDADES } from '../lib/modalidades';
 const ModalidadesContext = createContext(null);
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Modalidades de trabajo activas de la Prestadora (directa/intermediacion —
-// PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24). Se carga una vez por sesión, igual
+// Modalidades de trabajo activas de la Prestadora (directa/intermediacion — tabla
+// `prestadora_modalidades`, ver docs/CONTEXT.md). Se carga una vez por sesión, igual
 // que PermisosContext, para que Layout.jsx sepa qué grupos de menú mostrar sin volver a
 // pedirlo pantalla por pantalla.
 //

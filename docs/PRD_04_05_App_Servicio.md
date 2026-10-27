@@ -1,25 +1,24 @@
 # PRD_04_05 — PWA de Servicio (Asistentes y Clientes)
 
 > Fuente: documento único original de especificación (histórico) Parte O. Etapas 3 (PWA Asistentes) y 4 (PWA
-> Clientes) del build order. Se construye **después** de que el sitio (Etapa 1) y el panel
-> de admin (Etapa 2) estén en producción con Clientes reales — no antes.
+> Clientes) del build order.
 
 ## Objetivo
 
 La PWA de servicio es donde se hace real la propuesta de valor: reporte diario con IA, GPS
-en tiempo real, certificado QR, alertas inteligentes. La usan Asistentes durante la guardia y
+en tiempo real, Certificado de Aptitud en el perfil, alertas inteligentes. La usan Asistentes durante la guardia y
 Clientes para seguir el servicio.
 
 ## Stack (Etapas 3 y 4)
 
 ```
 Framework:  React 18 + Vite + Vite PWA Plugin
-Auth:       Supabase Auth (magic link o email/password)
+Auth:       Supabase Auth (usuario y contraseña)
 DB:         Supabase (PostgreSQL + RLS + Realtime)
 Storage:    Supabase Storage (fotos de reportes, documentos)
 GPS:        navigator.geolocation API (browser nativo)
 Cámara:     MediaDevices API (browser nativo)
-IA Nivel 1 y 2: Anthropic API — Claude Sonnet (ver AI_PROMPTS.md)
+IA Nivel 1 y 2: Anthropic API — modelo configurable en backend/src/config/modeloIA.js (ver AI_PROMPTS.md)
 Push:       Web Push API + Service Worker (Android) / Apple Push (iOS 16.4+)
 Informe Obra Social: sin librería de PDF — informe virtual dentro del Panel, impresión vía window.print() + @media print (Etapa 5, ver docs/claude_history.md 2026-07-21)
 ```
@@ -31,15 +30,11 @@ PWA-first, monitorear en producción antes de considerar migrar a app nativa con
 ## PWA del Asistente (Etapa 3)
 
 ### Login
-**Decisión revisada 2026-07-15** (pendiente #30 ítem H, extendida acá por el Desarrollador):
-contraseña (Supabase Auth email/password), no magic link — con opción de
-identificación biométrica (Face ID/Touch ID/Windows Hello vía WebAuthn, si el dispositivo lo
-permite) como método alternativo una vez que el usuario ya inició sesión con contraseña al
-menos una vez. El biométrico es opcional y corre para cualquier rol/login del sistema, no
-solo para esta PWA — se documenta acá porque esta es la primera vez que un login de este
-tipo entra en el build order (Etapa 3, todavía sin empezar). Diseño únicamente, sin código
-todavía. Primer login: completar perfil si faltan datos. Sesión persistente — no pedir login
-en cada visita.
+Usuario y contraseña (`src/context/AuthContext.jsx`): se entra con el nombre de usuario, único
+en todo el sistema. Con opción de identificación biométrica (huella o rostro vía WebAuthn, si el
+dispositivo lo permite) una vez que el usuario ya inició sesión con contraseña al menos una vez:
+el acceso guardado (`src/lib/accesoGuardado.js`). Primer login: completar perfil si faltan datos.
+Sesión persistente — no pedir login en cada visita.
 
 ### Mis Guardias (pantalla principal)
 Lista de guardias asignadas (próximas + historial). Cada card: paciente, dirección, fecha,
@@ -49,7 +44,7 @@ hora, modalidad, estado. Botón prominente "CHECK-IN" en la guardia activa o pr�
 
 1. El Asistente toca "CHECK-IN" al llegar al domicilio.
 2. La app pide permiso de geolocalización si no lo tiene.
-3. Registra `checkin_lat`/`checkin_lng`/`checkin_at` en `guardias` (ver `DATA_MODEL.md`).
+3. Registra `checkin_lat`/`checkin_lng`/`checkin_at` en `guardias`.
 4. Valida distancia contra el domicilio del paciente:
    - Dentro del rango → check-in exitoso, guardia pasa a `activa`.
    - Fuera del rango → advertencia + opción de confirmar igual, con nota automática al coordinador
@@ -203,11 +198,8 @@ Nueva guardia asignada, mensajes del coordinador, recordatorios.
 ## PWA del Cliente (Etapa 4)
 
 ### Login
-**Decisión revisada 2026-07-15** (pendiente #30 ítem H, extendida acá por el Desarrollador):
-contraseña (Supabase Auth email/password), no magic link — con opción de
-identificación biométrica (Face ID/Touch ID/Windows Hello vía WebAuthn, si el dispositivo lo
-permite), igual que en la PWA de Asistentes de arriba. Diseño únicamente, sin código todavía
-(Etapa 4, depende de que la Etapa 3 esté funcionando primero). Sesión persistente.
+Igual que en la PWA de Asistentes de arriba: usuario y contraseña, con la opción del acceso
+guardado (huella o rostro vía WebAuthn, si el dispositivo lo permite). Sesión persistente.
 
 ### Mis Pacientes
 Un solo paciente → va directo a su pantalla. Varios → lista con estado actual de cada uno.
@@ -219,7 +211,7 @@ Alertas activas (ROJA/AMARILLA) con descripción.
 
 ### Reportes
 Lista por fecha (más reciente primero) — fecha, Asistente, resumen breve. Al abrir: campos
-estructurados completos + foto si la hay. Botón "Exportar PDF" → Planilla 3 IOMA (Etapa 5).
+estructurados completos + foto si la hay.
 
 ### Asistente Asignado
 Foto, nombre, especialidades y el Certificado de Aptitud con su estado y su fecha: que esté
@@ -251,8 +243,7 @@ notificación — no repetir acá para que no diverjan las dos fuentes.
 ## Informe para Obra Social (Etapa 5 — rediseñada, ver `docs/claude_history.md` 2026-07-21)
 
 Se construye exclusivamente en el Panel de Administración (no en esta PWA, el Cliente no
-participa del proceso ni accede al informe). Reemplaza el diseño original de "Planillas
-IOMA" en PDF por un informe virtual dentro del Panel, con impresión vía `window.print()` +
+participa del proceso ni accede al informe). Es un informe virtual dentro del Panel, con impresión vía `window.print()` +
 `@media print` — sin librería de PDF y sin asumir una única obra social: cada Paciente
 registra su propia `obra_social` (texto libre) y `numero_afiliado` (esquema vigente en
 `supabase/migrations/`).
@@ -274,6 +265,5 @@ se edita después; solo se anula (con motivo y auditoría) y se genera uno nuevo
 
 ## Datos y RLS
 
-Esquema completo en `DATA_MODEL.md` (tablas `usuarios`, `asistentes`, `clientes`,
-`pacientes`, `guardias`, `reportes`, `alertas`, `certificados`) y políticas RLS exactas en
-`SECURITY.md` — no reproducir el SQL acá, esta PWA solo lee/escribe esas tablas ya definidas.
+Tablas `usuarios`, `asistentes`, `clientes`, `pacientes`, `guardias`, `reportes`, `alertas`,
+`certificados`, con su esquema y sus políticas RLS en la base en vivo — no reproducir el SQL acá, esta PWA solo lee/escribe esas tablas ya definidas.

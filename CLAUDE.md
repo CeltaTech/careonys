@@ -444,7 +444,7 @@ esta sesión: [Z].»*
 
 **Cómo se escribe la ruta de un documento.** Hay dos carpetas `docs/`: la del producto y la de la
 empresa. Un documento del producto se cita desde la raíz del producto —`docs/CONTEXT.md`—; uno de
-la empresa, con la ruta entera desde `celtatech/` —`celtatech/docs/ARQUITECTURA_NIVELES.md`—.
+la empresa, con la ruta entera desde `celtatech/` —`celtatech/docs/MODELO_COMERCIAL_CELTATECH.md`—.
 
 **Todo se verifica contra el código escrito y la base en vivo, nunca contra documentos ni
 migraciones** (`..\..\CLAUDE.md` §12). Acá, cómo: la base se consulta con

@@ -59,7 +59,7 @@ renglón por renglón.
 Los cuatro son el mismo mecanismo mirado desde documentos distintos. Qué detecta, si se puede
 apagar, y por dónde sale el mensaje.
 
-- `docs/DATA_MODEL.md:610` y `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
+- `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
   **Contestado, con cambios. Se aplica cuando cierre el grupo.** El sistema junta información y
   sugiere; **decide el Coordinador**, y cada Prestadora ajusta todo a su forma de trabajar.
   - **Titular que avisa que se demora:** el GPS calcula cuánto le falta. Dentro del margen de
@@ -118,9 +118,7 @@ No es una decisión sino un documento completo puesto a su nombre. Si no es suyo
 revisar es el documento entero, no un renglón.
 
 - `docs/PRD_07_Modalidad_Match.md:3` — el planteo entero de la modalidad Match. **La parte de cómo se cobra el contacto no se contesta acá: ya está escrita en la sección de la modalidad Match**, más abajo.
-- `docs/PRD_02_Panel_Admin.md` — el planteo entero del Panel. El documento no dice de quién es la decisión.
-- `docs/PRD_08_Dashboard_Modalidades.md:207` — ocho puntos de diseño del tablero, cerrados de una sola vez y con fecha.
-- `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:229` — qué se hace si cae un proveedor.
+- `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:168` — qué se hace si cae un proveedor.
 
 ### 6. Cómo se elige construir, que no se ve en ninguna pantalla
 
@@ -184,8 +182,8 @@ darse cuenta.
 
 **Los 12 depósitos de archivos tienen política**, pero el backend los sirve con la llave maestra,
 que no pasa por ella, y el aislamiento real sigue siendo **comparar a mano el comienzo de la ruta
-del archivo** (`panelVitalesAutorizacion.js:88`, y `appAsistentesMatricula.js:207` a través de
-`utils/archivosSubidos.js:68`).
+del archivo** (`panelVitalesAutorizacion.js:91`, y `appAsistentesDocumentos.js:266` a través de
+`utils/archivosSubidos.js:72`).
 
 **La protección por fila está puesta y hoy no protege de nada.** Las 202 tablas la tienen encendida
 y 201 tienen política —la única sin ninguna es `codigos_de_presencia`—, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
@@ -405,7 +403,7 @@ resumen, y lo que queda sigue verificando bien. Cierre: el último resumen se gu
 la base, y `verificar_cadena_de_consultas` lo compara.
 
 **En la misma pasada salen las dos comparaciones de ruta de archivo** que todavía hace el código
-(`panelVitalesAutorizacion.js:88` y `appAsistentesMatricula.js:207`): los
+(`panelVitalesAutorizacion.js:91` y `appAsistentesDocumentos.js:266`): los
 depósitos ya exigen la Prestadora al comienzo de la ruta, y con la credencial de la persona es la
 base la que dice que no. **Dos disparadores lo van a sentir:** `interno.prestadora_de_la_restriccion`
 e `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `clientes` con los
@@ -576,8 +574,8 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra.
 
-**14.** **Un solo archivo dice el estado.** Hoy son 39 migraciones: la primera ya es una foto de la
-base entera y las otras 38 se apilan encima. Se funden en una maestra única y se enciende el
+**14.** **Un solo archivo dice el estado.** Hoy son 125 migraciones: la primera ya es una foto de la
+base entera y las otras 124 se apilan encima. Se funden en una maestra única y se enciende el
 esquema declarado —`supabase/config.toml:64` ya tiene el renglón, vacío—. La maestra
 vuelve a fundirse con cada migración nueva, así que siempre contiene todo el sistema.
 
@@ -707,8 +705,8 @@ sola Prestadora, sin versión y sin dónde queden guardados.
 sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la
 intermediación. Son cinco: Calificaciones, Clientes, Formas de cobro —con su detalle y los
 plazos del cobro—, Auditoría legal y Funciones con riesgo legal. Hoy el menú le muestra Clientes y
-Formas de cobro también a quien no es de la administración (`panel/src/components/layout/Layout.jsx:234`,
-`:244`); las rutas sí están protegidas. Clientes y Formas de cobro las ve además sólo la
+Formas de cobro también a quien no es de la administración (`panel/src/components/layout/Layout.jsx:232`,
+`:242`); las rutas sí están protegidas. Clientes y Formas de cobro las ve además sólo la
 administración. En el Legajo del Asistente, la pestaña de evaluaciones sigue la misma regla.
 
 ---
@@ -802,7 +800,7 @@ Cliente.
 
 **28.** La explicación de la coordinación que acompañaba al equipo del Paciente ya salió. Queda la
 etiqueta «Trabaja en la zona de esta persona», en los tres idiomas
-(`panel/src/i18n/translations.js:2805`, `:5814`, `:8812`), que describe el modelo que este plan
+(`panel/src/i18n/translations.js:2676`, `:5584`, `:8481`), que describe el modelo que este plan
 reemplaza. Se cambia junto con el paso del coordinador asignado, no antes, y pasa a decir
 «Coordinador asignado».
 
@@ -1040,23 +1038,6 @@ no conocen ningún rol, pero las únicas puertas que las usan exigen ser del Pan
 Asistente y a un Cliente. Hay que abrir las puertas equivalentes para ellos dos, y recién
 después las pantallas.
 
-**38.** Pedir el enlace para restablecer la contraseña desde las dos aplicaciones de teléfono. Hoy no se puede:
-quien se olvidó la contraseña llama a su Prestadora y ella se lo manda desde el Panel. El backend ya
-tiene la puerta, el Panel ya la usa, y las dos aplicaciones ya tienen la página donde se escribe la
-contraseña nueva al abrir el enlace. Falta el pedido desde la pantalla de ingreso.
-
-**El trámite es de una Prestadora, y alcanza a una sola.** La Prestadora sale de la puerta por
-donde se entró, igual que al ingresar, y nunca de lo que venga adentro del pedido. **Nunca se
-busca el correo en las demás Organizaciones**, ni para juntar respuestas, ni para mandar un enlace
-por cada una, ni para avisar que esa persona existe en otra. Quien perdió la contraseña en dos
-Prestadoras hace el trámite dos veces, una en cada una.
-
-**Por eso va después del paso de la cuenta por Prestadora**, que es el que le da a la pantalla de
-ingreso de las dos aplicaciones de qué Prestadora se trata.
-
-**Y contesta siempre lo mismo**, exista el correo o no: si la respuesta cambiara, cualquiera
-averiguaría quién tiene cuenta preguntando de a un correo por vez.
-
 ---
 
 ## El dinero
@@ -1134,7 +1115,7 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
 
 **49.** Ponerlo en el tablero. Se calcula desde `ceses` y `asistentes`, sin tabla nueva.
 
-**50.** El aislamiento del Panel, que hoy descansa entero en la base. Tres cosas:
+**50.** El aislamiento del Panel, que hoy descansa entero en la base. Dos cosas:
 
 - **Unas cuarenta consultas no llevan ningún filtro propio.** Si una política se afloja, o entra
   una tabla nueva sin la suya, esas pantallas muestran listas y números mezclados y nada en el
@@ -1142,8 +1123,6 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
 - **Cinco pantallas guardan con la Prestadora que traía la fila que estaba en pantalla**, no con
   la de la sesión. Hoy coincide. Es un dato de aislamiento viajando por un camino que la sesión no
   controla.
-- **Al lado de cada cuenta se cuenta en cuántos lugares trabaja, y suma los de otras
-  Prestadoras.** Deja deducir que esa persona trabaja en otra.
 
 **51.** La marca del equipo del Panel usa un solo casillero del navegador para todas las
 Prestadoras: la última pisa a la anterior. El backend la valida contra la Prestadora, así que no
@@ -1290,10 +1269,7 @@ país.
 **62.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
 todo el Panel y de las dos aplicaciones, sin excepción;
 quitar los textos que no se alcanzan desde ninguna pantalla; escribir la regla de que cuando un
-texto sale sale el cartel entero, donde vive la regla del casillero; y pasar a las traducciones el
-texto del documento de cese, que está escrito en castellano adentro de
-`panel/src/lib/generarDocumentoCese.js` —incluida la línea del DNI— y sale igual en los tres
-idiomas.
+texto sale sale el cartel entero, donde vive la regla del casillero.
 
 **Y «invitación» sale de las pantallas que activan una cuenta** —«Reenviar invitación», «pida que
 reenvíen la invitación»—, donde el glosario ya la prohíbe. Termina cuando buscar esa palabra en el
@@ -1303,8 +1279,7 @@ código y en la base da cero.
 pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de
 las dos aplicaciones y los de Habilitar cambio de contraseña. **Y todo el texto visible, contra
 las cuatro fuentes** que fija `..\..\CLAUDE.md` §8: términos sin aprobar, giros locales,
-construcciones dubitativas como «Conviene…» —hoy está en los avisos de activación de las dos
-aplicaciones— e impersonalidades innecesarias. Cada cambio de redacción se le presenta para
+construcciones dubitativas como «Conviene…» e impersonalidades innecesarias. Cada cambio de redacción se le presenta para
 aprobar, uno por uno.
 
 **64.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
@@ -1440,7 +1415,7 @@ muestra en ningún lado.
 
 **91. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay advertencia.
 
-**92.** La advertencia. Qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca, no se contesta acá: es el tramo de conservación y borrado, más abajo en esta misma lista.
+**92.** La advertencia. Qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca, no se contesta acá: es el paso 122, más abajo en esta misma lista.
 
 **93. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
 
@@ -1472,7 +1447,7 @@ prueba del escaneo del Asistente.
 Y queda además **una contraseña de prueba en texto plano dentro de la configuración de permisos de
 una copia de trabajo**, que no es un archivo del repositorio y por eso el barrido no la alcanzó.
 
-**98. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 201 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
+**98. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 207 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
 
 **99. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 

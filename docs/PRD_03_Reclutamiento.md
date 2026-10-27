@@ -2,14 +2,13 @@
 
 > Fuente: documento original de PRD de Reclutamiento (histórico, fuera del repo, v1.0, Mayo 2026). Condensado para
 > ejecución directa, con las siguientes correcciones respecto del original: (1) el original
-> menciona un nombre propio ("Alberto Sánchez") como responsable de entrevistas —
-> reemplazado por "Inversor" o "Admin_prestadora", igual que en el resto de
-> `Workspace/docs/`, ver nota del glosario en `CLAUDE.md`; (2) se documenta explícitamente una discrepancia de stack, ver
+> nombra a una persona real como responsable de entrevistas — reemplazado por el Responsable
+> del reclutamiento y el Entrevistador; (2) se documenta explícitamente una discrepancia de stack, ver
 > sección "Nota de stack" abajo, en vez de elegir en silencio; (3) el original usa
 > "Cuidadora"/"Cuidadoras" en varios lugares (tabla de usuarios del sistema, catálogo de
 > especialidades) — reemplazado por "Asistente"/"Asistente Integral" en todo el documento,
 > regla del glosario obligatorio; (4) se agregó la sección "Landing page de reclutamiento"
-> (contenido de la página pública — perfiles buscados, beneficios, zonas — del original, que
+> (contenido de la página pública — perfiles buscados, beneficios — del original, que
 > no estaba condensada acá todavía); (5) queda fuera de alcance la Sección 8 del original
 > (comparativa de posicionamiento frente a la competencia) y la mención a explorar aval
 > institucional de terceros (Cruz Roja, AAGG) — son decisiones de negocio/marketing, no
@@ -36,32 +35,25 @@ empresas y no toma postulaciones (`PRD_01_Sitio_Web.md` §3).
 Twilio (mensajes de texto) no aparece en ningún otro documento — no construir verificación
 por mensaje de texto hasta que haya una decisión de negocio explícita.
 
-## Proceso de Incorporación de Asistentes — 6 etapas
+## Proceso de Incorporación de Asistentes
 
-**Nota de nomenclatura (corregida 2026-07-10):** esta tabla es la que directamente alimenta
-las pantallas de Panel (Módulo 2/4 de `PRD_02_Panel_Admin.md`, tabla `verificaciones_asistente`)
-— dentro del Panel, uso interno, se llama "Proceso de Incorporación de Asistentes". El nombre
-anterior quedó retirado por completo, de cualquier contexto interno o público
-(ver glosario de `CLAUDE.md`) — no reintroducirlo ni siquiera como "concepto general".
+**Nota de nomenclatura (corregida 2026-07-10):** dentro del Panel, uso interno, se llama
+"Proceso de Incorporación de Asistentes". El nombre anterior quedó retirado por completo, de
+cualquier contexto interno o público (ver glosario de `CLAUDE.md`) — no reintroducirlo ni
+siquiera como "concepto general".
 
-| Etapa | Descripción | Responsable | SLA |
-|---|---|---|---|
-| 0 — Postulación | Formulario público, estado inicial `pendiente` | Sistema | Inmediato |
-| 1 — Verificación de identidad | Foto DNI + foto de perfil, comparación por IA | Sistema + Coordinador | < 24hs |
-| 2 — Antecedentes penales | Consulta Registro Nacional de Reincidencia, renovación anual | Coordinador | 1-2 días |
-| 3 — Entrevista estructurada | Videollamada 30 min, evalúa competencia técnica/emocional/valores | Responsable del reclutamiento y Entrevistador | 1 día |
-| 4 — Referencias laborales | Mínimo 2 referencias verificadas por teléfono | Coordinador | 1-2 días |
-| 5 — Capacitación y certificación | 8hs online, aprobación mínima 80%, emite Certificado de Aptitud con QR | Sistema + aspirante | 1-2 días |
-
-Estas 5 etapas post-postulación son exactamente `etapa_filtro` en `verificaciones_asistente`
-(`DATA_MODEL.md`) — mismos nombres, no inventar variantes: `postulacion`,
-`verificacion_identidad`, `antecedentes_penales`, `entrevista`, `capacitacion`.
+**Las etapas no son fijas: cada Prestadora define las suyas**, con su clave, su nombre y su
+orden, en Configuración › El cuidado (tabla `etapas_incorporacion_asistente`). Cada Asistente
+nuevo arranca con una fila por etapa activa en `verificaciones_asistente`, y el único lugar del
+backend que sabe de dónde salen las etapas es `backend/src/utils/etapasDeIncorporacion.js`. Una
+Prestadora sin ninguna etapa activa no puede dar de alta un Asistente: el producto no le inventa
+un proceso.
 
 ### Verificación de identidad — cómo quedó construido
 
 Las dos fotos se cargan y se ven juntas desde el Legajo del Asistente, en la pestaña de
 verificación (`panel/src/pages/asistentes/FotosDeIdentidad.jsx`). Quedan guardadas en el depósito
-`fotos-identidad` (`DATA_MODEL.md`), que sube y firma el backend
+`fotos-identidad`, que sube y firma el backend
 (`backend/src/routes/panelVerificacionIdentidad.js`).
 
 **El bloque de las fotos está afuera de la lista de etapas**, y no es un olvido: cada Prestadora
@@ -71,7 +63,7 @@ etapa.
 
 **Las compara una persona, no el producto.** Quien revisa las mira una al lado de la otra y marca
 la etapa como venía haciéndolo; lo que cambió es que ahora queda guardado lo que miró. La
-comparación automática de las dos caras —la columna «comparación por IA» del cuadro— es
+comparación automática de las dos caras —la «comparación por IA» que pedía el PRD original— es
 tratamiento de dato biométrico y **no está construida**: falta el documento legal del que salga la
 advertencia al Asistente, y falta elegir proveedor (`SECURITY.md`, decisiones pendientes).
 
@@ -87,7 +79,7 @@ mano, hasta las mismas cinco que admite el formulario, para quien entró sin pos
 no la pantalla: son la firma de esa verificación. Volver el resultado a «sin llamar» los borra.
 
 **El mínimo de dos verificadas es configuración de cada Prestadora**, no un número escrito en el
-código (`configuracion_referencias_laborales` en `DATA_MODEL.md`). Se cambia desde Configuración,
+código (`configuracion_referencias_laborales`). Se cambia desde Configuración,
 puede ser cero, y el tope es cinco porque más de cinco no se pueden cargar.
 
 **Y no bloquea nada.** Si faltan verificadas, la pantalla lo dice y aclara que incorporar igual a
@@ -116,7 +108,7 @@ La pantalla de verificación muestra, arriba de todo, cuánto lleva hecho el asp
 |---|---|---|
 | Aspirante | Postulante sin verificar | Formulario público + estado de su postulación |
 | Asistente | Verificada e incorporada al Padrón | App + panel propio |
-| Admin_prestadora | Gestión de negocio de la prestadora (rol técnico — distinto del Inversor como persona, ver glosario de `CLAUDE.md`) | Panel de administración completo |
+| Admin_prestadora | Gestión de negocio de la prestadora | Panel de administración completo |
 | Cliente | Contrata el servicio | Portal de seguimiento |
 | Coordinador | Rol operativo | Gestión de su zona |
 
@@ -130,23 +122,21 @@ Integrales" (glosario de `CLAUDE.md`).
 **Perfiles buscados** (checklist visual, no un formulario todavía): Asistente Integral /
 Auxiliar de Enfermería / Enfermero/a profesional / Kinesiólogo/a / Acompañante Terapéutico/a
 / Fonoaudiólogo/a / Psicólogo/a / Terapista Ocupacional / Nutricionista / otras
-especialidades vinculadas al cuidado de personas — mismo catálogo que `especialidades` en
-`asistentes` (`DATA_MODEL.md`), no crear una lista paralela.
+especialidades vinculadas al cuidado de personas — mismo catálogo `especialidades` de cada
+Prestadora, no crear una lista paralela.
 
 **Beneficios que comunica el sitio**: trabajo registrado; honorarios acordados según
-tipo de Asistente y experiencia (sin publicar montos — ver regla abajo); Certificado de Aptitud
-con QR verificable; respaldo operativo permanente; aplicación propia de gestión de guardias;
-capacitación continua.
+tipo de Asistente y experiencia (sin publicar montos — ver regla abajo); Certificado de Aptitud;
+respaldo operativo permanente; aplicación propia de gestión de guardias; capacitación continua.
 
-**Zonas de cobertura**: mismo catálogo de zona/municipios que la Sección E del formulario
-(ver abajo) — no duplicar como una lista independiente en el código, es contenido estático
-de la landing que puede leer del mismo catálogo.
+**Zonas de cobertura**: mismo catálogo de zonas que la Sección E del formulario
+(ver abajo) — no duplicar como una lista independiente en el código.
 
 ## Formulario de postulación (landing pública)
 
 Regla explícita del PRD original: **no publicar honorarios en el sitio** — se relevan en el
 formulario sin sesgar la respuesta del aspirante, se acuerdan individualmente en la
-entrevista (Etapa 3).
+entrevista.
 
 ### Sección A — Datos personales
 
@@ -175,12 +165,12 @@ entrevista (Etapa 3).
 Regla de negocio (bloqueante para asignación, no solo informativa): ser monotributista es
 obligatorio para recibir guardias. Si el aspirante no está inscripto, el sistema **bloquea
 la asignación** hasta que Admin_prestadora confirme el alta de monotributo — este es el mismo campo
-`tipo_vinculo`/monotributo de `asistentes` en `DATA_MODEL.md`, no una tabla nueva.
+`tipo_vinculo`/monotributo de `asistentes`, no una tabla nueva.
 
 ### Sección C — Formación y certificaciones
 
-Profesión/especialidad (checkboxes múltiples — mismo catálogo que `especialidades` en
-`asistentes`: Asistente Integral, Acompañante Terapéutico/a, Enfermero/a, Auxiliar de
+Profesión/especialidad (checkboxes múltiples — mismo catálogo `especialidades` de cada
+Prestadora; el original enumeraba: Asistente Integral, Acompañante Terapéutico/a, Enfermero/a, Auxiliar de
 Enfermería, Asistente Gerontológico/a, Kinesiólogo/a, Fonoaudiólogo/a, Psicólogo/a,
 Terapista Ocupacional, Nutricionista, Voluntario/a, Otro — mínimo 1 obligatorio;
 corregido respecto del documento fuente, que decía "Cuidadora Domiciliaria" — término
@@ -198,21 +188,14 @@ en el documento fuente, usar como opciones fijas de un multi-select, no texto li
 
 ### Sección E — Zonas de cobertura
 
-Selector múltiple de zona + municipio + distancia máxima desde el domicilio. Catálogo de
-zonas (mismas que usa el resto del proyecto — no crear un catálogo paralelo):
-
-| Zona | Municipios |
-|---|---|
-| CABA | Todos los barrios |
-| GBA Norte | San Isidro, Vicente López, San Martín, Tres de Febrero, San Miguel, Malvinas Argentinas, José C. Paz, Tigre, Pilar, Escobar |
-| GBA Oeste | Morón, Ituzaingó, Haedo, Castelar, El Palomar, Merlo, Moreno, La Matanza |
-| GBA Sur | Lomas de Zamora, Lanús, Avellaneda, Quilmes, Berazategui, Florencio Varela, Almirante Brown |
-| La Plata y alrededores | La Plata, Berisso, Ensenada, Brandsen |
+Selector múltiple de zona + municipio + distancia máxima desde el domicilio. Las zonas no son
+fijas: cada Prestadora carga las suyas (`zonas_cobertura`), y es el mismo catálogo que usa el
+resto del producto — no crear un catálogo paralelo.
 
 ### Sección F — Disponibilidad horaria
 
 Grilla días (L-D) x franjas (Mañana 6-14 / Tarde 14-22 / Noche 22-6) — mapea directo a
-`asistentes.disponibilidad` (JSONB) en `DATA_MODEL.md`. Más checkboxes: disponible para
+`asistentes.disponibilidad` (JSONB). Más checkboxes: disponible para
 urgencias, disponible con retiro (por horas), disponible sin retiro (cama adentro).
 
 ### Cómo quedó construido
@@ -302,8 +285,8 @@ alguien para una casa lejos).
 **El filtro por «Suspendida» no existe porque esa situación no existe**: una postulación está
 pendiente, en revisión, aprobada o rechazada.
 
-Mapa geolocalizado de los Asistentes activos del Padrón agrupado por municipio (mismo componente de mapa que
-`PRD_02_Panel_Admin.md` Módulo 2, no duplicar implementación).
+Mapa geolocalizado de los Asistentes activos del Padrón agrupado por zona (mismo componente de mapa
+del Padrón, `panel/src/components/mapa/MapaDelPadron.jsx`, no duplicar implementación).
 
 ### La entrevista al postulante — cómo está construida
 
@@ -351,7 +334,7 @@ se le carga el informe (`panel/src/components/EntrevistaDePostulacion.jsx`,
   quien mira y el backend guarda un instante universal. Su prueba hace ir y volver sin fijar ningún
   huso: escrita con un huso adentro pasaría acá y fallaría en la máquina que publica.
 
-## Programa de capacitación (Etapa 5 del Proceso de Incorporación de Asistentes)
+## Programa de capacitación (etapa del Proceso de Incorporación de Asistentes, si la Prestadora la configura)
 
 8 horas online en 4 bloques (2hs c/u): 1) La persona mayor, 2) Cuidados esenciales, 3)
 Seguridad y prevención, 4) El rol del Asistente (incluye uso de la app: check-in/out, reporte

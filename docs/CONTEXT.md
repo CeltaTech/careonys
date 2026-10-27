@@ -13,8 +13,13 @@
 - Precio de referencia de lanzamiento: **nunca hardcodear** — se carga desde configuración
   (la lista de precios del Panel), no desde una constante en el código. Mientras no haya
   benchmark validado, la interfaz pública muestra "A consultar".
-- Zona de cobertura inicial: CABA y GBA (norte, oeste, sur) y La Plata y alrededores —
-  también configurable, no hardcodear la lista de zonas en componentes.
+- Zonas de cobertura: las configura cada Prestadora (`zonas_cobertura`, `zona_lugares`) —
+  no hardcodear la lista de zonas en componentes.
+- **La modalidad de trabajo no es lo contratado.** Qué modalidades usa una Prestadora —prestación
+  directa e intermediación (Match)— vive en su propia tabla, `prestadora_modalidades`, que es el
+  único punto de verdad de esa decisión y no se cuelga de ningún plan ni de lo que la Prestadora
+  haya contratado: son dos decisiones distintas. La consultan igual el menú del Panel
+  (`panel/src/context/ModalidadesContext.jsx`) y el backend (`backend/src/middleware/exigirModalidad.js`).
 - **Principio de negocio (acordado en sesión, 2026-07-07): el modelo está pensado para
   operar con muy poca gente administrando.** Por lo tanto, toda tarea operativa que se
   pueda automatizar con IA sin comprometer el riesgo legal (ver `CLAUDE.md`) es deseable,
@@ -28,19 +33,10 @@
   exige entidad `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual
   CeltaTech/prestadora, i18n y multi-moneda desde el arranque y residencia de datos a futuro:
   todo eso ya está implementado y verificado.
-  **Estado real (verificado contra el código el 2026-07-24, no solo contra este documento):
-  ya NO es mono-tenant, y los 4 Bloques del plan están cerrados.** Bloque 1 (aislamiento
-  aditivo de datos: tabla `prestadoras` + `prestadora_id NOT NULL` en 15 tablas), Bloque 2
-  (RLS centralizada vía `prestadora_actual()`/`es_superadmin()`, ~28 policies reescritas, rol
-  `admin` renombrado a `admin_prestadora` en dato y código sin transición pendiente), Bloque 3
-  (filtrado de tenant en rutas backend con Service Role Key) y Bloque 4 (`configuracion_prestadora`
-  reemplazando la configuración singleton — confirmado en `backend/src/routes/panelConfiguracion.js:34-41`
-  — y hardcodeos de marca sacados de los documentos generados) ya están
-  aplicados y verificados contra Supabase real. Desde entonces se sumó el modo "dentro de una
-  Prestadora" (ver `TenantSessionContext.jsx`), que va más allá de lo que pedía el Bloque 4;
-  nació con el rol comercial `admin_plataforma` y después pasó a ser la **sesión de soporte
-  técnico** de `superadmin` — el rol comercial se fue entero a CeltaTech y ya no existe en
-  Careonys.
+  Cada tabla lleva `prestadora_id` y la RLS resuelve la Prestadora con `prestadora_actual()`;
+  la configuración es por Prestadora (`configuracion_prestadora`). `superadmin` entra a una
+  Prestadora real sólo con un permiso de acceso que abre CeltaTech (`permisos_de_acceso`); sin
+  uno vigente el backend lo rechaza (`backend/src/middleware/requiereRolPanel.js`).
   **El correo, que es lo único estructural que sigue abierto.** Railway bloquea los puertos de
   correo, así que el backend no puede entrar a ninguna casilla —ni propia ni de una Prestadora— y
   **hoy no se entrega ningún correo**. El envío ya pasa por un despachante que habla por el puerto
@@ -60,11 +56,9 @@
 | Asistente | PWA de Asistentes | Sus propias guardias, su perfil, su certificado |
 | Cliente | PWA de Clientes | Sus pacientes, reportes y alertas de sus pacientes |
 
-Acordado en sesión (2026-07-07): Superadmin es un quinto rol real, con login propio,
-distinto de Admin_prestadora — no un simple flag sobre el mismo usuario. Antes no estaba en
-ningún PRD original; se agrega por decisión explícita de negocio (necesidad de que alguien
-con más permiso técnico pueda operar sin exponer ese poder a un Admin_prestadora de negocio
-"neófito").
+Superadmin es un rol distinto de Admin_prestadora, no un simple flag sobre el mismo usuario, y
+no tiene entrada propia en Careonys: llega sólo con un permiso de acceso. Los roles que entran
+al Panel están en `panel/src/lib/roles.js`.
 
 Ningún rol de Asistente/Cliente debe tener acceso, ni siquiera de solo lectura, a
 `escalas_legales`, `ausencias` ni a datos laborales internos de otros Asistentes.
@@ -103,19 +97,16 @@ Etapa 1 — La página pública de Careonys (le vende el software a empresas de 
 
 Etapa 2 — Panel de administración
   Frontend:  React 18 + Vite, proyecto separado (`panel/`) — SPA detrás de auth, nunca
-             indexable (<meta name="robots" content="noindex, nofollow">), mismo motivo por
-             el que Etapa 1 sí necesitaba Next.js y esto no
+             indexable (<meta name="robots" content="noindex, nofollow">)
   Auth:      Supabase Auth (email + password, sin magic link) — rol resuelto desde tabla
              `usuarios` (extiende `auth.users`), no desde metadata de Auth
-  DB:        Supabase (PostgreSQL + RLS) — mismo proyecto ya creado en Etapa 1, sin migración.
+  DB:        Supabase (PostgreSQL + RLS).
              El panel lee/escribe directo con la anon key; RLS (no el backend) es el único
              límite de autorización sobre los datos
-  Backend:   el Express de Etapa 1 gana un uso nuevo, acotado: acciones puntuales que el
-             panel no puede hacer solo con RLS (ej. envío de email al cambiar estado de una
-             postulación) van por `POST /api/panel/*`, protegidas con un middleware que
-             valida el JWT de Supabase Auth contra `usuarios.rol`
-  Nota: el sitio público sigue en Express como capa de validación/envío de email, pero
-  ambos (sitio y panel) leen/escriben la misma base Supabase.
+  Backend:   Express (`backend/`): acciones puntuales que el panel no puede hacer solo con
+             RLS (ej. envío de email al cambiar estado de una postulación) van por
+             `/api/panel/*`, protegidas con un middleware que valida el JWT de Supabase Auth
+             contra `usuarios.rol` (`backend/src/middleware/requiereRolPanel.js`)
 
   Qué hay construido hoy, por área. Cada una tiene su esquema aplicado, sus rutas en
   `backend/src/routes/` y su pantalla en `panel/src/pages/`; lo que falta está en
@@ -153,18 +144,15 @@ Etapa 2 — Panel de administración
 
 Etapas 3 y 4 — PWA Asistentes / PWA Clientes
   Framework: React 18 + Vite + Vite PWA Plugin
-  Auth:      Supabase Auth (magic link o email/password)
+  Auth:      Supabase Auth, con usuario y contraseña (`src/context/AuthContext.jsx`) y acceso
+             guardado en el teléfono (`src/lib/accesoGuardado.js`)
   DB:        Supabase (PostgreSQL + RLS + Realtime)
   Storage:   Supabase Storage (fotos de reportes, documentos)
   GPS:       navigator.geolocation API (nativo del browser)
   Cámara:    MediaDevices API (nativo del browser)
-  IA Nivel 1 (reporte inteligente) y Nivel 2 (alertas): Anthropic API — Claude Sonnet
+  IA Nivel 1 (reporte inteligente) y Nivel 2 (alertas): Anthropic API — modelo en
+             `backend/src/config/modeloIA.js`
   Push:      Web Push API + Service Worker (Android) / Apple Push (iOS 16.4+)
-  PDF:       jsPDF o react-pdf (Planilla 3 IOMA y Resumen Mensual)
-
-Etapa 5 — Planillas IOMA
-  Generación de PDF desde datos ya existentes en `reportes` y `guardias` — no requiere
-  stack nuevo.
 ```
 
 ## i18n — el objeto `T`
@@ -201,7 +189,7 @@ la Prestadora Demo tiene logo y paleta relevantes hoy.
 
 ## Modelo de datos
 
-Ver `DATA_MODEL.md` para el schema completo consolidado de todas las etapas.
+El esquema se consulta en la base en vivo, no en un documento.
 
 ## IA — prompts de sistema
 
@@ -218,9 +206,8 @@ Ver `celtatech/CLAUDE.md` §7 y `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md` §
 
 ## Cómo la Prestadora le cobra a los Clientes
 
-Ningún documento original lo especificó: el «Modelo UPE» cubre la facturación al Pagador vía
-Planillas 3, pero no el cobro directo a Clientes particulares. Se construyó después, y hoy los dos
-caminos están hechos.
+Hay dos caminos, y los dos están hechos: los informes a obras sociales
+(`panel/src/pages/InformesObraSocial.jsx`) y el cobro directo a los Clientes.
 
 **En prestación directa**, la factura del Cliente vive en `facturas_cliente`, la maneja
 `backend/src/routes/panelCobros.js`, se sigue desde `panel/src/pages/Facturacion.jsx`, y
@@ -303,17 +290,9 @@ y **cada Prestadora arma su propia forma de cobrar** con las piezas que el produ
 —importe, cada cuánto, período gratuito, saldo de contactos, si se renueva sola— en
 `formas_de_cobro_intermediacion`. Lo que cada Cliente tiene habilitado vive en
 `accesos_intermediacion`. El producto no elige por ella ni le fija precio ni duración: la política
-de comercialización es un dato de la Prestadora, no código. El saldo de contactos de un paquete
-se carga cuando entra la plata y se gasta de a un Asistente, con la cuenta hecha adentro de la
-base; el detalle está en `docs/PRD_07_Modalidad_Match.md` §3.5. Y una forma que se renueva
-sola se da de baja en un clic desde la aplicación del Cliente: apaga la renovación y conserva
-el período ya pagado hasta el final (§3.6); el acceso se apaga solo al llegar esa fecha, con un
-trabajo diario del backend (§3.7). El período gratuito que cargó la Prestadora se convierte en una
-fecha el día del alta —la del primer cobro—, se le informa a los rieles que cobran solos, y ese
-mismo trabajo diario avisa al teléfono de quien paga unos días antes de que llegue: nunca un cobro
-silencioso (§3.8). Y un cobro que no entra no apaga nada en el acto: abre un período de gracia de
-siete días, se avisa una vez, cada riel reintenta mientras dura, y recién al llegar esa fecha sin
-que la plata haya entrado el acceso se suspende (§3.9).
+de comercialización es un dato de la Prestadora, no código. El saldo de contactos, la baja, el
+vencimiento, el período gratuito y el cobro que no entra están en
+`docs/PRD_07_Modalidad_Match.md` §3.5-3.9, y no se repiten acá.
 
 ## Cuando falta una Asistente
 

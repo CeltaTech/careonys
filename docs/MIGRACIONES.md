@@ -7,40 +7,20 @@
 Vigente desde el **2026-07-28**. Es el paso 2 de la Etapa 0 de
 `celtatech/docs/PLAN_SEPARACION_CELTATECH.md`.
 
-## 1. Qué pasaba antes, y por qué había que arreglarlo
+## 1. La foto de la base
 
-Hasta el 2026-07-28 la base de Careonys **no se podía reconstruir desde el repositorio**. Había
-dos historiales distintos, y ninguno de los dos servía:
-
-- **Setenta y cinco archivos `.sql` sueltos guardados en el repositorio** (eliminados el
-  2026-08-18). Eran *intención*: lo que en algún momento se quiso aplicar. Nadie podía decir
-  cuáles se aplicaron, cuáles quedaron a medias y cuáles fueron pisados por otro posterior. No
-  estaban ordenados por fecha ni numerados.
-- **La tabla interna de Supabase — otras 75 anotaciones.** Eso sí era *lo que efectivamente
-  corrió* entre el 2026-07-11 y el 2026-07-27, con el texto completo de cada cambio. Pero vivía
-  **en un solo lugar del mundo**: adentro de la base de producción. No estaba en el repositorio
-  ni en ningún respaldo de código.
-
-Y ni siquiera juntando las dos cosas alcanzaba: la base se creó el 2026-07-07 y las anotaciones
-empiezan el 2026-07-11. La primera de esas 75 arranca con
-`ALTER TABLE ausencias ALTER COLUMN prestadora_id DROP DEFAULT;` — o sea, modifica tablas que ya
-existían. Los primeros cuatro días no quedaron registrados en ningún lado.
-
-## 2. Cómo se arregló: una foto, no una reconstrucción
-
-En vez de intentar rearmar la historia (imposible, faltaba el principio), se le sacó una **foto
-fiel al esquema real de producción** y esa foto pasó a ser la migración inicial. Hoy la foto
-vigente es:
+La migración inicial es una **foto fiel al esquema real de producción**. Hoy la foto vigente es:
 
 ```
 supabase/migrations/20261016000000_foto_de_la_base.sql
 ```
 
-Es el único archivo de la carpeta. La base en vivo tiene 189 tablas en `public`, con 1849
-columnas; 522 políticas de seguridad sobre esas tablas y 27 sobre los depósitos de archivos; 172
-funciones propias, 68 en `public` y 104 en `interno`; 153 disparadores; y 550 índices, todos en
-`public`. La foto trae además las filas de los catálogos que el producto trae de fábrica y los
-once depósitos de archivos. No es lo que alguien quiso hacer: es lo que hay.
+Detrás de ella vienen, en orden, los cambios que se aplicaron después: el 2026-10-27 la carpeta
+tiene 125 archivos, la foto incluida. Ese mismo día la base en vivo tiene 207 tablas en `public`,
+con 1959 columnas; 609 políticas de seguridad sobre esas tablas y 37 sobre los depósitos de
+archivos; 229 funciones propias, 83 en `public` y 146 en `interno`; 185 disparadores y 600
+índices en `public`; y 12 depósitos de archivos. La foto trae además las filas de los catálogos
+que el producto trae de fábrica. No es lo que alguien quiso hacer: es lo que había.
 
 ### Cuándo se saca una foto nueva
 
@@ -64,32 +44,18 @@ Tres cosas que hay que saber antes de hacerlo:
   `--status applied` para el que queda. Después, `supabase migration list --linked` tiene que
   mostrar una sola línea con las dos columnas iguales.
 
-## 3. Dónde vive el esquema
+## 2. Dónde vive el esquema
 
 **La única fuente del esquema son `supabase/migrations/` y la base real.** Fuera de esa carpeta
 no se guarda ningún archivo `.sql` de esquema: todo cambio, sin excepción, va ahí, y se ejecuta
 en orden de nombre. (La única excepción es `supabase/seed.sql`, que no crea ni modifica
 estructura: solo carga filas de prueba en la base local.)
 
-Aquellas 75 anotaciones se sacaron de la tabla interna de Supabase el 2026-07-28, para dejar el
-historial de producción alineado con el repositorio. Sacarlas **no tocó ni una tabla**: esa
-tabla es una libreta de apuntes, no la base.
+Las reglas que valen para toda migración —una aplicada no se edita, corre entera o no corre, el
+orden de los archivos es el de aplicación, y el permiso de tabla no es la RLS— están en
+`celtatech/CLAUDE.md`, en «La base de datos: sólo por migraciones».
 
-## 4. Las tres reglas que no se negocian
-
-1. **Una migración ya aplicada no se edita nunca.** Ni para arreglar un error de tipeo. Si algo
-   salió mal, se arregla con una migración nueva hacia adelante. Editar una migración aplicada
-   hace que la base de quien ya la corrió y la de quien no diverjan en silencio.
-2. **Cada migración corre entera o no corre.** Postgres ejecuta cada archivo en una transacción,
-   así que un error a la mitad revierte todo el archivo. No escribir nada que rompa eso
-   (`CREATE INDEX CONCURRENTLY`, por ejemplo, no puede ir dentro de una transacción — si hace
-   falta, va en su propio archivo y se documenta ahí mismo).
-3. **El orden de los archivos es el orden de aplicación.** Se ordenan por nombre. No se
-   renombra, no se reordena, no se intercala un archivo con fecha anterior entre dos ya
-   aplicados. *Única excepción:* al sacar una foto (§2) se puede cambiar el texto del nombre
-   —no los 14 dígitos— para que diga que es una foto y no lo último que se aplicó.
-
-## 5. Cómo se llama un archivo
+## 3. Cómo se llama un archivo
 
 ```
 supabase/migrations/AAAAMMDDHHMMSS_descripcion_en_snake_case.sql
@@ -100,7 +66,7 @@ Ejemplo: `20261020093000_el_paciente_guarda_su_grupo_sanguineo.sql`
 Los 14 dígitos son fecha y hora en UTC. Es el formato que espera la herramienta de línea de
 comandos de Supabase.
 
-## 6. Qué lleva adentro
+## 4. Qué lleva adentro
 
 Toda migración empieza con un comentario de cabecera que diga **qué hace y por qué**, no solo
 qué tablas toca. Dentro de seis meses el "por qué" es lo único que no se puede reconstruir
@@ -109,24 +75,16 @@ de borrarlo y **cómo se vuelve atrás**.
 
 Y toda migración que crea una tabla, en el mismo archivo:
 
-- activa RLS (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`) — regla 8 de `CLAUDE.md`;
+- activa RLS (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`) — «RLS estricta en toda tabla y todo
+  depósito de archivos nuevo», de `celtatech/CLAUDE.md`;
 - crea sus políticas;
-- otorga a `authenticated` los permisos de tabla que sus políticas usan, y ninguno más (ver §7);
+- otorga a `authenticated` los permisos de tabla que sus políticas usan, y ninguno más (ver §5);
 - deja `NOTIFY pgrst, 'reload schema';` al final si se aplicó directo contra Supabase, porque
   sin eso la API puede devolver 404 en tablas que sí existen.
 
 Una tabla sin RLS no se sube. No hay caso en el que "después la agrego".
 
-## 7. La puerta y la cerradura: RLS sin `GRANT` no sirve de nada
-
-Postgres decide en **dos pasos** si alguien puede tocar una fila:
-
-1. El **permiso de tabla** (`GRANT`) — ¿este rol puede tocar esta tabla, en general?
-2. La **política de RLS** — de las filas de esa tabla, ¿cuáles?
-
-La RLS es la cerradura; el `GRANT` es la puerta. **Una cerradura perfecta en una puerta tapiada
-no deja pasar a nadie**, y el error que devuelve no habla de RLS: dice `42501 permission denied
-for table X`. Si aparece eso, no se toquen las políticas — falta el paso 1.
+## 5. Qué permisos abre cada migración
 
 **Todo lo nuevo nace cerrado.** Los permisos por defecto de la base no le dan nada a
 `authenticated` ni a `anon`: ni sobre tablas, vistas y contadores de `public`, ni sobre
@@ -147,7 +105,7 @@ funciones, de ningún esquema. Así que cada migración dice a quién le abre lo
 Qué tiene cada rol se mira en la base, no acá: `information_schema.role_table_grants` para las
 tablas, y `has_function_privilege` para las funciones.
 
-## 8. Cómo se aplican
+## 6. Cómo se aplican
 
 **En la máquina propia**, para desarrollar y probar. Desde
 `F:\proyectos\celtatech\productos\careonys`:
@@ -200,10 +158,10 @@ supabase migration list --linked
 
 Muestra dos columnas, local y remoto. Si las dos coinciden, no hay nada pendiente.
 
-**No se pega SQL en el editor del panel de Supabase.** Es exactamente lo que generó el problema
-que esta página describe: deja la base cambiada y el repositorio sin enterarse.
+**No se pega SQL en el editor del panel de Supabase.** Deja la base cambiada y el repositorio sin
+enterarse.
 
-## 9. Reconstruir desde cero
+## 7. Reconstruir desde cero
 
 Correr todos los archivos de `supabase/migrations/` en orden sobre una base vacía tiene que dar
 exactamente el esquema de producción. Si algún día deja de dar, hay una migración que se editó

@@ -1,11 +1,7 @@
 # SECURITY.md — Autenticación, autorización y datos sensibles
 
 > Fuente principal: documento único original de especificación (histórico) Parte L (Arquitectura Web) y Parte O
-> (RLS policies). Donde se indica, se adoptan patrones de `Prompt de Money Suite.md`
-> (no vinculante) porque son buenas prácticas concretas que no contradicen ninguna
-> decisión de negocio ya tomada — la plataforma usa Supabase Auth, no un esquema JWT propio,
-> así que solo se toman las partes de Money Suite que son configuración de Supabase o
-> política independiente del proveedor.
+> (RLS policies). La plataforma usa Supabase Auth, no un esquema JWT propio.
 
 ## Autenticación por etapa
 
@@ -17,13 +13,9 @@
   (`backend/src/config/direccionDeAcceso.js`), así que corregir el email no toca el acceso.
 
 Supabase Auth ya maneja la emisión, rotación y revocación de tokens JWT — **no construir
-un esquema propio de access/refresh tokens**. El detalle de "Access Token 15 min + Refresh
-Token 30 días con rotación" que aparece en `Prompt de Money Suite.md` sección 13.1 describe
-cómo se construiría un auth desde cero; no aplica acá porque Supabase ya lo resuelve. Se
-menciona para dejar constancia de que fue evaluado y descartado por redundante, no por
-error.
+un esquema propio de access/refresh tokens**.
 
-## Política de contraseñas (patrón adoptado de Money Suite, configurable en Supabase Auth)
+## Política de contraseñas (configurable en Supabase Auth)
 
 - Longitud mínima: 10 caracteres.
 - Al menos 1 mayúscula, 1 número, 1 carácter especial.
@@ -59,16 +51,27 @@ para mantener esa salida siempre abierta:
   equivalente en cualquier storage S3-compatible.
 
 Ninguna de estas reglas frena el desarrollo actual — son restricciones de diseño, no
-trabajo extra significativo. El backup propio es la única tarea pendiente concreta, a
-implementar antes de que haya datos reales de pacientes/Asistentes/Clientes en producción
-(no es urgente mientras solo haya datos de prueba).
+trabajo extra significativo.
+
+**El backup propio existe.** Todos los días a las 03:00 de Buenos Aires
+(`.github/workflows/backup-diario.yml`) `backend/scripts/backup_a_buckets.mjs` sube el volcado
+de la base a Cloudflare R2, que es el principal, y a Backblaze B2, que es el espejo. Trae también
+los archivos de los depósitos, bajo `archivos/<depósito>/<ruta>`: sube sólo lo que falta o
+cambió, y la lista de depósitos se la pregunta a la base, para que uno nuevo no quede afuera por
+olvido (`backend/src/utils/copiaDeDepositos.js`).
+
+**La prueba de restauración la hace `backend/scripts/probar_restauracion.mjs`.** Baja el último
+respaldo, lo restaura en una base efímera, compara las tablas y las filas contra producción y los
+archivos contra el almacenamiento, y borra el contenedor y la descarga al terminar. Lo corre el
+Desarrollador, porque pide las llaves del bucket y de la base. Contesta `bien`, `roto` o
+`no_probado`: este último es que todo coincidió pero no había una sola fila ni un solo archivo que
+comparar, así que hay que rehacerla con datos cargados. Qué decide cada uno está en
+`backend/src/utils/comprobacionDeRestauracion.js`. Que deje constancia y se repita sola es un paso
+de `docs/PLAN_HASTA_PRODUCCION.md`, «Respaldos que se probaron».
 
 ## RBAC — roles del sistema
 
-Los 6 roles reales del proyecto (nota histórica: Money Suite usaba genéricos
-`super_admin`/`operations_manager` sin correspondencia en ningún PRD de este proyecto en ese
-momento — desde el 2026-07-07 sí existe un `superadmin` real, pero es una decisión propia
-de este proyecto, con alcance distinto, no el que traía Money Suite):
+Los roles reales del proyecto:
 
 | Rol | Alcance |
 |---|---|
@@ -91,7 +94,7 @@ acceso técnico (infra/código, sin necesidad real de tocar datos de negocio de 
 prestadora real) con acceso administrativo de negocio (comercial, todas las prestadoras).
 El diseño de reemplazo (roles `superadmin` acotado a sandbox + `admin_plataforma` nuevo,
 con el "modo dentro de una prestadora" — banner notorio, advertencia en acciones
-destructivas vía Regla 4 de `CLAUDE.md`, log de auditoría de todo login/acción sensible,
+destructivas según «Toda operación destructiva se confirma» de `celtatech/CLAUDE.md`, log de auditoría de todo login/acción sensible,
 timeout de 5 min de inactividad + tope de 60 min con advertencia a los 50) es el que se
 implementó.
 
@@ -115,8 +118,7 @@ de la herramienta de CeltaTech; la Prestadora no ve nada. Qué tiene que constru
 `celtatech/docs/EL_PERMISO_DE_ACCESO.md`.
 
 `superadmin` es el único rol, además de `admin_prestadora`, con acceso de escritura a
-configuración de sistema (planes/módulos activables, si se construye esa idea de
-`PRD_02_Panel_Admin.md` Módulo 8) y a cualquier herramienta de diagnóstico asistido por IA
+configuración de sistema y a cualquier herramienta de diagnóstico asistido por IA
 que se construya sobre logs/errores de la aplicación — no exponer esas herramientas a
 `admin_prestadora` ni a `coordinador`.
 
@@ -128,8 +130,10 @@ sesión de tenant dinámica "todavía no está implementada en código". Las dos
 ser ciertas en el pendiente #30 (2026-07-15) y quedaron escritas casi un mes de más. Estado
 real, verificado contra la base el 2026-07-28:
 
-- `prestadora_actual()` resuelve el permiso de acceso primero y el `prestadora_id` propio
-  después (definición completa abajo, copiada de la base, no del diseño).
+- `interno.prestadora_actual()` resuelve el permiso de acceso primero, el `prestadora_id` propio
+  después —sólo si la cuenta no está desactivada— y, para el trabajo sin persona, la Prestadora
+  para la que el backend generó su credencial. La definición vigente se lee de la base
+  (`pg_get_functiondef`), no se copia acá.
 - `es_superadmin()` no es un bypass: devuelve `TRUE` sólo si el usuario tiene el rol `superadmin`.
   Las policies la usan siempre junto al tenant
   (`es_superadmin() AND prestadora_id = prestadora_actual()`), nunca sola.
@@ -138,33 +142,7 @@ La tabla que consulta `prestadora_actual()` se llama `permisos_de_acceso` y el r
 `superadmin`.
 
 Toda policy de RLS escrita desde el Bloque 2 en adelante usa estas dos funciones SQL en vez
-de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a mano:
-
-```sql
--- Copiado de la base el 2026-10-19 (pg_get_functiondef), no del diseño.
-CREATE OR REPLACE FUNCTION interno.prestadora_actual() RETURNS uuid
-  LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'interno' AS $$
-  SELECT COALESCE(
-    -- 1. El permiso de acceso que CeltaTech abrió para esta cuenta, mientras está vigente.
-    (SELECT s.prestadora_id FROM permisos_de_acceso s
-      WHERE s.admin_id = auth.uid()
-        AND s.salida_at IS NULL
-        AND s.expira_at > NOW()
-        AND s.ultima_actividad_at > NOW() - INTERVAL '5 minutes'
-      ORDER BY s.entrada_at DESC LIMIT 1),
-    -- 2. La Prestadora de la cuenta con la que se entró.
-    (SELECT prestadora_id FROM usuarios WHERE id = auth.uid()),
-    -- 3. El trabajo sin persona: la Prestadora para la que el backend generó su credencial.
-    (SELECT NULLIF(auth.jwt() ->> 'prestadora_id', '')::uuid
-      WHERE auth.jwt() ->> 'role' = 'trabajo_sin_persona')
-  )
-$$;
-
-CREATE OR REPLACE FUNCTION interno.es_superadmin() RETURNS boolean
-  LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'interno' AS $$
-  SELECT EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol = 'superadmin');
-$$;
-```
+de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a mano.
 
 Toda tabla con `prestadora_id` debe filtrar por `prestadora_id = prestadora_actual()` en sus
 policies — nunca solo por rol, sin el filtro de tenant, salvo que la tabla sea
@@ -176,20 +154,21 @@ superadmin da un permiso *dentro* del tenant en el que uno está parado, no perm
 salirse de él. Una policy que diga solamente `USING (es_superadmin())` sobre una tabla con
 `prestadora_id` es un bypass cross-tenant.
 
-**Excepciones vigentes, contadas contra la base el 2026-07-28** (83 policies usan
-`es_superadmin()`; estas 5 la usan sola sobre una tabla que sí tiene `prestadora_id`):
+**Excepciones vigentes, contadas contra la base el 2026-10-27** (140 policies usan
+`es_superadmin()`; estas 6 la usan sin `prestadora_actual()` sobre una tabla que sí tiene
+`prestadora_id`):
 
 | Tabla | Policy | Por qué se acepta |
 |---|---|---|
-| `uso_ia` | `superadmin_lee_uso_ia` | Medición de consumo de IA por Prestadora, en tokens. Sin datos personales y sin importes. |
-| `prestadora_modalidades` | `superadmin_lee_modalidades` | Ídem: qué modalidades tiene activadas cada Prestadora. |
-| `prestadora_pasarela_pago` | `superadmin_lee_pasarela` | Estado de conexión de la pasarela por Prestadora (proveedor y estado, sin credenciales). |
-| `auditoria_de_accesos` | `superadmin_lee_toda_la_auditoria` | A propósito: el registro de auditoría se lee entero o no sirve como auditoría. |
+| `permisos_de_acceso` | `superadmin_lee_sus_permisos_de_acceso` | Va con `admin_id = auth.uid()`: cada cuenta lee sólo sus propios permisos de acceso. |
+| `tareas_que_alcanza_la_prohibicion` | `superadmin_gestiona_lo_que_alcanza_la_prohibicion` | Va con `prestadora_id IS NULL`: alcanza sólo las filas del producto, no las de ninguna Prestadora. |
+| `vias_que_alcanza_la_prohibicion` | `superadmin_gestiona_las_vias_que_alcanza_la_prohibicion` | Ídem. |
+| `formularios_declarados` | `superadmin_gestiona_formularios` | Sin motivo escrito: alcanza los formularios de todas las Prestadoras. |
+| `formulario_secciones` | `superadmin_gestiona_secciones` | Sin motivo escrito: ídem. |
+| `formulario_campos` | `superadmin_gestiona_campos` | Sin motivo escrito: ídem. |
 
-Ninguna de las cinco toca datos de Clientes, Pacientes ni Asistentes — ver las columnas de
-esas tablas en `docs/DATA_MODEL.md`. **Si una tabla nueva necesita entrar en esta lista, no se
-agrega en silencio: se agrega acá con su motivo escrito.** Toda tabla con datos de la
-operación queda fuera, sin excepción.
+**Si una tabla nueva necesita entrar en esta lista, no se agrega en silencio: se agrega acá con
+su motivo escrito.** Toda tabla con datos de la operación queda fuera, sin excepción.
 
 ## RLS — políticas obligatorias
 
@@ -221,44 +200,37 @@ CREATE POLICY "admin_prestadora_ve_todo" ON guardias
   );
 ```
 
-**Patrón OR-de-dos-EXISTS para FK nullable (ejemplo oficial, `incidentes_relevo`, Módulo 6):**
-cuando una tabla tiene una FK opcional que cambia de qué fila derivar el tenant/zona según
-esté NULL o no (acá, `guardia_saliente_id` NULL = "Ausente sin relevo previo", ver glosario
-de `CLAUDE.md`), la policy resuelve ambos casos con dos `EXISTS` unidos por `OR`, en vez de
-intentar una sola condición que cubra los dos:
+**Patrón OR-de-dos-EXISTS para FK nullable (ejemplo oficial, `incidentes_relevo`):**
+cuando una tabla tiene una FK opcional que cambia de qué fila derivar el alcance según esté NULL
+o no (acá, `guardia_saliente_id` NULL = "Ausente sin relevo previo"), la policy resuelve ambos
+casos con dos `EXISTS` unidos por `OR`, en vez de intentar una sola condición que cubra los dos:
 
 ```sql
-CREATE POLICY "coordinador_ve_incidentes_de_su_zona" ON incidentes_relevo
-  FOR SELECT USING (
-    prestadora_id = prestadora_actual() AND (
-      -- Caso con relevo previo: derivar la zona desde la guardia saliente
-      EXISTS (
-        SELECT 1 FROM guardias g
-        JOIN asistentes a ON a.id = g.asistente_id
-        WHERE g.id = incidentes_relevo.guardia_saliente_id
-          AND a.zonas && (SELECT zonas FROM usuarios WHERE id = auth.uid())
-      )
+-- Copiado de la base el 2026-10-27 (pg_policies).
+CREATE POLICY coordinador_gestiona_incidentes_relevo_de_su_zona ON incidentes_relevo
+  FOR ALL USING (
+    prestadora_id = interno.prestadora_actual() AND (
+      EXISTS (SELECT 1 FROM guardias ge
+               WHERE ge.id = incidentes_relevo.guardia_entrante_id
+                 AND interno.coordinador_alcanza_asistente(ge.asistente_id))
       OR
-      -- Caso "ausente sin relevo previo" (guardia_saliente_id IS NULL): derivar la zona
-      -- desde la guardia entrante en su lugar
-      EXISTS (
-        SELECT 1 FROM guardias g
-        JOIN asistentes a ON a.id = g.asistente_id
-        WHERE g.id = incidentes_relevo.guardia_entrante_id
-          AND incidentes_relevo.guardia_saliente_id IS NULL
-          AND a.zonas && (SELECT zonas FROM usuarios WHERE id = auth.uid())
-      )
+      EXISTS (SELECT 1 FROM guardias gs
+               WHERE gs.id = incidentes_relevo.guardia_saliente_id
+                 AND interno.coordinador_alcanza_asistente(gs.asistente_id))
     )
   );
 ```
 
 Tablas que **nunca** deben tener policy de lectura para `asistente` ni `cliente`:
 `escalas_legales`, `ceses`, `ausencias`, `guardias_cobertura`, `remuneraciones_asistente`,
-`datos_reservados_asistente` (regla 8 de `CLAUDE.md`).
+`datos_reservados_asistente`.
 
 **Lo que se le paga al Asistente vive en una tabla aparte (2026-08-19).** `valor_hora`,
 `sueldo_basico` y `categoria_cct` dejaron de ser columnas de `asistentes` y pasaron a
-`remuneraciones_asistente`, con su propia policy de lectura:
+`remuneraciones_asistente`, con su propia policy de lectura. Contra `asistentes` es uno a uno
+—la clave primaria es el propio `asistente_id`, y la fila existe sólo si hay algún importe
+cargado—. `datos_reservados_asistente`, más abajo, también tiene por clave primaria el
+`asistente_id`:
 
 ```sql
 CREATE POLICY lee_remuneraciones_quien_tiene_el_permiso ON remuneraciones_asistente
@@ -274,7 +246,7 @@ de `asistentes`, cualquier sesión que pudiera ver la fila del Asistente los le�
 el permiso — medido contra la base local con la sesión de una Coordinadora con
 `ver_pagos_asistente` cerrado, y con la de un Cliente. Escribir sigue siendo exclusivo de
 `es_superadmin() OR es_admin_prestadora()`. El `EXISTS` es deliberado: reutiliza las policies
-de `asistentes` en lugar de repetir los filtros de tenant y de zona (regla 12 de `CLAUDE.md`),
+de `asistentes` en lugar de repetir los filtros de tenant y de zona («Ningún patrón repetido sin punto único de verdad», `celtatech/CLAUDE.md`),
 así una Coordinadora con el permiso abierto ve los pagos de los Asistentes de su zona y de
 ningún otro. `es_admin_prestadora()` se creó en esa misma migración como punto único de verdad
 de una condición que hasta entonces estaba escrita a mano en cada policy.
@@ -328,28 +300,40 @@ cualquiera que pueda ver el Legajo del Asistente. Es una decisión, no un olvido
 para trabajar, y la lista de omisiones de esa vista nunca fue un criterio pensado. La frontera
 de lo sensible se escribió de nuevo acá, no se heredó de la vista.
 
-Para `coordinador`, la policy de "su zona" debe filtrar por el campo `zonas` del
-Coordinador contra la zona del `cliente`/`asistente` — no dar acceso total a
+Para `coordinador`, la policy de "su zona" resuelve el alcance con
+`interno.coordinador_alcanza_asistente(asistente_id)`: el Coordinador alcanza a un Asistente
+cuando comparten algún lugar (`usuario_lugares` contra `asistente_lugares`), o cuando cubre la
+ausencia de otro Coordinador que lo alcanza, mientras dura. No se da acceso total a
 `coordinador` salvo en las tablas donde el PRD lo indica explícitamente.
 
-**Estado real (actualizado 2026-07-09):** implementado y aplicado contra Supabase real
-(esquema vigente en `supabase/migrations/`) para las tablas donde existe una columna `zonas`
-real o un join directo a `asistentes.zonas`: `asistentes` (lectura y edición),
-`verificaciones_asistente`, `ausencias`, `guardias_cobertura`, `certificados` — vía
-`usuarios.zonas && tabla.zonas` (operador de overlap de arrays) en policies separadas de
-`admin_*` (sin filtro) y `coordinador_*_de_su_zona` (filtradas), que Postgres combina con OR
-al ser ambas permisivas. **Pendiente, no resuelto**: `clientes`/`pacientes`/`prestaciones` no
-filtran por zona — Coordinador sigue viendo todas las filas de estas 3 tablas, igual que Admin,
-hasta que exista una decisión de producto sobre cómo derivar la zona de un Cliente. El dato
-disponible es el lugar de la Ficha de Persona del Cliente (`legajos.lugar_id`). No adivinar esa semántica
-sin confirmarla primero.
+**Estado real (verificado contra la base el 2026-10-27):** esa función está en las policies de
+las tablas de Asistentes y de guardias —entre otras `asistentes`, `verificaciones_asistente`,
+`ausencias`, `guardias_cobertura`, `certificados`, `guardias`, `incidentes_relevo`,
+`guardias_tracking_gps` y `reportes`—, en policies separadas de las de administración, que
+Postgres combina con OR al ser ambas permisivas. **Pendiente, no resuelto**:
+`clientes`/`pacientes`/`prestaciones` no filtran por zona — Coordinador sigue viendo todas las
+filas de estas 3 tablas, igual que Admin, hasta que exista una decisión de producto sobre cómo
+derivar la zona de un Cliente. El dato disponible es el lugar de la Ficha de Persona
+(`personas.lugar_id`). No adivinar esa semántica sin confirmarla primero.
 
-**Módulo 6 (Guardias), estado 2026-07-10:** las 8 tablas del Módulo 6, definidas en
-`supabase/migrations/`, tienen RLS multi-tenant aplicada y verificada contra Supabase
-real (15 policies, incluyendo el patrón OR-de-dos-EXISTS de
-`incidentes_relevo` documentado arriba, verificado con datos reales para el caso
-`guardia_saliente_id IS NULL`). Sigue sin existir ninguna ruta backend ni pantalla de Panel
-que consuma estas tablas.
+**Guardias:** las tablas de guardias tienen RLS multi-tenant aplicada, incluido el patrón
+OR-de-dos-EXISTS de `incidentes_relevo` documentado arriba, y las consume el backend —entre
+otras, `backend/src/routes/panelGuardias.js`, `panelEmergencias.js` y `appAsistentes.js`—.
+
+- **A una guardia con check-in no se le saca ningún Paciente**: la base rechaza borrar o
+  cambiar una fila de `guardia_pacientes` y cambiar `guardias.paciente_id` (disparadores
+  `guardia_empezada_no_pierde_pacientes` y `guardia_empezada_no_cambia_de_paciente`).
+- **Una guardia empezada no cambia de Asistente, de día ni de horario.** Empezada es la que
+  tiene check-in o un estado que no sea programada, pausada o cancelada. El disparador
+  `guardia_empezada_no_cambia_de_asistente` rechaza en ella todo cambio de `asistente_id`,
+  `fecha`, `hora_inicio` y `hora_fin`. La única excepción es la guardia **ausente** —empezó y
+  nadie la está haciendo—, que pasa sólo por `reasignar_guardia_por_emergencia`: toma la
+  Prestadora y la persona de la sesión, exige el motivo, cambia sólo el Asistente, deja la
+  guardia en `programada` esperando el check-in de quien la cubre, y anota en
+  `auditoria_reasignaciones_por_emergencia` quién, cuándo, la guardia, el Asistente anterior, el
+  nuevo y el motivo. Ese registro lo leen la administración y la coordinación de la Prestadora,
+  la policy de alta sólo deja escribir desde esa función, y no tiene policy de cambio ni de
+  borrado.
 
 **Match — cómo cobra la Prestadora y qué tiene habilitado el Cliente.** Son dos tablas y
 se leen juntas. `formas_de_cobro_intermediacion` guarda las piezas con las que cada Prestadora arma
@@ -472,10 +456,27 @@ Paulo**, lo que para todo país que no sea Brasil es transferencia internacional
 ## Verificación de antecedentes penales (etapa 3 del Proceso de Incorporación de Asistentes)
 
 Hoy es un proceso manual/semi-manual (consulta al Registro Nacional de Reincidencia,
-renovación anual) — no hay integración de API elegida. Si se automatiza, evaluar
-proveedores regionales (Money Suite menciona Truora/Veriff/Idfy como referencia de mercado
-para verificación de antecedentes + validación facial en LATAM) — decisión pendiente de
-negocio y de presupuesto, no bloquea el desarrollo de las etapas 1-2.
+renovación anual) — no hay integración de API elegida. Si se automatiza, la elección del
+proveedor es decisión pendiente de negocio y de presupuesto, y no bloquea el desarrollo de las
+etapas 1-2.
+
+## Referencias laborales del Asistente
+
+Viven en `referencias_laborales_asistente`, una por una, para poder llamarlas y dejar constancia
+de qué contestó cada una; cuántas verificadas espera cada Prestadora, en
+`configuracion_referencias_laborales.minimo_verificadas` (entre 0 y 5).
+
+- **La firma de la verificación —`verificada_por` y `verificada_en`— la escribe el backend**,
+  nunca la pantalla: por eso esas rutas van por `/api/panel/referencias-laborales` y no por
+  Supabase directo. El CHECK `referencias_laborales_asistente_verificada_tiene_firma` impide que
+  una referencia quede con resultado y sin firma.
+- **Llegan solas desde la postulación:** `POST /api/panel/cuentas/asistente` copia las que la
+  persona cargó en su formulario, todas en `pendiente`. También se pueden cargar a mano, hasta el tope de
+  cinco, que es el mismo que admite ese formulario.
+- **El mínimo no bloquea nada.** La decisión es de la Prestadora (`celtatech/CLAUDE.md`, «El
+  riesgo legal»).
+- Los cuatro resultados y la cuenta contra el mínimo viven en
+  `panel/src/lib/referenciasLaborales.js`, que es el original de la copia que usa el backend.
 
 ## Verificación de identidad (etapa del Proceso de Incorporación de Asistentes)
 
@@ -494,7 +495,10 @@ depósito `fotos-identidad`.
   políticas.
 - **La ruta empieza por la Prestadora** y se arma siempre con los mismos tres datos —Prestadora,
   Asistente y cuál de las dos fotos es—, nunca con algo que venga en el pedido. Va sin extensión:
-  el formato viaja en el tipo de contenido.
+  el formato viaja en el tipo de contenido. Qué tipos hay y cómo se arma la ruta está en
+  `panel/src/lib/fotosDeIdentidad.js`, que es el original de la copia que usa el backend.
+- **No hay ninguna columna que diga si una foto está cargada.** Como la ruta se deduce, el archivo
+  es la única verdad posible; una columna podría decir que sí cuando el archivo ya no está.
 - **Las fotos se sirven con enlace temporal que vence al minuto**, nunca con dirección pública.
 - **Comparar las dos caras no lo hace el producto.** Hoy las mira una persona y marca la etapa.
   Compararlas automáticamente es tratamiento de dato biométrico, y no se construye hasta que estén

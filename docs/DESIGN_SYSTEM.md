@@ -4,109 +4,9 @@
 > del Panel y está descrito abajo, en "Paleta y tokens del Panel" y las cuatro secciones que
 > le siguen. Los valores exactos no se copian acá: viven en `panel/src/styles/variables.css`.
 
-> **Identidad visual base: vigente desde 2026-07-18.** La identidad anterior (Playfair Display + paleta azul
-> `#1F4E79` en hex) fue reemplazada por decisión explícita del Desarrollador tras considerar
-> el Panel "totalmente horrible e inoperativo" — ver el detalle del cambio, motivo y qué se
-> preservó sin tocar en `docs/claude_history.md` (entrada 2026-07-18). Las referencias a
-> Playfair Display en la sección de benchmark de abajo son históricas: documentan por qué se
-> eligió esa fuente en 2026-07-07, no la identidad vigente hoy.
-
-## Benchmark estético de competidores (2026-07-07)
-
-> La documentación de negocio original (histórica: anexo técnico, auditoría estratégica)
-> ya analiza a los competidores por **prestaciones** (verificación, GPS, precios, IA). Esta
-> sección cubre el ángulo que faltaba: cómo se ven, porque acá sí afecta decisiones de código
-> (`DESIGN_SYSTEM.md` es el único lugar de `Workspace/docs/` donde el análisis de mercado es
-> relevante para la implementación).
-
-Relevamiento visual, julio 2026, en dos rondas (la segunda a partir de una lista adicional
-de sitios que aportó el usuario, incluyendo Instagram — ver limitación abajo):
-
-| Sitio | Paleta | Tono / nota visual |
-|---|---|---|
-| EnCasa (`encasa.com.ar`) | Blanco + celeste/teal | Corporativo-cálido, fotografía de staff/pacientes |
-| Cuidarlos (`cuidarlos.com`) | Blanco + negro, casi sin color | Tech/producto, mockups de celular, bloques repetitivos |
-| Medincare (`grupomedincare.com.ar`) | Blanco + azul/teal, iconografía SVG | Institucional, poca fotografía humana |
-| Cuidando en Casa (`cuidandoencasa.com`) | Blanco + verde | Cálido, foto real de cuidador+paciente |
-| Ver Salud (`versalud.com.ar`) | Blanco + celeste + **magenta/fucsia en fotos** | Único relevado con un color fuera de la paleta azul/verde estándar — se nota, en buen sentido |
-| Casamed Salud (`casamedsalud.com.ar`) | Blanco + azul | Genérico, una sola foto de enfermera, sin personalidad |
-| Situ Care (`situ.care`) | Blanco + teal | Usa la metáfora "Sherpa" para darle calidez — el único con un concepto narrativo, no solo lista de servicios |
-| Home Care BA (`homecareba.org`) | Blanco + **rojo** de acento | Fotografía cálida/íntima, pero el rojo es un uso de color más atrevido que el resto |
-| Continuum (`continuum.com.ar`) | Blanco + azul | Fotografía en contexto domiciliario, tono "centrado en la persona, no en la enfermedad" |
-| Cuidarte Argentina (`cuidarteargentina.com.ar`) | Blanco + azul | El más flojo del relevamiento — menús duplicados, imagen de banco genérica, "se lee funcional y desactualizado" (cita literal del análisis) |
-| InDom (`indom.com.ar`) | Blanco + azul/gris | Institucional maduro, fotografía de banco de imágenes correcta pero sin identidad propia |
-| +Vida Salud (`masvidaessalud.com.ar`) | Blanco + azul/verde | Sin fotografía — todo ilustrado con íconos geométricos simples, "enfoque humano" solo en el texto, no en la imagen |
-| API Cuidados Domiciliarios (`api.org.ar`) | Blanco + gris + azul | Casi sin fotografía, muy institucional/wireframe |
-| Amparando Salud (`amparandosalud.com.ar`) | Blanco + azul | **Ojo**: por el contenido relevado parece más un estudio de asesoría legal en salud que un competidor de cuidado domiciliario directo — no asumir que compite 1 a 1, confirmar antes de sumarlo al análisis de negocio |
-| Cuidar Buenos Aires, `app.cuidadosdomiciliarios.com` | — | Sitios con muy poco contenido accesible por herramientas automáticas (probablemente SPA/JS pesado) — no se pudo evaluar en profundidad, requiere revisión visual manual si se los quiere comparar en serio |
-
-**Conclusión del benchmark: todos convergen en la misma fórmula** — fondo blanco,
-acento azul/teal/verde, sans-serif sin personalidad, mucho whitespace, tono
-"institucional-cálido" indistinguible entre marcas. Las únicas dos excepciones notadas
-(Ver Salud con magenta, Home Care BA con rojo) confirman la regla: alcanza con un solo
-color fuera de la paleta esperada para destacar en este rubro. Ningún competidor relevado
-usa tipografía display, ni tiene dirección de arte propia consistente entre foto y foto —
-es una categoría visualmente genérica. Esto es una oportunidad real, no solo un
-lindo-tener: en un mercado donde nadie se diferencia estéticamente, verse distinto es
-gratis en términos de percepción de superioridad, incluso antes de comparar funcionalidad.
-
-**Competidores nuevos detectados en esta búsqueda, no presentes en el corpus de negocio
-original (anexo técnico histórico) — dejar constancia para que se evalúe si suman al
-análisis de negocio, esto acá solo cubre el ángulo visual:** Cuidarnos (UTEP/Movimiento
-Evita), Cuidando en Casa, Ver Salud, Casamed Salud, Cuidar Buenos Aires, Situ Care, Home
-Care BA, Amparando Salud (con la salvedad de arriba), Continuum, Cuidarte Argentina, InDom,
-+Vida Salud, API Cuidados Domiciliarios, Go Home Cuidados Domiciliarios (Instagram),
-CuidArteBien (cooperativa, Córdoba/Santa Fe, activa en Instagram/Reels).
-
-## Instagram — vacío detectado, no cubierto por ningún PRD original
-
-Ningún documento de `Workspace/docs/` decía nada sobre identidad visual para redes
-sociales. Es un vacío real señalado por el usuario, no solo un detalle menor: la mayoría
-de los competidores chicos/medianos (Go Home, CuidArteBien) compiten más en Instagram que
-en su sitio web. **Limitación a declarar:** las herramientas de investigación disponibles
-en esta sesión no pueden "ver" Instagram como una persona — el contenido es
-JS-renderizado y con restricciones de scraping, así que solo se pudo observar cadencia de
-publicación y tipo de contenido (fotos/carruseles/reels), no calidad visual real de grilla,
-paleta ni dirección de arte. Lo que sí se pudo confirmar: hay competidores activos y con
-publicación regular en ese canal (Go Home: ~750 seguidores, posteo constante 2024-2026;
-CuidArteBien: reels con producción cuidada, cooperativa multi-sede). **Antes de construir
-nada de Etapa 1, definir explícitamente**: grilla de Instagram con sistema de plantillas
-(no publicaciones sueltas sin identidad), paleta y tipografía consistentes con el sitio
-(mismo `--azul-oscuro` + Playfair Display, no un estilo distinto "para redes"), y quién es
-responsable de este canal — no está definido en ningún PRD actual y requiere una decisión
-de negocio, no solo de diseño.
-
-### Qué ya tiene la Prestadora Demo a favor (no perder al implementar)
-
-- **Playfair Display para títulos** ya rompe con la sans-serif genérica de los cuatro
-  competidores relevados — es el diferenciador más barato de mantener y el más fácil de
-  perder si un desarrollador "simplifica" a una sola fuente sans en el camino. No negociar
-  esto en la implementación.
-- La paleta funcional (`--azul-oscuro #1F4E79`) es más oscura y con más carácter que el
-  celeste claro/teal que usan EnCasa y Medincare — mantenerla como color dominante de marca,
-  no aclararla "para que se vea más liviano".
-
-### Recomendaciones para superar al resto visualmente (a aplicar en Etapa 1)
-
-- **No repetir la fórmula fondo-blanco-completo.** Usar bloques con `--fondo-alt` y el azul
-  oscuro de marca como fondo de secciones completas (hero, testimonios), no solo como acento
-  de botón — ningún competidor se anima a esto, todos usan blanco de punta a punta.
-  Combinar la paleta funcional (verde-exito, naranja-alerta, rojo-peligro) con dark mode.
-- **Fotografía real y propia, no genérica de banco de imágenes**, con dirección de arte
-  consistente (misma luz, mismo grado de color en todas las fotos) — es lo único que
-  Cuidando en Casa y EnCasa hacen bien y Cuidarlos/Medincare no; superarlos significa
-  hacerlo mejor y de forma sistemática, no solo igual.
-- **Micro-interacciones y transiciones** (hover states, transiciones de sección, loading
-  states con identidad, no spinners genéricos) — ningún competidor relevado invierte en
-  esto, es terreno libre para diferenciarse con poco esfuerzo de desarrollo.
-- **Iconografía propia** en vez de sets genéricos (Font Awesome/Heroicons sin editar) —
-  Medincare ya se apoya en iconos SVG genéricos; un set de íconos con el mismo espíritu que
-  Playfair Display (con algo de personalidad, no solo funcional) refuerza la distancia visual.
-- **Definir una identidad de Instagram desde Etapa 1, no después** — grilla con sistema de
-  plantillas propio, misma paleta y tipografía que el sitio (ver sección "Instagram" arriba).
-  Ningún competidor grande lo hace bien; los que sí publican seguido (Go Home, CuidArteBien)
-  lo hacen sin un sistema visual reconocible — ahí también hay espacio para diferenciarse.
-
+> **Identidad visual base: vigente desde 2026-07-18.** Reemplazó a la identidad anterior por
+> decisión explícita del Desarrollador — ver el detalle del cambio, motivo y qué se preservó sin
+> tocar en `docs/claude_history.md` (entrada 2026-07-18).
 
 > Fuente: manual de identidad original (histórico, documento fuera del repo) + prompt maestro original Parte B.
 > Advertencia que hay que respetar: el manual se declara "Provisional — identidad
@@ -181,7 +81,7 @@ un dato más" / "esto no dice nada" sale de acá y de ningún otro lado.
 | `neutro` | Sin estado, o estado que no dice nada | `.badge-neutro` |
 
 Hay **un solo lugar** que decide qué estado del negocio corresponde a qué tono:
-`panel/src/lib/tonos.js` (regla 12 de `CLAUDE.md` §7). Una pantalla nunca elige el color de
+`panel/src/lib/tonos.js` («Ningún patrón repetido sin punto único de verdad», de `celtatech/CLAUDE.md`). Una pantalla nunca elige el color de
 un estado: llama a `claseBadge(estado)` y recibe la clase ya resuelta. Cuando el tono no
 depende de un estado con nombre sino de un sí/no, se usa `claseBadgeTono(TONO.EXITO)`.
 
@@ -201,7 +101,8 @@ casos la deja sin saber qué hacer:
   es sacar los filtros, y el botón para hacerlo aparece ahí mismo.
 
 `panel/src/components/layout/EstadoLista.jsx` es el único componente que dibuja los cuatro
-estados de carga que exige la regla 3 de `CLAUDE.md` §7 (cargando / error / vacío / listo), y
+estados de carga que exige «Todo componente que carga datos maneja cuatro estados», de
+`celtatech/CLAUDE.md` (cargando / error / vacío / listo), y
 distingue los dos vacíos mirando `filtrado`. Ese dato se lo pasa
 `panel/src/hooks/useFiltros.js`, que es el punto único de verdad de los filtros de una lista:
 guarda los valores, sabe si hay alguno puesto (`hayFiltros`) y sabe cómo sacarlos (`limpiar`).
@@ -260,17 +161,17 @@ se deshace, un archivo por vez.
 
 ## Tipografía
 
-- **Display** (títulos, encabezados principales): Public Sans — weights 400 a 800
-- **Body** (interfaz, párrafos, formularios, navegación): Public Sans — weights 400 a 800
+- **Display** (títulos, encabezados principales): Inter
+- **Body** (interfaz, párrafos, formularios, navegación): Inter
 
 ```css
 :root {
-  --font-display: 'Public Sans', sans-serif;
-  --font-body: 'Public Sans', sans-serif;
+  --font-display: 'Inter', 'Segoe UI', sans-serif;
+  --font-body: 'Inter', 'Segoe UI', sans-serif;
 }
 ```
 
-Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;700;800).
+Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;650;700;750).
 
 ## Layout general del Panel (vigente desde 2026-07-18)
 
@@ -281,9 +182,9 @@ Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;7
   nunca `border-left` grueso de acento (ver nota en la sección de paleta).
 - **Guardias**: grilla semanal (asistentes en filas, días en columnas) con reasignación por
   drag-and-drop nativo (HTML5 `draggable`/`dragstart`/`dragover`/`drop`), no lista agrupada
-  por día. Cada guardia es un chip que reutiliza las clases de estado ya existentes
-  (`.guardia-programada`, etc.). No existe columna "sin asignar": `guardias.asistente_id` es
-  `NOT NULL` en el schema, ese estado no tiene equivalente real.
+  por día. Cada guardia es un chip (`.grilla-chip`, en
+  `panel/src/pages/guardias/GrillaGuardias.jsx`). `guardias.asistente_id` admite vacío sólo
+  en una guardia `programada` o `cancelada` (`guardias_sin_cubrir_estado_check`).
 - **Comunicación**: además del hilo por Asistente (dentro del Legajo del Asistente), existe una bandeja
   global en `/comunicacion` con lista de Asistentes ordenada por último mensaje a la
   izquierda y el hilo activo a la derecha. Ambas vistas comparten el mismo componente
@@ -322,27 +223,17 @@ sobrevive al modo oscuro ni a un cambio de paleta, y obliga a que cada pantalla 
 
 ## Estados visuales de guardias (Módulo 6 del Panel Admin)
 
-Patrón adoptado de análisis de GlamourOS/ERP salones: colores automáticos por estado en
-vista calendario/lista, para escaneo visual rápido sin leer texto. Reutiliza las mismas
-variables de la paleta funcional, no colores nuevos:
+De las clases de acento lateral por estado, hoy existe una sola, en `panel/src/index.css`.
+Reutiliza las variables de la paleta funcional, no colores nuevos:
 
 ```css
-.guardia-programada { border-left: 4px solid var(--azul-medio); }
-.guardia-activa     { border-left: 4px solid var(--verde-exito); }
-.guardia-completada { border-left: 4px solid var(--texto-secundario); }
-.guardia-cancelada  { border-left: 4px solid var(--rojo-peligro); }
-.guardia-ausente    { border-left: 4px solid var(--naranja-alerta); }
+.guardia-ausente { border-left: 4px solid var(--naranja-alerta); }
 ```
 
 `guardias.estado` admite seis valores (`guardias_estado_check`): `programada`, `activa`,
-`completada`, `cancelada`, `ausente` y `pausada`. `ausente` es distinto de `cancelada`. `pausada`
-todavía no tiene regla de acento.
-
-**Falta cubrir un estado nuevo.** La guardia sin cubrir (`guardias_sin_cubrir_estado_check`)
-todavía no tiene regla de acento lateral. Se resuelven junto con la grilla nueva de guardias (tarea #61), no antes: el acento
-lateral tiene sentido en la lista actual, y la grilla puede necesitar otra forma de marcarlos.
-Mientras tanto, en cualquier badge de ese estado se usa `claseBadge()` como en el resto
-del Panel, que sí los resuelve.
+`completada`, `cancelada`, `ausente` y `pausada`. `ausente` es distinto de `cancelada`. Los demás
+estados no tienen regla de acento: en cualquier badge de un estado de guardia se usa
+`claseBadge()` como en el resto del Panel, que sí los resuelve.
 
 ## Convenciones de UI (patrón adoptado de análisis de GlamourOS/ERP salones — no vinculante,
 ## solo se toman estas dos prácticas puntuales, ver justificación en memoria de sesión)

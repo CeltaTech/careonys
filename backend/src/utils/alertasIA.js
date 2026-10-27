@@ -4,9 +4,9 @@ import { TRATO_IA } from './tratoIA.js';
 import { jsonDeRespuestaIA } from './respuestaIA.js';
 import { MODELO_IA } from '../config/modeloIA.js';
 
-// IA Nivel 2 (Alertas por patrones) — prompt exacto de docs/AI_PROMPTS.md:47-71, no
+// IA Nivel 2 (Alertas por patrones) — prompt exacto de docs/AI_PROMPTS.md (Nivel 2), no
 // reformular acá sin actualizar ese archivo primero (el contrato JSON está acoplado a las
-// columnas de `alertas`, ver DATA_MODEL.md). Mismo patrón de cliente perezoso que
+// columnas de `alertas`). Mismo patrón de cliente perezoso que
 // reporteIA.js/importacionIA.js.
 
 const SYSTEM_PROMPT = `Este es un sistema de monitoreo clínico para pacientes con cuidado domiciliario.

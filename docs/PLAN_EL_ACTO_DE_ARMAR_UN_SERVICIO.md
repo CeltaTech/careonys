@@ -107,7 +107,7 @@ está; el acto de administración que la llena es lo que falta.
 
 ### 4.1. Lo pactado se declara en texto libre, así que no se puede restar
 
-`panel/src/pages/clientes/PrestacionesPaciente.jsx:50-52` y `:765-766`. «Días» y «horario» son dos
+`panel/src/pages/clientes/PrestacionesPaciente.jsx:51-52` y `:593-594`. «Días» y «horario» son dos
 casilleros de texto escritos a mano. Quien carga escribe «lunes a domingo» y «24 hs», o «todos los
 días», o «L a D / turnos de 6». Las series, en cambio, guardan días de la semana marcados y hora de
 inicio y de fin, en forma de dato.
@@ -135,8 +135,8 @@ noche hay que cancelar y volver a cargar, y la continuidad se pierde.
 
 ### 4.4. La suspensión es sólo total, y sin fecha de vuelta
 
-`PrestacionesPaciente.jsx:466` y `:470` pausan **todos** los turnos programados y **todas** las
-series activas del Paciente de una vez. `:528` y `:529` los reactivan igual, en bloque. No hay forma
+`PrestacionesPaciente.jsx:440` y `:445` pausan **todos** los turnos programados y **todas** las
+series activas del Paciente de una vez. `:475` y `:476` los reactivan igual, en bloque. No hay forma
 de suspender una sola serie, ni uno de los horarios pactados, ni de decir hasta cuándo.
 
 ### 4.5. La zona está modelada y cargada, y las dos decisiones que dependen de ella la ignoran
@@ -159,31 +159,31 @@ de suspender una sola serie, ni uno de los horarios pactados, ni de decir hasta 
 ### 5.1. Nadie escribe la tabla de Servicios
 
 **Ninguna escritura** sobre `servicios` en el Panel, en el backend ni en las dos aplicaciones. Las
-cuatro apariciones de la tabla son lecturas: `panel/src/pages/Servicios.jsx:39`,
-`panel/src/pages/servicios/ServicioDetalle.jsx:39`, `panel/src/pages/guardias/NuevaGuardiaModal.jsx:97`
-y `panel/src/pages/clientes/PrestacionesPaciente.jsx:126`.
+cuatro apariciones de la tabla son lecturas: `panel/src/pages/Servicios.jsx:46`,
+`panel/src/pages/servicios/ServicioDetalle.jsx:60`, `panel/src/pages/guardias/NuevaGuardiaModal.jsx:93`
+y `panel/src/pages/clientes/PrestacionesPaciente.jsx:109`.
 
 Los Servicios que hay entraron por la migración de más arriba y desde entonces se heredan solos. **Es
 la constatación central de este plan: el acto no existe en ninguna parte del código.**
 
 ### 5.2. Lo que sí se escribe, y desde dónde
 
-**Lo pactado** — `prestaciones`: se inserta en `PrestacionesPaciente.jsx:228`, se marca revisado en
-`:269`, y se da de baja en cascada al cerrar el Servicio en `:354-359`.
+**Lo pactado** — `prestaciones`: se inserta en `PrestacionesPaciente.jsx:219`, se marca revisado en
+`:260`, y se da de baja en cascada al cerrar el Servicio en `:345-350`.
 
-**Los turnos repetidos** — `series_guardias`: se crea en `NuevaGuardiaModal.jsx:231-246`; se cancela
-en cascada en `PrestacionesPaciente.jsx:360-365`; se pausa en `:456` y se reactiva en `:515`.
-`series_guardias_pacientes`: se inserta en `NuevaGuardiaModal.jsx:255-261` —los Pacientes distintos
+**Los turnos repetidos** — `series_guardias`: se crea en `NuevaGuardiaModal.jsx:244-259`; se cancela
+en cascada en `PrestacionesPaciente.jsx:351-356`; se pausa en `:445` y se reactiva en `:476`.
+`series_guardias_pacientes`: se inserta en `NuevaGuardiaModal.jsx:268-274` —los Pacientes distintos
 del primero, que lo pone un disparador—.
 
 **Los turnos concretos** — `guardias` tiene 17 puntos de escritura en el Panel y 17 en el backend.
 Los que este plan toca son sólo los del calendario: la creación de la guardia suelta
-(`NuevaGuardiaModal.jsx:188-202`), la materialización de la serie (`:286-289`), la extensión diaria
-(`backend/src/utils/generacionSeriesGuardia.js:113`), y las tres cascadas de
-`PrestacionesPaciente.jsx:380-385`, `:464-469` y `:528`. **Los demás son de operación del turno
+(`NuevaGuardiaModal.jsx:189-204`), la materialización de la serie (`:297-300`), la extensión diaria
+(`backend/src/utils/generacionSeriesGuardia.js:131`), y las tres cascadas de
+`PrestacionesPaciente.jsx:357-362`, `:439-444` y `:475`. **Los demás son de operación del turno
 —llegada, salida, oferta, reasignación, avisos— y este plan no los toca.**
 
-**El cierre** — `cierres_servicio_paciente` se inserta en `PrestacionesPaciente.jsx:303-315`, y no se
+**El cierre** — `cierres_servicio_paciente` se inserta en `PrestacionesPaciente.jsx:284-298`, y no se
 actualiza ni se borra en ninguna parte.
 
 **Las dos aplicaciones no escriben ninguna de estas tablas.** Su cliente de base se usa sólo para la
@@ -253,7 +253,7 @@ productos Careonys ya dice las dos cosas: la Prestación es «cada cosa del acue
 sus propios días y horarios» —`:36`—. Así que la tabla se nombra por eso y no hay nada que decidir.
 
 **Y la palabra «tramo» no se usa acá**, porque en este producto ya nombra otra cosa: los renglones de
-premura con los que se le insiste al Coordinador —`panel/src/i18n/translations.js:689`, «Agregar un
+premura con los que se le insiste al Coordinador —`panel/src/i18n/translations.js:706`, «Agregar un
 tramo»— y el período liquidado, que por dentro es `col_tramo`.
 
 **Y lo pactado no se carga con la forma de un turno.** Son cuatro niveles y cada renglón vive en el
@@ -287,7 +287,7 @@ completa, el período repartido entre varias, **no tiene tabla**. Las dos salida
 nombre como está y entender que una fila es un turno, o renombrar lo guardado, que es una migración
 de datos sobre `guardias`, `series_guardias` y todo lo que las nombra.
 
-Qué queda afectado: el insert de `PrestacionesPaciente.jsx:238`, la tabla de prestaciones vigentes de
+Qué queda afectado: el insert de `PrestacionesPaciente.jsx:219`, la tabla de prestaciones vigentes de
 esa misma pantalla, y la siembra de datos de prueba.
 
 ### Paso 2. La cuenta de lo pactado contra lo cubierto
@@ -444,10 +444,10 @@ Acá la sugerencia se acepta o se rechaza al dar de alta el Servicio, y quien de
 **Por qué no existen, verificado en el código.** No hay ningún mecanismo que sugiera un coordinador:
 lo único parecido es `coordinadoresDelEquipo()` —`panel/src/lib/equipoDelPaciente.js:226`—, que
 **deduce** una lista por zona y no propone a nadie. Y toda la carga que el sistema mide hoy es **de
-Asistentes**, no de coordinadores: `resumenDelPlantel.js:51` cuenta guardias por Asistente y
-`candidatos.js:283` cuenta sus horas semanales. Lo único que se cuenta por usuario del Panel es
+Asistentes**, no de coordinadores: `resumenDelPadron.js:50` cuenta guardias por Asistente y
+`candidatos.js:269` cuenta sus horas semanales. Lo único que se cuenta por usuario del Panel es
 **cuántos lugares alcanza** —`backend/src/routes/panelUsuarios.js:65-77`, mostrado en
-`panel/src/pages/UsuariosPanel.jsx:92`—, que es hasta dónde llega, no cuánto trabajo tiene ahí.
+`panel/src/pages/UsuariosPanel.jsx:136`—, que es hasta dónde llega, no cuánto trabajo tiene ahí.
 
 **Y falta una sola pieza para que los dos criterios se puedan calcular: que cada Servicio tenga su
 coordinador anotado.** Hoy nadie está atribuido a un coordinador concreto, y los lugares de dos
@@ -466,15 +466,6 @@ sigue siendo hasta que nombre a otra persona para ese rol. Textual del Desarroll
 coordinador asignado, el Servicio no comienza. Y hasta que se asigne un coordinador, el Administrador
 es el Coordinador general, que distribuye el trabajo entre los coordinadores, hasta que nombre a otra
 persona para ese rol de Coordinador general.»
-
-**El cartel #11 se cerró acá, y está ejecutado.** El Desarrollador indicó: «El cartel de "Nadie por
-ahora" se va.» Salió de los tres idiomas y con él la sección entera mientras la lista está vacía
-—`panel/src/pages/clientes/EquipoDelPaciente.jsx:316`—. **Y el caso no debería existir**, porque sin
-coordinador asignado no hay Servicio habilitado.
-
-**Queda una consecuencia por ejecutar en este paso**: el párrafo que hay debajo de ese título dice
-«Mientras nadie esté fijado, son todos los que trabajan en la zona», y describe justamente el modelo
-que se cambia acá. Sale cuando este paso se haga.
 
 ### Paso 8. Los tres criterios de sugerencia que faltan
 

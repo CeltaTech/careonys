@@ -96,9 +96,9 @@ panelAusenciasRouter.post(
         ContentType: req.file.mimetype,
       }));
     } catch (errorMirror) {
-      // El mirror a R2 es un resguardo adicional (docs/PLAN_CONTINUIDAD_PROVEEDORES.md
-      // punto 1) — no bloquea la operación principal si falla, pero queda logueado sin
-      // exponer el contenido del archivo (Regla 7).
+      // El mirror a R2 es un resguardo adicional del certificado — no bloquea la operación
+      // principal si falla, pero queda logueado sin exponer el contenido del archivo
+      // («Nunca información sensible en registros», celtatech/CLAUDE.md).
       console.error('Error al espejar certificado médico a R2:', errorMirror.message);
     }
 

@@ -1,7 +1,6 @@
 # PRD_02B — Gestión de Personal (Ausencias, Cobertura, Escalas legales)
 
-> Este PRD **extiende el Módulo 4 (Padrón de Asistentes) de `PRD_02_Panel_Admin.md`,
-> no es un módulo separado** — vive en la misma navegación, mismo rol de acceso
+> Este PRD **extiende el Padrón de Asistentes del Panel, no es un módulo separado** — vive en la misma navegación, mismo rol de acceso
 > (Admin_prestadora; Coordinador solo lectura de su zona, sin acceso a montos — ver
 > `SECURITY.md`).
 
@@ -35,11 +34,10 @@ versionados por fecha y nunca escritos en el código.
 
 ## Modelo de datos
 
-Ver `DATA_MODEL.md` sección "Gestión de Personal" — tablas `asistentes` (columnas
-extendidas: `fecha_alta`, `fecha_baja`, `horas_semanales`), `remuneraciones_asistente`,
-`datos_reservados_asistente`, `escalas_legales`, `ausencias`, `guardias_cobertura`. Esas tablas
-ya están escritas ahí con el SQL exacto — no reproducir aquí para evitar que las dos fuentes
-diverjan.
+Tablas `asistentes` (columnas `fecha_alta`, `fecha_baja`, `horas_semanales`),
+`remuneraciones_asistente`, `datos_reservados_asistente`, `escalas_legales`, `ausencias`,
+`guardias_cobertura`. Sus columnas se consultan en la base en vivo — no reproducir aquí para
+evitar que las dos fuentes diverjan.
 
 `horas_semanales` es el máximo de horas por semana que la persona acepta trabajar.
 
@@ -57,9 +55,8 @@ Legajo del Asistente no hay forma de exigir un permiso para un dato y no para el
 
 Los vencimientos de documentación del Asistente (Monotributo, ART, Seguro, Certificado de
 Antecedentes Penales u otros que agregue cada prestadora) ya no viven como columnas de
-`asistentes` — pasaron a las tablas `tipos_documento_asistente`/`documentos_asistente` (ver
-`DATA_MODEL.md`, pendiente #18 punto 1 de `docs/PLAN_HASTA_PRODUCCION.md`), configurables por prestadora
-sin límite de cantidad.
+`asistentes` — pasaron a las tablas `tipos_documento_asistente`/`documentos_asistente`,
+configurables por prestadora sin límite de cantidad.
 
 Regla que más se rompe (repetida a propósito): toda lectura de `escalas_legales` filtra por
 `vigencia_desde <= fecha_del_hecho AND (vigencia_hasta IS NULL OR vigencia_hasta >=
@@ -94,7 +91,7 @@ navegador con jsPDF y no se guarda en la base.
 
 ## Navegación
 
-Dentro del Módulo 4 (Padrón de Asistentes) del panel, la pestaña "Ausencias y Cobertura" — no
+Dentro del Padrón de Asistentes del panel, la pestaña "Ausencias y Cobertura" — no
 crear un ítem de navegación de primer nivel separado.
 
 ## Fuera de alcance (explícito)

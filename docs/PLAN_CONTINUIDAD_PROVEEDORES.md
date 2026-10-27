@@ -2,66 +2,10 @@
 
 > Origen: la sección «Respaldo, continuidad y secretos» de `docs/PLAN_HASTA_PRODUCCION.md`
 > (inventario de dependencia de un solo proveedor — Supabase/Railway/Cloudflare Pages/Resend/GitHub).
-> Este documento cubre los cuatro primeros puntos de ese recorrido, de lo simple y prioritario a lo
-> complejo y no prioritario. El quinto —copia en caliente del servicio de identidad— queda afuera:
-> se discute aparte y no está recomendado (ver cierre).
-
-## Punto 2 — Prueba real de restauración de backup (hecha y verificada 2026-07-13)
-
-`docs/SECURITY.md` ya documentaba el backup diario a dos buckets independientes de Supabase
-(Cloudflare R2 principal + Backblaze B2 espejo, `backend/scripts/backup_a_buckets.mjs`), pero
-el pendiente #4 de `docs/PLAN_HASTA_PRODUCCION.md` dejaba anotado un hueco honesto (Regla 12.5): nunca se
-había restaurado ese backup dentro de una base Postgres viva, solo se había verificado que el
-archivo subía y existía en los dos buckets.
-
-**Procedimiento ejecutado:**
-
-1. Se bajó el backup más reciente (generado ese mismo día a las 09:23 UTC) directamente del bucket R2 de producción.
-2. Se levantó un contenedor Postgres 16 efímero con Docker (`postgres:16-alpine`), sin
-   ninguna relación con la infraestructura real — solo para esta prueba.
-3. Se restauró el dump completo (`psql -f backup.sql`) dentro de ese contenedor.
-4. Se verificó con `\dt public.*` que las 30 tablas de negocio del esquema `public`
-   aparecen todas tras la restauración (`prestadoras`, `usuarios`, `asistentes`,
-   `clientes`, `pacientes`, `guardias`, `escalas_legales`, etc.).
-5. Se compararon conteos de filas de 8 tablas clave entre la base restaurada y la base
-   real de producción (vía el mismo pooler que usa el backup, `aws-1-sa-east-1.pooler.
-   supabase.com`) — **coincidencia exacta en las 8**: `prestadoras` 1, `usuarios` 5,
-   `escalas_legales` 16, y 0 en `asistentes`/`clientes`/`pacientes`/`guardias`/
-   `lista_precios` (no hay datos de prueba cargados en producción en este momento).
-6. Se destruyó el contenedor y se borraron todos los archivos temporales (el dump
-   descomprimido, el `.gz` descargado, y las credenciales usadas) del directorio de
-   trabajo — no queda ningún rastro de datos reales de producción fuera de Supabase/R2/B2.
-
-**Conclusión:** el backup diario no solo se sube correctamente — es un backup real,
-restaurable, completo, y consistente con la producción. El hueco que dejaba abierto el
-pendiente #4 queda cerrado.
-
-**Y desde entonces el respaldo también trae los archivos.** La prueba de arriba verificó el
-volcado de la base, que era todo lo que se subía: los depósitos de archivos —certificados,
-fotos de los reportes, prescripciones, documentos de cese, las dos fotos de la verificación de
-identidad, las autorizaciones de monitoreo, las instrucciones de acceso y la marca de cada
-Prestadora— se quedaban afuera, así que una base restaurada decía que el certificado estaba
-cargado y el certificado no volvía. Ahora el mismo automatismo los copia a R2 y a B2 bajo
-`archivos/<depósito>/<ruta>`, sube sólo lo que falta o cambió, y la lista de depósitos se la
-pregunta a la base para que uno nuevo no quede afuera por olvido
-(`backend/src/utils/copiaDeDepositos.js`). **La prueba de restauración todavía no cubre esa
-mitad**, y por eso la que queda pendiente en `docs/PLAN_HASTA_PRODUCCION.md` tiene que bajar los
-archivos además del volcado.
-
-**Repetir esta prueba:** ya no se hace a mano. `backend/scripts/probar_restauracion.mjs` hace
-los seis pasos de arriba y además compara los archivos del espejo: baja el último respaldo,
-lo restaura en una base efímera, compara las tablas y las filas contra producción y los
-archivos contra el almacenamiento, y borra el contenedor y la descarga al terminar. Lo corre
-el Desarrollador, porque pide las llaves del bucket y de la base. **Contesta una de tres
-cosas**, y la tercera es la que importa: `bien`, `roto`, o `no_probado` —todo coincidió pero
-no había una sola fila ni un solo archivo que comparar, así que el verde no significa nada y
-la prueba hay que rehacerla con datos cargados—. Qué decide cada una está en
-`backend/src/utils/comprobacionDeRestauracion.js`, que sí tiene pruebas propias.
-
-No hace falta repetirla en cada sesión: alcanza cuando cambia el esquema de forma
-significativa (una tabla nueva con relaciones complejas, un cambio de backend de base) o, como
-mínimo, una vez cada varios meses, para detectar si algún cambio futuro rompió en silencio la
-restaurabilidad del volcado.
+> Este documento cubre qué se hace si hay que dejar el servicio de identidad o alguno de los
+> proveedores de bajo riesgo. El respaldo de la base y de los archivos, y su prueba de
+> restauración, están en `docs/SECURITY.md`, «Portabilidad de datos». La copia en caliente del
+> servicio de identidad queda afuera: se discute aparte y no está recomendada (ver cierre).
 
 ## Punto 3 — Plan de migración de Supabase Auth (documentado, no ejecutado)
 
@@ -79,9 +23,9 @@ falta, para no empezar de cero en el peor momento posible.
   Clerk) ni un esquema JWT propio puede re-verificar esos identificadores sin acceso al mismo
   algoritmo exacto. Esto no es una limitación técnica que se pueda evitar con más
   trabajo: es así en cualquier migración de un proveedor de auth a otro.
-- **Consecuencia obligatoria de cualquier migración real:** todos los usuarios del Panel
-  (hoy: Admin, Superadmin, Admin_prestadora, Coordinador — ver glosario de `CLAUDE.md`)
-  tendrían que restablecer su contraseña la primera vez que entren al sistema nuevo. Esto se
+- **Consecuencia obligatoria de cualquier migración real:** todas las cuentas
+  (hoy: Superadmin, Admin_prestadora, Coordinador, Asistente y Cliente — los valores de
+  `usuarios.rol`) tendrían que restablecer su contraseña la primera vez que entren al sistema nuevo. Esto se
   comunica por email antes del corte, no es un detalle a resolver en el momento.
 
 ### Alternativas de reemplazo (ninguna decidida — para evaluar si el caso se da)
@@ -90,7 +34,7 @@ falta, para no empezar de cero en el peor momento posible.
 |---|---|---|
 | **Auth0** | Proveedor maduro, migración de usuarios asistida, soporta multi-tenant nativo (relevante para el modelo de CeltaTech, una Organización por Prestadora) | Costo por usuario activo, otro proveedor externo del cual depender |
 | **Clerk** | Más simple de integrar, buena UI de gestión lista para usar | Más joven que Auth0, menos historial en volumen alto |
-| **JWT propio (backend Node/Express)** | Cero dependencia externa nueva, control total | Hay que construir y mantener: cálculo del identificador de verificación de las contraseñas, rotación de tokens, rate limiting de intentos fallidos, restablecimiento de la contraseña — todo lo que hoy resuelve Supabase Auth gratis (ver `docs/SECURITY.md` líneas 16-21, que ya evaluó y descartó esto por redundante mientras Supabase funcione) |
+| **JWT propio (backend Node/Express)** | Cero dependencia externa nueva, control total | Hay que construir y mantener: cálculo del identificador de verificación de las contraseñas, rotación de tokens, rate limiting de intentos fallidos, restablecimiento de la contraseña — todo lo que hoy resuelve Supabase Auth gratis (ver `docs/SECURITY.md:15`, que ya lo descartó por redundante mientras Supabase funcione) |
 
 No se recomienda decidir esto ahora — la decisión correcta depende de por qué se está
 migrando (¿solo Auth, o toda la base también?) y de la escala del proyecto en ese momento
@@ -100,16 +44,16 @@ presión.
 
 ### Qué NO cambia en una migración de Auth
 
-- La lógica de negocio (Regla de portabilidad ya documentada en `docs/SECURITY.md`
-  líneas 33-45): vive en el backend propio, no en Supabase — migrar Auth no toca esa capa.
+- La lógica de negocio (regla de portabilidad, `docs/SECURITY.md:28`): vive en el backend
+  propio, no en Supabase — migrar Auth no toca esa capa.
 - Los datos de la base (`prestadoras`, `usuarios`, `asistentes`, etc.) — eso es
   Postgres/Supabase Database, un proveedor distinto de Supabase Auth, y ya tiene su propio
-  resguardo (backup R2+B2, punto 2 de este documento).
+  resguardo (backup R2+B2, `docs/SECURITY.md`, «Portabilidad de datos»).
 
 ## Punto 4 — Runbooks de proveedores de bajo riesgo
 
 Los siguientes cuatro proveedores ya estaban evaluados como bajo riesgo / bajo esfuerzo de
-migración (pendiente #15). Estos son los pasos concretos a seguir si alguno falla o hay
+migración. Estos son los pasos concretos a seguir si alguno falla o hay
 que reemplazarlo — para no tener que decidir el procedimiento en el momento de la caída.
 
 ### Railway (hosting del backend Node/Express)
@@ -158,7 +102,8 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
    (`PWA_CLIENTES_URL` y `PWA_ASISTENTES_URL`, configuradas en Railway) apuntan a los
    dominios propios, no a los del proveedor: mientras el DNS se repunte, esos correos no
    hay que tocarlos.
-7. Recordar la Regla 13.1 en el proveedor nuevo también: confirmar si publica solo desde el
+7. Recordar en el proveedor nuevo también «terminar la tarea incluye comprobar que la
+   publicación salió bien», de `celtatech/CLAUDE.md`: confirmar si publica solo desde el
    `git push` o si hace falta un paso explícito, y dejarlo escrito en el automatismo, no en
    la memoria de nadie.
 
@@ -222,9 +167,5 @@ mientras el backend corra en Railway.**
 
 ## Cierre
 
-Puntos 1 (feature de subida de Certificado de Aptitud + mirror de almacenamiento), 2
-(prueba de restauración), 3 (plan de migración de Auth) y 4 (runbooks) quedan resueltos con
-este documento y el build de la feature de certificados (ver `docs/PLAN_HASTA_PRODUCCION.md` para el
-detalle de aplicación pendiente de la parte de Supabase Storage). El punto 5 (mirror en
-caliente de Supabase Auth) sigue explícitamente fuera de alcance y no recomendado —
-se retoma en una conversación aparte si el Desarrollador quiere profundizarlo.
+La copia en caliente de Supabase Auth sigue explícitamente fuera de alcance y no
+recomendada — se retoma en una conversación aparte si el Desarrollador quiere profundizarla.

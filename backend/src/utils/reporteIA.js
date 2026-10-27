@@ -6,7 +6,7 @@ import { MODELO_IA } from '../config/modeloIA.js';
 
 // IA Nivel 1 (Reporte inteligente) — prompt exacto de docs/AI_PROMPTS.md, no reformular acá
 // sin actualizar ese archivo primero (el contrato JSON está acoplado a las columnas de
-// `reportes`, ver DATA_MODEL.md). Mismo patrón de cliente perezoso que importacionIA.js.
+// `reportes`). Mismo patrón de cliente perezoso que importacionIA.js.
 
 const SYSTEM_PROMPT = `Este asistente estructura reportes de cuidado domiciliario.
 El Asistente envía un texto libre describiendo la guardia.

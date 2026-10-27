@@ -36,33 +36,33 @@ Latinoamérica— y CeltaTech es el encargado —*business associate*, *encargad
 
 | Artículo | Qué exige | Estado |
 |---|---|---|
-| **164.308(b)(1)** y **164.502(e)** | Contrato de business associate con cada proveedor que toque datos de salud, incluido el proveedor de nube | **En obra** — tramo 1. Exige nivel de servicio con acuerdo firmado en el proveedor de base de datos |
-| **164.312(a)(2)(i)** «Required» | Identificación única de cada persona que accede | **En obra** — tramo 8. Es «Required»: una cuenta compartida es incumplimiento sin evaluación de riesgo que valga |
-| **164.312(a)(2)(ii)** «Required» | Procedimiento de acceso de emergencia | **En obra** — tramo 8 |
-| **164.312(a)(2)(iii)** | Cierre de sesión automático | **En obra** — tramo 8. Hoy existe sólo para el permiso de acceso de CeltaTech |
-| **164.312(a)(2)(iv)** y **164.312(e)(2)(ii)** | Cifrado en reposo y en tránsito, «Addressable» | **Cumple en tránsito** (TLS forzado). **En obra** el resto — tramo 9 |
-| **164.306(d)(3)** | Lo «Addressable» que no se implementa se documenta por escrito | **En obra** — tramo 12 |
-| **164.312(b)** | Registro que examine la actividad sobre los sistemas con datos de salud | **En obra** — tramo 2. Hoy se registran escrituras, no lecturas |
-| **164.308(a)(1)(ii)(D)** «Required» | **Revisar** periódicamente los registros, con constancia | **En obra** — tramo 3 |
-| **164.308(a)(1)(ii)(A)** | Análisis de riesgos | **En obra** — tramo 12, con el Apéndice C de NIST SP 800-66r2, que enumera el acceso entre clientes como amenaza |
+| **164.308(b)(1)** y **164.502(e)** | Contrato de business associate con cada proveedor que toque datos de salud, incluido el proveedor de nube | **En obra** — paso 5. Exige nivel de servicio con acuerdo firmado en el proveedor de base de datos |
+| **164.312(a)(2)(i)** «Required» | Identificación única de cada persona que accede | **En obra** — paso 125. Es «Required»: una cuenta compartida es incumplimiento sin evaluación de riesgo que valga |
+| **164.312(a)(2)(ii)** «Required» | Procedimiento de acceso de emergencia | **En obra** — paso 125 |
+| **164.312(a)(2)(iii)** | Cierre de sesión automático | **En obra** — paso 125. Hoy existe sólo para el permiso de acceso de CeltaTech |
+| **164.312(a)(2)(iv)** y **164.312(e)(2)(ii)** | Cifrado en reposo y en tránsito, «Addressable» | **Cumple en tránsito** (TLS forzado). **En obra** el resto — paso 13 |
+| **164.306(d)(3)** | Lo «Addressable» que no se implementa se documenta por escrito | **En obra** — paso 129 |
+| **164.312(b)** | Registro que examine la actividad sobre los sistemas con datos de salud | **En obra** — paso 9. Hoy se registran escrituras, no lecturas |
+| **164.308(a)(1)(ii)(D)** «Required» | **Revisar** periódicamente los registros, con constancia | **En obra** — paso 121 |
+| **164.308(a)(1)(ii)(A)** | Análisis de riesgos | **En obra** — paso 129, con el Apéndice C de NIST SP 800-66r2, que enumera el acceso entre clientes como amenaza |
 | **164.306(a)(2)** | Protección frente a amenazas razonablemente anticipadas | **En obra** — plan de aislamiento completo |
-| **164.308(a)(7)(ii)(A)(B)(C)** «Required» | Copia exacta y recuperable, restauración, modo de emergencia | **En obra** — tramo 10 |
+| **164.308(a)(7)(ii)(A)(B)(C)** «Required» | Copia exacta y recuperable, restauración, modo de emergencia | **En obra** — paso 126 |
 | **164.308(a)(4)** y mínimo necesario **164.502(b)** | Acceso acotado a lo necesario | **En obra** — plan de aislamiento, tramos 1 a 4 |
-| **164.312(d)** | Verificación de identidad de quien accede | **Cumple parcialmente**: entrada con usuario y contraseña, sin segundo factor. La entrada con token está guardada en el estante de CeltaTech (`Codigos-utiles`) — tramo 8 |
-| **164.410** | El business associate notifica la brecha al covered entity | **En obra** — tramo 6, construido para 24 horas |
-| **164.402(2)** | Presunción de brecha salvo evaluación de cuatro factores, con carga de la prueba de la empresa | **En obra** — tramo 6 |
-| **164.404(c)** | Contenido mínimo del aviso, cinco elementos | **En obra** — tramo 6 |
-| **164.316(b)(2)(i)** | Conservar la documentación seis años | **En obra** — tramo 12 |
-| **164.504(e)(2)(ii)(J)** | Devolver o destruir los datos al terminar el contrato, alcanzando las copias | **En obra** — tramo 4 |
+| **164.312(d)** | Verificación de identidad de quien accede | **Cumple parcialmente**: entrada con usuario y contraseña, sin segundo factor. La entrada con token está guardada en el estante de CeltaTech (`Codigos-utiles`) — paso 125 |
+| **164.410** | El business associate notifica la brecha al covered entity | **En obra** — paso 124, construido para 24 horas |
+| **164.402(2)** | Presunción de brecha salvo evaluación de cuatro factores, con carga de la prueba de la empresa | **En obra** — paso 124 |
+| **164.404(c)** | Contenido mínimo del aviso, cinco elementos | **En obra** — paso 124 |
+| **164.316(b)(2)(i)** | Conservar la documentación seis años | **En obra** — paso 129 |
+| **164.504(e)(2)(ii)(J)** | Devolver o destruir los datos al terminar el contrato, alcanzando las copias | **En obra** — paso 122 |
 
 **42 U.S.C. §17941 (HITECH).** El regulador debe considerar las prácticas de seguridad reconocidas
 acreditadas **durante no menos de los doce meses anteriores** al incidente. No es puerto seguro y no
 impide la sanción, pero es la única palanca real que existe, y lo adoptado después del incidente no
-cuenta. **En obra** — tramo 12.
+cuenta. **En obra** — paso 129.
 
 **Estados.** Texas exige notificar dentro de los 30 días y avisar al Fiscal General cuando alcanza a
 250 residentes. California permite reclamar 1.000 dólares nominales por persona sin probar daño, lo
-que convierte cualquier brecha en litigio colectivo viable. **En obra** — tramo 6.
+que convierte cualquier brecha en litigio colectivo viable. **En obra** — paso 124.
 
 **Lo que HIPAA no exige, y por eso no se construye por esta vía:** segundo factor, prueba de
 penetración, escaneo de vulnerabilidades, inventario de activos, auditoría anual —el 164.308(a)(8)
@@ -82,29 +82,29 @@ plazo con fecha proyectada en julio de 2027. No se construye contra él.
 
 | Artículo | Qué exige | Estado |
 |---|---|---|
-| **9(1) y 9(2)(h)** | Los datos de salud están prohibidos salvo excepción; la de asistencia sanitaria exige además el art. 9(3) | **Cumple** la estructura de consentimiento con texto versionado. **En obra** el secreto profesional del art. 9(3) — tramo 8 |
+| **9(1) y 9(2)(h)** | Los datos de salud están prohibidos salvo excepción; la de asistencia sanitaria exige además el art. 9(3) | **Cumple** la estructura de consentimiento con texto versionado. **En obra** el secreto profesional del art. 9(3) — paso 125 |
 | **28(3)** | Contrato con el encargado, con contenido obligatorio | Es del contrato entre CeltaTech y el Cliente |
-| **28(3)(f)** | El encargado asiste al responsable en la evaluación de impacto | **En obra** — tramo 12 |
-| **28(10)** | Si el encargado determina fines propios, pasa a ser responsable | **Cumple**: no se entrenan modelos con datos de los Clientes — tramo 13 |
-| **30(2)** | Registro de actividades del encargado. La exención del 30(5) no aplica porque se tratan datos del art. 9 | **En obra** — tramo 12 |
+| **28(3)(f)** | El encargado asiste al responsable en la evaluación de impacto | **En obra** — paso 129 |
+| **28(10)** | Si el encargado determina fines propios, pasa a ser responsable | **Cumple**: no se entrenan modelos con datos de los Clientes — paso 130 |
+| **30(2)** | Registro de actividades del encargado. La exención del 30(5) no aplica porque se tratan datos del art. 9 | **En obra** — paso 129 |
 | **32(1)(b)** | Confidencialidad, integridad, disponibilidad y resiliencia permanentes | **En obra** — plan de aislamiento |
-| **32(1)(d)** | **Verificar periódicamente la eficacia** de las medidas | **En obra** — tramo 12. Es lo que convierte la prueba de aislamiento en obligación legal |
-| **33(2)** | El encargado avisa al responsable sin dilación indebida, **sin umbral** | **En obra** — tramo 6 |
-| **33(5)** | Documentar toda violación, se notifique o no | **En obra** — tramo 6 |
-| **34(3)(a)** | El cifrado exime de comunicar a las personas, **nunca** de notificar a la autoridad | **En obra** — tramo 9 |
-| **35** | Evaluación de impacto obligatoria y **previa**: concurren el 35(3)(b) y cuatro criterios de la guía WP248 rev.01 contra un umbral de dos | **En obra** — tramo 12 |
-| **15, 16, 17, 20** | Acceso, rectificación, supresión y portabilidad | **En obra** — tramo 5 |
-| **17(3)** | El borrado es **por dato**, no por cuenta: «en la medida en que» | **En obra** — tramo 4 |
-| **9(4)** | Los plazos de conservación de datos de salud los fija la ley nacional | **En obra** — tramos 4 y 11 |
-| **Capítulo V** | Transferencia internacional. Brasil no tiene decisión de adecuación | **En obra** — tramo 1 |
+| **32(1)(d)** | **Verificar periódicamente la eficacia** de las medidas | **En obra** — paso 129. Es lo que convierte la prueba de aislamiento en obligación legal |
+| **33(2)** | El encargado avisa al responsable sin dilación indebida, **sin umbral** | **En obra** — paso 124 |
+| **33(5)** | Documentar toda violación, se notifique o no | **En obra** — paso 124 |
+| **34(3)(a)** | El cifrado exime de comunicar a las personas, **nunca** de notificar a la autoridad | **En obra** — paso 13 |
+| **35** | Evaluación de impacto obligatoria y **previa**: concurren el 35(3)(b) y cuatro criterios de la guía WP248 rev.01 contra un umbral de dos | **En obra** — paso 129 |
+| **15, 16, 17, 20** | Acceso, rectificación, supresión y portabilidad | **En obra** — paso 123 |
+| **17(3)** | El borrado es **por dato**, no por cuenta: «en la medida en que» | **En obra** — paso 122 |
+| **9(4)** | Los plazos de conservación de datos de salud los fija la ley nacional | **En obra** — pasos 122 y 127 |
+| **Capítulo V** | Transferencia internacional. Brasil no tiene decisión de adecuación | **En obra** — paso 5 |
 
 ### Alemania
 
 - **§203 StGB** — secreto profesional. El §203(4) extiende la responsabilidad penal a quien colabora
-  con el obligado: el personal técnico del proveedor queda alcanzado. **En obra** — tramo 8.
+  con el obligado: el personal técnico del proveedor queda alcanzado. **En obra** — paso 125.
 - **§393 SGB V** — desde el 1 de julio de 2025 exige **dictamen BSI C5 Tipo 2 vigente** y limita el
   lugar de tratamiento a Alemania, el Espacio Económico Europeo o un tercer país adecuado donde el
-  proveedor tenga establecimiento nacional. **En obra** — tramo 1. Con los datos en Brasil, Alemania
+  proveedor tenga establecimiento nacional. **En obra** — paso 5. Con los datos en Brasil, Alemania
   no se puede vender.
 - **No hay obligación legal de conexión a la infraestructura telemática para cuidados
   domiciliarios.** El §106b SGB XI la financia pero no la impone, y el §378 SGB V alcanza a la
@@ -115,7 +115,7 @@ plazo con fecha proyectada en julio de 2027. No se construye contra él.
 ### Francia
 
 - **Art. L.1111-8 del Code de la santé publique** — alojar datos de salud exige alojador certificado
-  HDS. **Art. L.1115-1** — hacerlo sin certificación es delito. **En obra** — tramo 1. Es condición
+  HDS. **Art. L.1115-1** — hacerlo sin certificación es delito. **En obra** — paso 5. Es condición
   para vender en Francia y hoy no se cumple.
 - **El référentiel HDS no se pudo leer** y por eso no se afirma nada sobre su contenido de
   compartimentación entre clientes.
@@ -123,21 +123,21 @@ plazo con fecha proyectada en julio de 2027. No se construye contra él.
 ### España
 
 - **LO 3/2018.** La disposición adicional decimoséptima remite a la legislación sanitaria para los
-  plazos de historia clínica. **En obra** — tramo 11.
+  plazos de historia clínica. **En obra** — paso 127.
 - **El Esquema Nacional de Seguridad (RD 311/2022) no alcanza** a un producto vendido a clientes
   privados.
 
 ### Suecia y Países Bajos
 
 - **Patientdatalagen 4 kap. 2 §** — el acceso exige relación de cuidado con el paciente. No alcanza
-  con pertenecer a la organización. **En obra** — tramo 3.
+  con pertenecer a la organización. **En obra** — paso 121.
 - **NEN 7513:2018** rige el registro de accesos en Países Bajos. **Es una norma de pago y no se
   leyó.** No se afirma cumplirla y no se diseña el registro contra una lista recordada.
 
 ### Directiva NIS2 — 2022/2555
 
 Aviso temprano a las **24 horas**, notificación a las 72 y informe final al mes. Es el reloj más
-corto del conjunto y por eso el sistema se construye para 24 horas. **En obra** — tramo 6.
+corto del conjunto y por eso el sistema se construye para 24 horas. **En obra** — paso 124.
 
 ### Espacio Europeo de Datos Sanitarios — 2025/327
 
@@ -145,11 +145,11 @@ No obliga todavía. Autocertificación desde el 26 de marzo de 2029 y ampliació
 organismo notificado. El art. 26(2) considera puesto en servicio el software ofrecido como servicio,
 así que alcanzará al producto.
 
-- **Anexo II sección 3** — cinco campos por evento de acceso. **En obra** — tramo 2.
+- **Anexo II sección 3** — cinco campos por evento de acceso. **En obra** — paso 9.
 - **Art. 9** — el paciente puede saber quién accedió a lo suyo, con tres años de disponibilidad.
-  **En obra** — tramo 2.
-- **Anexo II sección 2** — exportación en formato interoperable. **En obra** — tramo 5.
-- **Art. 54** — prohíbe el uso de los datos para entrenar modelos. **Cumple** — tramo 13.
+  **En obra** — paso 9.
+- **Anexo II sección 2** — exportación en formato interoperable. **En obra** — paso 123.
+- **Art. 54** — prohíbe el uso de los datos para entrenar modelos. **Cumple** — paso 130.
 
 ### Reglamento de Inteligencia Artificial — 2024/1689
 
@@ -157,7 +157,7 @@ así que alcanzará al producto.
 - **Anexo III punto 4(b)** — alto riesgo: sistemas que asignan tareas según comportamiento o rasgos
   personales, o evalúan desempeño. Un emparejamiento o una planificación de Asistentes con
   puntuación cae acá. Rige desde el **2 de diciembre de 2027**, con autoevaluación. **En obra** —
-  tramo 13.
+  paso 130.
 - **No es alto riesgo por la vía sanitaria** del Anexo III punto 5(a), que requiere que lo use una
   autoridad pública.
 - **El Reglamento de ciberresiliencia (2024/2847) no alcanza al software como servicio**; entraría
@@ -203,7 +203,7 @@ habilita alojar el padrón completo de una Prestadora en Brasil.** No se la invo
 
 **Lo que sí habilita: las cláusulas contractuales tipo del Anexo II de la Disposición 60-E/2016**,
 que son precisamente las de prestación de servicios de tratamiento, incorporadas al contrato entre
-CeltaTech y la Prestadora. **En obra** — tramo 1. Es un requisito del contrato, no del código, y hay
+CeltaTech y la Prestadora. **En obra** — paso 5. Es un requisito del contrato, no del código, y hay
 que tenerlo firmado antes del alta. Si el contrato se aparta del modelo, hay que presentarlo a la
 AAIP dentro de los 30 días corridos de firmado.
 
@@ -233,7 +233,7 @@ Lo demás de Argentina:
   **en obra**, plan de aislamiento.
 - **Resolución AAIP 47/2018.** Medidas de seguridad recomendadas y contenido del informe de
   incidente. No es obligatoria, pero es el estándar contra el que mide la autoridad. **En obra** —
-  tramos 2, 6, 8 y 9.
+  pasos 9, 13, 124 y 125.
 - **Ley 26.529.** Historia clínica cronológica, foliada y completa, propiedad del paciente, con
   copia entregada dentro de las 48 horas y conservación de **diez años como mínimo**. **En obra** —
   tramos 4, 5 y 7.
@@ -241,7 +241,7 @@ Lo demás de Argentina:
   dos relojes: el dato deja de ser necesario y se destruye, salvo el que una ley obliga a conservar.
   La consecuencia de producto es que la conservación se parametriza por tipo de dato, con el plazo
   más largo mandando, y nunca hay un borrado automático que alcance al registro clínico. **En obra**
-  — tramo 4.
+  — paso 122.
 - **Ley 27.553 y Decreto 98/2023 — teleasistencia.** El art. 4 del Anexo es el más exigente que
   tiene Argentina sobre un producto como éste: obliga a resguardar credenciales y accesos, a alojar
   los servidores en lugar seguro, a **detectar desviaciones de información**, a **cifrar audio y
@@ -254,10 +254,10 @@ Lo demás de Argentina:
   aplica si Careonys presta teleasistencia en los términos de esa norma.
 - **Ley 27.706 art. 7.** Trazabilidad que asocie inequívocamente cada acción a una persona, y al
   menos tres niveles de acceso: consulta; consulta y actualización; consulta, actualización y
-  modificación. **En obra** — tramos 2 y 8. ⚠️ Sin verificar si fue reglamentada.
+  modificación. **En obra** — pasos 9 y 125. ⚠️ Sin verificar si fue reglamentada.
 - **Registro de bases del art. 21.** Lo inscribe la Prestadora, es gratuito, y el producto le avisa.
-  **En obra** — tramo 11.
-- **Sin plazo legal de notificación de brechas.** Se aplica igual el de 24 horas del tramo 6, porque
+  **En obra** — paso 127.
+- **Sin plazo legal de notificación de brechas.** Se aplica igual el de 24 horas del paso 124, porque
   el sistema se construye contra el reloj más corto y no por país.
 - **Los proyectos de nueva ley de protección de datos no están sancionados.** No se construye contra
   ellos.
@@ -265,13 +265,13 @@ Lo demás de Argentina:
 **Y falta el documento legal argentino de protección de datos.** `docs/legal/argentina.md` existe,
 pero es de riesgo laboral: penalización de inasistencias, rankings, puntuaciones. La regla de la
 empresa exige que antes de vender en un país ese país tenga su documento, y la materia de datos de
-salud todavía no está escrita ahí. **En obra** — tramo 11.
+salud todavía no está escrita ahí. **En obra** — paso 127.
 
 **Las cinco exigencias que los diez comparten, y que el plan traduce a producto:**
 
 1. **Consentimiento expreso para datos de salud** (Costa Rica art. 5, Panamá art. 8, Brasil art. 11,
    Argentina art. 8, Ecuador, Perú). **Cumple** la estructura; **en obra** los textos por país —
-   tramo 11.
+   paso 127.
 2. **Acceso limitado a lo necesario.** La norma panameña no dice «mínimo privilegio»: el art. 8 del
    Decreto 285 se titula **principio de proporcionalidad**, y su párrafo final impone tres límites
    que se acumulan — **quién** accede (sólo quien lo necesita para su función), **cuánta**
@@ -282,12 +282,12 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
    Decreto 285 art. 35 num. 12; Costa Rica reglamento art. 47). La norma panameña pide sólo dos
    datos: quién ingresó y en qué período; no exige anotar la operación ni el registro tocado. Aun
    así conviene anotar la operación, porque el art. 38 obliga a documentar «los hechos y efectos»
-   de toda violación y sin eso es imposible. **En obra** — tramo 2. Hoy no se cumple: el registro
+   de toda violación y sin eso es imposible. **En obra** — paso 9. Hoy no se cumple: el registro
    anota escrituras, no lecturas.
 4. **Corrección por nota aclaratoria, nunca por sobreescritura** (Brasil; Argentina; Uruguay
    Decreto 242/017 art. 13; Ecuador). **En obra** — tramo 7.
 5. **Plazo de conservación y anonimización al vencer** (Costa Rica Ley art. 6.1, Panamá Decreto
-   art. 7, Ecuador art. 31). **En obra** — tramo 4.
+   art. 7, Ecuador art. 31). **En obra** — paso 122.
 
 **Las obligaciones particulares, que no se deducen de ningún parecido con otro país:**
 
@@ -303,7 +303,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   falta está en el paso 6 de `PLAN_HASTA_PRODUCCION.md`.
 - **Chile: el registro de accesos es de lecturas, y es reglamentario.** El mismo art. 9 del Decreto
   41/2012: «Este sistema debe llevar registro de las fechas y personas que han accedido a las
-  fichas.» No es auditoría de escritura. **En obra** — tramo 2.
+  fichas.» No es auditoría de escritura. **En obra** — paso 9.
 - **Chile: no hay refugio geográfico.** El art. 1 bis lit. b) de la Ley 19.628 nueva aplica la ley
   chilena al encargado que trata datos por cuenta de un responsable establecido en Chile, esté
   donde esté y con la base donde esté. Y el art. 3 de la Ley 20.584 lo dice desde el lado sanitario:
@@ -312,7 +312,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
 - **Chile: subcontratar el alojamiento necesita permiso escrito de cada Prestadora.** El art. 15 bis
   prohíbe subencargar sin autorización específica y por escrito del responsable, y aun autorizada
   subsiste la responsabilidad solidaria. El proveedor de nube es un subencargado. **En obra** —
-  tramo 1.
+  paso 5.
 - **Chile: la situación socioeconómica pasa a ser dato sensible.** El art. 2 lit. g) del texto que
   entra en vigor la pone junto a la salud. Es el segundo país que lo hace, después de Perú. Y el
   matiz importa: lo que el Cliente de la Prestadora paga por el servicio se trata por la ejecución del contrato (art.
@@ -325,7 +325,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   registros de actividad. Y hay una trampa en el numeral 3: **todo tratamiento de datos de salud
   anonimizados necesita autorización previa de la autoridad**, con protocolo técnico e informe
   favorable de la autoridad sanitaria. **No menciona la seudonimización.** De ahí sale la regla del
-  producto: se seudonimiza, no se anonimiza. **En obra** — tramo 4.
+  producto: se seudonimiza, no se anonimiza. **En obra** — paso 122.
 - **Ecuador exige representante local, y alcanza al encargado.** Art. 3 de la LOPDP y del
   Reglamento: quien no está establecido en Ecuador designa apoderado especial con residencia en el
   país, con poder apostillado. La única excepción —tratamiento ocasional, sin gran escala de
@@ -342,12 +342,12 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   societaria de CeltaTech, no del producto. En Chile, en cambio, el art. 50 lo deja **potestativo**.
 - **El cifrado de audio y video ya no es una rareza argentina: son dos países.** El Decreto 98/2023
   argentino y el art. 10 del Decreto 127/024 uruguayo, que exige «sistema de cifrado actualizado» en
-  los servicios con transmisión de audio y video en simultáneo. **En obra** — tramo 9.
+  los servicios con transmisión de audio y video en simultáneo. **En obra** — paso 13.
 - **Uruguay: la historia clínica electrónica no se borra.** El art. 13 del Decreto 242/017: «La
   información no podrá ser alterada o eliminada sin que quede registrada la modificación», y la
   corrección agrega el dato nuevo «sin suprimir lo corregido». Los cinco años del Decreto 355/982
   son **facultad de destruir**, pensada para el papel: quien no destruye no incumple. Refuerza la
-  regla del tramo 4 —vencido el plazo el sistema avisa y espera, nunca borra— con un país donde
+  regla del paso 122 —vencido el plazo el sistema avisa y espera, nunca borra— con un país donde
   borrar sería lo incorrecto.
 
 - **Panamá castiga penalmente la falla de aislamiento.** La Ley 203 de 2021 reformó el art. 291 del
@@ -358,7 +358,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   reglamento: «cinco días hábiles a partir del momento en que ocurrió la vulnerabilidad». Es el
   reloj más hostil de los diez, porque puede empezar a correr antes de que nadie sepa que hay algo
   que informar, y el art. 39 obliga a avisarle al titular **y** a la autoridad. De acá sale por qué
-  el tramo 6 se construye contra detección y no contra aviso. **En obra** — tramo 6.
+  el paso 124 se construye contra detección y no contra aviso. **En obra** — paso 124.
 - **Costa Rica, art. 9.1.d de la Ley 8968.** Tratar datos de salud exige que lo haga personal
   sanitario sujeto a secreto profesional «**o por otra persona sujeta, asimismo, a una obligación
   equivalente de secreto**». La ley no define esa frase, pero la llenan el art. 11 —que impone el
@@ -367,13 +367,13 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   tenga participación en el tratamiento o almacenamiento». De ahí se sigue que **el personal
   técnico del proveedor ya está alcanzado por la ley, y que el contrato no lo obliga sino que lo
   vuelve demostrable.** La norma **no** exige que sea personal sanitario. Tratar sin ese recaudo es
-  falta gravísima. **En obra** — tramo 8.
+  falta gravísima. **En obra** — paso 125.
 - **Costa Rica: la condición socioeconómica es dato sensible.** El art. 3.e de la Ley 8968 la
   incluye en la definición, y el art. 31.a convierte en **falta gravísima** tratar datos sensibles
   fuera de la ley. Lo que el Cliente de la Prestadora paga y su capacidad de pago entran por ahí. El art. 9.4, sobre
   comportamiento crediticio, es categoría aparte y rige para el Sistema Financiero Nacional: no
-  aplica. Es el tercer país que protege el dato económico, con Perú y Chile. **En obra** — tramos
-  4, 8 y 11.
+  aplica. Es el tercer país que protege el dato económico, con Perú y Chile. **En obra** — pasos
+  122, 125 y 127.
 - **Costa Rica: transmitir «por medio de mecanismos inseguros» es falta, sin que haga falta daño.**
   El art. 29.b del reglamento tipifica como falta leve recolectar, almacenar y transmitir así. Es
   el enganche directo entre una debilidad del software y la responsabilidad de la Prestadora, y no
@@ -384,12 +384,12 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   A eso se suman el análisis de riesgo, el riesgo residual y el plan de trabajo. Las medidas son
   información no divulgada y PRODHAB sólo las revisa in situ ante denuncia. Y el art. 37, último
   párrafo, fija la **única periodicidad obligatoria del régimen: con datos sensibles, las medidas
-  se revisan al menos una vez al año.** **En obra** — tramos 8 y 10.
+  se revisan al menos una vez al año.** **En obra** — pasos 125 y 126.
 - **Costa Rica: el protocolo de actuación es obligatorio y se le entrega al encargado.** La Ley
   dice «podrán» (art. 12), pero el art. 32 del reglamento dice **deberán**, fija su contenido
   mínimo —incluido el inciso e, mantener un historial de los datos durante su tratamiento— y obliga
   a transmitírselo al encargado. Es el país donde la documentación que CeltaTech le entrega a cada
-  Prestadora deja de ser cortesía. **En obra** — tramo 11.
+  Prestadora deja de ser cortesía. **En obra** — paso 127.
 - **Costa Rica: la base clínica de una Prestadora no se inscribe, y eso no exime de nada.** El art.
   21 de la Ley con el art. 2 del reglamento sólo obliga a inscribir la base «administrada con fines
   de distribución, difusión o comercialización»; el párrafo final del art. 44, agregado por el
@@ -401,7 +401,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   prueba: hay que poder mostrar **qué texto** se consintió, **en qué versión** y **en qué momento**.
   Una casilla marcada no lo satisface. Y el num. 7 de ese artículo, que exime en caso de urgencia
   médica, **no cubre la prestación programada**: un servicio de cuidados contratado no es una
-  urgencia. **En obra** — tramo 11.
+  urgencia. **En obra** — paso 127.
 - **Panamá: ANTAI fiscaliza directamente al custodio.** El art. 59 del Decreto 285 somete a
   fiscalización tanto al responsable como al custodio de la base. CeltaTech no queda detrás de la
   Prestadora: responde por sí misma ante la autoridad.
@@ -409,7 +409,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   art. 37 del Decreto 285 obliga al custodio a informarle al responsable «de manera inmediata», y
   cada responsable sólo puede ser informado de lo suyo. De ahí sale una exigencia de arquitectura
   que no es opcional: la detección tiene que poder contestar **a qué Prestadoras alcanzó el
-  incidente**, o cumplir con una obliga a filtrarle datos de otra. **En obra** — tramo 6 y plan de
+  incidente**, o cumplir con una obliga a filtrarle datos de otra. **En obra** — paso 124 y plan de
   aislamiento.
 - **Ecuador: un producto de salud es «gran escala» por definición, sin contar titulares.** El art.
   14.1 de la Resolución SPDP-SPD-2026-0005-R califica directamente como gran escala los
@@ -419,7 +419,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   obligatorio, evaluación de impacto previa, registro de actividades reforzado (art. 15), auditoría
   cada doce meses (art. 17) e informe anual de cumplimiento (art. 18), todo conservado cinco
   años**. Es la carga formal más pesada de los diez países. **No alcanza** en su parte societaria;
-  **en obra** — tramos 10 y 11.
+  **en obra** — pasos 126 y 127.
 - **México: la norma de la historia clínica electrónica obliga al que hace el software, no sólo al
   que lo usa.** El numeral 1.2 de la NOM-024-SSA3-2012 alcanza a «las personas físicas o morales
   que tengan los derechos de propiedad, uso, autoría, distribución y comercialización» del sistema.
@@ -445,16 +445,16 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   20). Los datos patrimoniales no son sensibles, pero también exigen consentimiento expreso (art. 7,
   párrafo quinto). La excepción sanitaria del art. 9 fracc. VI **no sirve como base de operación**:
   tiene dos candados que se acumulan —sólo mientras el titular esté impedido de consentir, y sólo
-  por persona sujeta a secreto—. **En obra** — tramo 11.
+  por persona sujeta a secreto—. **En obra** — paso 127.
 - **Panamá: el reloj de la conservación arranca con un hecho que el sistema puede no enterarse
   nunca.** El art. 49 de la Ley 68 cuenta los veinte años **desde la muerte del paciente**, y no fija
   ningún plazo autónomo para pacientes vivos. Purgar por antigüedad de la última atención sería
   ilícito para el núcleo del art. 50. De ahí salen dos exigencias de producto que no se deducen de
   ningún otro país: **un dato de fallecimiento que dispare el cómputo**, y **el bloqueo de toda purga
-  automática** mientras ese dato no exista. **En obra** — tramo 4.
+  automática** mientras ese dato no exista. **En obra** — paso 122.
 - **Panamá: subcontratar el alojamiento necesita autorización previa y escrita, con el proveedor
   nombrado.** El art. 49 del Decreto 285. Es la misma exigencia que el art. 15 bis chileno, y alcanza
-  al proveedor de nube de São Paulo. **En obra** — tramo 1.
+  al proveedor de nube de São Paulo. **En obra** — paso 5.
 - **Panamá: las multas alcanzan directamente al custodio.** El art. 36 de la Ley 81 fija de 1.000 a
   10.000 balboas —a la par del dólar, sin indexación—, y los arts. 38 a 41 gradúan: son **muy graves**
   no observar las regulaciones sobre datos sensibles (art. 41 num. 2) y el almacenamiento o la
@@ -466,17 +466,17 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   escrito con el proveedor de tecnología, exhibible; el art. 6, consentimiento informado firmado
   **dentro del expediente clínico**; y el art. 13, que toda actividad de telemedicina quede asentada
   en la historia clínica. Es el único de los diez países que legisla sobre revelar la inteligencia
-  artificial. **En obra** — tramo 11.
+  artificial. **En obra** — paso 127.
 - **Costa Rica: derecho al olvido a los diez años.** El art. 11 del reglamento, reformado en 2016,
   obliga a suprimir el dato a los diez años de terminado el objeto del tratamiento, salvo acuerdo de
   partes, relación continuada o interés público. Complementa el art. 6.1 de la Ley, que cuenta desde
-  cada hecho registrado. **En obra** — tramo 4.
+  cada hecho registrado. **En obra** — paso 122.
 - **Ecuador: la telesalud tiene norma propia y es la más nueva del relevamiento.** El Acuerdo
   Ministerial 00044-2025 exige **dos consentimientos separados** —uno para usar medios telemáticos y
   otro para tratar los datos—, cifrado en la transmisión, cumplimiento del Esquema Gubernamental de
   Seguridad de la Información, un registro de trazabilidad de los servicios prestados y estándares de
   interoperabilidad **DICOM, HL7, FHIR, LOINC y SNOMED-CT**. Sólo se activa si el producto presta
-  teleconsulta, teleseguimiento o telemonitoreo. **En obra** — tramos 9 y 11.
+  teleconsulta, teleseguimiento o telemonitoreo. **En obra** — pasos 13 y 127.
 - **Ecuador: la empresa prestadora necesita permiso anual de ACESS.** Arts. 8 y 9 del Acuerdo
   Ministerial 00032-2020, con una excepción expresa: el profesional en libre ejercicio que atiende a
   domicilio **sin establecimiento** no lo requiere. La normativa sanitaria propia de la atención
@@ -484,7 +484,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   en la definición general de establecimiento de salud. **No alcanza** — es trámite de la Prestadora,
   y el producto se lo avisa.
 - **Brasil, art. 11 §4º de la LGPD.** Prohíbe compartir datos de salud con fines de ventaja
-  económica. Cierra cualquier monetización, incluso agregada. **Cumple** — tramo 13.
+  económica. Cierra cualquier monetización, incluso agregada. **Cumple** — paso 130.
 - **Brasil, art. 42 §1º I de la LGPD.** Quien trata datos por cuenta de otro responde
   **solidariamente y queda equiparado al responsable** cuando incumple la ley o se aparta de las
   instrucciones recibidas. Un aislamiento que falle es exactamente ese supuesto, y abre el catálogo
@@ -495,13 +495,13 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   pone «ingresos económicos» en la misma categoría que la salud. Es el único de los diez que lo
   hace, y significa que en Perú la facturación entra en la categoría más protegida: consentimiento
   **por escrito con firma** —manuscrita, digital o electrónica—, y las mismas medidas que el dato
-  clínico. **En obra** — tramos 4, 8 y 11.
+  clínico. **En obra** — pasos 122, 125 y 127.
 - **Perú: el registro de accesos se conserva dos años y tiene que estar disponible de inmediato.**
   El art. 46 del DS 016-2024-JUS lo dice con esa palabra, y enumera qué anotar: cuentas, hora de
   inicio y de fin de sesión, y las operaciones de tratamiento, **visualización**, modificación,
   eliminación, importación y exportación. Es la exigencia más precisa de los diez países y fija el
-  piso del tramo 2. El art. 51 agrega respaldos **semanales** con verificación de integridad, y el
-  52 exige cifrado en toda transferencia externa. **En obra** — tramos 2, 9 y 10.
+  piso del paso 9. El art. 51 agrega respaldos **semanales** con verificación de integridad, y el
+  52 exige cifrado en toda transferencia externa. **En obra** — pasos 9, 13 y 126.
 - **Perú exige representante en el país a quien opera desde afuera.** Art. VII del Título Preliminar
   del DS 016-2024-JUS. Es obligación de CeltaTech, no del producto, y es societaria: hay que
   resolverla antes de vender ahí. Ninguno de los otros nueve países la tiene. **No alcanza** — no
@@ -557,7 +557,7 @@ concepto no existe en su derecho, y transferir sin consentimiento es falta grav�
 pero la Ley no recoge esa exclusión —**es una tensión de rango que decide un abogado**, y mientras
 tanto lo prudente es que el consentimiento mencione el alojamiento y dónde está. **Colombia** incluye a Estados Unidos como adecuado por
 Circular Externa 005 de 2017, y dentro de la Comunidad Andina las transferencias se consideran
-adecuadas. **En obra** — tramos 1 y 11.
+adecuadas. **En obra** — pasos 5 y 127.
 
 **Y una advertencia que vale para los cuatro países que no llaman transferencia al encargo:** que no
 haya que firmar cláusulas de transferencia no alivia nada. El contrato de encargo sigue siendo
@@ -587,7 +587,7 @@ Nacional, pero lo que el portal de la autoridad efectivamente inscribe son deleg
 de datos, apoderados, certificados, vulneraciones y denuncias —el registro del delegado es
 gratuito—, y ninguno de sus trámites publicados es la inscripción de una base; Brasil, México y Panamá no tienen registro. **Chile tampoco**, y
 además el art. tercero transitorio de la Ley 21.719 ordena **eliminar** el registro de bancos de
-datos que hoy lleva el Registro Civil. **En obra** — tramo 11, como aviso por país. Nunca como bloqueo.
+datos que hoy lleva el Registro Civil. **En obra** — paso 127, como aviso por país. Nunca como bloqueo.
 
 Lo que esto le pide al producto es concreto: **cada Prestadora es la responsable y es quien
 inscribe**, CeltaTech es el encargado, y el producto tiene que poder entregarle a cada una lo que
@@ -613,7 +613,7 @@ Ninguno es ley, y todos los pide el mercado.
 
 | Marco | Qué es | Qué dice sobre separar clientes | Estado |
 |---|---|---|---|
-| **BSI C5:2026** | Dictamen de auditor, no certificación. Condición legal en Alemania por §393 SGB V | `OPS-30.01B` exige políticas de separación atadas a un modelo documentado de capas, con medidas por capa, monitoreo y acción ante desvíos, y cubre **cliente-de-cliente y cliente-del-proveedor**. `OPS-31.02B`: datos «segura y estrictamente separados». `OPS-31.03B`: revisión ante cambios y **al menos anual**. `OPS-15.01B`: identificación del acceso **a nivel de cliente**. `COS-06.01B`: separación de red | **En obra** — tramos 2, 8 y 12 |
+| **BSI C5:2026** | Dictamen de auditor, no certificación. Condición legal en Alemania por §393 SGB V | `OPS-30.01B` exige políticas de separación atadas a un modelo documentado de capas, con medidas por capa, monitoreo y acción ante desvíos, y cubre **cliente-de-cliente y cliente-del-proveedor**. `OPS-31.02B`: datos «segura y estrictamente separados». `OPS-31.03B`: revisión ante cambios y **al menos anual**. `OPS-15.01B`: identificación del acceso **a nivel de cliente**. `COS-06.01B`: separación de red | **En obra** — pasos 9, 125 y 129 |
 | **ISO/IEC 27017:2015** | Se audita junto con ISO/IEC 27001 | `CLD.9.5.1` — separación lógica de datos, aplicaciones, sistemas operativos, almacenamiento y red, **y separar la administración del proveedor de los recursos de los clientes** | **En obra** — plan de aislamiento |
 | **CSA CCM v4** | Cuestionario de mercado | `IVS-06` — el acceso del proveedor y el de cada cliente segmentados, monitoreados y restringidos respecto de otros clientes | **En obra** |
 | **SOC 2** | Atestación, no certificación | `CC6.1` es genérico. **No existe una regla de SOC 2 que diga «aísle a sus clientes»**: los controles los define la empresa. Sirve igual, porque es el sustituto de mercado del derecho de auditoría que HIPAA no da | No obtenido |
@@ -640,7 +640,7 @@ todo lo de este documento.
 ## 5. Lo que hoy cumple, sin obra pendiente
 
 - Los secretos de las pasarelas de pago no están en claro en la base: viven en Supabase Vault.
-- Diez de los once depósitos de archivos son privados y se sirven con enlace temporal.
+- Once de los doce depósitos de archivos son privados y se sirven con enlace temporal.
 - El consentimiento se registra con texto versionado, con quién consintió, por qué medio, desde
   cuándo y hasta cuándo.
 - Existe la estructura de aviso legal por jurisdicción, con constancia de que se avisó.

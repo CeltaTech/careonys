@@ -36,7 +36,7 @@ consultar el historial de la conversación si hace falta el detalle de precios/t
      acceso) son un dato **por-`prestadora_id`**, nunca una credencial compartida a nivel de
      plataforma — mismo patrón multi-tenant que el resto del sistema, pero con una capa extra
      de cuidado por tratarse de credenciales de una cuenta externa de terceros con costo real
-     asociado (Regla 7/8 de `CLAUDE.md` aplican con el mismo peso que a datos sensibles).
+     asociado (las reglas de seguridad de `celtatech/CLAUDE.md` §6 aplican con el mismo peso que a datos sensibles).
    - **Costo del envío de mensajes lo paga la prestadora**, no CeltaTech como
      plataforma — cada Prestadora factura directo con Meta desde su propia cuenta.
 3. **La configuración vive dentro de la pestaña "Servicios" del Módulo 8 (Configuración),
@@ -93,7 +93,7 @@ comunes la IA puede actuar de forma automática — pero cuáles cuentan como "c
 **configurable por prestadora, caso por caso**, no una lista fija igual para todas. Cuando la
 IA no tiene una respuesta clara, avisa de inmediato al Coordinador en vez de decidir "no sé"
 en silencio o dejar el mensaje sin atender. Backend de IA: mismo proveedor que Niveles 1-2
-(Anthropic/Claude, `docs/CONTEXT.md:158`) salvo que la implementación encuentre un motivo
+(Anthropic/Claude, modelo en `backend/src/config/modeloIA.js`) salvo que la implementación encuentre un motivo
 técnico concreto para otra cosa.
 
 ### C. Almacenamiento de credenciales de Meta por prestadora
@@ -108,7 +108,7 @@ secreto de Vault por prestadora. El Panel nunca muestra el valor real una vez gu
 "configurado ✓" / botón "reemplazar", como un campo de contraseña). Solo el backend puede
 pedir el valor descifrado, y solo en el momento de mandar un mensaje — **ni siquiera
 `superadmin` puede leerlo en texto plano desde el Panel**, mismo criterio que sueldos/
-certificados médicos (Regla 7 de `CLAUDE.md`). Acceso para cargar/reemplazar el secreto
+certificados médicos (`celtatech/CLAUDE.md` §6). Acceso para cargar/reemplazar el secreto
 acotado a `admin_prestadora` de esa prestadora únicamente.
 
 ### D. Catálogo inicial de eventos con WhatsApp saliente
@@ -135,7 +135,7 @@ documento), el Coordinador tiene que recibir un reintento/insistencia si no resp
 primera notificación, con estas condiciones explícitas del Desarrollador:
 
 - **El intervalo de reintento es configurable por prestadora** — nunca un número fijo en el
-  código (Regla 1 de `CLAUDE.md`), consistente con el resto de `configuracion_escalada_relevo`.
+  código (regla «Nunca hardcodear», `celtatech/CLAUDE.md`), consistente con el resto de `configuracion_escalada_relevo`.
 - **El intervalo no es constante: se acorta a medida que se reduce el tiempo que falta para
   que la guardia quede sin Asistente cubriendo.** Es decir, la urgencia de la insistencia
   aumenta cuanto más cerca está el momento en que el Paciente queda sin cobertura, no es un
@@ -191,23 +191,13 @@ de Claude Code, no una decisión tomada:
   un Paciente que puede quedar solo de por medio, y cualquier reclamo futuro necesita poder
   explicarse con una regla clara de tiempo, no con "el modelo decidió esto en el momento".
 
-## Qué NO se decide en este documento
-
-- No se diseña la tabla de datos definitiva ni las rutas de backend — eso es trabajo de
-  implementación, que todavía necesita el kickoff explícito del Desarrollador (ver nota de
-  estado al inicio del documento), no autorizado solo por haber cerrado los puntos A-E.
-- No se estima costo ni estimación de tiempo — depende directamente de qué tan grande termine
-  siendo el alcance real de la implementación una vez que arranque.
-- No se define todavía el número concreto de minutos/umbrales de "premura" del punto E — el
-  criterio (que depende de la premura y es configurable por prestadora) ya está decidido, el
-  número/mecanismo exacto es detalle de implementación.
-
 ## Cómo se relaciona con el resto del proyecto
 
 - Pendiente #9 (`docs/PLAN_HASTA_PRODUCCION.md`) — remite acá para su cierre.
 - Pestaña "Servicios" del Módulo 8, ya construida (pendiente #8, resuelto) — este documento
   extiende la pestaña "Notificaciones" del mismo módulo, no crea una pestaña nueva.
-- `docs/PRD_02_Panel_Admin.md:91-94` (Continuidad de guardia, Parte 2 de Módulo 6) — el caso
+- Continuidad de guardia (`panel/src/pages/Continuidad.jsx`,
+  `backend/src/utils/ausenciaAutomatica.js`) — el caso
   de uso principal que dispara el primer evento de WhatsApp saliente.
 - Pendiente #16 (`docs/PLAN_HASTA_PRODUCCION.md`) — auditoría de qué otras políticas deberían
   parametrizarse por prestadora; este documento es un ejemplo puntual de ese mismo principio

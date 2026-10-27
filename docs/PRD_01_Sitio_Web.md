@@ -87,10 +87,10 @@ Son límites duros, no preferencias.
    así las capturas siguen siendo de datos inventados.
 4. **El nombre del producto no se escribe a mano en ningún archivo.** Sale de
    `identidadProducto.js` mediante los marcadores `{{producto}}` / `{{productoCorto}}`
-   (`CLAUDE.md` §7 regla 1). La página de obra que hay hoy ya lo hace así, y
+   (regla «La marca sale de un solo archivo», `celtatech/CLAUDE.md`). La página de obra que hay hoy ya lo hace así, y
    `scripts/verificar_identidad.mjs` corta la publicación si alguien lo escribe a mano.
 5. **Los tres idiomas desde el primer día**: español de Argentina, inglés y portugués de
-   Brasil, siempre juntos (`CLAUDE.md` §7 regla 2). No se publica una página en un idioma
+   Brasil, siempre juntos (regla «i18n desde el día uno», `celtatech/CLAUDE.md`). No se publica una página en un idioma
    "para traducirla después".
 6. **No se promete lo que el producto no hace.** A la fecha de hoy no existen: el cobro
    automático a los Clientes de la Prestadora, la aplicación instalable desde las tiendas de Android y Apple, y
@@ -204,8 +204,8 @@ Por qué va afuera y no acá adentro:
 2. **Le sirve a cualquier cliente de CeltaTech, no solo a una empresa de cuidados.** Metido
    adentro de Careonys, solo lo podría usar quien tenga Careonys, y habría que rehacerlo para
    el producto siguiente. Es exactamente lo que la arquitectura de la empresa manda evitar:
-   OctoBuilder ya figura como producto propio en `celtatech/docs/ARQUITECTURA_NIVELES.md:76`,
-   junto con OctoCMS, OctoCRM y OctoTranslator, y esos productos se comparten entre sí por
+   OctoBuilder ya figura como producto propio en `celtatech/docs/POLITICA_DE_MODULOS.md:95-97`,
+   junto con OctoCMS y OctoCRM, y esos productos se comparten entre sí por
    una interfaz de verdad, no copiándose el código.
 3. **Cada empresa va a querer su diseño, su dominio y su correo.** Como función suelta metida
    acá, eso sería soporte para siempre.
@@ -218,13 +218,12 @@ clientes y a sus asistentes a las direcciones que le damos.
 mostrar cosas que Careonys ya sabe —los servicios que la Prestadora ofrece, sus zonas de
 cobertura, su teléfono— y la tentación va a ser que las lea directo de la base del producto.
 No se hace así: se piden por una interfaz, como cualquier otro producto de la empresa
-(`CLAUDE.md` §2 y `celtatech/docs/ARQUITECTURA_NIVELES.md`).
+(regla «Todo se usa por API», `celtatech/CLAUDE.md`, y `celtatech/docs/POLITICA_DE_MODULOS.md`).
 
 ## 9. Lo que falta decidir, y es del Desarrollador
 
-1. **Quién es dueño de esta página.** Cuando se definieron los tres niveles, quedó escrito que
-   de *"la pagina web"* del producto se ocupa CeltaTech, no el producto
-   (`celtatech/docs/ARQUITECTURA_NIVELES.md`). Hoy el código vive acá, en el repositorio del
+1. **Quién es dueño de esta página.** Cuando se definieron los tres niveles, el Desarrollador
+   dejó dicho que de *"la pagina web de careonys"* se ocupa CeltaTech, no el producto. Hoy el código vive acá, en el repositorio del
    producto, junto a las tres aplicaciones y compartiendo con ellas el nombre del producto y
    la forma de publicar. Hay que decidir si se queda o se muda — y este documento se muda con
    ella. **Mientras no se decida, se queda acá**, que es donde funciona.

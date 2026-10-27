@@ -5,7 +5,7 @@ import { EstadoLista } from '../layout/EstadoLista';
 import { MAPA_DE_FONDO } from '../../config/mapaDeFondo';
 import { SIN_ZONA, puntosDeLaZona } from '../../lib/mapaDelPadron';
 
-/* El mapa del Padrón activo, agrupado por zona (`PRD_02_Panel_Admin.md` Módulo 2).
+/* El mapa del Padrón activo, agrupado por zona.
 
    QUÉ DECIDE ESTE ARCHIVO: nada. Los números, los grupos y el encuadre llegan armados de
    `lib/mapaDelPadron.js`; la dirección del fondo y la atribución, de `config/mapaDeFondo.js`;

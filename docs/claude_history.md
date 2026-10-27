@@ -1,6 +1,31 @@
 # Historial de decisiones de CLAUDE.md
 
-> Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
+> Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§9, «Protocolo de sesión») — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
+
+## Los errores del Panel del 4 y el 5 de octubre, y lo que se aprendió (2026-10-05)
+
+El 5 de octubre el Panel volvió entero a como estaba al cerrar el 1 de octubre, porque los cambios del 4 y del 5 lo habían dejado sin contenido, sin formato, sin tarjetas y sin información. Lo que quedó pendiente de esos días está en `docs/CAMBIOS_DESHECHOS_EL_5_DE_OCTUBRE.md`. Los errores se anotan acá para no repetirlos:
+
+- **El diseño v2 se aplicó de una sola vez.** Fueron 36 archivos en un solo cambio: aspecto, menú, nombres, cuatro secciones afuera, una columna afuera y las páginas fusionadas. El Desarrollador no pudo ver ninguna parte por separado antes de que estuviera publicada, y se sacaron páginas y una columna con información de trabajo sin presentarlas como pérdidas.
+- **Se demolió la página de entrada en vez de agregarle lo nuevo.** El pedido era sumar alertas a una página que funcionaba. Se la reemplazó entera por una tarjeta con once renglones y números, y salieron los cinco números de arriba, la tabla de Servicios, las dos donas y las incidencias. El plan decía que cada renglón es «una tarjeta, una lista o un gráfico», y se hizo una lista de renglones para todo. Se le hizo caso a una línea del plan («lo que sale del tablero…») por encima del sistema en marcha que el Desarrollador tenía aprobado.
+- **Se escribió una cosa y se hizo otra.** Lo dicho fue «las alertas entran en la página de entrada», y lo hecho fue sacar todo lo demás. Nadie comparó lo anunciado con lo que de verdad cambió.
+- **Se cambió una regla de todo el sistema dentro de un cambio de pantalla.** El aviso de salida pasó de 2 horas a 15 minutos dentro del cambio del tablero, y eso alteró la grilla de Guardias y los números de todo el Panel.
+- **Se dio por bueno lo que pasaba las pruebas.** Todas las pruebas pasaban con la página destruida, ninguna mira si una pantalla conserva sus tarjetas y su información, y nadie miró la pantalla publicada antes de seguir con el próximo cambio.
+- **Se encadenaron cambios de madrugada sin revisión entre ellos.** Entre las 0:31 y las 2:11 del 5 de octubre se publicaron cinco cambios, cada uno sobre el anterior, sin que el Desarrollador viera ninguno.
+- **Al arreglarlo, se volvió a mirar sólo una parte.** Ante el reclamo se empezó a rearmar la página de entrada sola; el Desarrollador tuvo que avisar que el daño estaba en todos lados, y el cambio del 4 de octubre no se revisó hasta ese momento.
+- **Se le dieron opciones que no podía distinguir.** Se le preguntó «hasta dónde devolver» con dos opciones descritas desde el código, y no desde lo que él ve en la pantalla.
+- **Se afirmó una lista completa que no lo estaba.** La primera lista de lo deshecho omitía cinco cambios: el menú reorganizado, los nombres, la sección de Clientes de Match, el lector QR y la columna Modalidad. Se presentó con seguridad hasta que él preguntó si era seguro, y recién ahí se comparó archivo por archivo.
+- **Se leyó mal un pedido.** «Lista cada paso dado desde el estado actual» pedía los cambios posteriores a lo que hoy está publicado, y se entregó la historia completa desde el 30 de septiembre.
+- **Antes, en la misma conversación:** se afirmó que existía un formulario público que no existe; se trató un Contacto como si fuera un pedido de servicio; se preguntaron cosas que ya estaban respondidas; y se dijo que los Clientes no estaban en el tablero cuando sí estaban.
+
+**Lo que se aprende:**
+
+- Un sistema en marcha se mejora sobre lo que anda. **Nunca se demuele para empezar de nuevo.**
+- **Lo que sale de una pantalla se nombra antes**, y se aprueba aparte.
+- Una línea de un plan no manda sobre lo que el Desarrollador tiene funcionando y aprobado: si chocan, se pregunta.
+- **Que pasen las pruebas no prueba que la pantalla esté bien.** Se mira la pantalla publicada.
+- Una lista que se presenta como completa sale de comparar archivo por archivo, nunca de la memoria.
+- Ante un reclamo, primero se mide todo el daño y después se arregla.
 
 ## Asistentes y Clientes entran con nombre de usuario
 
@@ -63,7 +88,7 @@
 - **Dice ahora:** no están. La única fuente del esquema es `supabase/migrations/` y la base real. Fuera de ahí no se guardan archivos `.sql` de esquema.
 - **Motivo, en palabras del Desarrollador:** *"todo archivo viejo debería ser suprimido dado que solo conduce a errores, siempre consulta el codigo y la base real, no lo que digan archivos que en su mayoría ya quedaron obsoletos"*. El costo era concreto y medible: cada vez que se releía uno de esos archivos volvía a discutirse algo ya decidido. El caso que colmó la paciencia fue el envío de correo, decidido el 2026-07-26 y vuelto a plantear varias veces porque un documento archivado seguía presentándolo como pregunta abierta.
 - **Lo que se salvó antes de borrar:** el archivo de siembra de las siete advertencias legales de Argentina vivía únicamente en una de esas carpetas muertas, así que una base armada desde cero quedaba sin una sola advertencia. Pasó a la cadena de migraciones antes de la eliminación.
-- **Lo que no se tocó:** `backend/src/db/connection.js`, que es código vivo, y los comentarios de las migraciones ya aplicadas, que son registro histórico y no se editan (`docs/MIGRACIONES.md` §4.1). En `docs/claude_history.md` los nombres de archivo borrados quedan nombrados en pasado, con la aclaración de que se eliminaron.
+- **Lo que no se tocó:** `backend/src/db/connection.js`, que es código vivo, y los comentarios de las migraciones ya aplicadas, que son registro histórico y no se editan («La base de datos: sólo por migraciones», de `celtatech/CLAUDE.md`). En `docs/claude_history.md` los nombres de archivo borrados quedan nombrados en pasado, con la aclaración de que se eliminaron.
 
 ## No hay depósito de documentos viejos ni de tareas cerradas (2026-08-18)
 
@@ -197,7 +222,7 @@
 
 - **Antes:** `CLAUDE.md` §7 tenía 11 reglas no negociables de desarrollo; no existía ninguna regla general sobre duplicación de lógica de negocio entre distintos puntos del código.
 - **Ahora:** se agregó la Regla 12 — toda decisión de negocio (regla de acceso, validación, cálculo, mapeo de estado/color, criterio de permisos, etc.) que aparezca en más de un lugar debe consumir una única función/constante/vista, nunca la misma condición copiada archivo por archivo; cuando la plataforma no permite compartir código directamente (ej. políticas RLS de Postgres), el punto único de verdad es una función SQL reutilizada por todas las políticas. También exige buscar primero (grep/lectura real) antes de asumir que un patrón no existe ya en el proyecto.
-- **Motivo:** durante el relevamiento de la Fase 5 (Personas autorizadas, PWA de Clientes) se encontraron 13 políticas RLS en 5 archivos de schema distintos, todas repitiendo a mano la misma condición `cliente_id = auth.uid()`, sin ninguna función central. El Desarrollador señaló el riesgo de contradicciones y dificultad de mantenimiento que eso implica. Se propuso primero limitarlo a una nota de convención en `docs/DATA_MODEL.md` (solo RLS/Cliente), pero el Desarrollador pidió explícitamente generalizarlo a todo el proyecto: "yo no limitaria la norma a rls y cliente, lo haria general al proyecto. No podemos permitirnos semejante descontrol". La redacción final fue confirmada por el Desarrollador antes de escribirla.
+- **Motivo:** durante el relevamiento de la Fase 5 (Personas autorizadas, PWA de Clientes) se encontraron 13 políticas RLS en 5 archivos de schema distintos, todas repitiendo a mano la misma condición `cliente_id = auth.uid()`, sin ninguna función central. El Desarrollador señaló el riesgo de contradicciones y dificultad de mantenimiento que eso implica. Se propuso primero limitarlo a una nota de convención en el documento del modelo de datos (solo RLS/Cliente), pero el Desarrollador pidió explícitamente generalizarlo a todo el proyecto: "yo no limitaria la norma a rls y cliente, lo haria general al proyecto. No podemos permitirnos semejante descontrol". La redacción final fue confirmada por el Desarrollador antes de escribirla.
 - **No reintroducir:** condiciones de negocio copiadas manualmente entre múltiples políticas RLS, componentes o endpoints sin pasar por una función/constante compartida — incluye no repetir el patrón viejo de `auth.uid()` directo al día que se implemente el helper `cliente_id_de_usuario()` de la Fase 5.
 
 ## Glosario: "Cumplimiento normativo" → "Documentación" (2026-07-18)
@@ -274,7 +299,7 @@
 - **Motivo:** el nombre viejo nombraba otra cosa. Una cooperativa es una **forma jurídica** de empresa —quién es dueño y cómo se reparte lo que gana—, y acá no se estaba hablando de eso. El Desarrollador describió la modalidad así: *"se contrata a terceras empresas que tienen su propio plantel de asistentes para que brinden un servicio que le subcontrataremos... servicio que tomaremos de un cliente (por ejemplo una obra social) y se lo derivemos para que lo cubran ellas"*. Eso es subcontratar, y la empresa que cubre puede ser una cooperativa, una S.A. o un monotributista: la forma jurídica no cambia en nada cómo funciona el sistema.
 - **Por qué se pudo renombrar sin romper la regla 13:** `CLAUDE.md` §7 regla 13 dice que un identificador guardado se nombra por su función y **no se renombra después**. Las dos mitades de la regla apuntan para el mismo lado en este caso: (a) el nombre viejo **no** nombraba su función, que es justamente lo que la regla pide, y (b) no hay dato guardado que proteger — se consultó la base viva antes de tocar nada y `prestadora_modalidades` solo tenía `directa | 2`, ni una fila con `cooperativa`. Renombrar hoy cuesta un `UPDATE` que no toca ninguna fila; renombrar con clientes adentro habría costado una migración de verdad.
 - **Alcance del cambio:** los tres `UPDATE` y las tres restricciones `CHECK` de la base (`prestadora_modalidades_modalidad_check`, `guardias_canal_modalidad_check` y `series_guardias_canal_modalidad_check`), las tres traducciones del Panel (`modalidades_cooperativa` → `modalidades_subcontratacion`, con "Subcontratación" / "Subcontracting" / "Subcontratação"), el mapa de nombres y el contador del Estado actual, y los comentarios de cinco archivos más.
-- **Qué se dejó tal cual, a propósito:** el historial. La migración inicial de la base, `supabase/historial_previo/` y los `.sql` de `backend/src/db/` guardaban el nombre viejo porque eran el registro de lo que se hizo ese día (`CLAUDE.md` §10); las tres cosas ya no están en el repositorio — las dos últimas se eliminaron el 2026-08-18 y la migración desapareció el 2026-08-19, absorbida por la foto de la base (`docs/MIGRACIONES.md` §2). Los dos PRD aprobados tampoco se reescriben: llevan un aviso arriba que dice que el nombre cambió y adónde mirar. Y en `docs/DESIGN_SYSTEM.md` la palabra "cooperativa" se queda donde está, porque ahí nombra a una empresa competidora que **de verdad es** una cooperativa.
+- **Qué se dejó tal cual, a propósito:** el historial. La migración inicial de la base, `supabase/historial_previo/` y los `.sql` de `backend/src/db/` guardaban el nombre viejo porque eran el registro de lo que se hizo ese día (`CLAUDE.md` §10); las tres cosas ya no están en el repositorio — las dos últimas se eliminaron el 2026-08-18 y la migración desapareció el 2026-08-19, absorbida por la foto de la base (`docs/MIGRACIONES.md` §1). Los dos PRD aprobados tampoco se reescriben: llevan un aviso arriba que dice que el nombre cambió y adónde mirar. Y en `docs/DESIGN_SYSTEM.md` la palabra "cooperativa" se queda donde está, porque ahí nombra a una empresa competidora que **de verdad es** una cooperativa.
 - **No reintroducir:** "cooperativa" como nombre de esta modalidad, ni "tercerización" o "derivación" a secas. Y sobre todo, no volver a meter una palabra de negocio en un PRD sin pasarla antes por el glosario — es la segunda vez que pasa (la primera fue "mostrador") y las dos veces el costo fue el mismo: renombrar todo después.
 
 ## El Servicio deja de estar "pendiente de definir" (2026-08-07)
@@ -336,7 +361,7 @@ La primera versión de la definición, escrita esa misma mañana, se corrigió c
 
 ## Las decisiones de los primeros días del proyecto (2026-07-07 y 2026-07-08)
 
-Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de este archivo. Se traen acá, que es donde corresponde (§10), porque siguen mandando sobre lo que se construye hoy. Se dejaron afuera, a propósito, las anotaciones que eran pasos de una jornada de trabajo y no decisiones: qué se instaló ese día, qué se probó, qué se publicó.
+Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de este archivo. Se traen acá, que es donde corresponde (`CLAUDE.md` §9, «Protocolo de sesión»), porque siguen mandando sobre lo que se construye hoy. Se dejaron afuera, a propósito, las anotaciones que eran pasos de una jornada de trabajo y no decisiones: qué se instaló ese día, qué se probó, qué se publicó.
 
 ### Se rechazó la gamificación de Asistentes: niveles, rankings y puntos (2026-07-07)
 
@@ -350,7 +375,7 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 
 - **Qué se decidió:** queda registrado como principio de negocio que Careonys debe poder funcionar con muy poca gente administrando. De ahí se sigue que **automatizar con inteligencia artificial todo lo que no comprometa el riesgo legal es deseable**, no un lujo.
 - **Motivo:** decisión de negocio explícita del Desarrollador. Es lo que hace viable el modelo: si cada Prestadora nueva obligara a sumar gente en la administración, el producto no escala.
-- **Qué condiciona hacia adelante:** el alcance de las etapas de inteligencia artificial. Los niveles que `docs/BUILD_ORDER.md` marca como diferidos pueden re-priorizarse por este motivo, a evaluar caso por caso cuando se llegue a esa etapa. Y sirve como criterio para descartar cualquier función que solo funcione si hay alguien mirando la pantalla todo el día.
+- **Qué condiciona hacia adelante:** el alcance de las etapas de inteligencia artificial. Los niveles de inteligencia artificial que se dejen para más adelante pueden re-priorizarse por este motivo, a evaluar caso por caso cuando se llegue a esa etapa. Y sirve como criterio para descartar cualquier función que solo funcione si hay alguien mirando la pantalla todo el día.
 
 ### De dónde salieron cuatro costumbres de pantalla que todavía rigen (2026-07-07)
 

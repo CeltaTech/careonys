@@ -26,6 +26,7 @@ rompiera la conexión al otro.
 | Qué se avisa | Dirección |
 |---|---|
 | Lo que se facturó | `POST /api/avisos-de-facturacion/<identificador de la Prestadora>` |
+| El comprobante emitido, en PDF | `POST /api/avisos-de-facturacion/<identificador de la Prestadora>/<factura_id>/comprobante` |
 | Que a un Cliente se le restringe el servicio por falta de pago | `POST /api/avisos-de-cobranza/<identificador de la Prestadora>` |
 
 En las dos, **el identificador de la Prestadora va en la dirección y nunca en el cuerpo**. Lo que
@@ -64,7 +65,8 @@ línea agregados.
 - **El reloj corrido.** El instante tiene que caer dentro de **cinco minutos** de la hora real, para
   adelante o para atrás. Sirve para que un pedido auténtico copiado hace meses no se pueda volver a
   mandar hoy.
-- **El tipo de contenido.** Tiene que ser `application/json`.
+- **El tipo de contenido.** Tiene que ser `application/json`, salvo al mandar el comprobante, que
+  va como `application/pdf`.
 
 **Se puede mandar más de una firma**, separadas por coma (`ts=…,v1=…,v1=…`), y alcanza con que una
 coincida. Sirve el día que se cambia el secreto: durante el cambio se mandan las dos y no se pierde
@@ -152,6 +154,25 @@ no termina cambiando lo que ya se había guardado.
 
 **Un renglón malo no arruina el pedido.** Los demás se anotan igual, y el que falló dice por qué.
 
+### El comprobante en PDF
+
+El archivo que emitió el software de facturación va aparte, en un pedido por factura, porque no
+siempre llega junto con los datos: con los datos alcanza para reclamar, y el PDF puede llegar
+después.
+
+```
+POST /api/avisos-de-facturacion/<identificador de la Prestadora>/<factura_id>/comprobante
+content-type: application/pdf
+x-signature: ts=<instante>,v1=<firma>
+```
+
+- **El cuerpo son los bytes del PDF**, tal cual, y la firma se calcula sobre esos mismos bytes.
+- **Hasta 5 MB.** Un archivo vacío, más pesado o que no empiece como empieza todo PDF se rechaza
+  con `400`, diciendo cuál de las tres cosas pasó.
+- **Mandarlo dos veces no hace daño.** El segundo se guarda aparte y la factura apunta al último.
+
+**Respuesta:** `{ "guardado": true }`.
+
 ---
 
 ## 4. Avisar cómo va la cobranza de un Cliente
@@ -216,11 +237,12 @@ inscripta esa persona y bajo qué condición es asunto de quien factura.
 | `200` | El pedido entró. Mirar los renglones de la respuesta | Nada |
 | `400` | El pedido estaba firmado bien, pero algún dato está mal. La respuesta dice cuál | Corregir el dato y reenviar |
 | `401` | No se pudo probar que el pedido sea auténtico | Ver más abajo |
-| `404` | Sólo en la puerta de cobranza: ese Cliente no es de esta Prestadora | Revisar el identificador |
+| `404` | En la puerta de cobranza, ese Cliente no es de esta Prestadora. Al mandar el comprobante, esa factura no es de esta Prestadora | Revisar el identificador |
 
-En la puerta de facturación no hay `404`: una factura que no es de esta Prestadora se contesta
-adentro de la respuesta, en su renglón, igual que si no existiera. Decir cuál identificador cae
-adentro y cuál no sería enseñar a encontrarlos.
+Al avisar lo facturado no hay `404`: una factura que no es de esta Prestadora se contesta
+adentro de la respuesta, en su renglón, igual que si no existiera. Al mandar el comprobante, la
+misma factura se contesta con `404`, igual que una que no existe. En los dos casos no se distingue
+una de la otra: decir cuál identificador cae adentro y cuál no sería enseñar a encontrarlos.
 
 **El `401` contesta siempre lo mismo, sin decir qué falló**, y es a propósito: detallar cuál de las
 comprobaciones no pasó es enseñar a pasarla. Las causas posibles son cinco, y conviene revisarlas en

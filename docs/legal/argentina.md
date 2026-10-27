@@ -24,7 +24,7 @@ Vínculo ya es un contrato de trabajo en relación de dependencia reconocido com
 
 | Función | Texto de advertencia mostrado al activar |
 |---|---|
-| Penalización de inasistencias o inconductas | Penalizar inasistencias o inconductas de un Asistente autónomo puede interpretarse como ejercicio de poder disciplinario, un indicio de subordinación bajo el art. 23 de la LCT. Evaluá si esta función es coherente con la modalidad de vínculo de tus Asistentes. |
+| Penalización de inasistencias o inconductas | Penalizar inasistencias o inconductas de un Asistente autónomo puede interpretarse como ejercicio de poder disciplinario, un indicio de subordinación bajo el art. 23 de la LCT. Evalúe si esta función es coherente con la modalidad de vínculo de sus Asistentes. |
 | Rankings | Publicar rankings que condicionan el acceso futuro a Guardias puede interpretarse como una forma de control jerárquico propia de una relación de dependencia (art. 23 LCT). |
 | Puntuaciones por aceptación de Guardia | Puntuar la aceptación de Guardias y usarlo para asignar futuras oportunidades puede funcionar como una exigencia de disponibilidad, un indicio de subordinación (art. 23 LCT) más que de autonomía real del Asistente. |
 | Puntuaciones por calificación de Cliente/Paciente | Condicionar oportunidades futuras a una calificación de terceros puede interpretarse como una forma de evaluación de desempeño propia de una relación laboral (art. 23 LCT). |

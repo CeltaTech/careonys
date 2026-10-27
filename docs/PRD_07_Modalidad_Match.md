@@ -1,30 +1,11 @@
 # Modalidad Match — diseño de negocio (Cliente ↔ Asistente)
 
-> Decisiones tomadas con el Desarrollador el 2026-07-24, antes de tocar código
-> (`CLAUDE.md` §11: inventario/decisión → plan → aprobación → código). Este documento fija
-> **qué se decidió y por qué**; la implementación (schema, UI, PWA) es un paso posterior,
-> todavía no iniciado, y debe volver a pasar por el control de características de
-> `CLAUDE.md` §12 antes de programarse.
-
-## 1. Qué ya existe en el código (punto de partida)
-
-- `asistentes.canales TEXT[]` (default `['directo','intermediacion']`) — un Asistente puede
-  estar en uno, otro o ambos canales a la vez (`docs/DATA_MODEL.md:222-230`, y el esquema
-  vigente en `supabase/migrations/`). Pendiente de aplicar contra Supabase real (ver
-  `docs/PLAN_HASTA_PRODUCCION.md`).
-- `calificaciones_asistente` — estrellas del Cliente, puramente informativas; la
-  Prestadora solo decide `visible_publica`, nunca edita el contenido ni dispara acción
-  automática sobre el Asistente (`docs/DATA_MODEL.md:589-612`, y el esquema vigente en
-  `supabase/migrations/`). Este diseño ya anticipaba correctamente el principio del §4 de
-  este documento, antes de que se discutiera en detalle.
+> Decisiones tomadas con el Desarrollador el 2026-07-24. Este documento fija **qué se decidió
+> y por qué**. Lo que falta construir está en `docs/PLAN_HASTA_PRODUCCION.md`.
 
 Las 2 modalidades de trabajo de una Prestadora —prestación directa e intermediación, cuyo
 nombre comercial es Match— son **combinables entre sí**, no mutuamente excluyentes: una
 Prestadora puede operar las dos a la vez.
-
-> La propuesta cruda del §8 nombra unas «Cooperativas» como si fueran una tercera modalidad.
-> No lo son: trabajar con una empresa subcontratada o tercerizada es un recurso dentro de la
-> prestación directa (`celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md`).
 
 ## 2. Principio central: quién ejerce el control
 
@@ -299,63 +280,3 @@ persona):
 - Consentimiento de geolocalización (§6), activable/revocable en cualquier momento.
 - **No incluye**: horario fijado por la plataforma, precio fijado por la plataforma,
   ranking global que condicione su acceso a futuras oportunidades.
-
-## 8. Propuesta original del Desarrollador para el dashboard (sin rearmar todavía)
-
-Antes de entrar en el detalle de Match (§2-7), el Desarrollador ya había dejado esta
-propuesta cruda de agrupación para el dashboard de Admin_prestadora, pidiendo explícitamente
-"rearma tu esquema en función de esto y dime si estoy dejando algo afuera de
-consideración" — pedido que quedó sin responder porque la conversación pasó primero a la
-corrección de arquitectura de 3 niveles (`ARQUITECTURA_NIVELES.md`) y luego a resolver las
-4 preguntas abiertas de Match (§2-7 de este documento). Se deja registrada tal cual,
-textual, para no perderla:
-
-**a) Prestación directa** (la modalidad más común hoy en Argentina):
-- **Clientes/pacientes** (nombre comercial todavía por definir) — todo lo
-  referente a captación y configuración del Cliente, más los planes que contrató y los
-  acuerdos de aceptación de esos planes. Distinguir si el servicio es contratado en forma
-  directa o es derivación de obra social u otro sistema todavía no considerado.
-- **Asistentes** — todo lo referente a la gestión de los Asistentes.
-- **Facturación, pagos y cobranzas**.
-- **Administración de servicios** (Guardias, etc.).
-
-**b) Match** (similar a cuidarlos.com):
-- Los Clientes tratan a través del sistema la contratación de Asistentes, con todo el
-  soporte y coberturas adicionales que se ofrezcan.
-- Los Asistentes comparten con la modalidad directa todo lo referente a reclutamiento,
-  calificación y capacitación — un solo Padrón, un solo proceso de verificación (ya
-  confirmado como infraestructura común a ambos modelos en `docs/PLAN_HASTA_PRODUCCION.md`) —
-  pudiendo ofrecerse a ambas partes el uso de PWA adaptadas a ese uso limitado, excluyendo
-  toda implicancia de la Prestadora en el vínculo contractual entre ambas partes.
-
-**c) Cooperativas**: mostrar las herramientas necesarias para administrarlas dentro de lo
-ya hablado (sin mayor detalle todavía).
-
-**Todavía pendiente**: el "rearme del esquema" en sí (cómo quedan agrupados estos bloques
-en la UI del dashboard, qué falta considerar) — es el próximo paso de diseño antes de tocar
-código, ahora que las 4 preguntas de Match (§2-7) y la separación de niveles ya están
-resueltas y no van a hacer cambiar la respuesta.
-
-## 9. Qué falta antes de escribir código
-
-> Revisado contra la base y el código el 2026-08-19. De los cuatro puntos que este apartado
-> listaba, tres ya estaban construidos y solo seguían escritos acá.
-
-- **La columna `asistentes.canales` existe pero no la lee nadie.** Está creada en la base,
-  con su regla (`directo`, `intermediacion`, al menos uno) y su valor de arranque, y ninguna
-  pantalla ni ruta del backend la consulta: hoy nada impide ofrecerle una guardia de
-  Match a un Asistente que solo trabaja en prestación directa. Tiene fila propia,
-  la `#154`, en `docs/PLAN_HASTA_PRODUCCION.md`.
-- **Rediseño del dashboard de Admin_prestadora** en "grupos fundamentales" por modalidad —
-  este documento alimenta ese rediseño, todavía no iniciado.
-
-Ya no está pendiente lo demás que este apartado daba por hacer: la columna `canales` está
-aplicada contra la base real, y las advertencias de Match están escritas en
-`docs/legal/argentina.md`, que lleva su propia nota de revisión pendiente por un abogado
-laboralista — no hace falta repetirla acá.
-
-El cobro del Cliente tiene su modelo de datos y su backend construidos —período de prueba y
-próxima fecha, historial de cobros, credenciales de pasarela por Prestadora y las puertas por las
-que seis proveedores de pago dejan sus datos—. Lo que falta son los resguardos del §3: la baja en un clic, el corte
-diferido, el mensaje previo al primer cobro y el período de gracia con reintentos. Están en
-`docs/PLAN_HASTA_PRODUCCION.md`, sección «El dinero».

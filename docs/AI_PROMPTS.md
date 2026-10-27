@@ -1,9 +1,9 @@
-# AI_PROMPTS.md — Prompts de sistema para Claude Sonnet (Anthropic API)
+# AI_PROMPTS.md — Prompts de sistema para Claude (Anthropic API)
 
 > Fuente: documento único original de especificación (histórico) Parte O (PRD App de Servicio). Estos son los
 > prompts exactos a usar — no reformular ni "mejorar" sin actualizar este archivo primero,
-> porque el contrato JSON de salida está acoplado a los campos de `reportes` y `alertas`
-> en `DATA_MODEL.md`.
+> porque el contrato JSON de salida está acoplado a las columnas de `reportes` y `alertas`
+> en la base.
 
 **Con qué modelo se habla no se decide en estos prompts.** El nombre del modelo vive en un solo
 lugar, `backend/src/config/modeloIA.js`, y se puede cambiar desde afuera con la variable de entorno
@@ -102,11 +102,12 @@ Lo único que **no** se configura: una alerta roja siempre le llega al Coordinad
 encontró algo urgente, alguien de la Prestadora tiene que enterarse, y eso no se puede apagar. La
 pantalla lo dice con todas las letras en vez de mostrar un interruptor trabado.
 
-Ver tabla de notificaciones en `PRD_02_Panel_Admin.md`.
+De fábrica (`configuracion_alertas_ia`): la alerta roja va al Coordinador y al Cliente; la
+amarilla, sólo al Coordinador.
 
 ## Cómo trata la IA a quien la lee
 
-La regla 1 de `CLAUDE.md` — el texto que ve una persona nunca la tutea — **también rige lo
+La regla «Trato de usted, en imperativo y en voz activa» de `celtatech/CLAUDE.md` — el texto que ve una persona nunca la tutea — **también rige lo
 que escribe la IA**. Da igual que la frase la redacte el modelo en el momento y no esté
 guardada en ningún archivo: la lee la misma persona.
 
@@ -168,13 +169,13 @@ nuevo se lee con esa función, no a mano.
 ## Reglas comunes a ambos niveles
 
 - Nunca loguear el texto libre del reporte ni el JSON de salida en logs de servidor
-  accesibles fuera del equipo técnico — contiene datos de salud del paciente (regla 7 de
-  `CLAUDE.md`).
+  accesibles fuera del equipo técnico — contiene datos de salud del paciente
+  (`celtatech/CLAUDE.md` §6).
 - El texto que devuelve la IA no tutea a quien lo lee — ver "Cómo trata la IA a quien la lee".
 - La respuesta se lee con `jsonDeRespuestaIA()`, nunca con `JSON.parse` directo — ver "Cómo se
   lee lo que devuelve el modelo".
 - El prompt de sistema completo (no solo el nombre del "nivel") debe versionarse junto con
   el código — si se cambia el prompt, es un cambio de comportamiento del producto, no un
   detalle de implementación menor.
-- Ambos niveles usan Claude Sonnet vía Anthropic API. La API key vive en variable de
-  entorno, nunca en el código ni en el repo.
+- Ambos niveles usan Anthropic API, con el modelo de `backend/src/config/modeloIA.js`. La API
+  key vive en variable de entorno, nunca en el código ni en el repo.

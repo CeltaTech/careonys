@@ -17,7 +17,8 @@
 //      la publicación; uno que dejó de usarla también, hasta que se lo saque de la lista.
 //   2. Que la lista no crezca. Se compara contra la versión anterior de la misma lista: la del
 //      último push en GitHub (`BASE`) o la del último commit en la máquina. Agregarle un renglón
-//      no destraba nada: también corta.
+//      no destraba nada: también corta. Lo único que no cuenta como renglón nuevo es un archivo
+//      que git reconoce como renombrado de uno que ya estaba.
 //
 // Cuando las dos listas lleguen a cero se borran, junto con este chequeo, y la llave se da de
 // baja en Supabase (docs/PLAN_HASTA_PRODUCCION.md, «Los cimientos»).
@@ -70,6 +71,30 @@ function anterior() {
 }
 const antes = anterior();
 
+// Un archivo que sólo cambió de nombre no es un archivo nuevo: es el mismo renglón con otro nombre.
+// Se miran los renombres desde la última vez que se escribió la lista, porque el renombre pudo
+// haber subido en un push anterior que ya cortó por esto mismo.
+function renombres() {
+  const base = process.env.BASE;
+  const desde = base && !/^0+$/.test(base) ? base : 'HEAD';
+  const nombreNuevo = new Map();
+  try {
+    const escrita = git('log', '-1', '--format=%H', desde, '--', LISTA).trim();
+    if (!escrita) return nombreNuevo;
+    const salida = git('log', '-M', '--diff-filter=R', '--name-status', '--format=', '--reverse', `${escrita}..HEAD`);
+    for (const renglon of salida.split('\n')) {
+      const [estado, viejo, nuevo] = renglon.split('\t');
+      if (!estado?.startsWith('R')) continue;
+      for (const [origen, destino] of nombreNuevo) if (destino === viejo) nombreNuevo.set(origen, nuevo);
+      nombreNuevo.set(viejo, nuevo);
+    }
+  } catch {
+    // Sin historia no hay renombres que reconocer, y la regla corre como siempre.
+  }
+  return nombreNuevo;
+}
+const renombrados = renombres();
+
 const fallas = [];
 for (const clave of Object.keys(hoy)) {
   const lista = new Set(guardada[clave] ?? []);
@@ -81,7 +106,7 @@ for (const clave of Object.keys(hoy)) {
     if (!real.has(r)) fallas.push(`${r} ya no la usa: hay que sacarlo de la lista (${clave}).`);
   }
   if (antes) {
-    const previa = new Set(antes[clave] ?? []);
+    const previa = new Set((antes[clave] ?? []).map((r) => renombrados.get(r) ?? r));
     for (const r of lista) {
       if (!previa.has(r)) fallas.push(`${r} se agregó a la lista, y la lista sólo puede achicarse (${clave}).`);
     }

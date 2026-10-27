@@ -54,7 +54,7 @@
 //   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
 //                                    al Cliente), pedido por routes/panelGuardias.js
 //   emergencia_en_guardia          → routes/appAsistentes.js (notificarCoordinador)
-//   no_puede_continuar_la_extension→ routes/appAsistentes.js (notificarCoordinador)
+//   relevo_de_emergencia           → routes/appAsistentes.js y utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
 //   ausencia_avisada_con_tiempo    → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 //   ausencia_de_golpe              → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 //   vuelta_de_ausencia_sin_confirmar    → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
@@ -207,14 +207,14 @@ export const CATALOGO_MENSAJES = [
     se_puede_apagar: false,
   },
   {
-    evento: 'no_puede_continuar_la_extension',
-    descripcion: 'El Asistente que se quedó esperando el relevo avisó que no puede continuar',
+    evento: 'relevo_de_emergencia',
+    descripcion: 'El Asistente pidió un relevo de emergencia',
     admite_whatsapp: true,
     // Tampoco por esta puerta. Acá además hay un turno que puede terminar sin nadie adentro, y esa
     // conversación con el Cliente la tiene la Prestadora, no un mensaje automático.
     admite_cliente: false,
-    // Es el mensaje más urgente que emite el producto: la única persona que está tapando el agujero
-    // dice que ya no da más. Nunca se apaga.
+    // Es el mensaje más urgente que emite el producto: la única persona que está con el Paciente
+    // pide que la releven. Nunca se apaga.
     se_puede_apagar: false,
   },
   {

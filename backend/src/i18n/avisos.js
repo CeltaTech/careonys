@@ -313,9 +313,9 @@ const ARMADORES = {
 
   // Lo mismo: lo que escribió no entra acá. Y el texto no pide nada ni sugiere qué hacer — quien
   // decide es quien coordina.
-  no_puede_continuar_la_extension: (t, d) => ({
-    asunto: t('no_puede_continuar_la_extension.asunto'),
-    texto: t('no_puede_continuar_la_extension.texto', {
+  relevo_de_emergencia: (t, d) => ({
+    asunto: t('relevo_de_emergencia.asunto'),
+    texto: t('relevo_de_emergencia.texto', {
       fecha: d.fecha,
       horaInicio: d.horaInicio,
       horaFin: d.horaFin,

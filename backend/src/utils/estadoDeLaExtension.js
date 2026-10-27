@@ -4,8 +4,8 @@ import { pasosDeLaBusqueda } from './extensionDeTurno.js';
 /* Lo que se le muestra a la que quedó de más.
    ==========================================================================
 
-   Tres cosas, y ninguna más: desde qué hora está de más, si ya avisó que no puede continuar, y en
-   qué anda la búsqueda del relevo.
+   Tres cosas, y ninguna más: desde qué hora está de más, cuándo avisó por última vez que no puede
+   continuar, y en qué anda la búsqueda del relevo.
 
    SIN NINGÚN NOMBRE. Quién faltó, quién viene, a quién se le asignó el turno: nada de eso se le
    cuenta. No es información que le sirva —no puede llamar a nadie desde adentro de un turno— y
@@ -19,10 +19,10 @@ import { pasosDeLaBusqueda } from './extensionDeTurno.js';
 /**
  * El estado de la extensión abierta de un turno, o `null` si no hay ninguna.
  *
- * Cuesta hasta cuatro consultas, así que se llama sólo cuando hace falta: la enorme mayoría de los
+ * Cuesta hasta cinco consultas, así que se llama sólo cuando hace falta: la enorme mayoría de los
  * turnos no tiene extensión, y la primera consulta corta ahí.
  *
- * Las cuatro van con la credencial del trabajo de esa Prestadora, que la base acota a ella. Si no
+ * Las cinco van con la credencial del trabajo de esa Prestadora, que la base acota a ella. Si no
  * se pudo leer, no hay nada que mostrar: lo mismo que cuando una consulta falla.
  */
 export async function estadoDeLaExtension({ guardiaId, prestadoraId }) {
@@ -40,7 +40,7 @@ export async function estadoDeLaExtension({ guardiaId, prestadoraId }) {
 async function leerLaExtension(db, { guardiaId, prestadoraId }) {
   const { data: extension, error } = await db
     .from('extensiones_de_turno')
-    .select('id, desde_at, relevo_guardia_id, no_puede_continuar_at')
+    .select('id, desde_at, relevo_guardia_id')
     .eq('guardia_id', guardiaId)
     .eq('prestadora_id', prestadoraId)
     .is('hasta_at', null)
@@ -52,6 +52,7 @@ async function leerLaExtension(db, { guardiaId, prestadoraId }) {
   }
   if (!extension) return null;
 
+  const noPuedeContinuarAt = await ultimoRelevoDeEmergencia(db, { guardiaId, prestadoraId, desde: extension.desde_at });
   const relevo = await elRelevo(db, extension.relevo_guardia_id, prestadoraId);
   const { coordinacionAvisada, escalado } = await comoVaElMensaje(db, {
     guardiaId,
@@ -61,9 +62,32 @@ async function leerLaExtension(db, { guardiaId, prestadoraId }) {
 
   return {
     desdeAt: extension.desde_at,
-    noPuedeContinuarAt: extension.no_puede_continuar_at,
+    noPuedeContinuarAt,
     pasos: pasosDeLaBusqueda({ relevo, coordinacionAvisada, escalado }),
   };
+}
+
+/**
+ * La última vez que pidió el Relevo de emergencia desde que quedó de más. Se puede pedir más de una
+ * vez, y cada pedido es una emergencia de la guardia con su hora.
+ */
+async function ultimoRelevoDeEmergencia(db, { guardiaId, prestadoraId, desde }) {
+  const { data, error } = await db
+    .from('emergencias_guardia')
+    .select('reportado_at')
+    .eq('guardia_id', guardiaId)
+    .eq('prestadora_id', prestadoraId)
+    .eq('relevo_de_emergencia', true)
+    .gte('reportado_at', desde)
+    .order('reportado_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(`Error leyendo el relevo de emergencia del turno ${guardiaId}:`, error.message);
+    return null;
+  }
+  return data?.reportado_at ?? null;
 }
 
 async function elRelevo(db, relevoId, prestadoraId) {

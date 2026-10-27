@@ -29,6 +29,7 @@ const GUARDIAS = 'GET /rest/v1/guardias';
 const INCIDENTES_RELEVO = 'GET /rest/v1/incidentes_relevo';
 const SIN_CUBRIR = 'GET /rest/v1/incidentes_turno_sin_cubrir';
 const ESCALONES = 'GET /rest/v1/escalones_de_alarma_avisados';
+const EMERGENCIAS = 'GET /rest/v1/emergencias_guardia';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba pisa lo que necesita cambiar. */
 const respuestas = new Map();
@@ -91,8 +92,9 @@ beforeEach(() => {
 /** Una extensión abierta, esperando a `RELEVO`. */
 function prepararExtensionAbierta() {
   respuestas.set(EXTENSIONES, [
-    { id: 'ext-1', desde_at: '2026-01-10T08:00:00Z', relevo_guardia_id: RELEVO, no_puede_continuar_at: null },
+    { id: 'ext-1', desde_at: '2026-01-10T08:00:00Z', relevo_guardia_id: RELEVO },
   ]);
+  respuestas.set(EMERGENCIAS, []);
   respuestas.set(GUARDIAS, [{ id: RELEVO, asistente_id: 'asis-1', checkin_at: null }]);
   respuestas.set(INCIDENTES_RELEVO, [{ id: INCIDENTE, ultima_notificacion_at: '2026-01-10T08:05:00Z' }]);
   respuestas.set(SIN_CUBRIR, []);
@@ -100,14 +102,14 @@ function prepararExtensionAbierta() {
 }
 
 describe('el estado de la extensión de un turno', () => {
-  it('las cuatro tablas se leen con la credencial del trabajo de la Prestadora', async () => {
+  it('las seis tablas se leen con la credencial del trabajo de la Prestadora', async () => {
     prepararExtensionAbierta();
 
     await estadoDeLaExtension({ guardiaId: GUARDIA, prestadoraId: PRESTADORA });
 
     assert.deepEqual(
       [...new Set(llamadas.map((l) => l.clave))].sort(),
-      [ESCALONES, EXTENSIONES, GUARDIAS, INCIDENTES_RELEVO, SIN_CUBRIR].sort(),
+      [EMERGENCIAS, ESCALONES, EXTENSIONES, GUARDIAS, INCIDENTES_RELEVO, SIN_CUBRIR].sort(),
     );
     for (const llamada of llamadas) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
@@ -123,6 +125,18 @@ describe('el estado de la extensión de un turno', () => {
     assert.equal(estado.desdeAt, '2026-01-10T08:00:00Z');
     assert.equal(estado.noPuedeContinuarAt, null);
     assert.ok(Array.isArray(estado.pasos));
+  });
+
+  it('el último Relevo de emergencia desde que quedó de más viaja con la extensión', async () => {
+    prepararExtensionAbierta();
+    respuestas.set(EMERGENCIAS, [{ reportado_at: '2026-01-10T08:20:00Z' }]);
+
+    const estado = await estadoDeLaExtension({ guardiaId: GUARDIA, prestadoraId: PRESTADORA });
+
+    assert.equal(estado.noPuedeContinuarAt, '2026-01-10T08:20:00Z');
+    const consulta = llamadas.find((l) => l.clave === EMERGENCIAS);
+    assert.ok(consulta.url.includes('relevo_de_emergencia=eq.true'), consulta.url);
+    assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
   });
 
   it('sin extensión abierta devuelve null y no sigue consultando', async () => {

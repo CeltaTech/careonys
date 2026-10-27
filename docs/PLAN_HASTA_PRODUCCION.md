@@ -383,17 +383,15 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   mensaje «No tiene permiso para verificar el registro de accesos». Cierre: una migración nueva los
   renombra y el mensaje sale del catálogo aprobado.
 
-**8.** **«No puedo continuar», rehecho con la credencial de la persona.** Es la tercera etapa de
-la sección «El Paciente nunca queda solo», y va acá porque hoy escribe con la llave maestra:
-`extensiones_de_turno` no tiene ninguna política para el Asistente
-(`backend/src/routes/appAsistentes.js:1276`). Hacerlo después sería escribirlo dos veces.
+**8.** **El botón del Relevo de emergencia en la aplicación del Asistente.** El backend ya lo
+guarda con la credencial del Asistente, como una emergencia de la guardia, y le hace sonar la
+alarma al Coordinador. La aplicación todavía lo muestra sólo durante una extensión del turno y una
+sola vez (`pwa-asistentes/src/components/ExtensionDeTurno.jsx`). Pasa a estar **en cualquier
+momento de la guardia en curso, y se puede apretar más de una vez**. Espera el sí del Desarrollador
+para tocar la interfaz.
 
-Cambia además lo que hace, según lo decidido allá: **se puede apretar en cualquier momento de la
-guardia**, no sólo durante una extensión y no una sola vez; **nunca cierra la guardia**; la deja
-en «Salida de emergencia solicitada» y le hace sonar la alarma al Coordinador.
-
-**Comprobación:** con la credencial de un Asistente, apretarlo en su guardia anota el pedido y
-dispara la alarma; en la guardia de otro Asistente, la base dice que no.
+**Comprobación:** en la aplicación, con una guardia en curso y sin extensión, el botón está y cada
+toque le llega al Coordinador.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
@@ -638,7 +636,7 @@ Coordinadores la ve cualquiera. Se les avisa a las Prestadoras antes de publicar
 nadie que use el producto nota nada, salvo que a partir de acá un error de programación no puede
 filtrar datos de otra Prestadora.
 
-**La excepción es «No puedo continuar»** (paso 8), que cambia lo que hace porque así se decidió
+**La excepción es el Relevo de emergencia** (paso 8), que cambia lo que hace porque así se decidió
 para que el Paciente nunca quede solo. Sus textos y su pantalla esperan la aprobación del
 Desarrollador como cualquier otro.
 
@@ -931,7 +929,8 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
   opera guardias.
 - **El relevo confirma antes de ir**, con la anticipación que fija la Prestadora. Si no confirma,
   el Coordinador recibe una alarma temprana.
-- **«No puedo continuar»** se rehace dentro de los cimientos (paso 8).
+- **El Relevo de emergencia** se puede pedir en cualquier momento de la guardia, más de una vez,
+  y no la cierra: le hace sonar la alarma al Coordinador. Falta su botón en la aplicación (paso 8).
 - **Si el Asistente no vino o se fue**, se detecta por la ubicación fuera sin aviso, por la
   aplicación cerrada, por el botón «Paciente sin Asistente» del Cliente o porque el relevo no
   encontró a nadie —y entonces entra con el código QR del Cliente—. Queda como «Egreso sin
@@ -955,7 +954,7 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
   el cierre automático.
 
 **Las palabras nuevas ya están aprobadas** y entran al glosario: Paciente sin Asistente, Egreso sin
-relevo, Horas no cubiertas, Salida con el Paciente, Salida de emergencia solicitada y Salida sin
+relevo, Horas no cubiertas, Salida con el Paciente, Relevo de emergencia y Salida sin
 Reporte Diario.
 
 **Cada pantalla nueva espera su sí para tocar la interfaz, y cada texto visible su aprobación,
@@ -1201,7 +1200,7 @@ fue otra cosa, busca la solución; si no puede resolverlo, lo pasa al escalón d
 
 **Cómo se cierra un turno, qué pasa sin Reporte Diario y qué se le avisa al Cliente** está en la
 sección «El Paciente nunca queda solo». De ahí salen también los estados nuevos que este tablero
-tiene que mostrar: Salida sin Reporte Diario, Egreso sin relevo y Salida de emergencia solicitada.
+tiene que mostrar: Salida sin Reporte Diario, Egreso sin relevo y Relevo de emergencia.
 
 **Lo que sale del tablero.** Turnos de hoy, Servicios en curso y Asistentes trabajando, porque no
 piden hacer nada. Y las cuentas esperando su contraseña, que desaparecen con la regla del número nuevo,

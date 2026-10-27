@@ -445,7 +445,7 @@ async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
 
   const { data: emergencias, error } = await supabase
     .from('emergencias_guardia')
-    .select('id, guardia_id, reportado_at, ultima_notificacion_at, veces_notificado')
+    .select('id, guardia_id, reportado_at, ultima_notificacion_at, veces_notificado, relevo_de_emergencia')
     .eq('prestadora_id', prestadoraId)
     .is('atendida_at', null);
 
@@ -473,16 +473,19 @@ async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
   for (const emergencia of emergencias) {
     if (tomadas.has(emergencia.id)) continue;
     const guardia = guardias.get(emergencia.guardia_id) ?? GUARDIA_QUE_NO_SE_PUDO_LEER;
-    const mensaje = mensajeDelSistema('emergencia_en_guardia', idioma, {
+    // El Relevo de emergencia viaja por la misma alarma, con su propio aviso.
+    const evento = emergencia.relevo_de_emergencia ? 'relevo_de_emergencia' : 'emergencia_en_guardia';
+    const mensaje = mensajeDelSistema(evento, idioma, {
       fecha: guardia.fecha,
       horaInicio: guardia.horaInicio,
+      horaFin: guardia.horaFin,
     });
     const minutosPremura = (ahora.getTime() - new Date(emergencia.reportado_at).getTime()) / 60_000;
     // Con su propio ritmo, no con los tramos de las demás alarmas: ver `intervaloDeEmergencia`.
     const intervalo = intervaloDeEmergencia(config, minutosPremura);
 
     if (necesitaNotificar({ ultimaNotificacionAt: emergencia.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
-      await notificarCoordinador({ evento: 'emergencia_en_guardia', prestadoraId, ...mensaje });
+      await notificarCoordinador({ evento, prestadoraId, ...mensaje });
 
       await supabase
         .from('emergencias_guardia')

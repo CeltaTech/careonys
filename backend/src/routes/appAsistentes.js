@@ -1215,95 +1215,102 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   res.json({ ok: true, reportadoAt });
 });
 
-/* «No puedo continuar»: el botón de la que se quedó de más.
+/* «No puedo continuar»: el Relevo de emergencia.
    --------------------------------------------------------------------------
-   Aparece solamente cuando su turno ya terminó y ella sigue adentro porque el relevo no llegó.
+   Se puede apretar en cualquier momento de la guardia en curso, también en el rato de más en que
+   se quedó esperando el relevo, y más de una vez: cada vez es un hecho con su hora.
 
    NO LA LIBERA, Y ESO NO ES UN DESCUIDO. Irse deja al Paciente solo, y eso la expone a ella: el
-   producto no puede ofrecerle un botón que la meta en un problema. Lo que hace este botón es
-   decirle a quien coordina, con la máxima urgencia, que la persona que está tapando el agujero ya
-   no da más. De ahí en adelante decide quien coordina, que es quien puede ir, mandar a alguien o
-   hablar con el cliente.
+   producto no puede ofrecerle un botón que la meta en un problema. La guardia no se cierra: queda
+   con el relevo pedido y le suena al Coordinador la misma alarma que una emergencia, con la misma
+   insistencia y la misma escalera (`utils/revisarNotificacionesCoordinador.js`). De ahí en
+   adelante decide quien coordina, que es quien puede ir, mandar a alguien o hablar con el cliente.
 
-   SIN ESTE BOTÓN, UNA EMERGENCIA PROPIA DE ELLA LA DEJA SIN NADA QUE APRETAR. El botón de
-   emergencia de la guardia deja de estar cuando la guardia terminó, y justo en el rato de más es
-   cuando más falta hace.
+   Todo con la credencial de quien lo aprieta: la base le deja escribir y leer sólo las emergencias
+   de sus propias guardias.
 
-   SE PUEDE APRETAR UNA SOLA VEZ POR EXTENSIÓN. Repetirlo no agrega ninguna información —quien
-   coordina ya está enterado— y multiplicaría avisos iguales, que terminan en un filtro del correo.
-
-   LO QUE ESCRIBIÓ NO SALE HACIA AFUERA. El aviso dice que pasó y de qué turno; el texto se lee
+   LO QUE ESCRIBIÓ NO SALE HACIA AFUERA. El aviso dice que pasó y de qué guardia; el texto se lee
    entrando al Panel (`celtatech/CLAUDE.md` §6). Y el detalle es opcional: quien está en el medio
    de algo puede no estar en condiciones de escribir nada. */
 appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistente, async (req, res) => {
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
 
-  // SIGUE CON LA LLAVE MAESTRA, igual que las dos escrituras de más abajo: `extensiones_de_turno`
-  // no tiene ninguna política para el Asistente.
-  const { data: extension, error: errorExtension } = await supabase
-    .from('extensiones_de_turno')
-    .select('id, no_puede_continuar_at')
-    .eq('guardia_id', guardia.id)
-    .eq('prestadora_id', guardia.prestadora_id)
-    .is('hasta_at', null)
-    .maybeSingle();
+  // Cuándo pasó, no cuándo se pudo enviar, con el mismo criterio que el aviso de emergencia.
+  const avisadoAt = horaDelHecho(req.body?.ocurrido_at);
 
-  if (errorExtension) {
-    return responderError(res, errorExtension);
+  // En curso, con el mismo criterio y por los mismos motivos que el aviso de emergencia. El rato de
+  // más esperando el relevo también lo está: la salida no se marcó.
+  const enCurso = guardia.checkin_at && (!guardia.checkout_at || new Date(avisadoAt) <= new Date(guardia.checkout_at));
+  if (!enCurso) {
+    return responderError(res, new ErrorConMotivo('no_encontrado', 'relevo de emergencia fuera de la guardia en curso'));
   }
-  // Sin extensión abierta no hay nada que avisar: su turno está corriendo y para eso está el botón
-  // de emergencia, que sí está a mano en esa pantalla.
-  if (!extension) {
-    return responderError(res, new ErrorConMotivo('no_encontrado', 'no hay extension abierta'));
-  }
-  if (extension.no_puede_continuar_at) {
-    return res.json({ ok: true, avisadoAt: extension.no_puede_continuar_at });
+
+  // Un reenvío de la cola no escribe un segundo pedido: lo reconoce el identificador que el
+  // teléfono puso antes del primer intento.
+  const clienteUuid = identificadorDelTelefono(req.body);
+  const yaEstaba = await filaDeEsteMensaje({
+    db,
+    tabla: 'emergencias_guardia',
+    prestadoraId: guardia.prestadora_id,
+    guardiaId: guardia.id,
+    clienteUuid,
+    campos: 'id, reportado_at',
+  });
+  if (yaEstaba) {
+    return res.json({ ok: true, yaRegistrado: true, avisadoAt: yaEstaba.reportado_at });
   }
 
   const detalle = typeof req.body?.detalle === 'string' ? req.body.detalle.trim() : '';
 
-  // Cuándo pasó, no cuándo se pudo enviar, con el mismo criterio que el aviso de emergencia.
-  const avisadoAt = horaDelHecho(req.body?.ocurrido_at);
-
-  const { error } = await supabase
-    .from('extensiones_de_turno')
-    .update({
-      no_puede_continuar_at: avisadoAt,
+  const { data: salida, error } = await db
+    .from('emergencias_guardia')
+    .insert({
+      prestadora_id: guardia.prestadora_id,
+      guardia_id: guardia.id,
+      reportado_por: req.usuarioAsistente.id,
+      reportado_at: avisadoAt,
+      cliente_uuid: clienteUuid,
+      relevo_de_emergencia: true,
       // Un tope, para que un teléfono con un problema no escriba un texto sin fin. Se recorta y se
       // guarda igual: un aviso así no se pierde porque alguien escribió de más.
-      no_puede_continuar_detalle: detalle ? detalle.slice(0, 2000) : null,
+      detalle: detalle ? detalle.slice(0, 2000) : null,
     })
-    .eq('id', extension.id)
-    .eq('prestadora_id', guardia.prestadora_id);
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     return responderError(res, error);
   }
 
+  empujar(guardia.prestadora_id, ASUNTOS.EMERGENCIAS_SIN_ATENDER);
+
   // Se guarda primero y se avisa después, adentro de un `try`. Si el envío falla, la fila queda con
   // `ultima_notificacion_at` en blanco y nunca se le devuelve un error a quien avisó: su acto ya
   // está guardado, que es lo que la protege.
   try {
-    const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), guardia.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(db, guardia.prestadora_id);
     await notificarCoordinador({
-      evento: 'no_puede_continuar_la_extension',
+      evento: 'relevo_de_emergencia',
       prestadoraId: guardia.prestadora_id,
-      ...mensajeDelSistema('no_puede_continuar_la_extension', idioma, {
+      ...mensajeDelSistema('relevo_de_emergencia', idioma, {
         fecha: guardia.fecha,
         horaInicio: guardia.hora_inicio,
         horaFin: guardia.hora_fin,
       }),
     });
-    await supabase
-      .from('extensiones_de_turno')
-      .update({ ultima_notificacion_at: new Date().toISOString(), veces_notificado: 1 })
-      .eq('id', extension.id)
-      .eq('prestadora_id', guardia.prestadora_id);
+    if (salida?.id) {
+      await db
+        .from('emergencias_guardia')
+        .update({ ultima_notificacion_at: new Date().toISOString(), veces_notificado: 1 })
+        .eq('id', salida.id)
+        .eq('prestadora_id', guardia.prestadora_id);
+    }
   } catch (e) {
-    console.error('Error avisando al Coordinador de que no puede continuar la extension:', e.message);
+    console.error('Error avisando al Coordinador de un Relevo de emergencia:', e.message);
   }
 
   res.json({ ok: true, avisadoAt });

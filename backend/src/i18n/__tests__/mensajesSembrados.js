@@ -28,6 +28,7 @@ const MIGRACIONES_POSTERIORES = [
   '20270114000000_el_numero_concuerda_con_la_cantidad.sql',
   '20270125000000_el_aviso_del_plazo_de_la_ubicacion.sql',
   '20270126000000_los_documentos_del_asistente.sql',
+  '20270127000100_el_relevo_de_emergencia_es_una_emergencia_de_la_guardia.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;

@@ -576,3 +576,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** la foto inicial de la base estaba editada a mano después de aplicada, y la base armada desde cero en la máquina local fallaba al construirse.
 - **Qué dice ahora:** la foto quedó como se aplicó, y lo que se le había cambiado entra por una migración nueva, adelante, que deja la base armada desde cero igual a la que está en vivo.
 - **Motivo:** una migración aplicada no se edita jamás: se corrige con otra adelante (`celtatech/CLAUDE.md`, sección 9).
+
+## «No puedo continuar» pasa a ser el Relevo de emergencia
+
+- **Qué decía antes:** el botón colgaba de la extensión del turno, se podía apretar una sola vez, lo guardaba el backend con la llave maestra y el aviso al Coordinador decía que el relevo no había llegado.
+- **Qué dice ahora:** es una emergencia de la guardia, se pide en cualquier momento y más de una vez, no cierra la guardia, lo guarda la credencial del Asistente y el aviso dice «Relevo de emergencia».
+- **Motivo:** así lo decidió el Desarrollador para que el Paciente nunca quede solo; que el relevo no llegue es otro caso y tiene su propio aviso.

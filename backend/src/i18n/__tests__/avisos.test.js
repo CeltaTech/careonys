@@ -115,7 +115,7 @@ const DATOS = {
   // y se lee entrando al Panel (`celtatech/CLAUDE.md` §6).
   emergencia_en_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
   // Tampoco lleva el detalle, por lo mismo: el mensaje dice de qué turno se trata y nada más.
-  no_puede_continuar_la_extension: { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00' },
+  relevo_de_emergencia: { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00' },
   alerta_ia_coordinador: { esRoja: true },
   alerta_ia_cliente: { esRoja: false },
   vencimiento_documentos: {

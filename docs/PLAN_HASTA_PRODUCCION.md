@@ -180,9 +180,10 @@ consultas no nombran la Prestadora **no está medido de nuevo**: los números de
 anterior ya no se pueden sostener. Si falta un filtro, la base contesta igual: no tiene con qué
 darse cuenta.
 
-**Los 12 depósitos de archivos tienen política.** La autorización de monitoreo y los documentos
-del Asistente ya se sirven con el acceso de quien pide, y ahí dice que no el depósito; las rutas que
-siguen con la llave maestra se saltean la política del depósito como la de las tablas.
+**Los 12 depósitos de archivos tienen política.** La autorización de monitoreo, los documentos
+del Asistente, los papeles del Pagador y la hoja firmada de las personas autorizadas ya se sirven
+con el acceso de quien pide, y ahí dice que no el depósito; las rutas que siguen con la llave
+maestra se saltean la política del depósito como la de las tablas.
 
 **La protección por fila está puesta y hoy no protege de nada.** Las 202 tablas la tienen encendida
 y 201 tienen política —la única sin ninguna es `codigos_de_presencia`—, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve

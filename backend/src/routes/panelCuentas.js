@@ -1,7 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { clienteDelPedido, supabase } from '../db/connection.js';
 import {
   crearCuentaConPerfil,
@@ -275,16 +276,14 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizaci
 // rige hasta que el titular la firma.
 // ============================================================================
 
-// El Cliente de este pedido, acotado a la Prestadora de quien pregunta. Si es de otra, para él no
-// existe.
-// Con la llave maestra: la política restrictiva `oculta_pendientes_de_conformidad` de `clientes`
-// (NOT pendiente_conformidad) le esconde a Admin, a Superadmin y al Coordinador el Cliente
-// pendiente de conformidad, y la ruta contestaría «no encontrada» donde antes respondía. Se decide
-// aparte.
+// El Cliente de este pedido, tal como la base se lo deja ver a quien pregunta. Si es de otra
+// Prestadora, o todavía está pendiente de conformidad, para él no existe.
 async function clienteContratanteDelPedido(req) {
-  let query = supabase.from('clientes').select('id, prestadora_id').eq('id', req.params.clienteId);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data } = await query.maybeSingle();
+  const { data } = await clienteDelPedido(req)
+    .from('clientes')
+    .select('id, prestadora_id')
+    .eq('id', req.params.clienteId)
+    .maybeSingle();
   return data ?? null;
 }
 
@@ -347,13 +346,12 @@ panelCuentasRouter.post(
       return res.status(404).json({ error: 'Cliente no encontrado' });
     }
 
-    // Con la llave maestra: la subida pisa la hoja si ya había una (`upsert`), y el depósito no
-    // tiene política para modificar un archivo, sólo para crearlo y leerlo. La ruta sale del
-    // Cliente que la base ya dejó ver.
-    const ruta = `${cliente.prestadora_id}/${cliente.id}/${req.params.instruccionId}.${extensionDeArchivo(req.file.mimetype)}`;
-    const { error: errorSubida } = await supabase.storage
+    // El depósito deja crear un archivo y no pisarlo, así que cada hoja lleva nombre propio: si se
+    // vuelve a subir, la fila apunta a la última.
+    const ruta = `${cliente.prestadora_id}/${cliente.id}/${req.params.instruccionId}-${randomUUID()}.${extensionDeArchivo(req.file.mimetype)}`;
+    const { error: errorSubida } = await clienteDelPedido(req).storage
       .from(DEPOSITO_INSTRUCCIONES)
-      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype });
     if (errorSubida) {
       return responderError(res, errorSubida);
     }
@@ -373,33 +371,24 @@ panelCuentasRouter.post(
 
 // La hoja firmada, para volver a verla desde el Panel. Nunca dirección pública: un enlace temporal
 // que dura un minuto, igual que el resto de los archivos del producto.
-panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
-  const cliente = await clienteContratanteDelPedido(req);
-  if (!cliente) {
-    return res.status(404).json({ error: 'Cliente no encontrado' });
-  }
-
-  // Con la llave maestra, filtrada por el Cliente que la base ya dejó ver: la tabla y el depósito
-  // de la hoja firmada piden 'configurar_accesos_de_personas_autorizadas', y esta ruta se abre con
-  // 'editar_datos_cliente'. Con la credencial de quien pide, quien edita el Cliente sin cargar
-  // instrucciones dejaría de ver la hoja.
-  const { data: instruccion } = await supabase
+panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_de_personas_autorizadas'), async (req, res) => {
+  const db = clienteDelPedido(req);
+  const { data: instruccion } = await db
     .from('instrucciones_acceso_personas_autorizadas')
     .select('archivo_firmado_url')
     .eq('id', req.params.instruccionId)
-    .eq('prestadora_id', cliente.prestadora_id)
-    .eq('cliente_id', cliente.id)
+    .eq('cliente_id', req.params.clienteId)
     .maybeSingle();
 
   if (!instruccion?.archivo_firmado_url) {
     return res.status(404).json({ error: 'No hay hoja firmada guardada' });
   }
 
-  const { data, error } = await supabase.storage
+  const { data, error } = await db.storage
     .from(DEPOSITO_INSTRUCCIONES)
     .createSignedUrl(instruccion.archivo_firmado_url, 60);
   if (error) {
-    return responderError(res, error);
+    return responderError(res, error, 404);
   }
 
   res.json({ url: data.signedUrl });
@@ -542,13 +531,10 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimien
     return res.status(404).json({ error: 'No hay hoja firmada guardada' });
   }
 
-  // El enlace temporal va con la llave maestra: el depósito pide 'registrar_consentimiento_pagador'
-  // y esta ruta se abre con 'editar_datos_cliente'. El archivo es el de una fila que la base ya
-  // dejó ver a quien pide.
-  const { data, error } = await supabase.storage
+  const { data, error } = await db.storage
     .from(DEPOSITO_DEL_PAGADOR)
     .createSignedUrl(consentimiento.archivo_firmado_url, 60);
-  if (error) return responderError(res, error);
+  if (error) return responderError(res, error, 404);
 
   res.json({ url: data.signedUrl });
 });
@@ -614,11 +600,10 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador/papel/:documentoId/archivo',
     return res.status(404).json({ error: 'No hay archivo guardado' });
   }
 
-  // Con la llave maestra, por lo mismo que la hoja firmada de arriba.
-  const { data, error } = await supabase.storage
+  const { data, error } = await db.storage
     .from(DEPOSITO_DEL_PAGADOR)
     .createSignedUrl(documento.archivo_url, 60);
-  if (error) return responderError(res, error);
+  if (error) return responderError(res, error, 404);
 
   res.json({ url: data.signedUrl });
 });

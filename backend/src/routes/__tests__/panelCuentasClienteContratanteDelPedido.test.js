@@ -3,12 +3,11 @@
  *
  *   node --test src/routes/__tests__/panelCuentasClienteContratanteDelPedido.test.js
  *
- * POR QUÉ EXISTE ESTA PRUEBA. El Cliente se busca con la llave maestra y acotada a la Prestadora de
- * la sesión. Con la credencial de la persona, la política restrictiva
- * `oculta_pendientes_de_conformidad` de `clientes` esconde el Cliente pendiente de conformidad, y
- * las rutas contestarían «no encontrada» donde antes respondían. Se prueba el camino entero: se
- * levanta el router contra una base de mentira y se mira con qué credencial y con qué filtro llegó
- * la lectura de `clientes`.
+ * POR QUÉ EXISTE ESTA PRUEBA. El Cliente se busca con la credencial de quien pide, y la base decide
+ * si lo ve: si es de otra Prestadora o está pendiente de conformidad, la ruta contesta «no
+ * encontrado». Se prueba el camino entero: se levanta el router contra una base de mentira y se
+ * mira con qué credencial llegó cada lectura, y que no viaje ningún filtro de Prestadora escrito a
+ * mano, porque ése es el que separaba las Prestadoras cuando entraba la llave maestra.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -101,7 +100,9 @@ const RUTAS_QUE_BUSCAN_EL_CLIENTE = [
   ['GET', `/cliente/${CLIENTE}/pagador`],
 ];
 
-describe('el Cliente del pedido se busca con la llave maestra y acotada a la Prestadora', () => {
+const INSTRUCCION = '99999999-9999-9999-9999-999999999999';
+
+describe('el Cliente del pedido se busca con la credencial de quien pide', () => {
   for (const rol of ['admin_prestadora', 'coordinador']) {
     for (const [metodo, ruta] of RUTAS_QUE_BUSCAN_EL_CLIENTE) {
       it(`${rol}: ${metodo} ${ruta}`, async () => {
@@ -111,10 +112,36 @@ describe('el Cliente del pedido se busca con la llave maestra y acotada a la Pre
 
         const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/clientes');
         assert.ok(lectura, 'la ruta no buscó el Cliente');
-        assert.notEqual(lectura.credencial, credencialEnviada, 'el Cliente se buscó con la credencial de la persona');
-        assert.match(lectura.busqueda, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`), 'el Cliente se buscó sin la Prestadora');
+        assert.equal(lectura.credencial, credencialEnviada, 'el Cliente se buscó con otra credencial');
+        assert.doesNotMatch(lectura.busqueda, /prestadora_id=/, 'viajó un filtro de Prestadora escrito a mano');
         assert.match(lectura.busqueda, new RegExp(`id=eq\\.${CLIENTE}`));
       });
     }
   }
+});
+
+describe('la hoja firmada de las personas autorizadas la abre quien ve la fila', () => {
+  it('si la base no le deja ver la autorización, no existe', async () => {
+    respuestas.set('GET /rest/v1/instrucciones_acceso_personas_autorizadas', () => []);
+    const { estado } = await pedir('GET', `/cliente/${CLIENTE}/personas_autorizadas/instruccion/${INSTRUCCION}/papel`);
+    assert.equal(estado, 404);
+
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/instrucciones_acceso_personas_autorizadas');
+    assert.ok(lectura, 'la ruta no buscó la autorización');
+    assert.equal(lectura.credencial, credencialEnviada, 'la autorización se buscó con otra credencial');
+    assert.doesNotMatch(lectura.busqueda, /prestadora_id=/);
+    assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/')), 'pidió un enlace sin tener la fila');
+  });
+
+  it('el enlace temporal lo pide con la credencial de quien pide', async () => {
+    const ARCHIVO = `${PRESTADORA}/${CLIENTE}/${INSTRUCCION}-x.pdf`;
+    respuestas.set('GET /rest/v1/instrucciones_acceso_personas_autorizadas', () => [{ archivo_firmado_url: ARCHIVO }]);
+    respuestas.set(`POST /storage/v1/object/sign/instrucciones-acceso-personas-autorizadas/${ARCHIVO}`, () => ({ signedURL: '/firmado' }));
+    const { estado } = await pedir('GET', `/cliente/${CLIENTE}/personas_autorizadas/instruccion/${INSTRUCCION}/papel`);
+    assert.equal(estado, 200);
+
+    const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+    assert.ok(firma, 'no pidió el enlace');
+    assert.equal(firma.credencial, credencialEnviada, 'el enlace se pidió con otra credencial');
+  });
 });

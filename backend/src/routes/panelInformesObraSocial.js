@@ -1,28 +1,19 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase, clienteDelPedido } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
-import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { FICHA_NOMBRE, conSuFicha } from '../utils/fichaDelPaciente.js';
 
 export const panelInformesObraSocialRouter = Router();
 
-// CON LA LLAVE MAESTRA, Y FILTRADO A MANO POR LA PRESTADORA. Esta ruta no pasa todavía a la
-// credencial de quien pide porque la base es más estrecha que lo que la ruta hace hoy, y cambiar
-// qué ve cada rol se decide aparte:
-// - `personas_las_lee_su_organizacion` pide el permiso `ver_personas`: sin él, el informe saldría con
-//   el nombre de la obra social vacío.
-// - `coordinador_gestiona_guardias_de_su_zona` (guardias) y
-//   `coordinador_gestiona_informes_obra_social_de_su_zona` le muestran al coordinador sólo lo de
-//   los Asistentes de su zona: el informe de un Paciente perdería los turnos de los Asistentes de
-//   otras zonas, y la lista de informes, los de esos Pacientes.
-// - `la_informacion_de_salud_la_ve_quien_atiende` (restrictiva, informes_obra_social) esconde el
-//   informe a quien no atiende al Paciente donde rige la restricción de historia clínica.
-// - `oculta_pendientes_de_conformidad` (restrictiva, pacientes) esconde al Paciente importado que
-//   espera conformidad, y el informe daría «no encontrado».
+// CON LA CREDENCIAL DE QUIEN PIDE. Todo entra a la base con `clienteDelPedido(req)`: la base sabe
+// quién pide y le contesta sólo lo de su Prestadora, así que ninguna consulta lleva el filtro de la
+// Prestadora de la sesión. Lo que la base le deja ver a cada uno es lo que ve el informe: el
+// Coordinador, los turnos de su zona; nadie, el Paciente que espera conformidad; y el informe de un
+// Paciente con historia clínica restringida, sólo quien lo atiende.
 //
 // Un informe es información de salud de un Paciente: cada vez que se arma o se entrega uno, queda
 // anotado quién lo vio (`utils/registroDeConsultas.js`), antes de responder, con la credencial de
@@ -36,18 +27,13 @@ const TIPOS_INFORME = ['planilla_asistencia', 'resumen_mensual'];
  * Devuelve un mapa `id de guardia → cantidad`. Hace falta para repartir las horas: un turno
  * que cubrió a dos personas no le imputa las horas enteras a cada una (ver
  * `utils/horasDeGuardia.js`).
- *
- * La Prestadora se nombra acá también, aunque las guardias ya vengan filtradas: colgar de la
- * fila padre no alcanza, porque un identificador de guardia que llegara de otra Organización
- * contaría Pacientes ajenos y correría el reparto de horas de este informe.
  */
-async function cuantosPacientesPorGuardia(guardiaIds, prestadoraId) {
+async function cuantosPacientesPorGuardia(db, guardiaIds) {
   if (guardiaIds.length === 0) return {};
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('guardia_pacientes')
     .select('guardia_id')
-    .eq('prestadora_id', prestadoraId)
     .in('guardia_id', guardiaIds);
   if (error) throw new Error(error.message);
 
@@ -61,17 +47,16 @@ async function cuantosPacientesPorGuardia(guardiaIds, prestadoraId) {
 // Recalcula el contenido del informe server-side siempre (preview y validación usan esta
 // misma función) — nunca se confía en un "contenido" que mande el frontend, coherente con
 // que el snapshot final debe reflejar la base de datos real al momento de validar.
-async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde, periodoHasta }) {
-  const { data: paciente, error: errorPaciente } = await supabase
+async function construirContenido(db, { pacienteId, tipo, periodoDesde, periodoHasta }) {
+  const { data: paciente, error: errorPaciente } = await db
     .from('pacientes')
-    .select(`id, obra_social_persona_id, numero_afiliado, cliente_id, ${FICHA_NOMBRE}`)
+    .select(`id, prestadora_id, obra_social_persona_id, numero_afiliado, cliente_id, ${FICHA_NOMBRE}`)
     .eq('id', pacienteId)
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (errorPaciente) throw new Error(errorPaciente.message);
   // Con motivo, y no con la frase suelta que estaba antes. Además la frase contaba de más:
   // decía «en esta Prestadora», o sea que distinguía «no existe» de «existe pero es de otra».
-  // El motivo contesta lo mismo en los dos casos.
+  // El motivo contesta lo mismo en los dos casos, y en el de que la base no se lo deja ver.
   if (!paciente) throw new ErrorConMotivo('paciente_no_encontrado', `paciente ${pacienteId}`);
 
   // Cómo se llama la obra social no está copiado en el Paciente: el Paciente guarda cuál Ficha
@@ -79,11 +64,10 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   // ninguna, no hay nada que buscar y el informe sale con el renglón vacío, como antes.
   let obraSocialNombre = null;
   if (paciente.obra_social_persona_id) {
-    const { data: persona, error: errorPersona } = await supabase
+    const { data: persona, error: errorPersona } = await db
       .from('personas')
       .select('nombre_visible')
       .eq('id', paciente.obra_social_persona_id)
-      .eq('prestadora_id', prestadoraId)
       .maybeSingle();
     if (errorPersona) throw new Error(errorPersona.message);
     obraSocialNombre = persona?.nombre_visible ?? null;
@@ -92,10 +76,9 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   // Las guardias de este Paciente salen de la lista de Pacientes de cada guardia, no de la
   // columna vieja `guardias.paciente_id`: esa columna guarda UNO solo, así que en una guardia
   // compartida el informe del otro Paciente salía vacío aunque lo hubieran atendido.
-  const { data: enLista, error: errorLista } = await supabase
+  const { data: enLista, error: errorLista } = await db
     .from('guardia_pacientes')
     .select('guardia_id')
-    .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId);
   if (errorLista) throw new Error(errorLista.message);
 
@@ -103,10 +86,9 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
 
   let guardias = [];
   if (idsDeSusGuardias.length > 0) {
-    const { data, error: errorGuardias } = await supabase
+    const { data, error: errorGuardias } = await db
       .from('guardias')
       .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, asistente_id')
-      .eq('prestadora_id', prestadoraId)
       .in('id', idsDeSusGuardias)
       .gte('fecha', periodoDesde)
       .lte('fecha', periodoHasta)
@@ -115,16 +97,22 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
     guardias = data || [];
   }
 
-  const pacientesPorGuardia = await cuantosPacientesPorGuardia(guardias.map((g) => g.id), prestadoraId);
+  const pacientesPorGuardia = await cuantosPacientesPorGuardia(db, guardias.map((g) => g.id));
 
   // .filter(Boolean) porque una guardia puede estar sin cubrir: sin este filtro el NULL
   // llega al .in('id', …) contra una columna uuid y la consulta revienta con un 500.
   const asistenteIds = [...new Set(guardias.map((g) => g.asistente_id).filter(Boolean))];
-  // `guardias.asistente_id` es el Legajo, no la cuenta, y el nombre es de la persona: sale de la
-  // cuenta de la que ese Legajo cuelga.
+  // `guardias.asistente_id` es el Legajo, y el nombre se lee del Legajo: la cuenta de la persona
+  // no la ve nadie más que ella.
   const nombresAsistente = {};
-  const cuentas = await cuentasDeLasFilas('asistentes', asistenteIds, 'nombre', prestadoraId);
-  for (const [asistenteId, datos] of cuentas) nombresAsistente[asistenteId] = datos?.nombre ?? '';
+  if (asistenteIds.length > 0) {
+    const { data: asistentes, error: errorAsistentes } = await db
+      .from('asistentes')
+      .select('id, nombre')
+      .in('id', asistenteIds);
+    if (errorAsistentes) throw new Error(errorAsistentes.message);
+    for (const a of asistentes || []) nombresAsistente[a.id] = a.nombre ?? '';
+  }
 
   // Cada renglón lleva escrito a cuánta gente cubrió ese turno y cuántas horas le tocan a
   // este Paciente. Se muestran las dos cosas juntas a propósito: si el informe dijera
@@ -163,6 +151,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   return {
     paciente: { nombre: conSuFicha(paciente).nombre, obra_social: obraSocialNombre, numero_afiliado: paciente.numero_afiliado },
     cliente_id: paciente.cliente_id,
+    prestadora_id: paciente.prestadora_id,
     tipo,
     periodo_desde: periodoDesde,
     periodo_hasta: periodoHasta,
@@ -177,17 +166,12 @@ panelInformesObraSocialRouter.get('/preview', requiereRolPanel, async (req, res)
     return res.status(400).json({ error: 'Faltan parámetros (paciente_id, tipo, periodo_desde, periodo_hasta)' });
   }
   try {
-    const contenido = await construirContenido({
-      prestadoraId: req.usuarioPanel.prestadoraId,
-      pacienteId,
-      tipo,
-      periodoDesde,
-      periodoHasta,
-    });
+    const db = clienteDelPedido(req);
+    const { prestadora_id: _prestadora, ...contenido } = await construirContenido(db, { pacienteId, tipo, periodoDesde, periodoHasta });
     await anotarConsultaAHce(
       req.usuarioPanel,
       { pacienteId, categorias: ['pacientes', 'guardias'], origen: origenDelPedido(req) },
-      { cliente: clienteDelPedido(req) },
+      { cliente: db },
     );
     res.json({ contenido });
   } catch (error) {
@@ -202,15 +186,16 @@ panelInformesObraSocialRouter.post('/', requiereRolPanel, requierePermiso('valid
   }
 
   try {
-    const prestadoraId = req.usuarioPanel.prestadoraId;
-    const contenido = await construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde, periodoHasta });
+    const db = clienteDelPedido(req);
+    // El informe nace con la Prestadora del Paciente que la base le dejó ver a quien pide.
+    const { prestadora_id: prestadoraId, ...contenido } = await construirContenido(db, { pacienteId, tipo, periodoDesde, periodoHasta });
     await anotarConsultaAHce(
       req.usuarioPanel,
       { pacienteId, categorias: ['pacientes', 'guardias', 'informes_obra_social'], origen: origenDelPedido(req) },
-      { cliente: clienteDelPedido(req) },
+      { cliente: db },
     );
 
-    const { data: informe, error: errorInsert } = await supabase
+    const { data: informe, error: errorInsert } = await db
       .from('informes_obra_social')
       .insert({
         prestadora_id: prestadoraId,
@@ -235,10 +220,9 @@ panelInformesObraSocialRouter.post('/', requiereRolPanel, requierePermiso('valid
 
 panelInformesObraSocialRouter.get('/', requiereRolPanel, async (req, res) => {
   const { paciente_id: pacienteId, desde, hasta } = req.query;
-  let query = supabase
+  let query = clienteDelPedido(req)
     .from('informes_obra_social')
     .select('id, paciente_id, tipo, periodo_desde, periodo_hasta, estado, validado_en, created_at')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('periodo_desde', { ascending: false });
   if (pacienteId) query = query.eq('paciente_id', pacienteId);
   if (desde) query = query.gte('periodo_desde', desde);
@@ -250,11 +234,11 @@ panelInformesObraSocialRouter.get('/', requiereRolPanel, async (req, res) => {
 });
 
 panelInformesObraSocialRouter.get('/:id', requiereRolPanel, async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('informes_obra_social')
     .select('*')
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
   if (!data) return res.status(404).json({ error: 'Informe no encontrado' });
@@ -262,7 +246,7 @@ panelInformesObraSocialRouter.get('/:id', requiereRolPanel, async (req, res) => 
     await anotarConsultaAHce(
       req.usuarioPanel,
       { pacienteId: data.paciente_id, categorias: ['informes_obra_social'], origen: origenDelPedido(req) },
-      { cliente: clienteDelPedido(req) },
+      { cliente: db },
     );
   } catch (errorAnotacion) {
     return responderError(res, errorAnotacion);
@@ -276,11 +260,11 @@ panelInformesObraSocialRouter.post('/:id/anular', requiereRolPanel, requierePerm
     return res.status(400).json({ error: 'El motivo de anulación es obligatorio' });
   }
 
-  const { data: informe } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: informe } = await db
     .from('informes_obra_social')
     .select('id, estado, paciente_id')
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (!informe) return res.status(404).json({ error: 'Informe no encontrado' });
   if (informe.estado === 'anulado') {
@@ -292,13 +276,13 @@ panelInformesObraSocialRouter.post('/:id/anular', requiereRolPanel, requierePerm
     await anotarConsultaAHce(
       req.usuarioPanel,
       { pacienteId: informe.paciente_id, categorias: ['informes_obra_social'], origen: origenDelPedido(req) },
-      { cliente: clienteDelPedido(req) },
+      { cliente: db },
     );
   } catch (errorAnotacion) {
     return responderError(res, errorAnotacion);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('informes_obra_social')
     .update({
       estado: 'anulado',
@@ -307,7 +291,6 @@ panelInformesObraSocialRouter.post('/:id/anular', requiereRolPanel, requierePerm
       anulado_en: new Date().toISOString(),
     })
     .eq('id', informe.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select()
     .single();
   if (error) return responderError(res, error);

@@ -4,19 +4,16 @@
  *
  *   node --test backend/src/routes/__tests__/panelInformesObraSocial.test.js
  *
- * POR QUÉ EXISTE ESTA PRUEBA. La ruta (`../panelInformesObraSocial.js`) lee con la llave maestra,
- * todavía, porque la base es más estrecha que lo que la ruta hace: `personas_las_lee_su_organizacion`
- * pide el permiso `ver_personas`, y sin él el informe saldría con la obra social vacía; las políticas
- * de zona le recortarían a quien coordina los turnos de Asistentes de otras zonas; y
- * `oculta_pendientes_de_conformidad` escondería al Paciente importado que espera conformidad.
- * Entonces lo que separa una Prestadora de otra es el filtro escrito en cada consulta, y eso es lo
- * que se sostiene acá. La anotación de quién vio el informe sí va con la credencial de quien pide.
+ * POR QUÉ EXISTE ESTA PRUEBA. La ruta (`../panelInformesObraSocial.js`) entra a la base con la
+ * credencial de quien pide, sin filtrar por Prestadora: lo que separa una Prestadora de otra es la
+ * protección por fila de la base. Lo que esta prueba sostiene es que ninguna consulta vuelva a la
+ * llave maestra ni a un filtro escrito a mano, y que lo que la base esconde no aparezca.
  *
- * La base es de mentira y contesta por HTTP como la de verdad. Con la llave maestra contesta lo que
- * pide el filtro de la Prestadora; con la credencial de quien pide imita las políticas: sin Ficha
- * de la obra social, sin Paciente pendiente y, para quien coordina, sin guardias. Con el sistema
- * roto —una consulta sin filtro, o de vuelta con la credencial de quien pide— dan al revés la prueba
- * del nombre de la obra social, la del Paciente pendiente, la de quien coordina o la del filtro.
+ * La base es de mentira y contesta por HTTP como la de verdad. Con la credencial de quien pide imita
+ * las políticas: sólo lo de su Prestadora, sin Paciente pendiente de conformidad y, para quien
+ * coordina, sin las guardias de otras zonas. Con la llave maestra no contesta nada. Con el sistema
+ * roto —una consulta de vuelta con la llave maestra— el informe sale vacío y la prueba falla. Lo que
+ * esta prueba no ve es la protección por fila en sí: la base de mentira no la tiene.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -89,10 +86,10 @@ async function pedirVistaPrevia() {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-/** Filtra por la Prestadora que pide la dirección, como la base con la llave maestra. */
-function segunElFiltro(filas, url) {
-  const filtro = url.match(/prestadora_id=eq\.([^&]+)/);
-  return filtro ? filas.filter((fila) => fila.prestadora_id === filtro[1]) : filas;
+/** Lo que la base le deja ver a quien pide: sólo lo de su Prestadora, y nada a la llave maestra. */
+function deSuPrestadora(filas, credencial) {
+  if (credencial === LLAVE_MAESTRA) return [];
+  return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
 }
 
 function prepararLaBase({ paciente = {} } = {}) {
@@ -100,31 +97,24 @@ function prepararLaBase({ paciente = {} } = {}) {
     id: PACIENTE, prestadora_id: PRESTADORA, persona: { nombre_visible: 'Paciente de prueba' }, obra_social_persona_id: OBRA_SOCIAL,
     numero_afiliado: 'A-0001', cliente_id: null, pendiente_conformidad: false, ...paciente,
   }];
-  respuestas.set('GET /rest/v1/pacientes', (credencial, url) => (credencial === LLAVE_MAESTRA
-    ? segunElFiltro(pacientes, url)
-    // `oculta_pendientes_de_conformidad`, restrictiva, para todos los roles.
-    : pacientes.filter((p) => p.prestadora_id === PRESTADORA && !p.pendiente_conformidad)));
+  // `oculta_pendientes_de_conformidad`, restrictiva, para todos los roles.
+  respuestas.set('GET /rest/v1/pacientes', (credencial) => deSuPrestadora(pacientes, credencial)
+    .filter((p) => !p.pendiente_conformidad));
 
   const personas = [{ id: OBRA_SOCIAL, prestadora_id: PRESTADORA, nombre_visible: 'Obra social inventada' }];
-  respuestas.set('GET /rest/v1/personas', (credencial, url) => (credencial === LLAVE_MAESTRA
-    ? segunElFiltro(personas, url)
-    // `personas_las_lee_su_organizacion` pide `ver_personas`, que quien pide en esta prueba no tiene.
-    : []));
+  respuestas.set('GET /rest/v1/personas', (credencial) => deSuPrestadora(personas, credencial));
 
   const enLista = [{ guardia_id: GUARDIA, paciente_id: PACIENTE, prestadora_id: PRESTADORA }];
-  respuestas.set('GET /rest/v1/guardia_pacientes', (credencial, url) => (credencial === LLAVE_MAESTRA
-    ? segunElFiltro(enLista, url)
-    : []));
+  respuestas.set('GET /rest/v1/guardia_pacientes', (credencial) => deSuPrestadora(enLista, credencial));
 
   const guardias = [{
     id: GUARDIA, prestadora_id: PRESTADORA, fecha: '2026-08-10', hora_inicio: '08:00', hora_fin: '16:00',
     dias_hasta_el_fin: 0, modalidad: 'diurna', estado: 'completada', asistente_id: null,
   }];
-  respuestas.set('GET /rest/v1/guardias', (credencial, url) => {
-    if (credencial === LLAVE_MAESTRA) return segunElFiltro(guardias, url);
-    // La política de zona: quien coordina en esta prueba no alcanza a ningún Asistente.
-    return rolDelUsuario === 'coordinador' ? [] : guardias;
-  });
+  // La política de zona: quien coordina en esta prueba no alcanza a ningún Asistente.
+  respuestas.set('GET /rest/v1/guardias', (credencial) => (rolDelUsuario === 'coordinador'
+    ? []
+    : deSuPrestadora(guardias, credencial)));
 }
 
 beforeEach(() => {
@@ -138,7 +128,7 @@ beforeEach(() => {
 });
 
 describe('la vista previa del informe para la obra social', () => {
-  it('sale con el nombre de la obra social, aunque quien pide no tenga el permiso del Directorio', async () => {
+  it('sale con el nombre de la obra social y del Paciente, y con sus turnos', async () => {
     prepararLaBase();
 
     const { estado, cuerpo } = await pedirVistaPrevia();
@@ -147,9 +137,12 @@ describe('la vista previa del informe para la obra social', () => {
     assert.equal(cuerpo.contenido.paciente.obra_social, 'Obra social inventada');
     // Y con el nombre del Paciente, que sale de su Ficha de Persona.
     assert.equal(cuerpo.contenido.paciente.nombre, 'Paciente de prueba');
+    assert.equal(cuerpo.contenido.guardias.length, 1);
+    // La Prestadora del Paciente sirve para guardar el informe, no viaja en la vista previa.
+    assert.equal(cuerpo.contenido.prestadora_id, undefined);
   });
 
-  it('cada lectura va con la llave maestra y atada a la Prestadora de quien pide', async () => {
+  it('cada lectura va con la credencial de quien pide y sin filtrar por Prestadora', async () => {
     prepararLaBase();
 
     await pedirVistaPrevia();
@@ -159,28 +152,29 @@ describe('la vista previa del informe para la obra social', () => {
       const lecturas = llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`);
       assert.ok(lecturas.length > 0, `no se leyó ${tabla}`);
       for (const lectura of lecturas) {
-        assert.equal(lectura.credencial, LLAVE_MAESTRA, `${tabla} no fue con la llave maestra`);
-        assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${tabla} sin la Prestadora: ${lectura.url}`);
+        assert.equal(lectura.credencial, sesionDePrueba(USUARIO), `${tabla} no fue con la credencial de quien pide`);
+        assert.ok(!lectura.url.includes('prestadora_id='), `${tabla}: el aislamiento lo hace la base: ${lectura.url}`);
       }
     }
   });
 
-  it('quien coordina ve los turnos de todos los Asistentes del Paciente, como antes', async () => {
+  it('quien coordina ve sólo los turnos de los Asistentes de su zona', async () => {
     rolDelUsuario = 'coordinador';
     prepararLaBase();
 
     const { estado, cuerpo } = await pedirVistaPrevia();
 
     assert.equal(estado, 200, JSON.stringify(cuerpo));
-    assert.equal(cuerpo.contenido.guardias.length, 1);
+    assert.equal(cuerpo.contenido.guardias.length, 0);
   });
 
-  it('el Paciente importado que espera conformidad se encuentra igual', async () => {
+  it('el Paciente importado que espera conformidad no se encuentra, y no se anota ninguna consulta', async () => {
     prepararLaBase({ paciente: { pendiente_conformidad: true } });
 
     const { estado } = await pedirVistaPrevia();
 
-    assert.equal(estado, 200);
+    assert.notEqual(estado, 200);
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/consultas_a_hce'), false);
   });
 
   it('el Paciente de otra Prestadora no existe para ésta, y no se anota ninguna consulta', async () => {

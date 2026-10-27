@@ -5,18 +5,18 @@
  *   node --test backend/src/routes/__tests__/panelVerificacionIdentidad.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Adentro del depósito `fotos-identidad` hay imágenes de documentos de
- * identidad, y el depósito no tiene ninguna política: lo escribe y lo lee el backend con la llave
- * maestra (`../panelVerificacionIdentidad.js`). O sea que lo único que separa una Prestadora de
- * otra son los filtros escritos en esta ruta, y dos decisiones más: que el tipo de foto salga de
- * una lista cerrada —si no, quien manda el pedido elige el nombre del archivo adentro del
- * depósito— y que la ruta del enlace temporal se arme con los datos del Asistente y no con nada que venga
- * de afuera.
+ * identidad. La ruta (`../panelVerificacionIdentidad.js`) entra a la base y al depósito con la
+ * credencial de quien pide, y la base separa una Prestadora de otra; eso lo prueba
+ * `scripts/probar_aislamiento.mjs` contra una base de verdad. Acá se sostienen tres cosas: que
+ * cada pedido vaya de verdad con esa credencial, que el tipo de foto salga de una lista cerrada
+ * —si no, quien manda el pedido elige el nombre del archivo adentro del depósito— y que la ruta
+ * del enlace temporal se arme con los datos del Asistente y no con nada que venga de afuera.
  *
  * Por eso la base es de mentira y contesta por HTTP como la de verdad: además del resultado se
- * mira **qué se le pidió**, que es donde viven esos filtros.
+ * mira **qué se le pidió y con qué credencial**.
  *
- * Con el sistema roto —un filtro de menos, o el tipo tomado tal como viene— las pruebas del
- * Asistente ajeno y la del tipo inventado dan al revés.
+ * Con el sistema roto —un pedido con la llave maestra, o el tipo tomado tal como viene— la prueba
+ * de la credencial y la del tipo inventado dan al revés.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -216,7 +216,7 @@ describe('guardar una foto de identidad', () => {
   });
 
   it('el Asistente de otra Prestadora no existe para ésta, y nada se sube a su nombre', async () => {
-    // La base contesta vacío porque el filtro la acotó; lo que se comprueba es que el filtro esté.
+    // La base contesta vacío porque no lo deja ver.
     respuestas.set('GET /rest/v1/asistentes', () => []);
 
     const { estado, cuerpo } = await subir(ASISTENTE, { tipo: TIPO_DOCUMENTO });
@@ -224,18 +224,14 @@ describe('guardar una foto de identidad', () => {
     assert.equal(estado, 404);
     assert.equal(cuerpo.motivo, 'asistente_no_encontrado');
     assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
-
-    const lectura = consultasDeAsistentes().find((l) => l.clave.startsWith('GET '));
-    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), lectura.url);
   });
 
-  it('la consulta del Asistente lleva el filtro de Prestadora escrito', async () => {
+  it('la consulta del Asistente nombra al Asistente pedido', async () => {
     respuestas.set('GET /rest/v1/asistentes', () => [unAsistente()]);
 
     await subir(ASISTENTE, { tipo: TIPO_DOCUMENTO });
 
     const lectura = consultasDeAsistentes().find((l) => l.clave.startsWith('GET '));
-    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), lectura.url);
     assert.ok(lectura.url.includes(`id=eq.${ASISTENTE}`), lectura.url);
   });
 
@@ -295,15 +291,9 @@ describe('los enlaces temporales de las dos fotos', () => {
     assert.equal(estado, 404);
     assert.equal(cuerpo.motivo, 'asistente_no_encontrado');
     assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
-    const lectura = consultasDeAsistentes().find((l) => l.clave.startsWith('GET '));
-    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), lectura.url);
   });
 
-  // El Asistente, la subida y los enlaces siguen con la llave maestra: con la credencial de quien
-  // pide, la base le deja al Coordinador sólo los Asistentes de su zona y le esconde a todos los
-  // roles el pendiente de conformidad, y el depósito le exige lo mismo. Lo que separa las
-  // Prestadoras es el filtro escrito en la consulta del Asistente.
-  it('el Asistente, la subida y los dos enlaces van con la llave maestra', async () => {
+  it('el Asistente, la subida y los dos enlaces van con la credencial de quien pide', async () => {
     respuestas.set('GET /rest/v1/asistentes', () => [unAsistente()]);
 
     const credencialDeQuienPide = sesionDePrueba(USUARIO);
@@ -316,8 +306,7 @@ describe('los enlaces temporales de las dos fotos', () => {
     assert.equal(pedidos.filter((l) => l.clave.startsWith('POST /storage/v1/object/sign/')).length, 2);
     assert.ok(pedidos.some((l) => l.clave.startsWith('POST /storage/v1/object/fotos-identidad/')), 'no se subió nada que mirar');
     for (const pedido of pedidos) {
-      assert.notEqual(pedido.credencial, credencialDeQuienPide, `${pedido.clave} fue con la credencial de quien pide`);
-      assert.equal(pedido.credencial, 'Bearer clave-de-mentira', `${pedido.clave} no fue con la llave maestra`);
+      assert.equal(pedido.credencial, credencialDeQuienPide, `${pedido.clave} no fue con la credencial de quien pide`);
     }
   });
 

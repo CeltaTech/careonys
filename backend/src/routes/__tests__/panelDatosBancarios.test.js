@@ -7,16 +7,16 @@
  * prepara, igual que las pruebas de los cobros. Así se comprueba el camino entero —permiso,
  * filtros, respuesta— y no una imitación.
  *
- * LAS DOS COSAS QUE ESTA PRUEBA CUIDA. La primera es el aislamiento: el backend entra a la base
- * con la llave de servicio, o sea sin las reglas de acceso por fila, así que si una consulta se
- * olvida el filtro de Prestadora, una Prestadora ve la cuenta bancaria de un Asistente de otra
- * y nada la detiene. La segunda es que el número de cuenta no salga por ningún lado que no sea
- * el cuerpo de la respuesta: ni en la dirección, ni en el registro del servidor, ni en un
- * mensaje de error.
+ * LAS DOS COSAS QUE ESTA PRUEBA CUIDA. La primera es el aislamiento: la ruta entra a la base con
+ * la credencial de quien pide, y es la base la que separa una Prestadora de otra. Lo que se
+ * sostiene acá es que cada consulta vaya de verdad con esa credencial; que la base la haga
+ * cumplir lo prueba `scripts/probar_aislamiento.mjs` contra una base de verdad. La segunda es
+ * que el número de cuenta no salga por ningún lado que no sea el cuerpo de la respuesta: ni en
+ * la dirección, ni en el registro del servidor, ni en un mensaje de error.
  *
- * Qué darían con el sistema roto: sacarle el filtro de Prestadora a cualquier consulta deja
- * roja la prueba del aislamiento; meter el número de cuenta en un mensaje de error deja rojas
- * las dos que lo persiguen.
+ * Qué darían con el sistema roto: volver a pedir cualquier tabla con la llave maestra deja roja
+ * la prueba de la credencial; meter el número de cuenta en un mensaje de error deja rojas las
+ * dos que lo persiguen.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -213,54 +213,23 @@ describe('lo que devuelve', () => {
 });
 
 // ---------------------------------------------------------------------------------------
-// El aislamiento
+// Con quién entra a la base
 // ---------------------------------------------------------------------------------------
 
-describe('el filtro de Prestadora', () => {
-  /**
-   * La única tabla que no lo lleva, y por qué. Cómo se llama en cada país el número con el que
-   * se identifica una cuenta —CBU, CVU, alias— no es de ninguna Prestadora y no tiene columna
-   * que la nombre: dos Prestadoras del mismo país ven la misma sigla. Lo que sí es de alguien
-   * —la cuenta— se consulta aparte y sí va filtrado.
-   */
-  const SIN_COLUMNA_DE_PRESTADORA = ['/rest/v1/catalogo_identificadores_de_cuenta'];
-
-  it('toda consulta lleva el filtro de Prestadora escrito', async () => {
-    await pedir(`/${ASISTENTE}`);
-    const consultas = consultasDeDatos();
-    assert.ok(consultas.length >= 2, 'no se hizo ninguna consulta que mirar');
-
-    for (const consulta of consultas) {
-      if (SIN_COLUMNA_DE_PRESTADORA.some((tabla) => consulta.clave.endsWith(tabla))) continue;
-      assert.ok(
-        consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
-        `esta consulta no filtró por Prestadora: ${consulta.url}`,
-      );
-    }
-  });
-
-  // Sigue con la llave maestra: con la credencial de quien pide, la base le deja al Coordinador
-  // con el permiso sólo los Asistentes de su zona y le esconde a todos los roles el Asistente
-  // pendiente de conformidad, y la pantalla contestaría 404 donde antes mostraba la cuenta.
-  it('el Asistente y su cuenta se leen con la llave maestra, no con la credencial de quien pide', async () => {
+describe('la credencial', () => {
+  it('todo se pide con la credencial de quien llama, y nada con la llave maestra', async () => {
     rolDelUsuario = 'coordinador';
     const credencialDeQuienPide = sesionDePrueba(USUARIO);
     const { estado } = await pedir(`/${ASISTENTE}`);
     assert.equal(estado, 200);
-    for (const tabla of ['asistentes', 'datos_bancarios_asistente']) {
-      const consulta = consultasDeDatos().find((l) => l.clave.endsWith(`/${tabla}`));
-      assert.ok(consulta, `no se consultó ${tabla}`);
-      assert.notEqual(consulta.credencial, credencialDeQuienPide, `${tabla} fue con la credencial de quien pide`);
-      assert.equal(consulta.credencial, 'Bearer clave-de-mentira', `${tabla} no fue con la llave maestra`);
+    const consultas = consultasDeDatos();
+    assert.equal(consultas.length, 3, 'no se hicieron las tres consultas que mirar');
+    for (const consulta of consultas) {
+      assert.equal(consulta.credencial, credencialDeQuienPide, `${consulta.clave} no fue con la credencial de quien pide`);
     }
   });
 
-  it('la Prestadora sale de la sesión y no del pedido', async () => {
-    rolDelUsuario = 'admin_prestadora';
-    respuestas.set('GET /rest/v1/usuarios', () => [
-      { rol: rolDelUsuario, prestadora_id: PRESTADORA },
-    ]);
-    // Aunque el pedido intente nombrar otra Prestadora, la que se escribe es la de la sesión.
+  it('ninguna Prestadora que venga en el pedido llega a la base', async () => {
     await pedir(`/${ASISTENTE}?prestadora_id=99999999-9999-9999-9999-999999999999`);
     for (const consulta of consultasDeDatos()) {
       assert.ok(!consulta.url.includes('99999999-9999-9999-9999-999999999999'));

@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { clienteDelPedido } from '../db/connection.js';
 import {
   esFotoDeIdentidad,
   rutaEnElDeposito,
@@ -20,10 +20,9 @@ import { responderError } from '../utils/errorConMotivo.js';
 //
 // POR QUÉ SUBE POR ACÁ Y NO DERECHO DESDE EL PANEL. El depósito `fotos-identidad` es privado,
 // porque adentro hay imágenes de documentos de identidad. Lo escribe y lo lee el backend con la
-// llave maestra, después de comprobar de qué Prestadora es el Asistente. Es la misma forma de
-// `documentos-cese`. La base tiene políticas para la tabla y para el depósito, pero son más
-// estrechas que lo que esta ruta le deja hacer a cada rol (ver el comentario de cada consulta);
-// si se adoptan o no se decide aparte.
+// credencial de quien pide (`clienteDelPedido(req)`), y es la base la que decide: la
+// administración alcanza a todos los Asistentes de su Prestadora, el Coordinador sólo a los de su
+// zona, y nadie al Asistente pendiente de conformidad.
 //
 // LO QUE ESTA RUTA NO HACE. No compara las dos caras: eso es dato biométrico, no hay documento
 // legal del que sacar la advertencia y no hay proveedor elegido (`docs/SECURITY.md`). Acá las fotos se
@@ -42,18 +41,13 @@ const upload = multer({
   },
 });
 
-async function asistenteDeLaPrestadora(asistenteId, usuarioPanel) {
-  // Con la llave maestra: con la credencial de la persona, `coordinador_lee_asistentes_de_su_zona`
-  // (interno.coordinador_alcanza_asistente) le deja al Coordinador sólo los de su zona, y
-  // `oculta_pendientes_de_conformidad` (RESTRICTIVE, NOT pendiente_conformidad) contesta 404 a
-  // todos los roles por el Asistente pendiente. Hasta ahora cualquier rol del Panel alcanzaba a
-  // todos los de su Prestadora. Si se acota o no se decide aparte.
-  let query = supabase
+// Si la base no lo deja ver, para quien pregunta no existe.
+async function asistenteVisible(db, asistenteId) {
+  const { data } = await db
     .from('asistentes')
     .select('id, prestadora_id')
-    .eq('id', asistenteId);
-  query = acotarAPrestadora(query, usuarioPanel);
-  const { data } = await query.maybeSingle();
+    .eq('id', asistenteId)
+    .maybeSingle();
   return data;
 }
 
@@ -79,15 +73,14 @@ panelVerificacionIdentidadRouter.post(
       return res.status(400).json({ error: 'foto_invalida', motivo: 'foto_invalida' });
     }
 
-    const asistente = await asistenteDeLaPrestadora(req.params.asistenteId, req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const asistente = await asistenteVisible(db, req.params.asistenteId);
     if (!asistente) {
       return res.status(404).json({ error: 'asistente_no_encontrado', motivo: 'asistente_no_encontrado' });
     }
 
-    // Con la llave maestra: `fotos_identidad_las_alcanza_quien_administra_o_coordina` le pide al
-    // Coordinador que alcance a ese Asistente (interno.coordinador_alcanza_asistente); la ruta sale
-    // de la fila ya acotada a la Prestadora de la sesión. Si se acota o no se decide aparte.
-    const { error: errorSubida } = await supabase.storage
+    // La ruta sale de la fila que la base ya dejó ver, no del pedido.
+    const { error: errorSubida } = await db.storage
       .from(BUCKET)
       .upload(rutaEnElDeposito(asistente.prestadora_id, asistente.id, tipo), req.file.buffer, {
         contentType: req.file.mimetype,
@@ -106,7 +99,8 @@ panelVerificacionIdentidadRouter.get(
   requiereRolPanel,
   exigirOrganizacionActiva,
   async (req, res) => {
-    const asistente = await asistenteDeLaPrestadora(req.params.asistenteId, req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const asistente = await asistenteVisible(db, req.params.asistenteId);
     if (!asistente) {
       return res.status(404).json({ error: 'asistente_no_encontrado', motivo: 'asistente_no_encontrado' });
     }
@@ -118,10 +112,8 @@ panelVerificacionIdentidadRouter.get(
     // de la Prestadora, el Asistente y el tipo, así que el archivo es la única verdad posible.
     // Una columna que dijera «esta foto está subida» podría decir que sí cuando el archivo ya no
     // está, y entonces la pantalla mostraría un hueco sin explicar por qué.
-    //
-    // Con la llave maestra, por la misma política del depósito que al subir.
     const enlaces = await Promise.all(FOTOS_DE_IDENTIDAD.map(async (tipo) => {
-      const { data } = await supabase.storage
+      const { data } = await db.storage
         .from(BUCKET)
         .createSignedUrl(rutaEnElDeposito(asistente.prestadora_id, asistente.id, tipo), SEGUNDOS_DEL_ENLACE_TEMPORAL);
       return [tipo, data?.signedUrl ?? null];

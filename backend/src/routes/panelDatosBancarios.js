@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -13,10 +13,11 @@ import { responderError } from '../utils/errorConMotivo.js';
    administración corrige de una cuenta lo corrige su dueño.
 
    POR DÓNDE SE ENTRA. Por el permiso `ver_datos_bancarios_asistente`, que nace reservada a
-   administración, con el mismo molde que `ver_pagos_asistente`. La Prestadora sale siempre de
-   la sesión, nunca del pedido, y va escrita en cada consulta: el backend entra a la base con la
-   llave de servicio, o sea sin las reglas de acceso por fila, y acá el aislamiento lo garantiza
-   cada consulta o no lo garantiza nadie (`CLAUDE.md` §5).
+   administración, con el mismo molde que `ver_pagos_asistente`. Todo entra a la base con la
+   credencial de quien pide (`clienteDelPedido(req)`), no con la llave maestra: la base sabe quién
+   pide y le contesta sólo lo de su Prestadora, así que ninguna consulta lleva el filtro de la
+   Prestadora de la sesión. Al Coordinador con el permiso la base le deja los Asistentes de su
+   zona, y a nadie el Asistente pendiente de conformidad: para esta mirada, esos no existen.
 
    EL NÚMERO DE CUENTA NO SALE POR NINGÚN LADO. No viaja en la dirección, no se registra, no
    aparece en ningún mensaje de error y no entra en la auditoría. Sale solamente en el cuerpo de
@@ -25,8 +26,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 
    CÓMO SE LLAMA EL NÚMERO LO DICE LA BASE. CBU, CVU o alias son nombres de Argentina; en otro
    país son otros. La sigla sale de `catalogo_identificadores_de_cuenta`, que es por país y no
-   es de ninguna Prestadora: dos Prestadoras del mismo país ven la misma. Por eso esa consulta
-   es la única que no lleva filtro de Prestadora — no tiene columna que la nombre. */
+   es de ninguna Prestadora: dos Prestadoras del mismo país ven la misma. */
 
 export const panelDatosBancariosRouter = Router();
 
@@ -37,36 +37,28 @@ panelDatosBancariosRouter.get(
   requiereRolPanel,
   requierePermiso(PERMISO_LECTURA),
   async (req, res) => {
-    const prestadoraId = req.usuarioPanel.prestadoraId;
+    const db = clienteDelPedido(req);
 
-    // Primero de quién es. Un Asistente de otra Prestadora no existe para esta sesión, y
-    // contesta lo mismo que uno que no existe.
-    // Sigue con la llave maestra: con la credencial de la persona, `coordinador_lee_asistentes_de_su_zona`
-    // (interno.coordinador_alcanza_asistente) le deja al Coordinador con el permiso sólo los de su
-    // zona, y `oculta_pendientes_de_conformidad` (RESTRICTIVE, NOT pendiente_conformidad) contesta
-    // 404 a todos los roles por el Asistente pendiente. Si se acota o no se decide aparte.
-    const { data: asistente, error: errorAsistente } = await supabase
+    // Primero de quién es. Si la base no lo deja ver, para quien pregunta no existe, y contesta
+    // lo mismo que uno que no existe.
+    const { data: asistente, error: errorAsistente } = await db
       .from('asistentes')
       .select('id, nombre')
       .eq('id', req.params.asistenteId)
-      .eq('prestadora_id', prestadoraId)
       .maybeSingle();
     if (errorAsistente) return responderError(res, errorAsistente);
     if (!asistente) return res.status(404).json({ error: 'Asistente no encontrado' });
 
-    // Misma razón: `lee_los_datos_bancarios_quien_tiene_el_permiso` exige que el Asistente se vea
-    // en `asistentes` con la credencial de quien pide, así que hereda el mismo recorte.
-    const { data: cuentas, error } = await supabase
+    const { data: cuentas, error } = await db
       .from('datos_bancarios_asistente')
       .select('pais, identificador_clase, identificador, banco, titular, updated_at')
-      .eq('prestadora_id', prestadoraId)
       .eq('asistente_id', asistente.id);
     if (error) return responderError(res, error);
 
     const paises = [...new Set((cuentas || []).map((cuenta) => cuenta.pais))];
     let siglas = new Map();
     if (paises.length > 0) {
-      const { data: catalogo, error: errorCatalogo } = await supabase
+      const { data: catalogo, error: errorCatalogo } = await db
         .from('catalogo_identificadores_de_cuenta')
         .select('pais, codigo, sigla')
         .in('pais', paises);

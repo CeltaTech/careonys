@@ -4,32 +4,16 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 10 fichas.** Panel 5, aplicación del Cliente 3, Base 2.
+**Total: 9 fichas.** Panel 4, aplicación del Cliente 3, Base 2.
 
-## Panel (5)
-
-### 52. Fecha del documento
-
-| | |
-|---|---|
-| **Texto actual** | Fecha de la autorización |
-| **Propuesta** | Dejar el texto actual. |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice de qué es la fecha sin ambigüedad. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Personas autorizadas», en la ventana del documento, arriba del texto. |
-| **Qué estaba haciendo** | abrió el documento. |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | etiqueta. |
-| **Decisión** |  |
+## Panel (4)
 
 ### 53. Última autorización firmada
 
 | | |
 |---|---|
 | **Texto actual** | Última autorización firmada: {fecha} ({como}). — donde {como} es «confirmada por el titular desde su aplicación» o «documento firmado». |
-| **Propuesta** | «Última autorización firmada: {fecha}, {como}.» con {como}: «desde la aplicación del titular» o «en papel». |
+| **Propuesta** | «Última autorización firmada: {fecha}, {como}.» con {como}: «desde la aplicación del titular» o «con el documento impreso». |
 | **¿Aparece hoy?** | sí |
 | **Por qué** | la firma en la aplicación ya no es una confirmación: es firma con código. Y «documento firmado» repite lo que dice el renglón. Las dos formas quedan cortas y paralelas. |
 | **Quién lo lee** | la coordinación de la Prestadora. |

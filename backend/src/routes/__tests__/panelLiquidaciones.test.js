@@ -842,10 +842,8 @@ describe('con qué se le pagó al Asistente', () => {
 // Con qué credencial entra cada ruta
 // ---------------------------------------------------------------------------------------
 
-/* El catálogo y todo lo que escribe van con la credencial de quien pide: la que separa una
-   Prestadora de otra es la protección por fila de la base. Las dos lecturas de liquidaciones
-   siguen con la llave maestra, porque a un Coordinador la base le recorta los Asistentes a su
-   zona. Con el sistema roto —una consulta con la llave cambiada— una de las dos da al revés. Lo
+/* Todo va con la credencial de quien pide: la que separa una Prestadora de otra es la protección
+   por fila de la base. Con el sistema roto —una consulta con la llave maestra— la prueba falla. Lo
    que esta prueba no ve es la protección por fila en sí: la base de mentira no la tiene. */
 describe('con qué credencial entra cada ruta', () => {
   const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
@@ -880,9 +878,7 @@ describe('con qué credencial entra cada ruta', () => {
     assert.equal(alta.credencial, credencialEnviada);
   });
 
-  it('generar el mes va con la llave maestra y nombra a la Prestadora en cada lectura', async () => {
-    // Con la credencial de quien pide, la base le esconde a todos los roles el Asistente importado
-    // que espera conformidad (y con él su remuneración), y ese Asistente hoy se liquida.
+  it('generar el mes va con la credencial de quien pide y sin filtrar por Prestadora', async () => {
     respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS' }]);
     respuestas.set('GET /rest/v1/guardias', () => [
       { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
@@ -905,20 +901,18 @@ describe('con qué credencial entra cada ruta', () => {
     const aLaBase = llamadas.filter((l) => l.clave.includes('/rest/v1/') && !deLaSesion(l));
     assert.ok(aLaBase.length >= 8, 'la ruta tiene que haber consultado la base');
     for (const llamada of aLaBase) {
-      assert.equal(llamada.credencial, LLAVE_MAESTRA, `${llamada.clave} no fue con la llave maestra`);
+      assert.equal(llamada.credencial, credencialEnviada, `${llamada.clave} no fue con la credencial de quien pide`);
+      assert.notEqual(llamada.credencial, LLAVE_MAESTRA);
     }
-    // Con la llave maestra el aislamiento es el filtro: cada lectura de datos de la Prestadora lo lleva.
     for (const tabla of ['guardias', 'asistentes', 'remuneraciones_asistente', 'configuracion_pago_asistentes', 'conceptos_liquidacion', 'liquidaciones_asistente']) {
       const lectura = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
-      assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${tabla} sin el filtro de la Prestadora`);
+      assert.ok(!lectura.url.includes('prestadora_id='), `${tabla}: el aislamiento lo hace la base, no un filtro`);
     }
-    const asistentes = llamadas.find((l) => l.clave === 'GET /rest/v1/asistentes');
-    assert.ok(!asistentes.url.includes('pendiente_conformidad'), 'el Asistente pendiente de conformidad no se deja afuera');
     const alta = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
     assert.equal(alta.cuerpo.prestadora_id, PRESTADORA);
   });
 
-  it('el detalle de una liquidación sigue con la llave maestra y nombrando a la Prestadora', async () => {
+  it('el detalle de una liquidación va con la credencial de quien pide', async () => {
     respuestas.set('GET /rest/v1/liquidaciones_asistente', () => [
       { id: 'liq-1', estado: 'pendiente', asistente_id: 'a-1', periodo_desde: '2026-08-01', periodo_hasta: '2026-08-31' },
     ]);
@@ -928,8 +922,28 @@ describe('con qué credencial entra cada ruta', () => {
 
     const { estado } = await pedir('GET', '/liq-1');
     assert.equal(estado, 200);
-    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/liquidaciones_asistente');
-    assert.equal(lectura.credencial, LLAVE_MAESTRA);
-    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+    const aLaBase = llamadas.filter((l) => l.clave.includes('/rest/v1/') && !deLaSesion(l));
+    assert.ok(aLaBase.length >= 3, 'la ruta tiene que haber consultado la base');
+    for (const llamada of aLaBase) {
+      assert.equal(llamada.credencial, credencialEnviada, `${llamada.clave} no fue con la credencial de quien pide`);
+      assert.ok(!llamada.url.includes('prestadora_id='), `${llamada.clave}: el aislamiento lo hace la base`);
+    }
+  });
+
+  it('la lista del mes va con la credencial de quien pide', async () => {
+    respuestas.set('GET /rest/v1/liquidaciones_asistente', () => [
+      { id: 'liq-1', estado: 'pendiente', asistente_id: 'a-1', periodo_desde: '2026-08-01', periodo_hasta: '2026-08-31' },
+    ]);
+    respuestas.set('GET /rest/v1/asistentes', () => [{ id: 'a-1', nombre: 'Asistente de prueba' }]);
+
+    const { estado, cuerpo } = await pedir('GET', '/?periodo=2026-08');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo[0].asistente_nombre, 'Asistente de prueba');
+    const aLaBase = llamadas.filter((l) => l.clave.includes('/rest/v1/') && !deLaSesion(l));
+    assert.equal(aLaBase.length, 2);
+    for (const llamada of aLaBase) {
+      assert.equal(llamada.credencial, credencialEnviada, `${llamada.clave} no fue con la credencial de quien pide`);
+      assert.ok(!llamada.url.includes('prestadora_id='), `${llamada.clave}: el aislamiento lo hace la base`);
+    }
   });
 });

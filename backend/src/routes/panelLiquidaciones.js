@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre } from '../utils/horasDeGuardia.js';
 import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
@@ -47,10 +47,10 @@ export { bordesDelPeriodo, calcularLiquidacion, esPeriodoValido, primerDia, ulti
    (CLAUDE.md §6): no se loguean, no viajan por la URL. El período sí va en la URL porque es
    un mes, no un importe.
 
-   CON LA CREDENCIAL DE QUIEN PIDE. El catálogo de conceptos, pagar y borrar entran a la base con
-   `clienteDelPedido(req)`: la base sabe quién pide y le contesta sólo lo de su Prestadora, así
-   que esas consultas no llevan el filtro de la Prestadora de la sesión. Las dos lecturas de
-   liquidaciones y la generación siguen con la llave maestra y dicen por qué. */
+   CON LA CREDENCIAL DE QUIEN PIDE. Todo entra a la base con `clienteDelPedido(req)`: la base
+   sabe quién pide y le contesta sólo lo de su Prestadora, así que ninguna consulta lleva el
+   filtro de la Prestadora de la sesión. El Asistente pendiente de conformidad no lo devuelve la
+   base, y no se liquida hasta que se conforme. */
 
 export const panelLiquidacionesRouter = Router();
 
@@ -301,12 +301,11 @@ panelLiquidacionesRouter.patch('/conceptos/:id', requiereRolPanel, requierePermi
 // ---------------------------------------------------------------------------------------
 
 /** Los nombres de estos Asistentes, para las listas que se muestran en pantalla. */
-async function nombresDeAsistentes(db, prestadoraId, ids) {
+async function nombresDeAsistentes(db, ids) {
   if (ids.length === 0) return new Map();
   const { data, error } = await db
     .from('asistentes')
     .select('id, nombre')
-    .eq('prestadora_id', prestadoraId)
     .in('id', ids);
   if (error) throw new Error(error.message);
   return new Map((data || []).map((a) => [a.id, a.nombre]));
@@ -321,47 +320,35 @@ panelLiquidacionesRouter.get('/', requiereRolPanel, requierePermiso(PERMISO_LECT
   // Se piden las liquidaciones que TOCAN ese mes, no las que empiezan el primer día. Desde que
   // el período puede ser una semana o una quincena, un mes contiene varias, y una de ellas
   // puede haber empezado el mes anterior. Quien mira septiembre tiene que ver esa semana.
-  //
-  // Con la llave maestra, y por eso cada consulta nombra a la Prestadora: esto lo abre también un
-  // Coordinador con el permiso de ver pagos, y a él la base le deja ver sólo los Asistentes y las
-  // guardias de su zona. Con su credencial, las liquidaciones de los demás saldrían sin nombre.
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('liquidaciones_asistente')
     .select('*')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .lte('periodo_desde', ultimoDia(periodo))
     .gte('periodo_hasta', primerDia(periodo))
     .order('periodo_desde', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);
 
-  // El nombre se busca aparte y filtrando por Prestadora, en vez de traerlo colgado de la
-  // liquidación: esta lectura va con la llave maestra, sin las reglas de acceso de la base, y
-  // acá el aislamiento entre Prestadoras lo garantiza cada consulta o no lo garantiza nadie
-  // (CLAUDE.md §5).
-  const nombres = await nombresDeAsistentes(supabase, req.usuarioPanel.prestadoraId, (data || []).map((l) => l.asistente_id));
+  const nombres = await nombresDeAsistentes(db, (data || []).map((l) => l.asistente_id));
   res.json((data || []).map((l) => ({ ...l, asistente_nombre: nombres.get(l.asistente_id) ?? null })));
 });
 
-// CON LA LLAVE MAESTRA, Y CON LA PRESTADORA EN CADA CONSULTA. Con la credencial de quien pide,
-// la política restrictiva `oculta_pendientes_de_conformidad` de `asistentes` le esconde a todos
-// los roles el Legajo importado que espera conformidad, y `lee_remuneraciones_quien_tiene_el_permiso`
-// pide que ese Legajo se vea: el Asistente importado y todavía sin conformar quedaría afuera de la
-// liquidación, y hoy entra. Si eso cambia se decide aparte.
 panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERMISO_LECTURA), soloAdministracion, async (req, res) => {
   const { periodo } = req.body || {};
   if (!esPeriodoValido(periodo)) {
     return res.status(400).json({ error: 'Falta el período a liquidar, en formato AAAA-MM' });
   }
 
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
   const desde = primerDia(periodo);
   const hasta = ultimoDia(periodo);
 
-  const { data: prestadora, error: errorPrestadora } = await supabase
+  // Las liquidaciones nacen con la Prestadora que la base deja ver a quien pide.
+  const { data: prestadora, error: errorPrestadora } = await db
     .from('prestadoras')
-    .select('pais, moneda')
-    .eq('id', prestadoraId)
+    .select('id, pais, moneda')
+    .eq('id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (errorPrestadora) return responderError(res, errorPrestadora);
   if (!prestadora) return res.status(404).json({ error: 'Prestadora no encontrada' });
@@ -370,10 +357,9 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   // quincenal puede empezar en el mes anterior o terminar en el siguiente. Cada período se queda
   // después con las suyas. Quince días de más a cada lado cubren cualquiera de las tres formas.
   const guardias = await traerPaginado(() =>
-    supabase
+    db
       .from('guardias')
       .select('id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, asistente_id')
-      .eq('prestadora_id', prestadoraId)
       .gte('fecha', diaCorrido(desde, -15))
       .lte('fecha', diaCorrido(hasta, 15))
       .not('asistente_id', 'is', null)
@@ -382,39 +368,34 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   const acumuladoDelMes = acumularGuardias(guardias.filter((g) => g.fecha >= desde && g.fecha <= hasta));
 
   const asistentes = await traerPaginado(() =>
-    supabase
+    db
       .from('asistentes')
       .select('id, nombre, estado, tipo_vinculo, fecha_alta, fecha_baja')
-      .eq('prestadora_id', prestadoraId)
       .is('deleted_at', null)
       .order('nombre', { ascending: true })
   );
 
   // Lo que cobra cada uno vive en su propia tabla, separada del Legajo del Asistente justamente porque las
-  // reglas de acceso de la base filtran filas y no columnas. Se pide aparte y filtrando por
-  // Prestadora, en vez de colgada del Legajo, por lo mismo que los nombres de más arriba.
-  const { data: remuneraciones, error: errorRemuneraciones } = await supabase
+  // reglas de acceso de la base filtran filas y no columnas.
+  const { data: remuneraciones, error: errorRemuneraciones } = await db
     .from('remuneraciones_asistente')
-    .select('asistente_id, unidad_medicion, valor_hora, valor_guardia, valor_semana, valor_hora_extra, frecuencia_pago')
-    .eq('prestadora_id', prestadoraId);
+    .select('asistente_id, unidad_medicion, valor_hora, valor_guardia, valor_semana, valor_hora_extra, frecuencia_pago');
   if (errorRemuneraciones) return responderError(res, errorRemuneraciones);
   const pagoPorAsistente = new Map((remuneraciones || []).map((r) => [r.asistente_id, r]));
 
   // Cómo paga esta Prestadora lo que no depende de una persona sola. Que la fila no exista no
   // es un error: es la configuración de fábrica.
-  const { data: filaPago, error: errorConfigPago } = await supabase
+  const { data: filaPago, error: errorConfigPago } = await db
     .from('configuracion_pago_asistentes')
     .select('regla, frecuencia_pago')
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (errorConfigPago) return responderError(res, errorConfigPago);
   const reglaDePago = filaPago?.regla ?? {};
   const frecuenciaDeLaPrestadora = filaPago?.frecuencia_pago ?? {};
 
-  const { data: conceptos, error: errorConceptos } = await supabase
+  const { data: conceptos, error: errorConceptos } = await db
     .from('conceptos_liquidacion')
     .select('*')
-    .eq('prestadora_id', prestadoraId)
     .eq('activo', true)
     .order('orden', { ascending: true })
     .order('nombre', { ascending: true });
@@ -422,7 +403,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
 
   // Las escalas legales son contenido curado por CeltaTech por país, nunca una decisión de
   // una Prestadora: por eso el filtro es por jurisdicción y no por `prestadora_id`.
-  const { data: filasEscalas, error: errorEscalas } = await supabase
+  const { data: filasEscalas, error: errorEscalas } = await db
     .from('escalas_legales')
     .select('*')
     .eq('jurisdiccion', prestadora.pais);
@@ -437,10 +418,9 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
 
   // Las que ya están, de cualquier período que toque este mes. Se identifica cada una por la
   // persona y el día en que su período empieza, que es lo que la base tiene por única.
-  const { data: yaExistentes, error: errorExistentes } = await supabase
+  const { data: yaExistentes, error: errorExistentes } = await db
     .from('liquidaciones_asistente')
     .select('id, asistente_id, periodo_desde, estado')
-    .eq('prestadora_id', prestadoraId)
     .lte('periodo_desde', hasta)
     .gte('periodo_hasta', desde);
   if (errorExistentes) return responderError(res, errorExistentes);
@@ -511,30 +491,29 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
       // Rehacer un período es borrar la liquidación anterior y generar otra. Se borra recién
       // acá, con la cuenta nueva ya hecha, para no dejarlo sin nada si algo salía mal antes.
       if (existente) {
-        const { error: errorBorrado } = await supabase
+        const { error: errorBorrado } = await db
           .from('liquidaciones_asistente')
           .delete()
-          .eq('id', existente.id)
-          .eq('prestadora_id', prestadoraId);
+          .eq('id', existente.id);
         if (errorBorrado) return responderError(res, errorBorrado);
       }
 
       // La moneda no se manda: la completa la base con la de la Prestadora, igual que en todas
       // las tablas de importes (regla 14).
-      const { data: guardada, error: errorGuardar } = await supabase
+      const { data: guardada, error: errorGuardar } = await db
         .from('liquidaciones_asistente')
-        .insert({ prestadora_id: prestadoraId, ...calculada.liquidacion, generada_por: req.usuarioPanel.id })
+        .insert({ prestadora_id: prestadora.id, ...calculada.liquidacion, generada_por: req.usuarioPanel.id })
         .select()
         .single();
       if (errorGuardar) return responderError(res, errorGuardar);
 
-      const { error: errorItems } = await supabase
+      const { error: errorItems } = await db
         .from('liquidaciones_asistente_items')
         .insert(calculada.items.map((item) => ({ liquidacion_id: guardada.id, ...item })));
       if (errorItems) {
         // Una liquidación sin sus renglones no explica nada: si los renglones no entraron, la
         // cabecera tampoco se queda.
-        await supabase.from('liquidaciones_asistente').delete().eq('id', guardada.id).eq('prestadora_id', prestadoraId);
+        await db.from('liquidaciones_asistente').delete().eq('id', guardada.id);
         return responderError(res, errorItems);
       }
 
@@ -547,30 +526,26 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
 });
 
 panelLiquidacionesRouter.get('/:id', requiereRolPanel, requierePermiso(PERMISO_LECTURA), async (req, res) => {
-  // Con la llave maestra y nombrando a la Prestadora en cada consulta, por lo mismo que la lista:
-  // un Coordinador con el permiso de ver pagos no alcanza con su credencial el Legajo ni las
-  // guardias de un Asistente de fuera de su zona.
-  const { data: liquidacion, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: liquidacion, error } = await db
     .from('liquidaciones_asistente')
     .select('*')
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
   if (!liquidacion) return res.status(404).json({ error: 'Liquidación no encontrada' });
 
-  const { data: items, error: errorItems } = await supabase
+  const { data: items, error: errorItems } = await db
     .from('liquidaciones_asistente_items')
     .select('*')
     .eq('liquidacion_id', liquidacion.id)
     .order('orden', { ascending: true });
   if (errorItems) return responderError(res, errorItems);
 
-  const { data: asistente, error: errorAsistente } = await supabase
+  const { data: asistente, error: errorAsistente } = await db
     .from('asistentes')
     .select('id, nombre, tipo_vinculo')
     .eq('id', liquidacion.asistente_id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (errorAsistente) return responderError(res, errorAsistente);
 

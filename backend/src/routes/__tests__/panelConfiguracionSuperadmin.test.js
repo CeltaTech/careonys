@@ -183,12 +183,15 @@ describe('visibilidad de las aplicaciones', () => {
 });
 
 describe('personal de emergencia', () => {
-  it('lee con la maestra y acotado a la Prestadora, para que el nombre del Asistente no salga vacío', async () => {
-    respuestas.set('GET /rest/v1/personal_emergencia', () => []);
-    const { estado } = await pedir('GET', '/personal-emergencia');
+  it('lee con la credencial de quien pide y deja afuera al Asistente que la base no muestra', async () => {
+    respuestas.set('GET /rest/v1/personal_emergencia', () => [
+      { id: 'a', asistentes: { nombre: 'Visible' } },
+      { id: 'b', asistentes: null },
+    ]);
+    const { estado, cuerpo } = await pedir('GET', '/personal-emergencia');
     assert.equal(estado, 200);
     const consulta = laConsulta('GET /rest/v1/personal_emergencia');
-    assert.equal(consulta.credencial, 'Bearer clave-de-mentira');
-    assert.equal(consulta.consulta.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(consulta.credencial, sesionDePrueba(USUARIO));
+    assert.deepEqual(cuerpo.personal.map((f) => f.id), ['a']);
   });
 });

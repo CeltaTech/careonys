@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { clienteDelPedido, enLaPrestadora, supabase } from '../db/connection.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
@@ -634,19 +634,14 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id/mover', async (req, re
 // --- Servicios: personal de emergencia (roster de suplentes/franqueros/emergencia
 //     disponibles para el protocolo de continuidad de guardia, Parte 2 de Módulo 6) ---
 panelConfiguracionRouter.get('/personal-emergencia', async (req, res) => {
-  // Queda con la llave maestra y el filtro de la Prestadora: el nombre embebido sale de
-  // `asistentes`, donde la política restrictiva `oculta_pendientes_de_conformidad` esconde al
-  // Asistente importado que todavía espera conformidad (`pendiente_conformidad = true`), para
-  // superadmin y admin_prestadora por igual; con la credencial de la persona su nombre saldría
-  // vacío en esta lista, y antes se mostraba. Se decide aparte.
-  let query = supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('personal_emergencia')
     .select('id, asistente_id, tipo, activo, created_at, asistentes(nombre)')
     .order('created_at', { ascending: false });
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query;
   if (error) return responderError(res, error);
-  res.json({ personal: data });
+  // El Asistente importado que todavía espera conformidad no es de la Prestadora: la base no lo
+  // muestra en ningún lado del Panel, y acá tampoco.
+  res.json({ personal: (data || []).filter((fila) => fila.asistentes) });
 });
 
 panelConfiguracionRouter.post('/personal-emergencia', async (req, res) => {

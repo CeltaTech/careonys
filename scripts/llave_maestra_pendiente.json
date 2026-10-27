@@ -86,7 +86,6 @@
                                  "backend/src/routes/appClientes.js",
                                  "backend/src/routes/panelAusencias.js",
                                  "backend/src/routes/panelCobros.js",
-                                 "backend/src/routes/panelConfiguracion.js",
                                  "backend/src/routes/panelCuentas.js",
                                  "backend/src/routes/panelGuardias.js",
                                  "backend/src/routes/panelImportacion.js",

@@ -684,8 +684,7 @@ export const T = {
       reenviar: 'Reenviar el código',
       confirmando: 'Firmando…',
       firmada: 'La autorización quedó firmada.',
-      aviso: 'Tiene una autorización de acceso para firmar.',
-      aviso_enlace: 'Ver y firmar',
+      documentacion_pendiente: 'Documentación pendiente',
     },
     // El alta de una persona autorizada que hace el titular, y la lista de las que ya tiene.
     alta_persona: {
@@ -1290,8 +1289,7 @@ export const T = {
       reenviar: 'Resend the code',
       confirmando: 'Signing…',
       firmada: 'The authorization has been signed.',
-      aviso: 'You have an access authorization to sign.',
-      aviso_enlace: 'View and sign',
+      documentacion_pendiente: 'Pending documentation',
     },
     alta_persona: {
       titulo: 'Add authorized person',
@@ -1895,8 +1893,7 @@ export const T = {
       reenviar: 'Reenviar o código',
       confirmando: 'Assinando…',
       firmada: 'A autorização ficou assinada.',
-      aviso: 'Você tem uma autorização de acesso para assinar.',
-      aviso_enlace: 'Ver e assinar',
+      documentacion_pendiente: 'Documentação pendente',
     },
     alta_persona: {
       titulo: 'Adicionar pessoa autorizada',

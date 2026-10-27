@@ -1,8 +1,8 @@
-// El renglón que le avisa al titular que la Prestadora armó una autorización de acceso para firmar.
-// Cuando la arma él mismo, la firma ahí mismo y este renglón no llega a aparecer.
+// El botón que le avisa al titular que la Prestadora armó una autorización de acceso para firmar.
+// Cuando la arma él mismo, la firma ahí mismo y este botón no llega a aparecer.
 //
 // NO BLOQUEA NI INTERRUMPE, A PROPÓSITO. Hasta la firma sigue rigiendo lo anterior: no hay nada
-// trabado, así que un cartel que tape la pantalla estaría mintiendo.
+// trabado, así que un cartel que tape la pantalla estaría mintiendo. Llama la atención latiendo.
 //
 // SÓLO LO VE EL TITULAR, y sólo cuando hay algo pendiente. Para las personas autorizadas no existe: la
 // autorización no es suya y no hay nada que puedan hacer con ella.
@@ -23,16 +23,9 @@ export default function AvisoInstruccionPendiente() {
   if (!esTitular || !instruccionPendiente) return null;
 
   return (
-    <div className="alert alert-info aviso-instruccion" role="status">
-      <span>{t.instruccion.aviso}</span>
-      {/* De qué pantalla se salió, para volver a esa después de firmar y no a un lugar fijo. */}
-      <Link
-        to="/instruccion"
-        state={{ desde: location.pathname }}
-        className="btn"
-      >
-        {t.instruccion.aviso_enlace}
-      </Link>
-    </div>
+    // De qué pantalla se salió, para volver a esa después de firmar y no a un lugar fijo.
+    <Link to="/instruccion" state={{ desde: location.pathname }} className="btn boton-que-llama">
+      {t.instruccion.documentacion_pendiente}
+    </Link>
   );
 }

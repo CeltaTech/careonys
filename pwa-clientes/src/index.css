@@ -818,11 +818,35 @@ a {
 /* El aviso de instrucción pendiente lleva adentro un botón, y en un teléfono el texto y el botón
    no entran en el mismo renglón: se apilan, y el botón queda alineado a la izquierda con el
    texto en vez de estirarse de punta a punta como si fuera lo principal de la pantalla. */
-.aviso-instruccion {
+/* Lo que espera al titular y no se puede pasar por alto: un borde de atención que late. */
+.boton-que-llama {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  width: fit-content;
+  margin-bottom: 12px;
+  background: var(--aviso-fondo);
+  border: 2px solid var(--naranja-alerta);
+  color: var(--aviso-texto);
+  font-weight: 600;
+  animation: latido-de-atencion 1.6s ease-out infinite;
+}
+
+@keyframes latido-de-atencion {
+  0% {
+    box-shadow: 0 0 0 0 var(--naranja-alerta);
+  }
+  70% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boton-que-llama {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--naranja-alerta);
+  }
 }
 
 /* ---------- El hilo de mensajes de Match ---------- */
@@ -875,7 +899,8 @@ a {
 }
 
 .mensaje-ajeno {
-  align-self: flex-start;
+  display: flex;
+  width: fit-content;
 }
 
 .mensaje-cuerpo {

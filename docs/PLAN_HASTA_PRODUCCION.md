@@ -180,10 +180,9 @@ consultas no nombran la Prestadora **no está medido de nuevo**: los números de
 anterior ya no se pueden sostener. Si falta un filtro, la base contesta igual: no tiene con qué
 darse cuenta.
 
-**Los 12 depósitos de archivos tienen política**, pero el backend los sirve con la llave maestra,
-que no pasa por ella, y el aislamiento real sigue siendo **comparar a mano el comienzo de la ruta
-del archivo** (`panelVitalesAutorizacion.js:91`, y `appAsistentesDocumentos.js:266` a través de
-`utils/archivosSubidos.js:72`).
+**Los 12 depósitos de archivos tienen política.** La autorización de monitoreo y los documentos
+del Asistente ya se sirven con el acceso de quien pide, y ahí dice que no el depósito; las rutas que
+siguen con la llave maestra se saltean la política del depósito como la de las tablas.
 
 **La protección por fila está puesta y hoy no protege de nada.** Las 202 tablas la tienen encendida
 y 201 tienen política —la única sin ninguna es `codigos_de_presencia`—, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
@@ -402,10 +401,7 @@ devuelva información de salud de un paciente y todavía no lo llame, lo llama a
 resumen, y lo que queda sigue verificando bien. Cierre: el último resumen se guarda además fuera de
 la base, y `verificar_cadena_de_consultas` lo compara.
 
-**En la misma pasada salen las dos comparaciones de ruta de archivo** que todavía hace el código
-(`panelVitalesAutorizacion.js:91` y `appAsistentesDocumentos.js:266`): los
-depósitos ya exigen la Prestadora al comienzo de la ruta, y con la credencial de la persona es la
-base la que dice que no. **Dos disparadores lo van a sentir:** `interno.prestadora_de_la_restriccion`
+**Dos disparadores van a sentir la credencial de la persona:** `interno.prestadora_de_la_restriccion`
 e `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `clientes` con los
 permisos de quien inserta. **Y el historial del registro clínico pasa a tener autor** en lo que se
 corrige desde el Panel, que hoy queda anotado sin persona porque lo escribe la llave maestra.

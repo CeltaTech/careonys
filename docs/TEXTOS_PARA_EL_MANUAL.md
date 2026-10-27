@@ -73,5 +73,5 @@ cual. La redacción final la aprueba el Desarrollador cuando se escriba el manua
 
 - Ninguna guardia debería quedar sin cubrir.
 - El sistema anticipa la demora, convoca al suplente y verifica el presentismo en el domicilio. La coordinación interviene sólo cuando hace falta.
-- Ingrese con las credenciales asignadas por la administración.
+- Ingrese con los datos de acceso asignados por la administración.
 - Acceso restringido al personal autorizado. Toda actividad queda registrada.

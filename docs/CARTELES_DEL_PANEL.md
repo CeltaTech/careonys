@@ -307,9 +307,7 @@ mapa roto.
 - Título de sección del mapa: «Mapa del Padrón por zona»
 - Debajo, el cartel, en el lugar donde iría el mapa.
 
-**El cartel, textual.**
-Primer renglón: «Todavía no hay ninguna ubicación para mostrar.»
-Segundo renglón: «Los Legajos con el domicilio ubicado aparecen acá.»
+**El cartel, textual.** «Todavía no hay ninguna ubicación para mostrar.»
 
 **Cuándo aparece.** Cuando hay al menos un Asistente activo en el Padrón y ninguno de ellas tiene
 ubicación cargada. También aparece cuando las ubicaciones que hay cargadas no sirven: un par de
@@ -325,10 +323,7 @@ por zona», y debajo un blanco.
 
 **Problemas que se ven acá.** El cartel esconde justamente el dato que más falta hace: cuántos
 Asistentes hay en el Padrón. Se sabe que no hay ubicaciones, pero no se sabe si son tres personas sin
-ubicar o cuarenta, porque el renglón que dice esa cuenta desaparece junto con el mapa. El texto del
-segundo renglón habla de «Legajos» y de «domicilio ubicado», dos palabras que no aparecen en ningún
-otro lado de esta pantalla —el resto habla de personas y de zonas—, y no dice dónde se carga esa
-ubicación, así que leído solo no se sabe adónde ir a resolverlo. Y hay una situación parecida que no
+ubicar o cuarenta, porque el renglón que dice esa cuenta desaparece junto con el mapa. Y hay una situación parecida que no
 muestra ningún cartel: si se elige una zona que no tiene a nadie ubicado, el dibujo del mapa queda
 sin puntos y no aparece ninguna explicación, porque el cartel sólo mira el total del Padrón y no la
 zona elegida.

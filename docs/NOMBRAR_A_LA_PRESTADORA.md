@@ -782,7 +782,7 @@ una opinión:
 - **Las dos de la entrevista pública** (fichas 112 y 114) las lee un postulante, que está
   afuera de la empresa.
 - **Un grupo las lee también el soporte técnico de CeltaTech**: son las de datos de acceso
-  (fichas 91 y 100) y las de Auditoría (fichas 159 a 163). Van señaladas en su ficha.
+  (ficha 100) y las de Auditoría (fichas 159 a 163). Van señaladas en su ficha.
 
 ---
 
@@ -832,8 +832,8 @@ cobro, Calificaciones, Auditoría legal—.
 **Ruta:** `errores.motivos.sin_pasarela_conectada`
 
 **Texto de hoy:**
-> Esta Prestadora no tiene ninguna pasarela de cobro conectada. Se conecta en Match > Pasarela
-> de pago.
+> Esta Prestadora no tiene ninguna pasarela de cobro conectada. Se conecta en Configuración ›
+> Prestadora › Pasarela de pago.
 
 **Dónde se ve:** Clientes > Clientes (Match), al confirmar el alta de un acceso cobrable.
 
@@ -852,8 +852,8 @@ cobro, Calificaciones, Auditoría legal—.
 **Ruta:** `errores.motivos.pasarela_no_conectada`
 
 **Texto de hoy:**
-> Esa pasarela de cobro no está conectada en esta Prestadora. Se conecta en Match > Pasarela de
-> pago.
+> Esa pasarela de cobro no está conectada en esta Prestadora. Se conecta en Configuración ›
+> Prestadora › Pasarela de pago.
 
 **Dónde se ve:** Clientes > Clientes (Match), al confirmar el alta de un acceso.
 
@@ -969,29 +969,6 @@ parte de ella.
 
 ---
 
-## 91. Los datos de acceso de la pasarela sólo los toca el Admin
-
-**Ruta:** `configuracion.pasarela_credenciales_solo_admin`
-
-**Texto de hoy:**
-> Acá se ve qué pasarelas están conectadas, pero conectarlas y cambiar sus claves es del
-> administrador de la prestadora. El soporte técnico no accede a los datos de acceso con los que
-> la prestadora cobra, ni siquiera durante una sesión de soporte.
-
-**Dónde se ve:** en ninguna parte. El detalle de la sección de pasarelas de cobro, donde iría,
-está en la ficha 26 de `docs/CARTELES_DEL_PANEL.md`.
-
-**Quién lo lee:** nadie.
-
-**Archivo:** —
-
-**OBSERVACIÓN:** la clave existe en las traducciones (`panel/src/i18n/translations.js:503`) y no
-la usa ninguna pantalla.
-
-**DECISIÓN:**
-
----
-
 ## 94. No hay ningún lugar cargado
 
 **Ruta:** `configuracion.lugares_sin_lista`
@@ -1070,27 +1047,6 @@ llave que lo enciende o lo apaga.
 **Quién lo lee:** la empresa.
 
 **Archivo:** `panel/src/pages/configuracion/Avisos.jsx:970`
-
-**DECISIÓN:**
-
----
-
-## 106. Este usuario no puede validar informes
-
-**Ruta:** `informesObraSocial.sin_permiso_validar`
-
-**Texto de hoy:**
-> La Prestadora no habilitó a este usuario para validar informes. Se puede ver la vista previa,
-> pero no guardarla.
-
-**Dónde se ve:** en ninguna parte.
-
-**Quién lo lee:** nadie.
-
-**Archivo:** —
-
-**OBSERVACIÓN:** la clave existe en las traducciones (`panel/src/i18n/translations.js:975`) y no
-la usa ninguna pantalla.
 
 **DECISIÓN:**
 
@@ -1277,26 +1233,6 @@ pantalla está en la ficha 6 de `docs/CARTELES_DEL_PANEL.md`.
 
 ---
 
-## 132. Esta función no se ofrece
-
-**Ruta:** `clientes.personas_autorizadas.accesos_topado`
-
-**Texto de hoy:**
-> Esta Prestadora no ofrece esta función en su aplicación, así que no hay nada que dar. No es
-> una decisión del titular.
-
-**Dónde se ve:** en ninguna parte.
-
-**Quién lo lee:** nadie.
-
-**Archivo:** —
-
-**OBSERVACIÓN:** la clave existe en las traducciones y no la usa ninguna pantalla.
-
-**DECISIÓN:**
-
----
-
 ## 133. El autor de un mensaje saliente
 
 **Ruta:** `comunicacion.autor_prestadora`
@@ -1323,7 +1259,7 @@ de autor de cada mensaje saliente.
 
 **Texto de hoy:**
 > Esta Prestadora todavía no tiene WhatsApp configurado. Se configura en Configuración ›
-> WhatsApp.
+> Mensajes › Conexión de WhatsApp.
 
 **Dónde se ve:** Gestión > Comunicación > Comunicación, hilo de WhatsApp.
 
@@ -1372,28 +1308,6 @@ cancelar una guardia desde su detalle como al cancelar varias con la barra de ac
 
 **Archivo:** `panel/src/pages/guardias/GuardiaAcciones.jsx:476` y
 `panel/src/pages/guardias/BarraAccionesMasivas.jsx:320`
-
-**DECISIÓN:**
-
----
-
-## 141. El estado de cuenta está reservado
-
-**Ruta:** `facturacion.estado_de_cuenta_reservado`
-
-**Texto de hoy:**
-> El estado de cuenta de los Clientes lo ve la administración de la Prestadora. Si necesita
-> verlo, pídale que le habilite esa acción en Configuración.
-
-**Dónde se ve:** en ninguna parte. En Gestión > Facturación > Saldos pendientes, quien no tiene
-ese permiso no ve el estado de cuenta ni ningún texto en su lugar.
-
-**Quién lo lee:** nadie.
-
-**Archivo:** —
-
-**OBSERVACIÓN:** la clave existe en las traducciones (`panel/src/i18n/translations.js:2256`) y no
-la usa ninguna pantalla.
 
 **DECISIÓN:**
 

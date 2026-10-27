@@ -220,7 +220,6 @@ describe('el mapa habla los tres idiomas', () => {
     'sin_zona',
     'sin_ubicacion',
     'vacio_sin_ubicacion',
-    'vacio_ayuda',
   ];
 
   it.each(IDIOMAS)('%s tiene todos los textos del mapa', (idioma) => {

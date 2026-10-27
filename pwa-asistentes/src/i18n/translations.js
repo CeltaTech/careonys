@@ -392,7 +392,7 @@ export const T = {
     // El Relevo de emergencia: a mitad del turno, y no es el relevo que no llega.
     relevo_emergencia: {
       boton: 'Relevo de emergencia',
-      mantener: 'Mantenga apretado {segundos} segundos',
+      mantener: 'Mantenga presionado {segundos} segundos',
       siga_apretando: 'Siga apretando…',
       cuenta: 'Pidiendo el relevo en {segundos}…',
       enviando: 'Pidiendo el relevo…',

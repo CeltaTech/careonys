@@ -120,48 +120,6 @@ a {
   color: var(--texto-principal) !important;
 }
 
-/* Lo que espera a alguien y no se puede pasar por alto: un borde de atención que late. Al llegar
-   adonde lleva, el destino late tres veces y queda quieto. */
-.boton-que-llama {
-  background: var(--tono-atencion-fondo);
-  border: 2px solid var(--naranja-alerta);
-  color: var(--tono-atencion-texto) !important;
-  animation: latido-de-atencion 1.6s ease-out infinite;
-}
-
-.boton-que-llama:hover:not(:disabled) {
-  background: var(--tono-atencion-fondo);
-  border-color: var(--naranja-alerta-texto);
-}
-
-.destino-que-llama {
-  border-radius: var(--radio-control);
-  animation: latido-de-atencion 1.2s ease-out 3;
-}
-
-@keyframes latido-de-atencion {
-  0% {
-    box-shadow: 0 0 0 0 var(--naranja-alerta);
-  }
-  70% {
-    box-shadow: 0 0 0 8px transparent;
-  }
-  100% {
-    box-shadow: 0 0 0 0 transparent;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .boton-que-llama {
-    animation: none;
-    box-shadow: 0 0 0 3px var(--naranja-alerta);
-  }
-
-  .destino-que-llama {
-    animation: none;
-  }
-}
-
 /* ---------- Formularios ---------- */
 
 .form-field {

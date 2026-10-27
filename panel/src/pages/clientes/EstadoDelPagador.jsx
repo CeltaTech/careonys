@@ -23,7 +23,7 @@ import '../hojaDeTarjetas.css';
    QUÉ CUENTA COMO DEFINIDO NO SE DECIDE ACÁ. Lo contesta el backend, en un solo lugar, y esta
    pantalla lo muestra. Repartida entre pantallas, la misma pregunta terminaría contestándose
    distinto según dónde se mire. */
-export function EstadoDelPagador({ clienteId, puedeRegistrar, onRecargado }) {
+export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
   const { t, locale } = useLocale();
   const [estado, setEstado] = useState('cargando');
   const [datos, setDatos] = useState(null);
@@ -41,13 +41,11 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, onRecargado }) {
     try {
       setDatos(await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador`));
       setEstado('listo');
-      // La Ficha del cliente vuelve a preguntar si queda documentación pendiente.
-      onRecargado?.();
     } catch (err) {
       setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, [clienteId, t, onRecargado]);
+  }, [clienteId, t]);
 
   useEffect(() => {
     recargar();
@@ -155,7 +153,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, onRecargado }) {
               )}
             </div>
 
-            <div className="molde-acciones" id={consentimientoPendiente ? 'pendiente-pagador' : undefined}>
+            <div className="molde-acciones">
               {consentimientoPendiente ? (
                 <>
                   <Button

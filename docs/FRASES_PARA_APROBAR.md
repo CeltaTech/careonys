@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 8 fichas.** Panel 3, aplicación del Cliente 3, Base 2.
+**Total: 6 fichas.** Panel 3, aplicación del Cliente 3.
 
 ## Panel (3)
 
@@ -72,7 +72,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Qué pasó** | — |
 | **Qué puede hacer después** | — |
 | **Cómo se muestra** | — |
-| **Decisión** |  |
+| **Decisión** | queda para después de la mudanza: lo de Match se resuelve con la unificación con su desarrollo independiente. |
 
 ### 10. Servicio contratado vencido
 
@@ -88,7 +88,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Qué pasó** | — |
 | **Qué puede hacer después** | — |
 | **Cómo se muestra** | — |
-| **Decisión** |  |
+| **Decisión** | queda para después de la mudanza: lo de Match se resuelve con la unificación con su desarrollo independiente. |
 
 ### 11. Contactos incluidos agotados
 
@@ -104,38 +104,4 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Qué pasó** | — |
 | **Qué puede hacer después** | — |
 | **Cómo se muestra** | — |
-| **Decisión** |  |
-
-## Base (2)
-
-### 1. Correo de entrevista agendada
-
-| | |
-|---|---|
-| **Texto actual** | Su entrevista está agendada para el {{cuando}}. El día de la entrevista, ingrese por este enlace: {{enlace}} El acceso se habilita {{anticipo}} minutos antes de la hora. No necesita instalar nada ni crear una cuenta. |
-| **Propuesta** | «Su entrevista está agendada para el {{cuando}}. Ingrese por este enlace: {{enlace}}. La sala se abre {{anticipo}} minutos antes de la hora. No necesita instalar nada ni crear una cuenta.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | «El día de la entrevista» repite {{cuando}}; falta el punto después del enlace; «sala» es como lo llama la página de la entrevista. Queda lo de no instalar nada, que a un postulante sin aplicación le sirve. |
-| **Quién lo lee** | el postulante. |
-| **Dónde está** | correo a la dirección de su postulación. |
-| **Qué estaba haciendo** | nada; la coordinación agendó la entrevista en Panel → Postulaciones → una postulación → «Agendar entrevista». |
-| **Qué pasó** | el sistema agendó la entrevista y le envió el día, la hora y el enlace. Hoy el anticipo es de 15 minutos. |
-| **Qué puede hacer después** | entrar por el enlace el día de la entrevista. |
-| **Cómo se muestra** | correo. |
-| **Decisión** |  |
-
-### 2. Guardia sin cerrar, tercer aviso
-
-| | |
-|---|---|
-| **Texto actual** | El sistema avisó al Coordinador y la guardia sigue sin cerrarse. Intervenga para resolverlo. |
-| **Propuesta** | «La guardia sigue sin cerrar, aunque el sistema ya avisó al Coordinador. Intervenga para que se cierre.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | primero lo que importa —la guardia abierta—, después lo que ya se hizo, y «para que se cierre» dice el objetivo en lugar de «resolverlo», que no dice qué. |
-| **Quién lo lee** | la coordinación de la Prestadora que figura como destinataria del aviso grave de guardia sin cerrar. |
-| **Dónde está** | dentro del tercer aviso por una guardia sin cerrar, junto con la guardia, quién estaba a cargo, el atraso y si el Asistente marcó la salida. No se pudo confirmar cómo se llama en el Panel la parte donde se eligen los destinatarios. |
-| **Qué estaba haciendo** | nada; una guardia terminó y nadie la cerró. |
-| **Qué pasó** | el atraso superó las horas que configuró la Prestadora. Antes el sistema avisó al Coordinador y al respaldo. Sale una vez por guardia. |
-| **Qué puede hacer después** | intervenir para que se cierre la guardia. |
-| **Cómo se muestra** | WhatsApp, si la Prestadora lo activó; si no, correo. |
-| **Decisión** |  |
+| **Decisión** | queda para después de la mudanza: lo de Match se resuelve con la unificación con su desarrollo independiente. |

@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { exigeVisible, visibilidadDelPedido } from '../utils/visibilidadPrestadora.js';
-import { esRutaDeDocumentoDe } from '../utils/archivosSubidos.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { estaEnviado, estadoVisible, llegaVencido } from '../utils/estadoDelDocumento.js';
 import {
@@ -255,21 +254,19 @@ appAsistentesDocumentosRouter.post('/', exigeVisible(OPCION_DE_CARGA), recibirDo
 appAsistentesDocumentosRouter.get('/:documentoId/archivo-url', async (req, res) => {
   try {
     const db = clienteDelPedido(req);
-    const { asistenteId, prestadoraId } = req.usuarioAsistente;
     const { data: documento, error } = await db
       .from('documentos_asistente')
       .select('id, ruta_archivo')
       .eq('id', req.params.documentoId)
-      .eq('asistente_id', asistenteId)
+      .eq('asistente_id', req.usuarioAsistente.asistenteId)
       .maybeSingle();
     if (error) throw error;
-    if (!documento || !esRutaDeDocumentoDe(documento.ruta_archivo, prestadoraId, asistenteId)) {
-      throw new ErrorConMotivo('documento_no_encontrado');
-    }
+    if (!documento?.ruta_archivo) throw new ErrorConMotivo('documento_no_encontrado');
+    // El depósito sólo le da el enlace de un archivo de la carpeta de su Legajo.
     const { data, error: errorEnlace } = await db.storage
       .from(DEPOSITO_DE_DOCUMENTOS)
       .createSignedUrl(documento.ruta_archivo, 60);
-    if (errorEnlace) throw errorEnlace;
+    if (errorEnlace) throw new ErrorConMotivo('documento_no_encontrado', errorEnlace.message);
     res.json({ url: data.signedUrl });
   } catch (error) {
     return responderError(res, error);

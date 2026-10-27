@@ -4,17 +4,15 @@
  *   node --test backend/src/routes/__tests__/panelVitalesAutorizacion.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. La ruta (`../panelVitalesAutorizacion.js`) entra a la base y al
- * depósito con la credencial del trabajo de la Prestadora activa, no con la de quien pide, porque
- * el depósito sólo deja subir a la administración
- * (`autorizaciones_monitoreo_las_gestiona_quien_administra`) y quien coordina también sube la
- * autorización. Lo que se sostiene acá es que todo lo que toca la ruta va con esa credencial, y
- * que la comparación de la ruta del archivo sigue cortando antes de pedir ningún enlace.
+ * depósito con la credencial de quien pide, y no compara la ruta del archivo: lo que dice que no es
+ * la política del depósito. Lo que se sostiene acá es que todo lo que toca la ruta va con esa
+ * credencial, y que lo que el depósito rechaza no sale.
  *
- * La base es de mentira y contesta por HTTP como la de verdad. Con la credencial del trabajo
- * contesta sólo los Pacientes de la Prestadora que lleva adentro; con la de quien pide imita la
- * política del depósito: nada para quien coordina. La prueba arranca sin la llave maestra, así que
- * una consulta que volviera a ella fallaría al pedirla. Con el sistema roto —de vuelta con la
- * credencial de quien pide— la prueba de quien coordina da al revés.
+ * La base es de mentira y contesta por HTTP como la de verdad. Imita las políticas: sólo los
+ * Pacientes de la Prestadora de quien pide; en el depósito, subir sólo la administración y leer
+ * sólo lo que empieza por la Prestadora. La prueba arranca sin la llave maestra, así que una
+ * consulta que volviera a ella fallaría al pedirla. Lo que esta prueba no ve es la política en sí:
+ * la base de mentira no la tiene.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -29,16 +27,6 @@ const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 const PACIENTE = '33333333-3333-3333-3333-333333333333';
 
-/** La Prestadora que lleva adentro la credencial del trabajo, o null si es otra credencial. */
-function prestadoraDelTrabajo(credencial) {
-  try {
-    const datos = JSON.parse(Buffer.from(credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
-    return datos.role === 'trabajo_sin_persona' ? datos.prestadora_id : null;
-  } catch {
-    return null;
-  }
-}
-
 const respuestas = new Map();
 let llamadas = [];
 let rolDelUsuario = 'admin_prestadora';
@@ -51,9 +39,12 @@ const baseFalsa = createServer((req, res) => {
     llamadas.push({ clave, url: req.url, credencial: req.headers.authorization, reemplaza: req.headers['x-upsert'] });
 
     if (ruta.startsWith('/storage/v1/')) {
-      // La política del depósito: con la credencial de quien pide, quien coordina no pasa.
-      if (!prestadoraDelTrabajo(req.headers.authorization) && rolDelUsuario === 'coordinador') {
-        res.writeHead(403, { 'Content-Type': 'application/json' });
+      // Las políticas del depósito: todo empieza por la Prestadora de quien pide, y subir es de
+      // la administración.
+      const firma = ruta.includes('/object/sign/');
+      const deSuPrestadora = ruta.includes(`/autorizaciones-monitoreo/${PRESTADORA}/`);
+      if (!deSuPrestadora || (!firma && rolDelUsuario === 'coordinador')) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ statusCode: '403', error: 'Unauthorized', message: 'la política no lo deja' }));
         return;
       }
@@ -130,11 +121,9 @@ function unPaciente(cambios = {}) {
 
 /** Los Pacientes que hay en la base. */
 function pacientesEnLaBase(...filas) {
-  respuestas.set('GET /rest/v1/pacientes', (credencial) => {
-    const prestadora = prestadoraDelTrabajo(credencial) ?? PRESTADORA;
-    // `oculta_pendientes_de_conformidad`, restrictiva, para todos los roles.
-    return filas.filter((fila) => fila.prestadora_id === prestadora && !fila.pendiente_conformidad);
-  });
+  // `oculta_pendientes_de_conformidad`, restrictiva, para todos los roles.
+  respuestas.set('GET /rest/v1/pacientes', () => filas
+    .filter((fila) => fila.prestadora_id === PRESTADORA && !fila.pendiente_conformidad));
 }
 
 function consultasDePacientes() {
@@ -151,8 +140,7 @@ beforeEach(() => {
 });
 
 describe('subir la autorización de monitoreo', () => {
-  it('quien coordina sube la autorización, como antes', async () => {
-    rolDelUsuario = 'coordinador';
+  it('la administración sube la autorización con su credencial, sin reemplazar ninguna', async () => {
     pacientesEnLaBase(unPaciente());
 
     const { estado, cuerpo } = await subir(PACIENTE);
@@ -161,18 +149,28 @@ describe('subir la autorización de monitoreo', () => {
     assert.ok(cuerpo.archivoUrl.startsWith(`${PRESTADORA}/${PACIENTE}/autorizacion-`));
     const subida = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/'));
     assert.ok(subida.clave.startsWith(`POST /storage/v1/object/autorizaciones-monitoreo/${PRESTADORA}/${PACIENTE}/`));
-    assert.equal(prestadoraDelTrabajo(subida.credencial), PRESTADORA);
-    assert.equal(subida.reemplaza, 'false', 'la subida pidió reemplazar, y el trabajo no puede');
+    assert.equal(subida.credencial, sesionDePrueba(USUARIO));
+    assert.equal(subida.reemplaza, 'false');
   });
 
-  it('el Paciente se busca con el trabajo de la Prestadora de quien pide', async () => {
+  it('el Paciente se busca con la credencial de quien pide y sin filtrar por Prestadora', async () => {
     pacientesEnLaBase(unPaciente());
 
     await subir(PACIENTE);
 
     const consultas = consultasDePacientes();
     assert.equal(consultas.length, 1);
-    assert.equal(prestadoraDelTrabajo(consultas[0].credencial), PRESTADORA);
+    assert.equal(consultas[0].credencial, sesionDePrueba(USUARIO));
+    assert.ok(!consultas[0].url.includes('prestadora_id='), consultas[0].url);
+  });
+
+  it('a quien coordina el depósito no lo deja subir, igual que la fila de la autorización', async () => {
+    rolDelUsuario = 'coordinador';
+    pacientesEnLaBase(unPaciente());
+
+    const { estado } = await subir(PACIENTE);
+
+    assert.notEqual(estado, 200);
   });
 
   it('el Paciente de otra Prestadora no existe para ésta, y nada se sube a su nombre', async () => {
@@ -186,24 +184,21 @@ describe('subir la autorización de monitoreo', () => {
 });
 
 describe('el enlace temporal de la autorización', () => {
-  it('quien coordina ve la autorización de su Prestadora', async () => {
+  it('quien coordina ve la autorización de su Prestadora, con su credencial', async () => {
     rolDelUsuario = 'coordinador';
-    pacientesEnLaBase(unPaciente());
 
     const { estado, cuerpo } = await pedirDireccion(PACIENTE, `${PRESTADORA}/${PACIENTE}/autorizacion-1.pdf`);
 
     assert.equal(estado, 200);
     assert.ok(cuerpo.url.includes(`/object/sign/autorizaciones-monitoreo/${PRESTADORA}/${PACIENTE}/`));
     const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.equal(prestadoraDelTrabajo(pedidoDeEnlace.credencial), PRESTADORA);
+    assert.equal(pedidoDeEnlace.credencial, sesionDePrueba(USUARIO));
   });
 
-  it('una ruta que no es la del Paciente se rechaza sin dar ningún enlace', async () => {
-    pacientesEnLaBase(unPaciente());
+  it('el archivo de otra Prestadora no da ningún enlace: lo rechaza el depósito', async () => {
+    const { estado, cuerpo } = await pedirDireccion(PACIENTE, `${OTRA_PRESTADORA}/${PACIENTE}/autorizacion-1.pdf`);
 
-    const { estado } = await pedirDireccion(PACIENTE, `${OTRA_PRESTADORA}/${PACIENTE}/autorizacion-1.pdf`);
-
-    assert.equal(estado, 400);
-    assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
+    assert.notEqual(estado, 200);
+    assert.equal(cuerpo.url, undefined);
   });
 });

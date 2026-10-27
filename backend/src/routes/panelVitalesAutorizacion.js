@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { enLaPrestadora } from '../db/connection.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -27,22 +27,12 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
-// Con la credencial del trabajo de la Prestadora activa, que sólo alcanza lo de ella. No con la
-// de quien pide, porque la base es más estrecha que lo que la ruta hace:
-// - `pacientes` lleva la política restrictiva `oculta_pendientes_de_conformidad`; eso no cambia
-//   nada acá, porque el Panel nunca muestra un Paciente que espera conformidad.
-// - El depósito sólo deja subir con `autorizaciones_monitoreo_las_gestiona_quien_administra`, que
-//   pide `es_admin_prestadora()` o `es_superadmin()`: el coordinador, que también sube la
-//   autorización, dejaría de poder.
-// Por eso también se conserva la comparación de la ruta del archivo con la del Paciente.
-function conElTrabajo(req, hacer) {
-  return enLaPrestadora(req.usuarioPanel.prestadoraId, 'autorización de monitoreo de vitales', hacer);
-}
-
-async function pacienteDeLaPrestadora(req) {
-  const { data } = await conElTrabajo(req, (db) =>
-    acotarAPrestadora(db.from('pacientes').select('id, prestadora_id').eq('id', req.params.pacienteId), req.usuarioPanel)
-      .maybeSingle());
+// Con la credencial de quien pide: la base y el depósito deciden. Subir el archivo lo deja
+// `autorizaciones_monitoreo_las_gestiona_quien_administra`, la misma administración que después
+// guarda la fila de la autorización; leerlo, el personal de la Prestadora. El Paciente que espera
+// conformidad no se encuentra.
+async function pacienteVisible(db, pacienteId) {
+  const { data } = await db.from('pacientes').select('id, prestadora_id').eq('id', pacienteId).maybeSingle();
   return data;
 }
 
@@ -61,7 +51,8 @@ panelVitalesAutorizacionRouter.post(
       return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
     }
 
-    const paciente = await pacienteDeLaPrestadora(req);
+    const db = clienteDelPedido(req);
+    const paciente = await pacienteVisible(db, req.params.pacienteId);
     if (!paciente) {
       return res.status(404).json({ error: 'Paciente no encontrado' });
     }
@@ -69,12 +60,12 @@ panelVitalesAutorizacionRouter.post(
     const extension = extensionDeArchivo(req.file.mimetype);
     const ruta = `${paciente.prestadora_id}/${paciente.id}/autorizacion-${Date.now()}.${extension}`;
 
-    // Cada subida es un archivo nuevo: el trabajo puede subir y leer, no reemplazar.
-    const { error } = await conElTrabajo(req, (db) => db.storage
+    // Cada subida es un archivo nuevo, nunca el reemplazo de uno anterior.
+    const { error } = await db.storage
       .from(BUCKET)
-      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: false }));
+      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
     if (error) {
-      return responderError(res, error);
+      return responderError(res, error, String(error.statusCode) === '403' ? 403 : 500);
     }
 
     res.json({ archivoUrl: ruta });
@@ -82,19 +73,15 @@ panelVitalesAutorizacionRouter.post(
 );
 
 panelVitalesAutorizacionRouter.get('/:pacienteId/archivo-url', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
-  const paciente = await pacienteDeLaPrestadora(req);
-  if (!paciente) {
-    return res.status(404).json({ error: 'Paciente no encontrado' });
-  }
-
   const ruta = req.query.ruta;
-  if (!ruta || !ruta.startsWith(`${paciente.prestadora_id}/${paciente.id}/`)) {
+  if (!ruta) {
     return res.status(400).json({ error: 'Ruta de archivo inválida' });
   }
 
-  const { data, error } = await conElTrabajo(req, (db) => db.storage.from(BUCKET).createSignedUrl(ruta, 60));
+  // El depósito sólo da el enlace de un archivo de la Prestadora de quien pide.
+  const { data, error } = await clienteDelPedido(req).storage.from(BUCKET).createSignedUrl(ruta, 60);
   if (error) {
-    return responderError(res, error);
+    return responderError(res, error, 404);
   }
 
   res.json({ url: data.signedUrl });

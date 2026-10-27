@@ -5,7 +5,6 @@ import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { errorDeDocumentos } from '../utils/erroresDeDocumentos.js';
-import { esRutaDeDocumentoDe } from '../utils/archivosSubidos.js';
 import { estadoVisible } from '../utils/estadoDelDocumento.js';
 import { avisarDocumentoAlAsistente } from '../utils/avisoDeDocumento.js';
 import {
@@ -154,12 +153,10 @@ panelDocumentosAsistenteRouter.get('/:documentoId/archivo-url', async (req, res)
   try {
     const db = clienteDelPedido(req);
     const documento = await documentoVisible(db, req.params.documentoId);
-    // Sin archivo, o con una ruta que no es de la carpeta de ese Legajo, no hay enlace.
-    if (!documento || !esRutaDeDocumentoDe(documento.ruta_archivo, documento.prestadora_id, documento.asistente_id)) {
-      throw new ErrorConMotivo('documento_no_encontrado');
-    }
+    if (!documento?.ruta_archivo) throw new ErrorConMotivo('documento_no_encontrado');
+    // El depósito sólo da el enlace de un archivo de un Legajo que quien pide alcanza.
     const { data, error } = await db.storage.from(DEPOSITO_DE_DOCUMENTOS).createSignedUrl(documento.ruta_archivo, 60);
-    if (error) throw error;
+    if (error) throw new ErrorConMotivo('documento_no_encontrado', error.message);
     res.json({ url: data.signedUrl });
   } catch (error) {
     return responderError(res, error);

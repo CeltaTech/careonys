@@ -57,24 +57,3 @@ export function carpetaDeDocumentos(prestadoraId, asistenteId) {
 export function rutaDeDocumentoNuevo(prestadoraId, asistenteId, extension) {
   return `${carpetaDeDocumentos(prestadoraId, asistenteId)}${randomUUID()}.${extension}`;
 }
-
-/**
- * ¿Esta ruta es la de un documento de este Asistente, de esta Prestadora?
- *
- * Es lo que decide si se genera o no el enlace temporal para ver el archivo, así que **falla
- * cerrado**: si falta cualquiera de los dos identificadores, la respuesta es que no. Sin ese corte,
- * un identificador vacío arma la carpeta `undefined/undefined/` y la comparación pasaría a depender
- * de que nadie guarde nunca un archivo con ese nombre.
- *
- * Se compara el comienzo entero —Prestadora incluida— y se exige que lo que sigue sea un nombre
- * de archivo y nada más.
- */
-export function esRutaDeDocumentoDe(ruta, prestadoraId, asistenteId) {
-  if (typeof ruta !== 'string' || !prestadoraId || !asistenteId) return false;
-
-  const carpeta = carpetaDeDocumentos(prestadoraId, asistenteId);
-  if (!ruta.startsWith(carpeta)) return false;
-
-  const nombre = ruta.slice(carpeta.length);
-  return nombre.length > 0 && !nombre.includes('/') && nombre !== '.' && nombre !== '..';
-}

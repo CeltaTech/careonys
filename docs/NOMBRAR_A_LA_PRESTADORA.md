@@ -1,7 +1,7 @@
 # Dónde el producto dice «la Prestadora»
 
 Este documento existe para que usted revise, uno por uno, **todos los textos del producto que
-nombran a la empresa como «la Prestadora»**. Son 168 en castellano.
+nombran a la empresa como «la Prestadora»**. Son 161 en castellano.
 
 ## Qué se está revisando
 
@@ -11,11 +11,11 @@ que licenció el producto se llama PresDemo, o Cuidados del Sur, o como se llame
 
 La pieza para decir el nombre real ya está construida y funcionando en las tres pantallas: se
 escribe `{{prestadora}}` adentro de la frase y el producto lo reemplaza por el nombre con el que
-esa empresa se presenta. Hoy no la usa ninguno de los 168.
+esa empresa se presenta. Hoy no la usa ninguno de los 161.
 
 ## Las tres salidas posibles de cada texto
 
-Cada uno de los 168 puede terminar en una de tres, y **la decisión es suya, texto por texto**:
+Cada uno de los 161 puede terminar en una de tres, y **la decisión es suya, texto por texto**:
 
 1. **Poner el nombre** — la frase nombra a la empresa y corresponde que diga su nombre.
 2. **No nombrar a nadie** — la frase se entiende sin nombrar a nadie, y el sujeto sobra.
@@ -37,11 +37,11 @@ ni una propuesta.
 
 Por quién lee. Tres partes:
 
-- **Parte I — La aplicación de los Asistentes** (33 textos). Los lee la persona que hace las
+- **Parte I — La aplicación de los Asistentes** (31 textos). Los lee la persona que hace las
   guardias.
-- **Parte II — La aplicación de los Clientes** (34 textos). Los lee el Cliente y sus personas
+- **Parte II — La aplicación de los Clientes** (32 textos). Los lee el Cliente y sus personas
   autorizadas.
-- **Parte III — El Panel** (101 textos). Los lee la propia empresa, por dentro.
+- **Parte III — El Panel** (98 textos). Los lee la propia empresa, por dentro.
 
 ---
 
@@ -292,25 +292,6 @@ renglón de la lista de pasos.
 **Quién lo lee:** el Asistente.
 
 **Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:42`
-
-**DECISIÓN:**
-
----
-
-## 14. El Relevo de emergencia quedó pedido
-
-**Ruta:** `relevo_emergencia.avisado`
-
-**Texto de hoy:**
-> Relevo pedido a las {hora}. La Prestadora ya lo tiene.
-
-**Dónde se ve:** pantalla de la Guardia en curso, al pie, sobre el botón «Relevo de emergencia».
-
-**Qué lo dispara:** el pedido ya salió. Confirma la hora.
-
-**Quién lo lee:** el Asistente.
-
-**Archivo:** `pwa-asistentes/src/components/RelevoDeEmergencia.jsx:177`
 
 **DECISIÓN:**
 
@@ -2243,7 +2224,7 @@ postulante con la llave que le llegó por correo. Es el título de la página.
 
 **Archivo:** `panel/src/pages/EntrevistaPublica.jsx:96`
 
-**OBSERVACIÓN:** es el único texto de los 168 que ya usa el marcador `{{prestadora}}`.
+**OBSERVACIÓN:** es el único texto de los 161 que ya usa el marcador `{{prestadora}}`.
 
 **DECISIÓN:**
 

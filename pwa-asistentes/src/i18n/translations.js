@@ -395,7 +395,7 @@ export const T = {
       mantener: 'Mantenga presionado {segundos} segundos',
       cuenta: 'Solicitando relevo en {segundos}…',
       enviando: 'Relevo solicitado',
-      avisado: 'Relevo pedido a las {hora}. La Prestadora ya lo tiene.',
+      avisado: 'Relevo solicitado a las {hora}.',
       sin_conexion: 'Sin conexión: el pedido quedó guardado en el teléfono y todavía no lo recibió nadie. Se envía solo cuando vuelva la señal. Mientras tanto, avise por otro medio.',
     },
     // El descanso adentro de una guardia larga. El texto dice con todas las letras que esto no es
@@ -1049,7 +1049,7 @@ export const T = {
       mantener: 'Hold for {segundos} seconds',
       cuenta: 'Requesting relief in {segundos}…',
       enviando: 'Relief requested',
-      avisado: 'Relief requested at {hora}. The Provider already has it.',
+      avisado: 'Relief requested at {hora}.',
       sin_conexion: 'No connection: the request is saved on the phone and nobody has received it yet. It will be sent on its own once the signal is back. In the meantime, report it by another means.',
     },
     descanso: {
@@ -1675,7 +1675,7 @@ export const T = {
       mantener: 'Mantenha pressionado por {segundos} segundos',
       cuenta: 'Solicitando rendição em {segundos}…',
       enviando: 'Rendição solicitada',
-      avisado: 'Rendição pedida às {hora}. A Prestadora já a tem.',
+      avisado: 'Rendição solicitada às {hora}.',
       sin_conexion: 'Sem conexão: o pedido ficou salvo no telefone e ninguém o recebeu ainda. É enviado sozinho quando o sinal voltar. Enquanto isso, avise por outro meio.',
     },
     descanso: {

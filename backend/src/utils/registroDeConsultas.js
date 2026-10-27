@@ -3,7 +3,7 @@
 // Cada lectura de un dato de salud deja un renglon en `consultas_a_hce`: la Prestadora,
 // la persona que accedio, el paciente, las categorias de dato alcanzadas, el momento y el origen.
 // La tabla es `public.consultas_a_hce`; la cadena de resumenes que demuestra que nadie la altero
-// la arma el disparador `trg_encadenar_acceso_a_datos_de_salud`, y quien puede leerla lo dice la
+// la arma el disparador `trg_encadenar_consulta_a_hce`, y quien puede leerla lo dice la
 // politica `lo_lee_la_administracion_de_la_prestadora`.
 //
 // Se escribe desde aca y desde ningun otro lado: si cada ruta armara su renglon, la que se olvide

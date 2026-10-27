@@ -421,10 +421,9 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   Superadmin (`indicaciones_medicacion`, `prestadoras`, varias de
   cobros y de Match), y `usuarios` sólo deja leer la fila propia, así que toda lista de
   cuentas sigue con la maestra. Donde el comportamiento cambiaba, esas rutas volvieron a la
-  maestra: primero se alinean las políticas y después se migran. Una de esas políticas dice algo
-  distinto de lo que hace el Panel, y antes de alinearla se decide cuál de los dos tiene razón: los
-  Clientes y los Asistentes pendientes de conformidad, que la base oculta y el Panel factura y
-  liquida.
+  maestra: primero se alinean las políticas y después se migran. Los Clientes y los Asistentes
+  pendientes de conformidad los oculta la base, y el Panel se alinea a ella: lo pendiente no tiene
+  un Servicio en curso, porque lo heredado con Servicio en curso no queda pendiente (paso 29).
 - **La zona del Coordinador, decidida.** Cada Coordinador ve lo de su trabajo diario, que es su
   zona; el Administrador ve todo. El padrón de Asistentes disponibles lo ven todos los
   Coordinadores. Una alarma que llega al escalón de todos los Coordinadores la puede ver y resolver

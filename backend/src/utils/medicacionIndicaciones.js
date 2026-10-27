@@ -69,22 +69,20 @@ export async function asistentePuedeDarLaVia(db, prestadoraId, asistenteId, viaA
 // personas de la misma casa, el Asistente atiende a las dos, y para la segunda no aparecía
 // nadie. De acá cuelga el aviso de que nadie asignado puede dar esa vía, así que quedarse corto
 // significa avisar de más sobre un pedido que sí se podía cumplir.
-export async function asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId) {
-  const hoyISO = new Date().toISOString().slice(0, 10);
-  const { data } = await db
-    .from('guardia_pacientes')
-    .select('guardias!inner(asistente_id)')
-    .eq('prestadora_id', prestadoraId)
-    .eq('paciente_id', pacienteId)
-    .not('guardias.asistente_id', 'is', null)
-    .gte('guardias.fecha', hoyISO);
-  return [...new Set((data || []).map((f) => f.guardias?.asistente_id).filter(Boolean))];
+//
+// Lo contesta la base (`asistentes_asignados_al_paciente`), que mira las guardias de todas las
+// zonas: quien coordina sólo ve las de la suya, y el bloqueo tiene que mirarlas todas. La
+// Prestadora sale de la sesión. Si no se puede leer, falla: callar a los asignados destrabaría la vía.
+export async function asistentesAsignadosAlPaciente(db, pacienteId) {
+  const { data, error } = await db.rpc('asistentes_asignados_al_paciente', { p_paciente: pacienteId });
+  if (error) throw error;
+  return data || [];
 }
 
 // ¿Hay Asistentes asignados, y alguno puede dar esta vía? Son dos preguntas y no una: sin nadie
 // asignado la indicación se acepta igual; con asignados y ninguno que pueda, sólo se rechaza.
 export async function laViaFrenteALosAsignados(db, prestadoraId, pacienteId, viaAdministracionId) {
-  const asignados = await asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId);
+  const asignados = await asistentesAsignadosAlPaciente(db, pacienteId);
   for (const asistenteId of asignados) {
     if (await asistentePuedeDarLaVia(db, prestadoraId, asistenteId, viaAdministracionId)) {
       return { hayAsignados: true, alguienPuede: true };

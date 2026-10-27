@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { laViaBloquea, laViaFrenteALosAsignados } from '../utils/medicacionIndicaciones.js';
 import { extensionDeArchivo, rutaDelPapelFirmado } from '../utils/archivosSubidos.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
@@ -21,19 +21,14 @@ import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 // Cliente eligió firmar en papel se imprime desde acá, y al subir el documento firmado queda cerrada.
 // La base lo exige igual: el disparador que acepta la indicación se niega sin firma.
 //
-// CON LA CREDENCIAL DE QUIEN PIDE. El enlace temporal al archivo se pide a la base con
-// `clienteDelPedido(req)`, no con la llave maestra: el depósito sólo da enlaces a archivos cuya
-// ruta empieza por la Prestadora de quien pide, así que no hace falta comparar la ruta a mano. La bandeja
-// es información de salud: antes de entregarla queda anotado, con esa misma credencial, quién la
-// vio, paciente por paciente.
-//
-// SIGUEN CON LA LLAVE MAESTRA, con la Prestadora de la sesión escrita en cada consulta:
-// - Leer la bandeja: la base se la acota más que lo que la pantalla mostraba (ver el comentario
-//   de la consulta).
-// - Aceptar y rechazar: la base deja modificar una indicación sólo a la administración, y acá
-//   también la revisa el Coordinador (`indicaciones_medicacion`, modificar).
-// - Subir el documento firmado: el depósito no le deja escribir al
-//   Coordinador (`prescripciones-medicacion`, alta y reemplazo).
+// CON LA CREDENCIAL DE QUIEN PIDE, toda la ruta. La base acota la bandeja: con la restricción de la
+// historia clínica activa, cada persona ve las indicaciones de los Pacientes que atiende, y la
+// administración las ve todas. Antes de entregarla queda anotado quién la vio, paciente por paciente.
+// Aceptar, rechazar y cerrar la firma en papel pasan por funciones de la base que tocan sólo lo
+// suyo (`revisar_indicacion_medicacion`, `cerrar_firma_medicacion_en_papel`): quien coordina
+// revisa la indicación sin poder cambiarle el medicamento, la dosis ni la vía, y quién revisó sale
+// de la sesión. Quiénes tienen guardia con el Paciente lo contesta la base mirando todas las zonas.
+// El depósito sólo da enlaces y deja subir en la carpeta de la Prestadora de quien pide.
 
 export const panelMedicacionRouter = Router();
 
@@ -58,31 +53,25 @@ function manejarErrorMulter(err, req, res, next) {
 
 panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
   const db = clienteDelPedido(req);
-  // Con la llave maestra: la política RESTRICTIVE `la_informacion_de_salud_la_ve_quien_atiende`
-  // exige interno.alcanza_la_informacion_de_salud(paciente_id), y con la restricción de la
-  // historia clínica activa (el valor de fábrica) el Superadministrador que no atiende al paciente
-  // deja de ver la indicación —el Administrador sí la ve—; además `oculta_pendientes_de_conformidad`
-  // (RESTRICTIVE, NOT pendiente_conformidad) deja en null el paciente y el cliente embebidos si
-  // están pendientes. Hasta ahora cada rol veía toda la bandeja de su Prestadora. Si se acota o no
-  // se decide aparte.
-  const { data, error } = await supabase
+  const { data: leidas, error } = await db
     .from('indicaciones_medicacion')
     .select(`id, medicamento, dosis, frecuencia, via_administracion_id, via:vias_administracion(clave), prescripcion_archivo_url, fecha_desde, fecha_hasta, created_at, pacientes(id, ${FICHA_NOMBRE}), clientes(id)`)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);
+  // El Paciente pendiente de conformidad llega sin sus datos: no es todavía de la Prestadora.
+  const data = (leidas || []).filter((indicacion) => indicacion.pacientes?.id);
 
   let firmaDe;
   try {
-    firmaDe = await firmasDe(req.usuarioPanel.prestadoraId, (data || []).map((i) => i.id));
+    firmaDe = await firmasDe(db, data.map((i) => i.id));
   } catch (errorFirmas) {
     return responderError(res, errorFirmas);
   }
 
   // Antes de entregar la medicación queda anotado quién la vio. Si no se puede anotar, no se
   // entrega (docs/PLAN_HASTA_PRODUCCION.md, paso 9).
-  const pacienteIds = [...new Set((data || []).map((indicacion) => indicacion.pacientes?.id).filter(Boolean))];
+  const pacienteIds = [...new Set(data.map((indicacion) => indicacion.pacientes.id))];
   try {
     for (const pacienteId of pacienteIds) {
       await anotarConsultaAHce(
@@ -95,93 +84,92 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
     return responderError(res, errorAnotacion);
   }
 
-  // Quién tiene guardia con el Paciente, con la llave maestra: quien coordina sólo ve las guardias
-  // de su zona, y el bloqueo tiene que mirar todas.
-  const pendientes = await Promise.all(
-    (data || []).map(async ({ via, ...indicacion }) => {
-      const bloqueada = laViaBloquea(await laViaFrenteALosAsignados(
-        supabase,
-        req.usuarioPanel.prestadoraId,
-        indicacion.pacientes.id,
-        indicacion.via_administracion_id
-      ));
-      return {
-        ...indicacion,
-        via_clave: via?.clave ?? null,
-        pacientes: conSuFicha(indicacion.pacientes),
-        firma: firmaDe.get(indicacion.id) ?? null,
-        bloqueada,
-      };
-    })
-  );
-
-  res.json({ pendientes });
+  try {
+    const pendientes = await Promise.all(
+      data.map(async ({ via, ...indicacion }) => {
+        const bloqueada = laViaBloquea(await laViaFrenteALosAsignados(
+          db,
+          req.usuarioPanel.prestadoraId,
+          indicacion.pacientes.id,
+          indicacion.via_administracion_id
+        ));
+        return {
+          ...indicacion,
+          via_clave: via?.clave ?? null,
+          pacientes: conSuFicha(indicacion.pacientes),
+          firma: firmaDe.get(indicacion.id) ?? null,
+          bloqueada,
+        };
+      })
+    );
+    res.json({ pendientes });
+  } catch (errorVia) {
+    responderError(res, errorVia);
+  }
 });
 
 // La firma de cada indicación: su estado y de qué consentimiento, salvo los anulados.
-async function firmasDe(prestadoraId, indicacionIds) {
+async function firmasDe(db, indicacionIds) {
   if (!indicacionIds.length) return new Map();
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('consentimientos_medicacion')
     .select('id, indicacion_id, estado, cerrado_como')
-    .eq('prestadora_id', prestadoraId)
     .in('indicacion_id', indicacionIds)
     .neq('estado', 'anulado');
   if (error) throw error;
   return new Map((data || []).map((f) => [f.indicacion_id, { id: f.id, estado: f.estado, cerradoComo: f.cerrado_como }]));
 }
 
-async function indicacionPendiente(prestadoraId, id) {
-  const { data } = await supabase
+async function indicacionPendiente(db, id) {
+  const { data, error } = await db
     .from('indicaciones_medicacion')
     .select('id, estado, paciente_id, via_administracion_id')
     .eq('id', id)
-    .eq('prestadora_id', prestadoraId)
     .eq('estado', 'pendiente')
     .maybeSingle();
+  if (error) throw error;
   return data;
 }
 
-// Va con la llave maestra: ver el encabezado.
+// Aceptar o rechazar, por la función de la base. Devuelve falso si la indicación ya no estaba
+// pendiente: dos Coordinadores mirando la misma bandeja pueden revisar la misma indicación al
+// mismo tiempo, y sin esto los dos verían que salió bien y sólo una de las dos decisiones quedaría.
+async function revisar(db, id, estado, motivo = null, motivoClave = null) {
+  const { data, error } = await db.rpc('revisar_indicacion_medicacion', {
+    p_indicacion: id,
+    p_estado: estado,
+    p_motivo: motivo,
+    p_motivo_clave: motivoClave,
+  });
+  // El disparador de la base exige la firma si se anuló entre la lectura y la escritura.
+  if (error?.message?.includes('Falta la firma')) throw new ErrorConMotivo('falta_la_firma');
+  if (error) throw error;
+  return data === true;
+}
+
 panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
   try {
-    const indicacion = await indicacionPendiente(prestadoraId, req.params.id);
+    const indicacion = await indicacionPendiente(db, req.params.id);
     if (!indicacion) throw new ErrorConMotivo('no_encontrado');
 
     // Las dos condiciones se vuelven a calcular acá y no se reciben del navegador.
-    const frente = await laViaFrenteALosAsignados(supabase, prestadoraId, indicacion.paciente_id, indicacion.via_administracion_id);
+    const frente = await laViaFrenteALosAsignados(db, prestadoraId, indicacion.paciente_id, indicacion.via_administracion_id);
     if (laViaBloquea(frente)) throw new ErrorConMotivo('ningun_asignado_puede_dar_la_via');
 
-    if (await pideLaFirma({ prestadoraId })) {
-      const firma = (await firmasDe(prestadoraId, [indicacion.id])).get(indicacion.id);
+    if (await pideLaFirma({ prestadoraId, db })) {
+      const firma = (await firmasDe(db, [indicacion.id])).get(indicacion.id);
       if (firma?.estado !== 'cerrado') throw new ErrorConMotivo('falta_la_firma');
     }
 
-    // La condición de la lectura se repite en la escritura, y se comprueba que haya escrito. Dos
-    // Coordinadores mirando la misma bandeja pueden aceptar y rechazar la misma indicación al
-    // mismo tiempo: sin esto, los dos ven que salió bien y solo una de las dos decisiones quedó.
-    // En medicación eso no es un detalle de pantalla.
-    const { data: aceptada, error } = await supabase
-      .from('indicaciones_medicacion')
-      .update({ estado: 'aceptada', revisado_por: req.usuarioPanel.id, revisado_en: new Date().toISOString() })
-      .eq('id', indicacion.id)
-      .eq('prestadora_id', prestadoraId)
-      .eq('estado', 'pendiente')
-      .select('id');
-    // El disparador de la base dice lo mismo si la firma se anuló entre la lectura y la escritura.
-    if (error?.message?.includes('Falta la firma')) throw new ErrorConMotivo('falta_la_firma');
-    if (error) throw error;
-    if (!aceptada?.length) throw new ErrorConMotivo('no_encontrado');
-
+    if (!(await revisar(db, indicacion.id, 'aceptada'))) throw new ErrorConMotivo('no_encontrado');
     res.json({ ok: true });
   } catch (err) {
     responderError(res, err);
   }
 });
 
-// Va con la llave maestra: ver el encabezado.
-//
 // El motivo es texto libre o una clave fija. La fija es la de la vía que nadie asignado puede dar,
 // y la pantalla de quien la cargó la muestra traducida.
 panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) => {
@@ -192,52 +180,36 @@ panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) =
   }
   if (!motivoRechazo && !motivoClave) return res.status(400).json({ error: 'Falta el motivo del rechazo' });
 
-  const { data: indicacion } = await supabase
-    .from('indicaciones_medicacion')
-    .select('id, estado')
-    .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-    .eq('estado', 'pendiente')
-    .maybeSingle();
-  if (!indicacion) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
-
-  // Mismo criterio que en /aceptar de más arriba.
-  const { data: rechazada, error } = await supabase
-    .from('indicaciones_medicacion')
-    .update({
-      estado: 'rechazada',
-      motivo_rechazo: motivoClave ? null : motivoRechazo,
-      motivo_rechazo_clave: motivoClave || null,
-      revisado_por: req.usuarioPanel.id,
-      revisado_en: new Date().toISOString(),
-    })
-    .eq('id', indicacion.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-    .eq('estado', 'pendiente')
-    .select('id');
-  if (error) return responderError(res, error);
-  if (!rechazada?.length) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
-
-  res.json({ ok: true });
+  try {
+    const rechazada = await revisar(
+      clienteDelPedido(req),
+      req.params.id,
+      'rechazada',
+      motivoClave ? null : motivoRechazo,
+      motivoClave || null,
+    );
+    if (!rechazada) return res.status(404).json({ error: 'Indicación no encontrada o ya revisada' });
+    res.json({ ok: true });
+  } catch (err) {
+    responderError(res, err);
+  }
 });
 
 // Lo que se imprime para firmar en papel: el texto tal como quedó guardado al cargarla —no el
 // vigente hoy—, en el idioma en que lo leyó el Cliente, y los datos de la indicación.
 panelMedicacionRouter.get('/:id/para-firmar', requiereRolPanel, async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data: indicacion, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: indicacion, error } = await db
     .from('indicaciones_medicacion')
     .select(`id, medicamento, dosis, frecuencia, via:vias_administracion(clave), fecha_desde, fecha_hasta, created_at, pacientes(id, ${FICHA_NOMBRE})`)
     .eq('id', req.params.id)
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
-  if (!indicacion) return responderError(res, new ErrorConMotivo('no_encontrado'));
+  if (!indicacion?.pacientes) return responderError(res, new ErrorConMotivo('no_encontrado'));
 
-  const { data: consentimiento, error: errorConsentimiento } = await supabase
+  const { data: consentimiento, error: errorConsentimiento } = await db
     .from('consentimientos_medicacion')
     .select('id, documento_texto, documento_idioma, estado')
-    .eq('prestadora_id', prestadoraId)
     .eq('indicacion_id', indicacion.id)
     .eq('estado', 'pendiente_firma')
     .maybeSingle();
@@ -262,48 +234,37 @@ panelMedicacionRouter.post(
   manejarErrorMulter,
   async (req, res) => {
     const prestadoraId = req.usuarioPanel.prestadoraId;
+    const db = clienteDelPedido(req);
     try {
       if (!req.file) throw new ErrorConMotivo('faltan_datos');
-      const indicacion = await indicacionPendiente(prestadoraId, req.params.id);
+      const indicacion = await indicacionPendiente(db, req.params.id);
       if (!indicacion) throw new ErrorConMotivo('no_encontrado');
 
-      const firma = (await firmasDe(prestadoraId, [indicacion.id])).get(indicacion.id);
+      const firma = (await firmasDe(db, [indicacion.id])).get(indicacion.id);
       // Si otra persona ya la cerró o la anuló, no queda nada por hacer: se contesta bien sin subir
       // nada, y la pantalla vuelve a leer y muestra cómo quedó.
       if (!firma) throw new ErrorConMotivo('no_encontrado');
       if (firma.estado !== 'pendiente_firma') return res.json({ ok: true });
 
       const ruta = rutaDelPapelFirmado(prestadoraId, indicacion.paciente_id, firma.id, extensionDeArchivo(req.file.mimetype));
-      const { error: errorSubida } = await supabase.storage
+      const { error: errorSubida } = await db.storage
         .from(BUCKET)
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
       if (errorSubida) throw errorSubida;
 
-      const { data: cerrado, error } = await supabase
-        .from('consentimientos_medicacion')
-        .update({
-          estado: 'cerrado',
-          cerrado_como: 'papel_firmado',
-          cerrado_en: new Date().toISOString(),
-          cerrado_desde: 'panel',
-          archivo_firmado_url: ruta,
-        })
-        .eq('id', firma.id)
-        .eq('prestadora_id', prestadoraId)
-        .eq('estado', 'pendiente_firma')
-        .select('id');
+      const { data: cerrado, error } = await db.rpc('cerrar_firma_medicacion_en_papel', { p_firma: firma.id, p_archivo: ruta });
       if (error) throw error;
       // Otra persona la cerró mientras se subía el archivo. El archivo subido no quedó en ninguna
-      // firma y se borra, salvo que esté en la misma ruta que el que sí quedó guardado.
-      if (!cerrado?.length) {
-        const { data: actual } = await supabase
+      // firma y se borra, salvo que esté en la misma ruta que el que sí quedó guardado: ése el
+      // depósito no lo deja borrar.
+      if (cerrado !== true) {
+        const { data: actual } = await db
           .from('consentimientos_medicacion')
           .select('archivo_firmado_url')
           .eq('id', firma.id)
-          .eq('prestadora_id', prestadoraId)
           .maybeSingle();
         if (actual?.archivo_firmado_url !== ruta) {
-          const { error: errorBorrado } = await supabase.storage.from(BUCKET).remove([ruta]);
+          const { error: errorBorrado } = await db.storage.from(BUCKET).remove([ruta]);
           if (errorBorrado) console.error('[medicacion] no se pudo borrar el archivo que quedó sin firma:', errorBorrado.message);
         }
       }

@@ -93,7 +93,6 @@
                                  "backend/src/routes/panelInformesObraSocial.js",
                                  "backend/src/routes/panelIntermediacion.js",
                                  "backend/src/routes/panelLiquidaciones.js",
-                                 "backend/src/routes/panelMedicacion.js",
                                  "backend/src/utils/avisoAutomaticoCese.js",
                                  "backend/src/utils/avisoCambioDeAsistente.js",
                                  "backend/src/utils/avisosDeEscalon.js",

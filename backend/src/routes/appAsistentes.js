@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { supabase, enLaPrestadora, clienteDelPedido } from '../db/connection.js';
+import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { estructurarReporteIA, distanciaMetros } from '../utils/reporteIA.js';
 import { enviarPushCliente } from '../utils/push.js';
@@ -209,16 +209,13 @@ async function nombreDeAsistente(db, asistenteId) {
 // reporte por cada uno: el de la señora de la casa no es el del marido, y darlos por
 // equivalentes era escribir la comida, la medicación y la presión de los dos en la misma hoja.
 //
-// SIGUE CON LA LLAVE MAESTRA. La base deja ver un reporte sólo a quien atiende al Paciente por un
-// Servicio vigente, y esta ruta pregunta por los reportes de una guardia del Asistente sin mirar el
-// Servicio: con la credencial de quien pide, una guardia sin Servicio vigente parecería sin
-// reportes y no se podría cerrar.
-async function reportesDeLaGuardia(guardiaId, prestadoraId) {
-  const { data } = await supabase
+// Con la credencial de quien pide: la base le deja ver los reportes de sus propias guardias.
+async function reportesDeLaGuardia(db, guardiaId) {
+  const { data, error } = await db
     .from('reportes')
     .select('id, paciente_id')
-    .eq('prestadora_id', prestadoraId)
     .eq('guardia_id', guardiaId);
+  if (error) throw error;
   return data ?? [];
 }
 
@@ -227,7 +224,7 @@ async function reportesDeLaGuardia(guardiaId, prestadoraId) {
 async function pacientesSinReporte(db, guardia) {
   const [pacientes, reportes] = await Promise.all([
     pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`),
-    reportesDeLaGuardia(guardia.id, guardia.prestadora_id),
+    reportesDeLaGuardia(db, guardia.id),
   ]);
   const conReporte = new Set(reportes.map((r) => r.paciente_id));
   return pacientes.filter((p) => !conReporte.has(p.id));
@@ -562,15 +559,22 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
   // Se pide de vuelta la fila que se tocó: la base contesta que salió bien aunque no haya
   // encontrado ninguna, y acá lo que se muestra después es justamente el estado del interruptor.
   //
-  // SIGUE CON LA LLAVE MAESTRA: la base no tiene ninguna política que le deje al Asistente
-  // corregir su propio Legajo, así que con su credencial la escritura no alcanzaría ninguna fila.
-  const { data: guardada, error } = await supabase
-    .from('asistentes')
-    .update({ disponible: disponible, disponibilidad_cambiada_en: new Date().toISOString() })
-    .eq('id', req.usuarioAsistente.asistenteId)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .select('disponible, disponibilidad_cambiada_en');
-  if (error) return responderError(res, error);
+  // Con el trabajo de la Prestadora, porque el Asistente no tiene permiso para corregir su propio
+  // Legajo. La fila la fija la sesión ya verificada, nunca el pedido.
+  let guardada;
+  try {
+    guardada = await enLaPrestadora(req.usuarioAsistente.prestadoraId, 'cambiar la disponibilidad', async (db) => {
+      const { data, error } = await db
+        .from('asistentes')
+        .update({ disponible: disponible, disponibilidad_cambiada_en: new Date().toISOString() })
+        .eq('id', req.usuarioAsistente.asistenteId)
+        .select('disponible, disponibilidad_cambiada_en');
+      if (error) throw error;
+      return data;
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
   if (!guardada?.length) {
     return res.status(404).json({ error: 'Perfil no encontrado', motivo: 'perfil_no_encontrado' });
   }
@@ -712,17 +716,19 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
 
   // La pantalla necesita saber a quiénes les falta el reporte: ofrece el cierre recién cuando
   // no queda ninguno, en vez de dejar apretar un botón que el backend va a rechazar.
-  const reportes = await reportesDeLaGuardia(data.id, req.usuarioAsistente.prestadoraId);
+  let reportes;
+  try {
+    reportes = await reportesDeLaGuardia(db, data.id);
+  } catch (e) {
+    return responderError(res, e);
+  }
   const conReporte = reportes.map((r) => r.paciente_id);
 
   // Si quedó un descanso abierto, la pantalla tiene que ofrecer terminarlo y no empezar otro. Es
   // una sola fila como máximo: la base no admite dos abiertos en la misma guardia.
-  //
-  // SIGUE CON LA LLAVE MAESTRA: `descansos_guardia` no tiene ninguna política para el Asistente.
-  const { data: descansoAbierto } = await supabase
+  const { data: descansoAbierto } = await db
     .from('descansos_guardia')
     .select('id, inicio_at')
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('guardia_id', data.id)
     .is('fin_at', null)
     .maybeSingle();
@@ -1324,18 +1330,26 @@ appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsiste
    vuelven a quedar sin sustituto desde hoy y a quien coordina le llega el aviso. Lo que ya hizo o
    ya empezó no se toca.
 
-   CON LA LLAVE MAESTRA, filtrado a mano por la Prestadora y por el sustituto:
-   `coberturas_de_ausencia` no tiene ninguna política para el Asistente. */
+   Con el trabajo de la Prestadora, porque el Asistente no tiene permiso sobre las coberturas. La
+   base lo acota a su Prestadora; a sus propias coberturas lo acota el filtro por el sustituto,
+   que sale de la sesión ya verificada. */
 appAsistentesRouter.get('/coberturas', requiereRolAsistente, async (req, res) => {
   const { prestadoraId, asistenteId } = req.usuarioAsistente;
-  const { data, error } = await supabase
-    .from('coberturas_de_ausencia')
-    .select('id, series_guardias(dias_semana, hora_inicio, hora_fin), ausencias(fecha_inicio, fecha_fin, fecha_vuelta_real)')
-    .eq('prestadora_id', prestadoraId)
-    .eq('asistente_sustituto_id', asistenteId)
-    .is('objetada_at', null)
-    .not('aceptada_at', 'is', null);
-  if (error) return responderError(res, error);
+  let data;
+  try {
+    data = await enLaPrestadora(prestadoraId, 'ver las coberturas del Asistente', async (db) => {
+      const { data: filas, error } = await db
+        .from('coberturas_de_ausencia')
+        .select('id, series_guardias(dias_semana, hora_inicio, hora_fin), ausencias(fecha_inicio, fecha_fin, fecha_vuelta_real)')
+        .eq('asistente_sustituto_id', asistenteId)
+        .is('objetada_at', null)
+        .not('aceptada_at', 'is', null);
+      if (error) throw error;
+      return filas;
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
 
   const hoy = hoyISO();
   const coberturas = (data ?? [])
@@ -1353,35 +1367,42 @@ appAsistentesRouter.get('/coberturas', requiereRolAsistente, async (req, res) =>
 
 appAsistentesRouter.post('/coberturas/:id/objecion', requiereRolAsistente, async (req, res) => {
   const { prestadoraId, asistenteId } = req.usuarioAsistente;
-  const { data: cobertura, error } = await supabase
-    .from('coberturas_de_ausencia')
-    .select('id, prestadora_id, objetada_at, ausencias(asistente_id)')
-    .eq('id', req.params.id)
-    .eq('prestadora_id', prestadoraId)
-    .eq('asistente_sustituto_id', asistenteId)
-    .maybeSingle();
-  if (error) return responderError(res, error);
-  if (!cobertura) return responderError(res, new ErrorConMotivo('no_encontrado', 'cobertura ajena o inexistente'));
-  if (cobertura.objetada_at) return res.json({ ok: true });
+  let resultado;
+  try {
+    resultado = await enLaPrestadora(prestadoraId, 'objetar la cobertura', async (db) => {
+      const { data: cobertura, error } = await db
+        .from('coberturas_de_ausencia')
+        .select('id, prestadora_id, objetada_at, ausencias(asistente_id)')
+        .eq('id', req.params.id)
+        .eq('asistente_sustituto_id', asistenteId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!cobertura) throw new ErrorConMotivo('no_encontrado', 'cobertura ajena o inexistente');
+      if (cobertura.objetada_at) return 'ya_objetada';
 
-  const { error: errorMarca } = await supabase
-    .from('coberturas_de_ausencia')
-    .update({ objetada_at: new Date().toISOString() })
-    .eq('id', cobertura.id)
-    .eq('prestadora_id', prestadoraId);
-  if (errorMarca) return responderError(res, errorMarca);
+      const { error: errorMarca } = await db
+        .from('coberturas_de_ausencia')
+        .update({ objetada_at: new Date().toISOString() })
+        .eq('id', cobertura.id);
+      if (errorMarca) throw errorMarca;
 
-  await devolverAlTitular({
-    db: supabase,
-    cobertura,
-    titularId: cobertura.ausencias.asistente_id,
-    desde: hoyISO(),
-  });
+      await devolverAlTitular({
+        db,
+        cobertura,
+        titularId: cobertura.ausencias.asistente_id,
+        desde: hoyISO(),
+      });
+      return 'objetada';
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
+  if (resultado === 'ya_objetada') return res.json({ ok: true });
 
   // Guardado primero, avisado después: si el envío falla, la objeción ya quedó.
   try {
-    const { data: asistente } = await supabase
-      .from('asistentes').select('nombre').eq('id', asistenteId).eq('prestadora_id', prestadoraId).maybeSingle();
+    const { data: asistente } = await clienteDelPedido(req)
+      .from('asistentes').select('nombre').eq('id', asistenteId).maybeSingle();
     const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), prestadoraId);
     await notificarCoordinador({
       evento: 'cobertura_objetada',
@@ -1560,11 +1581,10 @@ appAsistentesRouter.post(
     const extension = req.file.mimetype === 'image/png' ? 'png' : 'jpg';
     const ruta = `${guardia.prestadora_id}/${guardia.id}/${Date.now()}.${extension}`;
 
-    // SIGUE CON LA LLAVE MAESTRA: la política del depósito compara la guardia con la cuenta de
-    // quien pide y no con su Legajo, así que con su credencial la subida se rechazaría siempre.
-    const { error } = await supabase.storage
+    // La ruta ya lleva el momento, así que nunca pisa una foto anterior.
+    const { error } = await clienteDelPedido(req).storage
       .from('reportes-fotos')
-      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
     if (error) {
       return responderError(res, error);
     }
@@ -1613,7 +1633,12 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     );
   }
 
-  const reportes = await reportesDeLaGuardia(guardia.id, guardia.prestadora_id);
+  let reportes;
+  try {
+    reportes = await reportesDeLaGuardia(db, guardia.id);
+  } catch (e) {
+    return responderError(res, e);
+  }
   if (reportes.some((r) => r.paciente_id === paciente.id)) {
     // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline). Antes
     // esta protección contra el envío duplicado la daba el guard de checkout_at; al separar
@@ -1626,10 +1651,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // historia clínica de un Paciente un dato que esa Prestadora decidió no tomar.
   const visibilidad = await visibilidadDelPedido(req);
 
-  // SIGUE CON LA LLAVE MAESTRA por lo mismo que `reportesDeLaGuardia`: devolver la fila recién
-  // escrita pide poder leerla, y la base sólo deja leer la información de salud a quien atiende al
-  // Paciente en un Servicio vigente, que una guardia puede no tener.
-  const { data: reporte, error: errorReporte } = await supabase
+  const { data: reporte, error: errorReporte } = await db
     .from('reportes')
     .insert({
       prestadora_id: guardia.prestadora_id,
@@ -1662,14 +1684,10 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
 
   // El mensaje va al Cliente de este Paciente y a ningún otro: el reporte habla de él. Si el
   // turno cubre a dos hermanos, cada Cliente recibe el suyo cuando le toca, no el del otro.
-  //
-  // SIGUE CON LA LLAVE MAESTRA: la función de la base que dice qué Pacientes le tocan a un
-  // Asistente compara las guardias con su cuenta y no con su Legajo, y no le devuelve ninguno.
-  const { data: datosPaciente } = await supabase
+  const { data: datosPaciente } = await db
     .from('pacientes')
     .select('cliente_id')
     .eq('id', paciente.id)
-    .eq('prestadora_id', guardia.prestadora_id)
     .maybeSingle();
   // Lo que sigue corre después de contestar, así que entra con la credencial de esta Prestadora.
   if (datosPaciente?.cliente_id) {
@@ -1684,11 +1702,10 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // configurada por la Prestadora (docs/AI_PROMPTS.md:43-45 — nunca hardcodeada). Sin fila
   // configurada, no se dispara nada acá; el análisis nocturno sigue corriendo igual.
   if (textoLibre) {
-    enLaPrestadora(guardia.prestadora_id, 'análisis inmediato', async () => {
-      const { data: config } = await supabase
+    enLaPrestadora(guardia.prestadora_id, 'análisis inmediato', async (dbTrabajo) => {
+      const { data: config } = await dbTrabajo
         .from('configuracion_alertas_ia')
         .select('palabras_clave')
-        .eq('prestadora_id', guardia.prestadora_id)
         .maybeSingle();
       const palabrasClave = config?.palabras_clave || [];
       const textoNormalizado = textoLibre.toLowerCase();
@@ -1929,18 +1946,23 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
   // ninguna pantalla dibujaba. Si alguna vez hace falta mostrar alguno, se agrega acá con su
   // interruptor, no se deja "por las dudas" (tarea 65).
   //
-  // SIGUE CON LA LLAVE MAESTRA: la base sólo deja leer los reportes a quien atiende al Paciente en
-  // un Servicio vigente, y de las guardias de otros Asistentes no le deja ver ninguna, así que con
-  // su credencial se perderían los reportes de los turnos que no fueron suyos.
-  const { data, error } = await supabase
-    .from('reportes')
-    .select('id, observaciones, created_at, guardias!inner(fecha)')
-    .eq('paciente_id', req.params.id)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .order('created_at', { ascending: false })
-    .limit(30);
-  if (error) {
-    return responderError(res, error);
+  // Con el trabajo de la Prestadora, porque de las guardias de otros Asistentes la base no le deja
+  // ver ninguna, y con su acceso se perderían los reportes de los turnos que no fueron suyos. Que
+  // atiende a este Paciente ya lo comprobó la base arriba, con su acceso.
+  let data;
+  try {
+    data = await enLaPrestadora(req.usuarioAsistente.prestadoraId, 'reportes anteriores', async (dbTrabajo) => {
+      const { data: filas, error } = await dbTrabajo
+        .from('reportes')
+        .select('id, observaciones, created_at, guardias!inner(fecha)')
+        .eq('paciente_id', req.params.id)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return filas;
+    });
+  } catch (e) {
+    return responderError(res, e);
   }
 
   // Lo que se muestra de la salud de este Paciente queda anotado antes de salir. Si no se pudo

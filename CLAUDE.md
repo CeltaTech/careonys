@@ -13,9 +13,10 @@
 
 ## 1. Qué es Careonys
 
-Plataforma de gestión para empresas dedicadas al cuidado de personas. **Careonys no presta
-servicios de cuidado.** Las Prestadoras la usan con licencia, cada una en su propia Organización.
-**Ninguna Prestadora tiene relación especial con CeltaTech ni trato privilegiado en el código.**
+Producto de gestión para las empresas prestadoras de servicios de cuidado de personas.
+**Careonys no presta servicios de cuidado.** Las Prestadoras lo usan con licencia, cada una en su
+propia Organización. **Ninguna Prestadora tiene relación especial con CeltaTech ni trato
+privilegiado en el código.**
 
 **El alta de una Prestadora no es de Careonys.** Una Prestadora se registra con CeltaTech, y **sólo
 CeltaTech le da el alta**. Hecha el alta, CeltaTech le informa al producto dos cosas: los datos que
@@ -26,7 +27,8 @@ y no le crea nada por su cuenta en ese momento.
 Lo fijó el Desarrollador, textual: *«Solo celtatech puede dar alta a una prestadora, lo hace y te
 informa los datos que requieras para que ingrese. cuando le da el alta tambien te informa a que
 tiene acceso y a que no lo tiene»*, y *«Careonys nada tiene que hacer metiendo la nariz donde no la
-llaman»*. Es la regla fundamental de la empresa —`..\..\CLAUDE.md` §2— aplicada al alta.
+llaman»*. Es la regla fundamental de la empresa —`..\..\CLAUDE.md`, sección «La regla
+fundamental: CeltaTech no sabe qué hacen los productos por dentro»— aplicada al alta.
 
 **Y la cuenta con la que se entra al Panel tampoco es de Careonys.** Cada Prestadora ingresa con el
 usuario, la contraseña y los permisos que le genera CeltaTech. **Del cambio de contraseña, de su
@@ -40,20 +42,21 @@ y cómo entran ellos no está dicho acá.
 
 **Lo único que Careonys sí hace en el alta es el correo de salida.** Se le crea
 `[prestadora]@careonys.com`, **exclusivamente para enviar**; se crea solo y la Prestadora ni se
-entera de que existe (`docs/MARCA.md`, sección 0). Una dirección de correo no es una dirección web:
-**no existe ninguna dirección web propia por Prestadora, y no se construye ninguna.**
+entera de que existe (`docs/MARCA.md`, sección «Antes que nada: acá hay tres marcas, no una»). Una
+dirección de correo no es una dirección web: **no existe ninguna dirección web propia por
+Prestadora, y no se construye ninguna.**
 
 ## 2. Sandbox
 
-Organización ficticia reservada del sistema, sólo para desarrollo, pruebas, validación y demos
-internas. No es una Prestadora comercial ni un cliente. **El nombre «Sandbox» queda reservado:
-ninguna Prestadora real puede usarlo.**
+Organización ficticia reservada del sistema, sólo para desarrollo, pruebas, validación y
+demostraciones internas. No es una Prestadora comercial ni un cliente. **El nombre «Sandbox» queda
+reservado: ninguna Prestadora real puede usarlo.**
 
 ## 3. De dónde sale cada advertencia legal
 
 Qué funciones traen riesgo y qué dice cada aviso está en
-`..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md` §3, y los textos por país en `docs/legal/<país>.md`.
-Acá sólo cómo se implementa:
+`..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`, sección «Riesgo legal», y los textos por país en
+`docs/legal/<país>.md`. Acá sólo cómo se implementa:
 
 **La fuente de las advertencias es una tabla configurable** —jurisdicción → función → texto—,
 nunca texto escrito en el código.
@@ -79,46 +82,38 @@ soporte técnico entre por el lado de CeltaTech, desde celtatech hara lo que ten
 Panel es la herramienta con la que trabaja la Prestadora, y un rol que no es suyo —y que además es
 el más poderoso— no vive ahí.
 
-**Para entrar a una Prestadora real hace falta un permiso de acceso**, con todos sus recaudos: una
-Organización por vez, corte por inactividad a los 5 minutos, tope absoluto de 60 y todo auditado
-—es regla de la empresa, `..\..\CLAUDE.md` §6—. **Lo abre CeltaTech desde su lado, y el producto
-no tiene ninguna ruta para abrirlo, renovarlo ni cerrarlo a pedido.** Textual del Desarrollador:
-*«la sesión de soporte ya está construida con todos sus recaudos, es cierto, pero solo puede ser
-accedida desde el soporte de celtatech»*. Qué tiene que construir CeltaTech está escrito en
-`celtatech/docs/EL_PERMISO_DE_ACCESO.md`.
+**Para entrar a una Prestadora real hace falta un permiso de acceso**, con todos los recaudos que
+fija `..\..\CLAUDE.md`, sección «Seguridad, privacidad y auditoría». **Lo abre CeltaTech desde su
+lado, y el producto no tiene ninguna ruta para abrirlo, renovarlo ni cerrarlo a pedido.** Textual
+del Desarrollador: *«la sesión de soporte ya está construida con todos sus recaudos, es cierto,
+pero solo puede ser accedida desde el soporte de celtatech»*. Qué tiene que construir CeltaTech está
+escrito en `celtatech/docs/EL_PERMISO_DE_ACCESO.md`.
 
-**La cerradura está acá y la llave es de CeltaTech.** El permiso se anota en esta base porque es
-la que decide qué filas ve una consulta; quién tiene derecho a abrirlo no se anota adentro del
-producto.
-
-**Y la Prestadora no lo ve ni sabe que existe.** Textual: *«la prestadora no la ve, ni siquiera
-sabe que existe»*. Ninguna pantalla del Panel lo ofrece, lo nombra ni lo deja ver abierto. El
-cartel que exige la regla de la empresa es de la herramienta con la que opera CeltaTech.
 - **Acá la Organización ficticia es Sandbox.** El permiso vive en `permisos_de_acceso` y lo que
   se hace con él, en `auditoria_de_accesos`. La forma del permiso es la de la empresa y no se toca.
 - La precedencia —permiso de acceso primero, Organización propia después— la define la función
-  SQL `prestadora_actual()`, y el middleware `requiereRolPanel.js` la refleja, no la reinventa. Ahí
-  vive además el cierre por vencimiento, porque es el único lugar por el que pasan todos los
-  pedidos.
+  SQL `interno.prestadora_actual()`, y el middleware `requiereRolPanel.js` la refleja, no la
+  reinventa. Ahí vive además el cierre por vencimiento, porque es el único lugar por el que pasan
+  todos los pedidos.
 
 **Admin_prestadora** — administrador operativo, acotado a su propia Organización. Sin acceso a
 otras Prestadoras ni a configuración global.
 
 **En cada Prestadora hay un solo Administrador, y es el que figura en el contrato.** Lo nombra
 CeltaTech, que es también quien se ocupa de su usuario, su contraseña y sus permisos, y de los
-cambios y el restablecimiento de esa contraseña. **No hay dos, y el producto no crea ninguno.** Las personas
-en las que ese Administrador delegue funciones propias de él **llevan otro nombre, que todavía no
-está decidido**, nunca el de Administrador. **No es el Coordinador**, que es otra cosa: quien
-organiza el trabajo de un grupo determinado de Asistentes, y que depende de funciones del
-Administrador o de aquel en quien él las delegue o las comparta. Textual del Desarrollador: *«en cada prestadora hay un
-solo administrador, que es el que figura en el contrato y el que nombra celtatech, el resto de las
-personas en las que ese administrador delegue funciones que le corresponde a el, tendrá un nombre
-distinto»*.
+cambios y el restablecimiento de esa contraseña. **No hay dos, y el producto no crea ninguno.** Las
+personas en las que ese Administrador delegue funciones propias de él **llevan otro nombre, que
+todavía no está decidido**, nunca el de Administrador. **No es el Coordinador**, que es otra cosa:
+quien organiza el trabajo de un grupo determinado de Asistentes, y que depende de funciones del
+Administrador o de aquel en quien él las delegue o las comparta. Textual del Desarrollador: *«en
+cada prestadora hay un solo administrador, que es el que figura en el contrato y el que nombra
+celtatech, el resto de las personas en las que ese administrador delegue funciones que le
+corresponde a el, tendrá un nombre distinto»*.
 
 **Del Administrador para abajo, las cuentas las hace la Prestadora.** El Administrador genera y
 administra los usuarios, las contraseñas y los permisos de su gente: coordinadores, Asistentes,
-Clientes, personas autorizadas. Ahí el ciclo de la contraseña del producto —pedirla, restablecerla, los
-topes— sí corre; para el Administrador no, porque esa cuenta es de CeltaTech.
+Clientes, personas autorizadas. Ahí el ciclo de la contraseña del producto —pedirla,
+restablecerla, los topes— sí corre; para el Administrador no, porque esa cuenta es de CeltaTech.
 
 **Y reparte permisos adentro de lo que su Prestadora tiene.** Qué alcanza cada Prestadora lo
 informa CeltaTech al dar el alta, y de ahí no se sale. Adentro de eso decide él: el producto deja
@@ -128,35 +123,41 @@ la prestadora lo reconfigura segun sus criterios y necesidades»*.
 
 ## 6. Lo propio de Careonys en el desarrollo
 
-Lo común a todos los productos —no hardcodear, multiidioma, cuatro estados, apagar el botón,
-sistema de diseño, RLS, auditoría, operaciones destructivas, importe con moneda, punto único de
-verdad, módulos, commit y push— está en `..\..\CLAUDE.md` y **no se repite acá**. Lo del cuidado
-de personas —glosario, riesgo legal, marca de la Prestadora, datos sensibles, Pagador— está en
-`..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`. Acá queda **cómo se cumple en este producto**.
+Lo común a todos los productos —no hardcodear, i18n, cuatro estados, apagar el botón, sistema de
+diseño, RLS, auditoría, operaciones destructivas, importe con moneda, punto único de verdad,
+módulos, commit y push, datos inventados en pruebas— está en `..\..\CLAUDE.md` y **no se repite
+acá**. Lo del cuidado de personas —glosario, riesgo legal, marca de la Prestadora, datos
+sensibles, Pagador— está en `..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`. Acá queda **cómo se cumple
+en este producto**.
+
+### Identidad del producto y marca de la Prestadora
 
 **La identidad del producto sale de `src/config/identidadProducto.js`.** Marcador `{{producto}}` /
 `{{productoCorto}}` en traducciones y HTML, `IDENTIDAD.nombre` en código. Lo que **persiste** —base
-IndexedDB, prefijo de respaldo— usa `IDENTIDAD.codigo`. Ese archivo existe
-cinco veces, una por unidad desplegable, y `scripts/verificar_identidad.mjs` corta el push si las
-cinco no coinciden o si el nombre está escrito a mano.
+IndexedDB, prefijo de respaldo— usa `IDENTIDAD.codigo`. Ese archivo existe cinco veces, una por
+unidad desplegable, y `scripts/verificar_identidad.mjs` hace fallar la comprobación de cada push si
+las cinco no coinciden o si el nombre está escrito a mano.
 
 **El código del producto es `codigo: 'careonys'`.** Con él se arman la base local del teléfono y
 el prefijo de los respaldos.
 
 **Dónde vive la marca de la Prestadora.** En las dos aplicaciones, `src/context/PerfilContext.jsx`
-la pide una vez a `/perfil` y la entrega con `useMarca()` (`nombre`, `logoUrl`,
-`mostrarMarcaProducto`); el aviso al celular la lee de `src/lib/marcaGuardada.js`, porque el
-trabajador de fondo no tiene sesión; del lado del backend la arma
-`backend/src/utils/marcaPrestadora.js` con `prestadoras.nombre_fantasia` y `prestadoras.logo_url`.
-La línea al pie —*«con la tecnología de {{producto}}»*— **va siempre** y es el **único** uso de
-`IDENTIDAD` en una superficie de Cliente o Asistente. **El producto no consulta qué contrató
-ninguna Prestadora**, acá ni en ningún otro lado: eso es de CeltaTech (`celtatech/CLAUDE.md` §2).
+la pide una vez a `/perfil` y la entrega con `useMarca()` (`nombre`, `logoUrl`); la notificación al
+celular la lee de `src/lib/marcaGuardada.js`, porque el trabajador de fondo no tiene sesión; del
+lado del backend la arma `backend/src/utils/marcaPrestadora.js` con `prestadoras.nombre_fantasia`
+y `prestadoras.logo_url`. La línea al pie —*«con la tecnología de {{producto}}»*— **va siempre** y
+es el **único** uso de `IDENTIDAD` en una superficie de Cliente o Asistente. **El producto no
+consulta qué contrató ninguna Prestadora**, acá ni en ningún otro lado: eso es de CeltaTech
+(`..\..\CLAUDE.md`, sección «La regla fundamental: CeltaTech no sabe qué hacen los productos por
+dentro»).
 
 **Y para nombrarla adentro de una frase hay marcador, igual que el producto.** `{{prestadora}}`
 en cualquier traducción, resuelto en `src/i18n/marcaEnElTexto.js` (original en el Panel, copia
 idéntica en las dos aplicaciones) y alimentado por `PerfilContext.jsx` en las aplicaciones y
 `EmpresaContext.jsx` en el Panel. Sin Prestadora conocida cae al nombre del producto. **Sólo
 texto:** la marca dibujada no pasa por ahí y sigue saliendo de `useMarca()`.
+
+### i18n, textos y errores
 
 **En qué idioma se le abre la pantalla a quien entra por primera vez** lo decide
 `src/i18n/idiomaInicial.js`: lo que esa persona haya elegido alguna vez, después lo que diga la
@@ -179,15 +180,20 @@ Detalle en `docs/AI_PROMPTS.md`.
 sin permiso, no encontrado, duplicado, en uso, dato mal cargado, falla del sistema— y muestra la
 frase de las traducciones en los tres idiomas. El texto crudo queda en la consola.
 
+### Copias entre carpetas que se despliegan por separado
+
 **Entre carpetas que se despliegan por separado, el punto único de verdad es un original más
 copias idénticas.** El Panel, las dos aplicaciones y el backend no pueden importarse entre sí. La
 lista de qué archivo es copia de cuál está en `scripts/copias_entre_apps.mjs`,
-`scripts/sincronizar_copias.mjs` las regenera y `scripts/verificar_identidad.mjs` corta el build si
-alguna se despegó. Nunca una copia editada a mano.
+`scripts/sincronizar_copias.mjs` las regenera y `scripts/verificar_identidad.mjs` hace fallar la
+construcción si alguna se despegó. Nunca una copia editada a mano.
+
+### Moneda, facturación y cobranzas
 
 **La moneda de cada importe se completa sola.** La de la Prestadora está en `prestadoras.moneda`,
 nace del país configurado y se cambia desde Configuración; la de cada importe, en la columna
-`moneda` de su tabla, que la función `public.moneda_de_prestadora` completa al insertar.
+`moneda` de su tabla, que los disparadores completan al insertar, tomándola de la Prestadora con
+`interno.moneda_de_prestadora` o de la fila de la que depende.
 
 **Alcance, para que la regla de la moneda no se estire:** Careonys **no emite comprobantes
 fiscales y no está previsto que lo haga.** No tiene punto de venta, ni numeración autorizada, ni
@@ -208,11 +214,11 @@ es el trabajo: no emite comprobantes, no calcula impuestos, no reclama, no gesti
 decide ninguna restricción.
 
 **Y tiene que poder con las dos situaciones**, que las elige cada Prestadora: con un software de
-facturación conectado, o **con ninguno conectado**. Con ninguno, Careonys
-sigue funcionando con lo que él mismo registra. **Conectado, Careonys no calcula: muestra lo que
-recibe, tal como lo recibe.** No lo recalcula, no lo completa con lo suyo y no lo compara contra
-nada. Un número que llega de afuera y otro calculado acá son dos verdades para lo mismo, y eso es
-peor que no tener ninguna. Textual del Desarrollador: *«cada prestadora elige como hacerlo»*.
+facturación conectado, o **con ninguno conectado**. Con ninguno, Careonys sigue funcionando con lo
+que él mismo registra. **Conectado, Careonys no calcula: muestra lo que recibe, tal como lo
+recibe.** No lo recalcula, no lo completa con lo suyo y no lo compara contra nada. Un número que
+llega de afuera y otro calculado acá son dos verdades para lo mismo, y eso es peor que no tener
+ninguna. Textual del Desarrollador: *«cada prestadora elige como hacerlo»*.
 
 **El estado de cuenta lo ve solamente la administración de la Prestadora.** Cuánto debe un Cliente
 y si está atrasado no es información de quien coordina turnos ni de nadie más: entra por el
@@ -221,6 +227,8 @@ administración.
 
 **Cada Prestadora con lo suyo, sin mezclar.** Una conexión con un software de facturación o de
 cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.
+
+### Directorio de Personas y roles de una contratación
 
 **Toda persona de los Clientes de la Prestadora vive en un solo lugar —el Directorio de Personas— y
 de ahí se nutre todo el que la consuma.** Quien contrata, recibe el cuidado o paga puede ser una
@@ -241,7 +249,7 @@ conserve los datos del día que se emitió es asunto de quien lo emite —el sof
 el contable—, no de Careonys, que no emite ninguno.
 
 **Hacia afuera se entrega, y no se trae.** Careonys le dice al software de facturación, para una
-Prestadora: hacé las facturas con estos datos e informame lo que corresponda. **Al revés no**: el
+Prestadora: haga las facturas con estos datos e infórmeme lo que corresponda. **Al revés no**: el
 mismo software puede estar trabajando para otros fines y con otros clientes, y nada de eso le llega
 a Careonys, porque no es información suya. Un cliente creado adentro del facturador no existe para
 Careonys. Un solo emisor y muchos receptores; dos padrones hablándose de igual a igual divergen
@@ -290,9 +298,10 @@ persona tuvo. Con quien dejó de ser Cliente se vuelve a cruzar: como Pagador de
 como familiar de otro Paciente o como Paciente. Ese historial es justamente lo que se pierde el
 día que alguien borra la Ficha «porque ya no está activa».
 
-**Y la cuenta de una persona tampoco se borra, por la misma razón que no se borra una HCE.** Se
-puede desactivar, suspender, bloquear o marcar con la advertencia que haga falta; borrar, nunca.
-En el Panel, el Administrador desactiva una cuenta dejando siempre una nota que diga por qué.
+**Y la cuenta de una persona tampoco se borra, por la misma razón que no se borra una historia
+clínica electrónica (HCE).** Se puede desactivar, suspender, bloquear o marcar con la advertencia
+que haga falta; borrar, nunca. En el Panel, el Administrador desactiva una cuenta dejando siempre
+una nota que diga por qué.
 
 **Rol nunca significa permisos.** Un rol dice qué lugar ocupa alguien en una contratación. Quién
 puede ver o hacer qué cosa es otra cosa, se llama de otra manera y se guarda en otro lado.
@@ -319,6 +328,8 @@ la localidad o el barrio. Si aun así siguen siendo dos, se le antepone el núme
 número de cliente es otra cosa**: es único, no se reasigna nunca a nadie más, y es lo que usan el
 sistema y los documentos. El nombre visible es para la pantalla.
 
+### Funciones de la base y aislamiento entre Prestadoras
+
 **Las funciones internas de la base no viven en un esquema publicado.** Las que usan las políticas
 de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 `supabase/config.toml` a propósito: así no son direcciones web. Las políticas las siguen
@@ -332,46 +343,45 @@ segundo motivo cuando se la asigna igual a quien tiene documentos pendientes; y
 `domicilio_del_paciente_en` y `domicilios_de_pacientes_en`, que reciben pacientes y una fecha y
 corren con los permisos de quien llama, así que la protección por fila de cada tabla decide qué ve.
 `ausencias_que_tapan` sigue en `public`, recibe dos fechas y resuelve la Prestadora adentro, pero
-hoy no la llama nadie. Además el Panel lee
-`cuenta_desactivada` como columna calculada de `asistentes`: recibe la fila que la consulta ya le
-dejó ver y contesta falso si es de otra Prestadora. Y el backend, con la credencial
-de quien pide, llama siete más: `tiene_permiso_la_sesion` y `permisos_efectivos_de_la_sesion`, que
-no reciben a nadie y contestan los permisos de quien inició sesión; `reactivar_la_cuenta`, que
-recibe una cuenta y sólo la reactiva si quien pide es el Administrador de esa misma Prestadora;
-`pedir_medicacion`, que corre con los permisos de quien llama, toma la Prestadora y el Cliente del
-Paciente que la base le deja ver, y guarda la indicación y lo firmado en una sola operación;
+no la llama nadie. Además el Panel lee `cuenta_desactivada` como columna calculada de
+`asistentes`: recibe la fila que la consulta ya le dejó ver y contesta falso si es de otra
+Prestadora. Y el backend, con la credencial de quien pide, llama —entre otras—
+`tiene_permiso_la_sesion` y `permisos_efectivos_de_la_sesion`, que no reciben a nadie y contestan
+los permisos de quien inició sesión; `reactivar_la_cuenta`, que recibe una cuenta y sólo la
+reactiva si quien pide es el Administrador de esa misma Prestadora; `pedir_medicacion`, que corre
+con los permisos de quien llama, toma la Prestadora y el Cliente del Paciente que la base le deja
+ver, y guarda la indicación y lo firmado en una sola operación;
 `asistentes_asignados_al_paciente`, que devuelve sólo quiénes tienen guardia con un Paciente de la
 Prestadora de quien pide, en todas las zonas, y sólo al personal del Panel; y
 `revisar_indicacion_medicacion` y `cerrar_firma_medicacion_en_papel`, que le dejan al personal del
 Panel aceptar o rechazar una indicación y cerrar su firma en papel, tocando sólo el estado, el
 motivo y quién y cuándo, y sólo sobre Pacientes cuya información de salud alcanza.
-Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama
+Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
-credencial. Toda función nueva de política
-nace en `interno`, y cualquiera que se quede en `public` y llame a una de ahí lleva `interno` en su
-`search_path`. El reparto de permisos —cuáles pierden el alcance anónimo y cuáles conservan
-`authenticated`— lo guarda la base en los permisos de cada función y en los permisos por defecto
-(`ALTER DEFAULT PRIVILEGES`) de los esquemas `public` e `interno`.
+credencial. Toda función nueva de política nace en `interno`, y cualquiera que se quede en
+`public` y llame a una de ahí lleva `interno` en su `search_path`. El reparto de permisos —cuáles
+pierden el alcance anónimo y cuáles conservan `authenticated`— lo guarda la base en los permisos
+de cada función y en los permisos por defecto (`ALTER DEFAULT PRIVILEGES`) de los esquemas
+`public` e `interno`.
 
 **Y lo que llama un disparador tiene que estar del lado de adentro.** Un disparador que no es
 `SECURITY DEFINER` corre con el rol de quien está escribiendo, así que lo que llama por dentro se
 comprueba contra ese rol y no contra su dueño. Si la función que llama está cerrada a
 `authenticated`, ninguna persona con sesión puede escribir en esa tabla: el síntoma es
-`42501 permission denied for function`, y así estuvieron catorce tablas hasta que las funciones
-que llaman sus disparadores se mudaron a `interno`. La salida no es abrirle la función a `authenticated` en `public` —eso la convierte en dirección web— sino
-mudarla a `interno` y darle el permiso ahí. **No se convierte el disparador en `SECURITY
-DEFINER`**: sumaría código corriendo con privilegio de dueño y le sacaría la protección por fila a
-las consultas que hace por dentro. El Desarrollador la adoptó como propia, textual: *«no era mia,
-pero desde ahora en mas lo es»*.
+`42501 permission denied for function`. La salida no es abrirle la función a `authenticated` en
+`public` —eso la convierte en dirección web— sino mudarla a `interno` y darle el permiso ahí.
+**No se convierte el disparador en `SECURITY DEFINER`**: sumaría código corriendo con privilegio
+de dueño y le sacaría la protección por fila a las consultas que hace por dentro.
 
 **Por lo mismo, un disparador no llama a `auth.uid()`**: el trabajo sin persona no tiene uso del
 esquema `auth`, que es de Supabase y no se reparte desde una migración. Pregunta quién inició
 sesión con `interno.usuario_de_la_sesion()`, que devuelve lo mismo.
 
 **Ninguna prueba del backend ve esto**: casi todo el backend entra todavía con la llave de
-servicio, que puede ejecutar todo, y las pruebas del backend contestan con una base de mentira. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una
-persona y además le pregunta a la base si algún disparador quedó pidiendo un permiso que no
-tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
+servicio, que puede ejecutar todo, y las pruebas del backend contestan con una base de mentira. Lo
+prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una persona y
+además le pregunta a la base si algún disparador quedó pidiendo un permiso que no tiene. Se corre
+con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
 
 **El aislamiento lo hace cumplir la base, y el backend todavía no está ahí.** Hoy el backend entra
 con `SUPABASE_SERVICE_ROLE_KEY`, que alcanza todas las Prestadoras y se saltea la protección por
@@ -379,15 +389,16 @@ fila, así que lo que separa una de otra son los filtros escritos a mano en cada
 automatizadas ya salieron de ahí: corren de a una Prestadora por vez con la credencial del trabajo
 sin persona, que genera `backend/src/db/connection.js`. Los tres middleware de entrada también:
 comprueban la credencial con la clave pública y leen a la persona con `clienteDelPedido(req)`, que
-es la única forma en que una ruta toma la conexión de quien pide; la primera ruta que la usa es
-`panelReferenciasLaborales.js`. Las demás rutas todavía no, y eso incumple
-`..\..\CLAUDE.md` §5 —«no se puede tener una credencial que alcance a todas las Organizaciones»— y
-se está reemplazando: **cada pedido de una persona pasa a la credencial de esa persona, y lo que no tiene
-persona detrás lleva una credencial acotada a sus tablas y funciones, de a una Prestadora por
-vez.** Los pasos, con sus comprobaciones, están en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Los
-cimientos».
+es la única forma en que una ruta toma la conexión de quien pide. Las rutas que todavía no la usan
+incumplen `..\..\CLAUDE.md`, sección «Aislamiento entre Organizaciones» —«no se puede tener una
+credencial que alcance a todas las Organizaciones»—, y eso se está reemplazando: **cada pedido de
+una persona pasa a la credencial de esa persona, y lo que no tiene persona detrás lleva una
+credencial acotada a sus tablas y funciones, de a una Prestadora por vez.** Los pasos, con sus
+comprobaciones, están en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Los cimientos».
 Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es
 sacarla.
+
+### Cumplimiento normativo
 
 **Y el sistema tiene que poder demostrar lo que hace, no sólo hacerlo.** Careonys trata datos de
 salud, así que lo alcanzan HIPAA en Estados Unidos, el Reglamento General de Protección de
@@ -401,25 +412,22 @@ existe certificación de ninguna clase, y de protección de datos europea tampoc
 
 **Los datos están alojados en São Paulo.** Para todo país que no sea Brasil eso es transferencia
 internacional, y para Alemania y Francia hoy impide vender. Antes de dar de alta una Prestadora de
-un país nuevo, el documento de ese país en `docs/legal/` tiene que decir qué habilita alojar allá los datos de
-salud de ese país.
+un país nuevo, el documento de ese país en `docs/legal/` tiene que decir qué habilita alojar allá
+los datos de salud de ese país.
 
-**Ninguna palabra de Careonys entra en un módulo** —Prestadora, Guardia, Paciente, Servicio— si el
-otro producto no la tiene. Todavía no hay ningún módulo; sacar una pieza de acá para convertirla
-en uno entra por `..\..\CLAUDE.md` §11, nunca como parte de otra tarea. Anotado en
-`docs/PLAN_HASTA_PRODUCCION.md`, sección «Módulos».
+### Módulos
 
-**Nunca datos reales en pruebas: se usa Sandbox y datos inventados.**
-
-**Antes de cerrar una tarea:** ¿se consultaron los tres archivos de reglas? ¿aislamiento entre
-Organizaciones mantenido? ¿términos del glosario aprobados? ¿cuatro estados cubiertos?
-¿documentación al día? Si alguna respuesta es no, la tarea no está terminada.
+**Las palabras de Careonys que no entran en un módulo** son, por ejemplo, Prestadora, Guardia,
+Paciente y Servicio, si el otro producto no las tiene. Todavía no hay ningún módulo; sacar una
+pieza de acá para convertirla en uno entra por `..\..\CLAUDE.md`, sección «Antes de un cambio
+grande», nunca como parte de otra tarea. Anotado en `docs/PLAN_HASTA_PRODUCCION.md`, sección
+«Módulos».
 
 ## 7. Despliegue
 
 **Un push no es un despliegue por sí solo — lo es porque hay un automatismo que lo convierte en
-uno.** Cada `push` a `main` que toca `backend/`, `panel/`, `pwa-clientes/` o `pwa-asistentes/`
-dispara el despliegue de esa parte (`.github/workflows/deploy-backend.yml` y
+uno.** Cada `push` a `main` que toca `backend/`, `panel/`, `pwa-clientes/`, `pwa-asistentes/` o
+`sitio-web/` dispara el despliegue de esa parte (`.github/workflows/deploy-backend.yml` y
 `publicar-pantallas.yml`). Los proyectos de Cloudflare Pages son de **subida directa**: no están
 enganchados a GitHub, publica el automatismo. Comprobar que salió bien con `gh run list` y la
 dirección en vivo respondiendo.
@@ -434,7 +442,7 @@ carpeta nueva con material de una sola Prestadora se nombra igual y queda bajo e
 
 ## 9. Protocolo de sesión
 
-Lo general está en `..\..\CLAUDE.md` §12. Acá, lo de este producto.
+Lo general está en `..\..\CLAUDE.md`, sección «Protocolo de sesión». Acá, lo de este producto.
 
 **Al iniciar:** leer este archivo, `..\..\CLAUDE.md`,
 `..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`,
@@ -447,18 +455,12 @@ esta sesión: [Z].»*
 empresa. Un documento del producto se cita desde la raíz del producto —`docs/CONTEXT.md`—; uno de
 la empresa, con la ruta entera desde `celtatech/` —`celtatech/docs/MODELO_COMERCIAL_CELTATECH.md`—.
 
-**Todo se verifica contra el código escrito y la base en vivo, nunca contra documentos ni
-migraciones** (`..\..\CLAUDE.md` §12). Acá, cómo: la base se consulta con
-`supabase db query --linked "…"`, que pregunta a la instancia enlazada y no necesita Docker. Las
-migraciones no son el estado: son instrucciones que ya se ejecutaron, y este producto juntó
-tantas que se contradicen entre sí. `supabase migration list --linked` sólo sirve para saber si
-quedó alguna sin aplicar, nunca para saber cómo está la base.
-
-**Antes de preguntarle o explicarle algo al Desarrollador, se hacen esas dos consultas en ese
-momento: el código y la base en vivo.** Es obligación permanente. Se comprueba a quién alcanza la
-cosa, si está encendida, quién la usa y si ya se decidió. Nunca se responde desde la memoria, desde
-un resumen de conversación ni desde un pendiente anotado. Si el código o la base contestan, no
-había pregunta.
+**Cómo se consulta la realidad en este producto.** La regla —el código escrito y la base en vivo,
+nunca documentos ni migraciones, también antes de preguntarle o explicarle algo al
+Desarrollador— está en `..\..\CLAUDE.md`, sección «Protocolo de sesión». Acá, cómo: la base se
+consulta con `supabase db query --linked "…"`, que pregunta a la instancia enlazada y no necesita
+Docker. `supabase migration list --linked` sólo sirve para saber si quedó alguna migración sin
+aplicar, nunca para saber cómo está la base.
 
 **Por qué cambió una regla** va a `docs/claude_history.md`, en una línea: qué decía antes, qué
 dice ahora y el motivo. Se revisa antes de proponer algo que suene a tema ya debatido.
@@ -469,3 +471,7 @@ de la tarea que se está haciendo. Sólo se agrega como paso, en el lugar de la 
 corresponde, cuando hay un motivo justificado para no poder hacerlo ahí —espera una decisión del
 Desarrollador o algo de afuera—, y el paso dice cuál es. Un paso
 terminado se borra: no se marca como hecho, se saca.
+
+**Antes de cerrar una tarea:** ¿se consultaron los tres archivos de reglas? ¿aislamiento entre
+Organizaciones mantenido? ¿términos del glosario aprobados? ¿cuatro estados cubiertos?
+¿documentación al día? Si alguna respuesta es no, la tarea no está terminada.

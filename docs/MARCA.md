@@ -63,7 +63,7 @@ Dos cosas que la decisión **descartó** explícitamente, para que nadie las rea
   solo build para todas las Prestadoras. Es el punto donde el límite técnico y el estándar de
   la industria coinciden.
 
-**Desde el 2026-08-08 la regla se cumple** (pendiente `#95`, cerrado). La Prestadora tiene
+**La regla se cumple.** La Prestadora tiene
 dónde guardar su logo, y las dos aplicaciones muestran su marca arriba y la del producto al
 pie.
 
@@ -110,8 +110,9 @@ encabezado del Panel, la firma de un email.
 ## 2. Archivos a entregar
 
 Todos van en `public/marca/` de cada app que los use (`panel/`, `pwa-asistentes/`,
-`pwa-clientes/`). Las rutas se declaran en `src/config/identidadProducto.js`, campos
-`isotipo` y `logotipo` — ningún componente escribe una ruta de imagen a mano.
+`pwa-clientes/`). Las rutas tienen su lugar en `src/config/identidadProducto.js`, campos
+`isotipo` y `logotipo`, pero ningún archivo lee todavía esos dos campos: ver «Lo que hoy hay en
+su lugar».
 
 ### Isotipo
 
@@ -155,21 +156,24 @@ sobre cualquier fondo, alcanza con una sola versión y no hacen falta las varian
   de `useMarca()`: un marcador reemplaza texto, y una imagen no es texto.
 - **Los colores** (`colorPrimario`, `colorFondo`) ya salen de ahí, y de ahí los toma el
   manifiesto de las dos PWA.
-- **El manifiesto y el `<title>`** de las PWA ya se arman desde la identidad — cuando existan
-  los archivos de marca, solo hay que apuntar `isotipo` y reemplazar los `icon-*.png`
-  provisorios que hoy viven en `public/`.
+- **El nombre del manifiesto y el `<title>`** de las PWA ya se arman desde la identidad.
 
 ## 4. Lo que hoy hay en su lugar
 
 `identidadProducto.js` apunta `isotipo` a `/favicon.svg` (el archivo provisorio que ya existe
-en las tres apps) y deja `logotipo` en `null`. **Todo punto de consumo tiene que tolerar
-`logotipo: null` y caer al nombre en texto** — nunca romper ni dejar un hueco por una imagen
-que todavía no se dibujó.
+en las tres apps) y deja `logotipo` en `null`. **Ningún archivo lee esos dos campos.** Las rutas
+de los íconos están escritas a mano: el manifiesto de las dos PWA (`vite.config.js`) declara
+`icon-192.png`, `icon-512.png`, `icon-maskable-192.png` e `icon-maskable-512.png`, y el
+`index.html` de cada app apunta a `favicon.svg` y, en las dos PWA, a `icon-192.png` como
+`apple-touch-icon`. Son los archivos provisorios que hoy viven en `public/`.
+
+El punto de consumo que se escriba tiene que tolerar `logotipo: null` y caer al nombre en
+texto — nunca romper ni dejar un hueco por una imagen que todavía no se dibujó.
 
 ## 5. Cuándo hay que tener esto
 
-No bloquea nada del plan de separación. La fecha límite real es la misma que la de pendiente
-`#44`: **antes de la primera Prestadora real**. Hasta entonces el producto funciona completo
+No bloquea nada del plan de separación. La fecha límite real es **antes de la primera
+Prestadora real**. Hasta entonces el producto funciona completo
 con el favicon provisorio.
 
 Hay un motivo para no dejarlo para el final: el ícono de una PWA queda grabado en el teléfono

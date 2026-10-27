@@ -5,8 +5,13 @@ los ojos cada cartel que el sistema pone por su cuenta. Cada ficha arranca dicie
 llega a esa pantalla** —el camino por el menú, los clics— y qué hay que hacer para que ese cartel
 aparezca.
 
-**Son seis.** Están ordenados por el camino del menú, de arriba abajo, para que se puedan ir
-viendo uno atrás del otro sin saltar de un lado al otro del Panel.
+**Son seis.** Llevan el mismo número que tienen en el punto 15 de `docs/CARTELES_DEL_PANEL.docx`
+—el 2, el 6, el 9, el 12, el 21 y el 26—, que son los que siguen en el código de los veintiséis de
+ese punto. Están ordenados por el camino del menú, de arriba abajo, para que se puedan ir viendo
+uno atrás del otro sin saltar de un lado al otro del Panel.
+
+**Éste es el único lugar donde está el detalle de cada cartel.** El plan, la lista de cambios
+deshechos y las fichas de cómo nombrar a la Prestadora remiten acá.
 
 **Qué se cuenta acá como cartel.** Todo texto que el Panel dice por su cuenta, sin que sea un dato
 cargado por nadie: los carteles que ocupan el lugar de una lista cuando esa lista está vacía, los
@@ -63,14 +68,14 @@ que se haya tecleado o elegido —que queda a la vista—, y debajo el cartel en
 **El cartel, textual.**
 Primer renglón: «El filtro no encontró nada»
 Segundo renglón: «Hay registros cargados, pero ninguno coincide con lo que se buscó.»
-Y debajo, un botón: «Sacar los filtros».
+Y debajo, un botón: «Limpiar filtros».
 
 **Cuándo aparece.** Cuando la lista volvió sin ni un renglón y hay al menos un filtro puesto.
 
 **Qué desaparece mientras el cartel está puesto.** La tabla entera.
 
 **Qué queda alrededor si el cartel se saca.** El título, los filtros con lo tecleado adentro, y un
-blanco. El botón de sacar los filtros se iría con el cartel, que es el único lugar donde está.
+blanco. El botón «Limpiar filtros» se iría con el cartel, que es el único lugar donde está.
 
 **Problemas que se ven acá.** Tres.
 
@@ -84,7 +89,8 @@ filtran además por desplegable —un estado, una zona, un rango de fechas—. Q
 eligió un estado lee una frase que no habla de lo que hizo.
 
 El tercero es que hay pantallas que nunca llegan a este cartel aunque tengan filtros: Documentación
-es una, porque su filtro de arranque no cuenta como filtro y la manda siempre al cartel genérico.
+es una, porque su filtro de arranque no cuenta como filtro y la deja como lista vacía, sin ningún
+cartel.
 
 
 **Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
@@ -96,49 +102,58 @@ es una, porque su filtro de arranque no cuenta como filtro y la manda siempre al
 
 # PARTE II — Los carteles propios de cada pantalla
 
-# Clientes → Clientes → un Cliente
+# Clientes → Directorio de Clientes → un Cliente
 
 ## 6. Cuando el Pagador no tiene cargada ninguna documentación exigible
 
-**Cómo llegar.** Menú lateral → grupo **Clientes** → **Clientes** → clic en un Cliente de la lista.
-Dentro de la Ficha del cliente, bajar hasta la subsección **«Documentación que pide el Pagador»**, que está
-debajo de todo lo de la firma del Pagador.
+**Cómo llegar.** Menú lateral → grupo **Clientes** → **Directorio de Clientes** → clic en un Cliente
+de la lista → pestaña **Contacto**. Ahí, bajar hasta la tarjeta **«Documentación que pide el
+Pagador»**, que está debajo de la tarjeta de la firma del Pagador.
 
 **Qué es esa pantalla y para qué se usa.** Es la parte de la Ficha del cliente donde se responde
 una sola pregunta: quién paga esto y si eso ya está cerrado. Elegir a alguien del Directorio de Personas no alcanza:
 queda definido como Pagador recién cuando firmó que asume la obligación de pagar. Ahí mismo se ve si
 esa firma está, se arma el documento para que la firme, se registra que llegó firmado, y —abajo de
-todo eso— se lleva la cuenta de los papeles que exige quien paga el servicio: cuáles están,
+todo eso— se lleva la cuenta de los documentos que exige quien paga el servicio: cuáles están,
 cuáles faltan, cuáles se vencieron. Nada de eso frena la contratación; avisa nada más, en el momento
 en que se elige a la persona y no el día que hay que cobrarle.
 
 **Qué se ve en pantalla, de arriba abajo.**
-- Título de la pantalla: el nombre del Cliente.
-- Título de sección: «Contacto», con los casilleros de nombre, teléfono, correo, localidad y plan.
-- El casillero donde se elige del Directorio de Personas, rotulado «Quién paga».
-- Título de la subsección: «Quién paga».
-- Debajo, la explicación: «Elegir el Legajo no alcanza: el Pagador queda definido cuando firma que
-  asume la obligación de pagar. Acá se ve si esa firma está y qué documentación pide el Pagador.
-  Nada de esto frena la contratación.»
-- Un cartel de estado, que dice «El Pagador está definido: firmó que asume la obligación de pagar.»
-  o «El Pagador todavía no firmó que asume la obligación de pagar.»
-- Una lista de dos renglones: «Quién paga» con el nombre, y «Firma en su representación» con el
-  nombre de quien firma, si lo hay.
-- Los botones de «Armar el consentimiento», «Ver el documento», «Registrar la firma» y «Anular»,
-  según en qué punto esté la firma.
-- Título de la subsección siguiente: «Documentación que pide el Pagador».
-- Y ahí abajo va la tabla de papeles, o el cartel cuando no hay nada.
+- Título de la pantalla: el nombre del Cliente, y debajo un renglón con la localidad, el teléfono,
+  el email y la fecha de alta.
+- Las pestañas: «Contacto», «Pacientes», «Personas autorizadas», «Guardias activas», «Historial de
+  reportes» y «Alertas activas». Este cartel está en la primera.
+- La tarjeta «Contacto», con el enlace «Abrir WhatsApp» si hay teléfono, y los casilleros «Plan»,
+  «Días para pagar, desde la emisión», «Pagador» —un desplegable con «El Cliente», «Obra social» y
+  «Otro»— y «Quién paga», donde se elige del Directorio de Personas. Al pie, el botón «Guardar».
+- Debajo, la tarjeta «Quién paga», que se ve sólo si quien mira puede modificar el Cliente. Si no
+  hay nadie elegido, dice «Esta contratación todavía no tiene elegido quién paga.» y nada más. Si
+  hay alguien elegido:
+  - Un cartel de estado, que dice «El Pagador está definido: firmó que asume la obligación de
+    pagar.» o «El Pagador todavía no firmó que asume la obligación de pagar.»
+  - Según el caso, un aviso de que el consentimiento guardado lo firmó otra persona, o de que a
+    quien paga le falta anotado quién firma en su representación.
+  - Los datos: «Quién paga» con el nombre, «Firma en su representación» con el nombre de quien
+    firma, si lo hay, y «Firmado el» con la fecha, si ya se firmó.
+  - Los botones de «Armar el consentimiento», «Ver el documento», «Ver el documento firmado»,
+    «Registrar la firma» y «Anular», según en qué punto esté la firma.
+- Debajo, la tarjeta «Documentación que pide el Pagador», que existe sólo si hay alguien elegido como
+  Pagador.
+- Y ahí adentro va la tabla de documentos, o el cartel cuando no hay nada.
 
 **El cartel, textual.**
 Un solo renglón: «Esta Prestadora todavía no cargó qué documentación pide. Se configura en
 Configuración.»
 
-**Cuándo aparece.** Cuando la lista de papeles exigibles vuelve vacía, es decir, cuando nadie dejó
-escrito en ningún lado qué documentación hay que pedirle a quien paga. No depende de este Cliente ni
-de este Pagador: es una definición que se hace una sola vez para toda la empresa, y mientras no se
-haga, este cartel va a estar en todos los Clientes por igual.
+**Cuándo aparece.** Cuando la lista de documentos exigibles vuelve vacía. Esa lista sale de los
+documentos que la Prestadora tiene activos en Configuración → **Prestadora** → «Documentación que
+se le pide al Pagador», y depende del casillero «Pagador» de este Cliente: si ahí dice «Obra
+social» u «Otro», entran los documentos que se piden a todos y los que se piden a ese tipo de
+Pagador; si dice «El Cliente», entran sólo los que se piden a todos. Así que el cartel puede
+aparecer en un Cliente y no en otro de la misma Prestadora, según qué tipo de Pagador tenga cada
+uno.
 
-**Qué desaparece mientras el cartel está puesto.** La tabla entera de papeles, con sus cuatro
+**Qué desaparece mientras el cartel está puesto.** La tabla entera de documentos, con sus cuatro
 columnas —«Documento», «Situación», «Vence» y «Acciones»—, con el estado de cada renglón, que puede
 ser «Falta», «Cargado» o «Vencido», y con los botones de «Ver», «Cargar» y «Reemplazar». Desaparece
 también el aviso que resume la situación arriba de la tabla, el que dice «Falta cargar tantos
@@ -147,14 +162,14 @@ documentos.» y «Hay tantos documentos vencidos.»
 **Qué queda alrededor si el cartel se saca.** Todo lo de la firma queda intacto: el estado del
 Pagador, quién paga, quién firma en su representación, la fecha en que se firmó y los botones de
 armar, ver y registrar. Lo único que queda es el título «Documentación que pide el Pagador» con
-un blanco debajo, y el botón de guardar los datos de contacto más abajo.
+un blanco debajo.
 
 **Problemas que se ven acá.** Son tres. El primero es que el título y el cartel se contradicen sobre
-quién exige los papeles: el título dice que la documentación la pide el Pagador, y el cartel dice
+quién exige los documentos: el título dice que la documentación la pide el Pagador, y el cartel dice
 que la Prestadora «todavía no cargó qué documentación pide», como si fuera ella la que exige. Leídos
 uno atrás del otro, no se entiende de quién es la exigencia. El segundo es que en esta misma pantalla
 la frase «Quién paga» aparece tres veces seguidas y con tres significados distintos: es el rótulo del
-casillero donde se elige, es el título de la subsección entera, y es el renglón que muestra el nombre
+casillero donde se elige, es el título de la tarjeta de la firma, y es el renglón que muestra el nombre
 elegido. El tercero es que la frase «Se configura en Configuración» dice la misma palabra dos veces
 en cinco palabras, y aun así no dice en qué parte de esa pantalla hay que buscar.
 
@@ -166,48 +181,42 @@ en cinco palabras, y aun así no dice en qué parte de esa pantalla hay que busc
 
 ---
 
-## 8. Cuando el Cliente no tiene reportes
+## 9. Cuando el Cliente no tiene reportes
 
-**Cómo llegar.** El mismo camino: **Clientes → Clientes → un Cliente**, y bajar hasta la sección
-**«Historial de reportes»**, que está justo debajo de las guardias activas.
+**Cómo llegar.** El mismo camino: **Clientes → Directorio de Clientes → un Cliente**, y ahí la
+pestaña **«Historial de reportes»**.
 
 **Qué es eso y para qué se usa.** Cada guardia deja un reporte al terminar, escrito por quien la
 trabajó. Esta sección junta los de los Pacientes de ese Cliente, hasta treinta, sin rango de fechas
 para elegir.
 
 **Qué se ve en pantalla, de arriba abajo.**
-- El nombre del Cliente, y las secciones anteriores.
-- Título de sección: «Historial de reportes»
+- El nombre del Cliente, el renglón de sus datos y las pestañas, con «Historial de reportes»
+  elegida.
 - Debajo, la tabla de reportes, o el cartel cuando no hay ninguno.
-- Más abajo, la sección de «Alertas activas».
 
 **El cartel, textual.**
-Primer renglón: «Todavía no hay reportes»
-Segundo renglón: «Cada guardia deja su reporte al terminar, y acá se ven los de los Pacientes de
-este Cliente.»
+Un solo renglón: «Todavía no hay reportes»
 
 **Cuándo aparece.** Cuando ningún Paciente de ese Cliente tiene ni un reporte cargado.
 
-**Qué desaparece mientras el cartel está puesto.** La tabla de reportes, con la fecha, el Paciente,
-quién lo escribió, y la señal que dice si quedó «Sin confirmar».
+**Qué desaparece mientras el cartel está puesto.** La tabla de reportes, con sus columnas «Fecha»,
+«Paciente», «Asistente», «Ánimo» y «Señales». En la última se marca si hubo un incidente, si algo
+quedó fuera de rango y si el reporte quedó «Sin confirmar».
 
-**Qué queda alrededor si el cartel se saca.** El título «Historial de reportes» y un blanco debajo.
+**Qué queda alrededor si el cartel se saca.** Las pestañas, con «Historial de reportes» elegida, y
+un blanco debajo.
 
-**Problemas que se ven acá.** Cuatro.
+**Problemas que se ven acá.** Tres.
 
-El primero es que cuenta como hecho algo que no siempre pasa: dice que «cada guardia deja su reporte
-al terminar», y la propia tabla tiene una señal para los reportes que quedaron «Sin confirmar», que
-existe justamente porque el reporte puede no quedar cerrado. La frase presenta como automático algo
-que la misma pantalla muestra que falla.
-
-El segundo es que tapa dos situaciones distintas con el mismo texto: que no hubo ninguna guardia
+El primero es que tapa dos situaciones distintas con el mismo texto: que no hubo ninguna guardia
 todavía, y que hubo guardias y ninguna dejó reporte. La segunda es un problema y se lee igual que la
 primera.
 
-El tercero es la misma confusión de la sección anterior: un Cliente sin Pacientes recibe este
-cartel en vez de que se le diga que no tiene a quién atenderle.
+El segundo es que un Cliente sin Pacientes recibe este cartel en vez de que se le diga que no
+tiene a quién atenderle.
 
-El cuarto es que no nombra la pantalla de Reportes diarios, que es donde se ven todos y donde se
+El tercero es que no nombra la pantalla de Reportes diarios, que es donde se ven todos y donde se
 resuelve lo que quedó sin confirmar.
 
 
@@ -218,11 +227,11 @@ resuelve lo que quedó sin confirmar.
 
 ---
 
-# Cobertura → Guardias
+# Guardias → Guardias
 
-## 11. Cuando no quedó ninguna guardia abierta de días anteriores
+## 12. Cuando no quedó ninguna guardia abierta de días anteriores
 
-**Cómo llegar.** Menú lateral → grupo **Cobertura** → **Guardias**. El cartel está arriba de todo,
+**Cómo llegar.** Menú lateral → grupo **Guardias** → **Guardias**. El cartel está arriba de todo,
 antes de los filtros y de la grilla de turnos, en la sección **«Guardias sin cerrar»**. Se ve ni
 bien se entra a la pantalla, sin apretar nada.
 
@@ -239,13 +248,12 @@ cuándo y que fue desde el Panel, y a propósito no escribe hora ni lugar, para 
 distinguir de una salida marcada de verdad.
 
 **Qué se ve en pantalla, de arriba abajo.**
-- Título de la pantalla: «Guardias»
+- Título de la pantalla: «Guardias», con los botones «Filtrar» y «Nueva».
 - Título de sección: «Guardias sin cerrar»
-- Debajo del título, el subtítulo: «Guardias de días que ya pasaron y siguen figurando en curso:
-  terminaron y nadie las cerró. Aparecen todas, sin importar cuánto tiempo haya pasado.»
 - Y ahí va la tabla, o el cartel cuando no hay nada.
-- Más abajo, ya fuera de esta franja, la tarjeta de filtros de la pantalla de Guardias —desde,
-  hasta, estado, buscador, y la casilla de ver sólo los huecos— y la grilla de turnos.
+- Más abajo, ya fuera de esta franja, la grilla de turnos. Los filtros de la pantalla —desde,
+  hasta, estado, buscador, y la casilla de ver sólo los huecos— quedan ocultos hasta que se aprieta
+  «Filtrar».
 
 **El cartel, textual.**
 Primer renglón: «No quedó ninguna guardia sin cerrar»
@@ -260,9 +268,9 @@ cuando aparece algo.
 renglón que dice hace cuánto está abierta —«1 día», o «tantos días»—, el botón de cerrar y el botón
 para avisar que alguien ya se está ocupando.
 
-**Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título de la sección y su
-subtítulo largo, y debajo un blanco. Más abajo, la tarjeta de filtros y la grilla de turnos, que no
-tienen nada que ver con esta franja y siguen funcionando igual.
+**Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título de la sección, y
+debajo un blanco. Más abajo, la grilla de turnos y sus filtros, que no tienen nada que ver con esta
+franja y siguen funcionando igual.
 
 **Problemas que se ven acá.** Dos. El primero es que el segundo renglón cuenta mal el hecho:
 afirma que todas las guardias de días anteriores están cerradas, y eso no es lo que se comprobó. Lo
@@ -283,15 +291,14 @@ normalmente va qué hacer o qué va a hacer aparecer algo acá, y acá se usa pa
 
 # Asistentes → Postulaciones
 
-## 20. Mapa de los Asistentes — cuando hay Asistentes pero ninguna ubicación cargada
+## 21. Mapa de los Asistentes — cuando hay Asistentes pero ninguna ubicación cargada
 
-**Cómo llegar.** El mismo camino que el cartel anterior: **Asistentes → Postulaciones**, y bajar hasta
-**«Mapa del Padrón por zona»**. La diferencia con el caso anterior no es el camino sino la
-situación: acá sí hay gente trabajando.
+**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Postulaciones**, y bajar hasta **«Mapa del
+Padrón por zona»**.
 
-**Qué es esa pantalla y para qué se usa.** Es el mismo mapa descrito arriba: dónde viven los
-Asistentes activos del Padrón, agrupados por zona. La diferencia con el caso anterior es la situación: acá sí hay
-gente trabajando, pero de ninguna de esas personas se cargó una ubicación, así que no hay ni un punto
+**Qué es esa pantalla y para qué se usa.** Es el mapa de dónde viven los Asistentes activos del
+Padrón, agrupados por zona. Este cartel es para cuando hay gente trabajando, pero de ninguna de
+esas personas se cargó una ubicación, así que no hay ni un punto
 que dibujar. La decisión deliberada es no mostrar un mapa mudo, porque un mapa vacío se lee como un
 mapa roto.
 
@@ -307,10 +314,10 @@ Segundo renglón: «Los Legajos con el domicilio ubicado aparecen acá.»
 **Cuándo aparece.** Cuando hay al menos un Asistente activo en el Padrón y ninguno de ellas tiene
 ubicación cargada. También aparece cuando las ubicaciones que hay cargadas no sirven: un par de
 números fuera del rango posible, o el punto exacto cero-cero, que no es una ubicación sino una
-casilla que quedó vacía, se descartan y no cuentan como ubicación.
+casilla que quedó vacía, se descartan y no cuentan como ubicación. Si el Padrón no tiene ningún
+Asistente activo, no aparece ningún cartel.
 
-**Qué desaparece mientras el cartel está puesto.** Lo mismo que en el caso anterior: el renglón de
-cuántos se pudieron ubicar sobre el total, los botones de zona con sus cantidades, el dibujo del
+**Qué desaparece mientras el cartel está puesto.** El renglón de cuántos se pudieron ubicar sobre el total, los botones de zona con sus cantidades, el dibujo del
 mapa, la lista escrita de nombres y el renglón que avisa cuántos quedaron sin ubicar.
 
 **Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título «Mapa del Padrón
@@ -334,12 +341,12 @@ zona elegida.
 
 ---
 
-# Ajustes → Configuración → La Prestadora
+# Gestión → Configuración → Prestadora
 
-## 25. El aviso de que falta la clave de un proveedor conectado
+## 26. El aviso de que falta la clave de un proveedor conectado
 
-**Cómo llegar.** Menú lateral → grupo **Ajustes** → **Configuración** → solapa **«La Prestadora»** →
-bajar hasta la sección **«Pasarela de pago»**. El aviso está adentro de la tabla, en la columna
+**Cómo llegar.** Menú lateral → grupo **Gestión** → **Configuración** → **Configuración** → solapa
+**«Prestadora»** → bajar hasta la sección **«Pasarela de pago»**. El aviso está adentro de la tabla, en la columna
 «Estado», justo debajo de la palabra «Activo», en el renglón del proveedor al que le falta la clave.
 Este bloque sólo existe si esta Prestadora tiene contratada la modalidad Match.
 
@@ -355,15 +362,8 @@ cargada. Conectar los medios y cambiar sus claves es del administrador de la Pre
 técnico ve cuáles están conectados y nada más.
 
 **Qué se ve en pantalla, de arriba abajo.**
-- Título de la pantalla: «Configuración», con la solapa «La Prestadora».
+- Título de la pantalla: «Configuración», con la solapa «Prestadora».
 - Título de sección: «Pasarela de pago»
-- Explicación de la sección: «Se puede elegir uno o varios medios de cobro para la suscripción de los
-  Clientes a Match. La credencial de cada uno se guarda cifrada y no vuelve a mostrarse una vez
-  cargada.»
-- Cuando quien mira no es el administrador de la Prestadora, un aviso: «Acá se ve qué pasarelas están
-  conectadas, pero conectarlas y cambiar sus claves es del administrador de la prestadora. El soporte
-  técnico no accede a las credenciales con las que la prestadora cobra, ni siquiera durante una sesión
-  de soporte.»
 - La tabla, con tres columnas: «Proveedor», «Estado» y una última sin nombre para los botones. En la
   columna de estado se lee «Activo» o «Inactivo», y es justo ahí, debajo de esa palabra, donde aparece
   este aviso.
@@ -380,18 +380,19 @@ clave.
 celda de estado, debajo de la palabra «Activo», que sigue diciendo «Activo».
 
 **Qué queda alrededor si el aviso se saca.** La fila del proveedor con su nombre y la palabra «Activo»,
-y, si quien mira es el administrador de la Prestadora, los botones de esa fila: «Desactivar» y el de
-cargar o reemplazar el secreto de firma.
+y, si quien mira es el administrador de la Prestadora, los botones de esa fila: «Desactivar cuenta»
+y «Cargar secreto de firma» o «Reemplazar secreto de firma».
 
 **Problemas que se ven acá.** La misma cosa tiene tres nombres distintos en la misma pantalla: el aviso
-la llama «la clave», los botones de al lado la llaman «secreto de firma» y hay otros botones que hablan
-de «credencial». Leído solo, no se sabe cuál de las dos cosas falta ni cuál de los botones la resuelve.
+la llama «la clave», los botones de al lado la llaman «secreto de firma», y el casillero que se abre
+para conectar un proveedor se llama «Datos de acceso». Leído solo, no se sabe qué falta ni cuál de
+los botones lo resuelve.
 Y hay una contradicción visible en un mismo renglón: la columna de estado dice «Activo» y abajo se
 aclara que los cobros no se aceptan, que es lo contrario de estar activo, sin que ninguna de las dos
 afirmaciones desmienta a la otra. Por último, cuando quien mira no es el administrador de la
 Prestadora, el aviso aparece igual pero los botones para resolverlo no están, así que se ve el problema
-y no hay ninguna manera de actuar desde ahí; el aviso tampoco dice a quién hay que pedírselo, eso está
-escrito más arriba en otro recuadro.
+y no hay ninguna manera de actuar desde ahí; ni el aviso ni ningún otro texto de la sección dice a
+quién hay que pedírselo.
 
 
 **Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
@@ -399,12 +400,18 @@ escrito más arriba en otro recuadro.
 
 > Debe indicar únicamente que falta la credencial necesaria, con una redacción formal y sencilla. Texto a aprobar. Quiero suponer que en ninguna pantalla dice «La Prestadora»
 
+**Dato para esta decisión.** Hoy sí hay pantallas del Panel que dicen «La Prestadora». Dos
+ejemplos: el selector de lugares sin ninguno cargado dice «La Prestadora todavía no cargó ningún
+lugar. Se cargan en Configuración.», y el error de una modalidad apagada dice «La Prestadora no
+tiene habilitada la modalidad {modalidad}. Se habilita en Configuración.». El relevamiento completo,
+texto por texto, está en `docs/NOMBRAR_A_LA_PRESTADORA.md`.
+
 ---
 
 # Lo que queda afuera de este documento
 
-**El cartel de Habilitar cambio de contraseña.** Se ve en Menú lateral → grupo **Ajustes** → **Habilitar cambio de
-contraseña**, que es la pantalla donde se atienden los pedidos de habilitación, y el enlace del menú
+**El cartel de Habilitar cambio de contraseña.** Se ve en Menú lateral → grupo **Gestión** →
+**Configuración** → **Habilitar cambio de contraseña**, que es la pantalla donde se atienden los pedidos de habilitación, y el enlace del menú
 lleva un contador al lado. Ese cartel **queda afuera por decisión del Desarrollador**, hasta que se
 analicen en detalle los procedimientos y la lógica de esa pantalla. Textual: *«en este caso en
 particular, ningún cartel es mas útil que tener uno vacío esperando. Puede llega a aparecer uno, y

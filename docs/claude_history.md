@@ -607,3 +607,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el botón colgaba de la extensión del turno, se podía apretar una sola vez, lo guardaba el backend con la llave maestra y el aviso al Coordinador decía que el relevo no había llegado.
 - **Qué dice ahora:** es una emergencia de la guardia, se pide en cualquier momento y más de una vez, no cierra la guardia, lo guarda la credencial del Asistente y el aviso dice «Relevo de emergencia».
 - **Motivo:** así lo decidió el Desarrollador para que el Paciente nunca quede solo; que el relevo no llegue es otro caso y tiene su propio aviso.
+
+## Lo que llama un disparador pasa a `interno`, y la regla se queda sin su historia
+
+- **Qué decía antes:** `CLAUDE.md` contaba cómo apareció la regla —catorce tablas en las que nadie con sesión podía escribir, con `42501`, porque sus disparadores llamaban funciones de `public` cerradas a `authenticated`— y que el Desarrollador la adoptó como propia: *«no era mia, pero desde ahora en mas lo es»*.
+- **Qué dice ahora:** queda sólo la regla: lo que llama un disparador vive en `interno` con el permiso dado ahí, y el disparador no se convierte en `SECURITY DEFINER`.
+- **Motivo:** `CLAUDE.md` refleja el estado vigente y no narra cómo se llegó a él.

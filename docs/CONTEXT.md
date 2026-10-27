@@ -20,29 +20,20 @@
   único punto de verdad de esa decisión y no se cuelga de ningún plan ni de lo que la Prestadora
   haya contratado: son dos decisiones distintas. La consultan igual el menú del Panel
   (`panel/src/context/ModalidadesContext.jsx`) y el backend (`backend/src/middleware/exigirModalidad.js`).
-- **Principio de negocio (acordado en sesión, 2026-07-07): el modelo está pensado para
-  operar con muy poca gente administrando.** Por lo tanto, toda tarea operativa que se
-  pueda automatizar con IA sin comprometer el riesgo legal (ver `CLAUDE.md`) es deseable,
-  no un extra opcional. Esto pesa a favor de priorizar antes de lo previsto algunos de los
-  niveles de IA que `PLAN_HASTA_PRODUCCION.md` marca hoy como "Diferida" — a revisar caso por caso
-  cuando se llegue a esa etapa, no se re-prioriza automáticamente sin evaluar cada nivel.
-- **Cambio societario (2026-07-09): el software pasa a ser propiedad de CeltaTech**, que
-  lo licencia como SaaS a cualquier prestadora de cuidado domiciliario. Cada
-  Prestadora sigue con su propio negocio de cuidado domiciliario, y puede sumar un
-  servicio B2B de auditoría/certificación a otras prestadoras. La arquitectura multi-prestadora
-  exige entidad `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual
-  CeltaTech/prestadora, i18n y multi-moneda desde el arranque y residencia de datos a futuro:
-  todo eso ya está implementado y verificado.
-  Cada tabla lleva `prestadora_id` y la RLS resuelve la Prestadora con `prestadora_actual()`;
-  la configuración es por Prestadora (`configuracion_prestadora`). `superadmin` entra a una
-  Prestadora real sólo con un permiso de acceso que abre CeltaTech (`permisos_de_acceso`); sin
-  uno vigente el backend lo rechaza (`backend/src/middleware/requiereRolPanel.js`).
-  **El correo, que es lo único estructural que sigue abierto.** Railway bloquea los puertos de
+- **El modelo está pensado para operar con muy poca gente administrando.** Toda tarea operativa
+  que se pueda automatizar con IA sin comprometer el riesgo legal es deseable, no un extra
+  opcional. Pesa a favor de adelantar algunos de los niveles de IA que `PLAN_HASTA_PRODUCCION.md`
+  marca como "Diferida", evaluando cada nivel cuando se llegue a esa etapa.
+- Qué es el producto y de quién es está en `careonys/CLAUDE.md`, «Qué es Careonys». Cada tabla
+  lleva `prestadora_id` y la RLS resuelve la Prestadora con `prestadora_actual()`; la configuración
+  es por Prestadora (`configuracion_prestadora`). Cómo entra CeltaTech a una Prestadora está en
+  `careonys/CLAUDE.md`, «Los tres roles».
+- **El correo es lo único estructural que sigue abierto.** Railway bloquea los puertos de
   correo, así que el backend no puede entrar a ninguna casilla —ni propia ni de una Prestadora— y
   **hoy no se entrega ningún correo**. El envío ya pasa por un despachante que habla por el puerto
   443 (`backend/src/utils/email.js`); falta dar de alta la cuenta, crear la dirección de envío
-  propia de cada Prestadora bajo `careonys.com` y el reenvío de las respuestas a la casilla que
-  ella declare (`docs/MARCA.md`, sección 0). Se cierra con la sección «El correo» de
+  de cada Prestadora (`careonys/CLAUDE.md`, «Qué es Careonys») y el reenvío de las respuestas a la
+  casilla que ella declare (`docs/MARCA.md`, sección 0). Se cierra con la sección «El correo» de
   `docs/PLAN_HASTA_PRODUCCION.md`, y hay que hacerlo antes de dar de alta la primera Prestadora
   real.
 
@@ -50,26 +41,16 @@
 
 | Rol | Dónde opera | Ve |
 |---|---|---|
-| Superadmin | Sin entrada propia en Careonys: la herramienta de CeltaTech le abre un **permiso de acceso** | Sólo la Prestadora de un permiso de acceso vigente, una por vez, con auditoría. Sin permiso, ninguna |
-| Admin_prestadora | Panel de administración | Todo el negocio de su propia prestadora (sin el acceso técnico de Superadmin, cero visibilidad de otras prestadoras) |
-| Coordinador | Panel de administración | Su zona asignada |
+| Superadmin, Admin_prestadora, Coordinador | Panel de administración | Ver `careonys/CLAUDE.md`, «Los tres roles». En el código, `panel/src/lib/roles.js` |
 | Asistente | PWA de Asistentes | Sus propias guardias, su perfil, su certificado |
 | Cliente | PWA de Clientes | Sus pacientes, reportes y alertas de sus pacientes |
-
-Superadmin es un rol distinto de Admin_prestadora, no un simple flag sobre el mismo usuario, y
-no tiene entrada propia en Careonys: llega sólo con un permiso de acceso. Los roles que entran
-al Panel están en `panel/src/lib/roles.js`.
 
 Ningún rol de Asistente/Cliente debe tener acceso, ni siquiera de solo lectura, a
 `escalas_legales`, `ausencias` ni a datos laborales internos de otros Asistentes.
 
-**Actualizado 2026-07-10:** el rol antes descripto acá como "Administrador de prestadora"
-(futuro) ya está implementado — es el mismo rol de la tabla de arriba, renombrado de
-`admin` a `admin_prestadora` (Bloque 2 del pasaje a multi-prestadora), con acceso
-acotado a los datos de su propia prestadora y cero visibilidad de otras, verificado contra
-Supabase real. Lo único que sigue siendo futuro, no implementado, es un rol de solo lectura
-agregada para Pagadores (obras sociales/prepagas) — no diseñar código para ese rol sin
-que se apruebe explícitamente.
+El rol de consulta para Pagadores (obras sociales, prepagas) no existe: qué vería está en
+`celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`, «Datos y marca», y no se diseña código para ese
+rol sin que se apruebe explícitamente.
 
 ## Stack por etapa
 
@@ -80,33 +61,31 @@ Etapa 1 — La página pública de Careonys (le vende el software a empresas de 
              publicada a mano a Cloudflare Pages, proyecto careonys-sitio.
   Requisito: el texto tiene que llegar ya escrito desde el servidor, para que los
              buscadores lo lean, y cada idioma con su propia dirección (/es-AR, /en,
-             /pt-BR). Motivo del Desarrollador, 2026-07-08: "el seo es fundamental, si no
-             nos ven no nos contactan, si no nos contactan no facturamos".
+             /pt-BR).
   Con qué:   sin decidir. La recomendación es estirar lo que ya hay —páginas estáticas sin
-             framework— y traer una herramienta solo si el sitio crece. La decisión de
-             2026-07-08 de usar Next.js quedó sin efecto junto con el documento que la
-             contenía (pendiente #104). Ver docs/PRD_01_Sitio_Web.md §7.
+             framework— y traer una herramienta solo si el sitio crece. Ver
+             docs/PRD_01_Sitio_Web.md §7.
   Datos:     ninguno. La página ofrece correo y WhatsApp y no guarda nada
              (PRD_01_Sitio_Web.md §5).
 
-  Lo que esta parte decía antes —Next.js, formularios de pedido de servicio y de
-  postulación, MySQL, Vercel, Nodemailer— describía el sitio de una empresa de cuidados, que
-  no es este producto. Se reencuadró el 2026-08-13. Nada de eso llegó a construirse. La
-  decisión de que las PWA de Asistentes/Clientes (Etapas 3-4) sigan en Vite no cambia: no
-  necesitan que el servidor arme el texto, viven detrás de un ingreso con contraseña.
+  Las PWA de Asistentes y de Clientes (Etapas 3-4) siguen en Vite: no necesitan que el
+  servidor arme el texto, viven detrás de un ingreso con contraseña.
 
 Etapa 2 — Panel de administración
   Frontend:  React 18 + Vite, proyecto separado (`panel/`) — SPA detrás de auth, nunca
              indexable (<meta name="robots" content="noindex, nofollow">)
   Auth:      Supabase Auth (email + password, sin magic link) — rol resuelto desde tabla
              `usuarios` (extiende `auth.users`), no desde metadata de Auth
-  DB:        Supabase (PostgreSQL + RLS).
-             El panel lee/escribe directo con la anon key; RLS (no el backend) es el único
-             límite de autorización sobre los datos
-  Backend:   Express (`backend/`): acciones puntuales que el panel no puede hacer solo con
-             RLS (ej. envío de email al cambiar estado de una postulación) van por
-             `/api/panel/*`, protegidas con un middleware que valida el JWT de Supabase Auth
-             contra `usuarios.rol` (`backend/src/middleware/requiereRolPanel.js`)
+  DB:        Supabase (PostgreSQL + RLS). Una parte de las lecturas el Panel las hace
+             directo con la anon key, bajo RLS
+  Backend:   Express (`backend/`). La mayoría de las operaciones del Panel pasan por él,
+             en `/api/panel/*`, protegidas con un middleware que valida el JWT de Supabase
+             Auth contra `usuarios.rol` (`backend/src/middleware/requiereRolPanel.js`).
+             También atiende las dos aplicaciones (`/api/app-asistentes`,
+             `/api/app-clientes`), las puertas públicas, las direcciones por las que avisa
+             otro software y las tareas programadas, que corren de a una Prestadora por vez.
+             Con qué credencial trabaja hoy: `careonys/CLAUDE.md`, «Lo propio de Careonys en
+             el desarrollo»
 
   Qué hay construido hoy, por área. Cada una tiene su esquema aplicado, sus rutas en
   `backend/src/routes/` y su pantalla en `panel/src/pages/`; lo que falta está en
@@ -115,7 +94,8 @@ Etapa 2 — Panel de administración
 
   - **Reclutamiento e incorporación** — postulaciones, entrevistas, verificación de identidad
     con las dos fotos, referencias laborales, documentación y Matrícula.
-    Falta únicamente la pantalla pública del formulario de postulación.
+    La entrada pública de postulaciones salió del producto porque no hay sitio público que la
+    llame, y está en el estante: `celtatech/Codigos-utiles/postulacion-desde-un-sitio-publico/`.
   - **Padrón y gestión del personal** — Asistentes monotributistas o independientes, ausencias y
     cobertura, liquidaciones y pagos a Asistentes. La relación de dependencia y el cese son de un
     módulo de sueldos y jornales.
@@ -124,7 +104,8 @@ Etapa 2 — Panel de administración
   - **Guardias** — series y guardias, asignaciones de turno, cobertura, grilla, acciones masivas, guardias sin
     cerrar, pase de guardia con código de presencia, emergencias en guardia, domicilios
     temporales y seguimiento de ubicación. Tiene rutas (`panelGuardias.js`, `panelComprobaciones.js`,
-    `panelEmergencias.js`) y pantallas (`panel/src/pages/Guardias.jsx`, `PaseDeGuardia.jsx`,
+    `panelEmergencias.js`) y pantallas (`panel/src/pages/Guardias.jsx`,
+    `guardias/SolicitudDeIngresoModal.jsx`, `panel/src/context/PedidosDeAutorizacionContext.jsx`,
     `EmergenciasEnGuardia.jsx`, `panel/src/pages/guardias/`).
   - **Reportes, alertas y medicación** — el reporte diario que arma la IA, las alertas por
     patrones, los signos vitales con su autorización, y las indicaciones de medicación.
@@ -146,8 +127,8 @@ Etapas 3 y 4 — PWA Asistentes / PWA Clientes
   Framework: React 18 + Vite + Vite PWA Plugin
   Auth:      Supabase Auth, con usuario y contraseña (`src/context/AuthContext.jsx`) y acceso
              guardado en el teléfono (`src/lib/accesoGuardado.js`)
-  DB:        Supabase (PostgreSQL + RLS + Realtime)
-  Storage:   Supabase Storage (fotos de reportes, documentos)
+  Datos:     todo por el backend (`/api/app-asistentes`, `/api/app-clientes`), también las
+             fotos y los documentos. Del cliente de Supabase usan sólo la sesión
   GPS:       navigator.geolocation API (nativo del browser)
   Cámara:    MediaDevices API (nativo del browser)
   IA Nivel 1 (reporte inteligente) y Nivel 2 (alertas): Anthropic API — modelo en
@@ -170,13 +151,9 @@ export const T = {
 ```
 
 **El lema "Cuida tus afectos" no es del producto y no va en ninguna pantalla de Careonys.**
-Es el lema de la empresa de cuidados original, de cuando el proyecto era el sitio de una sola
-empresa del rubro. Careonys no cuida a nadie: le vende el software a las empresas que cuidan
-(`CLAUDE.md` §1), así que un lema que le habla a un Cliente está fuera de lugar tanto en el
-producto como en `careonys.com` (ver `docs/PRD_01_Sitio_Web.md` §0). La regla de las dos
-formas —"Cuida" para hablarle a quien mira, "Cuidamos" para hablar de sí misma— era de esa
-empresa y se fue con ella; los archivos que citaba (`sitio-web/src/i18n/translations.js`,
-`sitio-web/src/components/Footer.jsx`) nunca existieron en este repositorio.
+Careonys no cuida a nadie: le vende el software a las empresas que cuidan (`careonys/CLAUDE.md`,
+«Qué es Careonys»), así que un lema que le habla a un Cliente está fuera de lugar tanto en el
+producto como en `careonys.com` (ver `docs/PRD_01_Sitio_Web.md` §0).
 
 Careonys todavía no tiene lema propio, y no hace falta inventarle uno para poder trabajar.
 
@@ -202,7 +179,8 @@ Ver `SECURITY.md` para autenticación, RLS y manejo de datos sensibles.
 
 ## Riesgo legal que condiciona el producto
 
-Ver `celtatech/CLAUDE.md` §7 y `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md` §3. No se repite acá.
+Ver `celtatech/CLAUDE.md`, «El riesgo legal»; `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`,
+«Riesgo legal»; y `careonys/CLAUDE.md`, «De dónde sale cada advertencia legal». No se repite acá.
 
 ## Cómo la Prestadora le cobra a los Clientes
 
@@ -216,21 +194,20 @@ Una factura no cuelga de ningún Paciente: se le factura al Cliente entero, y un
 puede llevar renglones de más de una persona cuidada. Qué se cobra y cada cuánto lo decide la
 Prestadora; el producto no fija precio ni período.
 
-**El comprobante no lo emite Careonys**, lo emite el software de facturación de la Prestadora, con
-su cuenta y los impuestos de su país. De ahí vuelven tres datos que se anotan tal como llegaron —
-cómo se llama el comprobante, qué número tiene y cuánto quedó adeudando el Cliente—, y ese monto es
-el que se reclama; mientras no haya nada anotado se muestra lo que se mandó a facturar. Una factura
-emitida no se toca: la corrección es otro comprobante, que se anota en
-`correcciones_factura_cliente` con su sentido y su monto. Sin software conectado el sistema
-funciona igual, anotando esos datos a mano. La cuenta de la resta vive en un solo lugar, la vista
+Que el comprobante no lo emite Careonys, qué datos vuelven del software de facturación y qué pasa
+sin software conectado está en `careonys/CLAUDE.md`, «Lo propio de Careonys en el desarrollo».
+Mientras no haya nada anotado se muestra lo que se mandó a facturar. Una factura emitida no se
+toca: la corrección es otro comprobante, que se anota en `correcciones_factura_cliente` con su
+sentido y su monto. La cuenta de la resta vive en un solo lugar, la vista
 `saldos_cliente`, y las comprobaciones que hacen la pantalla y el backend salen del mismo archivo,
 `lib/facturacionDeClientes.js`. El plazo de pago acordado es lo que fija el vencimiento: hay uno
 general de la Prestadora y uno por Cliente, que gana sobre el general; vacío quiere decir que no se
 acordó nada y cero, que paga el mismo día.
 
-**Que el sistema siga la cobranza lo decide cada Prestadora**, con un interruptor en Configuración
-→ Facturación a Clientes (`configuracion_facturacion_clientes`, campo `sigue_la_cobranza`).
-Encendido —que es lo de fábrica— la pantalla de Facturación muestra los saldos, genera los
+**Que el sistema siga la cobranza lo decide cada Prestadora**, con un interruptor en la
+configuración de la Prestadora (`panel/src/pages/configuracion/FacturacionClientesTab.jsx`, en
+`/configuracion/prestadora`). Se guarda como la clave `sigue_la_cobranza` dentro de la columna
+`regla` de `configuracion_facturacion_clientes`, y si falta vale encendido. Encendido, la pantalla de Facturación muestra los saldos, genera los
 reclamos y anota los pagos. **Apagado, Careonys deja de calcular**: de la cobranza se ocupa el
 software de créditos y cobranzas de la Prestadora, y lo que se muestra es lo que ese software
 avisa —cómo está la cuenta de cada Cliente, en `estados_de_cuenta_externos`, y a cuáles les
@@ -247,8 +224,8 @@ avisado se muestra y no decide nada**: quien decide es una persona. La puerta es
 `scripts/probar_aviso_de_cobranza.mjs`. El interruptor también se consulta desde la pantalla de
 saldos con `GET /api/panel/cobros/configuracion`, que devuelve el interruptor y nunca el secreto.
 
-**El estado de cuenta lo ve solamente la administración de la Prestadora.** Cuánto debe cada
-Cliente y si está atrasado no es información de quien coordina turnos: entra por la acción
+**El estado de cuenta lo ve solamente la administración de la Prestadora**
+(`careonys/CLAUDE.md`, «Lo propio de Careonys en el desarrollo»). Entra por la acción
 `ver_estado_de_cuenta_cliente` del catálogo de permisos, que nace reservada a la administración y
 que cada Prestadora abre o cierra desde su Panel, con el mismo molde que `ver_pagos_asistente`.
 Lleva ese portero todo lo que entrega o mueve el estado de cuenta —los saldos, el que llegó de
@@ -262,37 +239,21 @@ los mismos datos.** A mano, factura por factura, que es lo que había. Por archi
 pantalla de Facturación se baja uno con todo lo que falta facturar del período —`GET
 /api/panel/cobros/para-facturar`—, se le entrega al software de facturación y se sube el que ese
 software devuelve —`POST /api/panel/cobros/facturado/importar`—, que anota de una vez qué comprobante
-salió por cada factura. Y por conexión directa, que tiene dos mitades: **Careonys llamando al
-software de facturación exige una pieza por software y no está escrita**, porque no se puede
-escribir sin el manual de uno concreto; **el software de facturación llamando a Careonys sí está,
-y es una sola puerta para todos**: `POST /api/avisos-de-facturacion/:prestadoraId`, firmada con un
-secreto propio —distinto del de cobranzas, porque pueden ser dos proveedores que no se conocen—
-que la Prestadora carga desde Configuración y que vive en la caja fuerte de la base. Sin secreto
-cargado no entra ningún pedido. Acepta una factura o varias, y contesta renglón por renglón qué
-pasó con cada una. Qué columnas van y
+salió por cada factura. Y por conexión directa, que está en `docs/CONEXION_CON_SOFTWARE_EXTERNO.md` y no se repite
+acá. Qué columnas van y
 qué columnas vuelven está en un solo lugar, `panel/src/lib/intercambioDeFacturacion.js`, con copia
 generada en el backend; **sus títulos no se traducen**, porque son la forma que el otro software
 tiene que leer y escribir, y traducirlos daría un archivo distinto por idioma. Al subir, una
 factura que ya tiene comprobante anotado no se pisa: se cuenta aparte y se avisa, así volver a
-subir el mismo archivo —o repetir un pedido— no hace daño. Se leen hasta 500 filas por vez. Las tres
-maneras escriben en la factura por el mismo lugar, `backend/src/utils/anotarLoFacturado.js`. **Lo
-que se le entrega a quien programa del otro lado** —las dos direcciones, cómo se arma la firma, qué
-datos lleva cada pedido y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_EXTERNO.md`, escrito para
-alguien que no conoce Careonys por dentro.
+subir el mismo archivo no hace daño. Se leen hasta 500 filas por vez. Las tres
+maneras escriben en la factura por el mismo lugar, `backend/src/utils/anotarLoFacturado.js`.
 
-**La factura nombra al Cliente.** A quién se le reclama no es siempre el Cliente —puede ser una
-obra social o un tercero—, y eso vive en la Ficha del cliente (`pagador_tipo` y la Ficha de Persona
-del Pagador); vacío quiere decir el Cliente, que es lo corriente. La factura no lo copia: se lo
-consulta en la Ficha.
+**La factura nombra al Cliente.** A quién se le reclama vive en la Ficha del cliente
+(`clientes.pagador_tipo` y la Ficha de Persona del Pagador; ver `careonys/CLAUDE.md`, «Lo propio de
+Careonys en el desarrollo»). La factura no lo copia: se lo consulta en la Ficha.
 
-**En la modalidad Match** (`docs/PRD_07_Modalidad_Match.md`), el Cliente le paga a la Prestadora por una pasarela,
-y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da
-—importe, cada cuánto, período gratuito, saldo de contactos, si se renueva sola— en
-`formas_de_cobro_intermediacion`. Lo que cada Cliente tiene habilitado vive en
-`accesos_intermediacion`. El producto no elige por ella ni le fija precio ni duración: la política
-de comercialización es un dato de la Prestadora, no código. El saldo de contactos, la baja, el
-vencimiento, el período gratuito y el cobro que no entra están en
-`docs/PRD_07_Modalidad_Match.md` §3.5-3.9, y no se repiten acá.
+**En la modalidad Match**, cómo cobra la Prestadora está en `docs/PRD_07_Modalidad_Match.md` §3,
+y no se repite acá.
 
 ## Cuando falta una Asistente
 

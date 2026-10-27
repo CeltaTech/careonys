@@ -86,8 +86,8 @@ tiempos, lo que Careonys necesita anotar: cómo se llama el comprobante, qué n�
 código de autorización del organismo fiscal (CAE).
 
 **Lo que cambia:** el nombre de cada campo y la forma de la credencial. Eso es traducción, y es
-poco trabajo por software. **Ninguno obliga a tocar a los demás**, que es la condición que el plan
-ya tenía escrita.
+poco trabajo por software. **Ninguno obliga a tocar a los demás**, que es la condición del paso 39
+de `docs/PLAN_HASTA_PRODUCCION.md`.
 
 **Tango.** Son dos productos distintos de la misma empresa, y ninguno hace las dos mitades:
 

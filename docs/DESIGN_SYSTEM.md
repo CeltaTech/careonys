@@ -23,9 +23,10 @@ digan cosas distintas.
 
 El archivo está partido en dos mitades y la división importa:
 
-**1. La marca.** Cinco colores de Careonys: `--azul-oscuro`, `--azul-medio`, `--verde-exito`,
-`--naranja-alerta`, `--rojo-peligro`. Son los mismos de día y de noche, porque son la
-identidad del producto.
+**1. La marca.** Los colores de Careonys: `--azul-oscuro`, `--azul-medio`, `--verde-exito`,
+`--naranja-alerta`, `--rojo-peligro` y `--violeta`, más los de la acción principal de cada
+pantalla (`--accion`, `--accion-hover`) y el del contador de la barra de arriba (`--contador`).
+Son los mismos de día y de noche, porque son la identidad del producto.
 
 **2. Los tokens.** Un token es un nombre que dice **para qué sirve** el color, no de qué
 color es: `--superficie` en vez de "blanco". No es cosmético — cuando el Panel pasa a modo
@@ -37,8 +38,9 @@ Los grupos de tokens son: fondos y superficies (`--fondo-app`, `--superficie`,
 `--superficie-hundida`, `--superficie-hover`, `--borde-card`, `--sombra-card`,
 `--velo-modal`), texto (`--texto-principal`, `--texto-secundario`, `--texto-titulo`,
 `--texto-sobre-color`), la barra lateral (`--barra-*`), las versiones "para texto" de los
-cinco colores (`--azul-medio-texto` y compañía), los cuatro pares de tono de señal y las dos
-medidas de densidad de fila.
+colores de marca (`--azul-medio-texto` y compañía), los seis pares de tono (`--tono-*`: los
+cinco de señal y el violeta), los dos radios de borde (`--radio-card`, `--radio-control`), la
+tipografía (`--font-*`) y las dos medidas de densidad de fila.
 
 `--fondo-alt` sigue existiendo, pero solo como sinónimo viejo de `--superficie-hundida`. En
 código nuevo se usa el nombre nuevo.
@@ -147,18 +149,6 @@ Si ninguno alcanza, se amplía **ese** archivo y desde ahí lo consume la pantal
 no se hace es resolverlo localmente: esa es exactamente la forma en que un sistema de diseño
 se deshace, un archivo por vez.
 
-## Colores de división (solo referencia — NO usar en la Prestadora Demo)
-
-```css
---salud: #2E75B6;      /* única división activa hoy — coincide con --azul-medio */
---junior: #F4820A;
---pets: #4A7C3F;
---bienestar: #7B6BB5;
---hogar: #C0622A;
---legal: #1F3A6E;
---group: #2C2C3E;
-```
-
 ## Tipografía
 
 - **Display** (títulos, encabezados principales): Inter
@@ -171,43 +161,40 @@ se deshace, un archivo por vez.
 }
 ```
 
-Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;650;700;750).
+Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;650;700;750). Las
+dos variables viven en `variables.css`.
 
 ## Layout general del Panel (vigente desde 2026-07-18)
 
-- **Sidebar**: 232px de ancho, fondo `--azul-oscuro`. El link de navegación activo se marca
-  con un punto (`::before`, redondel de 6px, color `--azul-medio`) a la izquierda del texto,
-  no con un fondo resaltado.
-- **Tarjetas**: fondo blanco, `border: 1px solid var(--borde-card)`, `border-radius: 12px` —
-  nunca `border-left` grueso de acento (ver nota en la sección de paleta).
-- **Guardias**: grilla semanal (asistentes en filas, días en columnas) con reasignación por
-  drag-and-drop nativo (HTML5 `draggable`/`dragstart`/`dragover`/`drop`), no lista agrupada
-  por día. Cada guardia es un chip (`.grilla-chip`, en
-  `panel/src/pages/guardias/GrillaGuardias.jsx`). `guardias.asistente_id` admite vacío sólo
+- **Sidebar** (`.panel-sidebar`): 242px de ancho, fondo en degradado vertical de
+  `--barra-fondo` a `--barra-fondo-abajo`. El enlace de navegación activo se marca con fondo
+  `--barra-activo`, en degradado horizontal y con letra más gruesa.
+- **Tarjetas**: fondo `--superficie`, `border: 1px solid var(--borde-card)`,
+  `border-radius: var(--radio-card)` (11px) — nunca `border-left` grueso de acento (ver nota en
+  la sección de paleta).
+- **Guardias**: grilla con dos vistas —filas por Asistente o por Paciente, la misma guardia
+  agrupada contra uno u otro— y tres acercamientos —columnas de un día, de siete días o línea de
+  tiempo de las 24 horas de un día—. Se reasigna arrastrando y soltando, con el arrastre nativo
+  de HTML5 (`draggable`/`dragstart`/`dragover`/`drop`). Cada guardia es un chip
+  (`.grilla-chip`, en `panel/src/pages/guardias/GrillaGuardias.jsx`). `guardias.asistente_id` admite vacío sólo
   en una guardia `programada` o `cancelada` (`guardias_sin_cubrir_estado_check`).
 - **Comunicación**: además del hilo por Asistente (dentro del Legajo del Asistente), existe una bandeja
   global en `/comunicacion` con lista de Asistentes ordenada por último mensaje a la
   izquierda y el hilo activo a la derecha. Ambas vistas comparten el mismo componente
   (`HiloComunicacion`), no hay lógica de chat duplicada.
 
-## Logos disponibles
-
-Solo **la Prestadora Demo** tiene el logo necesario para el desarrollo actual (1 variante con
-texto). Los logos de "divisiones" de ese negocio real de origen (Junior, Pets, Bienestar,
-Hogar, Legal, Group) no se usan en esta etapa — quedan solo como referencia de paleta arriba.
-
 ## Estructura real de archivos de estilos
 
 ```
 panel/src/
-├── styles/variables.css   ← los tokens: colores, tipografía, densidad, modo oscuro
-└── index.css              ← reset, base y estilos de componentes, todos leyendo tokens
+├── styles/variables.css      ← los tokens: colores, radios, tipografía, densidad, modo oscuro
+├── styles/molde-paginas.css  ← piezas de página compartidas, con prefijo `molde-`
+├── index.css                 ← reset, base y estilos de componentes, todos leyendo tokens
+└── pages/**/*.css            ← los estilos propios de una pantalla, junto a ella
 ```
 
-El corte de `global.css` / `components.css` que este documento proponía nunca se hizo: todo
-lo que no son tokens vive junto en `index.css`. Se deja registrado así, y no como plan, para
-que nadie busque dos archivos que no existen. Lo que sí es innegociable es la separación de
-`variables.css`: los tokens aparte, porque son lo único que cambia entre modo claro y oscuro.
+Lo innegociable es la separación de `variables.css`: los tokens aparte, porque son lo único
+que cambia entre modo claro y oscuro.
 
 ## Estados visuales de alertas (Nivel 2 de IA)
 
@@ -223,17 +210,17 @@ sobrevive al modo oscuro ni a un cambio de paleta, y obliga a que cada pantalla 
 
 ## Estados visuales de guardias (Módulo 6 del Panel Admin)
 
-De las clases de acento lateral por estado, hoy existe una sola, en `panel/src/index.css`.
-Reutiliza las variables de la paleta funcional, no colores nuevos:
+El acento lateral de cada chip de la grilla lo pone el tono de su situación: la pantalla le
+escribe `data-tono` con lo que resuelve `panel/src/lib/semaforoGuardia.js`, y `index.css`
+pinta el borde izquierdo con la variable de marca de ese tono:
 
 ```css
-.guardia-ausente { border-left: 4px solid var(--naranja-alerta); }
+.grilla-chip[data-tono='critico'] { border-left-color: var(--rojo-peligro); }
 ```
 
 `guardias.estado` admite seis valores (`guardias_estado_check`): `programada`, `activa`,
-`completada`, `cancelada`, `ausente` y `pausada`. `ausente` es distinto de `cancelada`. Los demás
-estados no tienen regla de acento: en cualquier badge de un estado de guardia se usa
-`claseBadge()` como en el resto del Panel, que sí los resuelve.
+`completada`, `cancelada`, `ausente` y `pausada`. `ausente` es distinto de `cancelada`. En cualquier
+badge de un estado de guardia se usa `claseBadge()` como en el resto del Panel.
 
 ## Convenciones de UI (patrón adoptado de análisis de GlamourOS/ERP salones — no vinculante,
 ## solo se toman estas dos prácticas puntuales, ver justificación en memoria de sesión)

@@ -1,11 +1,12 @@
 # SECURITY.md — Autenticación, autorización y datos sensibles
 
-> Fuente principal: documento único original de especificación (histórico) Parte L (Arquitectura Web) y Parte O
-> (RLS policies). La plataforma usa Supabase Auth, no un esquema JWT propio.
+> La plataforma usa Supabase Auth, no un esquema JWT propio.
 
 ## Autenticación por etapa
 
-- **Panel:** Supabase Auth, nombre de usuario `parte_código` y contraseña, **sin** magic link.
+- **Panel:** Supabase Auth y contraseña, **sin** magic link. El Coordinador entra con nombre de
+  usuario `parte_código`; el Administrador y el equipo técnico, con su email
+  (`panel/src/pages/Login.jsx`, `backend/src/routes/ingreso.js`).
 - **Aplicaciones de Asistentes y Clientes:** Supabase Auth, nombre de usuario y contraseña. El
   nombre es único en todo el sistema y lo elige la persona al activar la cuenta; la contraseña se
   recupera con ese nombre. El email es un dato de contacto: el servicio de acceso conoce a la
@@ -17,15 +18,17 @@ un esquema propio de access/refresh tokens**.
 
 ## Política de contraseñas (configurable en Supabase Auth)
 
-- Longitud mínima: 10 caracteres.
-- Al menos 1 mayúscula, 1 número, 1 carácter especial.
-- Rate limit: 5 intentos fallidos → bloqueo temporal (usar la config nativa de rate
-  limiting de Supabase Auth, no reimplementar).
+- Longitud mínima: 8 caracteres, sin exigencia de mayúsculas, números ni caracteres especiales.
+  Vive en dos lugares que tienen que decir lo mismo —`backend/src/config/reglaDeClave.js` y
+  `supabase/config.toml`—, y `scripts/verificar_regla_de_clave.mjs` rompe la construcción si se
+  despegan.
+- Intentos de entrada: el tope nativo de Supabase Auth, 30 entradas o altas cada 5 minutos por
+  dirección IP (`supabase/config.toml`, `[auth.rate_limit]`). No hay bloqueo de la cuenta por
+  intentos fallidos.
+- Pedidos de contraseña nueva: 5 por hora y por cuenta (`TOPE_PEDIDOS_DE_CLAVE_POR_HORA`,
+  `backend/src/utils/topeDePedidosDeClave.js`).
 
-Esto es una recomendación de configuración para cuando se dé de alta el proyecto de
-Supabase — no requiere código propio.
-
-## Portabilidad de datos — no depender de un solo proveedor (decisión 2026-07-07)
+## Portabilidad de datos — no depender de un solo proveedor
 
 Supabase es la base de datos elegida para todo el roadmap (ver `CONTEXT.md`), pero el
 proyecto **no debe construirse de forma que dejarlo sea riesgoso o traumático**. Reglas
@@ -43,8 +46,8 @@ para mantener esa salida siempre abierta:
   guardado fuera de Supabase, en almacenamiento de objetos (bucket — Google Cloud Storage,
   AWS S3, Backblaze B2 o similar). Esto protege contra el peor caso (cuenta bloqueada, error
   de facturación, borrado accidental del proyecto) sin depender de que el proveedor mismo
-  resuelva su propia falla. **Git/GitHub queda descartado como destino, no en evaluación**
-  (decisión 2026-07-10): guarda historial permanente que no se puede purgar sin reescribir
+  resuelva su propia falla. **Git/GitHub queda descartado como destino, no en evaluación**:
+  guarda historial permanente que no se puede purgar sin reescribir
   todo el repo, es una segunda copia de datos sensibles sin ninguna protección de RLS/tenant,
   y tiene límite de tamaño de archivo (100MB) que un dump de base va a superar con el tiempo.
 - Storage: si se sube a Supabase Storage, evitar features no estándar que no tengan
@@ -66,8 +69,8 @@ archivos contra el almacenamiento, y borra el contenedor y la descarga al termin
 Desarrollador, porque pide las llaves del bucket y de la base. Contesta `bien`, `roto` o
 `no_probado`: este último es que todo coincidió pero no había una sola fila ni un solo archivo que
 comparar, así que hay que rehacerla con datos cargados. Qué decide cada uno está en
-`backend/src/utils/comprobacionDeRestauracion.js`. Que deje constancia y se repita sola es un paso
-de `docs/PLAN_HASTA_PRODUCCION.md`, «Respaldos que se probaron».
+`backend/src/utils/comprobacionDeRestauracion.js`. Que deje constancia y se repita sola es el paso
+126 de `docs/PLAN_HASTA_PRODUCCION.md`, «Respaldos que se probaron».
 
 ## RBAC — roles del sistema
 
@@ -81,33 +84,14 @@ Los roles reales del proyecto:
 | `asistente` | Sus propias guardias, su perfil, su certificado |
 | `cliente` | Sus pacientes, reportes y alertas de sus pacientes |
 
-**Nota (2026-07-10):** el rol se llamaba `admin` hasta el Bloque 2 del pasaje a
-multi-tenant — se renombró a `admin_prestadora` en dato y código (sin
-transición pendiente, no queda ningún registro ni ruta con el valor `admin`) al pasar a
-multi-tenant real, para reflejar que su alcance quedó acotado a una sola prestadora. Ver
-glosario de `CLAUDE.md`.
+Son los únicos cinco: la base no admite otro valor en `usuarios.rol`. No hay rol `admin` ni
+`admin_plataforma`; lo comercial es de CeltaTech.
 
-**Nota (2026-07-13, reemplaza la descripción anterior de `superadmin` en esta tabla):**
-hasta esta fecha `superadmin` se describía como "todo lo de `admin_prestadora`, en todas las
-prestadoras" — un bypass cross-tenant total sin límite de sesión. Se descarta: conflacionaba
-acceso técnico (infra/código, sin necesidad real de tocar datos de negocio de una
-prestadora real) con acceso administrativo de negocio (comercial, todas las prestadoras).
-El diseño de reemplazo (roles `superadmin` acotado a sandbox + `admin_plataforma` nuevo,
-con el "modo dentro de una prestadora" — banner notorio, advertencia en acciones
-destructivas según «Toda operación destructiva se confirma» de `celtatech/CLAUDE.md`, log de auditoría de todo login/acción sensible,
-timeout de 5 min de inactividad + tope de 60 min con advertencia a los 50) es el que se
-implementó.
-
-**Nota (2026-07-15, cierra la anterior):** el mecanismo se implementó — `prestadora_actual()`
-dinámico por sesión incluido. La nota de arriba decía "todavía no está implementado"; eso
-dejó de ser cierto en el pendiente #30.
-
-**Nota (2026-07-28, Etapa 2 de la separación CeltaTech/Careonys — reemplaza a `admin_plataforma`
-en todo lo anterior):** el rol `admin_plataforma` **ya no existe en Careonys**. Era el rol
-comercial, y lo comercial se fue entero a CeltaTech (Nivel 1). La maquinaria del "modo dentro
-de una prestadora" no se borró: se re-apuntó a `superadmin` y hoy se llama **permiso de acceso**
-(tablas `permisos_de_acceso` y `auditoria_de_accesos`). Todo lo que dice el párrafo anterior sobre
-auditoría y límites de tiempo sigue vigente palabra por palabra.
+**El permiso de acceso** (tablas `permisos_de_acceso` y `auditoria_de_accesos`) es la única forma
+en que `superadmin` entra a los datos de una Prestadora: una por vez, con corte a los 5 minutos de
+inactividad, tope de 60 con aviso a los 50, advertencia antes de cada operación destructiva y
+auditoría de todo lo que se hace adentro (`celtatech/CLAUDE.md`, sección «Seguridad, privacidad y
+auditoría»).
 
 **El permiso lo abre CeltaTech desde su lado, y el producto ya no tiene ninguna ruta para abrirlo,
 renovarlo ni cerrarlo a pedido.** La cerradura está acá —la base es la que decide qué filas ve una
@@ -122,17 +106,11 @@ configuración de sistema y a cualquier herramienta de diagnóstico asistido por
 que se construya sobre logs/errores de la aplicación — no exponer esas herramientas a
 `admin_prestadora` ni a `coordinador`.
 
-## Multi-tenancy — `prestadora_actual()` y `es_superadmin()` (Bloque 2, aplicado y verificado)
-
-**Nota (2026-07-28, corrige y reemplaza la nota anterior de esta sección):** la nota que
-estaba acá decía que `es_superadmin()` "sigue siendo hoy un bypass total sin acotar" y que la
-sesión de tenant dinámica "todavía no está implementada en código". Las dos cosas dejaron de
-ser ciertas en el pendiente #30 (2026-07-15) y quedaron escritas casi un mes de más. Estado
-real, verificado contra la base el 2026-07-28:
+## Multi-tenancy — `prestadora_actual()` y `es_superadmin()`
 
 - `interno.prestadora_actual()` resuelve el permiso de acceso primero, el `prestadora_id` propio
   después —sólo si la cuenta no está desactivada— y, para el trabajo sin persona, la Prestadora
-  para la que el backend generó su credencial. La definición vigente se lee de la base
+  para la que el backend generó su acceso. La definición vigente se lee de la base
   (`pg_get_functiondef`), no se copia acá.
 - `es_superadmin()` no es un bypass: devuelve `TRUE` sólo si el usuario tiene el rol `superadmin`.
   Las policies la usan siempre junto al tenant
@@ -141,8 +119,8 @@ real, verificado contra la base el 2026-07-28:
 La tabla que consulta `prestadora_actual()` se llama `permisos_de_acceso` y el rol habilitado es
 `superadmin`.
 
-Toda policy de RLS escrita desde el Bloque 2 en adelante usa estas dos funciones SQL en vez
-de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a mano.
+Toda policy de RLS resuelve la Prestadora y el rol `superadmin` con estas dos funciones SQL, en
+vez de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a mano.
 
 Toda tabla con `prestadora_id` debe filtrar por `prestadora_id = prestadora_actual()` en sus
 policies — nunca solo por rol, sin el filtro de tenant, salvo que la tabla sea
@@ -154,7 +132,7 @@ superadmin da un permiso *dentro* del tenant en el que uno está parado, no perm
 salirse de él. Una policy que diga solamente `USING (es_superadmin())` sobre una tabla con
 `prestadora_id` es un bypass cross-tenant.
 
-**Excepciones vigentes, contadas contra la base el 2026-10-27** (140 policies usan
+**Excepciones vigentes** (140 policies usan
 `es_superadmin()`; estas 6 la usan sin `prestadora_actual()` sobre una tabla que sí tiene
 `prestadora_id`):
 
@@ -172,31 +150,33 @@ su motivo escrito.** Toda tabla con datos de la operación queda fuera, sin exce
 
 ## RLS — políticas obligatorias
 
-Cada tabla nueva necesita RLS antes de mergear el PR que la crea. Ejemplos oficiales
-(actualizados 2026-07-10 al patrón multi-tenant — toda policy nueva debe filtrar por
-`prestadora_actual()`, no solo por rol):
+Cada tabla nueva lleva RLS en la misma migración que la crea (`celtatech/CLAUDE.md`, sección
+«Aislamiento entre Organizaciones»). Toda policy filtra por `prestadora_actual()`, no sólo por
+rol. Tres de las vigentes, copiadas de la base (`pg_policies`):
 
 ```sql
--- Asistentes solo ven sus propias guardias (dentro de su tenant)
-CREATE POLICY "asistente_ve_sus_guardias" ON guardias
-  FOR SELECT USING (asistente_id = auth.uid() AND prestadora_id = prestadora_actual());
-
--- Los Clientes solo ven los reportes de sus pacientes
-CREATE POLICY "cliente_ve_sus_reportes" ON reportes
+-- El Asistente ve sólo sus propias guardias, dentro de su Prestadora
+CREATE POLICY asistente_ve_sus_guardias ON guardias
   FOR SELECT USING (
-    guardia_id IN (
-      SELECT id FROM guardias WHERE paciente_id IN (
-        SELECT id FROM pacientes WHERE cliente_id = auth.uid()
-      )
-    )
+    prestadora_id = interno.prestadora_actual()
+    AND asistente_id = interno.asistente_de_la_sesion()
   );
 
--- Admin_prestadora y coordinadores ven todo en su ámbito, acotado a su propia prestadora
-CREATE POLICY "admin_prestadora_ve_todo" ON guardias
+-- El Cliente ve los reportes de sus pacientes, si la persona autorizada tiene ese permiso
+CREATE POLICY cliente_ve_reportes_de_sus_pacientes ON reportes
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM pacientes p
+             WHERE p.id = reportes.paciente_id
+               AND p.cliente_id = interno.cliente_id_de_usuario(auth.uid()))
+    AND interno.persona_autorizada_puede(auth.uid(), 'persona_autorizada_reportes')
+  );
+
+-- La administración ve todas las guardias de su Prestadora, y el Superadmin sólo con permiso de acceso
+CREATE POLICY panel_gestiona_guardias ON guardias
   FOR ALL USING (
-    prestadora_id = prestadora_actual()
-    AND EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol IN ('admin_prestadora','coordinador'))
-    OR es_superadmin()
+    (interno.es_superadmin() AND prestadora_id = interno.prestadora_actual())
+    OR (prestadora_id = interno.prestadora_actual()
+        AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid() AND u.rol = 'admin_prestadora'))
   );
 ```
 
@@ -206,7 +186,7 @@ o no (acá, `guardia_saliente_id` NULL = "Ausente sin relevo previo"), la policy
 casos con dos `EXISTS` unidos por `OR`, en vez de intentar una sola condición que cubra los dos:
 
 ```sql
--- Copiado de la base el 2026-10-27 (pg_policies).
+-- Copiado de la base (pg_policies).
 CREATE POLICY coordinador_gestiona_incidentes_relevo_de_su_zona ON incidentes_relevo
   FOR ALL USING (
     prestadora_id = interno.prestadora_actual() AND (
@@ -225,9 +205,10 @@ Tablas que **nunca** deben tener policy de lectura para `asistente` ni `cliente`
 `escalas_legales`, `ceses`, `ausencias`, `guardias_cobertura`, `remuneraciones_asistente`,
 `datos_reservados_asistente`.
 
-**Lo que se le paga al Asistente vive en una tabla aparte (2026-08-19).** `valor_hora`,
-`sueldo_basico` y `categoria_cct` dejaron de ser columnas de `asistentes` y pasaron a
-`remuneraciones_asistente`, con su propia policy de lectura. Contra `asistentes` es uno a uno
+**Lo que se le paga al Asistente vive en una tabla aparte.** `valor_hora`, `valor_guardia`,
+`valor_semana`, `valor_hora_extra`, `sueldo_basico`, `categoria_cct`, `moneda`, `unidad_medicion` y
+`frecuencia_pago` están en `remuneraciones_asistente`, no en `asistentes`, con su propia policy de
+lectura. Contra `asistentes` es uno a uno
 —la clave primaria es el propio `asistente_id`, y la fila existe sólo si hay algún importe
 cargado—. `datos_reservados_asistente`, más abajo, también tiene por clave primaria el
 `asistente_id`:
@@ -241,43 +222,42 @@ CREATE POLICY lee_remuneraciones_quien_tiene_el_permiso ON remuneraciones_asiste
   );
 ```
 
-El motivo es que RLS filtra **filas, no columnas**: mientras esos tres datos fueron columnas
-de `asistentes`, cualquier sesión que pudiera ver la fila del Asistente los leía, tuviera o no
-el permiso — medido contra la base local con la sesión de una Coordinadora con
-`ver_pagos_asistente` cerrado, y con la de un Cliente. Escribir sigue siendo exclusivo de
+El motivo es que RLS filtra **filas, no columnas**: si esos datos fueran columnas de
+`asistentes`, cualquier sesión que pudiera ver la fila del Asistente los leería, tuviera o no
+el permiso. Escribir es exclusivo de
 `es_superadmin() OR es_admin_prestadora()`. El `EXISTS` es deliberado: reutiliza las policies
 de `asistentes` en lugar de repetir los filtros de tenant y de zona («Ningún patrón repetido sin punto único de verdad», `celtatech/CLAUDE.md`),
 así una Coordinadora con el permiso abierto ve los pagos de los Asistentes de su zona y de
-ningún otro. `es_admin_prestadora()` se creó en esa misma migración como punto único de verdad
-de una condición que hasta entonces estaba escrita a mano en cada policy.
+ningún otro. `es_admin_prestadora()` es el punto único de verdad de esa condición.
 
-En la misma migración se eliminó `cliente_ve_asistente_asignado`, que le daba al Cliente el
-Legajo completo del Asistente asignado. La aplicación de Clientes nunca consulta `asistentes`
-—pide todo por el backend—, así que era una puerta abierta sin uso.
+El Cliente alcanza la fila de `asistentes` sólo mientras ese Asistente lo atiende
+(`cliente_lee_asistente_asignado`, con `interno.asistente_atiende_al_cliente`), y en esa fila no
+están ni lo que se le paga ni lo reservado.
 
 **El estado de cuenta del Cliente lo ve la administración.** Cuánto debe cada Cliente y si está
-atrasado se veía con el solo hecho de tener un rol de Panel, o sea también desde la coordinación
-de turnos, que arma las guardias y no interviene en el trato económico. Ahora eso entra por la
-acción `ver_estado_de_cuenta_cliente` del catálogo `catalogo_acciones_permisos`, que nace
-reservada a la administración y que cada Prestadora abre o cierra desde su Panel.
+atrasado entra por la acción `ver_estado_de_cuenta_cliente` del catálogo
+`catalogo_acciones_permisos`, que nace reservada a la administración y que cada Prestadora abre o
+cierra desde su Panel. La coordinación de turnos arma las guardias y no interviene en el trato
+económico.
 
-Donde manda es en el backend, porque entra a la base con la llave de servicio: el middleware
-`requierePermiso('ver_estado_de_cuenta_cliente')` cierra en `backend/src/routes/panelCobros.js`
-las seis rutas que entregan o mueven el estado de cuenta —los saldos, el que llegó de afuera, el
-detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—. Lo que sirve para
-facturar no lo lleva, y que un Cliente quedó restringido tampoco: no dice cuánto
-debe, y quien coordina necesita verlo para trabajar. La política de lectura de
-`estados_de_cuenta_externos` pide además esa acción, como segunda red para el día en que esa
-tabla se lea con la credencial de una persona. `saldos_cliente` no se tocó: su política alcanza también
-a quien manda a facturar, que sí es trabajo de la coordinación.
+En el backend, el middleware `requierePermiso('ver_estado_de_cuenta_cliente')` cierra en
+`backend/src/routes/panelCobros.js` las seis rutas que entregan o mueven el estado de cuenta —los
+saldos, el que llegó de afuera, el detalle de una factura, anotar un cobro, anularlo y la entrada
+de lotes—, que además entran a la base con la sesión de quien pide. Lo que sirve para facturar no
+lo lleva, y que un Cliente quedó restringido tampoco: no dice cuánto debe, y quien coordina
+necesita verlo para trabajar. La política de lectura de `estados_de_cuenta_externos` pide también
+esa acción. `saldos_cliente` es una vista que se consulta con los permisos de quien pregunta
+(`security_invoker`), así que su alcance es el de las políticas de `facturas_cliente`: la de la
+administración pide `interno.gestiona_la_facturacion()`, que alcanza también a quien manda a
+facturar.
 
-**Lo reservado del Legajo del Asistente también vive aparte (2026-08-19).** El mismo agujero seguía abierto
-en otras cinco columnas de `asistentes`: `causal_baja`, `score_riesgo_reclasificacion`,
-`indicadores_riesgo`, `motivo_exclusion_directo` y `motivo_exclusion_intermediacion` — por qué se
-lo dio de baja, su puntaje de riesgo con los motivos que lo forman, y por qué quedó excluido de
-recibir trabajo. La vista `asistentes_coordinador` las omite, pero una vista solo describe lo
-que consulta la pantalla: la tabla seguía contestando esas columnas a cualquiera que preguntara
-con su propia sesión. Pasaron a `datos_reservados_asistente`, con su propia policy de lectura:
+**Lo reservado del Legajo del Asistente también vive aparte.** `causal_baja`,
+`score_riesgo_reclasificacion`, `indicadores_riesgo`, `motivo_exclusion_directo` y
+`motivo_exclusion_intermediacion` —por qué se lo dio de baja, su puntaje de riesgo con los motivos
+que lo forman, y por qué quedó excluido de recibir trabajo— están en `datos_reservados_asistente`,
+no en `asistentes`. Una vista que las omita no alcanza: describe lo que consulta la pantalla, y la
+tabla contestaría esas columnas a cualquiera que preguntara con su propia sesión. La tabla tiene
+su propia policy de lectura:
 
 ```sql
 CREATE POLICY lee_datos_reservados_quien_tiene_el_permiso ON datos_reservados_asistente
@@ -288,7 +268,7 @@ CREATE POLICY lee_datos_reservados_quien_tiene_el_permiso ON datos_reservados_as
   );
 ```
 
-El permiso `ver_datos_reservados_asistente` es nuevo en `catalogo_acciones_permisos`
+El permiso `ver_datos_reservados_asistente` está en `catalogo_acciones_permisos`
 (`default_solo_admin = TRUE`, orden 9): arranca cerrado y cada Prestadora decide si se lo abre
 a su Coordinadora. Escribir es exclusivo de `es_superadmin() OR es_admin_prestadora()` — el
 permiso habilita a mirar, nunca a cambiar la causa de una baja ni un puntaje de riesgo.
@@ -306,11 +286,18 @@ cuando comparten algún lugar (`usuario_lugares` contra `asistente_lugares`), o 
 ausencia de otro Coordinador que lo alcanza, mientras dura. No se da acceso total a
 `coordinador` salvo en las tablas donde el PRD lo indica explícitamente.
 
-**Estado real (verificado contra la base el 2026-10-27):** esa función está en las policies de
-las tablas de Asistentes y de guardias —entre otras `asistentes`, `verificaciones_asistente`,
-`ausencias`, `guardias_cobertura`, `certificados`, `guardias`, `incidentes_relevo`,
-`guardias_tracking_gps` y `reportes`—, en policies separadas de las de administración, que
-Postgres combina con OR al ser ambas permisivas. **Pendiente, no resuelto**:
+Esa función está en las policies de las tablas de Asistentes —entre otras `asistentes`,
+`verificaciones_asistente`, `ausencias`, `guardias_cobertura`, `certificados`, `incidentes_relevo`,
+`guardias_tracking_gps` y `reportes`—. Las tablas que cuelgan de una guardia —`guardias`,
+`series_guardias`, `extensiones_de_turno`, `guardia_comprobaciones`,
+`incidentes_turno_sin_cubrir`, `excepciones_familiar_relevo` y `consentimientos_paciente_solo`—
+usan `interno.coordinador_alcanza_guardia(asistente_id)`, que además alcanza la guardia que todavía
+no tiene Asistente. Van en policies separadas de las de administración, que Postgres combina con OR
+al ser ambas permisivas. Una alarma que llega a todos los Coordinadores abre una vía más, aparte de
+la zona: en `guardias` y en `incidentes_relevo`, el Coordinador ve la fila de la alarma que tiene a
+la vista y modifica la de la alarma que tomó (`coordinador_ve_la_guardia_de_una_alarma_que_llego_a_todos`,
+`coordinador_resuelve_la_guardia_de_una_alarma_que_tomo`, `coordinador_ve_la_alarma_que_llego_a_todos`,
+`coordinador_resuelve_la_alarma_que_tomo`). **Pendiente, no resuelto**:
 `clientes`/`pacientes`/`prestaciones` no filtran por zona — Coordinador sigue viendo todas las
 filas de estas 3 tablas, igual que Admin, hasta que exista una decisión de producto sobre cómo
 derivar la zona de un Cliente. El dato disponible es el lugar de la Ficha de Persona
@@ -352,8 +339,8 @@ CREATE POLICY prestadora_administra_sus_formas_de_cobro ON formas_de_cobro_inter
 CREATE POLICY cliente_ve_las_formas_ofrecidas ON formas_de_cobro_intermediacion
   FOR SELECT USING (
     ofrecida
-    AND prestadora_id = (SELECT c.prestadora_id FROM clientes c
-                         WHERE c.id = interno.cliente_id_de_usuario(auth.uid()))
+    AND prestadora_id = (SELECT f.prestadora_id FROM clientes f
+                         WHERE f.id = interno.cliente_id_de_usuario(auth.uid()))
   );
 ```
 
@@ -394,11 +381,11 @@ las obliga a estar ahí es la seguridad, no la comodidad: leer el saldo, restarl
 escribirlo son dos viajes, y dos ventanas abiertas a la vez descuentan una sola vez. Adentro de la
 base el descuento y la anotación pasan juntos, con la fila del acceso tomada.
 
-Ninguna de las dos funciones es `SECURITY DEFINER` —entra el backend con la llave de servicio, y el
-esquema `interno` es para las que usan las políticas—, y ninguna de las dos se puede ejecutar como
-`PUBLIC`, `anon` ni `authenticated`. `consumir_contacto_intermediacion` queda al alcance de `service_role` y
-de nadie más; `sumar_contactos_al_saldo`, de `service_role` y del trabajo sin persona
-(`trabajo_sin_persona`). Sin eso serían dos direcciones web, y una de ellas gasta plata ajena.
+Ninguna de las dos funciones es `SECURITY DEFINER` —las llama el backend
+(`backend/src/utils/contactosIntermediacion.js`), y el esquema `interno` es para las que usan las
+políticas—, y ninguna de las dos se puede ejecutar como `PUBLIC`, `anon` ni `authenticated`. Las
+dos quedan al alcance de `service_role` y del trabajo sin persona (`trabajo_sin_persona`) y de nadie
+más. Sin eso serían dos direcciones web, y una de ellas gasta plata ajena.
 
 La tabla lleva RLS y sólo políticas de lectura, porque desde una pantalla no se escribe: la fila
 la escribe el descuento, en la misma transacción.
@@ -488,9 +475,9 @@ depósito `fotos-identidad`.
   que la primera carpeta de la ruta sea la Prestadora de la sesión (`interno.prestadora_actual()`), y
   adentro de ella alcanza al Administrador y al Superadmin con cualquier foto, y al Coordinador sólo
   con las de un Asistente a su alcance (`interno.coordinador_alcanza_asistente`, con la segunda
-  carpeta de la ruta, que tiene que ser un identificador válido; si no lo es, niega). Hoy el backend
-  todavía lo escribe y lo lee con la llave de servicio, que se saltea esa política, después de
-  comprobar de qué Prestadora es el Asistente (`backend/src/routes/panelVerificacionIdentidad.js`).
+  carpeta de la ruta, que tiene que ser un identificador válido; si no lo es, niega). El backend lo
+  escribe y lo lee con la sesión de quien pide, así que es esa política la que decide
+  (`backend/src/routes/panelVerificacionIdentidad.js`).
   `certificados-medicos`, `autorizaciones-monitoreo` y `documentos-cese` también tienen sus
   políticas.
 - **La ruta empieza por la Prestadora** y se arma siempre con los mismos tres datos —Prestadora,
@@ -509,7 +496,8 @@ depósito `fotos-identidad`.
 - Proveedor de reconocimiento facial para la etapa de verificación de identidad del Proceso
   de Incorporación de Asistentes: no elegido.
 - Documento legal del que salga la advertencia al Asistente por el tratamiento de su dato biométrico:
-  no existe. Sin ese documento no hay advertencia —`celtatech/CLAUDE.md` §7 dice que no se improvisa—,
+  no existe. Sin ese documento no hay advertencia —`celtatech/CLAUDE.md`, sección «El riesgo legal»,
+  dice que no se improvisa—,
   y sin advertencia no se compara ninguna cara.
 - Si se automatiza la consulta de antecedentes penales: proveedor no elegido.
 - Cómo la Prestadora le cobra al Cliente el cuidado prestado **en prestación directa**: no hay

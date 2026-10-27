@@ -1,13 +1,11 @@
 # PLAN_CONTINUIDAD_PROVEEDORES.md — Resguardos ante caída o salida de un proveedor
 
-> Origen: la sección «Respaldo, continuidad y secretos» de `docs/PLAN_HASTA_PRODUCCION.md`
-> (inventario de dependencia de un solo proveedor — Supabase/Railway/Cloudflare Pages/Resend/GitHub).
-> Este documento cubre qué se hace si hay que dejar el servicio de identidad o alguno de los
-> proveedores de bajo riesgo. El respaldo de la base y de los archivos, y su prueba de
+> Este documento cubre qué se hace si hay que dejar el servicio de identidad de Supabase o alguno
+> de los proveedores de bajo riesgo: Railway, Cloudflare Pages, Resend y GitHub. El respaldo de la base y de los archivos, y su prueba de
 > restauración, están en `docs/SECURITY.md`, «Portabilidad de datos». La copia en caliente del
 > servicio de identidad queda afuera: se discute aparte y no está recomendada (ver cierre).
 
-## Punto 3 — Plan de migración de Supabase Auth (documentado, no ejecutado)
+## Plan de migración de Supabase Auth (documentado, no ejecutado)
 
 Este plan es para el caso de que Supabase deje de ser viable como proveedor de
 autenticación (cierre de cuenta, cambio de precios, discontinuación del servicio). Hoy
@@ -34,7 +32,7 @@ falta, para no empezar de cero en el peor momento posible.
 |---|---|---|
 | **Auth0** | Proveedor maduro, migración de usuarios asistida, soporta multi-tenant nativo (relevante para el modelo de CeltaTech, una Organización por Prestadora) | Costo por usuario activo, otro proveedor externo del cual depender |
 | **Clerk** | Más simple de integrar, buena UI de gestión lista para usar | Más joven que Auth0, menos historial en volumen alto |
-| **JWT propio (backend Node/Express)** | Cero dependencia externa nueva, control total | Hay que construir y mantener: cálculo del identificador de verificación de las contraseñas, rotación de tokens, rate limiting de intentos fallidos, restablecimiento de la contraseña — todo lo que hoy resuelve Supabase Auth gratis (ver `docs/SECURITY.md:15`, que ya lo descartó por redundante mientras Supabase funcione) |
+| **JWT propio (backend Node/Express)** | Cero dependencia externa nueva, control total | Hay que construir y mantener: cálculo del identificador de verificación de las contraseñas, rotación de tokens, rate limiting de intentos fallidos, restablecimiento de la contraseña — todo lo que hoy resuelve Supabase Auth gratis (ver `docs/SECURITY.md`, «Autenticación por etapa», que ya lo descartó por redundante mientras Supabase funcione) |
 
 No se recomienda decidir esto ahora — la decisión correcta depende de por qué se está
 migrando (¿solo Auth, o toda la base también?) y de la escala del proyecto en ese momento
@@ -44,16 +42,16 @@ presión.
 
 ### Qué NO cambia en una migración de Auth
 
-- La lógica de negocio (regla de portabilidad, `docs/SECURITY.md:28`): vive en el backend
+- La lógica de negocio (`docs/SECURITY.md`, «Portabilidad de datos»): vive en el backend
   propio, no en Supabase — migrar Auth no toca esa capa.
 - Los datos de la base (`prestadoras`, `usuarios`, `asistentes`, etc.) — eso es
   Postgres/Supabase Database, un proveedor distinto de Supabase Auth, y ya tiene su propio
   resguardo (backup R2+B2, `docs/SECURITY.md`, «Portabilidad de datos»).
 
-## Punto 4 — Runbooks de proveedores de bajo riesgo
+## Runbooks de proveedores de bajo riesgo
 
-Los siguientes cuatro proveedores ya estaban evaluados como bajo riesgo / bajo esfuerzo de
-migración. Estos son los pasos concretos a seguir si alguno falla o hay
+Estos cuatro proveedores son de bajo riesgo y bajo esfuerzo de migración. Estos son los pasos
+concretos a seguir si alguno falla o hay
 que reemplazarlo — para no tener que decidir el procedimiento en el momento de la caída.
 
 ### Railway (hosting del backend Node/Express)
@@ -77,29 +75,32 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
      variable que apunta a la dirección del backend.
    - Cualquier puerta configurada externamente para que otro software deje un dato (ej. la de WhatsApp/Meta Cloud
      API, `docs/PRD_06_WhatsApp_IA.md`) — hay que reconfigurar la URL en el panel de Meta.
-4. El `RAILWAY_TOKEN` usado en GitHub Actions (`docs/PLAN_HASTA_PRODUCCION.md`) solo sirve para el
+4. El `RAILWAY_TOKEN` usado en GitHub Actions (`.github/workflows/deploy-backend.yml`) solo sirve para el
    auto-deploy — no bloquea la migración, se reemplaza por el token/mecanismo equivalente
    del proveedor nuevo.
 
-### Cloudflare Pages (hosting de las tres pantallas: Panel, Clientes y Asistentes)
+### Cloudflare Pages (hosting del Panel, las dos aplicaciones y la página raíz)
 
-1. Las tres (`panel/`, `pwa-clientes/`, `pwa-asistentes/`) son proyectos frontend estándar
-   (Vite/React) y se publican **ya compiladas**: no hay nada propietario de Cloudflare
-   adentro del código. Lo único específico del proveedor es el archivo `_redirects` de cada
-   aplicación — una regla de una línea para que al recargar una pantalla interna no salga
-   404.
+1. El Panel y las dos aplicaciones (`panel/`, `pwa-clientes/`, `pwa-asistentes/`) son proyectos
+   frontend estándar (Vite/React) y se publican **ya compilados**: no hay nada propietario de
+   Cloudflare adentro del código. Lo único específico del proveedor es el archivo `_redirects` de
+   cada aplicación — una regla de una línea para que al recargar una pantalla interna no salga
+   404. La página raíz de `careonys.com` (`sitio-web/`) es un HTML suelto, sin Vite, que arma
+   `node sitio-web/construir.mjs`.
 2. Alternativas equivalentes: Netlify, Vercel, GitHub Pages (mientras el HTML no haya que
    armarlo del lado del servidor, que hoy no hace falta).
 3. **Los proyectos de Cloudflare Pages son de subida directa: no están enganchados a
    GitHub.** Quien compila y publica es `.github/workflows/publicar-pantallas.yml`, que
    corre `npm run build` con las variables `VITE_*` guardadas como secretos del repositorio
-   y después sube la carpeta ya compilada con `wrangler pages deploy`. Eso es justamente lo
+   —o `construir.mjs`, para la página raíz— y después sube la carpeta ya compilada con
+   `wrangler pages deploy` a cuatro proyectos: `careonys-panel`, `careonys-clientes`,
+   `careonys-asistentes` y `careonys-sitio`. Eso es justamente lo
    que hace fácil la mudanza: el proveedor recibe archivos terminados, así que cambiarlo es
    cambiar el último paso de ese archivo, no rehacer la compilación.
-4. Pasos para migrar: crear los tres proyectos en el proveedor nuevo, reemplazar en ese
+4. Pasos para migrar: crear los cuatro proyectos en el proveedor nuevo, reemplazar en ese
    archivo el paso de `wrangler` por el comando equivalente del proveedor nuevo, cargar allá
    el token que ese comando necesite (hoy son `CLOUDFLARE_API_TOKEN` y
-   `CLOUDFLARE_ACCOUNT_ID`), y repuntar por DNS `gestion.careonys.com`,
+   `CLOUDFLARE_ACCOUNT_ID`), y repuntar por DNS `careonys.com`, `gestion.careonys.com`,
    `clientes.careonys.com` y `asistentes.careonys.com` al lugar nuevo.
 5. Dos cosas que no se pueden olvidar en el proveedor nuevo, porque no fallan en la
    compilación sino en vivo: la regla de reescritura equivalente al `_redirects` (sin ella,
@@ -133,7 +134,7 @@ mientras el backend corra en Railway.**
    Prestadora manda desde `[prestadora]@careonys.com` y las respuestas se reenvían a la
    casilla que ella declare (`docs/MARCA.md`, sección 0).
 2. **El camino por SMTP sigue escrito, y es para la máquina de desarrollo.** Mientras no haya
-   credencial del despachante, `crearTransporterPara` arma un transporte de Nodemailer contra
+   acceso al despachante, `crearTransporterPara` arma un transporte de Nodemailer contra
    `smtp.gmail.com` con `SMTP_USER` y `SMTP_PASSWORD`, resolviendo a mano una IPv4 porque la
    salida IPv6 de Railway da `ENETUNREACH` y Nodemailer elige al azar entre IPv4 e IPv6.
    **Y no hay un tercer camino.** Cada Prestadora tuvo alguna vez su propio servidor de correo
@@ -148,11 +149,11 @@ mientras el backend corra en Railway.**
    Resend deja 3.000 correos por mes **y como mucho 100 por día**. El tope diario es el que se
    descubre el peor día, así que el uso se cuenta y se muestra en el Panel.
 5. **Pasos para migrar:** dar de alta la cuenta en el despachante nuevo, autorizar
-   `careonys.com` allá, generar sus credenciales, cargarlas en Railway con nombres propios y
+   `careonys.com` allá, generar sus claves de acceso, cargarlas en Railway con nombres propios y
    cambiar `transporteDelDespachante` en `backend/src/utils/email.js`. Es una pieza sola: el
    armado de cada correo —a quién va, qué dice, con qué marca— sale de `destinatariosEvento` y
    de la marca de la Prestadora, y no sabe por dónde viaja. Hay **un solo** juego de
-   credenciales que reemplazar, no uno por Prestadora.
+   claves de acceso que reemplazar, no uno por Prestadora.
 6. **Verificar el remitente antes del corte** (SPF y DKIM del proveedor nuevo), o los correos
    caen en correo no deseado. Los renglones de DNS van en Cloudflare sin proxi: proxiados, el
    dominio no verifica nunca.

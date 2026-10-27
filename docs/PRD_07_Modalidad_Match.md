@@ -159,7 +159,8 @@ se crea la suscripción si nadie le dice lo contrario, y ahí el período gratui
 esta base. Los rieles a los que hay que armarles el cobro de cada período no necesitan que se les
 diga nada: ese cobro se arma recién cuando llega la fecha.
 
-**Se avisa unos días antes, y a más tardar el mismo día.** El mensaje le llega al teléfono de quien
+**Se avisa unos días antes, y a más tardar el mismo día.** Cuántos días antes lo configura cada
+Prestadora en el mismo lugar que la gracia (§3.9): tres de partida. El mensaje le llega al teléfono de quien
 paga, dice qué día empieza a cobrarse, cuánto —con su moneda— y que puede darse de baja antes; el
 enlace lleva a la pantalla del acceso, donde está el botón. Lo manda un trabajo del sistema una vez
 por día, el mismo que apaga los accesos dados de baja.
@@ -176,7 +177,9 @@ trabaja: es el resguardo del §3.2, y un mensaje obligatorio que se pueda apagar
 
 ### 3.9 Qué pasa cuando un cobro no entra
 
-**Un cobro que falla abre un período de gracia de siete días, y el acceso sigue funcionando.** La
+**Un cobro que falla abre un período de gracia, y el acceso sigue funcionando.** Cuántos días dura
+lo configura cada Prestadora en el Panel, en «Formas de cobro de Match» → «Plazos del cobro»: siete
+de partida, y uno como mínimo. La
 fecha en que se suspende se escribe el día de la primera falla, y desde ahí el acceso queda igual
 que estaba: el Cliente sigue usándolo mientras dure.
 
@@ -225,7 +228,7 @@ ejerza ese control de forma agregada entre todos los Clientes.
 |---|---|---|
 | Calificación por estrellas visible, como opinión del Cliente, **sin consecuencia automática decidida por la plataforma** | Bajo | Es información al consumidor, equivalente a una reseña de Google/MercadoLibre. La "autoexclusión" (nadie la elige por su nota baja) es el Cliente decidiendo, no la plataforma. |
 | Verificación de identidad / antecedentes penales | Bajo | Función de seguridad, no de dirección del trabajo — describir con exactitud literal qué se verificó y qué no (caso California vs. Care.com: sancionados por afirmar una verificación que no hacían). |
-| Toggle de disponibilidad del Asistente (activar/desactivar) | Bajo | El Asistente decide sobre sí misma; ya reconocido en `CLAUDE.md` §3 como autonomía del Asistente en modalidad Match. |
+| Toggle de disponibilidad del Asistente (activar/desactivar) | Bajo | El Asistente decide sobre sí misma; ya reconocido como autonomía del Asistente en `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`, sección «Riesgo legal». |
 | Herramientas de horario/penalización/calificación **operadas por el Cliente sobre su propio Asistente** | Bajo | Es el Cliente ejerciendo su rol de empleador doméstico (Ley 26.844), no la plataforma. |
 | Ranking o puntaje que la **plataforma** calcula y usa para decidir si el Asistente sigue apareciendo ante *cualquier* Cliente | Alto | La plataforma decide el futuro laboral del Asistente en general — mismo hecho citado en Uber BV vs Aslam (Reino Unido, 2021). |
 | Consecuencia automática atada a la nota agregada (ej. "por debajo de X estrellas dejás de aparecer") | Alto | Convierte la opinión del consumidor en una decisión algorítmica de la plataforma sobre el Asistente. |
@@ -237,10 +240,10 @@ ejerza ese control de forma agregada entre todos los Clientes.
 ante una queja/calificación negativa — los casos que fallaron en contra de plataformas no
 tenían ese resguardo.
 
-**Mecánica de la advertencia**: igual que en prestación directa (`CLAUDE.md` §3) — nunca
+**Mecánica de la advertencia**: igual que en prestación directa (`CLAUDE.md`, sección «De dónde sale cada advertencia legal») — nunca
 bloquea, solo advierte al activar una función de riesgo alto, con texto propio de
 Match (no reutilizar el texto de prestación directa, el riesgo apunta al revés). Ver
-`docs/legal/argentina.md` §"Modalidad Match" para la tabla de advertencias.
+`docs/legal/argentina.md`, sección «Modalidad Match — riesgo invertido», para la tabla de advertencias.
 
 ## 6. Geolocalización del Asistente (check-in/checkout)
 
@@ -248,11 +251,12 @@ Requiere **consentimiento explícito y revocable** del Asistente (no solo buena 
 exigido por la Ley de Protección de Datos Personales 25.326 para geolocalizar a una
 persona):
 
-- Apagado por default.
-- El Cliente puede ofrecerlo/pedirlo, pero el Asistente lo acepta o rechaza — no se le
-  puede imponer.
-- Consentimiento auditado (quién, cuándo, qué aceptó — `CLAUDE.md` §6) y revocable en
-  cualquier momento, no es una aceptación permanente.
+- La forma de seguimiento la elige la Prestadora en el Panel, en Configuración → Aplicaciones →
+  «Ubicación del Asistente»: «Viaje y turno», la de partida, o «Sólo viaje». El Cliente no la elige.
+- El Asistente acepta o rechaza en su aplicación el texto que corresponde a esa forma.
+- Consentimiento auditado (quién, cuándo, qué aceptó — `celtatech/CLAUDE.md`, sección
+  «Seguridad, privacidad y auditoría») y revocable en cualquier momento, no es una aceptación
+  permanente.
 - Cualquier costo asociado se acuerda entre Cliente y Asistente directamente — la
   plataforma no cobra ni intermedia ese dinero.
 

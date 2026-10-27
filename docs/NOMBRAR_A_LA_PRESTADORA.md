@@ -70,7 +70,7 @@ videollamadas configuradas.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/lib/errores.js:156`, mostrado desde `pages/Conversacion.jsx:130`
+**Archivo:** `pwa-asistentes/src/lib/errores.js:167`, mostrado desde `pages/Conversacion.jsx:130`
 
 **DECISIÓN:**
 
@@ -90,7 +90,7 @@ donde haya ocurrido.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/lib/errores.js:156`
+**Archivo:** `pwa-asistentes/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -109,7 +109,7 @@ donde haya ocurrido.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/lib/errores.js:156`
+**Archivo:** `pwa-asistentes/src/lib/errores.js:167`
 
 **OBSERVACIÓN:** esta aplicación no tiene ninguna pantalla donde se cargue una cuenta bancaria.
 El texto habla de algo que acá no se puede hacer.
@@ -125,14 +125,14 @@ El texto habla de algo que acá no se puede hacer.
 **Texto de hoy:**
 > La Prestadora todavía no cargó esta lista.
 
-**Dónde se ve:** pantalla de la Guardia — se entra desde Mis guardias y se toca una guardia. Al
-pie, en el bloque «Qué me corresponde / qué no me corresponde».
+**Dónde se ve:** pantalla de la Guardia — se entra desde Guardias y se toca una guardia. En la
+tarjeta del tipo de Asistente, en lugar de la lista de tareas.
 
 **Qué lo dispara:** el tipo de Asistente está cargado, pero su lista de tareas vino vacía.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/pages/GuardiaActiva.jsx:702` y `:707`
+**Archivo:** `pwa-asistentes/src/pages/GuardiaActiva.jsx:735`
 
 **DECISIÓN:**
 
@@ -170,7 +170,7 @@ pie, en el bloque «Qué me corresponde / qué no me corresponde».
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/components/EmergenciaEnGuardia.jsx:83`
+**Archivo:** `pwa-asistentes/src/components/EmergenciaEnGuardia.jsx:91`
 
 **DECISIÓN:**
 
@@ -219,19 +219,19 @@ renglón de la lista de pasos.
 
 ## 32. El Certificado quedó dado de baja
 
-**Ruta:** `papeles.certificado_estado_dado_de_baja`
+**Ruta:** `documentos.certificado_estado_dado_de_baja`
 
 **Texto de hoy:**
 > La Prestadora dio de baja este Certificado.
 
-**Dónde se ve:** Mi perfil, bloque «Mis papeles», subsección «Certificado de Aptitud». Es el
-estado del certificado.
+**Dónde se ve:** Documentos (`/documentos`), bloque «Certificado de Aptitud». Es el estado del
+certificado.
 
 **Qué lo dispara:** el certificado fue dado de baja.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/components/CarpetaDePapeles.jsx:121`
+**Archivo:** `pwa-asistentes/src/pages/Documentos.jsx:139`
 
 **DECISIÓN:**
 
@@ -258,7 +258,7 @@ autorizadas. **Son 25.**
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/lib/errores.js:156`
+**Archivo:** `pwa-clientes/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -278,7 +278,7 @@ llega escribiendo la dirección.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/lib/errores.js:156`
+**Archivo:** `pwa-clientes/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -299,7 +299,7 @@ autorizada —guardias, reportes, alertas, facturas, medicación—.
 
 **Quién lo lee:** una persona autorizada, nunca el titular.
 
-**Archivo:** `pwa-clientes/src/lib/errores.js:156`
+**Archivo:** `pwa-clientes/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -318,7 +318,7 @@ autorizada —guardias, reportes, alertas, facturas, medicación—.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/lib/errores.js:156`
+**Archivo:** `pwa-clientes/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -331,15 +331,23 @@ autorizada —guardias, reportes, alertas, facturas, medicación—.
 **Texto de hoy:**
 > Para ver los datos de contacto de esta persona, contrate el servicio con la Prestadora.
 
-**Dónde se ve:** perfil público del Asistente (`/buscar/:id`), bloque de contacto.
+**Dónde se ve:** hoy en ninguna parte. Sería el perfil público del Asistente (`/buscar/:id`),
+bloque de contacto, que es de Match, y Match está cerrado: el servidor nunca deja entrar a la
+vidriera (`backend/src/utils/intermediacionDeLaPrestadora.js:50`).
 
 **Qué lo dispara:** el dato de contacto está cerrado por ese motivo.
 
-**Quién lo lee:** el Cliente.
+**Quién lo lee:** el Cliente, o la persona autorizada con permiso para lo relativo a dinero.
 
 **Archivo:** `pwa-clientes/src/pages/PerfilPublicoAsistente.jsx:177`
 
-**DECISIÓN:**
+**Propuesta de redacción:** dejar el texto actual.
+
+**Por qué:** ya es una oración completa que dice qué hacer y para qué. Match está cerrado, no
+retirado: el Desarrollador decide si la frase se saca hasta que Match se reabra.
+
+**DECISIÓN:** queda para después de la mudanza: lo de Match se resuelve con la unificación con su
+desarrollo independiente.
 
 ---
 
@@ -350,15 +358,23 @@ autorizada —guardias, reportes, alertas, facturas, medicación—.
 **Texto de hoy:**
 > El servicio contratado venció. Renuévelo con la Prestadora para ver estos datos.
 
-**Dónde se ve:** perfil público del Asistente (`/buscar/:id`), bloque de contacto.
+**Dónde se ve:** hoy en ninguna parte. Sería el perfil público del Asistente (`/buscar/:id`),
+bloque de contacto, que es de Match, y Match está cerrado: el servidor nunca deja entrar a la
+vidriera (`backend/src/utils/intermediacionDeLaPrestadora.js:50`).
 
 **Qué lo dispara:** el acceso venció.
 
-**Quién lo lee:** el Cliente.
+**Quién lo lee:** el Cliente, o la persona autorizada con permiso para lo relativo a dinero.
 
 **Archivo:** `pwa-clientes/src/pages/PerfilPublicoAsistente.jsx:177`
 
-**DECISIÓN:**
+**Propuesta de redacción:** «El servicio contratado venció. Para volver a ver estos datos,
+renuévelo con la Prestadora.»
+
+**Por qué:** igual que la ficha 39; sólo pone primero para qué.
+
+**DECISIÓN:** queda para después de la mudanza: lo de Match se resuelve con la unificación con su
+desarrollo independiente.
 
 ---
 
@@ -369,15 +385,24 @@ autorizada —guardias, reportes, alertas, facturas, medicación—.
 **Texto de hoy:**
 > Usó todos los contactos incluidos. Solicite otro paquete a la Prestadora para ver más.
 
-**Dónde se ve:** perfil público del Asistente (`/buscar/:id`), bloque de contacto.
+**Dónde se ve:** hoy en ninguna parte. Sería el perfil público del Asistente (`/buscar/:id`),
+bloque de contacto, que es de Match, y Match está cerrado: el servidor nunca deja entrar a la
+vidriera (`backend/src/utils/intermediacionDeLaPrestadora.js:50`).
 
 **Qué lo dispara:** se agotó el paquete de contactos.
 
-**Quién lo lee:** el Cliente.
+**Quién lo lee:** el Cliente, o la persona autorizada con permiso para lo relativo a dinero.
 
 **Archivo:** `pwa-clientes/src/pages/PerfilPublicoAsistente.jsx:177`
 
-**DECISIÓN:**
+**Propuesta de redacción:** «Ya no quedan contactos incluidos en su servicio. Para ver más,
+solicite otro paquete a la Prestadora.»
+
+**Por qué:** igual que la ficha 39. «Usó todos» pone a la persona como causa; la propuesta dice
+el hecho.
+
+**DECISIÓN:** queda para después de la mudanza: lo de Match se resuelve con la unificación con su
+desarrollo independiente.
 
 ---
 
@@ -395,7 +420,7 @@ cada guardia.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/pages/Guardias.jsx:108` — la clave se arma sola como
+**Archivo:** `pwa-clientes/src/pages/Guardias.jsx:110` — la clave se arma sola como
 `cancelo_${g.cancelacion_origen}`
 
 **DECISIÓN:**
@@ -451,20 +476,20 @@ no por el marcador `{{prestadora}}`.
 **Texto de hoy:**
 > La Prestadora todavía no cargó esta lista.
 
-**Dónde se ve:** Asistente asignado (`/pacientes/:id/asistente`), en «Qué le corresponde hacer»
-y en «Qué no le corresponde».
+**Dónde se ve:** Asistente asignado (`/pacientes/:id/asistente`), en la tarjeta de las tareas, en
+lugar de la lista.
 
 **Qué lo dispara:** esa lista viene vacía.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/pages/AsistenteAsignado.jsx:117` y `:122`
+**Archivo:** `pwa-clientes/src/pages/AsistenteAsignado.jsx:100`
 
 **DECISIÓN:**
 
 ---
 
-## 46. No se exigen papeles
+## 46. No se exigen documentos
 
 **Ruta:** `asistente.documentacion_sin_exigencias`
 
@@ -478,64 +503,64 @@ asignado (`/pacientes/:id/asistente`) y el perfil público de la vidriera (`/bus
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:19`
+**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:22`
 
 **DECISIÓN:**
 
 ---
 
-## 47. Los papeles están al día
+## 47. Los documentos están al día
 
 **Ruta:** `asistente.documentacion_al_dia`
 
 **Texto de hoy:**
-> Los papeles que esta Prestadora exige están al día.
+> Los documentos que esta Prestadora exige están al día.
 
 **Dónde se ve:** el mismo bloque «Documentación», en las dos pantallas.
 
-**Qué lo dispara:** los papeles están completos.
+**Qué lo dispara:** los documentos están completos.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:19`
+**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:22`
 
 **DECISIÓN:**
 
 ---
 
-## 48. Falta algún papel
+## 48. Falta algún documento
 
 **Ruta:** `asistente.documentacion_incompleta`
 
 **Texto de hoy:**
-> Falta cargar alguno de los papeles que esta Prestadora exige.
+> Falta cargar alguno de los documentos que esta Prestadora exige.
 
 **Dónde se ve:** el mismo bloque «Documentación», en las dos pantallas.
 
-**Qué lo dispara:** falta algún papel.
+**Qué lo dispara:** falta algún documento.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:19`
+**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:22`
 
 **DECISIÓN:**
 
 ---
 
-## 49. Algún papel está vencido
+## 49. Algún documento está vencido
 
 **Ruta:** `asistente.documentacion_vencida`
 
 **Texto de hoy:**
-> Alguno de los papeles que esta Prestadora exige está vencido.
+> Alguno de los documentos que esta Prestadora exige está vencido.
 
 **Dónde se ve:** el mismo bloque «Documentación», en las dos pantallas.
 
-**Qué lo dispara:** algún papel está vencido.
+**Qué lo dispara:** algún documento está vencido.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:19`
+**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:22`
 
 **DECISIÓN:**
 
@@ -548,7 +573,7 @@ asignado (`/pacientes/:id/asistente`) y el perfil público de la vidriera (`/bus
 **Texto de hoy:**
 > Qué no dice esto: no se verifica la identidad de la persona, no se consultan antecedentes
 > penales y no se comprueba que los documentos presentados sean auténticos. Quien controla los
-> papeles de su personal es la Prestadora.
+> documentos de su personal es la Prestadora.
 
 **Dónde se ve:** última línea del bloque «Documentación», en las dos pantallas.
 
@@ -556,7 +581,7 @@ asignado (`/pacientes/:id/asistente`) y el perfil público de la vidriera (`/bus
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:31`
+**Archivo:** `pwa-clientes/src/components/EstadoDocumental.jsx:30`
 
 **DECISIÓN:**
 
@@ -578,7 +603,7 @@ calificar.
 
 **Quién lo lee:** una persona autorizada.
 
-**Archivo:** `pwa-clientes/src/pages/AsistenteAsignado.jsx:155`
+**Archivo:** `pwa-clientes/src/pages/AsistenteAsignado.jsx:128`
 
 **DECISIÓN:**
 
@@ -598,8 +623,8 @@ público de un Asistente (`/buscar/:id`).
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/pages/BuscarAsistentes.jsx:117` y
-`pwa-clientes/src/pages/PerfilPublicoAsistente.jsx:131`
+**Archivo:** `pwa-clientes/src/pages/BuscarAsistentes.jsx:114` y
+`pwa-clientes/src/pages/PerfilPublicoAsistente.jsx:129`
 
 **DECISIÓN:**
 
@@ -619,7 +644,7 @@ que sale al tocar «ver el contacto».
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/pages/PerfilPublicoAsistente.jsx:201`
+**Archivo:** `pwa-clientes/src/pages/PerfilPublicoAsistente.jsx:199`
 
 **DECISIÓN:**
 
@@ -659,7 +684,7 @@ lista de Facturas, a la que se entra desde Mi Perfil.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/pages/FacturaDetalle.jsx:158`
+**Archivo:** `pwa-clientes/src/pages/FacturaDetalle.jsx:163`
 
 **DECISIÓN:**
 
@@ -680,7 +705,7 @@ las dos listas.
 
 **Quién lo lee:** el titular de la cuenta.
 
-**Archivo:** `pwa-clientes/src/pages/MiPerfil.jsx:152`
+**Archivo:** `pwa-clientes/src/pages/MiPerfil.jsx:217`
 
 **DECISIÓN:**
 
@@ -700,7 +725,7 @@ que usted no ve».
 
 **Quién lo lee:** una persona autorizada.
 
-**Archivo:** `pwa-clientes/src/pages/MiPerfil.jsx:165`
+**Archivo:** `pwa-clientes/src/pages/MiPerfil.jsx:230`
 
 **DECISIÓN:**
 
@@ -720,7 +745,7 @@ nueva indicación», arriba del botón Enviar.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/pages/Medicacion.jsx:223`
+**Archivo:** `pwa-clientes/src/pages/Medicacion.jsx:382`
 
 **DECISIÓN:**
 
@@ -741,7 +766,7 @@ nueva indicación», arriba del botón Enviar.
 
 **Quién lo lee:** una persona autorizada.
 
-**Archivo:** `pwa-clientes/src/pages/Medicacion.jsx:167`
+**Archivo:** `pwa-clientes/src/pages/Medicacion.jsx:294`
 
 **DECISIÓN:**
 
@@ -756,8 +781,8 @@ una opinión:
 
 - **Las dos de la entrevista pública** (fichas 112 y 114) las lee un postulante, que está
   afuera de la empresa.
-- **Un grupo las lee también el soporte técnico de CeltaTech**: son las de credenciales (fichas
-  91 y 100) y las de Auditoría (fichas 159 a 163). Van señaladas en su ficha.
+- **Un grupo las lee también el soporte técnico de CeltaTech**: son las de datos de acceso
+  (fichas 91 y 100) y las de Auditoría (fichas 159 a 163). Van señaladas en su ficha.
 
 ---
 
@@ -767,7 +792,7 @@ una opinión:
 
 **Texto de hoy:**
 > Esta Prestadora todavía no tiene etapas de incorporación configuradas. Se definen en
-> Configuración > El cuidado.
+> Configuración > Reclutamiento.
 
 **Dónde se ve:** al confirmar la incorporación o el avance de un Asistente por el circuito de
 incorporación.
@@ -776,7 +801,7 @@ incorporación.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/lib/errores.js:156`
+**Archivo:** `panel/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -796,7 +821,7 @@ cobro, Calificaciones, Auditoría legal—.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/lib/errores.js:156`
+**Archivo:** `panel/src/lib/errores.js:167`
 
 **DECISIÓN:** aprobado así.
 
@@ -816,7 +841,7 @@ cobro, Calificaciones, Auditoría legal—.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/lib/errores.js:156`
+**Archivo:** `panel/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -836,7 +861,7 @@ cobro, Calificaciones, Auditoría legal—.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/lib/errores.js:156`
+**Archivo:** `panel/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -849,14 +874,14 @@ cobro, Calificaciones, Auditoría legal—.
 **Texto de hoy:**
 > Esta Prestadora no tiene cuenta de WhatsApp Business. Se carga en Configuración > Mensajes.
 
-**Dónde se ve:** Ajustes > Configuración > Mensajes, bloque de plantillas.
+**Dónde se ve:** Gestión > Configuración > Configuración > Mensajes, bloque de plantillas.
 
 **Qué lo dispara:** se intenta dar de alta una plantilla o consultar su estado sin cuenta ni
 token cargados.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/lib/errores.js:156`
+**Archivo:** `panel/src/lib/errores.js:167`
 
 **DECISIÓN:**
 
@@ -867,19 +892,20 @@ token cargados.
 **Ruta:** `configuracion.seccion_prestadora`
 
 **Texto de hoy:**
-> La Prestadora
+> Prestadora
 
-**Dónde se ve:** Ajustes > Configuración, en la lista de secciones. Es la primera.
+**Dónde se ve:** Gestión > Configuración > Configuración, en la lista de secciones. Es la
+primera.
 
 **Qué lo dispara:** está siempre que un Admin abra Configuración.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/Configuracion.jsx:33`
+**Archivo:** `panel/src/pages/Configuracion.jsx:34`
 
-**OBSERVACIÓN:** este texto es el nombre de una sección de la pantalla, y otros ocho textos del
-Panel mandan a ella escribiendo «Configuración > La Prestadora». Si el nombre cambia, esos ocho
-quedan mandando a un lugar que ya no se llama así.
+**OBSERVACIÓN:** este texto es el nombre de una sección de la pantalla. Ningún otro texto del
+Panel la nombra: los que mandan a Configuración dicen «Configuración» a secas o nombran otra
+parte de ella.
 
 **DECISIÓN:**
 
@@ -892,13 +918,13 @@ quedan mandando a un lugar que ya no se llama así.
 **Texto de hoy:**
 > De la Prestadora
 
-**Dónde se ve:** Ajustes > Configuración > Listas de opciones, columna de origen de la tabla.
+**Dónde se ve:** Gestión > Configuración > Configuración > Listas de opciones, columna de origen de la tabla.
 
 **Qué lo dispara:** esa opción la agregó la empresa, no el producto.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/configuracion/LasListasDeOpciones.jsx:229`
+**Archivo:** `panel/src/pages/configuracion/LasListasDeOpciones.jsx:247`
 
 **DECISIÓN:**
 
@@ -912,13 +938,13 @@ quedan mandando a un lugar que ya no se llama así.
 > Hoy rige el modelo que trae {{producto}}. Es una sugerencia y nada más: no es asesoramiento
 > legal, y adoptarlo, cambiarlo o reemplazarlo es decisión de esta Prestadora.
 
-**Dónde se ve:** Ajustes > Configuración > La Prestadora, cartel de estado del consentimiento.
+**Dónde se ve:** Gestión > Configuración > Configuración > Prestadora, cartel de estado del consentimiento.
 
 **Qué lo dispara:** la empresa todavía no cargó texto propio.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/configuracion/ConsentimientoPagadorTab.jsx:94`
+**Archivo:** `panel/src/pages/configuracion/ConsentimientoPagadorTab.jsx:95`
 
 **DECISIÓN:**
 
@@ -931,35 +957,36 @@ quedan mandando a un lugar que ya no se llama así.
 **Texto de hoy:**
 > Hoy rige el texto que cargó esta Prestadora.
 
-**Dónde se ve:** Ajustes > Configuración > La Prestadora, el mismo cartel de estado.
+**Dónde se ve:** Gestión > Configuración > Configuración > Prestadora, el mismo cartel de estado.
 
 **Qué lo dispara:** ya hay texto propio cargado.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/configuracion/ConsentimientoPagadorTab.jsx:95`
+**Archivo:** `panel/src/pages/configuracion/ConsentimientoPagadorTab.jsx:96`
 
 **DECISIÓN:**
 
 ---
 
-## 91. Las credenciales de la pasarela sólo las toca el Admin
+## 91. Los datos de acceso de la pasarela sólo los toca el Admin
 
 **Ruta:** `configuracion.pasarela_credenciales_solo_admin`
 
 **Texto de hoy:**
 > Acá se ve qué pasarelas están conectadas, pero conectarlas y cambiar sus claves es del
-> administrador de la prestadora. El soporte técnico no accede a las credenciales con las que
+> administrador de la prestadora. El soporte técnico no accede a los datos de acceso con los que
 > la prestadora cobra, ni siquiera durante una sesión de soporte.
 
-**Dónde se ve:** Ajustes > Configuración > La Prestadora, bloque de pasarelas de cobro.
+**Dónde se ve:** en ninguna parte. El detalle de la sección de pasarelas de cobro, donde iría,
+está en la ficha 26 de `docs/CARTELES_DEL_PANEL.md`.
 
-**Qué lo dispara:** quien mira no puede tocar las credenciales: es Coordinador, o es soporte
-técnico con la sesión abierta.
+**Quién lo lee:** nadie.
 
-**Quién lo lee:** alguien de la empresa que no es su Administrador, o el soporte de CeltaTech.
+**Archivo:** —
 
-**Archivo:** `panel/src/pages/configuracion/LaPrestadora.jsx:437`
+**OBSERVACIÓN:** la clave existe en las traducciones (`panel/src/i18n/translations.js:503`) y no
+la usa ninguna pantalla.
 
 **DECISIÓN:**
 
@@ -973,7 +1000,7 @@ técnico con la sesión abierta.
 > La Prestadora todavía no cargó ningún lugar. Se cargan en Configuración.
 
 **Dónde se ve:** en todo casillero que elige lugares: alta y solapa Perfil de un Asistente
-(Asistentes > Padrón de Asistentes), asignación de zonas en Ajustes > Usuarios del Panel, y el
+(Asistentes > Padrón de Asistentes), asignación de zonas en Gestión > Configuración > Usuarios del Panel, y el
 propio bloque de lugares de Configuración.
 
 **Qué lo dispara:** no hay ningún lugar cargado.
@@ -994,35 +1021,35 @@ propio bloque de lugares de Configuración.
 **Texto de hoy:**
 > El correo de esta prestadora
 
-**Dónde se ve:** Ajustes > Configuración > Mensajes. Es el título del bloque.
+**Dónde se ve:** Gestión > Configuración > Configuración > Mensajes. Es el título del bloque.
 
 **Qué lo dispara:** está siempre.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/configuracion/Avisos.jsx:492`
+**Archivo:** `panel/src/pages/configuracion/Avisos.jsx:513`
 
 **DECISIÓN:**
 
 ---
 
-## 100. Las credenciales de WhatsApp sólo las ve el Admin
+## 100. Los datos de acceso de WhatsApp sólo los ve el Admin
 
 **Ruta:** `configuracion.whatsapp_credenciales_solo_admin`
 
 **Texto de hoy:**
-> Estas credenciales son de la prestadora y solo las ve y las cambia su administrador. El
+> Estos datos de acceso son de la prestadora y solo los ve y los cambia su administrador. El
 > soporte técnico no accede a las claves con las que la prestadora habla con Meta, ni siquiera
 > durante una sesión de soporte.
 
-**Dónde se ve:** Ajustes > Configuración > Mensajes, bloque de WhatsApp.
+**Dónde se ve:** Gestión > Configuración > Configuración > Mensajes, bloque de WhatsApp.
 
 **Qué lo dispara:** quien mira no es el Administrador de la empresa, o hay sesión de soporte
 abierta.
 
 **Quién lo lee:** alguien de la empresa que no es su Administrador, o el soporte de CeltaTech.
 
-**Archivo:** `panel/src/pages/configuracion/Avisos.jsx:769`
+**Archivo:** `panel/src/pages/configuracion/Avisos.jsx:801`
 
 **DECISIÓN:**
 
@@ -1035,14 +1062,14 @@ abierta.
 **Texto de hoy:**
 > WhatsApp activo para esta prestadora
 
-**Dónde se ve:** Ajustes > Configuración > Mensajes, bloque de WhatsApp. Es la etiqueta de la
+**Dónde se ve:** Gestión > Configuración > Configuración > Mensajes, bloque de WhatsApp. Es la etiqueta de la
 llave que lo enciende o lo apaga.
 
 **Qué lo dispara:** está siempre.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/configuracion/Avisos.jsx:861`
+**Archivo:** `panel/src/pages/configuracion/Avisos.jsx:970`
 
 **DECISIÓN:**
 
@@ -1056,13 +1083,14 @@ llave que lo enciende o lo apaga.
 > La Prestadora no habilitó a este usuario para validar informes. Se puede ver la vista previa,
 > pero no guardarla.
 
-**Dónde se ve:** Dinero > Informes para Obra Social, debajo de la vista previa ya generada.
+**Dónde se ve:** en ninguna parte.
 
-**Qué lo dispara:** quien mira no tiene permiso para validar y guardar.
+**Quién lo lee:** nadie.
 
-**Quién lo lee:** alguien de la empresa sin ese permiso.
+**Archivo:** —
 
-**Archivo:** `panel/src/pages/InformesObraSocial.jsx:361`
+**OBSERVACIÓN:** la clave existe en las traducciones (`panel/src/i18n/translations.js:975`) y no
+la usa ninguna pantalla.
 
 **DECISIÓN:**
 
@@ -1082,7 +1110,7 @@ franja de arriba.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/components/estado-actual/GuiaPrimerosPasos.jsx:76`
+**Archivo:** `panel/src/components/estado-actual/GuiaPrimerosPasos.jsx:84`
 
 **DECISIÓN:**
 
@@ -1101,7 +1129,7 @@ franja de arriba.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/components/estado-actual/GuiaPrimerosPasos.jsx:80`
+**Archivo:** `panel/src/components/estado-actual/GuiaPrimerosPasos.jsx:89`
 
 **DECISIÓN:**
 
@@ -1121,7 +1149,7 @@ franja de arriba.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/components/estado-actual/GuiaPrimerosPasos.jsx:80`
+**Archivo:** `panel/src/components/estado-actual/GuiaPrimerosPasos.jsx:89`
 
 **DECISIÓN:**
 
@@ -1141,7 +1169,7 @@ postulante con la llave que le llegó por correo. Es el título de la página.
 
 **Quién lo lee:** el postulante. Está afuera de la empresa.
 
-**Archivo:** `panel/src/pages/EntrevistaPublica.jsx:96`
+**Archivo:** `panel/src/pages/EntrevistaPublica.jsx:98`
 
 **OBSERVACIÓN:** es el único texto de los 70 que ya usa el marcador `{{prestadora}}`.
 
@@ -1162,7 +1190,7 @@ postulante con la llave que le llegó por correo. Es el título de la página.
 
 **Quién lo lee:** el postulante. Está afuera de la empresa.
 
-**Archivo:** `panel/src/pages/EntrevistaPublica.jsx:108`
+**Archivo:** `panel/src/pages/EntrevistaPublica.jsx:110`
 
 **DECISIÓN:**
 
@@ -1182,7 +1210,7 @@ Legajo del Asistente (Asistentes > Padrón de Asistentes).
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/lib/modalidades.js:180`
+**Archivo:** `panel/src/lib/modalidades.js:144`
 
 **DECISIÓN:**
 
@@ -1202,7 +1230,7 @@ bloque de referencias laborales.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/asistentes/ReferenciasLaborales.jsx:102`
+**Archivo:** `panel/src/pages/asistentes/ReferenciasLaborales.jsx:106`
 
 **DECISIÓN:**
 
@@ -1222,7 +1250,7 @@ bloque de referencias laborales.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/asistentes/ReferenciasLaborales.jsx:105`
+**Archivo:** `panel/src/pages/asistentes/ReferenciasLaborales.jsx:109`
 
 **DECISIÓN:**
 
@@ -1235,14 +1263,15 @@ bloque de referencias laborales.
 **Texto de hoy:**
 > Esta Prestadora todavía no cargó qué documentación pide. Se configura en Configuración.
 
-**Dónde se ve:** Clientes > Clientes > Ficha del cliente, bloque del estado del Pagador, donde
-irían los papeles exigidos.
+**Dónde se ve:** Clientes > Directorio de Clientes > un Cliente > pestaña Contacto, tarjeta
+«Documentación que pide el Pagador», donde iría la tabla de documentos. El detalle de esa
+pantalla está en la ficha 6 de `docs/CARTELES_DEL_PANEL.md`.
 
 **Qué lo dispara:** el catálogo de documentación está vacío.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/clientes/EstadoDelPagador.jsx:211`
+**Archivo:** `panel/src/pages/clientes/EstadoDelPagador.jsx:217`
 
 **DECISIÓN:**
 
@@ -1275,7 +1304,7 @@ irían los papeles exigidos.
 **Texto de hoy:**
 > Prestadora
 
-**Dónde se ve:** Comunicación —enlace suelto arriba del menú—, hilo de WhatsApp. Es la etiqueta
+**Dónde se ve:** Gestión > Comunicación > Comunicación, hilo de WhatsApp. Es la etiqueta
 de autor de cada mensaje saliente.
 
 **Qué lo dispara:** está siempre en los mensajes salientes.
@@ -1296,7 +1325,7 @@ de autor de cada mensaje saliente.
 > Esta Prestadora todavía no tiene WhatsApp configurado. Se configura en Configuración ›
 > WhatsApp.
 
-**Dónde se ve:** Comunicación, hilo de WhatsApp.
+**Dónde se ve:** Gestión > Comunicación > Comunicación, hilo de WhatsApp.
 
 **Qué lo dispara:** se intenta mandar un mensaje sin WhatsApp configurado.
 
@@ -1315,13 +1344,13 @@ de autor de cada mensaje saliente.
 **Texto de hoy:**
 > Cargada por la Prestadora
 
-**Dónde se ve:** Ajustes > Respuestas preparadas, columna de origen de la tabla.
+**Dónde se ve:** Gestión > Comunicación > Respuestas preparadas, columna de origen de la tabla.
 
 **Qué lo dispara:** esa respuesta la escribió la empresa, no la sugirió la IA.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/RespuestasPreparadas.jsx:262`
+**Archivo:** `panel/src/pages/RespuestasPreparadas.jsx:288`
 
 **DECISIÓN:**
 
@@ -1334,15 +1363,15 @@ de autor de cada mensaje saliente.
 **Texto de hoy:**
 > Prestadora
 
-**Dónde se ve:** Cobertura > Guardias. Es una opción del desplegable «quién cancela», tanto al
+**Dónde se ve:** Guardias > Guardias. Es una opción del desplegable «quién cancela», tanto al
 cancelar una guardia desde su detalle como al cancelar varias con la barra de acciones masivas.
 
 **Qué lo dispara:** está siempre en ese desplegable.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/guardias/GuardiaAcciones.jsx:493` y
-`panel/src/pages/guardias/BarraAccionesMasivas.jsx:321`
+**Archivo:** `panel/src/pages/guardias/GuardiaAcciones.jsx:476` y
+`panel/src/pages/guardias/BarraAccionesMasivas.jsx:320`
 
 **DECISIÓN:**
 
@@ -1356,13 +1385,15 @@ cancelar una guardia desde su detalle como al cancelar varias con la barra de ac
 > El estado de cuenta de los Clientes lo ve la administración de la Prestadora. Si necesita
 > verlo, pídale que le habilite esa acción en Configuración.
 
-**Dónde se ve:** Dinero > Saldos pendientes, en lugar del estado de cuenta.
+**Dónde se ve:** en ninguna parte. En Gestión > Facturación > Saldos pendientes, quien no tiene
+ese permiso no ve el estado de cuenta ni ningún texto en su lugar.
 
-**Qué lo dispara:** quien mira no tiene ese permiso — por ejemplo, un Coordinador.
+**Quién lo lee:** nadie.
 
-**Quién lo lee:** alguien de la empresa sin ese permiso.
+**Archivo:** —
 
-**Archivo:** `panel/src/pages/Facturacion.jsx:325` y `:450`
+**OBSERVACIÓN:** la clave existe en las traducciones (`panel/src/i18n/translations.js:2256`) y no
+la usa ninguna pantalla.
 
 **DECISIÓN:**
 
@@ -1375,14 +1406,15 @@ cancelar una guardia desde su detalle como al cancelar varias con la barra de ac
 **Texto de hoy:**
 > Valor propio de la Prestadora
 
-**Dónde se ve:** Dinero > Pagos a Asistentes, catálogo de conceptos de liquidación. Es una
+**Dónde se ve:** Asistentes > Pagos a Asistentes, catálogo de conceptos de liquidación. Es una
 opción del desplegable «de dónde sale el valor»; la otra es la escala legal.
 
 **Qué lo dispara:** está siempre en ese desplegable.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/PagosAsistentes.jsx:834`
+**Archivo:** `panel/src/pages/PagosAsistentes.jsx:828` — la clave se arma sola como
+`origen_${origen}`
 
 **DECISIÓN:**
 
@@ -1395,13 +1427,13 @@ opción del desplegable «de dónde sale el valor»; la otra es la escala legal.
 **Texto de hoy:**
 > Prestadora
 
-**Dónde se ve:** Ajustes > Auditoría, encabezado de esa columna en la tabla de eventos.
+**Dónde se ve:** Gestión > Informes > Auditoría, encabezado de esa columna en la tabla de eventos.
 
 **Qué lo dispara:** está siempre.
 
 **Quién lo lee:** la empresa, y el soporte de CeltaTech.
 
-**Archivo:** `panel/src/pages/Auditoria.jsx:152`
+**Archivo:** `panel/src/pages/Auditoria.jsx:106`
 
 **DECISIÓN:**
 
@@ -1414,13 +1446,13 @@ opción del desplegable «de dónde sale el valor»; la otra es la escala legal.
 **Texto de hoy:**
 > Entró a la prestadora
 
-**Dónde se ve:** Ajustes > Auditoría, en la fila del evento.
+**Dónde se ve:** Gestión > Informes > Auditoría, en la fila del evento.
 
 **Qué lo dispara:** lo registrado es la apertura de una sesión de soporte.
 
 **Quién lo lee:** la empresa, y el soporte de CeltaTech.
 
-**Archivo:** `panel/src/pages/Auditoria.jsx:80`
+**Archivo:** `panel/src/pages/Auditoria.jsx:67`
 
 **DECISIÓN:**
 
@@ -1433,13 +1465,13 @@ opción del desplegable «de dónde sale el valor»; la otra es la escala legal.
 **Texto de hoy:**
 > Salió de la prestadora
 
-**Dónde se ve:** Ajustes > Auditoría, en la fila del evento.
+**Dónde se ve:** Gestión > Informes > Auditoría, en la fila del evento.
 
 **Qué lo dispara:** la sesión se cerró a mano, no por tope ni por inactividad.
 
 **Quién lo lee:** la empresa, y el soporte de CeltaTech.
 
-**Archivo:** `panel/src/pages/Auditoria.jsx:86`
+**Archivo:** `panel/src/pages/Auditoria.jsx:73`
 
 **DECISIÓN:**
 
@@ -1452,13 +1484,14 @@ opción del desplegable «de dónde sale el valor»; la otra es la escala legal.
 **Texto de hoy:**
 > Cambió los permisos de la Prestadora
 
-**Dónde se ve:** Ajustes > Auditoría, nombre de la acción en la fila.
+**Dónde se ve:** Gestión > Informes > Auditoría, nombre de la acción en la fila.
 
 **Qué lo dispara:** lo auditado es un cambio en Configuración > Accesos.
 
 **Quién lo lee:** la empresa, y el soporte de CeltaTech.
 
-**Archivo:** `panel/src/pages/Auditoria.jsx:102`
+**Archivo:** `panel/src/lib/registroDeActividad.js:8` — la clave se arma sola como
+`accion_${fila.accion}`
 
 **DECISIÓN:**
 
@@ -1471,12 +1504,13 @@ opción del desplegable «de dónde sale el valor»; la otra es la escala legal.
 **Texto de hoy:**
 > Cambió la moneda de la Prestadora
 
-**Dónde se ve:** Ajustes > Auditoría, nombre de la acción en la fila.
+**Dónde se ve:** Gestión > Informes > Auditoría, nombre de la acción en la fila.
 
-**Qué lo dispara:** lo auditado es un cambio de moneda hecho en Configuración > La Prestadora.
+**Qué lo dispara:** lo auditado es un cambio de moneda hecho en Configuración > Prestadora.
 
 **Quién lo lee:** la empresa, y el soporte de CeltaTech.
 
-**Archivo:** `panel/src/pages/Auditoria.jsx:102`
+**Archivo:** `panel/src/lib/registroDeActividad.js:8` — la clave se arma sola como
+`accion_${fila.accion}`
 
 **DECISIÓN:**

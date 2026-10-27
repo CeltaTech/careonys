@@ -3,7 +3,7 @@
 > **Estado: esperando aprobación del Desarrollador. No se escribió ni una línea de código.**
 >
 > Este documento es el paso 2 de la regla de la empresa para un cambio grande —inventario, plan
-> aprobado, y recién después código de producción (`celtatech/CLAUDE.md` §11)—. El inventario está
+> aprobado, y recién después código de producción (`celtatech/CLAUDE.md`, «Antes de un cambio grande»)—. El inventario está
 > en la sección 5, hecho contra el código real y no contra la memoria ni contra documentos viejos.
 >
 > **Un paso terminado se borra de acá, no se marca como hecho.**
@@ -86,8 +86,8 @@ vea las guardias que caen en esos días.
 
 **La estructura de zonas, completa y cargada en las dos puntas.** `lugares`, `zona_lugares`,
 `asistente_lugares` y `usuario_lugares`. Lo guardado son siempre lugares, nunca zonas: la zona es
-atajo para cargar y forma de hablar en pantalla. El Paciente tiene su lugar en
-`pacientes.lugar_id`, y el alcance de cada coordinadora se
+atajo para cargar y forma de hablar en pantalla. El lugar del Paciente es el de su Ficha de Persona
+—`personas.lugar_id`, por `pacientes.persona_id`—, y el alcance de cada coordinadora se
 guarda también en lugares, para que las dos puntas de la comparación sean la misma cosa.
 
 **El Servicio como envase.** Guarda poco de sí mismo, pero es el punto al que apunta todo lo
@@ -117,7 +117,8 @@ El sistema tiene las dos mitades y no puede restarlas. **De ahí sale el hueco i
 falte información.**
 
 Y esos dos casilleros están además contra una regla del propio producto: «Un casillero que nombra
-algo que existe en otro lado es una lista, y nunca texto libre» (`careonys/CLAUDE.md` §6). Los días
+algo que existe en otro lado es una lista, y nunca texto libre» (`careonys/CLAUDE.md`, «Lo propio de
+Careonys en el desarrollo»). Los días
 de la semana y un horario existen en otro lado.
 
 ### 4.2. El único caso ciego del sistema
@@ -126,12 +127,15 @@ Con una ausencia, el turno existe y los seis mecanismos se disparan. Con una ser
 nunca cargada, **no hay fila que recorrer**: todos los avisos del sistema salen de recorrer turnos, y
 el turno que nunca se creó no está en ninguna tabla. Nada puede encontrarlo.
 
-### 4.3. Modificar no existe en ningún nivel
+### 4.3. El horario y los días no se modifican en ningún nivel
 
-Grep de `from('series_guardias')` en todo el Panel: siete resultados, y **ninguno es una edición**.
-Dos leen, dos cancelan todas, uno pausa todas, uno reactiva todas, uno crea. Una serie se crea y no
-se puede editar nunca — ni el horario, ni los días, ni el Asistente. Para cambiar el turno de la
-noche hay que cancelar y volver a cargar, y la continuidad se pierde.
+Grep de `from('series_guardias')` en todo el Panel: ocho resultados, y **ninguno cambia el horario
+ni los días**. Cuatro leen, uno cancela todas, uno pausa todas, uno reactiva todas, uno crea. Lo
+único que se cambia de una serie sin cancelarla es el Asistente: `POST
+/api/panel/guardias/series/:id/asignar` —`backend/src/routes/panelGuardias.js:271`, llamado desde
+`panel/src/lib/asignarTurno.js:55`— corre la función `asignar_serie` de la base, que deja la
+asignación esperando a que el Asistente acepte. El horario y los días no se editan nunca: para
+cambiar el turno de la noche hay que cancelar y volver a cargar, y la continuidad se pierde.
 
 ### 4.4. La suspensión es sólo total, y sin fecha de vuelta
 
@@ -159,9 +163,10 @@ de suspender una sola serie, ni uno de los horarios pactados, ni de decir hasta 
 ### 5.1. Nadie escribe la tabla de Servicios
 
 **Ninguna escritura** sobre `servicios` en el Panel, en el backend ni en las dos aplicaciones. Las
-cuatro apariciones de la tabla son lecturas: `panel/src/pages/Servicios.jsx:46`,
-`panel/src/pages/servicios/ServicioDetalle.jsx:60`, `panel/src/pages/guardias/NuevaGuardiaModal.jsx:93`
-y `panel/src/pages/clientes/PrestacionesPaciente.jsx:109`.
+siete apariciones de la tabla son lecturas, todas en el Panel: `panel/src/pages/Servicios.jsx:46`,
+`panel/src/pages/servicios/ServicioDetalle.jsx:60`, `panel/src/pages/guardias/NuevaGuardiaModal.jsx:93`,
+`panel/src/pages/clientes/PrestacionesPaciente.jsx:109`, `panel/src/pages/Clientes.jsx:76`,
+`panel/src/pages/Guardias.jsx:139` y `panel/src/pages/EstadoActual.jsx:259`.
 
 Los Servicios que hay entraron por la migración de más arriba y desde entonces se heredan solos. **Es
 la constatación central de este plan: el acto no existe en ninguna parte del código.**
@@ -195,7 +200,7 @@ aplicaciones.**
 | Pantalla | Qué hace hoy | Qué le pasa con este plan |
 |---|---|---|
 | **Clientes › Servicios** | Lista los Servicios con su Cliente, estado, cuántos Pacientes, cuántas prestaciones y cuántos turnos. Dice en pantalla que es de sólo lectura | **Deja de ser de sólo lectura:** es la pantalla donde el Servicio se arma y se mantiene |
-| **Clientes › Servicios › Detalle del servicio** | Cliente, Pacientes deducidos, tabla de prestaciones y las últimas 20 guardias. También de sólo lectura | Recibe lo que hoy no tiene: los períodos que cubre, la zona, quién realiza, quién coordina, y la cuenta de lo pactado contra lo cubierto |
+| **Clientes › Servicios › Detalle del servicio** | Cliente, Pacientes deducidos, tabla de prestaciones y las últimas 20 guardias. Lo único que se carga ahí son las tareas acordadas, con el tipo de Asistente que hace cada una (`tareas_del_servicio`, en `panel/src/pages/servicios/TareasDelServicio.jsx`) | Recibe lo que hoy no tiene: los períodos que cubre, la zona, quién realiza, quién coordina, y la cuenta de lo pactado contra lo cubierto |
 | **Clientes › Clientes › Ficha del cliente › Prestaciones del Paciente** | Es un modal, y hoy es el único lugar donde se pacta, se hospitaliza, se pausa, se reactiva y se cierra el Servicio | Los dos casilleros de texto libre pasan a ser días marcados y horarios. La pausa y la reactivación dejan de ser en bloque |
 | **Cobertura › Guardias › guardia nueva** | Crea la guardia suelta o la serie | Sigue creando, y además queda alcanzada por la cuenta: al crear o cambiar una serie, la cuenta se rehace |
 | **Cobertura › Guardias** | Grilla, filtros, reasignar y mover | Sin cambios de fondo |
@@ -206,8 +211,8 @@ aplicaciones.**
 ### 5.4. Ninguna pantalla compara hoy lo pactado contra lo cubierto
 
 Verificado archivo por archivo. **Clientes › Servicios** y su Detalle del servicio muestran prestaciones y turnos en
-dos tablas separadas, sin ninguna cuenta que las cruce —y el Detalle del servicio trae sólo los 20 turnos más
-próximos, así que ni tiene los datos—. **Clientes › Clientes › Ficha del cliente › Prestaciones del Paciente**
+dos tablas separadas, sin ninguna cuenta que las cruce —el Detalle del servicio trae todos los turnos del
+Servicio, pero no los cruza con nada y muestra veinte—. **Clientes › Clientes › Ficha del cliente › Prestaciones del Paciente**
 guarda los días, el horario y la cantidad de turnos pactados, y **nunca los lee contra los turnos
 reales**. **Estado actual**, **Cobertura › Guardias**, el panel de cobertura y **Cobertura ›
 Continuidad** miran huecos contra el calendario ya generado —turnos que existen y no tienen
@@ -249,8 +254,8 @@ renglón lleva sus días, su hora de inicio y su hora de fin, y apunta a la Pres
 **Esto no necesita ninguna palabra nueva, y el glosario ya lo tenía resuelto.** Lo que se guarda son
 **los días y horarios de una Prestación**, con más de un renglón cuando haga falta. El glosario de los
 productos Careonys ya dice las dos cosas: la Prestación es «cada cosa del acuerdo, con su precio»
-—`celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md:37`— y del Servicio dice «cada cosa del acuerdo tiene
-sus propios días y horarios» —`:36`—. Así que la tabla se nombra por eso y no hay nada que decidir.
+—`celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md:90`— y del Servicio dice «cada cosa del acuerdo tiene
+sus propios días y horarios» —`:88`—. Así que la tabla se nombra por eso y no hay nada que decidir.
 
 **Y la palabra «tramo» no se usa acá**, porque en este producto ya nombra otra cosa: los renglones de
 premura con los que se le insiste al Coordinador —`panel/src/i18n/translations.js:706`, «Agregar un
@@ -263,8 +268,8 @@ suyo:
 |---|---|---|
 | **Servicio** | el acuerdo entero | cuidado domiciliario, por tiempo indeterminado |
 | **Prestación** | cada cosa del acuerdo, con su precio y sus propios días y horarios | el cuidado por horas; aparte, la kinesiología |
-| **Guardia** | el cuidado a cubrir, con sus días y su horario, y de qué es | la de cuidados: los 7 días, de 00:00 a 24:00. Aparte, la de enfermería, de 8 a 14 los martes |
-| **Turno de guardia** | la parte que cubre una Asistente, hasta que entrega las responsabilidades | tres turnos de ocho horas, tres personas |
+| **Guardia** | el cuidado a cubrir, con sus días y su horario —una franja acotada o las 24 horas los 7 días—, y de qué es | la de cuidados: los 7 días, de 00:00 a 24:00. Aparte, la de enfermería, de 8 a 14 los martes |
+| **Turno de guardia** | la parte que cubre una Asistente, hasta que le entrega las responsabilidades a quien la releva o al Cliente | tres turnos de ocho horas, tres personas |
 
 Lo del paso 1 se carga en el segundo nivel: los días y horarios de una Prestación. Un renglón puede
 ir de 00:00 a 24:00, y ningún turno puede. **Repartir la guardia en turnos es trabajo de quien
@@ -295,7 +300,7 @@ esa misma pantalla, y la siembra de datos de prueba.
 Un punto único de verdad que reciba un Servicio y un período y conteste qué horarios pactados no están
 cubiertos por ninguna serie vigente, con su día y su horario. Una sola función que consuman los tres
 momentos y las pantallas, nunca la misma resta escrita en cada lugar
-(`celtatech/CLAUDE.md` §8, punto único de verdad).
+(`celtatech/CLAUDE.md`, «Las reglas de desarrollo»: ningún patrón repetido sin punto único de verdad).
 
 Qué tiene que resolver, y está verificado que hoy nada lo hace: que una serie cubra a varios
 Pacientes, que un horario pactado lo cubran dos series distintas, que una serie pausada no cuente como
@@ -331,13 +336,13 @@ hoy no tiene dónde decirse:
 
 ### Paso 5. Modificar, suspender y cancelar, total o parcialmente
 
-Una serie tiene que poder editarse —horario, días, Asistente— sin cancelarla y volver a cargarla,
-para que la continuidad no se pierda. Y las cuatro acciones tienen que poder alcanzar una sola serie
+Una serie tiene que poder editarse —horario y días— sin cancelarla y volver a cargarla, para que la
+continuidad no se pierda. El Asistente ya se cambia sin cancelarla (sección 4.3). Y las cuatro acciones tienen que poder alcanzar una sola serie
 o un solo horario pactado, no el Paciente entero:
 
 | Acción | Hoy | Con este paso |
 |---|---|---|
-| Modificar | No existe en ningún nivel | Sobre una serie, sin perder su historia |
+| Modificar | Sólo el Asistente de una serie | Horario y días de una serie, sin perder su historia |
 | Pausar | Todo el Paciente de una vez, sin fecha de vuelta | Una serie o un horario pactado, con fecha de vuelta opcional |
 | Suspender | No se distingue de pausar | Según lo decida el Desarrollador: ver sección 8 |
 | Cancelar | El Servicio entero, o un turno suelto con alcance parcial | Una serie, con su motivo del catálogo |
@@ -453,7 +458,8 @@ Asistentes**, no de coordinadores: `resumenDelPadron.js:50` cuenta guardias por 
 coordinador anotado.** Hoy nadie está atribuido a un coordinador concreto, y los lugares de dos
 coordinadores se solapan libremente —`usuario_lugares` no tiene exclusividad—, así que un Paciente de
 un lugar compartido cuenta para todos los que lo alcanzan: repartir esa carga sería inventarla. Con
-la asignación de este paso hecha, contar por lugar sale cruzando con `pacientes.lugar_id`.
+la asignación de este paso hecha, contar por lugar sale cruzando con el lugar de la Ficha de
+Persona del Paciente (`personas.lugar_id`).
 
 **Orden, entonces:** primero la asignación —que es lo que crea el dato—, y la sugerencia después, con
 los Servicios ya asignados. Las dos columnas donde eso podría anotarse ya existen y **hoy no las
@@ -474,8 +480,11 @@ capacidad de realizarlas, por antecedentes de la asistente, por voalores economi
 de estar de acuerdo con las condiciones economicas de sus servicios (montos, plazos de pago, etc)».
 
 La zona entra en el paso 6. Los otros tres —capacidad para las tareas del Servicio, antecedentes de
-la Asistente, y el acuerdo económico— **no están en el código** y quedan como paso propio, porque
-cada uno necesita datos que hoy no se guardan.
+la Asistente, y el acuerdo económico— **no están en el cálculo de candidatas** y quedan como paso
+propio. Las tareas del Servicio ya se guardan, con el tipo de Asistente que hace cada una
+(`tareas_del_servicio`, cargadas desde **Clientes › Servicios › Detalle del servicio**), pero
+`panel/src/lib/candidatos.js` no las lee. Los antecedentes y el acuerdo económico necesitan datos
+que hoy no se guardan.
 
 ---
 

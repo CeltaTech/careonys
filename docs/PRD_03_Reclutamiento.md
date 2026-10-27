@@ -1,34 +1,24 @@
 # PRD_03 — Reclutamiento (Sitio de Captación + Postulación + Verificación)
 
-> Fuente: documento original de PRD de Reclutamiento (histórico, fuera del repo, v1.0, Mayo 2026). Condensado para
-> ejecución directa, con las siguientes correcciones respecto del original: (1) el original
-> nombra a una persona real como responsable de entrevistas — reemplazado por el Responsable
-> del reclutamiento y el Entrevistador; (2) se documenta explícitamente una discrepancia de stack, ver
-> sección "Nota de stack" abajo, en vez de elegir en silencio; (3) el original usa
-> "Cuidadora"/"Cuidadoras" en varios lugares (tabla de usuarios del sistema, catálogo de
-> especialidades) — reemplazado por "Asistente"/"Asistente Integral" en todo el documento,
-> regla del glosario obligatorio; (4) se agregó la sección "Landing page de reclutamiento"
-> (contenido de la página pública — perfiles buscados, beneficios — del original, que
-> no estaba condensada acá todavía); (5) queda fuera de alcance la Sección 8 del original
-> (comparativa de posicionamiento frente a la competencia) y la mención a explorar aval
-> institucional de terceros (Cruz Roja, AAGG) — son decisiones de negocio/marketing, no
+> Fuente: documento original de PRD de Reclutamiento (fuera del repositorio, v1.0, mayo 2026),
+> condensado para ejecución directa. Las entrevistas las agenda el Responsable del reclutamiento
+> y las hace el Entrevistador. Quedan fuera de alcance la comparativa de posicionamiento frente a
+> la competencia y el aval institucional de terceros: son decisiones de negocio/marketing, no
 > generan código.
 
 ## Objetivo
 
 La prestadora necesita mínimo 20 Asistentes Integrales certificados antes del lanzamiento
 comercial. El proceso de incorporación completo tarda 4-7 días hábiles por persona — el
-reclutamiento arranca en Etapa 0/1, antes que el resto del producto.
+reclutamiento arranca antes que el resto del producto.
 
-## Nota de stack (discrepancia ya resuelta)
+## Nota de stack
 
-La discrepancia que este documento anotaba —Supabase desde el arranque contra un primer paso
-por MySQL en Railway— quedó resuelta hace tiempo y a favor de lo primero: **nunca hubo
-MySQL**, todo se construyó sobre Supabase (ver `docs/claude_history.md`). Este documento
-aporta el detalle funcional del reclutamiento —qué campos se piden, qué etapas de
-verificación hay, qué pantallas de Panel—, no decisiones de infraestructura.
+Todo el reclutamiento está construido sobre Supabase. Este documento aporta el detalle
+funcional —qué campos se piden, qué etapas de verificación hay, qué pantallas de Panel—, no
+decisiones de infraestructura.
 
-**Dónde vive el formulario de postulación (corregido 2026-08-13):** en la empresa que va a
+**Dónde vive el formulario de postulación:** en la empresa que va a
 contratar al Asistente, no en la página pública de Careonys, que le vende software a esas
 empresas y no toma postulaciones (`PRD_01_Sitio_Web.md` §3).
 
@@ -37,10 +27,7 @@ por mensaje de texto hasta que haya una decisión de negocio explícita.
 
 ## Proceso de Incorporación de Asistentes
 
-**Nota de nomenclatura (corregida 2026-07-10):** dentro del Panel, uso interno, se llama
-"Proceso de Incorporación de Asistentes". El nombre anterior quedó retirado por completo, de
-cualquier contexto interno o público (ver glosario de `CLAUDE.md`) — no reintroducirlo ni
-siquiera como "concepto general".
+Dentro del Panel, uso interno, se llama "Proceso de Incorporación de Asistentes".
 
 **Las etapas no son fijas: cada Prestadora define las suyas**, con su clave, su nombre y su
 orden, en Configuración › El cuidado (tabla `etapas_incorporacion_asistente`). Cada Asistente
@@ -65,7 +52,7 @@ etapa.
 la etapa como venía haciéndolo; lo que cambió es que ahora queda guardado lo que miró. La
 comparación automática de las dos caras —la «comparación por IA» que pedía el PRD original— es
 tratamiento de dato biométrico y **no está construida**: falta el documento legal del que salga la
-advertencia al Asistente, y falta elegir proveedor (`SECURITY.md`, decisiones pendientes).
+advertencia al Asistente, y falta elegir proveedor (`docs/PLAN_HASTA_PRODUCCION.md`, paso 69).
 
 ### Referencias laborales — cómo quedó construido
 
@@ -83,7 +70,8 @@ código (`configuracion_referencias_laborales`). Se cambia desde Configuración,
 puede ser cero, y el tope es cinco porque más de cinco no se pueden cargar.
 
 **Y no bloquea nada.** Si faltan verificadas, la pantalla lo dice y aclara que incorporar igual a
-esa persona lo decide la Prestadora: el producto avisa, no prohíbe (`celtatech/CLAUDE.md` §7).
+esa persona lo decide la Prestadora: el producto avisa, no prohíbe (`celtatech/CLAUDE.md`, «El
+riesgo legal»).
 
 **Están afuera de la lista de etapas**, por lo mismo que las dos fotos: las claves de las etapas las
 inventa cada Prestadora y ninguna se puede nombrar desde el código.
@@ -106,18 +94,19 @@ La pantalla de verificación muestra, arriba de todo, cuánto lleva hecho el asp
 
 | Rol | Quién | Acceso |
 |---|---|---|
-| Aspirante | Postulante sin verificar | Formulario público + estado de su postulación |
-| Asistente | Verificada e incorporada al Padrón | App + panel propio |
+| Superadmin | Rol técnico de CeltaTech | No entra por el Panel; da soporte sólo con permiso de acceso |
 | Admin_prestadora | Gestión de negocio de la prestadora | Panel de administración completo |
-| Cliente | Contrata el servicio | Portal de seguimiento |
-| Coordinador | Rol operativo | Gestión de su zona |
+| Coordinador | Rol operativo | Panel, gestión de su zona |
+| Asistente | Verificada e incorporada al Padrón | Aplicación del Asistente |
+| Cliente | Contrata el servicio | Aplicación del Cliente |
+
+El postulante no tiene rol ni cuenta: deja su postulación y recibe la cuenta de Asistente cuando
+la Prestadora lo incorpora.
 
 ## Landing page de reclutamiento (sitio público)
 
 Cara pública de la campaña de incorporación — comunica a quién busca la prestadora, qué ofrece y
-cómo es el proceso, antes de llevar al aspirante al formulario. Corrección de terminología
-respecto del documento fuente: donde el original dice "Cuidadoras" se usa "Asistentes
-Integrales" (glosario de `CLAUDE.md`).
+cómo es el proceso, antes de llevar al aspirante al formulario.
 
 **Perfiles buscados** (checklist visual, no un formulario todavía): Asistente Integral /
 Auxiliar de Enfermería / Enfermero/a profesional / Kinesiólogo/a / Acompañante Terapéutico/a
@@ -151,7 +140,7 @@ entrevista.
 | Localidad/Barrio | texto | Sí | |
 | Nacionalidad | select | No | |
 | CUIL | numérico | No | |
-| Género | select (Femenino/Masculino/No binario/Prefiero no contestar) | Sí | |
+| Género | select (opciones que carga cada Prestadora; ver «Cómo quedó construido») | Sí | |
 | Foto de perfil | file (imagen) | Sí | detectar rostro antes de aceptar |
 
 ### Sección B — Situación fiscal
@@ -162,19 +151,17 @@ entrevista.
 | Tipo de registro AFIP | No inscripto / Monotributo social / Monotributista / Responsable inscripto | Sí |
 | Obra social | texto libre | No |
 
-Regla de negocio (bloqueante para asignación, no solo informativa): ser monotributista es
-obligatorio para recibir guardias. Si el aspirante no está inscripto, el sistema **bloquea
-la asignación** hasta que Admin_prestadora confirme el alta de monotributo — este es el mismo campo
-`tipo_vinculo`/monotributo de `asistentes`, no una tabla nueva.
+Hoy ningún control del sistema impide asignar guardias a quien no es monotributista. Si eso
+avisa o bloquea es una decisión abierta (`docs/PLAN_HASTA_PRODUCCION.md`, pasos 67 y 68); la
+regla de la empresa es que el producto avisa y no prohíbe (`celtatech/CLAUDE.md`, «El riesgo
+legal»). El dato es el mismo campo `tipo_vinculo` de `asistentes`, no una tabla nueva.
 
 ### Sección C — Formación y certificaciones
 
 Profesión/especialidad (checkboxes múltiples — mismo catálogo `especialidades` de cada
 Prestadora; el original enumeraba: Asistente Integral, Acompañante Terapéutico/a, Enfermero/a, Auxiliar de
 Enfermería, Asistente Gerontológico/a, Kinesiólogo/a, Fonoaudiólogo/a, Psicólogo/a,
-Terapista Ocupacional, Nutricionista, Voluntario/a, Otro — mínimo 1 obligatorio;
-corregido respecto del documento fuente, que decía "Cuidadora Domiciliaria" — término
-prohibido por el glosario de `CLAUDE.md`). Estudios/cursos y experiencia
+Terapista Ocupacional, Nutricionista, Voluntario/a, Otro — mínimo 1 obligatorio). Estudios/cursos y experiencia
 laboral: formularios dinámicos (múltiples entradas), opcionales pero mejoran ranking.
 Referencias laborales: nombre/apellido/teléfono, 0 a 5. Cuántas verificadas se esperan es
 configuración de cada Prestadora, y dos es el valor con el que nace — ver «Referencias laborales —
@@ -207,13 +194,13 @@ se llaman igual que en `asistentes`: una postulación aprobada se convierte en A
 nombres tienen que coincidir.
 
 **Las listas de opciones no están escritas en la pantalla.** Género, nacionalidad, tipo de
-registro ante AFIP y los cinco subgrupos de experiencia clínica viven en `opciones_postulacion`,
-una fila por opción y por Prestadora, y el backend las entrega en `GET
-/api/publico/:prestadora/postulacion-asistente/opciones`. Las opciones que este documento enumera
-más arriba son lo que se esperaba encontrar, no lo que el sistema impone: **cada Prestadora carga
-las suyas, y la tabla nace vacía.** El catálogo completo de experiencia clínica quedó en el
-documento fuente, que no está en el repositorio, así que no se sembró ninguno: inventarlo sería
-inventar contenido de negocio.
+registro ante AFIP y los cinco subgrupos de experiencia clínica van en `opciones_postulacion`,
+una fila por opción y por Prestadora. Las opciones que este documento enumera más arriba son lo
+que se esperaba encontrar, no lo que el sistema impone: **cada Prestadora carga las suyas.** La
+tabla está vacía, y hoy sólo la lee el Panel para rotular las especialidades de una postulación
+(`panel/src/hooks/useOpcionesPostulacion.js`). El catálogo completo de experiencia clínica está
+en el documento fuente, que no está en el repositorio, así que no se sembró ninguno: inventarlo
+sería inventar contenido de negocio.
 
 **La mayoría de edad no son dieciocho escritos en el código.** La edad mínima para trabajar es un
 valor legal y vive en `escalas_legales` (`tipo = 'edad_minima_para_trabajar'`), resuelta a la
@@ -221,14 +208,15 @@ fecha de la postulación y en la jurisdicción de la Prestadora. Si no hay escal
 rechaza a nadie por edad**: la postulación entra con su fecha de nacimiento y quien la revisa
 decide.
 
-Lo que comprueba el servidor antes de guardar —edad, forma del CUIL y que corresponda al
-documento, que lo elegido esté en el catálogo, que las listas traigan renglones completos, que la
-distancia sea una distancia y que el punto del mapa viaje entero— está en
-`backend/src/utils/postulacionCompleta.js`, escrito una sola vez y probado aparte. Los motivos de
-rechazo salen como claves y ninguno nombra una tabla ni una columna.
+La entrada pública de postulaciones y la comprobación del servidor antes de guardar —edad, forma
+del CUIL y que corresponda al documento, que lo elegido esté en el catálogo, que las listas
+traigan renglones completos, que la distancia sea una distancia y que el punto del mapa viaje
+entero— no están en el producto: están en el estante,
+`celtatech/Codigos-utiles/postulacion-desde-un-sitio-publico/`, con su documento de cómo se
+vuelven a poner.
 
-**Falta la pantalla.** Dónde vive el formulario público es una decisión abierta — ver
-`docs/PLAN_HASTA_PRODUCCION.md`, sección «Reclutamiento».
+**Faltan la pantalla y la entrada del backend.** Dónde vive el formulario público y el
+formulario en sí son los pasos 65 y 66 de `docs/PLAN_HASTA_PRODUCCION.md`.
 
 ## Panel de administración — sección Postulantes
 
@@ -247,7 +235,7 @@ verificación, aprobadas y rechazadas.
   se sepa clasificarlas.
 
 **Falta un sexto número, las aprobadas sin monotributo**, y no se construyó porque todavía no está
-decidido si eso avisa o bloquea — ver `docs/PLAN_HASTA_PRODUCCION.md`, sección «Reclutamiento». Un
+decidido si eso avisa o bloquea — ver `docs/PLAN_HASTA_PRODUCCION.md`, paso 67. Un
 número que diga «bloqueadas» antes de esa decisión adelanta la respuesta.
 
 ### La tabla y los filtros — cómo quedaron construidos
@@ -328,7 +316,7 @@ se le carga el informe (`panel/src/components/EntrevistaDePostulacion.jsx`,
   configuración de cada Prestadora (`prestadoras.videollamada_base_url`), y el producto le agrega
   un nombre de sala imposible de adivinar. Vacía esa dirección, la pantalla del Panel avisa que va
   a haber que comunicarse por otro medio y la del postulante también: el producto avisa, no
-  prohíbe (`celtatech/CLAUDE.md` §7).
+  prohíbe (`celtatech/CLAUDE.md`, «El riesgo legal»).
 - **El día y la hora se convierten en un solo lugar**
   (`panel/src/lib/momentoDeLaEntrevista.js`), porque el campo del navegador habla en la hora de
   quien mira y el backend guarda un instante universal. Su prueba hace ir y volver sin fijar ningún

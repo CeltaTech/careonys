@@ -68,7 +68,6 @@ cual. La redacción final la aprueba el Desarrollador cuando se escriba el manua
 | Postulaciones, Cerrar la entrevista | Cerrarla deja constancia de que ya pasó. No cambia el estado de la postulación: eso se decide aparte. |
 | Asistentes, Datos bancarios | Los informa el Asistente desde su aplicación. |
 | Asistentes, Simulador, Cobertura de sus ausencias | La cobertura no es una estimación: es lo que ya se pagó para reemplazar a esta persona en los últimos {meses} meses, repartido por mes. Sale igual bajo los dos vínculos, porque se le paga a quien la reemplazó. |
-| Mapa del Padrón | Los Asistentes con el domicilio ubicado aparecen acá. |
 
 ## Entrada al Panel
 

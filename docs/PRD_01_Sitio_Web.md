@@ -1,19 +1,12 @@
 # PRD_01 — La página pública de Careonys
 
-> **Reescrito entero el 2026-08-13.** Cierra el pendiente `#104`. Lo que había acá describía
-> el sitio de una empresa de cuidados —con formularios para pedir un cuidador y para
-> postularse a trabajar— y ese no es este producto. Era un documento viejo, de cuando el
-> proyecto era el sitio de una sola empresa, antes de que el software pasara a ser de
-> CeltaTech. El texto anterior no se conserva acá: quien quiera verlo lo tiene en el
-> historial de git.
->
 > Nada de lo que sigue está construido. Hoy en `careonys.com` hay una sola página que dice
 > "En construcción" (ver §7).
 
 ## 0. Qué vende esta página, y qué no
 
 **Careonys le vende software de gestión a empresas que cuidan personas.** No le vende cuidado
-a nadie. `CLAUDE.md` §1 lo dice con todas las letras: Careonys *"no presta servicios de
+a nadie. La sección «Qué es Careonys» de `CLAUDE.md` lo dice con todas las letras: Careonys *"no presta servicios de
 cuidado"* — es la herramienta con la que las empresas del rubro administran su operación.
 
 De ahí salen las dos frases que ordenan todo el resto:
@@ -82,7 +75,7 @@ Son límites duros, no preferencias.
    empresa que lo va a contratar, no acá.
 3. **Ningún dato real de nadie.** Ni el nombre de una Prestadora, ni un caso de éxito con
    nombre y apellido, ni una captura de pantalla con un paciente, un domicilio o un dato de
-   salud verdadero (`CLAUDE.md` §6). Toda captura se saca del Sandbox, con datos inventados.
+   salud verdadero (`celtatech/CLAUDE.md`, sección «Seguridad, privacidad y auditoría»). Toda captura se saca del Sandbox, con datos inventados.
    Si alguna vez se publica el caso de un cliente, hace falta su permiso por escrito, y aun
    así las capturas siguen siendo de datos inventados.
 4. **El nombre del producto no se escribe a mano en ningún archivo.** Sale de
@@ -94,12 +87,12 @@ Son límites duros, no preferencias.
    "para traducirla después".
 6. **No se promete lo que el producto no hace.** A la fecha de hoy no existen: el cobro
    automático a los Clientes de la Prestadora, la aplicación instalable desde las tiendas de Android y Apple, y
-   los niveles de inteligencia artificial 3 a 5 (`PLAN_HASTA_PRODUCCION.md`). Lo que está a medias se
+   los niveles de inteligencia artificial 3 a 5. Lo que está a medias se
    cuenta como lo que es o no se cuenta.
 
 ## 4. Las páginas
 
-Cinco, y ninguna de más. Cada una tiene un trabajo; si no se le encuentra el trabajo, no va.
+Seis, en cinco apartados —privacidad y términos van juntas—, y ninguna de más. Cada una tiene un trabajo; si no se le encuentra el trabajo, no va.
 
 ### 1. Portada (`/`)
 Arriba de todo, en una sola frase, qué es y para quién. Debajo, el problema concreto que
@@ -159,20 +152,21 @@ de cada una y todo lo que se guarda ahí lleva la Prestadora como dato obligator
 
 ## 7. Cómo está hecha hoy, y con qué se sigue
 
-**Estado real, comprobado el 2026-08-13.** Existe `sitio-web/`, con siete archivos:
-una sola página estática (`index.html`), un armador (`construir.mjs`) que reemplaza los
-marcadores del nombre del producto, el ícono que toma del Panel, y la carpeta `dist/` que se
-publica. No hay React, ni Vite, ni ninguna dependencia. Se publica a mano:
+**Estado real.** Existe `sitio-web/`: una sola página estática (`index.html`), su propia copia
+de `src/config/identidadProducto.js`, y un armador (`construir.mjs`) que arma la carpeta `dist/`
+con los marcadores del nombre del producto ya reemplazados y el ícono que toma del Panel. No hay
+React, ni Vite, ni ninguna dependencia. Se publica solo, con cada push a `main` que cambie
+algo de `sitio-web/`, y corre lo mismo que se correría a mano:
 
 ```bash
 node sitio-web/construir.mjs && npx wrangler pages deploy sitio-web/dist --project-name=careonys-sitio
 ```
 
-**No está en el automatismo de publicación.** `publicar-pantallas.yml` cubre el Panel y las
-dos aplicaciones, y nada más (comprobado: sus rutas son `panel/`, `pwa-clientes/` y
-`pwa-asistentes/`). Mientras haya una sola página de obra no molesta; el día que el sitio
-tenga contenido que se actualice, publicar a mano es la forma segura de que una corrección se
-quede sin publicar.
+**Está en el automatismo de publicación.** `.github/workflows/publicar-pantallas.yml` vigila
+`sitio-web/` (`:32`) y lo publica en su propio trabajo, `publicar-sitio` (`:145-195`), en el
+proyecto `careonys-sitio` de Cloudflare Pages. Antes de subir comprueba que exista
+`dist/index.html` y que no haya quedado ningún marcador sin resolver; si falla cualquiera de
+las dos, no sube nada.
 
 **Con qué se construye el sitio de verdad.** El requisito es uno solo y no es negociable: el
 texto tiene que llegar ya escrito desde el servidor, para que los buscadores lo lean (§2).
@@ -183,16 +177,15 @@ publica, y no suma nada nuevo que aprender ni que mantener. La decisión anterio
 Next.js quedó sin efecto junto con el documento que la contenía; si se retoma, se retoma por
 un motivo nuevo y escrito.
 
-**Dos cosas para hacer junto con el sitio:** meterlo en el automatismo de publicación, y
-sacarle el `noindex` (§6).
+**Una cosa para hacer junto con el sitio:** sacarle el `noindex` (§6).
 
-## 8. La otra pregunta del pendiente #104: ¿y el sitio de cada Prestadora?
+## 8. ¿Y el sitio de cada Prestadora?
 
-El pendiente pedía decidir si el sitio que **sí** le habla a quien busca cuidado —el de cada empresa
+La pregunta es si el sitio que **sí** le habla a quien busca cuidado —el de cada empresa
 de cuidados, con sus servicios y su teléfono— es una función de Careonys, algo que cada
 empresa se arregla por su cuenta, o nada.
 
-**Respuesta (decidida por el Desarrollador el 2026-08-13): no es una función de Careonys,
+**Respuesta (decidida por el Desarrollador): no es una función de Careonys,
 pero tampoco queda librada al cliente.** La página con la que cada Prestadora se publicita
 —la que enlaza desde sus redes— se va a armar con **OctoBuilder**, el generador de páginas
 web de CeltaTech, que todavía está por construirse.
@@ -204,7 +197,7 @@ Por qué va afuera y no acá adentro:
 2. **Le sirve a cualquier cliente de CeltaTech, no solo a una empresa de cuidados.** Metido
    adentro de Careonys, solo lo podría usar quien tenga Careonys, y habría que rehacerlo para
    el producto siguiente. Es exactamente lo que la arquitectura de la empresa manda evitar:
-   OctoBuilder ya figura como producto propio en `celtatech/docs/POLITICA_DE_MODULOS.md:95-97`,
+   OctoBuilder ya figura como producto propio en `celtatech/docs/POLITICA_DE_MODULOS.md:93-95`,
    junto con OctoCMS y OctoCRM, y esos productos se comparten entre sí por
    una interfaz de verdad, no copiándose el código.
 3. **Cada empresa va a querer su diseño, su dominio y su correo.** Como función suelta metida

@@ -1,7 +1,7 @@
 # PRD_04_05 — PWA de Servicio (Asistentes y Clientes)
 
-> Fuente: documento único original de especificación (histórico) Parte O. Etapas 3 (PWA Asistentes) y 4 (PWA
-> Clientes) del build order.
+> Fuente: documento único original de especificación, Parte O. Cubre la PWA de Asistentes y la
+> PWA de Clientes.
 
 ## Objetivo
 
@@ -9,7 +9,7 @@ La PWA de servicio es donde se hace real la propuesta de valor: reporte diario c
 en tiempo real, Certificado de Aptitud en el perfil, alertas inteligentes. La usan Asistentes durante la guardia y
 Clientes para seguir el servicio.
 
-## Stack (Etapas 3 y 4)
+## Stack
 
 ```
 Framework:  React 18 + Vite + Vite PWA Plugin
@@ -20,14 +20,14 @@ GPS:        navigator.geolocation API (browser nativo)
 Cámara:     MediaDevices API (browser nativo)
 IA Nivel 1 y 2: Anthropic API — modelo configurable en backend/src/config/modeloIA.js (ver AI_PROMPTS.md)
 Push:       Web Push API + Service Worker (Android) / Apple Push (iOS 16.4+)
-Informe Obra Social: sin librería de PDF — informe virtual dentro del Panel, impresión vía window.print() + @media print (Etapa 5, ver docs/claude_history.md 2026-07-21)
+Informe Obra Social: sin librería de PDF — informe virtual dentro del Panel, impresión vía window.print() + @media print
 ```
 
 Limitación conocida: notificaciones push en Safari/iOS son limitadas incluso desde iOS 16.4.
 No es un bug a resolver en el MVP — está documentado como limitación de la estrategia
 PWA-first, monitorear en producción antes de considerar migrar a app nativa con Capacitor.
 
-## PWA del Asistente (Etapa 3)
+## PWA del Asistente
 
 ### Login
 Usuario y contraseña (`src/context/AuthContext.jsx`): se entra con el nombre de usuario, único
@@ -36,7 +36,7 @@ dispositivo lo permite) una vez que el usuario ya inició sesión con contraseñ
 el acceso guardado (`src/lib/accesoGuardado.js`). Primer login: completar perfil si faltan datos.
 Sesión persistente — no pedir login en cada visita.
 
-### Mis Guardias (pantalla principal)
+### Guardias (pantalla principal)
 Lista de guardias asignadas (próximas + historial). Cada card: paciente, dirección, fecha,
 hora, modalidad, estado. Botón prominente "CHECK-IN" en la guardia activa o próxima.
 
@@ -47,10 +47,11 @@ hora, modalidad, estado. Botón prominente "CHECK-IN" en la guardia activa o pr�
 3. Registra `checkin_lat`/`checkin_lng`/`checkin_at` en `guardias`.
 4. Valida distancia contra el domicilio del paciente:
    - Dentro del rango → check-in exitoso, guardia pasa a `activa`.
-   - Fuera del rango → advertencia + opción de confirmar igual, con nota automática al coordinador
-     (no bloquear el check-in — el Asistente puede tener razones legítimas, ver regla de
-     "nunca penalizar" en `CLAUDE.md`).
-5. Notificación push al Cliente: "Tu Asistente [nombre] llegó al domicilio".
+   - Fuera del rango → el check-in se registra igual y queda una nota automática para el
+     coordinador (`mensajes_asistente`): la distancia nunca bloquea el check-in, porque el
+     Asistente puede tener razones legítimas. La tolerancia en metros es configuración de cada
+     Prestadora.
+5. Notificación push al Cliente: "Llegó el Asistente: [nombre] llegó al domicilio de [Paciente]".
 
 ### Guardia Activa
 Timer desde el check-in. Datos del paciente (nombre, patologías, medicación habitual, notas
@@ -86,7 +87,7 @@ bien —su acto ya está guardado— y la fila queda sin marca de notificada.
 
 **El detalle no viaja por el canal público.** El mensaje inmediato dice que hay una emergencia, de
 qué guardia y de cuándo; el texto que escribió el Asistente es información sensible
-(`celtatech/CLAUDE.md` §6) y se lee entrando al Panel, en «Emergencias»
+(`celtatech/CLAUDE.md`, «Seguridad, privacidad y auditoría») y se lee entrando al Panel, en «Emergencias»
 (`panel/src/pages/EmergenciasEnGuardia.jsx`, `backend/src/routes/panelEmergencias.js`). Ahí se
 marca atendida con una nota de qué se hizo, y queda con nombre y hora.
 
@@ -133,7 +134,7 @@ botón diez veces. Lo provisorio se muestra y no se guarda.
 **Y se apaga solo al salir de la pantalla.** Un teléfono escuchando adentro de la casa de otra
 persona no queda encendido porque se tocó «volver».
 
-### Mi Perfil
+### Perfil
 Foto, datos personales, tipo de vínculo, matrícula, la carpeta de papeles con el Certificado de
 Aptitud, y el historial de evaluaciones recibidas.
 
@@ -160,48 +161,51 @@ papel», cada uno con razón según su propia cuenta.
 tenerlo vencido, y se dice distinto. La baja que le da la Prestadora gana sobre el calendario: un
 certificado dado de baja aparece así aunque la fecha no haya llegado.
 
-## Alertas tempranas de ausencia (diseño, no implementado — ver pendiente #20 de `docs/PLAN_HASTA_PRODUCCION.md`)
+## Alertas tempranas de ausencia
 
-Requerimiento definido por el Desarrollador el 2026-07-12, corrigiendo el diseño original de
-Módulo 6 (Continuidad de guardia), que trataba "marcar ausente" como una acción manual de un
-Coordinador. Dos reglas de fondo, todavía sin implementar:
+Dos reglas de fondo:
 
 1. **Detección automática de ausencia** — la ausencia se marca sola cuando no se registra el
-   check-in dentro de un margen de tiempo esperado después del inicio de la guardia. El botón
-   manual ("marcar ausente") queda como excepción/override para casos que el sistema no
-   detectó solo, no como el mecanismo principal.
+   check-in dentro del margen que configura cada Prestadora después del inicio de la guardia
+   (`configuracion_ausencia_automatica`): un trabajo programado la revisa cada cinco minutos,
+   marca la guardia ausente y abre el incidente (`backend/src/utils/ausenciaAutomatica.js`). El
+   botón manual ("marcar ausente") queda como excepción para casos que el sistema no detectó
+   solo, no como el mecanismo principal.
 2. **Cadena de alertas tempranas, previa a que la ausencia se concrete** — para gestionar un
    relevo con tiempo y minimizar el impacto en el Paciente, en vez de reaccionar recién cuando
-   la ausencia ya es un hecho. Arquitectura pensada como **fuentes de alerta enchufables**, no
-   una lista cerrada de casos — el Desarrollador fue explícito en que deben poder incorporarse
-   fuentes nuevas en el futuro sin rediseñar el mecanismo. Dos fuentes ya identificadas:
-   - **GPS de salida del domicilio**: cada Asistente tiene un medio de transporte habitual (a
-     pie, colectivo, auto, etc.) hacia cada Paciente; con eso se calcula un tiempo de viaje
-     estimado (vía API de mapas) y una "hora de salida esperada" (hora de inicio de guardia
-     menos tiempo de viaje). Si pasado un margen configurable por prestadora el GPS del
-     Asistente muestra que sigue en su domicilio, se dispara la alerta.
-   - **Aviso telefónico previo**: el Asistente llama avisando que, por algún motivo, no va a
-     concurrir — con un checklist de motivos (para estadísticas), no texto libre.
+   la ausencia ya es un hecho. Las fuentes de alerta son **enchufables**, no una lista cerrada
+   de casos: cada alerta queda en `alertas_tempranas_guardia` con su fuente, y las fuentes viven
+   en un solo lugar (`backend/src/utils/fuentesAlertaTemprana.js`). Hoy son cuatro:
+   - **Aviso telefónico previo**: el Coordinador registra que el Asistente llamó avisando que no
+     va a concurrir, con el motivo elegido de una lista (`motivos_aviso_previo_guardia`) y no
+     texto libre; la IA sugiere el motivo a partir de lo que se anotó
+     (`backend/src/utils/motivoSugeridoDelAviso.js`).
+   - **Aviso de demora del propio Asistente**, desde su aplicación.
+   - **Llegada tardía calculada** y **sin aviso ni salida**: las detecta solas
+     `backend/src/utils/revisarLlegadasDemoradas.js` a partir de la salida marcada y del tiempo
+     de viaje estimado.
 
-   Ante cualquier alerta temprana (de cualquier fuente), se dispara una escalada automatizada
-   configurable por prestadora (mensajes automáticos, llamada telefónica, etc.) — el mismo
-   concepto de niveles de escalada que ya existe para incidentes de relevo
-   (`configuracion_escalada_relevo`), pero debe poder arrancar **antes** del incidente de
-   ausencia, no solo después de que ya se concretó. Intervención humana minimizada al máximo,
-   no eliminada: el Coordinador siempre recibe la notificación de la anomalía y puede
-   intervenir en la resolución. Buena oportunidad de uso de IA — cruzar con
-   `docs/PLAN_HASTA_PRODUCCION.md` si corresponde.
+   Ante cualquier alerta temprana, el Coordinador recibe la notificación y se le insiste según la
+   premura, con un coordinador de respaldo si no responde, todo configurable por Prestadora
+   (`backend/src/utils/revisarNotificacionesCoordinador.js`, `configuracion_escalada_coordinador`).
+   Intervención humana minimizada al máximo, no eliminada: el Coordinador siempre puede
+   intervenir en la resolución.
+
+   **Falta** el seguimiento por GPS de que el Asistente sigue en su domicilio y el medio de
+   transporte habitual de cada Asistente hacia cada Paciente: hoy el tiempo de viaje se estima
+   con una velocidad media única y en línea recta. Son decisiones abiertas del paso 74 de
+   `docs/PLAN_HASTA_PRODUCCION.md`.
 
 ### Notificaciones
 Nueva guardia asignada, mensajes del coordinador, recordatorios.
 
-## PWA del Cliente (Etapa 4)
+## PWA del Cliente
 
 ### Login
 Igual que en la PWA de Asistentes de arriba: usuario y contraseña, con la opción del acceso
 guardado (huella o rostro vía WebAuthn, si el dispositivo lo permite). Sesión persistente.
 
-### Mis Pacientes
+### Pacientes
 Un solo paciente → va directo a su pantalla. Varios → lista con estado actual de cada uno.
 
 ### Pantalla del Paciente
@@ -240,13 +244,13 @@ ni la alerta, ni su nivel. Quien llama cuenta lo que quiere contar.
 Ver `AI_PROMPTS.md` para el prompt de sistema exacto y las reglas de persistencia/
 notificación — no repetir acá para que no diverjan las dos fuentes.
 
-## Informe para Obra Social (Etapa 5 — rediseñada, ver `docs/claude_history.md` 2026-07-21)
+## Informe para Obra Social
 
 Se construye exclusivamente en el Panel de Administración (no en esta PWA, el Cliente no
 participa del proceso ni accede al informe). Es un informe virtual dentro del Panel, con impresión vía `window.print()` +
 `@media print` — sin librería de PDF y sin asumir una única obra social: cada Paciente
-registra su propia `obra_social` (texto libre) y `numero_afiliado` (esquema vigente en
-`supabase/migrations/`).
+registra la suya como una Ficha del Directorio de Personas (`pacientes.obra_social_persona_id`)
+y su `numero_afiliado`.
 
 **Planilla de asistencia**: nombre del Paciente, obra social y número de afiliado, mes de
 prestación, nombre del Asistente por guardia, campo de firma del Asistente, campo de firma
@@ -255,7 +259,7 @@ del afiliado/familiar (manual — firma digital queda para una etapa futura, no 
 **Resumen mensual**: consolidado de guardias del período, totales agrupados por el valor
 real de `guardias.modalidad` que la Prestadora haya usado — sin catálogo cerrado de códigos
 (S4/F6/etc.), decisión explícita para no hardcodear una convención de una obra social en
-particular (CLAUDE.md §2/§7).
+particular («Nunca hardcodear», en «Las reglas de desarrollo» de `celtatech/CLAUDE.md`).
 
 El informe solo puede guardarse/imprimirse después de que un usuario de la Prestadora con el
 permiso `validar_informe_obra_social` (backend de `permisos_prestadora`) lo valide. Al validar,

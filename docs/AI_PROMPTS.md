@@ -89,9 +89,9 @@ Alcanza a los campos que lee una persona: "descripcion" (la lee el Cliente) y
 registrar el chequeo en un log de auditoría separado si se necesita trazabilidad, pero no
 en la tabla `alertas`.
 
-**Cuánto se mira y a quién se le avisa: lo decide cada Prestadora, no el código.** Desde el
-2026-08-11 las cinco interruptores viven en la tabla `configuracion_alertas_ia` y se tocan desde el
-Panel, en Configuración › Avisos:
+**Cuánto se mira y a quién se le avisa: lo decide cada Prestadora, no el código.** Los cinco
+valores viven en la tabla `configuracion_alertas_ia` y se tocan desde el Panel, en
+Configuración › Avisos:
 
 - **N** — cuántos reportes se leen en cada revisión (de 1 a 30; de fábrica, 7).
 - **Palabras clave** — las que hacen que la revisión no espere a la noche y se haga en el momento.
@@ -100,7 +100,7 @@ Panel, en Configuración › Avisos:
 
 Lo único que **no** se configura: una alerta roja siempre le llega al Coordinador. Si la revisión
 encontró algo urgente, alguien de la Prestadora tiene que enterarse, y eso no se puede apagar. La
-pantalla lo dice con todas las letras en vez de mostrar un interruptor trabado.
+pantalla no ofrece ese interruptor.
 
 De fábrica (`configuracion_alertas_ia`): la alerta roja va al Coordinador y al Cliente; la
 amarilla, sólo al Coordinador.
@@ -126,18 +126,24 @@ En portugués: forma impersonal, y "você" solo donde no quede otra; nunca "tu",
 Vale para todo texto en prosa que se devuelva, incluido el que va adentro de un campo JSON.
 ```
 
+**El ejemplo «Conviene revisar la presión» no es un modelo a seguir.** Es una construcción
+dubitativa, de las que prohíben las pautas de redacción de `celtatech/CLAUDE.md`, sección «Las
+reglas de desarrollo». Figura arriba porque es el texto que hoy tiene el código.
+
 Debajo del bloque, cada prompt agrega **qué campos suyos lee una persona**, para que el
 modelo sepa a dónde apunta la regla.
 
-**Los archivos que lo llevan**, que son todos los que hablan con el modelo salvo la sugerencia del motivo de un aviso, que devuelve una opción de la lista y ningún texto (todos en
-`backend/src/utils/`):
+**Los archivos que lo llevan** (todos en `backend/src/utils/`). Hay nueve prompts, y tres no lo
+llevan porque no devuelven prosa: la sugerencia del motivo de un aviso
+(`motivoSugeridoDelAviso.js`), que devuelve una opción de la lista, y la lectura de localidades y
+la de géneros de `importacionIA.js`, que devuelven nombres oficiales y códigos de un catálogo:
 
 | Archivo | Qué campos lee una persona |
 | --- | --- |
 | `reporteIA.js` (Nivel 1) | `incidentes`, `observaciones`, `alimentacion.descripcion` |
 | `alertasIA.js` (Nivel 2) | `descripcion` (el Cliente), `detalle_coordinador` |
-| `iaPlantillasWhatsapp.js` (dos prompts) | `cuerpo`, `huecos`, `nota` (lo lee y lo aprueba quien coordina antes de mandarlo a Meta) |
-| `importacionIA.js` (dos prompts) | `motivo`, `advertencias` (en pantalla del Panel) |
+| `iaPlantillasWhatsapp.js` (dos prompts: redactar y corregir) | `cuerpo` (la persona que recibe el mensaje), `nota` (quien coordina) |
+| `importacionIA.js` (dos de sus cuatro prompts: viabilidad del archivo y mapeo de columnas) | `motivo`, `advertencias` (en pantalla del Panel) |
 
 **Los prompts tampoco se escriben tuteando al modelo.** Un prompt redactado con "marcá",
 "respondé", "podés" lo empuja a contestar en ese mismo registro. Van en forma impersonal.
@@ -148,14 +154,14 @@ defensa es que la instrucción se lo diga.
 
 ## Cómo se lee lo que devuelve el modelo
 
-Los cinco prompts piden un JSON "sin texto adicional". **El modelo igual no siempre lo manda
+Los nueve prompts piden un JSON "sin texto adicional". **El modelo igual no siempre lo manda
 pelado**, y eso se comprobó contra la API real el 2026-08-18 (no es una precaución teórica).
 Aparecieron tres formas de falla, y las tres hacían que la función cayera en su respuesta de
 emergencia sin ningún error visible: el reporte se guardaba sin estructurar, la alerta no se
 generaba, el mensaje de WhatsApp se escalaba al Coordinador y la planilla pedía mapeo a mano.
 
 1. **El JSON viene envuelto en un bloque de código** (` ```json … ``` `). Le pasó a tres de los
-   cinco prompts en la primera prueba.
+   prompts en la primera prueba.
 2. **La respuesta trae primero un bloque de razonamiento** y el texto después. Mirar solo el
    primer bloque devolvía vacío.
 3. **La respuesta se corta por llegar al tope de tokens** y el JSON queda por la mitad. Le
@@ -166,16 +172,16 @@ Por eso ningún archivo hace `JSON.parse` del texto crudo. Todos leen la respues
 saca la envoltura si la hay y devuelve `null` si de verdad no se pudo interpretar. Un prompt
 nuevo se lee con esa función, no a mano.
 
-## Reglas comunes a ambos niveles
+## Reglas comunes a todos los prompts
 
 - Nunca loguear el texto libre del reporte ni el JSON de salida en logs de servidor
   accesibles fuera del equipo técnico — contiene datos de salud del paciente
-  (`celtatech/CLAUDE.md` §6).
+  (`celtatech/CLAUDE.md`, sección «Seguridad, privacidad y auditoría»).
 - El texto que devuelve la IA no tutea a quien lo lee — ver "Cómo trata la IA a quien la lee".
 - La respuesta se lee con `jsonDeRespuestaIA()`, nunca con `JSON.parse` directo — ver "Cómo se
   lee lo que devuelve el modelo".
 - El prompt de sistema completo (no solo el nombre del "nivel") debe versionarse junto con
   el código — si se cambia el prompt, es un cambio de comportamiento del producto, no un
   detalle de implementación menor.
-- Ambos niveles usan Anthropic API, con el modelo de `backend/src/config/modeloIA.js`. La API
+- Todos los prompts usan Anthropic API, con el modelo de `backend/src/config/modeloIA.js`. La API
   key vive en variable de entorno, nunca en el código ni en el repo.

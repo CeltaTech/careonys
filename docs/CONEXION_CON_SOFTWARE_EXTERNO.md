@@ -5,11 +5,14 @@ y cobranzas de una Prestadora, y tiene que avisarle a Careonys lo que pasó de s
 falta saber nada de Careonys por dentro.
 
 **Qué se necesita antes de empezar.** Dos datos que entrega la Prestadora, y que ella misma saca
-de la pantalla de Configuración → Facturación:
+del Panel, en Configuración → Prestadora, de la sección «Su software de facturación» o de «Su
+software de cobranzas». Esta última aparece sólo cuando la casilla «El seguimiento de la cobranza
+es de Careonys» está sin marcar:
 
 1. **La dirección**, que ya viene armada con el identificador de esa Prestadora adentro.
-2. **El secreto**, que ella escribe en esa misma pantalla. Es el único que lo conoce: Careonys lo
-   guarda y no lo vuelve a mostrar nunca, ni a ella. Si se pierde, se carga uno nuevo.
+2. **El secreto**, que ella escribe en el campo «Clave» de esa misma sección, con 32 caracteres
+   como mínimo. Es el único que lo conoce: Careonys lo guarda y no lo vuelve a mostrar nunca, ni a
+   ella. Si se pierde, se carga uno nuevo.
 
 **Mientras la Prestadora no haya cargado el secreto, no entra ningún pedido.** La puerta contesta
 que no está autenticado, y eso es lo correcto: sin secreto no hay forma de probar que el pedido es
@@ -234,10 +237,11 @@ inscripta esa persona y bajo qué condición es asunto de quien factura.
 
 | Código | Qué quiere decir | Qué hacer |
 |---|---|---|
-| `200` | El pedido entró. Mirar los renglones de la respuesta | Nada |
+| `200` | El pedido entró. Al avisar lo facturado, mirar los renglones de la respuesta. En la puerta de cobranza contesta `{ "ok": true }`, con `"repetido": true` si todo ya estaba anotado. Al mandar el comprobante, `{ "guardado": true }` | Nada |
 | `400` | El pedido estaba firmado bien, pero algún dato está mal. La respuesta dice cuál | Corregir el dato y reenviar |
 | `401` | No se pudo probar que el pedido sea auténtico | Ver más abajo |
 | `404` | En la puerta de cobranza, ese Cliente no es de esta Prestadora. Al mandar el comprobante, esa factura no es de esta Prestadora | Revisar el identificador |
+| `500` | Careonys no pudo anotar el aviso | Reenviar el mismo pedido más tarde |
 
 Al avisar lo facturado no hay `404`: una factura que no es de esta Prestadora se contesta
 adentro de la respuesta, en su renglón, igual que si no existiera. Al mandar el comprobante, la

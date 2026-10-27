@@ -2,7 +2,7 @@
 
 > Este PRD **extiende el Padrón de Asistentes del Panel, no es un módulo separado** — vive en la misma navegación, mismo rol de acceso
 > (Admin_prestadora; Coordinador solo lectura de su zona, sin acceso a montos — ver
-> `SECURITY.md`).
+> `docs/SECURITY.md`).
 
 ## Por qué existe este módulo
 
@@ -25,12 +25,12 @@ versionados por fecha y nunca escritos en el código.
 | 4 | Tabla versionada de valores legales (`escalas_legales`) |
 | 5 | Notificaciones de vencimientos de documentación (catálogo configurable por prestadora) |
 
-## Glosario nuevo (sumar al de `CLAUDE.md`)
+## Glosario nuevo (sumar a `celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md`, donde todavía no figura)
 
 | Término | Definición |
 |---|---|
 | Escala legal | Un valor normativo versionado (tope, valor de referencia, etc.), nunca hardcodeado |
-| Guardia de cobertura | Guardia cubierta por un Asistente sustituto mientras el titular está ausente |
+| Guardia de cobertura | Guardia que hace otro Asistente mientras quien la tenía asignada está ausente |
 
 ## Modelo de datos
 
@@ -54,9 +54,9 @@ Están separadas porque las reglas de acceso de la base filtran filas y no colum
 Legajo del Asistente no hay forma de exigir un permiso para un dato y no para el resto.
 
 Los vencimientos de documentación del Asistente (Monotributo, ART, Seguro, Certificado de
-Antecedentes Penales u otros que agregue cada prestadora) ya no viven como columnas de
-`asistentes` — pasaron a las tablas `tipos_documento_asistente`/`documentos_asistente`,
-configurables por prestadora sin límite de cantidad.
+Antecedentes Penales u otros que agregue cada prestadora) viven en las tablas
+`tipos_documento_asistente`/`documentos_asistente`, configurables por prestadora sin límite de
+cantidad.
 
 Regla que más se rompe (repetida a propósito): toda lectura de `escalas_legales` filtra por
 `vigencia_desde <= fecha_del_hecho AND (vigencia_hasta IS NULL OR vigencia_hasta >=
@@ -69,14 +69,22 @@ Flujo:
 
 1. Se registra una ausencia (`ausencias`, tipo enfermedad/accidente/licencia/no justificada).
 2. Si hay certificado médico, se sube a Storage (`certificado_url`).
-3. Sistema identifica guardias afectadas por el rango de fechas (`guardias_afectadas`).
-4. Coordinador asigna un Asistente sustituto por guardia afectada. El turno sigue teniendo una
-   sola persona —la que lo hace—, así que la guardia pasa a nombre del sustituto y queda escrito
-   en `guardias_cobertura` a quién le tocaba, con qué causa y con qué `costo_adicional`.
-5. Esas guardias las cobra quien las hizo, con su propio valor, que puede no ser el del titular,
-   y al titular no le suman nada.
-6. Al cerrar la ausencia (`fecha_fin`), se recalculan `dias_computados`.
-7. Se notifica a Coordinador y Cliente del cambio de Asistente asignado.
+3. El sistema toma las guardias del Asistente que caen en el rango de fechas de la ausencia
+   (la columna `guardias_afectadas` las anota).
+4. El Coordinador elige otro Asistente por cada turno fijo de esas guardias, y uno para las
+   sueltas; la elección queda en `coberturas_de_ausencia`. A ese Asistente se le asigna como
+   turno y lo acepta o lo rechaza una sola vez, por todos los días. Hasta que acepta, las
+   guardias siguen a nombre de quien las tenía.
+5. Al aceptar, cada guardia pasa a su nombre —el turno sigue teniendo una sola persona, la que lo
+   hace— y queda escrito en `guardias_cobertura` a quién le tocaba, con qué causa y con qué
+   `costo_adicional`. Lo que ya empezó no se toca; si la ausencia cambia de fechas, el trabajo
+   programado vuelve a aplicar la cobertura, y una ausencia sin fecha de fin se cubre hasta
+   pasado mañana.
+6. Esas guardias las cobra quien las hizo, con su propio valor, que puede no ser el de quien las
+   tenía, y a éste no le suman nada.
+7. Al cerrar la ausencia (`fecha_fin`), se recalculan `dias_computados`.
+8. Al aceptar la cobertura, se notifica a Coordinador y Cliente del cambio de Asistente asignado
+   (`backend/src/utils/avisoCambioDeAsistente.js`).
 
 Durante la licencia, el Asistente no tiene guardias: las que caen en esos días no aparecen en su
 aplicación, no puede abrirlas ni empezarlas y no le llega su recordatorio. Quedan con el

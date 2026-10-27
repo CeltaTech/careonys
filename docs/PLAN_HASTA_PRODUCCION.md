@@ -94,13 +94,13 @@ apagar, y por dónde sale el mensaje.
   - **Penalizar al titular y compensar al relevo son dos opciones separadas** que cada
     Prestadora usa o no. Hoy no existen.
 - `docs/PRD_04_05_App_Servicio.md:179` — que las alertas se puedan enchufar y sacar.
-- `docs/PRD_06_WhatsApp_IA.md:121` y `:126` — **[ya construido]** el catálogo de mensajes, los reintentos y a quién se escala.
-- `docs/PRD_06_WhatsApp_IA.md:26` — **[ya construido]** que el número y la cuenta de WhatsApp sean de cada Prestadora.
+- `docs/PRD_06_WhatsApp_IA.md:112` y `:116` — **[ya construido]** el catálogo de mensajes, los reintentos y a quién se escala.
+- `docs/PRD_06_WhatsApp_IA.md:19` — **[ya construido]** que el número y la cuenta de WhatsApp sean de cada Prestadora.
 
 Y colgada de ese último, una decisión de seguridad que sólo tiene sentido si el número es de cada
 Prestadora:
 
-- `docs/PRD_06_WhatsApp_IA.md:105` — **[ya construido]** que las credenciales de Meta queden donde ni el rol técnico las lea.
+- `docs/PRD_06_WhatsApp_IA.md:98` — **[ya construido]** que las credenciales de Meta queden donde ni el rol técnico las lea.
 
 ### 4. La marca, el sitio y dónde viven los archivos
 
@@ -118,7 +118,7 @@ No es una decisión sino un documento completo puesto a su nombre. Si no es suyo
 revisar es el documento entero, no un renglón.
 
 - `docs/PRD_07_Modalidad_Match.md:3` — el planteo entero de la modalidad Match. **La parte de cómo se cobra el contacto no se contesta acá: ya está escrita en la sección de la modalidad Match**, más abajo.
-- `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:176` — qué se hace si cae un proveedor.
+- `docs/PLAN_CONTINUIDAD_PROVEEDORES.md` — qué se hace si cae un proveedor.
 
 ### 6. Cómo se elige construir, que no se ve en ninguna pantalla
 
@@ -128,7 +128,7 @@ tres o no vale ninguna.
 - `docs/claude_history.md:371` — que lo propio del producto no quede atado a la plataforma de base de datos. Construido sólo en parte: la lógica de negocio vive en disparadores de Postgres y los secretos en Supabase Vault.
 - `docs/claude_history.md:382` — que la arquitectura se elija pensando en que dure, no en lo más rápido de hacer.
 - `docs/claude_history.md:337` — que la empresa tenga que poder operar con poca gente.
-- `docs/claude_history.md:395` — que el nivel visual del producto tenga que superar al de la competencia.
+- `docs/claude_history.md:432` — que el nivel visual del producto tenga que superar al de la competencia.
 
 ### 7. Sueltas, que no se agrupan con ninguna otra
 
@@ -724,14 +724,8 @@ Prestadora, que es lo que quedó construido allá.
 acá.** Lo que falta para arrancarlo es la aprobación de ese plan y las respuestas de los pasos de
 abajo.
 
-**Y lo que se carga son cuatro niveles que no se mezclan**, según el glosario:
-`celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md`. El **Servicio** es el acuerdo entero; la
-**Prestación**, cada cosa adentro con su precio y sus propios días y horarios; la **Guardia**, el
-cuidado a cubrir con sus días y su horario, que puede ser una franja acotada o las 24 horas los 7
-días; y el **turno de guardia**, la parte que cubre una Asistente hasta que le entrega las
-responsabilidades a quien la releva o al Cliente. **Lo pactado se carga al nivel de la
-Prestación**: un renglón puede ir de 00:00 a 24:00 y ningún turno puede. Repartir la guardia en
-turnos es trabajo de quien coordina.
+**Lo que se carga son cuatro niveles que no se mezclan** —Servicio, Prestación, Guardia y turno de
+guardia—, y la tabla está en el paso 1 de `docs/PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`.
 
 **Contra qué choca este acto en el resto de la lista.** Son cinco, y ninguno se ve leyendo los
 títulos:
@@ -766,8 +760,8 @@ documento: qué dice el aviso cuando queda un horario pactado sin nadie que lo c
 «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta
 opcional, o dos, una por tiempo conocido y otra indefinida—.
 
-**25. Usted** — Y dos que aparecieron al escribir la escala de cuatro niveles, las dos sobre lo
-guardado:
+**25. Usted** — Y dos sobre lo guardado, que salen de los cuatro niveles del paso 1 de
+`docs/PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`:
 
 - **La tabla `guardias` guarda turnos**, no guardias: cada fila lleva una Asistente, un día, un
   horario y su check-in y su check-out. El nivel de la guardia completa, el período que se reparte
@@ -1241,21 +1235,25 @@ trabajo:
 **Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
 la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.
 
-**54. Usted** — Los siete carteles que esperan su texto. Tres de ellos ya tienen el texto o el
-molde escrito en el `.docx` y lo único que falta es confirmarlo.
+**54. Usted** — Los seis carteles que esperan su texto, cuyo detalle está en
+`docs/CARTELES_DEL_PANEL.md`. Las fichas 2, 6 y 9 ya tienen el texto o el molde escrito en el
+`.docx` y lo único que falta es confirmarlo.
 
-**55. Usted** — Las dos preguntas que usted dejó escritas en el `.docx` y que siguen sin
-contestar: qué es un selector, y si alguna pantalla dice «La Prestadora».
+**55. Usted** — La pregunta que usted dejó escrita en el `.docx` junto a la ficha 26: si alguna
+pantalla dice «La Prestadora». Sí lo dicen; el dato está en esa ficha de
+`docs/CARTELES_DEL_PANEL.md`, y el relevamiento completo en `docs/NOMBRAR_A_LA_PRESTADORA.md`. La
+otra pregunta, qué es un selector, era de la fila 4, un cartel que ya no está en el código.
 
-**56. Usted** — El cartel que quedó parado porque no ubicó la situación. Va con la pantalla
-delante.
+**56. Usted** — El cartel que quedó parado porque no ubicó la situación: la ficha 21 de
+`docs/CARTELES_DEL_PANEL.md`. Va con la pantalla delante.
 
 **57. Usted** — Los tres grupos que quedaron sin autorizar: los once textos que salen por ser una
 aclaración debajo de un casillero, los catorce que pasarían a formar parte de la etiqueta del
 casillero, y los nueve casilleros que están mal hechos y por eso necesitaban esa aclaración.
 
-**58. Usted** — Habilitar cambio de contraseña: qué carteles lleva se decide después de analizar el procedimiento
-y su lógica, no antes.
+**58. Usted** — Habilitar cambio de contraseña, que `docs/CARTELES_DEL_PANEL.md` deja afuera por
+su decisión: qué carteles lleva se decide después de analizar el procedimiento y su lógica, no
+antes.
 
 **60. Usted** — Tres cosas que son texto visible y no se pueden decidir de mi lado: la
 contradicción del certificado, donde dos textos dicen cosas distintas del mismo código; las cuatro
@@ -1275,9 +1273,7 @@ texto sale sale el cartel entero, donde vive la regla del casillero.
 reenvíen la invitación»—, donde el glosario ya la prohíbe. Termina cuando buscar esa palabra en el
 código y en la base da cero.
 
-**63.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
-pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de
-las dos aplicaciones y los de Habilitar cambio de contraseña. **Y todo el texto visible, contra
+**63.** Relevar lo que el pie de `docs/CARTELES_DEL_PANEL.md` anota como todavía sin relevar. **Y todo el texto visible, contra
 las cuatro fuentes** que fija `..\..\CLAUDE.md` §8: términos sin aprobar, giros locales,
 construcciones dubitativas como «Conviene…» e impersonalidades innecesarias. Cada cambio de redacción se le presenta para
 aprobar, uno por uno.
@@ -1417,7 +1413,7 @@ muestra en ningún lado.
 
 **92.** La advertencia. Qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca, no se contesta acá: es el paso 122, más abajo en esta misma lista.
 
-**93. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
+**93. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 27 archivos de `docs/legal/` no aparece ni una vez «ubicación» ni «GPS», y la ley 25.326 aparece sólo en `docs/legal/argentina.md`, sin nada sobre la ubicación. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
 
 **94.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
 
@@ -1944,9 +1940,9 @@ vigentes y qué hay que definir antes de redactar— está en
 
 **131. Usted** — Las escalas legales: la validación, y el valor que el código usa y no existe
 (`piso_minimo_indemnizacion`). En el mismo viaje va el
-texto de la advertencia sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
+texto de la advertencia sobre el abandono de persona: ninguno de los veintisiete documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
-`docs/legal/argentina.md:147`, que es otra cosa—, y la regla del producto prohíbe improvisarlo. Sin
+`docs/legal/argentina.md:146`, que es otra cosa—, y la regla del producto prohíbe improvisarlo. Sin
 documento no hay advertencia; la mecánica se construye igual, porque no depende de ninguna ley.
 
 ---

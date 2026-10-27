@@ -1,24 +1,17 @@
 # PRD_06 — WhatsApp Business (Meta) + agente de IA asistiendo
 
-> ✅ **ESTADO (actualizado 2026-07-14): implementado, desplegado y probado.** Este documento
-> registró el diseño acordado el 2026-07-11 con varios puntos centrales abiertos; el
-> 2026-07-13 el Desarrollador cerró los cinco puntos pendientes (A-E, ver sección de abajo) y
-> dio el kickoff de implementación el mismo día. El código (backend + Panel) se construyó,
-> se aplicó y verificó contra Supabase real, se desplegó y se probó en navegador real contra
-> el Panel desplegado. (El Panel se servía entonces desde Vercel; desde el 2026-07-31 vive en
-> Cloudflare Pages, en `gestion.careonys.com`.) Ver pendiente #9 de
-> `docs/PLAN_HASTA_PRODUCCION.md` (🟢 Resuelto 2026-07-13), que tiene el detalle completo de la
-> implementación y de lo explícitamente diferido (envío real a Asistentes y endurecimiento
-> de la puerta por la que Meta deja los mensajes, para producción, a probar con una prestadora real con cuenta Meta activa).
+> ✅ **ESTADO: construido.** El backend y el Panel tienen la conexión con WhatsApp de cada
+> Prestadora, las plantillas de mensaje con su trámite ante Meta, las notificaciones por evento,
+> la insistencia al Coordinador y la respuesta automática a los mensajes que entran. La puerta
+> por la que Meta deja los mensajes (`backend/src/routes/whatsappWebhook.js`) comprueba la firma
+> de Meta con el secreto de la aplicación de cada Prestadora, y sin ese secreto no acepta nada.
 
 ## Por qué existe este documento
 
-Cierra (cuando se apruebe) el pendiente #9: "proveedor de WhatsApp Business API, o decisión
-explícita de posponer la mensajería automática". La decisión de fondo ya tomada es **no usar
-un intermediario/BSP (Twilio, 360dialog, MessageBird)** — se integra directo contra la **Meta
-Cloud API de WhatsApp Business**, con un agente de IA ayudando en el proceso. Comparación de
-proveedores considerada y descartada: ver el intercambio del 2026-07-11 (no repetido acá,
-consultar el historial de la conversación si hace falta el detalle de precios/tradeoffs).
+Fija cómo usa Careonys WhatsApp Business. La decisión de fondo es **no usar un
+intermediario/BSP (Twilio, 360dialog, MessageBird)** — se integra directo contra la **Meta
+Cloud API de WhatsApp Business**. La IA ayuda a redactar y corregir las plantillas; los mensajes
+que entran los contesta una regla fija, sin IA (punto B).
 
 ## Decisiones ya tomadas (no rediscutir sin motivo nuevo)
 
@@ -36,23 +29,23 @@ consultar el historial de la conversación si hace falta el detalle de precios/t
      acceso) son un dato **por-`prestadora_id`**, nunca una credencial compartida a nivel de
      plataforma — mismo patrón multi-tenant que el resto del sistema, pero con una capa extra
      de cuidado por tratarse de credenciales de una cuenta externa de terceros con costo real
-     asociado (las reglas de seguridad de `celtatech/CLAUDE.md` §6 aplican con el mismo peso que a datos sensibles).
+     asociado (las reglas de `celtatech/CLAUDE.md`, sección «Seguridad, privacidad y auditoría», aplican con el mismo peso que a datos sensibles).
    - **Costo del envío de mensajes lo paga la prestadora**, no CeltaTech como
      plataforma — cada Prestadora factura directo con Meta desde su propia cuenta.
-3. **La configuración vive dentro de la pestaña "Servicios" del Módulo 8 (Configuración),
-   extendiendo la tabla/pestaña "Notificaciones" ya existente** (patrón evento → canal →
-   destinatarios que ya usa `configuracion_notificaciones` para email) — no una sección nueva
-   separada. Cada prestadora define, por evento, si además de (o en vez de) email quiere
-   WhatsApp saliente.
+3. **La configuración vive en el Panel, en Configuración → «Mensajes», en la tarjeta
+   «Notificaciones»** (patrón evento → canal → destinatarios de `configuracion_notificaciones`)
+   — no una sección nueva separada. Cada Prestadora define, por evento, si el aviso sale por
+   WhatsApp o por mensaje de texto; si esas vías están apagadas o fallan, sale por correo
+   (`notificarCoordinador`, en `backend/src/utils/whatsapp.js`).
 4. **El agente de IA asiste, pero la decisión final siempre queda en manos de la
    Prestadora** — no actúa de forma autónoma en un canal con peso legal. El Desarrollador
    pidió expresamente (2026-07-11) que el agente ayude en las tres tareas siguientes,
    "salvaguardando siempre las decisiones del licenciatario/prestador de servicios":
    - Redactar/proponer el texto de las plantillas de mensaje.
    - Gestionar (o guiar paso a paso) el trámite de aprobación de esas plantillas ante Meta.
-   - Participar en las respuestas de conversaciones entrantes (del suplente, franquero,
-     personal de emergencia, familiar) — siempre con la Prestadora en control de qué se
-     manda finalmente.
+   - Las respuestas a las conversaciones entrantes (del suplente, franquero, personal de
+     emergencia, familiar) no las da la IA: las da una regla fija con textos que la Prestadora
+     aprobó (punto B).
 
 ## Puntos A-E — decididos 2026-07-13
 
@@ -70,10 +63,10 @@ un mensaje que inicia el negocio (nadie del lado del suplente/franquero escribi�
 **Decisión (2026-07-13):**
 - La IA arma el borrador de la plantilla (texto + variables); la Prestadora lo revisa/
   edita y confirma; recién ahí se envía a Meta para aprobación. Estado visible en el Panel
-  (pestaña Servicios → Notificaciones) por plantilla: Borrador → Enviada a Meta → Aprobada /
-  Rechazada. Si Meta rechaza, la IA propone una corrección según el motivo del rechazo.
-- **Si un evento todavía no tiene ninguna plantilla aprobada, el mensaje se manda por el canal
-  que sí está disponible (email, `enviarEmailCoordinador`) y la responsabilidad de tomar
+  (Configuración → «Mensajes» → «Plantillas de mensaje») por plantilla: Borrador → Enviada a
+  Meta → Aprobada / Rechazada. Si Meta rechaza, la IA propone una corrección según el motivo del rechazo.
+- **Si un evento todavía no tiene ninguna plantilla aprobada, el mensaje se manda por la vía
+  siguiente que esté disponible (mensaje de texto o correo) y la responsabilidad de tomar
   acción pasa al Coordinador — el sistema y la IA tienen la responsabilidad de garantizar
   que ese mensaje efectivamente le llegue** (nunca queda silenciosamente sin canal ni sin
   avisar a nadie mientras se espera la aprobación de Meta).
@@ -87,14 +80,14 @@ El Desarrollador pidió las tres tareas (redacción, trámite de aprobación, pa
 respuestas entrantes) "y cualquier otra en la que pueda colaborar" — alcance deliberadamente
 abierto, pero eso es justamente lo que había que acotar antes de construir algo.
 
-**Decisión (2026-07-13):** ningún mensaje entrante puede quedar sin respuesta. El Coordinador
-siempre ve lo que la IA respondió (registrado en el sistema, no oculto). Para situaciones
-comunes la IA puede actuar de forma automática — pero cuáles cuentan como "comunes" es
-**configurable por prestadora, caso por caso**, no una lista fija igual para todas. Cuando la
-IA no tiene una respuesta clara, avisa de inmediato al Coordinador en vez de decidir "no sé"
-en silencio o dejar el mensaje sin atender. Backend de IA: mismo proveedor que Niveles 1-2
-(Anthropic/Claude, modelo en `backend/src/config/modeloIA.js`) salvo que la implementación encuentre un motivo
-técnico concreto para otra cosa.
+**Decisión:** ningún mensaje entrante queda sin atender, y la IA no contesta. Contesta una
+regla fija (`backend/src/utils/respuestaAutomaticaWhatsapp.js`) que manda, letra por letra, sólo
+los textos que la Prestadora escribió y aprobó en el Panel, en Configuración → «Mensajes» →
+«Respuestas preparadas», y nunca redacta. Lo que toca la salud, quien pide hablar con una persona,
+la conversación que ya atiende una persona y el mensaje sin respuesta aprobada pasan a una
+persona; una emergencia, además, se avisa al servicio de emergencias de esa jurisdicción. Ante la
+duda no contesta y deriva. La pieza que le pedía a la IA proponer respuestas está en el estante,
+en `celtatech/Codigos-utiles/respuestas-de-whatsapp-propuestas-por-ia/`.
 
 ### C. Almacenamiento de credenciales de Meta por prestadora
 
@@ -108,31 +101,24 @@ secreto de Vault por prestadora. El Panel nunca muestra el valor real una vez gu
 "configurado ✓" / botón "reemplazar", como un campo de contraseña). Solo el backend puede
 pedir el valor descifrado, y solo en el momento de mandar un mensaje — **ni siquiera
 `superadmin` puede leerlo en texto plano desde el Panel**, mismo criterio que sueldos/
-certificados médicos (`celtatech/CLAUDE.md` §6). Acceso para cargar/reemplazar el secreto
+certificados médicos (`celtatech/CLAUDE.md`, sección «Seguridad, privacidad y auditoría»). Acceso para cargar/reemplazar el secreto
 acotado a `admin_prestadora` de esa prestadora únicamente.
 
 ### D. Catálogo inicial de eventos con WhatsApp saliente
 
-Hoy el único evento con lógica de negocio real que podría disparar un mensaje es la escalada
-de relevo (`configuracion_escalada_relevo`) — y la lógica de escalada en sí (Parte 2 de
-Módulo 6) todavía no está construida, solo el CRUD de configuración (pendiente #8, ya
-resuelto).
+El primer evento con lógica de negocio que dispara un mensaje es la escalada de relevo
+(`configuracion_escalada_relevo`, que recorre `backend/src/utils/faseAutomaticaRelevo.js`).
 
-**Decisión (2026-07-13):** el catálogo inicial arranca con **dos** eventos, no solo uno:
-escalada de relevo, y **vencimientos de documentación** (hoy solo-email vía
-`revisarVencimientos`/`backend/src/utils/vencimientos.js`) — el Desarrollador confirmó que
-este segundo caso también es importante desde esta primera vuelta.
+**Decisión:** el catálogo de eventos vive en `backend/src/utils/catalogoAvisos.js` e incluye
+la escalada de relevo y los **vencimientos de documentación** (`vencimiento_documento_asistente`,
+que emite `revisarVencimientos` en `backend/src/utils/vencimientos.js` por `notificarCoordinador`).
 
 ### E. Insistencia si el Coordinador no responde a la notificación de una alerta temprana/incidente
 
-Requerimiento planteado por el Desarrollador el 2026-07-13, todavía sin diseño: hoy ni el
-"Registrar aviso previo" (alertas tempranas, pendiente #20) ni la detección automática de
-ausencia notifican a nadie — solo quedan visibles en la pantalla de Continuidad del Panel, a
-la espera de que el Coordinador la esté mirando (ver hallazgo del pendiente #21). Cuando se
-resuelva el canal de notificación (email ya disponible vía `enviarEmailCoordinador`,
-`backend/src/utils/email.js`, mismo patrón que `revisarVencimientos`; WhatsApp sujeto a este
-documento), el Coordinador tiene que recibir un reintento/insistencia si no responde a la
-primera notificación, con estas condiciones explícitas del Desarrollador:
+El aviso previo de una ausencia y el incidente que abre la detección automática de ausencia le
+llegan al Coordinador por `notificarCoordinador` (`backend/src/utils/whatsapp.js`): WhatsApp,
+mensaje de texto o correo, en ese orden, según lo que la Prestadora encendió. Si no responde a
+la primera notificación, recibe una insistencia, con estas condiciones del Desarrollador:
 
 - **El intervalo de reintento es configurable por prestadora** — nunca un número fijo en el
   código (regla «Nunca hardcodear», `celtatech/CLAUDE.md`), consistente con el resto de `configuracion_escalada_relevo`.
@@ -141,9 +127,8 @@ primera notificación, con estas condiciones explícitas del Desarrollador:
   aumenta cuanto más cerca está el momento en que el Paciente queda sin cobertura, no es un
   simple "cada X minutos" parejo durante todo el proceso.
 
-**Estructura en dos fases, aclarada por el Desarrollador el 2026-07-13** (esto resuelve la
-pregunta de diseño que había quedado abierta sobre si esto reutiliza o no
-`configuracion_escalada_relevo` — son dos fases secuenciales, no el mismo mecanismo):
+**Estructura en dos fases** (no reutiliza `configuracion_escalada_relevo`: son dos fases
+secuenciales, no el mismo mecanismo):
 
 1. **Fase de notificación/reacción humana:** se avisa al Coordinador (con la insistencia de
    intervalo variable descripta arriba) y se le da la oportunidad de resolver él mismo.
@@ -154,12 +139,12 @@ pregunta de diseño que había quedado abierta sobre si esto reutiliza o no
    automatización, el sistema no toma ninguna acción por su cuenta — queda todo en manos del
    Coordinador.
 
-**Coordinador alternativo (backup), requerimiento agregado el 2026-07-13:** cada prestadora
+**Coordinador alternativo (backup):** cada prestadora
 tiene que poder configurar, opcionalmente, un segundo Coordinador al que se le empiecen a
 mandar las notificaciones si el primero no respondió dentro del plazo configurado — antes de
 (o en paralelo a) que entre la fase automática del punto 2.
 
-**Decisión sobre el orden (2026-07-13):** el orden exacto entre "insistirle más al
+**Decisión sobre el orden:** el orden exacto entre "insistirle más al
 Coordinador 1", "pasar al Coordinador 2" y "entrar en fase automática" **depende de la
 premura de la situación** (cuánto tiempo falta para que el Paciente quede sin cobertura), y
 ese criterio de premura es a su vez **configurable por prestadora** — no un orden fijo igual
@@ -175,16 +160,14 @@ recorre ninguna secuencia —cada escalón mira su umbral y marca su propia fech
 `backend/src/utils/revisarNotificacionesCoordinador.js`—, y el Panel muestra el orden
 resultante mientras se configura (`panel/src/lib/ordenDeLaEscalada.js`).
 
-**¿Es útil la IA en esta fase?** Pregunta que hizo el Desarrollador el 2026-07-13 — recomendación
-de Claude Code, no una decisión tomada:
+**¿Es útil la IA en esta fase?** Recomendación de Claude Code, no una decisión tomada:
 - **Sí, para redactar el contenido de la notificación con contexto útil** (no solo "hay un
   problema", sino algo como "Guardia de [Paciente] sin cobertura en 40 min, sin Asistente
-  saliente, este Asistente ya avisó por temas de salud dos veces este mes") — esto ya estaba
-  cubierto por el punto 4 de este documento (el agente redacta/propone texto).
+  saliente, este Asistente ya avisó por temas de salud dos veces este mes"). Hoy la
+  notificación no la redacta la IA: sale de los textos del sistema.
 - **Sí, más adelante, para sugerir el mejor suplente disponible** en la fase automática en vez
   de seguir siempre el orden fijo de prioridad — pero esto depende de tener datos históricos
-  suficientes, por eso ya figura como diferido en `docs/PLAN_HASTA_PRODUCCION.md` ("IA Niveles 3-5 —
-  matching").
+  suficientes.
 - **No, para decidir si/cuándo pasar de una fase a la otra** (Coordinador 1 → Coordinador 2 →
   fase automática) — esto tiene que seguir siendo una regla determinística por tiempo, igual
   que ya hace `backend/src/utils/ausenciaAutomatica.js`, no un juicio de un modelo de IA: hay
@@ -193,16 +176,15 @@ de Claude Code, no una decisión tomada:
 
 ## Cómo se relaciona con el resto del proyecto
 
-- Pendiente #9 (`docs/PLAN_HASTA_PRODUCCION.md`) — remite acá para su cierre.
-- Pestaña "Servicios" del Módulo 8, ya construida (pendiente #8, resuelto) — este documento
-  extiende la pestaña "Notificaciones" del mismo módulo, no crea una pestaña nueva.
+- Configuración → «Mensajes» del Panel — este documento vive en sus tarjetas «Notificaciones»,
+  «Plantillas de mensaje», «Respuestas preparadas» y «Escalada a Coordinador».
 - Continuidad de guardia (`panel/src/pages/Continuidad.jsx`,
   `backend/src/utils/ausenciaAutomatica.js`) — el caso
   de uso principal que dispara el primer evento de WhatsApp saliente.
-- Pendiente #16 (`docs/PLAN_HASTA_PRODUCCION.md`) — auditoría de qué otras políticas deberían
-  parametrizarse por prestadora; este documento es un ejemplo puntual de ese mismo principio
-  aplicado a un canal de mensajería.
-- Memoria de sesión `project_ia_oportunidades` y `feedback_tres_relaciones_distintas` — este
-  caso vive en la relación "Asistente durante el trabajo" (punto 2 de esa nota), no en
-  reclutamiento ni en la relación con Clientes — las reglas de riesgo legal de `CLAUDE.md`
-  sobre subordinación aplican con todo su peso acá.
+- `docs/PLAN_HASTA_PRODUCCION.md`, sección «Configuración que todavía está escrita en el
+  código» — lo que falta parametrizar por Prestadora; este documento aplica ese mismo principio
+  a un canal de mensajería.
+- Este caso vive en la relación con el Asistente durante el trabajo, no en el reclutamiento ni
+  en la relación con Clientes — las reglas de riesgo legal sobre subordinación
+  (`celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`, sección «Riesgo legal») aplican con todo su
+  peso acá.

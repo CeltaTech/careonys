@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase, clienteDelPedido } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import {
   crearAsistenteDirecto, crearClienteImportado,
@@ -24,14 +24,18 @@ import { informeDeFilasNoCargadas } from '../utils/informeDeFilasNoCargadas.js';
 
 export const panelImportacionRouter = Router();
 
-// CON LA LLAVE MAESTRA, TODAVÍA. Esta ruta no entra con la credencial de quien pide, y no se puede
-// mudar sin tocar antes la base: no hay regla que le deje a quien tiene sesión dar de alta ni
-// cerrar un lote de `importaciones_prestadora` —sólo leerlo—, y las filas importadas nacen
-// pendientes de conformidad, que es justo lo que la base les esconde a todos en `asistentes`,
-// `clientes` y `pacientes`. Con la credencial de la persona, la revisión, la conformidad y el
-// rechazo no verían ninguna fila del lote. Por eso cada consulta sigue nombrando la Prestadora de
-// la sesión. La propuesta de configuración inicial es la excepción: sólo lee el catálogo de tipos
-// de Asistente, que la base ya le deja leer a quien tiene sesión, y lo lee con su credencial.
+// Con el trabajo de la Prestadora, porque las filas importadas nacen pendientes de conformidad, y
+// eso es justo lo que la base les esconde a todos en `asistentes`, `clientes` y `pacientes`: con la
+// credencial de quien pide, la revisión, la conformidad y el rechazo no verían ninguna fila del
+// lote. La base hace una sola excepción, y es este trabajo por su nombre
+// (`interno.es_la_importacion()`); cualquier otro sigue sin ver lo pendiente. El filtro por
+// Prestadora queda escrito igual, que es lo que hace todo el backend. La propuesta de configuración
+// inicial no pasa por acá: sólo lee el catálogo de tipos de Asistente, y lo lee con la credencial
+// de quien pide.
+//
+// El nombre es el que la base compara: cambiarlo acá sin cambiarlo allá deja la importación sin
+// ver lo que escribe.
+export const TRABAJO_DE_LA_IMPORTACION = 'importación de planillas';
 
 // Capa 1 (formato conocido): toda extensión que `xlsx` sabe leer (spreadsheets comunes +
 // texto delimitado) más `.sql` (dump estándar, ver intentarParsearSQL). Cualquier otra
@@ -217,157 +221,155 @@ panelImportacionRouter.post(
 
     const prestadoraId = req.usuarioPanel.prestadoraId;
 
-    const { data: lote, error: errorLote } = await supabase
-      .from('importaciones_prestadora')
-      .insert({
-        prestadora_id: prestadoraId,
-        usuario_id: req.usuarioPanel.id,
-        tipo,
-        archivo_nombre: archivoNombre || null,
-        filas_totales: filas.length,
-      })
-      .select()
-      .single();
-    if (errorLote) {
-      return res.status(500).json({ error: 'No se pudo registrar el lote de importación' });
-    }
-
-    const errores = [];
-    // Las filas cuya persona ya estaba en el Directorio: no se creó otra Ficha, se usó la que
-    // había. Viaja sólo el documento y el número de cliente, que la pantalla arma en una frase.
-    const vinculadas = [];
-    // Las filas que ya habían entrado en una importación anterior: no se volvieron a crear. Es lo
-    // que deja volver a importar la planilla corregida sin duplicar lo que sí se cargó.
-    const yaEstaban = [];
-    let creadas = 0;
-
-    // Las altas entran con la llave maestra, como el resto de esta ruta: nacen
-    // pendientes de conformidad, y la política restrictiva `oculta_pendientes_de_conformidad` se
-    // las esconde a quien importa en cuanto las escribe.
-
-    // Las localidades se resuelven antes de crear a nadie y todas juntas, para consultar el
-    // servicio de direcciones por tandas y no fila por fila. Lo que no se reconoce sin duda vuelve
-    // con su motivo en el archivo de no cargados: nadie elige a ojo cuál de dos localidades era.
-    let localidades;
-    try {
-      const [{ lugares, zonas }, pais] = await Promise.all([
-        catalogoDeLugares(supabase, prestadoraId),
-        paisDeLaPrestadora(supabase, prestadoraId),
-      ]);
-      localidades = await resolverLocalidades({
-        filas: filas.map((fila) => ({
-          domicilio: domicilioDesdeFila(fila, mapeo, tipo),
-          lugaresDeTrabajo: tipo === 'asistente' ? valorDesdeFila(fila, mapeo, 'dondeAceptaTrabajar', true) : [],
-        })),
-        lugares,
-        zonas,
-        herramientas: obtenerGeocodificador(pais),
-        proponer: reescritorDeLocalidades({ pais, prestadoraId }),
-        agregar: (lugar) => agregarLugar(supabase, {
-          prestadoraId,
-          pais,
-          nombre: lugar.nombre,
-          provincia: lugar.provincia,
-          municipio: lugar.municipio ?? lugar.departamento,
-          idOficial: lugar.idOficial,
-          localidadCensal: lugar.localidadCensal,
-          lat: lugar.lat,
-          lng: lugar.lng,
-        }),
-      });
-    } catch (error) {
-      console.error(`Importación ${lote.id}, localidades:`, error?.message ?? error);
-      localidades = filas.map(() => ({ partes: null, lugares: [], motivo: { codigo: 'falla_del_sistema' } }));
-    }
-
-    // Lo que ya resolvió la lectura de localidades no se vuelve a pasar como texto suelto.
-    const base = CAMPOS_DOMICILIO[tipo];
-    const camposDelDomicilio = new Set(CAMPOS_IMPORTACION[tipo].filter((campo) => campo.startsWith(base)));
-    camposDelDomicilio.add('dondeAceptaTrabajar');
-
-    // El género mal escrito se corrige antes de crear a nadie y todo junto: cada forma distinta una
-    // sola vez. Lo que no se resuelve con certeza queda como estaba y vuelve con su motivo.
-    const camposDeGenero = tipo === 'asistente' ? ['genero'] : ['generoContacto', 'generoPaciente'];
-    const generos = await resolverGeneros({
-      valores: filas.flatMap((fila) => camposDeGenero.map((campo) => valorDesdeFila(fila, mapeo, campo, false))),
-      proponer: lectorDeGeneros({ prestadoraId }),
-    });
-    const conGeneroLeido = (datos) => {
-      for (const campo of camposDeGenero) {
-        const leido = generos.get(String(datos[campo] ?? ''));
-        if (leido) datos[campo] = leido;
+    await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, async (db) => {
+      const { data: lote, error: errorLote } = await db
+        .from('importaciones_prestadora')
+        .insert({
+          prestadora_id: prestadoraId,
+          usuario_id: req.usuarioPanel.id,
+          tipo,
+          archivo_nombre: archivoNombre || null,
+          filas_totales: filas.length,
+        })
+        .select()
+        .single();
+      if (errorLote) {
+        return res.status(500).json({ error: 'No se pudo registrar el lote de importación' });
       }
-      return datos;
-    };
 
-    for (let i = 0; i < filas.length; i += 1) {
-      const fila = filas[i];
-      const { partes, lugares: lugaresDeTrabajo, motivo } = localidades[i];
-      if (motivo) {
-        errores.push({ fila: i + 1, motivo: motivo.codigo, opciones: motivo.opciones, hayMas: motivo.hayMas });
-        continue;
-      }
+      const errores = [];
+      // Las filas cuya persona ya estaba en el Directorio: no se creó otra Ficha, se usó la que
+      // había. Viaja sólo el documento y el número de cliente, que la pantalla arma en una frase.
+      const vinculadas = [];
+      // Las filas que ya habían entrado en una importación anterior: no se volvieron a crear. Es lo
+      // que deja volver a importar la planilla corregida sin duplicar lo que sí se cargó.
+      const yaEstaban = [];
+      let creadas = 0;
+
+      // Las localidades se resuelven antes de crear a nadie y todas juntas, para consultar el
+      // servicio de direcciones por tandas y no fila por fila. Lo que no se reconoce sin duda vuelve
+      // con su motivo en el archivo de no cargados: nadie elige a ojo cuál de dos localidades era.
+      let localidades;
       try {
-        if (tipo === 'asistente') {
-          const datos = { prestadoraId, usuarioPanelId: req.usuarioPanel.id, importacionId: lote.id, db: supabase };
-          for (const campo of CAMPOS_IMPORTACION.asistente) {
-            if (camposDelDomicilio.has(campo)) continue;
-            datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.asistente.has(campo));
-          }
-          datos.domicilioPartido = partes;
-          datos.lugares = lugaresDeTrabajo;
-          await crearAsistenteDirecto(conGeneroLeido(datos));
-        } else {
-          const datos = { prestadoraId, importacionId: lote.id, db: supabase };
-          for (const campo of CAMPOS_IMPORTACION.cliente) {
-            if (camposDelDomicilio.has(campo)) continue;
-            datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.cliente.has(campo));
-          }
-          datos.domicilioDelPacientePartido = partes;
-          datos.domicilioPaciente = valorDesdeFila(fila, mapeo, 'domicilioPaciente', false);
-          const alta = await crearClienteImportado(conGeneroLeido(datos));
-          if (alta.yaEstaba) {
-            yaEstaban.push({ fila: i + 1, numeroCliente: alta.numeroCliente });
-            continue;
-          }
-          if (alta.fichaQueYaExistia) {
-            vinculadas.push({
-              fila: i + 1,
-              documento: String(datos.documentoContacto ?? '').replace(/[\s.-]/g, ''),
-              numeroCliente: alta.numeroCliente,
-            });
-          }
-        }
-        creadas += 1;
+        const [{ lugares, zonas }, pais] = await Promise.all([
+          catalogoDeLugares(db, prestadoraId),
+          paisDeLaPrestadora(db, prestadoraId),
+        ]);
+        localidades = await resolverLocalidades({
+          filas: filas.map((fila) => ({
+            domicilio: domicilioDesdeFila(fila, mapeo, tipo),
+            lugaresDeTrabajo: tipo === 'asistente' ? valorDesdeFila(fila, mapeo, 'dondeAceptaTrabajar', true) : [],
+          })),
+          lugares,
+          zonas,
+          herramientas: obtenerGeocodificador(pais),
+          proponer: reescritorDeLocalidades({ pais, prestadoraId }),
+          agregar: (lugar) => agregarLugar(db, {
+            prestadoraId,
+            pais,
+            nombre: lugar.nombre,
+            provincia: lugar.provincia,
+            municipio: lugar.municipio ?? lugar.departamento,
+            idOficial: lugar.idOficial,
+            localidadCensal: lugar.localidadCensal,
+            lat: lugar.lat,
+            lng: lugar.lng,
+          }),
+        });
       } catch (error) {
-        // Acá no sirve `responderError`: esto es un renglón de un lote, y contestar cortaría la
-        // importación en la primera fila que falla, que es justo lo que no se quiere. Pero el
-        // texto crudo tampoco puede salir: este arreglo viaja al navegador en la respuesta de
-        // `/confirmar` y además se guarda en `importaciones_prestadora.errores`, así que un
-        // mensaje de Postgres quedaría escrito en la base y a la vista (`celtatech/CLAUDE.md`
-        // §6). Afuera va el motivo, que la pantalla traduce; el detalle, al registro.
-        console.error(`Importación ${lote.id}, fila ${i + 1}:`, error?.message ?? error);
-        errores.push({ fila: i + 1, motivo: error?.motivo ?? 'falla_del_sistema' });
+        console.error(`Importación ${lote.id}, localidades:`, error?.message ?? error);
+        localidades = filas.map(() => ({ partes: null, lugares: [], motivo: { codigo: 'falla_del_sistema' } }));
       }
-    }
 
-    // El lote se cierra nombrando la Organización, no sólo con su identificador: una escritura
-    // que sólo dice el número de la fila alcanza a cualquier Prestadora.
-    await supabase
-      .from('importaciones_prestadora')
-      .update({ filas_creadas: creadas, filas_error: errores.length, errores })
-      .eq('id', lote.id)
-      .eq('prestadora_id', prestadoraId);
+      // Lo que ya resolvió la lectura de localidades no se vuelve a pasar como texto suelto.
+      const base = CAMPOS_DOMICILIO[tipo];
+      const camposDelDomicilio = new Set(CAMPOS_IMPORTACION[tipo].filter((campo) => campo.startsWith(base)));
+      camposDelDomicilio.add('dondeAceptaTrabajar');
 
-    res.json({
-      ok: true,
-      importacionId: lote.id,
-      filasTotales: filas.length,
-      filasCreadas: creadas,
-      filasError: errores.length,
-      errores,
-      vinculadas,
-      yaEstaban,
+      // El género mal escrito se corrige antes de crear a nadie y todo junto: cada forma distinta una
+      // sola vez. Lo que no se resuelve con certeza queda como estaba y vuelve con su motivo.
+      const camposDeGenero = tipo === 'asistente' ? ['genero'] : ['generoContacto', 'generoPaciente'];
+      const generos = await resolverGeneros({
+        valores: filas.flatMap((fila) => camposDeGenero.map((campo) => valorDesdeFila(fila, mapeo, campo, false))),
+        proponer: lectorDeGeneros({ prestadoraId }),
+      });
+      const conGeneroLeido = (datos) => {
+        for (const campo of camposDeGenero) {
+          const leido = generos.get(String(datos[campo] ?? ''));
+          if (leido) datos[campo] = leido;
+        }
+        return datos;
+      };
+
+      for (let i = 0; i < filas.length; i += 1) {
+        const fila = filas[i];
+        const { partes, lugares: lugaresDeTrabajo, motivo } = localidades[i];
+        if (motivo) {
+          errores.push({ fila: i + 1, motivo: motivo.codigo, opciones: motivo.opciones, hayMas: motivo.hayMas });
+          continue;
+        }
+        try {
+          if (tipo === 'asistente') {
+            const datos = { prestadoraId, usuarioPanelId: req.usuarioPanel.id, importacionId: lote.id, db: db };
+            for (const campo of CAMPOS_IMPORTACION.asistente) {
+              if (camposDelDomicilio.has(campo)) continue;
+              datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.asistente.has(campo));
+            }
+            datos.domicilioPartido = partes;
+            datos.lugares = lugaresDeTrabajo;
+            await crearAsistenteDirecto(conGeneroLeido(datos));
+          } else {
+            const datos = { prestadoraId, importacionId: lote.id, db: db };
+            for (const campo of CAMPOS_IMPORTACION.cliente) {
+              if (camposDelDomicilio.has(campo)) continue;
+              datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.cliente.has(campo));
+            }
+            datos.domicilioDelPacientePartido = partes;
+            datos.domicilioPaciente = valorDesdeFila(fila, mapeo, 'domicilioPaciente', false);
+            const alta = await crearClienteImportado(conGeneroLeido(datos));
+            if (alta.yaEstaba) {
+              yaEstaban.push({ fila: i + 1, numeroCliente: alta.numeroCliente });
+              continue;
+            }
+            if (alta.fichaQueYaExistia) {
+              vinculadas.push({
+                fila: i + 1,
+                documento: String(datos.documentoContacto ?? '').replace(/[\s.-]/g, ''),
+                numeroCliente: alta.numeroCliente,
+              });
+            }
+          }
+          creadas += 1;
+        } catch (error) {
+          // Acá no sirve `responderError`: esto es un renglón de un lote, y contestar cortaría la
+          // importación en la primera fila que falla, que es justo lo que no se quiere. Pero el
+          // texto crudo tampoco puede salir: este arreglo viaja al navegador en la respuesta de
+          // `/confirmar` y además se guarda en `importaciones_prestadora.errores`, así que un
+          // mensaje de Postgres quedaría escrito en la base y a la vista (`celtatech/CLAUDE.md`
+          // §6). Afuera va el motivo, que la pantalla traduce; el detalle, al registro.
+          console.error(`Importación ${lote.id}, fila ${i + 1}:`, error?.message ?? error);
+          errores.push({ fila: i + 1, motivo: error?.motivo ?? 'falla_del_sistema' });
+        }
+      }
+
+      // El lote se cierra nombrando la Organización, no sólo con su identificador: una escritura
+      // que sólo dice el número de la fila alcanza a cualquier Prestadora.
+      await db
+        .from('importaciones_prestadora')
+        .update({ filas_creadas: creadas, filas_error: errores.length, errores })
+        .eq('id', lote.id)
+        .eq('prestadora_id', prestadoraId);
+
+      res.json({
+        ok: true,
+        importacionId: lote.id,
+        filasTotales: filas.length,
+        filasCreadas: creadas,
+        filasError: errores.length,
+        errores,
+        vinculadas,
+        yaEstaban,
+      });
     });
   }
 );
@@ -410,33 +412,35 @@ panelImportacionRouter.get(
   requierePermiso('importar_datos_masivos'),
   async (req, res) => {
     const prestadoraId = req.usuarioPanel.prestadoraId;
-    const { data: lote, error: errorLote } = await supabase
-      .from('importaciones_prestadora')
-      .select('*')
-      .eq('id', req.params.importacionId)
-      .eq('prestadora_id', prestadoraId)
-      .single();
-    if (errorLote || !lote) {
-      return res.status(404).json({ error: 'Lote de importación no encontrado' });
-    }
+    await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, async (db) => {
+      const { data: lote, error: errorLote } = await db
+        .from('importaciones_prestadora')
+        .select('*')
+        .eq('id', req.params.importacionId)
+        .eq('prestadora_id', prestadoraId)
+        .single();
+      if (errorLote || !lote) {
+        return res.status(404).json({ error: 'Lote de importación no encontrado' });
+      }
 
-    const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
-    const { data: filas, error: errorFilas } = await supabase
-      .from(tabla)
-      .select(lote.tipo === 'asistente'
-        ? 'id, nombre, dni, email, telefono'
-        : `id, plan, pacientes(id, ${FICHA_DOMICILIO})`)
-      .eq('importacion_id', lote.id)
-      .eq('prestadora_id', prestadoraId);
-    if (errorFilas) {
-      return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
-    }
+      const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
+      const { data: filas, error: errorFilas } = await db
+        .from(tabla)
+        .select(lote.tipo === 'asistente'
+          ? 'id, nombre, dni, email, telefono'
+          : `id, plan, pacientes(id, ${FICHA_DOMICILIO})`)
+        .eq('importacion_id', lote.id)
+        .eq('prestadora_id', prestadoraId);
+      if (errorFilas) {
+        return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
+      }
 
-    res.json({
-      lote,
-      filas: lote.tipo === 'asistente'
-        ? filas
-        : (filas ?? []).map((fila) => ({ ...fila, pacientes: conSusFichas(fila.pacientes) })),
+      res.json({
+        lote,
+        filas: lote.tipo === 'asistente'
+          ? filas
+          : (filas ?? []).map((fila) => ({ ...fila, pacientes: conSusFichas(fila.pacientes) })),
+      });
     });
   }
 );
@@ -451,55 +455,57 @@ panelImportacionRouter.post(
   requierePermiso('importar_datos_masivos'),
   async (req, res) => {
     const prestadoraId = req.usuarioPanel.prestadoraId;
-    const { data: lote, error: errorLote } = await supabase
-      .from('importaciones_prestadora')
-      .select('*')
-      .eq('id', req.params.importacionId)
-      .eq('prestadora_id', prestadoraId)
-      .single();
-    if (errorLote || !lote) {
-      return res.status(404).json({ error: 'Lote de importación no encontrado' });
-    }
-    if (lote.estado_conformidad !== 'pendiente') {
-      return res.status(409).json({ error: 'Este lote ya fue revisado' });
-    }
+    await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, async (db) => {
+      const { data: lote, error: errorLote } = await db
+        .from('importaciones_prestadora')
+        .select('*')
+        .eq('id', req.params.importacionId)
+        .eq('prestadora_id', prestadoraId)
+        .single();
+      if (errorLote || !lote) {
+        return res.status(404).json({ error: 'Lote de importación no encontrado' });
+      }
+      if (lote.estado_conformidad !== 'pendiente') {
+        return res.status(409).json({ error: 'Este lote ya fue revisado' });
+      }
 
-    const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
-    const { data: filas, error: errorFilas } = await supabase
-      .from(tabla)
-      .select('id')
-      .eq('importacion_id', lote.id)
-      .eq('prestadora_id', prestadoraId);
-    if (errorFilas) {
-      return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
-    }
+      const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
+      const { data: filas, error: errorFilas } = await db
+        .from(tabla)
+        .select('id')
+        .eq('importacion_id', lote.id)
+        .eq('prestadora_id', prestadoraId);
+      if (errorFilas) {
+        return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
+      }
 
-    const { error: errorUpdate } = await supabase
-      .from(tabla)
-      .update({ pendiente_conformidad: false })
-      .eq('importacion_id', lote.id)
-      .eq('prestadora_id', prestadoraId);
-    if (errorUpdate) {
-      return res.status(500).json({ error: 'No se pudo conformar el lote' });
-    }
+      const { error: errorUpdate } = await db
+        .from(tabla)
+        .update({ pendiente_conformidad: false })
+        .eq('importacion_id', lote.id)
+        .eq('prestadora_id', prestadoraId);
+      if (errorUpdate) {
+        return res.status(500).json({ error: 'No se pudo conformar el lote' });
+      }
 
-    if (lote.tipo === 'asistente') {
-      for (const fila of filas) {
-        try {
-          await activarVerificacionAltaAsistente(supabase, fila.id, prestadoraId, req.usuarioPanel.id);
-        } catch (error) {
-          console.error('Error activando verificación de alta tras conformar importación:', error.message);
+      if (lote.tipo === 'asistente') {
+        for (const fila of filas) {
+          try {
+            await activarVerificacionAltaAsistente(db, fila.id, prestadoraId, req.usuarioPanel.id);
+          } catch (error) {
+            console.error('Error activando verificación de alta tras conformar importación:', error.message);
+          }
         }
       }
-    }
 
-    await supabase
-      .from('importaciones_prestadora')
-      .update({ estado_conformidad: 'confirmada', revisada_en: new Date().toISOString(), revisada_por: req.usuarioPanel.id })
-      .eq('id', lote.id)
-      .eq('prestadora_id', prestadoraId);
+      await db
+        .from('importaciones_prestadora')
+        .update({ estado_conformidad: 'confirmada', revisada_en: new Date().toISOString(), revisada_por: req.usuarioPanel.id })
+        .eq('id', lote.id)
+        .eq('prestadora_id', prestadoraId);
 
-    res.json({ ok: true, filasConfirmadas: filas.length });
+      res.json({ ok: true, filasConfirmadas: filas.length });
+    });
   }
 );
 
@@ -512,46 +518,48 @@ panelImportacionRouter.post(
   requierePermiso('importar_datos_masivos'),
   async (req, res) => {
     const prestadoraId = req.usuarioPanel.prestadoraId;
-    const { data: lote, error: errorLote } = await supabase
-      .from('importaciones_prestadora')
-      .select('*')
-      .eq('id', req.params.importacionId)
-      .eq('prestadora_id', prestadoraId)
-      .single();
-    if (errorLote || !lote) {
-      return res.status(404).json({ error: 'Lote de importación no encontrado' });
-    }
-    if (lote.estado_conformidad !== 'pendiente') {
-      return res.status(409).json({ error: 'Este lote ya fue revisado' });
-    }
+    await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, async (db) => {
+      const { data: lote, error: errorLote } = await db
+        .from('importaciones_prestadora')
+        .select('*')
+        .eq('id', req.params.importacionId)
+        .eq('prestadora_id', prestadoraId)
+        .single();
+      if (errorLote || !lote) {
+        return res.status(404).json({ error: 'Lote de importación no encontrado' });
+      }
+      if (lote.estado_conformidad !== 'pendiente') {
+        return res.status(409).json({ error: 'Este lote ya fue revisado' });
+      }
 
-    const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
-    const { data: filas, error: errorFilas } = await supabase
-      .from(tabla)
-      .select('id')
-      .eq('importacion_id', lote.id)
-      .eq('prestadora_id', prestadoraId);
-    if (errorFilas) {
-      return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
-    }
+      const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
+      const { data: filas, error: errorFilas } = await db
+        .from(tabla)
+        .select('id')
+        .eq('importacion_id', lote.id)
+        .eq('prestadora_id', prestadoraId);
+      if (errorFilas) {
+        return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
+      }
 
-    // Las dos funciones nunca fallan: si algo queda sin limpiar lo anotan en el registro del
-    // servidor y devuelven `false`. Por eso el número que se cuenta acá es el de filas que se
-    // revirtieron **enteras**, no el de intentos que no explotaron.
-    let revertidas = 0;
-    for (const fila of filas) {
-      const limpia = lote.tipo === 'asistente'
-        ? await revertirAsistenteImportado(supabase, fila.id, prestadoraId)
-        : await revertirClienteImportada(supabase, fila.id, prestadoraId);
-      if (limpia) revertidas += 1;
-    }
+      // Las dos funciones nunca fallan: si algo queda sin limpiar lo anotan en el registro del
+      // servidor y devuelven `false`. Por eso el número que se cuenta acá es el de filas que se
+      // revirtieron **enteras**, no el de intentos que no explotaron.
+      let revertidas = 0;
+      for (const fila of filas) {
+        const limpia = lote.tipo === 'asistente'
+          ? await revertirAsistenteImportado(db, fila.id, prestadoraId)
+          : await revertirClienteImportada(db, fila.id, prestadoraId);
+        if (limpia) revertidas += 1;
+      }
 
-    await supabase
-      .from('importaciones_prestadora')
-      .update({ estado_conformidad: 'rechazada', revisada_en: new Date().toISOString(), revisada_por: req.usuarioPanel.id })
-      .eq('id', lote.id)
-      .eq('prestadora_id', prestadoraId);
+      await db
+        .from('importaciones_prestadora')
+        .update({ estado_conformidad: 'rechazada', revisada_en: new Date().toISOString(), revisada_por: req.usuarioPanel.id })
+        .eq('id', lote.id)
+        .eq('prestadora_id', prestadoraId);
 
-    res.json({ ok: true, filasRevertidas: revertidas });
+      res.json({ ok: true, filasRevertidas: revertidas });
+    });
   }
 );

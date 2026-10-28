@@ -3,7 +3,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { clienteDelPedido, enLaPrestadora, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import {
   crearCuentaConPerfil,
   crearAsistenteDirecto,
@@ -48,7 +48,8 @@ import {
 // `clienteDelPedido(req)`: la base sabe quién pide y le contesta sólo lo de su Prestadora, así que
 // ninguna consulta lleva el filtro de la Prestadora de la sesión. Cuando una fila nueva nombra a la
 // Prestadora, la toma de la fila que la base ya dejó ver —la postulación, el Cliente—.
-// Las pocas que siguen con la llave maestra dicen por qué, cada una en su lugar.
+// Lo que quien pide no puede hacer con su propio acceso va con el trabajo de la Prestadora, y
+// cada lugar dice por qué.
 
 export const panelCuentasRouter = Router();
 
@@ -232,9 +233,10 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     // `deshacerAlta` nunca falla: si tropieza lo anota en el registro del servidor y sigue.
     // Así el error que llega a la pantalla es siempre el problema de verdad, y la respuesta
     // se manda siempre — antes, un tropiezo del deshacer dejaba a la pantalla esperando.
-    // Con la llave maestra, por lo mismo que en el alta del Cliente: la fila de `usuarios` de
-    // la cuenta nueva no la ve quien da el alta.
-    await deshacerAlta(supabase, cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
+    // Con el trabajo de la Prestadora, porque la fila de `usuarios` de la cuenta nueva no la ve
+    // quien da el alta. La Prestadora es la de la postulación que la base ya dejó ver.
+    await enLaPrestadora(prestadoraId, 'alta de Asistente deshecha', (dbTrabajo) =>
+      deshacerAlta(dbTrabajo, cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) }));
     responderError(res, error);
   }
 });
@@ -247,15 +249,18 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), exigirConfiguracionInicial, async (req, res) => {
   const { nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, valor_hora, horas_semanales, modalidades } = req.body;
   try {
-    // Con la llave maestra: el permiso se le puede dar a quien coordina, y `asistentes` y
-    // `remuneraciones_asistente` sólo aceptan altas de la administración.
-    const { asistenteId } = await crearAsistenteDirecto({
-      nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
-      valor_hora, horas_semanales, modalidades,
-      prestadoraId: req.usuarioPanel.prestadoraId,
-      usuarioPanelId: req.usuarioPanel.id,
-      db: supabase,
-    });
+    // Con el trabajo de la Prestadora, porque el permiso se le puede dar a quien coordina, y
+    // `asistentes` y `remuneraciones_asistente` sólo aceptan altas de la administración. La
+    // Prestadora es la de la sesión, que `exigirOrganizacionActiva` ya comprobó.
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+    const { asistenteId } = await enLaPrestadora(prestadoraId, 'alta de Asistente', (dbTrabajo) =>
+      crearAsistenteDirecto({
+        nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
+        valor_hora, horas_semanales, modalidades,
+        prestadoraId,
+        usuarioPanelId: req.usuarioPanel.id,
+        db: dbTrabajo,
+      }));
     res.json({ ok: true, asistenteId });
   } catch (error) {
     responderError(res, error);

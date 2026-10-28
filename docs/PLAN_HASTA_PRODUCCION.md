@@ -361,10 +361,6 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   Pacientes de su Prestadora. Decidido: lo que carga un Coordinador que no es el asignado queda
   pendiente de aprobación, como la medicación (`PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`, paso 7).
   Cierre: construido junto con la asignación del Coordinador al Servicio.
-- **Ninguna pantalla ofrece la restricción.** Donde el país la exige es fija, y sólo CeltaTech la
-  mueve, desde `requerimientos_legales_de_hce_por_pais`; donde no, es decisión de la Prestadora y
-  la cambia su Administrador, cosa que la base ya permite. Cierre: la configuración de la
-  Prestadora la muestra, y sólo la deja cambiar donde el país no la exige.
 
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.

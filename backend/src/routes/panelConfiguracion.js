@@ -2534,6 +2534,34 @@ panelConfiguracionRouter.patch('/cierre-por-inactividad', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Restricción de HCE: si la información de salud la ve sólo quien atiende al Paciente ---
+//
+// Todo se hace con la sesión de quien pide. Cuánto rige y si el país la exige lo contesta la base
+// (`la_restriccion_de_hce_de_la_sesion`); quién puede cambiarla lo decide la RLS de
+// `configuracion_de_hce`, y el disparador de esa tabla niega apagarla donde el país la exige y
+// anota cada cambio con quién lo hizo.
+
+panelConfiguracionRouter.get('/restriccion-de-hce', async (req, res) => {
+  const { data, error } = await clienteDelPedido(req).rpc('la_restriccion_de_hce_de_la_sesion').single();
+  if (error) return responderError(res, error);
+  res.json({ rige: data.rige, la_exige_el_pais: data.la_exige_el_pais });
+});
+
+panelConfiguracionRouter.patch('/restriccion-de-hce', async (req, res) => {
+  const { rige } = req.body ?? {};
+  if (typeof rige !== 'boolean') {
+    return res.status(400).json({ error: 'Restricción de HCE inválida' });
+  }
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
+    .from('configuracion_de_hce')
+    .upsert({ prestadora_id: prestadoraId, restriccion_de_hce: rige }, { onConflict: 'prestadora_id' });
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
 // --- Escalada a Coordinador: respaldo + intervalos de insistencia según premura
 //     (punto 5 de docs/PRD_06_WhatsApp_IA.md) ---
 

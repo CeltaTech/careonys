@@ -16,8 +16,83 @@ export function ConfiguracionAccesos() {
   return (
     <div className="molde-pila">
       <TabPermisos />
+      <SaludVisibleParaTodos />
       <CierrePorInactividad />
     </div>
+  );
+}
+
+/* Si la información de salud de un Paciente la ve sólo quien lo atiende. La opción se muestra al
+   revés de como se guarda: «visible para todos» es la restricción de HCE apagada. Donde el país la
+   exige queda fija; eso lo contesta la base, y la base también niega apagarla ahí. */
+function SaludVisibleParaTodos() {
+  const { t } = useLocale();
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [visible, setVisible] = useState(false);
+  const [fija, setFija] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const resultado = await llamarApi('/restriccion-de-hce');
+      setVisible(!resultado.rige);
+      setFija(resultado.la_exige_el_pais);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    setGuardado(false);
+    try {
+      await llamarApi('/restriccion-de-hce', { method: 'PATCH', body: JSON.stringify({ rige: !visible }) });
+      setGuardado(true);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <section className="panel-tarjeta">
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        <div className="molde-formgrid">
+          <FormField
+            label={t.configuracion.salud_visible_para_todos}
+            name="salud_visible_para_todos"
+            type="select"
+            value={visible ? 'si' : 'no'}
+            disabled={fija}
+            onChange={(e) => { setVisible(e.target.value === 'si'); setGuardado(false); }}
+          >
+            <option value="si">{t.comun.si}</option>
+            <option value="no">{t.comun.no}</option>
+          </FormField>
+        </div>
+        {!fija && (
+          <div className="molde-acciones">
+            <Button onClick={guardar} disabled={guardando}>
+              {guardando ? t.comun.guardando : t.comun.guardar}
+            </Button>
+          </div>
+        )}
+      </EstadoLista>
+    </section>
   );
 }
 

@@ -15,7 +15,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 // resuelve se rechaza en vez de asumir una.
 //
 // El identificador público es el código de esa Prestadora: vive en
-// `configuracion_prestadora.dominio`, se le asigna solo al darla de alta, es único y no cambia
+// `configuracion_prestadora.dominio`, lo elige CeltaTech al darla de alta, es único y no cambia
 // nunca (`utils/direccionDeLaPrestadora.js`). No es una dirección web: también viaja en los enlaces
 // de los correos con un código de un solo uso. Se guarda siempre en minúsculas, que es por lo que
 // alcanza con comparar contra lo que llegó en minúsculas.

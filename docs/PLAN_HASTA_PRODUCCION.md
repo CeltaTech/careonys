@@ -379,10 +379,6 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.
 
-- **La cadena de `consultas_a_hce` tiene un hueco:** quien pueda borrar las últimas filas se lleva
-  también su resumen, y lo que queda sigue verificando bien. Cierre: el último resumen se guarda
-  además fuera de la base, y `verificar_cadena_de_consultas` lo compara. **Espera que el
-  Desarrollador decida dónde se guarda**, porque es crear algo afuera.
 - **El permiso de tabla de `authenticated` es entero en casi todas las tablas**, y lo que acota es
   la política. Donde una política le deja actualizar a una persona su propia fila, puede cambiarle
   cualquier columna si llama a la base directo con su sesión. En los avisos de demora ya está
@@ -437,7 +433,9 @@ Tres propiedades que no son opcionales:
   la historia clínica, y los arts. 13 a 17 le dan al paciente la vía para verlo.
 - **Integridad demostrable.** Ninguna norma usa la palabra «inmutable»: lo que exigen es poder
   demostrar que no fue alterado. Cada entrada encadenada con la anterior alcanza, y no depende de
-  ningún privilegio de base de datos.
+  ningún privilegio de base de datos. El último eslabón queda resguardado fuera de la base por la
+  copia de respaldo diaria (`backend/scripts/backup_a_buckets.mjs`): si alguien borra las últimas
+  entradas, la copia de esa noche las sigue teniendo.
 - **Disponible para el cliente cuando lo pida** (C5 OPS-15.01AC, y Panamá con la identificación y el
   período de todas las personas que ingresaron).
 

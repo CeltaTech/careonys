@@ -473,6 +473,21 @@ coordinador asignado, el Servicio no comienza. Y hasta que se asigne un coordina
 es el Coordinador general, que distribuye el trabajo entre los coordinadores, hasta que nombre a otra
 persona para ese rol de Coordinador general.»
 
+#### Lo que carga otro Coordinador queda pendiente del asignado
+
+Cualquier Coordinador de la Prestadora puede cargar un registro clínico de un Paciente, lo atienda o
+no. Si quien lo carga es el Coordinador asignado al Servicio o el Administrador, queda firme. Si es
+otro, la base lo acepta y queda **pendiente** hasta que lo apruebe el Coordinador asignado o la
+administración. Siempre queda anotado quién cargó qué. Textual del Desarrollador: «el que carga algo
+es otro coordinador distinto al que "atiende" al Cliente, la base le deje hacerlo, pero que quede
+pendiente de la aprobación del coordinador "titular" o de la administración de la prestadora. Por
+supuesto siempre queda registrado quien cargo que cosa».
+
+Es el mismo mecanismo que ya tiene la medicación —`indicaciones_medicacion.estado` y
+`motivo_rechazo`, revisadas con `revisar_indicacion_medicacion`—, y se reutiliza: no se escribe un
+segundo. **Depende de la asignación de este paso**, porque es la que dice quién aprueba; mientras un
+Servicio no tenga Coordinador asignado, aprueba el Administrador, que es el Coordinador general.
+
 ### Paso 8. Los tres criterios de sugerencia que faltan
 
 El Desarrollador los nombró: «Las sugerencias son por zona, por compatibilidad con las tareas, por

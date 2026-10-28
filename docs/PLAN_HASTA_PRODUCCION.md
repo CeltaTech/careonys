@@ -358,7 +358,9 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   base rechaza un alta que devuelve una fila que quien la cargó no puede leer, y un cambio o un
   borrado no alcanza filas que no se leen. Un Coordinador que no lo atiende y carga un rango de un
   paciente recibe un rechazo; el Administrador sí lee la información de salud de todos los
-  Pacientes de su Prestadora. Cierre: revisar cada pantalla que escribe en esas tablas.
+  Pacientes de su Prestadora. Decidido: lo que carga un Coordinador que no es el asignado queda
+  pendiente de aprobación, como la medicación (`PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`, paso 7).
+  Cierre: construido junto con la asignación del Coordinador al Servicio.
 - **Ninguna pantalla ofrece la restricción.** Donde el país la exige es fija, y sólo CeltaTech la
   mueve, desde `requerimientos_legales_de_hce_por_pais`; donde no, es decisión de la Prestadora y
   la cambia su Administrador, cosa que la base ya permite. Cierre: la configuración de la

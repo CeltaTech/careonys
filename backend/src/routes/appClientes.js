@@ -3,6 +3,7 @@ import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
+import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { contactoDeLaPrestadora } from '../utils/contactoDeLaPrestadora.js';
@@ -378,10 +379,15 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
   // pide `persona_autorizada_guardias` ni `persona_autorizada_alertas` y la base sí, así que con
   // la credencial de la persona, una persona autorizada sin esos accesos dejaría de ver quién
   // está en la casa. El Paciente ya salió comprobado contra el Cliente, con su propio acceso.
+  // Las alertas son información de salud y el trabajo de la Prestadora no pasa por la regla de
+  // salud: se le pregunta antes, con la credencial de la persona. Si no la alcanza, la pantalla
+  // sale igual, sin alertas.
+  const verAlertas = visibilidad.cliente_alertas_de_la_revision
+    && await alcanzaLaInformacionDeSalud(db, paciente.id);
   let resumen;
   try {
     resumen = await enLaPrestadora(paciente.prestadora_id, 'la pantalla del Paciente', (dbTrabajo) =>
-      resumenDelPaciente(dbTrabajo, paciente, visibilidad)
+      resumenDelPaciente(dbTrabajo, paciente, { ...visibilidad, cliente_alertas_de_la_revision: verAlertas })
     );
   } catch (e) {
     return responderError(res, e);
@@ -390,7 +396,7 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
 
   // Las alertas son dato de salud: queda anotado quién las leyó antes de responder; si no se
   // puede anotar, no se entregan.
-  if (visibilidad.cliente_alertas_de_la_revision) {
+  if (verAlertas) {
     try {
       await anotarConsultaAHce(
         req.usuarioCliente,
@@ -629,6 +635,12 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
+  // Los reportes se leen con el trabajo de la Prestadora, que no pasa por la regla de salud: se
+  // le pregunta antes, con la credencial de la persona.
+  if (!(await alcanzaLaInformacionDeSalud(db, paciente.id))) {
+    return res.status(403).json({ error: 'No tiene acceso a la información de salud de este Paciente' });
+  }
+
   // El reporte dice de quién habla, así que se piden directo. Buscarlos por los turnos que
   // cubrieron a esta persona traería también los reportes de los otros Pacientes del mismo
   // turno: el Cliente vería en la historia de su padre lo que se escribió sobre el vecino de
@@ -686,6 +698,11 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
   const paciente = await pacienteDelCliente(db, req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  // Lo mismo que la lista: antes de leer con el trabajo de la Prestadora, la regla de salud.
+  if (!(await alcanzaLaInformacionDeSalud(db, paciente.id))) {
+    return res.status(403).json({ error: 'No tiene acceso a la información de salud de este Paciente' });
   }
 
   // El filtro por Paciente no sobra aunque el reporte se pida por su id: sin él, quien conozca

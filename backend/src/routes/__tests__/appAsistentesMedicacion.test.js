@@ -78,10 +78,12 @@ function delTrabajo(llamada) {
 }
 
 let atiende = true;
+let alcanzaLaSalud = true;
 
 beforeEach(() => {
   llamadas = [];
   atiende = true;
+  alcanzaLaSalud = true;
   respuestas.clear();
   rechazadas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
@@ -93,6 +95,7 @@ beforeEach(() => {
     ? [{ id: ORDEN, prescripcion_archivo_url: `${PRESTADORA}/receta.pdf` }]
     : [{ id: ORDEN, medicamento: 'Inventado', via_administracion_id: VIA, via: { clave: 'oral' } }]));
   respuestas.set('POST /rest/v1/consultas_a_hce', () => []);
+  respuestas.set('POST /rest/v1/rpc/alcanza_la_informacion_de_salud_la_sesion', () => alcanzaLaSalud);
 });
 
 describe('las órdenes de medicación del Asistente', () => {
@@ -119,6 +122,15 @@ describe('las órdenes de medicación del Asistente', () => {
     const { estado } = await pedir(`/${PACIENTE}`);
     assert.equal(estado, 404);
     assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/indicaciones_medicacion'), false);
+  });
+
+  it('si la regla de salud no lo alcanza, no le lee ninguna orden', async () => {
+    alcanzaLaSalud = false;
+    const { estado } = await pedir(`/${PACIENTE}`);
+    assert.equal(estado, 404);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/indicaciones_medicacion'), false);
+    const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/alcanza_la_informacion_de_salud_la_sesion');
+    assert.equal(pregunta.credencial, SESION, 'la regla de salud se preguntó con otra credencial');
   });
 
   it('si no se puede anotar quién las vio, no las entrega', async () => {

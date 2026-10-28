@@ -354,10 +354,6 @@ y aplicada: la política es restrictiva, de lectura, y está en nueve tablas. Co
 sólo quien lo atiende y el Administrador de su Prestadora; donde la tabla de requerimientos legales de HCE por país la pide, como en
 Chile, la restricción queda fija y no se apaga. Lo que falta:
 
-- **La regla vale sólo para la credencial de la persona.** La política restrictiva es de
-  `authenticated`: lo que el backend lee con el trabajo de la Prestadora no pasa por ella. Cierre:
-  ninguna lectura de esas nueve tablas para una persona va con el trabajo de la Prestadora, y la
-  prueba repetida por el backend con la credencial de la persona.
 - **Escribir un registro clínico también pide atender al paciente** cuando se pide la fila de vuelta: la
   base rechaza un alta que devuelve una fila que quien la cargó no puede leer, y un cambio o un
   borrado no alcanza filas que no se leen. Un Coordinador que no lo atiende y carga un rango de un

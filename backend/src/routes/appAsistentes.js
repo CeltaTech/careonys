@@ -7,6 +7,7 @@ import { estructurarReporteIA, distanciaMetros } from '../utils/reporteIA.js';
 import { enviarPushCliente } from '../utils/push.js';
 import { analizarPaciente } from '../utils/revisarAlertasIA.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
+import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import {
   conPacientes,
   pacientesDeGuardia,
@@ -691,9 +692,11 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   // de salud que no tiene por qué llegar al teléfono.
   const vitalesPorPaciente = {};
   if (visibilidad.asistente_signos_vitales) {
+    // Los rangos se leen con el trabajo de la Prestadora: la regla de salud se pregunta antes.
     for (const p of guardia.pacientes ?? []) {
-      const vitales = await resolverVitalesHabilitados(p.id, req.usuarioAsistente.prestadoraId);
-      vitalesPorPaciente[p.id] = vitales;
+      vitalesPorPaciente[p.id] = (await alcanzaLaInformacionDeSalud(db, p.id))
+        ? await resolverVitalesHabilitados(p.id, req.usuarioAsistente.prestadoraId)
+        : { habilitados: false, rangos: {} };
     }
   }
 
@@ -1934,6 +1937,11 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async
 appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVisible('asistente_reportes_anteriores'), async (req, res) => {
   if (!(await asistenteAtiendeAlPaciente(clienteDelPedido(req), req.params.id, req.usuarioAsistente))) {
     return res.status(403).json({ error: 'No tiene guardias asignadas a este Paciente' });
+  }
+  // Los reportes se leen abajo con el trabajo de la Prestadora, que no pasa por la regla de salud:
+  // se le pregunta antes, con su credencial.
+  if (!(await alcanzaLaInformacionDeSalud(clienteDelPedido(req), req.params.id))) {
+    return res.status(403).json({ error: 'No tiene acceso a la información de salud de este Paciente' });
   }
 
   // El reporte dice de quién habla, así que se piden directo. Antes había que buscar primero

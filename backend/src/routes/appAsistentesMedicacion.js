@@ -3,6 +3,7 @@ import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { medicacionVigenteDelPaciente, asistentePuedeDarLaVia } from '../utils/medicacionIndicaciones.js';
 import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
+import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -23,10 +24,12 @@ async function ordenesDelAsistente(req) {
   // atiende, y sus órdenes de medicación tienen que estar a la vista.
   if (!(await asistenteAtiendeAlPaciente(clienteDelPedido(req), req.params.pacienteId, req.usuarioAsistente))) return null;
 
-  // Con la credencial del trabajo de su Prestadora: con la restricción de la historia clínica
-  // activa, la base le muestra las indicaciones sólo a quien atiende al Paciente con un Servicio
-  // vigente y una guardia no cancelada, y la comprobación de arriba deja pasar cualquier guardia
-  // suya con ese Paciente.
+  // Las indicaciones y sus recetas se leen con el trabajo de su Prestadora, que no pasa por la
+  // regla de salud: se le pregunta antes, con su credencial. Con la restricción de la historia
+  // clínica encendida, la regla pide un Servicio vigente y una guardia no cancelada, y la
+  // comprobación de arriba deja pasar cualquier guardia suya con ese Paciente.
+  if (!(await alcanzaLaInformacionDeSalud(clienteDelPedido(req), req.params.pacienteId))) return null;
+
   const indicaciones = await enLaPrestadora(
     req.usuarioAsistente.prestadoraId,
     'medicación que ve el Asistente',

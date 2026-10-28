@@ -347,7 +347,10 @@ no la llama nadie. Además el Panel lee `cuenta_desactivada` como columna calcul
 `asistentes`: recibe la fila que la consulta ya le dejó ver y contesta falso si es de otra
 Prestadora. Y el backend, con la credencial de quien pide, llama —entre otras—
 `tiene_permiso_la_sesion` y `permisos_efectivos_de_la_sesion`, que no reciben a nadie y contestan
-los permisos de quien inició sesión; `reactivar_la_cuenta`, que recibe una cuenta y sólo la
+los permisos de quien inició sesión; `alcanza_la_informacion_de_salud_la_sesion`, que recibe un
+Paciente y contesta si la regla de salud deja leerlo a quien inició sesión —falso si es de otra
+Prestadora—, y que el backend pregunta antes de toda lectura de información de salud que hace con
+el trabajo de la Prestadora para una persona; `reactivar_la_cuenta`, que recibe una cuenta y sólo la
 reactiva si quien pide es el Administrador de esa misma Prestadora; `pedir_medicacion`, que corre
 con los permisos de quien llama, toma la Prestadora y el Cliente del Paciente que la base le deja
 ver, y guarda la indicación y lo firmado en una sola operación;

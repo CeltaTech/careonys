@@ -24,9 +24,9 @@
    está cubriendo en el mismo acto. Marcar la ausencia sin sustituto sigue siendo trabajo de
    `marcarAusenteYCrearIncidente`, y no se toca.
 
-   Entra con la conexión que le pasa quien llama. La ruta de hoy le pasa la llave maestra, que se
-   saltea la protección por fila, así que el aislamiento lo pone ella: busca la guardia acotada a
-   la Organización activa antes de pedir esto. */
+   Entra con la conexión que le pasa quien llama, que en los dos caminos es la del trabajo de la
+   Prestadora de esa guardia: la ruta del Panel, después de que la base le dejó ver la guardia a
+   quien pide, y el reemplazo aceptado. */
 
 /**
  * Anota la sustitución y pasa la guardia a nombre del sustituto.

@@ -154,8 +154,8 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
    `coordinador_gestiona_asignaciones_de_su_zona` le deja a quien coordina asignarle sólo a un
    Asistente de su zona, y el padrón entero lo ve (`coordinador_lee_el_padron_de_asistentes`):
    hoy elige sustituto entre todos. Hasta que se decida si puede elegir uno de otra zona, la
-   asignación y su aviso van con la llave maestra, después de que la base le dejó ver la ausencia
-   y el sustituto.
+   asignación y su aviso van con el trabajo de la Prestadora, después de que la base le dejó ver
+   la ausencia y el sustituto.
 
    Contesta las guardias que quedaron cubiertas, que hasta que el sustituto acepte son ninguna. */
 panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {

@@ -28,9 +28,8 @@ import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
    todo el producto (CLAUDE.md §8, «ningún patrón repetido sin punto único de verdad»).
 
    Entra con la conexión que le pasa quien llama: la detección automática, con la credencial del
-   trabajo de esa Prestadora; la ruta del Panel, todavía con la llave maestra, y por eso acota a la
-   Prestadora activa antes de traer la guardia. El filtro por Prestadora va escrito igual en cada
-   consulta. */
+   trabajo de esa Prestadora; la ruta del Panel, también, después de que la base le dejó ver la
+   guardia a quien pide. El filtro por Prestadora va escrito igual en cada consulta. */
 
 /**
  * Deja la guardia en `ausente` y le abre el incidente de relevo.

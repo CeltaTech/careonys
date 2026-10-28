@@ -17,6 +17,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const GUARDIA_AJENA = '99999999-9999-9999-9999-999999999999';
@@ -69,6 +70,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -157,18 +159,20 @@ describe('marcar ausente', () => {
     assert.equal(incidente.nivel_actual, 1);
   });
 
-  // Con la llave maestra y acotada a la Prestadora activa: con la credencial del Coordinador la base
-  // le dejaría ver sólo las guardias de su zona (`coordinador_gestiona_guardias_de_su_zona`), y
-  // marcar la ausencia es trabajo suyo en cualquier guardia de la Prestadora.
-  it('la guardia se busca con la llave maestra, acotada a la Prestadora activa', async () => {
+  // La guardia se lee con la credencial de quien pide: la base decide si la alcanza. La ausencia y
+  // el incidente se escriben con el trabajo de esa Prestadora, que no es ninguna de las dos.
+  it('la guardia se lee con la credencial de quien pide y se marca con el trabajo de la Prestadora', async () => {
     await pedir('POST', `/${GUARDIA}/ausente`);
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
-    assert.equal(lectura.credencial, 'Bearer clave-de-mentira');
-    assert.match(decodeURIComponent(lectura.url), new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
+    assert.equal(lectura.credencial, credencialEnviada);
+    const cambio = llamadas.find((l) => l.clave === 'PATCH /rest/v1/guardias');
+    assert.notEqual(cambio.credencial, credencialEnviada);
+    assert.notEqual(cambio.credencial, 'Bearer clave-de-mentira');
+    assert.match(decodeURIComponent(cambio.url), new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
   });
 
   it('una guardia de otra Prestadora no se distingue de una que no existe', async () => {
-    // La base contesta vacío porque el filtro de arriba la dejó afuera. Lo que se comprueba es
+    // La base contesta vacío porque la protección por fila la dejó afuera. Lo que se comprueba es
     // que el backend no cuenta la diferencia: es un 404 igual que el de un identificador inventado.
     respuestas.set('GET /rest/v1/guardias', () => []);
     const { estado, cuerpo } = await pedir('POST', `/${GUARDIA_AJENA}/ausente`);
@@ -287,7 +291,7 @@ describe('asignar un turno', () => {
     respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ sin_cambios: true }));
     const { cuerpo } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO });
     assert.equal(cuerpo.sinCambios, true);
-    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/guardias'), false);
+    assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/guardias'), false);
   });
 
   it('el aviso marca el turno como avisado, acotado a la Prestadora', async () => {
@@ -421,7 +425,10 @@ describe('llevar un turno a otro Paciente', () => {
     respuestas.set('POST /rest/v1/rpc/mover_turno_a_otro_paciente', () => ({
       guardia_nueva_id: NUEVA, asistente_id: ASISTENTE, titular_retirado: ASISTENTE, pendiente_retirado: null,
     }));
-    respuestas.set('GET /rest/v1/guardias', () => [GUARDIA_VACIA, { ...GUARDIA_VACIA, id: NUEVA, paciente_id: DESTINO }]);
+    // Cada lectura pide una guardia por su identificador: la original antes de moverla, la nueva después.
+    respuestas.set('GET /rest/v1/guardias', ({ url }) => (decodeURIComponent(url).includes(`id=eq.${NUEVA}`)
+      ? [{ ...GUARDIA_VACIA, id: NUEVA, paciente_id: DESTINO, asistente_id: null }]
+      : [GUARDIA_VACIA]));
   });
 
   it('lo hace la base con la credencial de quien pide', async () => {

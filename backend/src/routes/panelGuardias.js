@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase, clienteDelPedido } from '../db/connection.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from '../utils/marcarAusente.js';
 import { cubrirGuardiaConSustituto } from '../utils/cubrirGuardia.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
@@ -12,18 +12,16 @@ import { documentosDelBloqueo } from '../utils/erroresDeDocumentos.js';
 
 export const panelGuardiasRouter = Router();
 
-/* CON LA LLAVE MAESTRA, Y FILTRADO A MANO POR LA PRESTADORA, salvo la lista de motivos del aviso.
-   Esta ruta la usa también el Coordinador, y con su credencial la base le deja ver sólo lo de su
-   zona: `coordinador_gestiona_guardias_de_su_zona` en `guardias`, `coordinador_lee_asistentes_de_su_zona`
-   en `asistentes` y `coordinador_lee_descansos_de_su_zona` en `descansos_guardia`. Hoy marca
-   ausencias, cubre, avisa cambios y anota descansos en cualquier guardia de su Prestadora, y elige
-   sustituto entre todos sus Asistentes. Además `oculta_pendientes_de_conformidad`, restrictiva en
-   `asistentes`, le esconde a todos los roles el Asistente importado que espera conformidad, que hoy
-   puede cubrir. Cambiar eso se decide aparte.
+/* CON LA CREDENCIAL DE QUIEN PIDE. La guardia se lee siempre así: al Coordinador la base le deja
+   ver sólo las de su zona (`coordinador_gestiona_guardias_de_su_zona`), que son las que el Panel
+   le muestra, y una guardia que no ve no aparece.
 
-   La lista de motivos sí va con la credencial de quien pide: `coordinador_lee_motivos_aviso_previo`
-   y `admin_prestadora_gestiona_motivos_aviso_previo` le dejan leer a cada rol toda su Prestadora,
-   igual que el filtro de antes. */
+   Lo que la persona no puede escribir por sí misma va con el trabajo de la Prestadora de esa
+   guardia, después de que la base le dejó verla: abrir el incidente de una ausencia, que busca al
+   Asistente saliente aunque sea de otra zona; pasar la guardia al sustituto, que puede ser de
+   otra zona porque el Coordinador ve el padrón entero (`coordinador_lee_el_padron_de_asistentes`)
+   y elige entre todos; y anotar un descanso, que la base le deja cargar sólo a la administración.
+   Si quien coordina puede elegir un sustituto de otra zona se decide aparte. */
 
 /* Las guardias las escribe el Panel directo contra la base, con el pase de la persona, y así
    sigue siendo: reasignar, cancelar, registrar la llegada. Acá vive la excepción.
@@ -35,20 +33,19 @@ export const panelGuardiasRouter = Router();
    dieron distinto: la del Panel miraba un solo Paciente y un solo día. El detalle de las dos
    diferencias está en `utils/marcarAusente.js`.
 
-   Así que la decisión se mudó entera al backend y el Panel la pide. La Prestadora la pone el
-   backend, nunca el pedido: se busca la guardia acotando a la Organización activa de quien llama,
-   y si no aparece, no aparece. Un identificador de otra Prestadora no distingue de uno que no
-   existe, que es lo que pide CLAUDE.md §6.
+   Así que la decisión se mudó entera al backend y el Panel la pide. La Prestadora la pone la
+   base, nunca el pedido: la guardia se lee con la credencial de quien llama, y si no la ve, no
+   aparece. Un identificador de otra Prestadora no distingue de uno que no existe, que es lo que
+   pide CLAUDE.md §6.
 
    Marcar una ausencia es trabajo operativo, así que también es del Coordinador: alcanza con
    `requiereRolPanel`. */
 panelGuardiasRouter.post('/:id/ausente', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
-  let query = supabase
+  const { data: guardia, error } = await clienteDelPedido(req)
     .from('guardias')
     .select('id, prestadora_id, paciente_id, fecha, hora_inicio, estado, asistente_id')
-    .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data: guardia, error } = await query.maybeSingle();
+    .eq('id', req.params.id)
+    .maybeSingle();
 
   if (error) return responderError(res, error);
   if (!guardia) return res.status(404).json({ error: 'No se encontró esa guardia' });
@@ -63,11 +60,10 @@ panelGuardiasRouter.post('/:id/ausente', requiereRolPanel, exigirOrganizacionAct
     return res.status(400).json({ error: 'Solo una guardia programada puede marcarse como ausente' });
   }
 
-  const resultado = await marcarAusenteYCrearIncidente({
-    db: supabase, // Con la llave maestra: ver el encabezado.
-    guardia,
-    prestadoraId: guardia.prestadora_id,
-  });
+  // Con el trabajo de la Prestadora, porque quien se queda esperando puede ser de otra zona: ver
+  // el encabezado.
+  const resultado = await enLaPrestadora(guardia.prestadora_id, 'marcar la ausencia', (db) =>
+    marcarAusenteYCrearIncidente({ db, guardia, prestadoraId: guardia.prestadora_id }));
   if (!resultado.ok) return res.status(500).json({ error: resultado.motivo });
 
   res.json({ ok: true });
@@ -79,10 +75,10 @@ panelGuardiasRouter.post('/:id/ausente', requiereRolPanel, exigirOrganizacionAct
    orden entre ellas importa. Está escrito una sola vez en `utils/cubrirGuardia.js`, con el porqué
    de cada paso.
 
-   La Prestadora la pone el backend, nunca el pedido: la guardia se busca acotada a la Organización
-   activa de quien llama, y si no aparece, no aparece. Y el sustituto se comprueba contra esa misma
-   Prestadora antes de escribir nada: un identificador de otra Organización no puede terminar
-   haciendo una guardia acá.
+   La Prestadora la pone la base, nunca el pedido: la guardia se lee con la credencial de quien
+   llama, y si no la ve, no aparece. Y el sustituto se busca igual, en esa misma Prestadora, antes
+   de escribir nada: un identificador de otra Organización no puede terminar haciendo una guardia
+   acá.
 
    Cubrir una ausencia es trabajo operativo, así que también es del Coordinador. */
 panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
@@ -96,12 +92,12 @@ panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActi
 
   if (!asistenteSustitutoId) return res.status(400).json({ error: 'Falta el Asistente que cubre' });
 
-  let query = supabase
+  const db = clienteDelPedido(req);
+  const { data: guardia, error } = await db
     .from('guardias')
     .select('id, prestadora_id, asistente_id, estado')
-    .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data: guardia, error } = await query.maybeSingle();
+    .eq('id', req.params.id)
+    .maybeSingle();
 
   if (error) return responderError(res, error);
   if (!guardia) return res.status(404).json({ error: 'No se encontró esa guardia' });
@@ -117,7 +113,7 @@ panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActi
     return res.status(400).json({ error: 'El sustituto no puede ser el mismo Asistente de la guardia' });
   }
 
-  const { data: sustituto } = await supabase
+  const { data: sustituto } = await db
     .from('asistentes')
     .select('id')
     .eq('id', asistenteSustitutoId)
@@ -127,15 +123,17 @@ panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActi
     .maybeSingle();
   if (!sustituto) return res.status(404).json({ error: 'No se encontró ese Asistente' });
 
-  const resultado = await cubrirGuardiaConSustituto({
-    db: supabase, // Con la llave maestra: ver el encabezado.
-    guardia,
-    asistenteSustitutoId,
-    ausenciaId,
-    motivo,
-    motivoDetalle,
-    costoAdicional,
-  });
+  // Con el trabajo de la Prestadora, porque el sustituto puede ser de otra zona: ver el encabezado.
+  const resultado = await enLaPrestadora(guardia.prestadora_id, 'cubrir la guardia', (dbTrabajo) =>
+    cubrirGuardiaConSustituto({
+      db: dbTrabajo,
+      guardia,
+      asistenteSustitutoId,
+      ausenciaId,
+      motivo,
+      motivoDetalle,
+      costoAdicional,
+    }));
   if (!resultado.ok) return res.status(500).json({ error: resultado.motivo });
 
   res.json({ ok: true });
@@ -151,8 +149,8 @@ panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActi
 
    El Asistente nuevo viaja en el pedido y no se deduce de la guardia, porque este mensaje también
    lo usa la reasignación, donde la guardia todavía puede estar contando al anterior. La
-   Prestadora, en cambio, nunca viaja: sale de las guardias, que se buscan acotadas a la
-   Organización activa de quien llama. */
+   Prestadora, en cambio, nunca viaja: sale de las guardias, que se leen con la credencial de
+   quien llama. */
 panelGuardiasRouter.post('/aviso-cambio-asistente', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const { guardia_ids: guardiaIds, asistente_nuevo_id: asistenteNuevoId, asistente_anterior_id: asistenteAnteriorId } = req.body ?? {};
 
@@ -163,12 +161,10 @@ panelGuardiasRouter.post('/aviso-cambio-asistente', requiereRolPanel, exigirOrga
     return res.status(400).json({ error: 'No se indicó el Asistente nuevo' });
   }
 
-  let query = supabase
+  const { data: guardias, error } = await clienteDelPedido(req)
     .from('guardias')
     .select('id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
     .in('id', guardiaIds);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data: guardias, error } = await query;
 
   if (error) return responderError(res, error);
   if (!guardias?.length) return res.status(404).json({ error: 'No se encontró esa guardia' });
@@ -238,6 +234,14 @@ panelGuardiasRouter.post('/:id/asignar', requiereRolPanel, exigirOrganizacionAct
   }
 
   const db = clienteDelPedido(req);
+  // Se lee antes de asignar lo que la asignación no cambia: después, si quedó en manos de un
+  // Asistente de otra zona, quien coordina ya no la ve.
+  const { data: guardia } = await db
+    .from('guardias')
+    .select('id, prestadora_id, fecha, hora_inicio, hora_fin')
+    .eq('id', req.params.id)
+    .maybeSingle();
+
   const parametros = { p_guardia_id: req.params.id, p_asistente_id: asistenteId };
   if (typeof motivoExcepcion === 'string') parametros.p_motivo_excepcion = motivoExcepcion.trim();
   const { data: resultado, error } = await db.rpc('asignar_turno', parametros);
@@ -246,15 +250,8 @@ panelGuardiasRouter.post('/:id/asignar', requiereRolPanel, exigirOrganizacionAct
 
   if (resultado?.sin_cambios) return res.json({ sinCambios: true });
 
-  // Con la llave maestra y acotada a mano, como el resto de esta ruta: el Coordinador alcanza el
-  // turno por su Asistente, y recién se lo dejó sin ninguno.
-  const { data: guardia } = await acotarAPrestadora(
-    supabase.from('guardias').select('id, prestadora_id, fecha, hora_inicio, hora_fin').eq('id', req.params.id),
-    req.usuarioPanel,
-  ).maybeSingle();
-
   if (guardia) {
-    await avisarAsignacionDeTurno(clienteDelPedido(req), {
+    await avisarAsignacionDeTurno(db, {
       prestadoraId: guardia.prestadora_id,
       guardia,
       asistenteNuevoId: asistenteId,
@@ -314,6 +311,10 @@ panelGuardiasRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirOrgani
   }
 
   const db = clienteDelPedido(req);
+  const CAMPOS = 'id, prestadora_id, fecha, hora_inicio, hora_fin';
+  // La original se lee antes de moverla, mientras quien coordina todavía la ve por su Asistente.
+  const { data: original } = await db.from('guardias').select(CAMPOS).eq('id', req.params.id).maybeSingle();
+
   const { data: resultado, error } = await db.rpc('mover_turno_a_otro_paciente', {
     p_guardia_id: req.params.id,
     p_paciente_id: pacienteId,
@@ -324,19 +325,13 @@ panelGuardiasRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirOrgani
 
   if (error) return responderRechazo(req, res, error);
 
-  // Con la llave maestra y acotada a mano, como el resto de esta ruta.
-  const { data: guardias } = await acotarAPrestadora(
-    supabase
-      .from('guardias')
-      .select('id, prestadora_id, fecha, hora_inicio, hora_fin')
-      .in('id', [req.params.id, resultado?.guardia_nueva_id].filter(Boolean)),
-    req.usuarioPanel,
-  );
-  const original = guardias?.find((g) => g.id === req.params.id);
-  const nueva = guardias?.find((g) => g.id === resultado?.guardia_nueva_id);
+  // La nueva nace sin Asistente hasta que acepte, y así la ve quien coordina.
+  const { data: nueva } = resultado?.guardia_nueva_id
+    ? await db.from('guardias').select(CAMPOS).eq('id', resultado.guardia_nueva_id).maybeSingle()
+    : { data: null };
 
   if (original) {
-    await avisarAsignacionDeTurno(clienteDelPedido(req), {
+    await avisarAsignacionDeTurno(db, {
       prestadoraId: original.prestadora_id,
       guardia: original,
       asistenteNuevoId: null,
@@ -344,7 +339,7 @@ panelGuardiasRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirOrgani
     });
   }
   if (nueva) {
-    await avisarAsignacionDeTurno(clienteDelPedido(req), {
+    await avisarAsignacionDeTurno(db, {
       prestadoraId: nueva.prestadora_id,
       guardia: nueva,
       asistenteNuevoId: resultado?.asistente_id ?? null,
@@ -397,23 +392,22 @@ panelGuardiasRouter.post('/motivo-del-aviso', requiereRolPanel, exigirOrganizaci
 
    POR QUÉ ESTAS DOS RUTAS. La que estuvo cuarenta y ocho horas adentro puede haberse olvidado de
    marcarlo, y ese rato igual existió: la Coordinadora lo anota después. No puede hacerlo contra la
-   base desde el navegador porque la migración que crea la tabla sólo le dio permiso de lectura a
-   quien tiene sesión — escribir es del backend.
+   base desde el navegador porque la base le deja cargar un descanso sólo a la administración
+   (`la_administracion_carga_un_descanso`): el alta la hace el trabajo de la Prestadora.
 
    ACÁ SE ANOTA UN DESCANSO YA TERMINADO, con su principio y su fin. Empezar uno abierto es de la
    Asistente, que es la que está adentro; la Coordinadora registra lo que ya pasó.
 
-   La Prestadora la pone el backend, nunca el pedido: la guardia se busca acotada a la Organización
-   activa de quien llama, y si no aparece, no aparece.
+   La Prestadora la pone la base, nunca el pedido: la guardia se lee con la credencial de quien
+   llama, y si no la ve, no aparece.
 
    Anotar un descanso es trabajo operativo, así que también es del Coordinador. */
-async function guardiaDelPanel(req) {
-  let query = supabase
+function guardiaDelPanel(req) {
+  return clienteDelPedido(req)
     .from('guardias')
     .select('id, prestadora_id')
-    .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  return query.maybeSingle();
+    .eq('id', req.params.id)
+    .maybeSingle();
 }
 
 panelGuardiasRouter.get('/:id/descansos', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
@@ -421,7 +415,7 @@ panelGuardiasRouter.get('/:id/descansos', requiereRolPanel, exigirOrganizacionAc
   if (error) return responderError(res, error);
   if (!guardia) return res.status(404).json({ error: 'No se encontró esa guardia' });
 
-  const { data, error: errorDescansos } = await supabase
+  const { data, error: errorDescansos } = await clienteDelPedido(req)
     .from('descansos_guardia')
     .select('id, inicio_at, fin_at, nota, registrado_por')
     .eq('guardia_id', guardia.id)
@@ -457,7 +451,7 @@ panelGuardiasRouter.post('/:id/descansos', requiereRolPanel, exigirOrganizacionA
   if (error) return responderError(res, error);
   if (!guardia) return res.status(404).json({ error: 'No se encontró esa guardia' });
 
-  const { data, error: errorAlta } = await supabase
+  const { data, error: errorAlta } = await enLaPrestadora(guardia.prestadora_id, 'anotar un descanso', (db) => db
     .from('descansos_guardia')
     .insert({
       prestadora_id: guardia.prestadora_id,
@@ -468,7 +462,7 @@ panelGuardiasRouter.post('/:id/descansos', requiereRolPanel, exigirOrganizacionA
       nota: typeof nota === 'string' && nota.trim() ? nota.trim() : null,
     })
     .select('id, inicio_at, fin_at, nota, registrado_por')
-    .single();
+    .single());
 
   if (errorAlta) return responderError(res, errorAlta);
 

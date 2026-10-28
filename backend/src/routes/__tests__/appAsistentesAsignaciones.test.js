@@ -214,9 +214,9 @@ describe('aceptar', () => {
   });
 });
 
-// El aviso al Coordinador y al Cliente sale por el mismo camino que todos los avisos del backend,
-// que todavía usa la llave maestra, y esta prueba arranca sin ella. Así que lo que se mira es que el
-// aviso se intente —y que al no poder armarse lo diga en el registro— sin que la aceptación falle.
+// El aviso al Coordinador y al Cliente se arma con el trabajo de la Prestadora, porque nombra al
+// Asistente anterior, que quien acepta no ve. Lo que se mira es que el aviso se arme —que pida el
+// nombre del anterior con una credencial que no es la del Asistente— sin que la aceptación falle.
 describe('al aceptar un turno que era de otro Asistente', () => {
   const ANTERIOR = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
   const conAnterior = (anterior) => () => [{
@@ -225,17 +225,12 @@ describe('al aceptar un turno que era de otro Asistente', () => {
     guardias: { id: GUARDIA, prestadora_id: PRESTADORA, paciente_id: null, fecha: '2099-01-01', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0 },
   }];
 
-  /** Acepta y devuelve lo que se anotó en el registro sobre el aviso del reemplazo. */
+  /** Acepta y dice si el aviso del reemplazo llegó a armarse. */
   async function aceptarMirandoElRegistro() {
-    const anotado = [];
-    const original = console.error;
-    console.error = (...partes) => anotado.push(partes.join(' '));
-    try {
-      const respuesta = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
-      return { ...respuesta, intentoAvisar: anotado.some((linea) => linea.includes('avisando el reemplazo')) };
-    } finally {
-      console.error = original;
-    }
+    const respuesta = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
+    const intentoAvisar = llamadas.some((l) =>
+      l.clave === 'GET /rest/v1/asistentes' && l.credencial !== SESION && l.url.includes(`id=eq.${ANTERIOR}`));
+    return { ...respuesta, intentoAvisar };
   }
 
   it('recién al aceptar se intenta avisar el reemplazo, y la aceptación queda hecha igual', async () => {

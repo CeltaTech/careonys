@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { supabase, enLaPrestadora } from '../db/connection.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { enviarPushCliente } from './push.js';
 import { configuracionEvento } from './email.js';
@@ -87,9 +87,21 @@ async function nombreDelAsistente(asistenteId, prestadoraId) {
 
 // El mensaje completo. Nunca tira: quien lo llama ya cambió la guardia, y hacer fallar la operación
 // por un canal que no salió mostraría como fallido algo que salió bien.
+//
+// Con el trabajo de la Prestadora, porque el mensaje lee datos que quien lo pide no siempre ve —el
+// Coordinador, al Asistente de otra zona; el Asistente, a sus compañeros— y la Prestadora ya la
+// resolvió quien llama, con la credencial de la persona.
 export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistenteNuevoId, asistenteAnteriorId }) {
   if (!guardias?.length || !prestadoraId) return;
+  try {
+    await enLaPrestadora(prestadoraId, 'aviso de cambio de Asistente', () =>
+      armarYMandar({ guardias, prestadoraId, asistenteNuevoId, asistenteAnteriorId }));
+  } catch (e) {
+    console.error(`Error armando el aviso de cambio de Asistente (prestadora ${prestadoraId}):`, e.message);
+  }
+}
 
+async function armarYMandar({ guardias, prestadoraId, asistenteNuevoId, asistenteAnteriorId }) {
   const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   let pacientesPorGuardia = new Map();

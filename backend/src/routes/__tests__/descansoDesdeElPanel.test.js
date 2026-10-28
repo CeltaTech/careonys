@@ -11,10 +11,10 @@
  *
  *   1. QUE EL DESCANSO SE CONVIERTA EN UN DESCUENTO O EN UNA FALTA. Anotar un descanso no toca la
  *      guardia. Se comprueba mirando qué se escribió, no lo que la ruta dice de sí misma.
- *   2. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. El backend entra con la llave de servicio y se
- *      saltea la protección por fila: lo único que separa a una de otra son los filtros de cada
- *      consulta. Va con la llave maestra porque con la credencial del Coordinador la base le dejaría
- *      ver sólo las guardias y los descansos de su zona, y hoy los anota en toda la Prestadora.
+ *   2. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. La guardia y los descansos se leen con la
+ *      credencial de quien pide, y la base decide qué alcanza. El alta va con el trabajo de la
+ *      Prestadora de esa guardia, porque la base no le da a quien tiene sesión permiso de alta en
+ *      `descansos_guardia`, y nunca con la llave maestra.
  *   3. QUE ENTRE UN RATO IMPOSIBLE. Un fin anterior al principio rompe la restricción de la base, y
  *      el texto crudo de esa restricción nombra tablas y columnas.
  *   4. QUE SE ANOTE UN DESCANSO QUE TODAVÍA NO PASÓ. Acá se registra lo que ya ocurrió.
@@ -25,6 +25,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-4999-8999-999999999999';
@@ -65,6 +66,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 const { default: express } = await import('express');
 await import('express-async-errors');
@@ -193,14 +195,14 @@ describe('anotar un descanso desde el Panel', () => {
     assert.equal(descansosAnotados()[0].nota, 'Lo avisó por teléfono.');
   });
 
-  it('la guardia se busca con la llave maestra, acotada a la Prestadora activa', async () => {
+  it('la guardia se lee con la credencial de quien pide y el alta va con el trabajo de la Prestadora', async () => {
     await pedir('POST', `/${GUARDIA}/descansos`, ANOCHE);
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
-    assert.equal(lectura.credencial, LLAVE_MAESTRA);
-    assert.match(decodeURIComponent(lectura.url), new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
+    assert.equal(lectura.credencial, credencialEnviada);
 
     const alta = llamadas.find((l) => l.clave === 'POST /rest/v1/descansos_guardia');
-    assert.equal(alta.credencial, LLAVE_MAESTRA);
+    assert.notEqual(alta.credencial, credencialEnviada);
+    assert.notEqual(alta.credencial, LLAVE_MAESTRA);
   });
 
   it('la guardia de otra Prestadora no se distingue de una que no existe', async () => {
@@ -243,7 +245,7 @@ describe('anotar un descanso desde el Panel', () => {
 });
 
 describe('ver los descansos de una guardia', () => {
-  it('devuelve los de esa guardia y los pide con la llave maestra, acotados a la Prestadora', async () => {
+  it('devuelve los de esa guardia y los pide con la credencial de quien pide', async () => {
     descansosEnLaBase = [
       { id: DESCANSO, guardia_id: GUARDIA, prestadora_id: PRESTADORA, ...ANOCHE, nota: null },
       { id: 'otro', guardia_id: 'otra-guardia', prestadora_id: PRESTADORA, ...ANOCHE, nota: null },
@@ -254,7 +256,7 @@ describe('ver los descansos de una guardia', () => {
     assert.equal(cuerpo.descansos[0].id, DESCANSO);
 
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/descansos_guardia');
-    assert.equal(lectura.credencial, LLAVE_MAESTRA);
+    assert.equal(lectura.credencial, credencialEnviada);
     assert.match(decodeURIComponent(lectura.url), new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
   });
 

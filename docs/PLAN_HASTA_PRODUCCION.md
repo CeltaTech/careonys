@@ -364,11 +364,8 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   paciente recibe un rechazo; el Administrador sí lee la información de salud de todos los
   Pacientes de su Prestadora. Cierre: revisar cada pantalla que escribe en esas tablas.
 - **Las columnas de salud del Paciente** —patologías, medicación habitual, nivel de
-  complejidad— quedan afuera: RLS filtra filas, no columnas. Cierre: se mudan a una tabla propia
-  que siga la misma regla, o se decide que no son historia clínica.
-- **Una persona sacada a mano del equipo sigue atendiendo al paciente** para la base si tiene
-  guardias o series suyas en un Servicio vigente: la regla no mira las exclusiones del equipo.
-  Cierre: decidir si una exclusión le quita la lectura.
+  complejidad— quedan afuera: RLS filtra filas, no columnas. Son información de salud, lo decidió
+  el Desarrollador. Cierre: se mudan a una tabla propia que siga la misma regla.
 - **Ninguna pantalla ofrece la restricción.** Donde el país la exige es fija, y sólo CeltaTech la
   mueve, desde `requerimientos_legales_de_hce_por_pais`; donde no, es decisión de la Prestadora y
   la cambia su Administrador, cosa que la base ya permite. Cierre: la configuración de la

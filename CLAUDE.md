@@ -377,26 +377,19 @@ de dueño y le sacaría la protección por fila a las consultas que hace por den
 esquema `auth`, que es de Supabase y no se reparte desde una migración. Pregunta quién inició
 sesión con `interno.usuario_de_la_sesion()`, que devuelve lo mismo.
 
-**Ninguna prueba del backend ve esto**: casi todo el backend entra todavía con la llave de
-servicio, que puede ejecutar todo, y las pruebas del backend contestan con una base de mentira. Lo
+**Ninguna prueba del backend ve esto**: las pruebas del backend contestan con una base de mentira. Lo
 prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una persona y
 además le pregunta a la base si algún disparador quedó pidiendo un permiso que no tiene. Se corre
 con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
 
-**El aislamiento lo hace cumplir la base, y el backend todavía no está ahí.** Hoy el backend entra
-con `SUPABASE_SERVICE_ROLE_KEY`, que alcanza todas las Prestadoras y se saltea la protección por
-fila, así que lo que separa una de otra son los filtros escritos a mano en cada ruta. Las tareas
-automatizadas ya salieron de ahí: corren de a una Prestadora por vez con la credencial del trabajo
-sin persona, que genera `backend/src/db/connection.js`. Los tres middleware de entrada también:
-comprueban la credencial con la clave pública y leen a la persona con `clienteDelPedido(req)`, que
-es la única forma en que una ruta toma la conexión de quien pide. Las rutas que todavía no la usan
-incumplen `..\..\CLAUDE.md`, sección «Aislamiento entre Organizaciones» —«no se puede tener una
-credencial que alcance a todas las Organizaciones»—, y eso se está reemplazando: **cada pedido de
-una persona pasa a la credencial de esa persona, y lo que no tiene persona detrás lleva una
-credencial acotada a sus tablas y funciones, de a una Prestadora por vez.** Los pasos, con sus
-comprobaciones, están en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Los cimientos».
-Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es
-sacarla.
+**El aislamiento lo hace cumplir la base.** Cada ruta de persona trabaja con la credencial de
+quien pide, que toma con `clienteDelPedido(req)`; lo que esa persona no puede hacer por sí misma
+—y las tareas automatizadas— va con la credencial del trabajo sin persona, de a una Prestadora por
+vez, con `enLaPrestadora`. Las dos las genera `backend/src/db/connection.js`. **Ninguna ruta usa
+`SUPABASE_SERVICE_ROLE_KEY`**; la siguen usando la copia de respaldo, los programas sueltos de
+`backend/scripts` y las pruebas, y sacarla de ahí es el paso 10 de `docs/PLAN_HASTA_PRODUCCION.md`,
+porque incumple `..\..\CLAUDE.md`, sección «Aislamiento entre Organizaciones». Ninguna propuesta
+que agregue una red más encima de la llave maestra se acepta: el arreglo es sacarla.
 
 ### Cumplimiento normativo
 

@@ -33,7 +33,8 @@ import { IDIOMAS_SOPORTADOS } from '../i18n/idiomas.js';
    `clienteDelPedido(req)`, no con la llave maestra: la base sabe quién pide y le contesta sólo el
    banco de su Prestadora. Por eso ninguna consulta lleva el filtro de la Prestadora de la sesión,
    y la respuesta nueva nace con la Prestadora que la base deja ver a quien pide, no con un dato
-   del pedido. El registro de actividad sigue con la llave maestra: es de `registrarActividad`. */
+   del pedido. El registro de actividad va con el trabajo de la Prestadora: es de
+   `registrarActividad`. */
 
 export const panelRespuestasPreparadasRouter = Router();
 

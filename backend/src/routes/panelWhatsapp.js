@@ -24,8 +24,8 @@ export const panelWhatsappRouter = Router();
 // CON LA CREDENCIAL DE QUIEN PIDE. Las conversaciones y los mensajes se leen y se escriben con
 // `clienteDelPedido(req)`, no con la llave maestra: la base sabe quién pide y le contesta sólo lo
 // de su Prestadora. Por eso ninguna consulta lleva el filtro de la Prestadora de la sesión, y la
-// Prestadora que se nombra es la de la conversación que la base ya dejó ver. Lo único que sigue
-// con la llave maestra es el envío, adentro de `enviarWhatsApp`, porque lee el token de Vault.
+// Prestadora que se nombra es la de la conversación que la base ya dejó ver. El envío va con el
+// trabajo de la Prestadora, adentro de `enviarWhatsApp`, porque lee el token de Vault.
 
 async function conversacionVisible(db, conversacionId) {
   const { data } = await db

@@ -114,8 +114,7 @@ panelConfiguracionRouter.use(requiereRolPanel, soloAdministracion, exigirOrganiz
 // Lo que la base no le deja hacer a la Administración de la Prestadora (cambiar su fila de
 // `prestadoras`, escribir la forma de pago de los Asistentes, las conexiones con software externo),
 // las funciones que guardan secretos o reordenan, y la lista de Coordinadores, que sale de
-// `usuarios`, van con el trabajo de la Prestadora, que alcanza sólo esa. Queda con la llave maestra
-// la lista del personal de emergencia, que lleva al lado por qué.
+// `usuarios`, van con el trabajo de la Prestadora, que alcanza sólo esa.
 
 // --- Datos de la prestadora (configuracion_prestadora, ver schema_multitenant_04.sql —
 //     reemplaza el singleton configuracion_empresa: cada prestadora tiene su propia fila) ---

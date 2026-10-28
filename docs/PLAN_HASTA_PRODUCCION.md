@@ -170,9 +170,14 @@ el que evita el enredo.
 
 Medido contra la base en vivo y contra el código, no contra documentos.
 
-**Una sola llave abre todo.** El backend entra con `SUPABASE_SERVICE_ROLE_KEY`, que alcanza las 201
-tablas de todas las Prestadoras y se saltea la protección por fila. Se crea en
-`backend/src/db/connection.js` y la importan 135 archivos, 123 de los cuales la usan.
+**La llave que abre todo sigue existiendo, y casi nadie la usa.** `SUPABASE_SERVICE_ROLE_KEY` se
+crea en `backend/src/db/connection.js` y alcanza todas las tablas de todas las Prestadoras. Ninguna
+ruta la importa: lo que pide una persona entra con su credencial (`clienteDelPedido(req)`) y lo que
+la persona no puede hacer, con el trabajo de su Prestadora (`enLaPrestadora`). Quedan con la llave
+los programas sueltos de `backend/scripts`, la copia de respaldo y las pruebas, y dos funciones que
+no llama nadie: `elegirDireccionDeLaPrestadora` y `elegirCasillaDeEnvio`, que eligen el nombre de
+una Prestadora antes de que exista y por eso miran las de todas. Las tareas programadas importan
+la conexión pero corren adentro de `paraCadaPrestadora`.
 
 **Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` se llama
 unas 25 veces desde 10 archivos; el resto de las consultas escribe el filtro a mano. Cuántas
@@ -185,26 +190,20 @@ del Asistente, los papeles del Pagador y la hoja firmada de las personas autoriz
 con el acceso de quien pide, y ahí dice que no el depósito; las rutas que siguen con la llave
 maestra se saltean la política del depósito como la de las tablas.
 
-**La protección por fila está puesta y hoy no protege de nada.** Las 202 tablas la tienen encendida
-y 201 tienen política —la única sin ninguna es `codigos_de_presencia`—, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
-`interno.prestadora_actual()` con la cuenta de quien entró. **La base ya sabe aislar y nadie le está
-preguntando.**
+**La protección por fila está puesta y la base es la que decide.** Todas las tablas la tienen
+encendida y con política, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
+`interno.prestadora_actual()` con la cuenta de quien entró, o la credencial del trabajo de esa
+Prestadora.
 
-**Lo que no tiene persona detrás ya no usa la llave maestra**: las tareas automatizadas, la carga de
-los mensajes del sistema, las entradas que llaman otros programas y las puertas públicas corren
-con la credencial del trabajo sin persona, de a una Prestadora por vez. Con la llave maestra
-quedan la entrada con la huella (`routes/llaveDelDispositivo.js:192`) y todo lo que pide una persona
-desde las pantallas.
-
-**Casi nadie sabe quién leyó qué.** Las lecturas de información de salud se anotan encadenadas en
-`consultas_a_hce` desde siete archivos de rutas, de las aplicaciones y del Panel; las demás lecturas se suman con el paso 9. `auditoria_de_accesos` tiene `admin_id` no
-nulo, así que sólo alcanza al personal de CeltaTech, y tiene cero filas. Y no es inmutable: la
-llave maestra puede borrarlo.
+**Las lecturas de información de salud se anotan encadenadas** en `consultas_a_hce`, con
+`anotarConsultaAHce` de `utils/registroDeConsultas.js`, desde las rutas de las aplicaciones y del
+Panel que la devuelven. `auditoria_de_accesos` tiene `admin_id` no nulo, así que sólo alcanza al
+personal de CeltaTech, y tiene cero filas. Y no es inmutable: la llave maestra puede borrarlo.
 
 **El registro clínico ya no se pisa.** Cada alta, corrección o baja de `indicaciones_medicacion`,
-`rangos_referencia_vitales` y `domicilios_temporales_paciente` deja una copia en `versiones_registro_clinico`, con autor, momento y
-nota aclaratoria, y ese historial no lo edita ni lo borra nadie. Mientras el backend escriba con la
-llave maestra, lo que se corrige desde el Panel queda sin autor: eso se arregla con el paso 9.
+`rangos_referencia_vitales` y `domicilios_temporales_paciente` deja una copia en
+`versiones_registro_clinico`, con autor, momento y nota aclaratoria, y ese historial no lo edita ni
+lo borra nadie. Todas esas escrituras van con la credencial de la persona, así que el autor queda.
 
 **La conservación no tiene nada que la haga correr.** Existe la tabla `reglas_de_conservacion`,
 vacía; no hay fecha de fallecimiento guardada ni ninguna tarea que purgue, y la extensión de tareas
@@ -357,15 +356,15 @@ y aplicada: la política es restrictiva, de lectura, y está en nueve tablas. Co
 sólo quien lo atiende y el Administrador de su Prestadora; donde la tabla de requerimientos legales de HCE por país la pide, como en
 Chile, la restricción queda fija y no se apaga. Lo que falta:
 
-- **Hasta el paso 9 protege sólo lo que se lee con sesión propia.** El backend entra con la llave
-  de servicio, que no pasa por RLS. Cierre: el paso 9 terminado, y la prueba repetida por el
-  backend con la credencial de la persona.
+- **La regla vale sólo para la credencial de la persona.** La política restrictiva es de
+  `authenticated`: lo que el backend lee con el trabajo de la Prestadora no pasa por ella. Cierre:
+  ninguna lectura de esas nueve tablas para una persona va con el trabajo de la Prestadora, y la
+  prueba repetida por el backend con la credencial de la persona.
 - **Escribir un registro clínico también pide atender al paciente** cuando se pide la fila de vuelta: la
   base rechaza un alta que devuelve una fila que quien la cargó no puede leer, y un cambio o un
   borrado no alcanza filas que no se leen. Un Coordinador que no lo atiende y carga un rango de un
   paciente recibe un rechazo; el Administrador sí lee la información de salud de todos los
-  Pacientes de su Prestadora. Cierre: al llegar el paso 9, revisar cada pantalla que escribe en
-  esas tablas.
+  Pacientes de su Prestadora. Cierre: revisar cada pantalla que escribe en esas tablas.
 - **Las columnas de salud del Paciente** —patologías, medicación habitual, nivel de
   complejidad— quedan afuera: RLS filtra filas, no columnas. Cierre: se mudan a una tabla propia
   que siga la misma regla, o se decide que no son historia clínica.
@@ -377,83 +376,18 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   la cambia su Administrador, cosa que la base ya permite. Cierre: la configuración de la
   Prestadora la muestra, y sólo la deja cambiar donde el país no la exige.
 
-**9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
+**9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
+maestra; lo que sigue no se pudo cerrar ahí.
 
-**La base ya está.** `backend/src/db/connection.js` entrega **el cliente de quien está pidiendo**
-con `clienteDelPedido(req)`, armado con la credencial que viene en el pedido y la clave pública de
-la región. Los tres middleware de entrada (`requiereRolPanel.js`, `requiereRolCliente.js`,
-`requiereRolAsistente.js`) comprueban la credencial con la clave pública y leen a la persona con su
-propia credencial. La primera ruta migrada es `panelReferenciasLaborales.js`, y es el molde.
-
-**Lo que falta son las rutas.** Siguen importando `supabase`, la llave maestra, y se pasan **por
-grupos**: en cada manejador `const db = clienteDelPedido(req)`, las funciones auxiliares reciben
-`db`, y `acotarAPrestadora` y los filtros por la Prestadora de la sesión salen de esas rutas; al
-insertar, la Prestadora se toma de una fila que la base ya le dejó ver a la persona. El paso
-termina cuando ninguna ruta de persona importa `supabase`. Ahí sale también la anotación por
-pedido de `requiereRolPanel.js` para el permiso de acceso, que mientras convivan las dos formas
-deja las escrituras de las rutas migradas anotadas dos veces. Quedan con la maestra, además, las
-escrituras de `utils/registroDeActividad.js`. El depósito `fotos-identidad` ya tiene
-su política, así que `panelVerificacionIdentidad.js` pasa como las demás.
-
-**El registro de consultas a HCE entra ruta por ruta en la misma pasada.** Hoy lo anotan siete
-archivos de rutas, con `anotarConsultaAHce` de `utils/registroDeConsultas.js`; toda ruta que
-devuelva información de salud de un paciente y todavía no lo llame, lo llama al migrarla. **Y la cadena de
-`consultas_a_hce` tiene un hueco:** quien pueda borrar las últimas filas se lleva también su
-resumen, y lo que queda sigue verificando bien. Cierre: el último resumen se guarda además fuera de
-la base, y `verificar_cadena_de_consultas` lo compara.
-
-**Dos disparadores van a sentir la credencial de la persona:** `interno.prestadora_de_la_restriccion`
-e `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `clientes` con los
-permisos de quien inserta. **Y el historial del registro clínico pasa a tener autor** en lo que se
-corrige desde el Panel, que hoy queda anotado sin persona porque lo escribe la llave maestra.
-
-**Lo que dejó la primera pasada por todas las rutas.** Cada manejador que sigue con la maestra lleva
-escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
-
-- **Un defecto de la base**, que hoy tapa la maestra: la función `interno.atiende_al_paciente`,
-  que usa la política restrictiva de las nueve tablas de salud, pide un Servicio vigente, y `guardias.servicio_id` puede quedar vacío.
-- **Políticas más estrechas que lo que hace el Panel**: dejan afuera al coordinador con permiso o al
-  Superadmin (`indicaciones_medicacion`, `prestadoras`, varias de
-  cobros y de Match), y `usuarios` sólo deja leer la fila propia, así que toda lista de
-  cuentas sigue con la maestra. Donde el comportamiento cambiaba, esas rutas volvieron a la
-  maestra: primero se alinean las políticas y después se migran. Los Clientes y los Asistentes
-  pendientes de conformidad los oculta la base, y el Panel se alinea a ella: lo pendiente no tiene
-  un Servicio en curso, porque lo heredado con Servicio en curso no queda pendiente (paso 29).
-- **La zona del Coordinador, decidida.** Cada Coordinador ve lo de su trabajo diario, que es su
-  zona; el Administrador ve todo. El padrón de Asistentes disponibles lo ven todos los
-  Coordinadores. Una alarma que llega al escalón de todos los Coordinadores la puede ver y resolver
-  cualquiera, pero primero tiene que hacerse cargo, y la base admite **una sola toma por alarma**:
-  los demás ven quién la tiene y no pueden resolverla mientras esté tomada. Las emergencias entran
-  en la misma escalera. Eso ya lo hace cumplir la base
-  (el disparador `una_sola_toma_por_alarma` de `alarmas_tomadas`) y la emergencia insiste y
-  escala (`backend/src/utils/revisarNotificacionesCoordinador.js`, `revisarEmergencias`). Mientras
-  una emergencia está en el escalón de todos, cualquier Coordinador la lee entera, y quien la toma
-  atiende esa guardia con toda su información mientras la tenga
-  (la función `interno.guardias_a_la_vista_por_una_alarma`).
-- **La tabla sin política se escribe acá, no antes.** `codigos_de_presencia` (el QR de la
-  llegada y del pase de guardia, `utils/comprobacionDePresencia.js`) sólo tiene permiso para la
-  maestra: hoy nadie más la alcanza, y el día que la maestra salga deja de andar. Lleva su política
-  y su permiso en la misma migración que retira la maestra de esa ruta, porque sólo ahí se puede
-  probar.
-- **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
-  WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
-  `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`. La de la conexión
-  con software externo recibe además la Prestadora como dato: la versión que se le abra a
-  `authenticated` la resuelve adentro, con `prestadora_actual()`, como `ausencias_que_tapan`.
+- **La cadena de `consultas_a_hce` tiene un hueco:** quien pueda borrar las últimas filas se lleva
+  también su resumen, y lo que queda sigue verificando bien. Cierre: el último resumen se guarda
+  además fuera de la base, y `verificar_cadena_de_consultas` lo compara. **Espera que el
+  Desarrollador decida dónde se guarda**, porque es crear algo afuera.
 - **El permiso de tabla de `authenticated` es entero en casi todas las tablas**, y lo que acota es
   la política. Donde una política le deja actualizar a una persona su propia fila, puede cambiarle
   cualquier columna si llama a la base directo con su sesión. En los avisos de demora ya está
   cerrado —el Asistente no puede darlos por resueltos—; las demás políticas de actualización de
-  Asistentes y Clientes se revisan con el mismo criterio al alinearlas.
-- **Las funciones de `utils/` que ya reciben la conexión todavía reciben la maestra en muchos
-  llamadores**, cada uno con el motivo escrito encima: las altas y bajas de cuentas del Panel y de
-  la importación, las Personas autorizadas desde el Panel, los teléfonos preferidos, las guardias al marcar
-  ausente y al cubrir, la medicación del Asistente y el aviso de matrícula. Pasan a la conexión de
-  la ruta cuando se alineen las políticas del renglón de arriba. Las de WhatsApp,
-  `registroDeActividad` y `auditoria_de_accesos` se quedan con la maestra.
-- **Quedan en `utils/` funciones con la maestra adentro que llaman rutas de persona**: tienen que
-  recibir `db` como las demás. La lista de las que faltan está en
-  `scripts/llave_maestra_pendiente.json`.
+  Asistentes y Clientes se revisan con el mismo criterio.
 
 **Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy el
 Cliente y el Asistente de ese Paciente leen el renglón entero —quién la firmó, en qué carácter,
@@ -463,17 +397,16 @@ sólo si quien entra es quien la firmó, y hoy eso no se puede saber, porque el 
 guardado como texto tecleado (`nombre_avala`, `rol_avala`) y no como una Ficha de Persona. **Pasa a ser
 una Ficha de Persona elegida del Directorio de Personas**, igual que el firmante del consentimiento del Pagador. Lo que las
 aplicaciones necesitan saber es si hay autorización vigente, no quién firmó: eso lo contesta una
-función de `interno` que devuelve sí o no (`utils/vitalesReferencia.js:9` hoy lo lee con la llave
-maestra). **Antes de construirlo se revisa la norma de cada país** sobre quién puede ver un
+función de `interno` que devuelve sí o no (`utils/vitalesReferencia.js` hoy lo lee con el trabajo
+de la Prestadora). **Antes de construirlo se revisa la norma de cada país** sobre quién puede ver un
 consentimiento firmado; la regla de `CLAUDE.md` §6 es el piso, y si una norma pide más, manda la norma.
 **Del lado del Asistente falta una cosa:** su consentimiento sobre la ubicación guarda el texto que
 aceptó (`appAsistentesConsentimientos.js:211`), pero la aplicación le muestra siempre el vigente.
 Cuando la Prestadora lo cambia, deja de poder ver lo que firmó.
-**Y el consentimiento del Pagador lo lee cualquiera con sesión en la Prestadora.** Las políticas
-`consentimientos_pagador_los_lee_su_organizacion` y `documentos_pagador_los_lee_su_organizacion`
-sólo miran la Prestadora, así que un Cliente o un Asistente con su credencial leen el texto armado
-con los datos del Pagador de cualquier otro Cliente. Se acota al personal de la Prestadora y a
-quien firmó.
+**Y el consentimiento del Pagador lo lee sólo el personal de la Prestadora** (políticas
+`consentimientos_pagador_los_leen_administrador_y_coordinador` y
+`documentos_pagador_los_leen_administrador_y_coordinador`). Falta quien firmó, que tiene derecho a
+verlo y hoy no lo alcanza.
 
 **Qué ve cada rol sale de qué necesita para cumplir su función.** En la Ficha del cliente, el
 coordinador:
@@ -490,8 +423,7 @@ coordinador:
 
 Después, lo mismo con el Legajo del Asistente y la Ficha de Persona del Paciente.
 
-**El registro de accesos va acá y no en un paso aparte**, porque es el mismo archivo reescrito una
-sola vez en vez de dos barridos por los mismos archivos. Es un registro separado del de actividad,
+**El registro de accesos va en este paso.** Es un registro separado del de actividad,
 porque anotan cosas distintas y tienen plazos distintos. **Seis campos por evento:** la Prestadora,
 la persona que accedió, el paciente, las categorías de dato alcanzadas, el momento y el origen. Los
 cinco primeros son el Anexo II sección 3 del EHDS; el paciente lo piden Suecia y Países Bajos, y sin
@@ -607,12 +539,11 @@ nada**, así que queda señalado y se decide cuando la fusión llegue a esa etap
 ### Qué no hacen los cimientos
 
 No cambian ninguna pantalla, ningún texto visible ni ninguna regla de negocio. **Lo único que se
-nota es la zona del Coordinador** (paso 9): hoy el Panel le muestra todo lo de su Prestadora porque
-el backend saltea la regla de zona que la base ya tiene, y con su propia credencial pasa a ver
-sólo lo de su zona. El Administrador sigue viendo todo, y una emergencia que llega a todos los
-Coordinadores la ve cualquiera. Se les avisa a las Prestadoras antes de publicarlo. Fuera de eso,
-nadie que use el producto nota nada, salvo que a partir de acá un error de programación no puede
-filtrar datos de otra Prestadora.
+nota es la zona del Coordinador**: el backend ya no saltea la regla de zona que la base tiene, y
+con su propia credencial el Coordinador ve sólo lo de su zona. El Administrador sigue viendo todo,
+y una emergencia que llega a todos los Coordinadores la ve cualquiera. Fuera de eso, nadie que use
+el producto nota nada, salvo que un error de programación ya no puede filtrar datos de otra
+Prestadora.
 
 ---
 

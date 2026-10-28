@@ -75,9 +75,8 @@ export const appClientesRouter = Router();
 // pide para esa tabla —las guardias en la pantalla del Paciente—. Pasarlas a la credencial de la
 // persona cambiaría lo que ve, y eso no se decide acá. La base las acota a la Prestadora; lo
 // que las acota al Cliente es el Paciente ya comprobado, o el filtro por el Cliente que llevan.
-//
-// Queda una sola con la llave maestra: el alta de una persona autorizada, porque crear su cuenta
-// y su Ficha no lo puede hacer el titular con su sesión.
+// También va así el alta de una persona autorizada, porque crear su cuenta y su Ficha no lo puede
+// hacer el titular con su sesión.
 
 // pacientes.medicacion_habitual queda deprecado: la medicación vigente se deriva de
 // indicaciones_medicacion (estado='aceptada'), nunca de este JSONB suelto.

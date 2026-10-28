@@ -88,9 +88,9 @@ import { requierePermiso } from '../utils/permisos.js';
    no con la llave maestra: la base sabe quién pide y le contesta sólo lo de su Prestadora. Por eso
    ninguna consulta lleva el filtro de la Prestadora de la sesión, y la Prestadora que se escribe al
    insertar es la de la fila que la base ya dejó ver —la factura, el Cliente—, no un dato del
-   pedido. Quedan con la maestra, cada una con su motivo escrito al lado, las pocas lecturas y
-   escrituras que la base todavía no le abre a todos los roles que esta ruta deja pasar, o que
-   les esconde a todos, como los Clientes pendientes de conformidad. */
+   pedido. Van con el trabajo de la Prestadora (`enLaPrestadora`), cada una con su motivo escrito
+   al lado, las pocas lecturas y escrituras que la base no le abre a todos los roles que esta ruta
+   deja pasar. */
 
 export const panelCobrosRouter = Router();
 

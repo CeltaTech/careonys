@@ -72,9 +72,9 @@ export const appAsistentesRouter = Router();
 // sólo lo suyo y de su Prestadora. Por eso esas consultas no llevan el filtro de la Prestadora de
 // la sesión, y la Prestadora que se escribe al guardar es la de una fila que la base ya dejó ver.
 //
-// Lo que sigue con la maestra lo dice en su renglón, con el motivo: casi siempre es una tabla en la
-// que la base todavía no tiene una política para el Asistente. Ahí el filtro de la Prestadora se
-// queda, porque es lo único que la separa de las otras.
+// Lo que va con el trabajo de la Prestadora (`enLaPrestadora`) lo dice en su renglón, con el
+// motivo: casi siempre es una tabla en la que la base no tiene una política para el Asistente. La
+// base lo acota a esa Prestadora; lo que lo acota al Asistente es el filtro que lleva.
 
 // Con qué datos del Paciente se dibuja la pantalla del Asistente en esta Prestadora. El
 // domicilio exacto y las patologías tienen cada uno su interruptor: hay quien da la dirección

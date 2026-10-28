@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import {
   ORIGENES_DE_AFUERA,
   TOPE_DEL_LOTE,
@@ -187,28 +187,45 @@ function noSeCalculaAca(res) {
  * secreto de la caja fuerte no se toca acá.
  */
 panelCobrosRouter.get('/configuracion', requiereRolPanel, async (req, res) => {
-  // Con la maestra: la base le abre `configuracion_facturacion_clientes` sólo a la administración,
-  // y esta lectura la necesita también quien coordina.
-  const { data, error } = await supabase
-    .from('configuracion_facturacion_clientes')
-    .select('regla')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-    .maybeSingle();
-  if (error) return responderError(res, error);
-  res.json({ sigue_la_cobranza: sigueLaCobranza(data?.regla) });
+  // Con el trabajo de la Prestadora, porque la base le abre `configuracion_facturacion_clientes`
+  // sólo a la administración, y esta lectura la necesita también quien coordina.
+  try {
+    const { data, error } = await enLaPrestadora(
+      req.usuarioPanel.prestadoraId,
+      'lectura de quién lleva la cobranza',
+      (dbTrabajo) =>
+        dbTrabajo
+          .from('configuracion_facturacion_clientes')
+          .select('regla')
+          .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+          .maybeSingle(),
+    );
+    if (error) return responderError(res, error);
+    res.json({ sigue_la_cobranza: sigueLaCobranza(data?.regla) });
+  } catch (e) {
+    return responderError(res, e);
+  }
 });
 
 panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
-  // Con la maestra: la base le abre `restricciones_de_cobranza` sólo a la administración, y quien
-  // coordina necesita saber qué Cliente quedó restringido para trabajar.
-  const { data, error } = await supabase
-    .from('restricciones_de_cobranza')
-    .select('id, cliente_id, restringida, motivo, origen, created_at')
-    .eq('prestadora_id', prestadoraId)
-    .order('created_at', { ascending: false });
-  if (error) return responderError(res, error);
+  // Con el trabajo de la Prestadora, porque la base le abre `restricciones_de_cobranza` sólo a la
+  // administración, y quien coordina necesita saber qué Cliente quedó restringido para trabajar.
+  let data;
+  try {
+    const respuesta = await enLaPrestadora(prestadoraId, 'lectura de restricciones de cobranza', (dbTrabajo) =>
+      dbTrabajo
+        .from('restricciones_de_cobranza')
+        .select('id, cliente_id, restringida, motivo, origen, created_at')
+        .eq('prestadora_id', prestadoraId)
+        .order('created_at', { ascending: false }),
+    );
+    if (respuesta.error) return responderError(res, respuesta.error);
+    data = respuesta.data;
+  } catch (e) {
+    return responderError(res, e);
+  }
 
   // El más nuevo de cada Cliente, que es el que rige. La consulta ya vino del más nuevo al más
   // viejo, así que alcanza con quedarse con el primero de cada una.
@@ -384,14 +401,22 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   const db = clienteDelPedido(req);
 
-  // Con la maestra: la base le abre `configuracion_facturacion_clientes` sólo a la administración,
-  // y generar las facturas también lo hace quien coordina.
-  const { data: configuracion, error: errorConfiguracion } = await supabase
-    .from('configuracion_facturacion_clientes')
-    .select('regla')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
-  if (errorConfiguracion) return responderError(res, errorConfiguracion);
+  // Con el trabajo de la Prestadora, porque la base le abre `configuracion_facturacion_clientes`
+  // sólo a la administración, y generar las facturas también lo hace quien coordina.
+  let configuracion;
+  try {
+    const respuesta = await enLaPrestadora(prestadoraId, 'lectura del plazo de vencimiento', (dbTrabajo) =>
+      dbTrabajo
+        .from('configuracion_facturacion_clientes')
+        .select('regla')
+        .eq('prestadora_id', prestadoraId)
+        .maybeSingle(),
+    );
+    if (respuesta.error) return responderError(res, respuesta.error);
+    configuracion = respuesta.data;
+  } catch (e) {
+    return responderError(res, e);
+  }
   const plazoDeLaPrestadora = configuracion?.regla?.dias_hasta_el_vencimiento ?? null;
 
   const hoy = new Date().toISOString().slice(0, 10);
@@ -736,25 +761,33 @@ panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, as
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
 
-  // Con la maestra: la base no le da a `authenticated` permiso de alta en
+  // Con el trabajo de la Prestadora, porque la base no le da a `authenticated` permiso de alta en
   // `correcciones_factura_cliente`. La factura ya la dejó ver la credencial de quien pide, y la
   // Prestadora que se escribe es la de esa factura.
-  const { data, error } = await supabase
-    .from('correcciones_factura_cliente')
-    .insert({
-      prestadora_id: factura.prestadora_id,
-      factura_id: factura.id,
-      sentido: cuerpo.sentido,
-      monto: aDosDecimales(cuerpo.monto),
-      comprobante_tipo: String(cuerpo.comprobante_tipo).trim(),
-      comprobante_numero: String(cuerpo.comprobante_numero ?? '').trim() || null,
-      motivo: String(cuerpo.motivo).trim(),
-      fecha: cuerpo.fecha ?? new Date().toISOString().slice(0, 10),
-      registrada_por: req.usuarioPanel.id,
-    })
-    .select()
-    .single();
-  if (error) return responderError(res, error, 400);
+  let data;
+  try {
+    const respuesta = await enLaPrestadora(factura.prestadora_id, 'corrección de factura', (dbTrabajo) =>
+      dbTrabajo
+        .from('correcciones_factura_cliente')
+        .insert({
+          prestadora_id: factura.prestadora_id,
+          factura_id: factura.id,
+          sentido: cuerpo.sentido,
+          monto: aDosDecimales(cuerpo.monto),
+          comprobante_tipo: String(cuerpo.comprobante_tipo).trim(),
+          comprobante_numero: String(cuerpo.comprobante_numero ?? '').trim() || null,
+          motivo: String(cuerpo.motivo).trim(),
+          fecha: cuerpo.fecha ?? new Date().toISOString().slice(0, 10),
+          registrada_por: req.usuarioPanel.id,
+        })
+        .select()
+        .single(),
+    );
+    if (respuesta.error) return responderError(res, respuesta.error, 400);
+    data = respuesta.data;
+  } catch (e) {
+    return responderError(res, e);
+  }
 
   let saldo;
   try {

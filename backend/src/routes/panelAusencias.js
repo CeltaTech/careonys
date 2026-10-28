@@ -3,7 +3,7 @@ import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase, clienteDelPedido } from '../db/connection.js';
+import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { hastaDondeCubrir } from '../utils/coberturaDeAusencia.js';
@@ -235,33 +235,41 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   if (errorAlta) return responderError(res, errorAlta);
 
   // Una sola asignación por sustituto y ausencia: si ya tenía una esperando respuesta, las
-  // coberturas nuevas entran en esa y no se le vuelve a avisar. Con la llave maestra: ver el
-  // encabezado.
-  const { data: pendiente, error: errorPendiente } = await supabase
-    .from('asignaciones_de_turno')
-    .select('id')
-    .eq('prestadora_id', ausencia.prestadora_id)
-    .eq('ausencia_id', ausencia.id)
-    .eq('asistente_id', asistenteSustitutoId)
-    .eq('estado', 'sin_responder')
-    .maybeSingle();
-  if (errorPendiente) return responderError(res, errorPendiente);
+  // coberturas nuevas entran en esa y no se le vuelve a avisar. Con el trabajo de la Prestadora,
+  // porque la base no le da a quien coordina permiso de alta en `asignaciones_de_turno`; la
+  // ausencia ya la dejó ver la credencial de quien pide, y la Prestadora es la de esa ausencia.
+  try {
+    const error = await enLaPrestadora(ausencia.prestadora_id, 'asignación del sustituto', async (dbTrabajo) => {
+      const { data: pendiente, error: errorPendiente } = await dbTrabajo
+        .from('asignaciones_de_turno')
+        .select('id')
+        .eq('prestadora_id', ausencia.prestadora_id)
+        .eq('ausencia_id', ausencia.id)
+        .eq('asistente_id', asistenteSustitutoId)
+        .eq('estado', 'sin_responder')
+        .maybeSingle();
+      if (errorPendiente) return errorPendiente;
+      if (pendiente) return null;
 
-  if (!pendiente) {
-    const { error: errorAsignacion } = await supabase.from('asignaciones_de_turno').insert({
-      prestadora_id: ausencia.prestadora_id,
-      ausencia_id: ausencia.id,
-      asistente_id: asistenteSustitutoId,
-      asignado_por: req.usuarioPanel.id,
-    });
-    if (errorAsignacion) return responderError(res, errorAsignacion);
+      const { error: errorAsignacion } = await dbTrabajo.from('asignaciones_de_turno').insert({
+        prestadora_id: ausencia.prestadora_id,
+        ausencia_id: ausencia.id,
+        asistente_id: asistenteSustitutoId,
+        asignado_por: req.usuarioPanel.id,
+      });
+      if (errorAsignacion) return errorAsignacion;
 
-    await avisarAsignacionDeAusencia(supabase, {
-      prestadoraId: ausencia.prestadora_id,
-      asistenteId: asistenteSustitutoId,
-      desde,
-      hasta: ausencia.fecha_fin,
+      await avisarAsignacionDeAusencia(dbTrabajo, {
+        prestadoraId: ausencia.prestadora_id,
+        asistenteId: asistenteSustitutoId,
+        desde,
+        hasta: ausencia.fecha_fin,
+      });
+      return null;
     });
+    if (error) return responderError(res, error);
+  } catch (e) {
+    return responderError(res, e);
   }
 
   res.json({ guardia_ids: [] });

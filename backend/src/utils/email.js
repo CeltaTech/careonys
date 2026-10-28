@@ -140,7 +140,7 @@ async function crearTransporterCompartido() {
 // La dirección desde la que manda esta Prestadora: la casilla que se le fijó al darla de alta,
 // con el dominio del producto. Se arma acá y no se guarda entera, porque el dominio es
 // configuración del producto y guardarlo junto al nombre lo metería adentro de los datos.
-// El nombre lo elige `utils/casillaDeEnvio.js`.
+// El nombre sale del código de la Prestadora (`utils/casillaDeEnvio.js`).
 //
 // Sin casilla propia devuelve `null` y el correo sale desde la dirección común: es lo que
 // hacían todas hasta que existió esta columna, y lo que hacen las que se dieron de alta antes.

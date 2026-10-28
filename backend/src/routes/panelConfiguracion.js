@@ -129,10 +129,10 @@ panelConfiguracionRouter.get('/empresa', async (req, res) => {
 });
 
 panelConfiguracionRouter.patch('/empresa', async (req, res) => {
-  // `dominio` no entra acá aunque venga en el pedido: es la dirección por la que entra esta
-  // Prestadora, se le asigna sola al darla de alta y no cambia nunca
-  // (`utils/direccionDeLaPrestadora.js`). Cambiarla dejaría afuera a toda su gente, que la tiene
-  // anotada en el navegador. La base lo impide igual, con un disparador.
+  // `dominio` no entra acá aunque venga en el pedido: es el código de esta Prestadora, lo elige
+  // CeltaTech al darla de alta y no cambia nunca (`utils/direccionDeLaPrestadora.js`). Cambiarlo
+  // dejaría sin entrar a toda su coordinación, que lo lleva en el nombre de usuario. La base lo
+  // impide igual, con un disparador.
   const { nombre, telefono, telefono_emergencias, whatsapp_numero, email, zona_cobertura_texto } = req.body;
   // A diferencia de los datos que viven en `prestadoras`, esta fila puede no existir: se crea
   // en el alta y una Prestadora dada de alta a mano puede quedarse sin ella. Sin esta

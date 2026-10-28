@@ -41,12 +41,8 @@ dar de alta una Prestadora se le crea `[prestadora]@careonys.com`, y de ahí sal
 mensajes. Esa dirección sólo manda: **las respuestas se reenvían a la casilla que la Prestadora
 declare**, que es la suya y vive donde ella quiera.
 
-El nombre de esa dirección sale, en este orden:
-
-1. Del dominio propio que la Prestadora haya declarado — `contacto@cuidardelsur.com` da
-   `cuidardelsur@careonys.com`.
-2. Del nombre de la Prestadora, si lo que declaró es una casilla de un proveedor gratuito.
-3. De ese mismo nombre con un sufijo, si ya está tomado.
+El nombre de esa dirección es el código de la Prestadora, que elige CeltaTech al darla de alta:
+el código `cuidardelsur` da `cuidardelsur@careonys.com`.
 
 **Se fija en el alta y no cambia nunca**, porque ya quedó escrita en todos los correos que se
 mandaron. Es un nombre guardado, no una marca.
@@ -86,15 +82,11 @@ ingreso no pregunta de qué Prestadora es la cuenta ni muestra ninguna marca: la
 la coordinación entra con su nombre de usuario, `parte_código`, y el código dice de qué
 Prestadora es.
 
-**Ese código se le asigna solo al darla de alta**, nadie lo teclea, y sale del nombre con la misma
-regla de tres pasos de arriba: del dominio propio que declaró, si no de su nombre, y con un sufijo
-si el que salió ya está tomado (`backend/src/utils/direccionDeLaPrestadora.js`). Se fija en el alta
-y no cambia nunca, porque forma parte del nombre de usuario de toda su coordinación.
-
-Los nombres que el producto usa para sus propias pantallas no se le pueden asignar a ninguna
-Prestadora: viven en la tabla `direcciones_reservadas` y no escritos en el código, así que publicar
-una pantalla nueva es agregar una fila. Que ninguna se repita, que ninguna sea un nombre reservado
-y que ninguna cambie lo hace cumplir la base, no la pantalla.
+**Ese código no lo elige Careonys: lo elige CeltaTech** y llega con el alta de la Prestadora
+(`docs/PLAN_HASTA_PRODUCCION.md`, paso 111). Careonys lo guarda y no lo cambia nunca, porque forma
+parte del nombre de usuario de toda su coordinación, y de él sale también la casilla desde la que
+manda (`backend/src/utils/casillaDeEnvio.js`). Que ninguno se repita y que ninguno cambie lo hace
+cumplir la base, no la pantalla.
 
 ## 1. Los dos nombres, y por qué importa la diferencia
 

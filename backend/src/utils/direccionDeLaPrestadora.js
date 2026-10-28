@@ -1,5 +1,4 @@
-import { enLaPrestadora, supabase } from '../db/connection.js';
-import { nombreBase } from './casillaDeEnvio.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // El código de cada Prestadora.
 //
@@ -8,63 +7,10 @@ import { nombreBase } from './casillaDeEnvio.js';
 // `nombreDeUsuario.js`) y adentro de los enlaces de los correos con un código de un solo uso. No es
 // una dirección web: no existe ninguna dirección propia por Prestadora.
 //
-// Se elige solo al dar de alta la Prestadora, nadie lo teclea, y no cambia nunca: está escrito en
-// los nombres de usuario de toda su coordinación.
-//
-// Sale con la misma regla que la casilla desde la que manda —del dominio propio que declaró, si no
-// de su nombre, y con un sufijo si el que salió ya está tomado—, y la regla está escrita una sola
-// vez, en `casillaDeEnvio.js`: letras, números y guiones, nunca «_». Lo único distinto es contra qué
-// se comprueba que esté libre: los códigos ya repartidos, y los nombres que el producto se reserva
-// para sí.
-
-// Los códigos ya repartidos que empiezan igual. Se consultan todos juntos y no de a uno para no
-// hacerle una pregunta a la base por cada intento.
-async function direccionesTomadas(base) {
-  // SIN PRESTADORA A PROPÓSITO
-  // Elige un dominio libre antes de que la Prestadora exista. Sin mirar a las demás no puede saber
-  // si está tomado. No sale ningún dato de ninguna: sólo qué rótulos ya están repartidos.
-  const { data, error } = await supabase
-    .from('configuracion_prestadora')
-    .select('dominio')
-    .ilike('dominio', `${base}%`);
-
-  if (error) throw error;
-  return new Set((data ?? []).map((fila) => String(fila.dominio).toLowerCase()));
-}
-
-// Los nombres que el producto se reserva: los que ya publica para sí mismo. Salen de la base y no
-// de una lista escrita acá, porque agregar una pantalla nueva no puede obligar a publicar el
-// backend de nuevo.
-//
-// Si el catálogo no contesta, se corta. Acá no se puede tomar el camino prudente de suponer que
-// están todos reservados —no quedaría ningún nombre— ni el de suponer que no hay ninguno, que es
-// justo el que le entregaría a una Prestadora la puerta del Panel general.
-async function direccionesReservadas() {
-  const { data, error } = await supabase.from('direcciones_reservadas').select('direccion');
-
-  if (error) throw error;
-  return new Set((data ?? []).map((fila) => String(fila.direccion).toLowerCase()));
-}
-
-// Devuelve el código, o `null` si no se pudo elegir ninguno. A diferencia de la casilla de envío,
-// `null` sí es una falla del alta: sin código, su coordinación no tiene nombre de usuario.
-export async function elegirDireccionDeLaPrestadora({ nombreFantasia, emailRespuestas }) {
-  const base = await nombreBase({ nombreFantasia, emailRespuestas });
-  if (!base) return null;
-
-  const tomadas = await direccionesTomadas(base);
-  const reservadas = await direccionesReservadas();
-  const estaLibre = (candidata) => !tomadas.has(candidata) && !reservadas.has(candidata);
-
-  if (estaLibre(base)) return base;
-
-  for (let sufijo = 2; sufijo <= 99; sufijo += 1) {
-    const candidata = `${base}-${sufijo}`;
-    if (estaLibre(candidata)) return candidata;
-  }
-
-  return null;
-}
+// No lo elige Careonys: lo elige CeltaTech y llega con el alta de la Prestadora
+// (`docs/PLAN_HASTA_PRODUCCION.md`, paso 111). Careonys lo guarda y no lo cambia nunca, porque
+// está escrito en los nombres de usuario de toda su coordinación. Que no se repita lo hace cumplir
+// el índice único de la base.
 
 // El enlace que va en un correo con un código de un solo uso: activar la cuenta o elegir una clave
 // nueva. Lleva el código de la Prestadora, porque quien lo abre todavía no tiene sesión y es ese

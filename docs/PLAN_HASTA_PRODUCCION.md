@@ -174,9 +174,7 @@ Medido contra la base en vivo y contra el código, no contra documentos.
 crea en `backend/src/db/connection.js` y alcanza todas las tablas de todas las Prestadoras. Ninguna
 ruta la importa: lo que pide una persona entra con su credencial (`clienteDelPedido(req)`) y lo que
 la persona no puede hacer, con el trabajo de su Prestadora (`enLaPrestadora`). Quedan con la llave
-los programas sueltos de `backend/scripts`, la copia de respaldo y las pruebas, y dos funciones que
-no llama nadie: `elegirDireccionDeLaPrestadora` y `elegirCasillaDeEnvio`, que eligen el nombre de
-una Prestadora antes de que exista y por eso miran las de todas. Las tareas programadas importan
+los programas sueltos de `backend/scripts`, la copia de respaldo y las pruebas. Las tareas programadas importan
 la conexión pero corren adentro de `paraCadaPrestadora`.
 
 **Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` se llama
@@ -1509,16 +1507,20 @@ clave configurada no abre; la referencia de CeltaTech se guarda como texto opaco
 con la misma referencia devuelve la misma Prestadora. Con lo que llega, el alta:
 
 - **Crea la Prestadora** con sus datos y la moneda de su país.
-- **Le elige la casilla de envío** —`utils/casillaDeEnvio.js`— y le abre el reenvío de las
-  respuestas a la casilla que ella declaró —`utils/reenvioDeRespuestas.js`—.
-- **Le elige el rótulo** con que la nombran los formularios públicos y los enlaces de activación
-  —`utils/direccionDeLaPrestadora.js`—.
+- **Guarda el código de la Prestadora que manda CeltaTech**, que la nombra en el usuario de su
+  coordinación, en los formularios públicos y en los enlaces de activación. Careonys no lo elige
+  ni lo cambia; si ya existe, el índice único de la base lo rechaza y el alta no se hace.
+- **Le fija la casilla de envío a partir de ese código** —`utils/casillaDeEnvio.js`— y le abre el
+  reenvío de las respuestas a la casilla que ella declaró —`utils/reenvioDeRespuestas.js`—.
 - **Crea la cuenta del Administrador** con los datos que manda CeltaTech
   —`utils/cuentasPanel.js`—.
 - **Si cualquier parte falla, deshace todo**, reenvío incluido.
 - **Queda auditada**, y devuelve el identificador de la Organización.
 
-Las dos primeras piezas quedan en el código para esto, sin nadie que las llame hasta entonces.
+La casilla a partir del código queda en el código para esto (`casillaDeEnvioDelCodigo`), sin nadie
+que la llame hasta entonces. Cómo elige CeltaTech el código —del dominio propio que declaró, si no
+de su nombre, y con un sufijo si ya está tomado— está en el estante de CeltaTech, en
+`Codigos-utiles/eleccion-del-codigo-de-una-organizacion/`.
 
 **Después,** recibir qué tiene habilitado cada Prestadora y que su
 Configuración ofrezca solamente eso; y recibir la orden de deshabilitar, sin la comprobación que

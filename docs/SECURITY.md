@@ -418,7 +418,8 @@ decisión de producto sobre esto todavía.
 - Certificados médicos, antecedentes penales.
 - Fotos de identidad del Asistente (la del documento y la de la cara), en el depósito
   `fotos-identidad`.
-- Datos de salud del paciente (`patologias`, `medicacion_habitual`, contenido de `reportes`).
+- Datos de salud del paciente (`informacion_de_salud_del_paciente`, indicaciones de medicación,
+  contenido de `reportes`).
 - Texto libre de reportes y salida de los prompts de IA (ver `AI_PROMPTS.md`).
 
 Estos datos viajan solo en el body de requests autenticadas, nunca en query params, nunca

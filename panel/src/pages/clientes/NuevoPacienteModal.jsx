@@ -26,14 +26,22 @@ export function NuevoPacienteModal({ clienteId, onClose, onCreado }) {
       return;
     }
     setGuardando(true);
-    const { error: errorInsert } = await supabase.from('pacientes').insert({
-      cliente_id: clienteId,
-      persona_id: personaId,
-      nivel_complejidad: nivelComplejidad || null,
-      prestadora_id: prestadoraId,
-    });
+    const { data: paciente, error: errorInsert } = await supabase
+      .from('pacientes')
+      .insert({ cliente_id: clienteId, persona_id: personaId, prestadora_id: prestadoraId })
+      .select('id')
+      .single();
+    // El nivel de complejidad es información de salud y vive en su propia tabla.
+    let errorSalud = null;
+    if (!errorInsert && nivelComplejidad) {
+      ({ error: errorSalud } = await supabase.from('informacion_de_salud_del_paciente').insert({
+        prestadora_id: prestadoraId,
+        paciente_id: paciente.id,
+        nivel_complejidad: nivelComplejidad,
+      }));
+    }
     setGuardando(false);
-    if (errorInsert) {
+    if (errorInsert || errorSalud) {
       setError(t.comun.error_generico);
       return;
     }

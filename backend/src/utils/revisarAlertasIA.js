@@ -95,14 +95,14 @@ async function revisarPrestadora(prestadoraId) {
 export async function analizarPaciente(pacienteId, prestadoraId) {
   const { data: paciente } = await supabase
     .from('pacientes')
-    .select('patologias, cliente_id')
+    .select('cliente_id, salud:informacion_de_salud_del_paciente(patologias)')
     .eq('prestadora_id', prestadoraId)
     .eq('id', pacienteId)
     .maybeSingle();
   if (!paciente) return;
+  const salud = Array.isArray(paciente.salud) ? paciente.salud[0] : paciente.salud;
 
-  // pacientes.medicacion_habitual queda retirada (pendiente #62, docs/PLAN_HASTA_PRODUCCION.md): la
-  // IA analiza la medicación vigente real, derivada de indicaciones_medicacion.
+  // La IA analiza la medicación vigente real, derivada de indicaciones_medicacion.
   const medicacionVigente = await medicacionVigenteDelPaciente(supabase, prestadoraId, pacienteId);
 
   const configuracion = await configuracionAlertasIA(prestadoraId);
@@ -125,7 +125,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   let resultado;
   try {
     resultado = await analizarAlertaIA(
-      { patologias: paciente.patologias, medicacionHabitual: medicacionVigente },
+      { patologias: salud?.patologias, medicacionHabitual: medicacionVigente },
       reportes.map((r) => ({
         id: r.id,
         texto_libre: r.texto_libre,

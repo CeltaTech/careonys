@@ -464,23 +464,29 @@ VALUES
    'Av. Siempreviva', '742', 'a1000000-0000-4000-8000-000000000001', -34.6037, -58.3816);
 
 INSERT INTO public.pacientes (
-  id, prestadora_id, cliente_id, persona_id, patologias,
-  nivel_complejidad, obra_social_persona_id, numero_afiliado
+  id, prestadora_id, cliente_id, persona_id, obra_social_persona_id, numero_afiliado
 ) VALUES
   -- La obra social no se teclea: se cita la Ficha de la Mutual del Ejemplo, que ya está en el
   -- Directorio de arriba. El número de afiliado sí es un dato de esta persona en esa obra social.
   ('50000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000021',
-   ARRAY['Hipertensión', 'Artrosis'], 'II', 'c0000000-0000-4000-8000-000000000003', 'OSP-0001'),
+   'c0000000-0000-4000-8000-000000000003', 'OSP-0001'),
   ('50000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000022',
-   ARRAY['Diabetes tipo 2'], 'I', 'c0000000-0000-4000-8000-000000000003', 'OSP-0002'),
+   'c0000000-0000-4000-8000-000000000003', 'OSP-0002'),
   ('50000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000023',
-   ARRAY['Demencia senil', 'Movilidad reducida'], 'III', NULL, NULL),
+   NULL, NULL),
   ('50000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000024',
-   ARRAY['EPOC'], 'II', 'c0000000-0000-4000-8000-000000000003', 'OSP-0004');
+   'c0000000-0000-4000-8000-000000000003', 'OSP-0004');
+
+-- Patologías y nivel de complejidad son información de salud, con la regla de la historia clínica.
+INSERT INTO public.informacion_de_salud_del_paciente (prestadora_id, paciente_id, patologias, nivel_complejidad) VALUES
+  ('11111111-1111-4111-8111-111111111111', '50000000-0000-4000-8000-000000000001', ARRAY['Hipertensión', 'Artrosis'], 'II'),
+  ('11111111-1111-4111-8111-111111111111', '50000000-0000-4000-8000-000000000002', ARRAY['Diabetes tipo 2'], 'I'),
+  ('11111111-1111-4111-8111-111111111111', '50000000-0000-4000-8000-000000000003', ARRAY['Demencia senil', 'Movilidad reducida'], 'III'),
+  ('11111111-1111-4111-8111-111111111111', '50000000-0000-4000-8000-000000000004', ARRAY['EPOC'], 'II');
 
 -- Para quién se contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué
 -- clase es el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `cliente`,

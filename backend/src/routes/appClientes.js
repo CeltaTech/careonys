@@ -11,7 +11,7 @@ import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { esFechaISO, semanaQueContiene } from '../utils/fechas.js';
 import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
-import { FICHA_NOMBRE, PARTES_DEL_DOMICILIO, fichaCon, conSuFicha, conSusFichas } from '../utils/fichaDelPaciente.js';
+import { FICHA_NOMBRE, PARTES_DEL_DOMICILIO, fichaCon, saludCon, conSuFicha, conSusFichas } from '../utils/fichaDelPaciente.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import { accesosDelPedido, exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } from '../utils/accesosDePersonasAutorizadas.js';
 import {
@@ -78,11 +78,10 @@ export const appClientesRouter = Router();
 // También va así el alta de una persona autorizada, porque crear su cuenta y su Ficha no lo puede
 // hacer el titular con su sesión.
 
-// pacientes.medicacion_habitual queda deprecado: la medicación vigente se deriva de
-// indicaciones_medicacion (estado='aceptada'), nunca de este JSONB suelto.
+// La medicación vigente se deriva de indicaciones_medicacion (estado='aceptada').
 //
 // Las patologías y las coordenadas del domicilio solo se piden si la Prestadora las tiene
-// prendidas: lo que no se puede ver, no se manda. `nivel_complejidad` no se pide —ninguna
+// prendidas: lo que no se puede ver, no se manda. El nivel de complejidad no se pide —ninguna
 // pantalla del Cliente lo muestra— y sería una etiqueta clínica de más viajando al teléfono.
 //
 // RECIBE EL PEDIDO ENTERO Y NO LA VISIBILIDAD SUELTA. Acá hay que saber dos cosas —qué muestra la
@@ -109,7 +108,7 @@ async function pacienteDelCliente(db, pacienteId, req) {
     ? columnasSegunVisibilidad([
       'id',
       ficha,
-      ['patologias', 'cliente_patologias_del_paciente'],
+      [saludCon(['patologias']), 'cliente_patologias_del_paciente'],
       'cliente_id',
       'prestadora_id',
     ], visibilidad)

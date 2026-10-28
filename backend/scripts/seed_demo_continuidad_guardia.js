@@ -40,10 +40,12 @@ async function main() {
       cliente_id: clienteAuth.user.id,
       nombre: 'DEMO — Roberto Fernández',
       fecha_nacimiento: '1938-04-12',
-      nivel_complejidad: 'II',
       domicilio: 'Av. Rivadavia 4500, CABA',
     })
     .select().single().throwOnError();
+  await supabase.from('informacion_de_salud_del_paciente')
+    .insert({ prestadora_id: PRESTADORA_ID, paciente_id: paciente.id, nivel_complejidad: 'II' })
+    .throwOnError();
 
   const { data: martaAuth } = await supabase.auth.admin.createUser({
     email: 'alas.para.escribir.2026+asistente.demo.marta@gmail.com',

@@ -24,14 +24,24 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
     const { error: errorUpdate } = await supabase
       .from('pacientes')
       .update({
-        nivel_complejidad: nivelComplejidad || null,
-        patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
         obra_social_persona_id: obraSocialPersonaId || null,
         numero_afiliado: numeroAfiliado || null,
       })
       .eq('id', paciente.id);
+    // Patologías y nivel de complejidad son información de salud y viven en su propia tabla.
+    const { error: errorSalud } = errorUpdate
+      ? { error: null }
+      : await supabase
+        .from('informacion_de_salud_del_paciente')
+        .upsert({
+          prestadora_id: paciente.prestadora_id,
+          paciente_id: paciente.id,
+          nivel_complejidad: nivelComplejidad || null,
+          patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'paciente_id' });
     setGuardando(false);
-    if (errorUpdate) {
+    if (errorUpdate || errorSalud) {
       setError(t.comun.error_generico);
       return;
     }

@@ -363,9 +363,6 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   borrado no alcanza filas que no se leen. Un Coordinador que no lo atiende y carga un rango de un
   paciente recibe un rechazo; el Administrador sí lee la información de salud de todos los
   Pacientes de su Prestadora. Cierre: revisar cada pantalla que escribe en esas tablas.
-- **Las columnas de salud del Paciente** —patologías, medicación habitual, nivel de
-  complejidad— quedan afuera: RLS filtra filas, no columnas. Son información de salud, lo decidió
-  el Desarrollador. Cierre: se mudan a una tabla propia que siga la misma regla.
 - **Ninguna pantalla ofrece la restricción.** Donde el país la exige es fija, y sólo CeltaTech la
   mueve, desde `requerimientos_legales_de_hce_por_pais`; donde no, es decisión de la Prestadora y
   la cambia su Administrador, cosa que la base ya permite. Cierre: la configuración de la
@@ -725,8 +722,7 @@ en la base y en el backend, que hoy filtra sólo por Prestadora:
 - **La Coordinadora ve sólo los Clientes y Servicios que tiene asignados**: sus Pacientes, su
   historia clínica, sus reportes y alertas, sus personas autorizadas y las Personas del Directorio
   vinculadas a ellos. Los Asistentes, las matrículas y las calificaciones, los de su zona; de cada
-  Asistente, la distancia al domicilio y no el domicilio. Hoy patologías, medicación habitual y
-  complejidad le llegan de todos los Pacientes por fuera de la restricción de historia clínica.
+  Asistente, la distancia al domicilio y no el domicilio.
 - **Una emergencia habilita a todas las Coordinadoras** a ver lo necesario para resolverla, hasta
   que la asignada retoma el problema. La que cubre una ausencia ve lo de la ausente mientras dure.
 - **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y

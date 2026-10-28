@@ -128,15 +128,18 @@ async function main() {
       cliente_id: clienteId,
       nombre: `DEMO — ${p.nombre}`,
       fecha_nacimiento: p.fecha_nacimiento,
-      patologias: p.patologias,
-      medicacion_habitual: p.medicacion,
-      nivel_complejidad: p.nivel,
       domicilio: p.domicilio,
       lat: p.lat,
       lng: p.lng,
       obra_social: 'IOMA',
       numero_afiliado: p.ioma,
     }).select().single().throwOnError();
+    await supabase.from('informacion_de_salud_del_paciente').insert({
+      prestadora_id: PRESTADORA_ID,
+      paciente_id: paciente.id,
+      patologias: p.patologias,
+      nivel_complejidad: p.nivel,
+    }).throwOnError();
     resumen.clientes.push(clienteId);
     resumen.pacientes.push(paciente.id);
     console.log(`cliente+paciente OK: ${p.nombre}`);
@@ -144,10 +147,13 @@ async function main() {
 
   // Completar los datos que faltaban en el paciente ya existente (Roberto Fernández)
   await supabase.from('pacientes').update({
-    patologias: ['Hipertensión', 'Artrosis de cadera'],
-    medicacion_habitual: [{ nombre: 'Enalapril', dosis: '10mg', frecuencia: '1 vez al día' }],
     lat: -34.6178, lng: -58.4396,
   }).eq('id', '54848fc9-8a30-49f5-87c1-0548fd85e9d3').throwOnError();
+  await supabase.from('informacion_de_salud_del_paciente').upsert({
+    prestadora_id: PRESTADORA_ID,
+    paciente_id: '54848fc9-8a30-49f5-87c1-0548fd85e9d3',
+    patologias: ['Hipertensión', 'Artrosis de cadera'],
+  }, { onConflict: 'paciente_id' }).throwOnError();
 
   // --- 38 asistentes nuevos (más los 2 ya existentes = 40) ---
   for (let i = 0; i < NOMBRES_ASISTENTES.length; i++) {

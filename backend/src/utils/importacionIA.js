@@ -16,9 +16,7 @@ import { MODELO_IA } from '../config/modeloIA.js';
 // Campos destino disponibles para el mapeo, por tipo — reflejan exactamente lo que
 // panel/src/pages/clientes/NuevoPacienteModal.jsx, EditarPacienteModal.jsx y
 // crearAsistenteDirecto()/crearClienteImportado() (backend/src/utils/cuentasPanel.js) aceptan.
-// Se excluye `medicacion_habitual` de Paciente: es un array de objetos {nombre, dosis,
-// frecuencia} que no mapea a una sola columna de planilla — queda para cargar después
-// desde la historia clínica del Paciente, no como parte de este import (ver docs/PLAN_HASTA_PRODUCCION.md).
+// La medicación no se importa: se carga después como indicación, con su firma.
 //
 // El domicilio se acepta de las dos formas en que llega: partido en columnas, o entero en una sola
 // celda, que la importación separa. La localidad no se guarda como texto: la resuelve

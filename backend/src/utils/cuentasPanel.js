@@ -720,8 +720,6 @@ export async function crearClienteImportado({
       .insert({
         cliente_id: clienteId,
         persona_id: fichaDelPaciente.id,
-        nivel_complejidad: nivelComplejidadPaciente || null,
-        patologias: patologiasPaciente || [],
         prestadora_id: prestadoraId,
         importacion_id: importacionId || null,
         pendiente_conformidad: Boolean(importacionId),
@@ -729,6 +727,19 @@ export async function crearClienteImportado({
       .select('id')
       .single();
     if (errorPaciente) throw new Error(errorPaciente.message);
+
+    // La información de salud vive aparte, con la regla de la historia clínica.
+    if (nivelComplejidadPaciente || patologiasPaciente?.length) {
+      const { error: errorSalud } = await db
+        .from('informacion_de_salud_del_paciente')
+        .insert({
+          prestadora_id: prestadoraId,
+          paciente_id: paciente.id,
+          nivel_complejidad: nivelComplejidadPaciente || null,
+          patologias: patologiasPaciente || [],
+        });
+      if (errorSalud) throw new Error(errorSalud.message);
+    }
 
     return {
       clienteId,

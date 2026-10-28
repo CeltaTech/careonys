@@ -1,8 +1,7 @@
 // Punto único de verdad (Regla 12, CLAUDE.md §7) para resolver "medicación vigente" de un
 // Paciente y "¿puede este Asistente administrar esta vía?" — consumido por
-// appClientes.js/appAsistentes.js (para dejar de leer pacientes.medicacion_habitual,
-// deprecado), panelMedicacion.js (cola de pendientes) y appAsistentesMedicacion.js (filtro
-// de órdenes).
+// appClientes.js/appAsistentes.js, revisarAlertasIA.js, panelMedicacion.js (cola de
+// pendientes) y appAsistentesMedicacion.js (filtro de órdenes).
 
 // Cada función entra con la conexión que recibe, que va primero. Detrás va `prestadoraId`, sin
 // valor por defecto, como en el resto del archivo: quien llama puede pasar la llave maestra, que se

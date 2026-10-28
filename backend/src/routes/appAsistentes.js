@@ -13,7 +13,7 @@ import {
   asistenteAtiendeAlPaciente,
 } from '../utils/pacientesDeGuardia.js';
 import { conDomicilioDelDia, pacientesConDomicilioDelDia } from '../utils/domicilioDelDia.js';
-import { FICHA_DOMICILIO, FICHA_NOMBRE, FICHA_UBICACION } from '../utils/fichaDelPaciente.js';
+import { FICHA_DOMICILIO, FICHA_NOMBRE, FICHA_UBICACION, saludCon } from '../utils/fichaDelPaciente.js';
 import { llegoAlDomicilio } from '../utils/toleranciaCheckin.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { telefonoParaEmergencias } from '../utils/contactoDeLaPrestadora.js';
@@ -91,7 +91,7 @@ function camposDePacienteParaElAsistente(visibilidad, { conPatologias = false } 
   return columnasSegunVisibilidad([
     'id',
     ficha,
-    ...(conPatologias ? [['patologias', 'asistente_patologias_del_paciente']] : []),
+    ...(conPatologias ? [[saludCon(['patologias']), 'asistente_patologias_del_paciente']] : []),
   ], visibilidad);
 }
 
@@ -745,7 +745,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   // patologías, si la Prestadora las deja ver, y sus signos vitales, si los toma. Si no se pudo
   // anotar, no se muestra.
   const categorias = [
-    ...(visibilidad.asistente_patologias_del_paciente ? ['pacientes'] : []),
+    ...(visibilidad.asistente_patologias_del_paciente ? ['informacion_de_salud_del_paciente'] : []),
     ...(visibilidad.asistente_signos_vitales ? ['rangos_referencia_vitales', 'autorizaciones_monitoreo_paciente'] : []),
   ];
   if (categorias.length) {

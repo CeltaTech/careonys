@@ -21,14 +21,12 @@ import {
 // pueda trabajar mientras tanto.
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
 
-// Las escrituras de las rutas que todavía usan la llave maestra (`supabase`, en
-// backend/src/db/connection.js) no llevan la credencial de la persona, así que el disparador que
-// anota en `auditoria_de_accesos` no las ve: `auth.uid()` da NULL adentro de un disparador lanzado
-// por una escritura con esa llave. Se anotan acá, a nivel de pedido, en vez de a nivel de fila.
-//
-// Las rutas ya migradas a `clienteDelPedido(req)` sí llevan la credencial, y ahí el disparador
-// anota cada fila. Mientras convivan las dos formas, en esas rutas queda anotado dos veces: por
-// fila y por pedido. Se saca de acá cuando no quede ninguna ruta con la maestra.
+// Lo que una ruta escribe con `clienteDelPedido(req)` lleva la credencial de la persona, y el
+// disparador de `auditoria_de_accesos` lo anota fila por fila. Lo que escribe con `enLaPrestadora`
+// lleva la del trabajo de la Prestadora, que no tiene persona: adentro de ese disparador
+// `auth.uid()` da NULL y no anota nada. Por eso todo cambio hecho con el permiso de acceso se anota
+// además acá, a nivel de pedido. Lo escrito con la credencial de la persona queda dos veces —por
+// fila y por pedido—, y es preferible a que algo quede sin anotar.
 const METODOS_MUTACION = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 // Con la credencial del trabajo de la Prestadora donde se entró, y no con la de la persona:

@@ -207,6 +207,16 @@ panelMedicacionRouter.get('/:id/para-firmar', requiereRolPanel, async (req, res)
   if (error) return responderError(res, error);
   if (!indicacion?.pacientes) return responderError(res, new ErrorConMotivo('no_encontrado'));
 
+  try {
+    await anotarConsultaAHce(
+      req.usuarioPanel,
+      { pacienteId: indicacion.pacientes.id, categorias: ['indicaciones_medicacion'], origen: origenDelPedido(req) },
+      { cliente: db },
+    );
+  } catch (errorAnotacion) {
+    return responderError(res, errorAnotacion);
+  }
+
   const { data: consentimiento, error: errorConsentimiento } = await db
     .from('consentimientos_medicacion')
     .select('id, documento_texto, documento_idioma, estado')

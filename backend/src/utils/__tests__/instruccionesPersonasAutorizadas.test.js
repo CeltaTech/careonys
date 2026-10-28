@@ -25,6 +25,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
 import { verificadorDelCodigo } from '../codigoDeUnSoloUso.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const INSTRUCCION = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const CLIENTE = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -68,6 +69,8 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+// La autorización se firma con el trabajo de la Prestadora.
+prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: este archivo sí arma la conexión al cargarse.
 const { confirmarConCodigo, pedirCodigo } = await import('../instruccionesPersonasAutorizadas.js');

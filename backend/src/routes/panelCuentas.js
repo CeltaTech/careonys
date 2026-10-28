@@ -3,7 +3,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora, supabase } from '../db/connection.js';
 import {
   crearCuentaConPerfil,
   crearAsistenteDirecto,
@@ -617,19 +617,20 @@ panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas', requiereRolP
   }
 
   try {
-    // Con la llave maestra, como el resto de las personas autorizadas.
-    const { miembroId } = await invitarPersonaAutorizada({
-      db: supabase,
-      email,
-      nombre,
-      apellido,
-      documento,
-      genero,
-      telefono,
-      clienteId: cliente.id,
-      prestadoraId: cliente.prestadora_id,
-      invitadoPor: req.usuarioPanel.id,
-    });
+    // Con el trabajo de la Prestadora, como el resto de las personas autorizadas.
+    const { miembroId } = await enLaPrestadora(cliente.prestadora_id, 'alta de persona autorizada', (dbTrabajo) =>
+      invitarPersonaAutorizada({
+        db: dbTrabajo,
+        email,
+        nombre,
+        apellido,
+        documento,
+        genero,
+        telefono,
+        clienteId: cliente.id,
+        prestadoraId: cliente.prestadora_id,
+        invitadoPor: req.usuarioPanel.id,
+      }));
 
     // La autorización que la nombra, para que el titular la firme. Qué puede ver lo elige sólo
     // quien tiene el permiso de configurar accesos; para cualquier otro sale con lo de fábrica.
@@ -656,13 +657,14 @@ panelCuentasRouter.delete('/cliente/:clienteId/personas_autorizadas/:usuarioId',
   }
 
   try {
-    // Con la llave maestra, por lo mismo que al invitar. La cuenta se desactiva, no se borra, y el
-    // motivo queda guardado en ella.
-    const desactivada = await revocarPersonaAutorizada(supabase, req.params.usuarioId, {
-      prestadoraId: cliente.prestadora_id,
-      clienteId: cliente.id,
-      motivo: req.body?.motivo,
-    });
+    // Con el trabajo de la Prestadora, por lo mismo que al invitar. La cuenta se desactiva, no se
+    // borra, y el motivo queda guardado en ella.
+    const desactivada = await enLaPrestadora(cliente.prestadora_id, 'baja de persona autorizada', (dbTrabajo) =>
+      revocarPersonaAutorizada(dbTrabajo, req.params.usuarioId, {
+        prestadoraId: cliente.prestadora_id,
+        clienteId: cliente.id,
+        motivo: req.body?.motivo,
+      }));
     // Es un cambio de membresía y se anota con su nombre. El motivo no entra: es contenido.
     if (desactivada) {
       // Sin ella, la autorización vigente ya no dice la verdad: se arma una nueva con las que

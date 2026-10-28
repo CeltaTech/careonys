@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { supabase, enLaPrestadora } from '../db/connection.js';
 import { accesosParaGuardar, mezclarAccesosConCatalogo } from './catalogoPersonasAutorizadas.js';
 import { visibilidadDeLaPrestadora } from './visibilidadPrestadora.js';
 import { textoDeLaInstruccion, verificadorDelDocumento, IDIOMA_DEL_DOCUMENTO } from './documentoInstruccionPersonasAutorizadas.js';
@@ -39,6 +39,11 @@ import {
 // compara y cuántos intentos se toleran está una sola vez, en `codigoDeUnSoloUso.js`: es el mismo
 // mecanismo que usan la recuperación de acceso y el pase de guardia.
 const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
+//
+// TODO CORRE CON EL TRABAJO DE LA PRESTADORA. Lo llaman el titular desde su aplicación y el Panel, y
+// ninguno de los dos puede con su propio acceso todo lo que esto toca: el titular no anota personas
+// ni les da accesos, y el Panel no siempre lee la configuración de la aplicación. La Prestadora
+// llega en cada pedido, y lo que se exporta abajo abre el trabajo de ésa y de ninguna otra.
 
 // Quiénes son las personas autorizadas de este Cliente. El nombre y el DNI salen de su Ficha de
 // Persona, que es donde se guardan una sola vez. El titular no tiene fila acá: ve todo siempre, y
@@ -64,7 +69,7 @@ async function personasAutorizadasDelCliente(clienteId) {
 // si no lo que rige. Es de donde parte una autorización nueva, para que cambiar a una persona no
 // les cambie nada a las demás.
 async function ultimoPedidoPorPersona(clienteId, prestadoraId) {
-  const pendiente = await instruccionPendiente(clienteId, prestadoraId);
+  const pendiente = await pendienteDeFirma(clienteId, prestadoraId);
   if (pendiente) return pendiente.accesos_pedidos ?? {};
 
   const { data: filas, error } = await supabase
@@ -127,7 +132,7 @@ async function nombreDe(usuarioId, prestadoraId) {
 // Las personas que no vienen ahí conservan lo último que se pidió para ellas. Lo que llegue de una
 // persona que no está anotada se ignora, y lo que falte de una que sí está se completa con el
 // valor de fábrica: la autorización dice entero qué puede cada una.
-export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, accesosPedidos }) {
+async function armarInstruccion({ clienteId, prestadoraId, cargadaPor, accesosPedidos }) {
   if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
 
   // La Prestadora se nombra en la consulta y no se comprueba después sobre la fila leída: un
@@ -146,8 +151,6 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
   const personas = await personasAutorizadasDelCliente(clienteId);
   const anterior = await ultimoPedidoPorPersona(clienteId, prestadoraId);
 
-  // Con la maestra, como todo este archivo: lo llama el Panel, y la base no le deja leer a
-  // Superadmin la configuración de la aplicación.
   const visibilidad = await visibilidadDeLaPrestadora(supabase, prestadoraId);
 
   const { data: prestadora } = await supabase
@@ -206,7 +209,7 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
 
 // Lo que está esperando firma, si hay algo. Lo miran las dos puntas: el Panel para mostrar que
 // quedó pendiente, y la aplicación del titular para ofrecerle firmarla.
-export async function instruccionPendiente(clienteId, prestadoraId) {
+async function pendienteDeFirma(clienteId, prestadoraId) {
   if (!clienteId || !prestadoraId) return null;
 
   const { data } = await supabase
@@ -224,7 +227,7 @@ export async function instruccionPendiente(clienteId, prestadoraId) {
 // Prestadora tiene WhatsApp configurado, y si no —o si el envío falla— al correo, que es el único
 // canal que siempre existe. Nunca se pierde la confirmación por un problema de un canal; mismo
 // criterio que los mensajes al Coordinador.
-export async function pedirCodigo({ instruccionId, clienteId, prestadoraId }) {
+async function mandarCodigo({ instruccionId, clienteId, prestadoraId }) {
   if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
 
   const { data: instruccion } = await supabase
@@ -321,7 +324,7 @@ export async function pedirCodigo({ instruccionId, clienteId, prestadoraId }) {
 // Cierra la instrucción con el código. Devuelve el motivo del rechazo en vez de lanzarlo, porque
 // la pantalla tiene que poder decir cosas distintas: no es lo mismo «el código no es» que «se
 // venció» o «probó demasiadas veces, pida uno nuevo».
-export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraId, codigo, desde }) {
+async function cerrarConCodigo({ instruccionId, clienteId, prestadoraId, codigo, desde }) {
   if (!prestadoraId) return { ok: false, motivo: 'no_encontrado' };
 
   const { data: instruccion } = await supabase
@@ -393,7 +396,9 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
 
 // El otro camino, el de siempre: el titular firma la hoja en papel, la Prestadora la guarda y
 // carga el archivo. La ruta que sube el archivo se encarga del depósito; acá sólo se cierra.
-export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archivoUrl }) {
+async function cerrarConDocumentoFirmado({ instruccionId, prestadoraId, archivoUrl }) {
+  if (!prestadoraId) throw new ErrorConMotivo('no_encontrado', 'Instrucción no encontrada');
+
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
     .select('id, cliente_id, estado, accesos_pedidos')
@@ -428,7 +433,8 @@ export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archi
 
 // Las diez claves con lo decidido para cada persona autorizada, que es lo que dibuja la pantalla
 // del Panel. Se devuelve siempre el catálogo entero, tenga o no fila guardada cada clave.
-export async function personasAutorizadasConSusAccesos({ clienteId, prestadoraId }) {
+async function accesosDeCadaPersona({ clienteId, prestadoraId }) {
+  if (!prestadoraId) return [];
   const personas = await personasAutorizadasDelCliente(clienteId);
   if (personas.length === 0) return [];
 
@@ -437,7 +443,6 @@ export async function personasAutorizadasConSusAccesos({ clienteId, prestadoraId
     .select('usuario_id, clave, permitido')
     .eq('cliente_id', clienteId);
 
-  // Con la maestra, por lo mismo que al crear la autorización.
   const visibilidad = await visibilidadDeLaPrestadora(supabase, prestadoraId);
   const porPersona = new Map(personas.map((persona) => [persona.usuarioId, []]));
   for (const fila of filas ?? []) {
@@ -460,3 +465,20 @@ export async function personasAutorizadasConSusAccesos({ clienteId, prestadoraId
     ),
   }));
 }
+
+// Lo que se exporta: cada función de arriba, adentro de la Prestadora que llega en el pedido. Sin
+// Prestadora no se abre nada, y cada función contesta lo suyo sin tocar la base.
+function enSuPrestadora(hacer) {
+  return async (datos) => (datos?.prestadoraId
+    ? enLaPrestadora(datos.prestadoraId, 'personas autorizadas', () => hacer(datos))
+    : hacer(datos));
+}
+
+export const crearInstruccion = enSuPrestadora(armarInstruccion);
+export const pedirCodigo = enSuPrestadora(mandarCodigo);
+export const confirmarConCodigo = enSuPrestadora(cerrarConCodigo);
+export const cerrarConPapelFirmado = enSuPrestadora(cerrarConDocumentoFirmado);
+export const personasAutorizadasConSusAccesos = enSuPrestadora(accesosDeCadaPersona);
+export const instruccionPendiente = (clienteId, prestadoraId) => enSuPrestadora(
+  ({ prestadoraId: deLaPrestadora }) => pendienteDeFirma(clienteId, deLaPrestadora),
+)({ prestadoraId });

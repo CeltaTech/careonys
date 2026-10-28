@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
-import { supabase, enLaPrestadora, clienteDelPedido } from '../db/connection.js';
+import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
@@ -253,18 +253,20 @@ appClientesRouter.post('/personas-autorizadas', requiereRolCliente, soloElTitula
   const { id, clienteId, prestadoraId } = req.usuarioCliente;
 
   try {
-    // Con la maestra: la cuenta nueva y la Ficha no las puede crear el titular con su sesión.
-    const { miembroId } = await invitarPersonaAutorizada({
-      db: supabase,
-      email,
-      nombre,
-      apellido,
-      documento,
-      genero,
-      clienteId,
-      prestadoraId,
-      invitadoPor: id,
-    });
+    // Con el trabajo de la Prestadora, porque la cuenta nueva y la Ficha no las puede crear el
+    // titular con su sesión.
+    const { miembroId } = await enLaPrestadora(prestadoraId, 'alta de persona autorizada', (dbTrabajo) =>
+      invitarPersonaAutorizada({
+        db: dbTrabajo,
+        email,
+        nombre,
+        apellido,
+        documento,
+        genero,
+        clienteId,
+        prestadoraId,
+        invitadoPor: id,
+      }));
     const instruccion = await crearInstruccion({
       clienteId,
       prestadoraId,

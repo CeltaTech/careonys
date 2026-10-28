@@ -2696,7 +2696,8 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
 
 panelConfiguracionRouter.get('/consentimiento-pagador', async (req, res) => {
   try {
-    const vigente = await cuerpoVigente({ prestadoraId: await prestadoraVisible(clienteDelPedido(req)) });
+    const db = clienteDelPedido(req);
+    const vigente = await cuerpoVigente({ db, prestadoraId: await prestadoraVisible(db) });
     // Los marcadores se devuelven para que quien escriba el suyo sepa cuáles puede usar. Salen del
     // mismo archivo que los reemplaza, para que la lista no se despegue de lo que de verdad anda.
     res.json({ ...vigente, marcadores: MARCADORES, modeloDelProducto: MODELO_DE_FABRICA });

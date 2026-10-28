@@ -1,4 +1,3 @@
-import { supabase } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import {
   IDIOMA_DEL_DOCUMENTO,
@@ -20,6 +19,10 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // anula: lo último que se le hizo firmar es lo que vale. La base lo exige además con un índice
 // único, así que esto no es la única defensa.
 //
+// CON LA SESIÓN DE QUIEN PIDE. Todo lo de acá lo hace una persona del Panel, así que cada función
+// recibe `db`, la conexión de esa persona: la base decide qué alcanza, y nada pasa por la conexión
+// maestra.
+//
 // LOS PAPELES SON APARTE DE LA FIRMA. El consentimiento lo firma quien paga; los papeles los exige
 // el Pagador, y qué papeles son lo sabe cada Prestadora. Que falte uno no invalida la firma, y
 // que esté la firma no completa los papeles: son dos cosas y la pantalla muestra las dos.
@@ -27,8 +30,8 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 const DEPOSITO = 'documentos-pagador';
 
 // El texto que rige para esta Prestadora: el suyo si lo cargó, el modelo del producto si no.
-export async function cuerpoVigente({ prestadoraId, idioma = IDIOMA_DEL_DOCUMENTO }) {
-  const { data } = await supabase
+export async function cuerpoVigente({ db, prestadoraId, idioma = IDIOMA_DEL_DOCUMENTO }) {
+  const { data } = await db
     .from('textos_consentimiento_pagador')
     .select('cuerpo, updated_at')
     .eq('prestadora_id', prestadoraId)
@@ -43,8 +46,8 @@ export async function cuerpoVigente({ prestadoraId, idioma = IDIOMA_DEL_DOCUMENT
   };
 }
 
-async function clienteConSuPagador({ clienteId, prestadoraId }) {
-  const { data: cliente } = await supabase
+async function clienteConSuPagador({ db, clienteId, prestadoraId }) {
+  const { data: cliente } = await db
     .from('clientes')
     .select('id, prestadora_id, pagador_persona_id, pagador_tipo')
     .eq('prestadora_id', prestadoraId)
@@ -57,13 +60,13 @@ async function clienteConSuPagador({ clienteId, prestadoraId }) {
   return cliente;
 }
 
-async function persona({ personaId, prestadoraId }) {
+async function persona({ db, personaId, prestadoraId }) {
   if (!personaId) return null;
   if (!prestadoraId) {
     throw new ErrorConMotivo('faltan_datos', 'No se lee una Ficha de Persona sin saber de qué Organización es');
   }
 
-  const { data } = await supabase
+  const { data } = await db
     .from('personas')
     .select('id, nombre_visible, clase, documento_tipo, documento_numero, apoderado_persona_id')
     .eq('prestadora_id', prestadoraId)
@@ -89,31 +92,31 @@ async function persona({ personaId, prestadoraId }) {
 // Devuelve nulo cuando paga una persona física, y también cuando paga una entidad que todavía no
 // tiene Apoderado configurado. Ese segundo caso no rompe nada: el documento se arma igual y la
 // pantalla avisa que falta. No bloquear es la regla, acá como en todo lo demás.
-async function apoderadoDe(pagador, prestadoraId) {
+async function apoderadoDe(db, pagador, prestadoraId) {
   if (pagador?.clase !== 'juridica' || !pagador.apoderadoPersonaId) return null;
-  return persona({ personaId: pagador.apoderadoPersonaId, prestadoraId });
+  return persona({ db, personaId: pagador.apoderadoPersonaId, prestadoraId });
 }
 
 // Arma el documento con lo de esta contratación, lo guarda tal cual y lo deja esperando firma.
 //
 // El nombre de quien firma se guarda escrito además de apuntado a su Ficha: la Ficha dice con quién
 // quedó atado, y el nombre, cómo se llamaba el día que leyó la hoja.
-export async function crearConsentimiento({ clienteId, prestadoraId, cargadoPor }) {
-  const cliente = await clienteConSuPagador({ clienteId, prestadoraId });
+export async function crearConsentimiento({ db, clienteId, prestadoraId, cargadoPor }) {
+  const cliente = await clienteConSuPagador({ db, clienteId, prestadoraId });
   if (!cliente.pagador_persona_id) {
     throw new ErrorConMotivo('sin_pagador', 'Esta contratación todavía no tiene Pagador elegido');
   }
 
-  const pagador = await persona({ personaId: cliente.pagador_persona_id, prestadoraId });
+  const pagador = await persona({ db, personaId: cliente.pagador_persona_id, prestadoraId });
   if (!pagador) {
     throw new ErrorConMotivo('no_encontrado', 'La Ficha de Persona del Pagador no existe');
   }
 
   const [{ cuerpo, idioma }, { data: prestadora }, nombreDelCliente, apoderado] = await Promise.all([
-    cuerpoVigente({ prestadoraId }),
-    supabase.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
-    nombreDeLaContratacion({ clienteId, prestadoraId }),
-    apoderadoDe(pagador, prestadoraId),
+    cuerpoVigente({ db, prestadoraId }),
+    db.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
+    nombreDeLaContratacion({ db, clienteId, prestadoraId }),
+    apoderadoDe(db, pagador, prestadoraId),
   ]);
 
   const texto = textoDelConsentimiento({
@@ -126,7 +129,7 @@ export async function crearConsentimiento({ clienteId, prestadoraId, cargadoPor 
 
   // El anterior se anula antes de insertar el nuevo, o el índice único de la base rechaza la
   // inserción. No se borra: el historial de lo que se fue firmando es lo que esta tabla guarda.
-  const { error: errorAnular } = await supabase
+  const { error: errorAnular } = await db
     .from('consentimientos_pagador')
     .update({ estado: 'anulado' })
     .eq('prestadora_id', prestadoraId)
@@ -134,7 +137,7 @@ export async function crearConsentimiento({ clienteId, prestadoraId, cargadoPor 
     .eq('estado', 'pendiente_firma');
   if (errorAnular) throw new Error(errorAnular.message);
 
-  const { data: consentimiento, error } = await supabase
+  const { data: consentimiento, error } = await db
     .from('consentimientos_pagador')
     .insert({
       prestadora_id: prestadoraId,
@@ -161,8 +164,8 @@ export async function crearConsentimiento({ clienteId, prestadoraId, cargadoPor 
 // que es lo mismo que la pantalla muestra: quien firma tiene que reconocer por quién se obliga.
 // El nombre visible se calcula al mostrarlo y no se guarda (CLAUDE.md del producto §6); acá se
 // escribe adentro del documento porque un documento firmado no se recalcula nunca más.
-async function nombreDeLaContratacion({ clienteId, prestadoraId }) {
-  const { data } = await supabase
+async function nombreDeLaContratacion({ db, clienteId, prestadoraId }) {
+  const { data } = await db
     .from('pacientes')
     .select(`created_at, ${FICHA_NOMBRE}`)
     .eq('prestadora_id', prestadoraId)
@@ -176,8 +179,8 @@ async function nombreDeLaContratacion({ clienteId, prestadoraId }) {
 }
 
 // El consentimiento de esta Prestadora, con su estado y su archivo, o null si no es de ella.
-export async function consentimientoDelPagador({ consentimientoId, prestadoraId }) {
-  const { data, error } = await supabase
+export async function consentimientoDelPagador({ db, consentimientoId, prestadoraId }) {
+  const { data, error } = await db
     .from('consentimientos_pagador')
     .select('id, estado, archivo_firmado_url')
     .eq('id', consentimientoId)
@@ -191,12 +194,12 @@ export async function consentimientoDelPagador({ consentimientoId, prestadoraId 
 // archivo se encarga del depósito; acá sólo se cierra. Si otra persona ya lo cerró o lo anuló, no
 // queda nada por hacer: no se toca nada, no es un error, y devuelve false para que la ruta sepa
 // que el archivo que subió no quedó guardado en ningún consentimiento.
-export async function cerrarConPapelFirmado({ consentimientoId, prestadoraId, archivoUrl }) {
-  const consentimiento = await consentimientoDelPagador({ consentimientoId, prestadoraId });
+export async function cerrarConPapelFirmado({ db, consentimientoId, prestadoraId, archivoUrl }) {
+  const consentimiento = await consentimientoDelPagador({ db, consentimientoId, prestadoraId });
   if (!consentimiento) throw new ErrorConMotivo('no_encontrado', 'Consentimiento no encontrado');
   if (consentimiento.estado !== 'pendiente_firma') return false;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('consentimientos_pagador')
     .update({
       estado: 'cerrado',
@@ -215,8 +218,8 @@ export async function cerrarConPapelFirmado({ consentimientoId, prestadoraId, ar
 // Se anula el pendiente sin reemplazarlo: se cargó por error, o cambió el Pagador y todavía no se
 // sabe cuál es el nuevo. Lo cerrado no se anula nunca: ya lo firmó alguien. Si otra persona ya lo
 // cerró o lo anuló, no queda nada por hacer y no es un error.
-export async function anularPendiente({ consentimientoId, prestadoraId }) {
-  const { data, error } = await supabase
+export async function anularPendiente({ db, consentimientoId, prestadoraId }) {
+  const { data, error } = await db
     .from('consentimientos_pagador')
     .update({ estado: 'anulado' })
     .eq('id', consentimientoId)
@@ -235,12 +238,12 @@ export async function anularPendiente({ consentimientoId, prestadoraId }) {
 // consume la pantalla donde se elige el Pagador, y cualquier otra que mañana necesite saberlo. La
 // decisión de qué cuenta como «definido» vive acá y en ningún otro lado: repartida entre pantallas
 // terminaría diciendo cosas distintas según dónde se mire.
-export async function estadoDelPagador({ clienteId, prestadoraId }) {
-  const cliente = await clienteConSuPagador({ clienteId, prestadoraId });
+export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
+  const cliente = await clienteConSuPagador({ db, clienteId, prestadoraId });
 
   const [pagador, { data: consentimientos }, papeles] = await Promise.all([
-    persona({ personaId: cliente.pagador_persona_id, prestadoraId }),
-    supabase
+    persona({ db, personaId: cliente.pagador_persona_id, prestadoraId }),
+    db
       .from('consentimientos_pagador')
       // El texto viene entero: la pantalla lo muestra tal como se guardó, y armarlo de nuevo para
       // mostrarlo daría otro documento el día que la Prestadora cambie su modelo.
@@ -249,7 +252,7 @@ export async function estadoDelPagador({ clienteId, prestadoraId }) {
       .eq('cliente_id', clienteId)
       .in('estado', ['pendiente_firma', 'cerrado'])
       .order('created_at', { ascending: false }),
-    papelesDelPagador({ clienteId, prestadoraId, pagadorTipo: cliente.pagador_tipo }),
+    papelesDelPagador({ db, clienteId, prestadoraId, pagadorTipo: cliente.pagador_tipo }),
   ]);
 
   const pendiente = (consentimientos ?? []).find((fila) => fila.estado === 'pendiente_firma') ?? null;
@@ -265,7 +268,7 @@ export async function estadoDelPagador({ clienteId, prestadoraId }) {
   // Si paga una entidad, quien firma es su Apoderado. Que no lo tenga configurado no impide nada
   // —el documento se arma igual—, pero saldría sin decir qué persona lo firma, y eso se avisa
   // antes y no después.
-  const apoderado = await apoderadoDe(pagador, prestadoraId);
+  const apoderado = await apoderadoDe(db, pagador, prestadoraId);
   const faltaApoderado = Boolean(pagador && pagador.clase === 'juridica' && !apoderado);
 
   return {
@@ -286,8 +289,8 @@ export async function estadoDelPagador({ clienteId, prestadoraId }) {
 
 // Qué papeles exige este Pagador y cuáles están. Se devuelve el catálogo entero, tenga o no
 // archivo cargado cada uno: lo que falta sólo se ve si el renglón aparece igual.
-export async function papelesDelPagador({ clienteId, prestadoraId, pagadorTipo }) {
-  let query = supabase
+export async function papelesDelPagador({ db, clienteId, prestadoraId, pagadorTipo }) {
+  let query = db
     .from('tipos_documento_pagador')
     .select('id, nombre, pagador_tipo, requiere_vencimiento')
     .eq('prestadora_id', prestadoraId)
@@ -304,7 +307,7 @@ export async function papelesDelPagador({ clienteId, prestadoraId, pagadorTipo }
   const { data: tipos, error } = await query;
   if (error) throw new Error(error.message);
 
-  const { data: cargados } = await supabase
+  const { data: cargados } = await db
     .from('documentos_pagador')
     .select('id, tipo_documento_id, archivo_url, fecha_vencimiento, created_at')
     .eq('prestadora_id', prestadoraId)
@@ -331,9 +334,9 @@ export async function papelesDelPagador({ clienteId, prestadoraId, pagadorTipo }
 // Guarda un papel que ya se subió al depósito. La ruta del archivo la arma quien sube; acá se anota
 // cuál es y hasta cuándo vale.
 export async function guardarPapel({
-  clienteId, prestadoraId, tipoDocumentoId, archivoUrl, fechaVencimiento, cargadoPor,
+  db, clienteId, prestadoraId, tipoDocumentoId, archivoUrl, fechaVencimiento, cargadoPor,
 }) {
-  const { data: tipo } = await supabase
+  const { data: tipo } = await db
     .from('tipos_documento_pagador')
     .select('id')
     .eq('id', tipoDocumentoId)
@@ -341,9 +344,9 @@ export async function guardarPapel({
     .maybeSingle();
   if (!tipo) throw new ErrorConMotivo('no_encontrado', 'Ese tipo de documento no existe');
 
-  await clienteConSuPagador({ clienteId, prestadoraId });
+  await clienteConSuPagador({ db, clienteId, prestadoraId });
 
-  const { error } = await supabase
+  const { error } = await db
     .from('documentos_pagador')
     .upsert({
       prestadora_id: prestadoraId,

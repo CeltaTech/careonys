@@ -75,6 +75,8 @@ prepararCredencialDePrueba();
 // El import va después de las variables de entorno: este archivo sí arma la conexión al cargarse.
 const { confirmarConCodigo, pedirCodigo } = await import('../instruccionesPersonasAutorizadas.js');
 const { anularPendiente, cerrarConPapelFirmado } = await import('../consentimientoPagador.js');
+// La conexión que en el backend sería la de la persona del Panel. Acá contesta la base de mentira.
+const { supabase: conexionDeLaPersona } = await import('../../db/connection.js');
 
 after(() => baseFalsa.close());
 
@@ -305,7 +307,7 @@ describe('el consentimiento de quien paga que ya no espera firma', () => {
     archivo_firmado_url: estado === 'cerrado' ? 'otra/ruta.pdf' : null,
   });
   const modificaciones = () => llamadas.filter((l) => l.clave === 'PATCH /rest/v1/consentimientos_pagador');
-  const pedido = { consentimientoId: CONSENTIMIENTO, prestadoraId: PRESTADORA };
+  const pedido = { db: conexionDeLaPersona, consentimientoId: CONSENTIMIENTO, prestadoraId: PRESTADORA };
 
   beforeEach(() => {
     consentimientos = [];

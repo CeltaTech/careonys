@@ -417,7 +417,7 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador', requiereRolPanel, exigirOr
   if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
   try {
-    res.json(await estadoDelPagador({ clienteId: cliente.id, prestadoraId: cliente.prestadora_id }));
+    res.json(await estadoDelPagador({ db: clienteDelPedido(req), clienteId: cliente.id, prestadoraId: cliente.prestadora_id }));
   } catch (error) {
     responderError(res, error);
   }
@@ -431,6 +431,7 @@ panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento', requiereRo
 
   try {
     const consentimiento = await crearConsentimiento({
+      db: clienteDelPedido(req),
       clienteId: cliente.id,
       prestadoraId: cliente.prestadora_id,
       cargadoPor: req.usuarioPanel.id,
@@ -449,6 +450,7 @@ panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimie
 
   try {
     await anularPendiente({
+      db: clienteDelPedido(req),
       consentimientoId: req.params.consentimientoId,
       prestadoraId: cliente.prestadora_id,
     });
@@ -474,7 +476,7 @@ panelCuentasRouter.post(
 
     // Si otra persona ya lo cerró o lo anuló, no queda nada por hacer: se contesta bien sin subir
     // nada, y la pantalla vuelve a leer y muestra cómo quedó.
-    const consentimientoPedido = { consentimientoId: req.params.consentimientoId, prestadoraId: cliente.prestadora_id };
+    const consentimientoPedido = { db, consentimientoId: req.params.consentimientoId, prestadoraId: cliente.prestadora_id };
     try {
       const consentimiento = await consentimientoDelPagador(consentimientoPedido);
       if (!consentimiento) throw new ErrorConMotivo('no_encontrado', 'Consentimiento no encontrado');
@@ -575,6 +577,7 @@ panelCuentasRouter.post(
 
     try {
       await guardarPapel({
+        db,
         clienteId: cliente.id,
         prestadoraId: cliente.prestadora_id,
         tipoDocumentoId: req.params.tipoDocumentoId,

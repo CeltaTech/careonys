@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import {
   codigoCoincide,
@@ -37,6 +37,11 @@ import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 // no tiene cuenta —los roles posibles son admin_prestadora, coordinador, asistente, cliente y
 // superadmin— ni aplicación propia, así que no tiene ninguna pantalla en la que mostrar un
 // código. Cuando la tenga, se agrega acá un tercer sujeto_tipo y nada más.
+//
+// CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA, NO CON LA DE QUIEN PIDE. El Asistente compara el
+// código que mostró el Cliente, y la autorización de una llegada deja autorizada la salida de otro
+// Asistente: cada uno necesita lo de otro, y su propia sesión no se lo deja ver. Cada función que
+// sale de acá abre la Prestadora de la guardia, y las de adentro reciben esa conexión, `db`.
 
 // Los mismos números que la base pone por omisión en las columnas. Se repiten acá para el único
 // caso en que la base no llega a aplicarlos, que es cuando esa Prestadora no tiene fila de
@@ -58,7 +63,13 @@ export { MOTIVOS_SIN_COMPROBAR, MOTIVOS_DEL_PEDIDO };
 const LARGO_MAXIMO_DEL_DETALLE = 500;
 
 export async function configuracionDeComprobacion(prestadoraId) {
-  const { data } = await supabase
+  if (!prestadoraId) return { segundosEnPantalla: SEGUNDOS_EN_PANTALLA_POR_OMISION };
+  return enLaPrestadora(prestadoraId, 'La configuración de la comprobación de presencia', (db) =>
+    configuracionCon(db, prestadoraId));
+}
+
+async function configuracionCon(db, prestadoraId) {
+  const { data } = await db
     .from('configuracion_ausencia_automatica')
     .select('segundos_codigo_en_pantalla')
     .eq('prestadora_id', prestadoraId)
@@ -89,34 +100,36 @@ export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) 
     throw new ErrorConMotivo('faltan_datos', 'No se puede armar un código sin saber quién lo muestra');
   }
 
-  const { segundosEnPantalla } = await configuracionDeComprobacion(prestadoraId);
-  const codigo = codigoNuevo();
-  const expiraEn = vencimientoEnSegundos(segundosEnPantalla);
+  return enLaPrestadora(prestadoraId, 'Mostrar un código de presencia', async (db) => {
+    const { segundosEnPantalla } = await configuracionCon(db, prestadoraId);
+    const codigo = codigoNuevo();
+    const expiraEn = vencimientoEnSegundos(segundosEnPantalla);
 
-  const { error } = await supabase.from('codigos_de_presencia').insert({
-    prestadora_id: prestadoraId,
-    sujeto_tipo: sujetoTipo,
-    sujeto_id: sujetoId,
-    codigo_verificador: verificadorDelCodigo(codigo),
-    expira_en: vencimientoEnSegundos(segundosEnPantalla * 2),
+    const { error } = await db.from('codigos_de_presencia').insert({
+      prestadora_id: prestadoraId,
+      sujeto_tipo: sujetoTipo,
+      sujeto_id: sujetoId,
+      codigo_verificador: verificadorDelCodigo(codigo),
+      expira_en: vencimientoEnSegundos(segundosEnPantalla * 2),
+    });
+    if (error) throw new Error(error.message);
+
+    // Los vencidos de esta persona no le sirven a nadie: se borran acá para que la tabla no crezca
+    // con cada vuelta. Si el borrado falla, el código nuevo ya quedó guardado y vale igual.
+    await db
+      .from('codigos_de_presencia')
+      .delete()
+      .eq('prestadora_id', prestadoraId)
+      .eq('sujeto_tipo', sujetoTipo)
+      .eq('sujeto_id', sujetoId)
+      .lt('expira_en', ahora());
+
+    return { codigo, segundos: segundosEnPantalla, expiraEn };
   });
-  if (error) throw new Error(error.message);
-
-  // Los vencidos de esta persona no le sirven a nadie: se borran acá para que la tabla no crezca
-  // con cada vuelta. Si el borrado falla, el código nuevo ya quedó guardado y vale igual.
-  await supabase
-    .from('codigos_de_presencia')
-    .delete()
-    .eq('prestadora_id', prestadoraId)
-    .eq('sujeto_tipo', sujetoTipo)
-    .eq('sujeto_id', sujetoId)
-    .lt('expira_en', ahora());
-
-  return { codigo, segundos: segundosEnPantalla, expiraEn };
 }
 
-async function pacientesDeLaGuardia(guardia) {
-  const { data: filas } = await supabase
+async function pacientesDeLaGuardia(db, guardia) {
+  const { data: filas } = await db
     .from('guardia_pacientes')
     .select('paciente_id')
     .eq('guardia_id', guardia.id)
@@ -132,10 +145,10 @@ async function pacientesDeLaGuardia(guardia) {
  * que se va cuando hay relevo. Se las busca por estado, no por horario: quien todavía no cerró es
  * quien todavía está.
  */
-async function guardiasSalientes(guardia, pacienteIds) {
+async function guardiasSalientes(db, guardia, pacienteIds) {
   if (pacienteIds.length === 0) return [];
 
-  const { data: otrasGuardias } = await supabase
+  const { data: otrasGuardias } = await db
     .from('guardia_pacientes')
     .select('guardia_id, guardias!inner(id, asistente_id, estado, checkout_at)')
     .in('paciente_id', pacienteIds)
@@ -162,12 +175,17 @@ async function guardiasSalientes(guardia, pacienteIds) {
  * la definición operativa de «hay relevo».
  */
 export async function sujetosQuePuedenMostrar(guardia) {
-  const pacienteIds = await pacientesDeLaGuardia(guardia);
+  return enLaPrestadora(guardia?.prestadora_id, 'Quiénes muestran el código de una guardia', (db) =>
+    sujetosCon(db, guardia));
+}
+
+async function sujetosCon(db, guardia) {
+  const pacienteIds = await pacientesDeLaGuardia(db, guardia);
   if (pacienteIds.length === 0) return [];
 
   const sujetos = [];
 
-  const { data: pacientes } = await supabase
+  const { data: pacientes } = await db
     .from('pacientes')
     .select('id, cliente_id')
     .in('id', pacienteIds)
@@ -179,7 +197,7 @@ export async function sujetosQuePuedenMostrar(guardia) {
     }
   }
 
-  for (const otra of await guardiasSalientes(guardia, pacienteIds)) {
+  for (const otra of await guardiasSalientes(db, guardia, pacienteIds)) {
     if (!sujetos.some((s) => s.tipo === 'asistente' && s.id === otra.asistente_id)) {
       sujetos.push({ tipo: 'asistente', id: otra.asistente_id });
     }
@@ -197,7 +215,12 @@ export async function comprobacionDe({ prestadoraId, guardiaId, momento }) {
     throw new ErrorConMotivo('faltan_datos', 'No se busca una comprobación sin saber de qué Organización es');
   }
 
-  const { data } = await supabase
+  return enLaPrestadora(prestadoraId, 'Ver una comprobación de presencia', (db) =>
+    comprobacionCon(db, { prestadoraId, guardiaId, momento }));
+}
+
+async function comprobacionCon(db, { prestadoraId, guardiaId, momento }) {
+  const { data } = await db
     .from('guardia_comprobaciones')
     .select('*')
     .eq('prestadora_id', prestadoraId)
@@ -211,17 +234,12 @@ function ahora() {
   return new Date().toISOString();
 }
 
-async function guardarComprobacion(fila) {
+async function guardarComprobacion(db, fila) {
   if (!fila.prestadora_id) {
     throw new ErrorConMotivo('faltan_datos', 'No se escribe una comprobación sin saber de qué Organización es');
   }
 
-  // SIN PRESTADORA A PROPÓSITO
-  // La Prestadora va adentro de la fila —arriba se corta si no viene—, y la columna del conflicto
-  // es el identificador de una guardia, único en toda la base: la fila en conflicto es siempre de
-  // la misma guardia y por lo tanto de la misma Prestadora. La base lo sostiene además con la clave
-  // foránea `(guardia_id, prestadora_id)` contra `guardias`, que rechaza cualquier otra pareja.
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('guardia_comprobaciones')
     .upsert({ ...fila, updated_at: ahora() }, { onConflict: 'guardia_id,momento' })
     .select('*')
@@ -247,13 +265,13 @@ async function guardarComprobacion(fila) {
  * llegada no traba nada: el camino de «pido autorización» y el de «entro igual con un motivo»
  * están siempre a un botón de distancia.
  */
-async function resolverCodigo({ guardia, codigo }) {
+async function resolverCodigo(db, { guardia, codigo }) {
   const texto = String(codigo ?? '').trim();
   if (!texto) throw new ErrorConMotivo('faltan_datos', 'Falta el código');
 
-  const sujetos = await sujetosQuePuedenMostrar(guardia);
+  const sujetos = await sujetosCon(db, guardia);
   if (sujetos.length > 0) {
-    const { data: vigentes } = await supabase
+    const { data: vigentes } = await db
       .from('codigos_de_presencia')
       .select('sujeto_tipo, sujeto_id, codigo_verificador, expira_en')
       .eq('prestadora_id', guardia.prestadora_id)
@@ -291,7 +309,12 @@ async function resolverCodigo({ guardia, codigo }) {
  * Devuelve `{ estado, medio }`.
  */
 export async function registrarComprobacion({ guardia, momento, lat, lng, comprobacion }) {
-  const yaHay = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
+  return enLaPrestadora(guardia?.prestadora_id, 'Comprobar una llegada o una salida', (db) =>
+    registrarCon(db, { guardia, momento, lat, lng, comprobacion }));
+}
+
+async function registrarCon(db, { guardia, momento, lat, lng, comprobacion }) {
+  const yaHay = await comprobacionCon(db, { prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
   if (yaHay?.estado === 'comprobada') {
     return { estado: 'comprobada', medio: yaHay.medio };
   }
@@ -307,8 +330,8 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
   };
 
   if (comprobacion?.codigo) {
-    const { medio, sujetoTipo, sujetoId } = await resolverCodigo({ guardia, codigo: comprobacion.codigo });
-    await guardarComprobacion({
+    const { medio, sujetoTipo, sujetoId } = await resolverCodigo(db, { guardia, codigo: comprobacion.codigo });
+    await guardarComprobacion(db, {
       ...base,
       estado: 'comprobada',
       medio,
@@ -331,7 +354,7 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
     throw new ErrorConMotivo('faltan_datos', 'Falta el código o el motivo por el que no se pudo comprobar');
   }
 
-  await guardarComprobacion({
+  await guardarComprobacion(db, {
     ...base,
     estado: 'sin_comprobar',
     medio: null,
@@ -355,7 +378,12 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
  * salida.
  */
 export async function pedirAutorizacion({ guardia, momento, lat, lng, motivo, detalle }) {
-  const yaHay = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
+  return enLaPrestadora(guardia?.prestadora_id, 'Pedir autorización de ingreso', (db) =>
+    pedirCon(db, { guardia, momento, lat, lng, motivo, detalle }));
+}
+
+async function pedirCon(db, { guardia, momento, lat, lng, motivo, detalle }) {
+  const yaHay = await comprobacionCon(db, { prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
   if (yaHay?.estado === 'comprobada') {
     return { id: yaHay.id, estado: yaHay.estado, pedidoEn: yaHay.pedido_en };
   }
@@ -364,7 +392,7 @@ export async function pedirAutorizacion({ guardia, momento, lat, lng, motivo, de
     throw new ErrorConMotivo('faltan_datos', 'Falta el motivo del pedido');
   }
 
-  const fila = await guardarComprobacion({
+  const fila = await guardarComprobacion(db, {
     prestadora_id: guardia.prestadora_id,
     guardia_id: guardia.id,
     asistente_id: guardia.asistente_id,
@@ -389,7 +417,12 @@ export async function pedirAutorizacion({ guardia, momento, lat, lng, motivo, de
 
 /** Los pedidos de autorización que están esperando a quien coordina. */
 export async function pedidosEsperandoAutorizacion(prestadoraId) {
-  const { data, error } = await supabase
+  return enLaPrestadora(prestadoraId, 'Los pedidos de autorización de ingreso', (db) =>
+    pedidosCon(db, prestadoraId));
+}
+
+async function pedidosCon(db, prestadoraId) {
+  const { data, error } = await db
     .from('guardia_comprobaciones')
     .select(`
       id, momento, pedido_en, motivo_del_pedido, detalle_del_pedido,
@@ -424,7 +457,12 @@ export async function pedidosEsperandoAutorizacion(prestadoraId) {
 export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizadaPor }) {
   if (!autorizadaPor) throw new ErrorConMotivo('faltan_datos', 'Falta quién autoriza');
 
-  const { data: fila } = await supabase
+  return enLaPrestadora(prestadoraId, 'Autorizar un ingreso', (db) =>
+    autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor }));
+}
+
+async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor }) {
+  const { data: fila } = await db
     .from('guardia_comprobaciones')
     .select('id, estado, momento, guardia_id')
     .eq('id', comprobacionId)
@@ -448,7 +486,7 @@ export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizad
     motivo_detalle: null,
   };
 
-  const { data: cambiada, error } = await supabase
+  const { data: cambiada, error } = await db
     .from('guardia_comprobaciones')
     .update({ ...autorizada, updated_at: cuando })
     .eq('prestadora_id', prestadoraId)
@@ -459,7 +497,7 @@ export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizad
   if (!cambiada?.length) throw new ErrorConMotivo('ya_resuelta', 'Ese pedido ya no está esperando autorización');
 
   if (fila.momento === 'checkin') {
-    const { data: guardia } = await supabase
+    const { data: guardia } = await db
       .from('guardias')
       .select('id, prestadora_id, asistente_id, paciente_id')
       .eq('id', fila.guardia_id)
@@ -467,11 +505,11 @@ export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizad
       .maybeSingle();
 
     if (guardia) {
-      const salientes = await guardiasSalientes(guardia, await pacientesDeLaGuardia(guardia));
+      const salientes = await guardiasSalientes(db, guardia, await pacientesDeLaGuardia(db, guardia));
       for (const saliente of salientes) {
-        const suya = await comprobacionDe({ prestadoraId, guardiaId: saliente.id, momento: 'checkout' });
+        const suya = await comprobacionCon(db, { prestadoraId, guardiaId: saliente.id, momento: 'checkout' });
         if (suya?.estado === 'comprobada') continue;
-        await guardarComprobacion({
+        await guardarComprobacion(db, {
           prestadora_id: prestadoraId,
           guardia_id: saliente.id,
           asistente_id: saliente.asistente_id,

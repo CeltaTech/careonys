@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // De qué cuenta cuelga un Legajo de Asistente o una Ficha del cliente, escrito una sola vez.
 //
@@ -10,16 +10,19 @@ import { supabase } from '../db/connection.js';
 // Preguntarle a `usuarios` con un número de Legajo no devuelve nada, y el defecto no se nota: la
 // pantalla muestra un nombre vacío y nadie sabe por qué. Por eso el paso de uno al otro se hace
 // acá y en ningún otro lado.
+//
+// Lo lee el trabajo de la Prestadora: quien pide no siempre ve la cuenta de la otra persona —el
+// Asistente, la de su Cliente—, y la base acota ese trabajo a una sola Prestadora.
 
 /** La cuenta de un solo renglón. Devuelve el identificador de la cuenta, o `null`. */
 export async function cuentaDeLaFila(tabla, filaId, prestadoraId) {
   if (!filaId || !prestadoraId) return null;
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, 'La cuenta de un Legajo', (db) => db
     .from(tabla)
     .select('usuario_id')
     .eq('id', filaId)
     .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+    .maybeSingle());
   return data?.usuario_id || null;
 }
 
@@ -34,11 +37,11 @@ export async function cuentasDeLasFilas(tabla, filaIds, columnas, prestadoraId) 
   const unicos = [...new Set((filaIds ?? []).filter(Boolean))];
   if (unicos.length === 0 || !prestadoraId) return mapa;
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Las cuentas de varios Legajos', (db) => db
     .from(tabla)
     .select(`id, usuarios!inner(${columnas})`)
     .in('id', unicos)
-    .eq('prestadora_id', prestadoraId);
+    .eq('prestadora_id', prestadoraId));
   if (error) {
     console.error(`No se pudieron leer las cuentas de ${tabla}:`, error.message);
     return mapa;

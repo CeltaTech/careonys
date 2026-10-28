@@ -37,10 +37,15 @@
    cobro queda armado en el próximo paso del trabajo diario. En los dos casos lo que cambia acá
    es lo mismo y es lo que importa: el acceso dejó de estar en prueba.
 
+   CON EL TRABAJO DE LA PRESTADORA. Quien pregunta es un Cliente, y el Legajo del Asistente, los
+   accesos y el saldo no son suyos para leer ni escribir: los lee y los escribe el trabajo de esa
+   Prestadora, que la base acota a ella. Las dos funciones de afuera entran ahí; las de adentro
+   usan la conexión que les toca.
+
    FALLA CERRADO. Sin acceso vigente, sin saldo, o ante cualquier error de la base, no se abre
    nada y se devuelve el motivo. Nunca se muestra un contacto que no se pudo descontar. */
 
-import { supabase } from '../db/connection.js';
+import { supabase, enLaPrestadora } from '../db/connection.js';
 import { abrirElContacto, MOTIVO_CONTACTO } from './contactosIntermediacion.js';
 
 /** Las columnas del Legajo del Asistente que son el dato que se vende. Están acá, en una sola
@@ -156,7 +161,11 @@ function advertenciaDeLaActivacion(acceso) {
  *   cuánto sale y cuánto queda de saldo es plata, y en las personas autorizadas no la mira cualquiera.
  * @returns {Promise<{abierto: boolean, contacto: object|null, activacion: object|null, motivo?: string}>}
  */
-export async function comoEstaElContacto({ prestadoraId, clienteId, asistenteId, mira_el_dinero = false }) {
+export function comoEstaElContacto(argumentos) {
+  return enLaPrestadora(argumentos.prestadoraId, 'Ver un contacto del Match', () => mirarElContacto(argumentos));
+}
+
+async function mirarElContacto({ prestadoraId, clienteId, asistenteId, mira_el_dinero = false }) {
   const { data: yaVisto, error } = await supabase
     .from('contactos_vistos_intermediacion')
     .select('id')
@@ -209,7 +218,11 @@ export async function comoEstaElContacto({ prestadoraId, clienteId, asistenteId,
  *
  * @returns {Promise<{ok: boolean, contacto?: object, ya_estaba?: boolean, saldo_contactos?: number, motivo?: string}>}
  */
-export async function abrirElContactoDeUnAsistente({ prestadoraId, clienteId, asistenteId }) {
+export function abrirElContactoDeUnAsistente(argumentos) {
+  return enLaPrestadora(argumentos.prestadoraId, 'Abrir un contacto del Match', () => abrirYMostrar(argumentos));
+}
+
+async function abrirYMostrar({ prestadoraId, clienteId, asistenteId }) {
   const { acceso, hubo_alguno: huboAlguno } = await accesoQuePagaElContacto({ prestadoraId, clienteId });
   if (!acceso) {
     return { ok: false, motivo: huboAlguno ? MOTIVO_VER_CONTACTO.ACCESO_NO_VIGENTE : MOTIVO_VER_CONTACTO.SIN_ACCESO };

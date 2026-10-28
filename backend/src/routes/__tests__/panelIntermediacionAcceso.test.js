@@ -258,12 +258,11 @@ describe('la administración sí pasa el candado', () => {
   });
 });
 
-describe('la lista de accesos trae los nombres aunque el Legajo esté pendiente de conformidad', () => {
-  // La política restrictiva `oculta_pendientes_de_conformidad` de `pacientes` y de `asistentes`
-  // esconde los Legajos pendientes a quien pide. Antes de pasar a la credencial de la persona, el
-  // nombre salía igual, y así tiene que seguir: los nombres se leen con la llave maestra,
-  // acotados a la Prestadora de la sesión.
-  it('pide los nombres con la llave maestra y con el filtro de la Prestadora', async () => {
+describe('la lista de accesos trae los nombres con el trabajo de la Prestadora', () => {
+  // A Superadmin, que esta ruta deja pasar con el permiso de acceso abierto, no lo alcanzan las
+  // políticas de lectura de la persona. Los nombres se leen con el trabajo de la Prestadora, que
+  // sólo ve esa Prestadora: ni con la credencial de quien pide ni con la llave maestra.
+  it('pide los nombres con el trabajo de la Prestadora', async () => {
     const PACIENTE = '66666666-6666-6666-6666-666666666666';
     const ASISTENTE = '77777777-7777-7777-7777-777777777777';
     respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
@@ -281,7 +280,8 @@ describe('la lista de accesos trae los nombres aunque el Legajo esté pendiente 
       const lectura = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
       assert.ok(lectura, `no se leyeron los nombres de ${tabla}`);
       assert.notEqual(lectura.credencial, credencialEnviada, `${tabla} se leyó con la credencial de la persona`);
-      assert.match(lectura.busqueda, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`), `${tabla} se leyó sin la Prestadora`);
+      assert.notEqual(lectura.credencial, 'Bearer clave-de-mentira', `${tabla} se leyó con la llave maestra`);
+      assert.ok(lectura.credencial, `${tabla} se leyó sin credencial`);
     }
   });
 });

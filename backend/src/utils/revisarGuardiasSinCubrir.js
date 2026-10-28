@@ -21,9 +21,8 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // quiere enterarse con tres días de anticipación y una que cubre urgencias se llenaría de
 // mensajes inútiles con ese mismo número.
 //
-// Usa el service role (pasa por encima de RLS) porque recorre todas las Prestadoras según su
-// propia configuración — en este proceso no hay ninguna sesión de Panel abierta. Mismo
-// criterio que avisoAutomaticoCese.js.
+// Corre como tarea programada, adentro del trabajo de una sola Prestadora por vez
+// (`paraCadaPrestadora`, en `server.js`): la base no le deja ver ninguna otra.
 
 const EVENTO = 'guardia_sin_cubrir';
 
@@ -35,9 +34,7 @@ const DIAS_HACIA_ATRAS = 1;
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
-// Se recorre de a una Prestadora por vez, y su configuración se lee con su propio filtro: el backend
-// entra con la llave de servicio, que se saltea la protección por fila, así que lo único que
-// mantiene cerrado cada cajón es que cada consulta diga para cuál trabaja.
+// Cada consulta nombra además la Prestadora para la que trabaja.
 export async function revisarGuardiasSinCubrir() {
   const { data: prestadoras, error } = await supabase
     .from('prestadoras')

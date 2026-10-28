@@ -14,8 +14,8 @@ const EVENTO_CESE = 'aviso_cese_asistente';
 // es el resguardo que dispara push + WhatsApp solo si esa llamada no quedó marcada dentro del
 // plazo configurado por la Prestadora (configuracion_aviso_cese_asistente).
 //
-// Usa el service role (bypassa RLS) porque procesa cierres de todas las prestadoras según su
-// propia configuración — no hay un usuario de panel logueado en este proceso.
+// Corre como tarea programada, adentro del trabajo de una sola Prestadora por vez
+// (`paraCadaPrestadora`, en `server.js`): la base no le deja ver ninguna otra.
 export async function revisarMensajesAutomaticosCese() {
   // SIN PRESTADORA A PROPÓSITO
   // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna

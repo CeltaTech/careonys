@@ -3,9 +3,9 @@
  *
  *   node --test "src/**\/__tests__/*.test.js"
  *
- * POR QUÉ EXISTE ESTA PRUEBA. El backend entra a la base con la llave de servicio y se saltea la
- * protección por fila, así que lo único que separa una Prestadora de otra son los filtros escritos
- * en cada consulta. Un filtro que falta no se ve: la pantalla anda igual de bien.
+ * POR QUÉ EXISTE ESTA PRUEBA. La base ya separa las Prestadoras por fila, y el filtro escrito en
+ * cada consulta es la segunda pared: si algún camino vuelve a entrar sin esa protección, es lo único
+ * que queda. Un filtro que falta no se ve: la pantalla anda igual de bien.
  *
  * QUÉ MIRA. Todo `src`, no sólo las rutas de las aplicaciones. El defecto no vive en quien llama:
  * vive en la consulta, y la mayoría de las consultas están en las funciones de adentro.

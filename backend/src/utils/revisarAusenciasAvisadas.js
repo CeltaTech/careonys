@@ -28,9 +28,8 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // más cercano o si la Prestadora corre el número. Cuando cambia se avisa de nuevo aunque no haya
 // pasado el intervalo: dejó de ser el mismo problema.
 //
-// Entra con la llave de servicio, que se saltea la protección por fila, porque recorre todas las
-// Prestadoras y acá no hay ninguna sesión de Panel abierta. Mismo criterio que
-// `revisarGuardiasSinCubrir.js`.
+// Corre como tarea programada, adentro del trabajo de una sola Prestadora por vez
+// (`paraCadaPrestadora`, en `server.js`): la base no le deja ver ninguna otra.
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
@@ -49,9 +48,7 @@ const EVENTO_POR_CLASE = {
   [COMO_LLEGO.DE_GOLPE]: 'ausencia_de_golpe',
 };
 
-// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el backend entra con la
-// llave de servicio, que se saltea la protección por fila, así que lo único que mantiene cerrado
-// cada cajón es que cada consulta diga para cuál trabaja.
+// Cada consulta nombra además la Prestadora para la que trabaja.
 export async function revisarAusenciasAvisadas() {
   const ahora = new Date();
   const desde = fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA));

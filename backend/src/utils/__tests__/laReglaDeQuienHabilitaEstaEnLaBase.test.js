@@ -3,9 +3,8 @@
  *
  *   node --test "src/**\/__tests__/*.test.js"   (desde backend/)
  *
- * POR QUÉ ESTÁ ESCRITA DOS VECES. El backend entra a la base con la llave de servicio, así que sin el
- * control de este lado la regla de la base nunca se evaluaría con lo que el backend sabe; y sin la de
- * la base, cualquier camino nuevo que escriba en esas tablas nacería sin control. Dos copias de la
+ * POR QUÉ ESTÁ ESCRITA DOS VECES. Sin el control de este lado, el backend no podría contestar con un
+ * mensaje claro antes de que la base rechace; y sin la de la base, cualquier camino nuevo que escriba en esas tablas nacería sin control. Dos copias de la
  * misma decisión son dos lugares donde corregirla, y basta con que alguien arregle una para que la
  * otra quede contestando otra cosa: eso es exactamente lo que había pasado.
  *

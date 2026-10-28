@@ -18,16 +18,16 @@ import { correoDe } from './correoDeUnaPersona.js';
 // donde no hay ninguna pantalla que los haya traído antes.
 //
 // NO SE COPIA A NINGUNA PARTE, y por eso vive acá y no en el Panel: el Panel ya trae estos datos
-// con la sesión de la persona que está mirando (`pages/clientes/EquipoDelPaciente.jsx`), y el backend
-// entra con la llave de servicio. Lo que sí es el mismo en los dos lados —la regla de quién es del
+// con la sesión de la persona que está mirando (`pages/clientes/EquipoDelPaciente.jsx`), y acá lo
+// pide una tarea programada, sin sesión de nadie. Lo que sí es el mismo en los dos lados —la regla de quién es del
 // equipo— está en el archivo que se copia, y acá no se repite.
 //
 // SE ARMA DOS VECES, igual que en la pantalla: la primera vuelta dice quiénes son las Asistentes,
 // de ahí salen los lugares donde aceptan trabajar, y recién con esos lugares se sabe quién coordina
 // a este Paciente.
 //
-// Entra con la llave de servicio, que se saltea la protección por fila, así que cada consulta
-// filtra por Prestadora a mano. Mismo criterio que los demás procesos de fondo.
+// Corre adentro del trabajo de una sola Prestadora (`paraCadaPrestadora`), y cada consulta nombra
+// además la Prestadora. Mismo criterio que los demás procesos de fondo.
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 

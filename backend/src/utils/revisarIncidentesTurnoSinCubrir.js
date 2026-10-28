@@ -48,9 +48,8 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // el cliente no lo sabe nadie más que quien lo vivió, así que ése lo cierra una persona desde el
 // Panel, y queda escrito como defecto grave que no se pudo solucionar.
 //
-// Entra con la llave de servicio, que se saltea la protección por fila, porque recorre todas las
-// Prestadoras y acá no hay ninguna sesión de Panel abierta. Mismo criterio que
-// `revisarAusenciasAvisadas.js`.
+// Corre como tarea programada, adentro del trabajo de una sola Prestadora por vez
+// (`paraCadaPrestadora`, en `server.js`): la base no le deja ver ninguna otra.
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 

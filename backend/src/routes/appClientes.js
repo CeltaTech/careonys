@@ -1028,7 +1028,7 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
 // El acceso al Match + cobro en efectivo por QR. El QR es la
 // alternativa a la carga manual del cobrador: el Cliente lo genera desde su propio
 // dispositivo, de un solo uso y con vencimiento corto (10 min) — el canje ocurre siempre en
-// el Panel vía service_role, nunca como UPDATE directo desde acá.
+// el Panel, con el trabajo de la Prestadora, nunca como UPDATE directo desde acá.
 // ============================================================================
 
 appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {

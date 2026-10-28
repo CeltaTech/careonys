@@ -31,8 +31,8 @@ import {
 // repetírselo desde otro lado no le agrega nada. La insistencia hasta que se resuelva la maneja
 // `revisarNotificacionesCoordinador.js`, que es el único que notifica; acá sólo se detecta.
 //
-// Entra con la llave de servicio porque recorre todas las Prestadoras y en este proceso no hay
-// ninguna sesión de Panel abierta, igual que `ausenciaAutomatica.js`.
+// Corre como tarea programada, adentro del trabajo de una sola Prestadora por vez
+// (`paraCadaPrestadora`, en `server.js`): la base no le deja ver ninguna otra.
 
 const MS_POR_MINUTO = 60 * 1000;
 const MS_POR_HORA = 60 * MS_POR_MINUTO;

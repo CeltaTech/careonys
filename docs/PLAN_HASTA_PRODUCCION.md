@@ -715,9 +715,10 @@ y series de esos Servicios con todo lo que cuelga de ellas. Una alarma tomada le
 guardia. El equipo del Paciente muestra como Coordinador a quien coordina sus Servicios. Las tomas
 de alarma y las reasignaciones por emergencia se leen sólo de lo que ve; WhatsApp, por zona del
 Asistente; y los archivos de prescripciones, papel firmado y autorizaciones de monitoreo, sólo de
-los Pacientes que ve. Lo prueba `scripts/probar_altas_con_sesion.mjs`. Falta:
+los Pacientes que ve. Del Directorio de Personas lee las que tienen un rol en sus Clientes y
+Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
+`scripts/probar_altas_con_sesion.mjs`. Falta:
 
-- **Las Personas del Directorio** vinculadas a sus Clientes, que hoy ve enteras.
 - **Las rutas del backend que trabajan con `enLaPrestadora`** y devuelven datos de Clientes o
   Pacientes a una persona: ahí la base no recorta, y el recorte por Coordinador lo tiene que hacer la
   ruta o pasar a la credencial de quien pide.

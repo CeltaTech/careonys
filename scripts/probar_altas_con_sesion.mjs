@@ -1141,9 +1141,11 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     return problemas;
   }
   const [servicio, cliente, paciente, guardia] = ajeno;
+  const [[contratante]] = consultarBase(`SELECT contratante_persona_id FROM public.clientes WHERE id = '${cliente}';`);
 
   const cuenta = async (ruta) => (await pedir(entorno, coordinadora, 'GET', ruta)).filas.length;
   const lecturas = {
+    'la Ficha del Contratante': `personas?id=eq.${contratante}&select=id`,
     'el Servicio': `servicios?id=eq.${servicio}&select=id`,
     'el Cliente': `clientes?id=eq.${cliente}&select=id`,
     'el Paciente': `pacientes?id=eq.${paciente}&select=id`,

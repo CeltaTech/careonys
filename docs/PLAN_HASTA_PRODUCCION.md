@@ -371,9 +371,15 @@ maestra; lo que sigue no se pudo cerrar ahí.
 
 - **El permiso de tabla de `authenticated` es entero en casi todas las tablas**, y lo que acota es
   la política. Donde una política le deja actualizar a una persona su propia fila, puede cambiarle
-  cualquier columna si llama a la base directo con su sesión. En los avisos de demora ya está
-  cerrado —el Asistente no puede darlos por resueltos—; las demás políticas de actualización de
-  Asistentes y Clientes se revisan con el mismo criterio.
+  cualquier columna si llama a la base directo con su sesión. Ya está cerrado en los avisos de
+  demora y de emergencia, los descansos, el acceso guardado del teléfono, el consentimiento del
+  Asistente —firma sólo el texto que se le mostró y después sólo lo retira— y los datos bancarios
+  (`20270220000012_cada_persona_cambia_solo_sus_columnas.sql`). Faltan, con la misma revisión:
+  `guardias` (`asistente_actualiza_su_guardia`), `asignaciones_de_turno`
+  (`asistente_rechaza_su_asignacion`), `calificaciones_asistente` (el descargo del Asistente y la
+  calificación del Cliente), `reportes` (`asistente_gestiona_reportes_de_su_guardia`) y
+  `push_subscriptions`. En `guardias` el permiso por columna no alcanza, porque el Panel escribe
+  casi todas: hace falta que la base distinga quién escribe.
 
 **Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy el
 Cliente y el Asistente de ese Paciente leen el renglón entero —quién la firmó, en qué carácter,

@@ -888,6 +888,109 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
     borrarLaCuentaSembrada();
   }
 
+  // Corregir la cuenta no es mudarla: el país y la clase de cuenta quedan como se cargaron.
+  consultarBase(`
+    INSERT INTO public.datos_bancarios_asistente (prestadora_id, asistente_id, pais, identificador_clase, identificador)
+    VALUES ('${d.prestadora}', '${asistenteDeLaSesion}', '${paisDeLaPrestadora || 'AR'}', 'cbu', '${CUENTA_DE_PRUEBA}');
+  `);
+  const mudaLaCuenta = await pedir(
+    entorno, delAsistente, 'PATCH',
+    `datos_bancarios_asistente?asistente_id=eq.${asistenteDeLaSesion}&identificador=eq.${CUENTA_DE_PRUEBA}`,
+    { identificador_clase: 'alias' },
+  );
+  if (mudaLaCuenta.ok) {
+    mal('el Asistente NO cambia la clase de su cuenta', 'la base lo dejó');
+  } else {
+    bien('el Asistente NO cambia la clase de su cuenta', `rebotó con ${mudaLaCuenta.estado}`);
+  }
+  borrarLaCuentaSembrada();
+
+  // ---- Lo que firmó el Asistente: el texto es el que se le mostró, y después sólo se retira ----
+  const [[textoId, textoClave, textoVersion, textoIdioma]] = consultarBase(`
+    SELECT id, clave, version, idioma FROM public.textos_consentimiento
+     WHERE vigente_hasta IS NULL ORDER BY clave, version DESC LIMIT 1;
+  `);
+  // El índice deja una sola decisión viva por consentimiento: la que ya tenga se aparta mientras
+  // dura la prueba y se le devuelve al final.
+  const apartadas = consultarBase(`
+    UPDATE public.consentimientos_asistente SET retirado_at = now()
+     WHERE asistente_id = '${asistenteDeLaSesion}' AND clave = '${textoClave}' AND retirado_at IS NULL
+       AND decision = 'otorgado'
+    RETURNING id;
+  `).map(([id]) => id).filter((id) => /^[0-9a-f-]{36}$/.test(id));
+  const firmadas = [];
+  try {
+    const firma = (textoMostrado) => ({
+      prestadora_id: d.prestadora, asistente_id: asistenteDeLaSesion, clave: textoClave,
+      texto_consentimiento_id: textoId, version_mostrada: Number(textoVersion),
+      idioma_mostrado: textoIdioma, texto_mostrado: textoMostrado, decision: 'otorgado',
+    });
+
+    const inventada = await pedir(entorno, delAsistente, 'POST', 'consentimientos_asistente',
+      firma('Un texto que nunca se le mostró.'));
+    if (inventada.ok) {
+      firmadas.push(...inventada.filas.map((f) => f.id));
+      mal('el Asistente NO firma un texto distinto del que se le mostró', 'la base lo dejó');
+    } else {
+      bien('el Asistente NO firma un texto distinto del que se le mostró', `rebotó con ${inventada.estado}`);
+    }
+
+    // El cuerpo se lee como lo lee el backend, con la sesión: puede traer saltos de renglón.
+    const mostrado = await pedir(entorno, delAsistente, 'GET', `textos_consentimiento?id=eq.${textoId}&select=cuerpo`);
+    const cuerpoReal = mostrado.filas[0]?.cuerpo ?? '';
+    const verdadera = await pedir(entorno, delAsistente, 'POST', 'consentimientos_asistente', firma(cuerpoReal));
+    const firmada = verdadera.filas[0]?.id;
+    if (!firmada) {
+      const c = verdadera.cuerpo || {};
+      mal('el Asistente SÍ firma el texto que se le mostró', `${verdadera.estado} ${c.code || ''} ${c.message || ''}`.trim());
+    } else {
+      firmadas.push(firmada);
+      bien('el Asistente SÍ firma el texto que se le mostró', 'asistente_registra_su_consentimiento');
+
+      const cambiaLaDecision = await pedir(entorno, delAsistente, 'PATCH',
+        `consentimientos_asistente?id=eq.${firmada}`, { decision: 'rechazado' });
+      const reescribeElTexto = await pedir(entorno, delAsistente, 'PATCH',
+        `consentimientos_asistente?id=eq.${firmada}`, { texto_mostrado: 'Otro texto.' });
+      const [[decisionQuedo, textoQuedo]] = consultarBase(
+        `SELECT c.decision, c.texto_mostrado = t.cuerpo FROM public.consentimientos_asistente c
+           JOIN public.textos_consentimiento t ON t.id = c.texto_consentimiento_id WHERE c.id = '${firmada}';`,
+      );
+      if (decisionQuedo === 'otorgado' && textoQuedo === 't') {
+        bien('el Asistente NO reescribe lo que firmó',
+          `rebotó con ${cambiaLaDecision.estado} y ${reescribeElTexto.estado}`);
+      } else {
+        mal('el Asistente NO reescribe lo que firmó', 'la base lo dejó');
+      }
+
+      const retira = await pedir(entorno, delAsistente, 'PATCH',
+        `consentimientos_asistente?id=eq.${firmada}`, { retirado_at: new Date().toISOString() });
+      if (retira.filas.length === 1) {
+        bien('el Asistente SÍ retira su consentimiento', 'asistente_retira_su_consentimiento');
+      } else {
+        const c = retira.cuerpo || {};
+        mal('el Asistente SÍ retira su consentimiento', `${retira.estado} ${c.code || ''} ${c.message || ''}`.trim());
+      }
+
+      await pedir(entorno, delAsistente, 'PATCH',
+        `consentimientos_asistente?id=eq.${firmada}`, { retirado_at: null });
+      const [[sigueRetirado]] = consultarBase(
+        `SELECT retirado_at IS NOT NULL FROM public.consentimientos_asistente WHERE id = '${firmada}';`,
+      );
+      if (sigueRetirado === 't') {
+        bien('el Asistente NO deshace un retiro', 'no tocó ninguna fila');
+      } else {
+        mal('el Asistente NO deshace un retiro', 'la base lo dejó volver a dar por vigente lo retirado');
+      }
+    }
+  } finally {
+    if (firmadas.length) {
+      consultarBase(`DELETE FROM public.consentimientos_asistente WHERE id IN (${firmadas.map((id) => `'${id}'`).join(',')});`);
+    }
+    if (apartadas.length) {
+      consultarBase(`UPDATE public.consentimientos_asistente SET retirado_at = NULL WHERE id IN (${apartadas.map((id) => `'${id}'`).join(',')});`);
+    }
+  }
+
   return problemas;
 }
 

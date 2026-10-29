@@ -721,8 +721,25 @@ Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
 
 - **De cada Asistente, la distancia al domicilio y no el domicilio.** Los Asistentes, las matrículas
   y las calificaciones siguen por zona, a propósito: un Asistente trabaja para varios Servicios.
+  Hoy el Panel ya le muestra a la Coordinadora el Padrón y el Legajo desde la vista
+  `asistentes_coordinador`, que no lleva domicilio, calle, piso, código postal ni coordenadas.
+  Quedan dos huecos: la base le deja leer esas seis columnas de `asistentes` a cualquier sesión
+  de la Prestadora, y el mapa de Postulaciones (`panel/src/hooks/usePadronEnElMapa.js`) las lee
+  para todos y dibuja a cada Asistente en su casa. El backend no lee el domicilio de ningún
+  Asistente. El arreglo en la base es quitarle a `authenticated` la lectura de esas seis columnas
+  y dar el domicilio por una función que sólo se lo contesta al Administrador y al propio
+  Asistente, y la distancia por otra que la calcula adentro. Eso obliga a cambiar las lecturas
+  con `*` del Panel sobre `asistentes` y cambia lo que el mapa le muestra a la Coordinadora
+  —sin la casa de cada uno—: es cambio grande y toca la interfaz, así que espera la aprobación
+  del Desarrollador.
 - **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y
-  se habilitan con un permiso.
+  se habilitan con un permiso. Hoy la facturación del Cliente, sus cobros y correcciones pasan
+  por una sola función, `interno.gestiona_la_facturacion()`, que deja entrar a todo el personal;
+  la lista de precios y los consentimientos y documentos del Pagador dejan leer al Administrador
+  y a la Coordinadora con la condición copiada en cada política. El arreglo es que esa función
+  sea Administrador o quien tenga el permiso, y que las otras tablas la usen. Espera que el
+  Desarrollador apruebe el nombre del permiso: la propuesta es `ver_facturacion_cliente`,
+  reservado de fábrica a la administración, con el mismo molde que `ver_estado_de_cuenta_cliente`.
 - **El Asistente, en un turno asignado sin responder, ve barrio, distancia, horario, complejidad y
   las tareas especiales que pide el Paciente.** El nombre del Paciente y el domicilio exacto, recién
   al aceptar. Ya le llegan horario, barrio, complejidad, la distancia en línea recta y las tareas

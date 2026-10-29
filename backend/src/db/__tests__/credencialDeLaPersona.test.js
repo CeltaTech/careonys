@@ -56,7 +56,6 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 const URL_BASE = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_URL = URL_BASE;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-maestra-de-mentira';
 process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
 
 const { abrirSesionDelPedido, clienteDelPedido } = await import('../connection.js');
@@ -143,7 +142,7 @@ describe('abrir la sesión de la persona', () => {
   });
 
   it('la credencial del trabajo sin persona y la pública no son de una persona', async () => {
-    for (const role of ['trabajo_sin_persona', 'anon', 'service_role']) {
+    for (const role of ['trabajo_sin_persona', 'copia_de_respaldo', 'anon', 'service_role']) {
       const req = pedidoCon(`Bearer ${credencial({ role })}`);
       assert.equal(await abrirSesionDelPedido(req), null, `el rol ${role} abrió una sesión`);
     }

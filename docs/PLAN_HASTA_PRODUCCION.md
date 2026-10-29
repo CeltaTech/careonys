@@ -170,10 +170,12 @@ el que evita el enredo.
 
 Medido contra la base en vivo y contra el código, no contra documentos.
 
-**La llave que abre todo sigue existiendo, y casi nadie la usa.** `SUPABASE_SERVICE_ROLE_KEY`
-alcanza todas las tablas de todas las Prestadoras. El backend no la usa: lo que pide una persona entra con su credencial (`clienteDelPedido(req)`) y lo que
-la persona no puede hacer, con el trabajo de su Prestadora (`enLaPrestadora`). Quedan con la llave
-los programas sueltos de `backend/scripts` y la copia de respaldo.
+**La llave que abre todo sigue existiendo, y nadie la usa.** `SUPABASE_SERVICE_ROLE_KEY`
+alcanza todas las tablas de todas las Prestadoras. Ningún archivo del repositorio la usa: lo que
+pide una persona entra con su credencial (`clienteDelPedido(req)`), lo que la persona no puede
+hacer, con el trabajo de su Prestadora (`enLaPrestadora`), y la copia nocturna de los archivos, con
+la credencial de la copia de respaldo, que sólo lista y baja archivos. Sigue cargada en Railway y
+en los secretos de GitHub, y viva en Supabase.
 
 **Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` se llama
 unas 25 veces desde 10 archivos; el resto de las consultas escribe el filtro a mano. Cuántas
@@ -183,8 +185,7 @@ darse cuenta.
 
 **Los 12 depósitos de archivos tienen política.** La autorización de monitoreo, los documentos
 del Asistente, los papeles del Pagador y la hoja firmada de las personas autorizadas ya se sirven
-con el acceso de quien pide, y ahí dice que no el depósito; las rutas que siguen con la llave
-maestra se saltean la política del depósito como la de las tablas.
+con el acceso de quien pide, y ahí dice que no el depósito.
 
 **La protección por fila está puesta y la base es la que decide.** Todas las tablas la tienen
 encendida y con política, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
@@ -279,9 +280,8 @@ cercanía al paciente, así que nada necesita ser único cruzando el océano.
 Hoy hay una sola, armada con `SUPABASE_URL` y `SUPABASE_ANON_KEY`; la credencial de una persona se
 manda a la región que la emitió, y una que no emitió ninguna no entra. Comprobar, cambiar la
 clave y cerrar las sesiones de una persona también le preguntan a la región de su cuenta
-(`backend/src/utils/claveActual.js`), y sin región se niegan. La única conexión que sigue
-armándose con `SUPABASE_URL` a secas es la de la llave maestra, que sale entera en el paso 10.
-Falta lo que
+(`backend/src/utils/claveActual.js`), y sin región se niegan. La copia nocturna de los archivos
+recorre todas las regiones. Falta lo que
 todavía no tiene de dónde sacarse: a qué región pertenece cada Prestadora y la puerta de
 entrada de las pantallas.
 
@@ -442,23 +442,18 @@ datos cargados. La del registro de accesos ya está en `scripts/probar_altas_con
 distintas, cada una las lee por paciente con los seis campos y ninguna ve las de la otra, ni
 pidiendo sin filtro; y una entrada del medio alterada deja la cadena rota y el sistema dice cuál.
 
-**10.** **Se cierra la puerta, en todos lados.** El backend y sus pruebas ya no usan
-`SUPABASE_SERVICE_ROLE_KEY`: fuera de `enLaPrestadora` no hay conexión. Falta sacarla de las
-variables de entorno del backend y de lo demás que la usa: la copia de respaldo diaria y los
-programas sueltos de `backend/scripts`.
+**10.** **Se cierra la puerta, en todos lados.** Ningún archivo del repositorio usa
+`SUPABASE_SERVICE_ROLE_KEY`. Falta, en este orden:
 
-**Mientras tanto, la llave sólo puede retroceder.** La lista de los archivos que todavía la usan
-está en `scripts/llave_maestra_pendiente.json`, y `scripts/verificar_llave_maestra.mjs` corta la
-publicación si aparece uno nuevo o si la lista crece. Cada paso que le saca la llave a un archivo
-lo saca también de la lista.
+- Cargar en Railway las variables `R2_*` y `B2_*`, que la copia nocturna de los archivos ahora
+  necesita en el backend.
+- Comprobar en el registro de Railway que esa copia terminó bien, y que el respaldo diario de
+  GitHub salió bien sin la llave.
+- Sacar la llave de las variables de Railway y del secreto del repositorio en GitHub, y darla de
+  baja en Supabase.
 
-**La copia de respaldo pasa a una credencial que sólo lee los archivos**: no toca la base, no
-escribe ni borra, y vive sólo en el proceso nocturno. Alcanza a todas las Prestadoras porque su
-trabajo es copiar todo. Antes de escribirla se comprueba qué ofrece Supabase para eso.
-
-**Comprobación:** la lista de `scripts/llave_maestra_pendiente.json` está vacía, la llave
-está dada de baja en Supabase, y el producto y la copia de respaldo funcionan igual. Es la única
-prueba que no se puede falsear: una llave que no existe no abre nada.
+**Comprobación:** la llave está dada de baja en Supabase, y el producto y la copia de respaldo
+funcionan igual. Es la única prueba que no se puede falsear: una llave que no existe no abre nada.
 
 **Ninguna Prestadora real entra mientras la llave exista en Supabase.**
 
@@ -1347,7 +1342,7 @@ uso.
 
 **96. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
 
-**97.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. La llave maestra no entra acá: se da de baja al cerrar los cimientos (paso 10).
+**97.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. La llave maestra no entra acá: se da de baja en el paso 10.
 
 **Ya no queda ninguna contraseña escrita en el repositorio.** Todas salen del entorno, y las
 cuentas de la base local nacen sin contraseña: se la pone un programa aparte después de cada

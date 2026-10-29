@@ -11,8 +11,8 @@
  * contadas: la base no le deja al Cliente leer Asistentes, porque la protección por fila no
  * recorta columnas. Y sólo se busca al de la guardia en curso o la próxima.
  *
- * Qué daría con el sistema roto: con la consulta en la credencial de la persona o en la llave
- * maestra, o con el teléfono viajando, las comprobaciones de abajo fallan. Los datos son inventados.
+ * Qué daría con el sistema roto: con la consulta en la credencial de la persona o en cualquier
+ * otra que no sea el trabajo de esta Prestadora, o con el teléfono viajando, las comprobaciones de abajo fallan. Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -52,7 +52,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // El Asistente del Paciente lo lee el trabajo de la Prestadora.
 prepararCredencialDePrueba();
 
@@ -74,8 +73,15 @@ after(() => {
   baseFalsa.close();
 });
 
-/** La credencial de la persona de la prueba. La de la llave maestra es otra: `clave-de-mentira`. */
+/** La credencial de la persona de la prueba. */
 let credencial;
+
+/** Que la consulta haya salido con el trabajo de esta Prestadora, y con ninguna otra credencial. */
+function esElTrabajoDeLaPrestadora(autorizacion, mensaje) {
+  const contenido = JSON.parse(Buffer.from(String(autorizacion).replace(/^Bearer /, '').split('.')[1] ?? '', 'base64url').toString() || '{}');
+  assert.equal(contenido.role, 'trabajo_sin_persona', mensaje);
+  assert.equal(contenido.prestadora_id, PRESTADORA, mensaje);
+}
 
 async function pedir(ruta) {
   credencial = sesionDePrueba(USUARIO);
@@ -116,7 +122,7 @@ describe('el Asistente que ve el Cliente', () => {
       const consultas = llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`);
       assert.equal(consultas.length, 1, `no se consultó ${tabla}`);
       assert.notEqual(consultas[0].autorizacion, credencial, `${tabla} salió con la credencial de la persona`);
-      assert.notEqual(consultas[0].autorizacion, `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, `${tabla} salió con la llave maestra`);
+      esElTrabajoDeLaPrestadora(consultas[0].autorizacion, `${tabla} salió con otra credencial`);
       assert.ok(consultas[0].url.includes(ASISTENTE), consultas[0].url);
     }
   });
@@ -173,7 +179,7 @@ describe('la ficha del Paciente que ve el Cliente', () => {
     const consultas = consultasDeLaFicha();
     assert.equal(consultas.length, 1, 'no se consultó la Ficha');
     assert.notEqual(consultas[0].autorizacion, credencial, 'la Ficha salió con la credencial de la persona');
-    assert.notEqual(consultas[0].autorizacion, `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'la Ficha salió con la llave maestra');
+    esElTrabajoDeLaPrestadora(consultas[0].autorizacion, 'la Ficha salió con otra credencial');
     assert.ok(decodeURIComponent(consultas[0].url).includes('calle'), 'al titular no se le pidió el domicilio');
   });
 

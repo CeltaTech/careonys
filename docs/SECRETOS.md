@@ -25,7 +25,7 @@ Son cinco lugares, y ninguno se superpone con otro:
 |---|---|---|
 | **Railway** — variables del servicio del backend | Todo lo que el backend necesita para funcionar en producción | El backend, en ejecución |
 | **Secretos del repositorio en GitHub** | Lo que necesitan los automatismos: publicar, desplegar, respaldar y comprobar los textos | Los archivos de `.github/workflows/` |
-| **La caja fuerte de la base** (`vault` de Supabase) | Lo de **cada Prestadora**: su pasarela, su correo, su WhatsApp | El backend, con la llave de servicio, a través de funciones `SECURITY DEFINER` |
+| **La caja fuerte de la base** (`vault` de Supabase) | Lo de **cada Prestadora**: su pasarela, su correo, su WhatsApp | El backend, con el trabajo sin persona de esa Prestadora, a través de funciones `SECURITY DEFINER` |
 | **El panel de cada proveedor** | El valor original, que es de donde sale la copia que va a los otros lugares | Quien tenga la cuenta |
 | **La máquina del Desarrollador** — `backend/.env` y la caja fuerte local | Lo mismo que Railway, pero apuntando al ambiente de desarrollo | El backend corriendo en local |
 
@@ -41,8 +41,7 @@ Cada uno con el archivo que lo usa, para no tener que buscarlo.
 
 | Secreto | Para qué sirve | Si falta | Última rotación |
 |---|---|---|---|
-| `SUPABASE_SERVICE_ROLE_KEY` | La llave con la que el backend entra a la base salteándose la protección por fila. **Es la más grave de todas: quien la tiene lee y escribe cualquier dato de cualquier Prestadora.** La usa sólo lo que corre sin la sesión de una persona y sin una Prestadora declarada. `backend/src/db/connection.js` | El backend arranca, y falla lo que la usa en el momento de usarla | Sin registro — ver §6 |
-| `CLAVE_DEL_TRABAJO_SIN_PERSONA` | La llave privada con la que el backend firma el acceso de lo que trabaja sin la sesión de una persona —una tarea programada, la dirección que llama otro software—, que entra a la base de a una Prestadora por vez. `backend/src/db/connection.js`. La misma clave arma además, al ingresar, la dirección que se devuelve para un usuario que no existe, para que no se distinga de uno que sí (`backend/src/routes/ingreso.js`) | Falla todo trabajo sin persona en el momento de entrar a la base | Sin registro |
+| `CLAVE_DEL_TRABAJO_SIN_PERSONA` | La llave privada con la que el backend firma el acceso de lo que trabaja sin la sesión de una persona —una tarea programada, la dirección que llama otro software—, que entra a la base de a una Prestadora por vez. Con la misma firma entra la copia nocturna de los archivos, con un acceso que sólo lista y baja archivos. `backend/src/db/connection.js`. La misma clave arma además, al ingresar, la dirección que se devuelve para un usuario que no existe, para que no se distinga de uno que sí (`backend/src/routes/ingreso.js`) | Falla todo trabajo sin persona en el momento de entrar a la base, y la copia de los archivos | Sin registro |
 | `SECRETO_DE_LOS_CODIGOS` | Calcula el identificador de verificación de cada código de un solo uso, para que la base no guarde el código. Tiene que tener 32 caracteres o más. `backend/src/utils/codigoDeUnSoloUso.js` | El backend no arranca (`backend/src/server.js`) | Sin registro |
 | `ANTHROPIC_API_KEY` | Todo lo que hace la IA: leer un aviso de ausencia, redactar plantillas de WhatsApp, interpretar una importación, resumir | Cada función de IA devuelve «sin respuesta» y el resto del producto sigue andando | Sin registro |
 | `RESEND_API_KEY` | El acceso al despachante por el que sale todo el correo del producto. Va junto con `REMITENTE_AVISOS`, que no es secreta y dice desde qué dirección sale. `backend/src/utils/email.js` | No se manda ningún correo, en silencio | Sin registro |
@@ -50,7 +49,8 @@ Cada uno con el archivo que lo usa, para no tener que buscarlo.
 | `SMTP_USER` y `SMTP_PASSWORD` | La casilla de correo de la máquina de desarrollo. Es el camino que se usa mientras no haya acceso al despachante; en Railway no entrega nada, porque los puertos de correo están bloqueados. `backend/src/utils/email.js` | En desarrollo no se manda ningún correo, en silencio | Sin registro |
 | `VAPID_PRIVATE_KEY` | Firma los mensajes al celular. Va de a pares con `VAPID_PUBLIC_KEY`, que no es secreta y se compila adentro de las pantallas. `backend/src/utils/push.js` | No llega ningún mensaje al celular | Sin registro |
 | `QR_COBRO_SECRET` | Firma el código que se escanea para cobrar en efectivo, para que no se pueda fabricar uno. `backend/src/utils/qrCobroEfectivo.js` | El backend arranca igual y falla recién al generar un código de cobro | Sin registro |
-| `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` | Copiar cada certificado médico que se sube al depósito de Cloudflare R2, como espejo. Van junto con `R2_ENDPOINT` y `R2_BUCKET`. `backend/src/routes/panelAusencias.js` | La copia falla, queda en el registro del servidor, y la carga del certificado sigue andando | Sin registro |
+| `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` | Copiar cada certificado médico que se sube al depósito de Cloudflare R2, como espejo (`backend/src/routes/panelAusencias.js`), y la copia nocturna de todos los archivos (`backend/src/utils/copiaDeLosArchivos.js`). Van junto con `R2_ENDPOINT` y `R2_BUCKET` | La copia falla, queda en el registro del servidor, y lo demás sigue andando | Sin registro |
+| `B2_KEY_ID` y `B2_APPLICATION_KEY` | La misma copia nocturna de los archivos, al espejo de Backblaze. Van junto con `B2_ENDPOINT` y `B2_BUCKET`. `backend/src/utils/copiaDeLosArchivos.js` | La copia de los archivos falla esa noche y queda en el registro del servidor | Sin registro |
 | `COBRANZA_EFECTIVO_SECRETO_FIRMA_WEBHOOK`, `DEBIN_SECRETO_FIRMA_WEBHOOK`, `MODO_SECRETO_FIRMA_WEBHOOK` | Comprobar que el cobro informado viene de la pasarela y no de cualquiera que conozca la dirección. **Son el respaldo del ambiente:** el secreto que manda es el de esa Prestadora, guardado en la caja fuerte de la base (§4) | El cobro informado se rechaza, que es lo correcto: mejor no cobrar que dar por cobrado lo que no se cobró | Sin registro |
 
 ---
@@ -70,7 +70,6 @@ publicar, el token de publicar no tiene por qué andar dando vueltas en una comp
 | `BACKUP_DB_HOST`, `BACKUP_DB_PORT`, `BACKUP_DB_NAME`, `BACKUP_DB_USER`, `BACKUP_DB_PASSWORD` | La conexión directa a la base para el volcado diario, y para leer los catálogos al comprobar el texto visible | `backup-diario.yml`, `verificar-textos.yml` |
 | `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Subir el volcado al depósito principal | `backup-diario.yml` |
 | `B2_ENDPOINT`, `B2_BUCKET`, `B2_KEY_ID`, `B2_APPLICATION_KEY` | Subir el mismo volcado al espejo de Backblaze | `backup-diario.yml` |
-| `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` | Bajar los archivos de los depósitos para copiarlos junto con el volcado. **La llave es el mismo valor que la del backend**, y por eso rotarla toca los dos lugares. La dirección no es secreta | `backup-diario.yml` |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`, `VITE_SITE_URL`, `VITE_VAPID_PUBLIC_KEY` | Los valores que se compilan adentro de cada pantalla. **No son secretos** —quedan a la vista de cualquiera que abra la aplicación— y están acá únicamente porque los archivos `.env.production` no se versionan | `publicar-pantallas.yml` |
 
 **La clave anónima de Supabase no es una contraseña.** Es pública por diseño: lo que decide qué
@@ -93,7 +92,8 @@ referencia de una caja de `vault`, y adentro de esa caja está el texto cifrado.
 | `whatsapp_app_secret_<prestadora>` | Con qué se comprueba la firma de lo que llega de Meta | `guardar_app_secret_whatsapp` / `leer_app_secret_whatsapp` |
 | `whatsapp_verify_token_<prestadora>` | Con qué se contesta el saludo de enganche de Meta | `guardar_verify_token_whatsapp` / `leer_verify_token_whatsapp` |
 
-**Las diez funciones son `SECURITY DEFINER` y sólo las alcanza `service_role`**, o sea el backend.
+**Las diez funciones son `SECURITY DEFINER` y sólo las alcanza el trabajo sin persona**, o sea el
+backend, de a una Prestadora por vez.
 Ni el Superadmin ni el Admin de la propia Prestadora llegan al texto. Rotar uno de estos secretos
 no es trabajo de CeltaTech: la Prestadora lo vuelve a cargar desde Configuración, y el cambio
 reemplaza el contenido de la caja en vez de abrir otra.
@@ -104,10 +104,6 @@ reemplaza el contenido de la caja en vez de abrir otra.
 
 Sirve el día que pasa, que es el día en que nadie tiene tiempo de leer código.
 
-- **Se filtró la llave de servicio de Supabase** → se rota en el panel de Supabase y se actualiza
-  **en el mismo acto** en los dos lugares donde vive: las variables de Railway y el secreto
-  `SUPABASE_SERVICE_ROLE_KEY` del repositorio, que es el que usa el respaldo diario para bajar los
-  archivos. Mientras tanto el backend entero está caído: no hay forma de que no lo esté.
 - **Se filtró un token de publicación** (Railway o Cloudflare) → se rota en su panel y se reemplaza
   el secreto del repositorio. No se cae nada; lo que no anda hasta reemplazarlo es publicar.
 - **Se filtraron las llaves del respaldo** (R2 o B2) → se rotan en su panel y se reemplazan los
@@ -124,8 +120,7 @@ Sirve el día que pasa, que es el día en que nadie tiene tiempo de leer código
 
 **Porque no se rotó ninguno, no porque falte averiguarlo.** Todos los secretos de §2 y §3 son los
 originales, de cuando se dio de alta cada servicio. La rotación de a uno es el paso 97 de
-`docs/PLAN_HASTA_PRODUCCION.md`. La llave de servicio de Supabase no entra en esa rotación: sale del
-backend al cerrar los cimientos, en el paso 10.
+`docs/PLAN_HASTA_PRODUCCION.md`.
 
 **Al rotar uno, la fecha se anota acá**, en su renglón. Un mapa que dice dónde está cada secreto y
 no dice cuándo se cambió sirve la mitad.

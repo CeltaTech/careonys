@@ -3,7 +3,7 @@
  * lo que volvió contra lo que hay.
  *
  * LO CORRE EL DESARROLLADOR, Y ESO NO ES UN OLVIDO. Para bajar el respaldo hacen falta las
- * llaves del bucket, y para comparar contra producción, las de la base y las del almacenamiento.
+ * llaves del bucket, y para comparar contra producción, las de la base.
  * Todas viven en la caja fuerte, que no se abre (`celtatech/CLAUDE.md`, sección 6). Así que el
  * trabajo que sí se puede hacer desde acá es dejar el comando hecho, para que la prueba sea una
  * línea y no una tarde: lo que decide si volvió bien está en
@@ -29,9 +29,8 @@ import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { createGunzip } from 'node:zlib';
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
-import { createClient } from '@supabase/supabase-js';
 import { IDENTIDAD } from '../src/config/identidadProducto.js';
-import { claveEnElDestino, depositosDeSupabase } from '../src/utils/copiaDeDepositos.js';
+import { claveEnElDestino } from '../src/utils/copiaDeDepositos.js';
 import {
   elegirElUltimoRespaldo,
   diferenciasDeTablas,
@@ -156,17 +155,20 @@ async function conteos(tablas, opciones) {
   return Object.fromEntries(filas.map(([tabla, cantidad]) => [tabla, Number(cantidad)]));
 }
 
-/** Qué archivos hay hoy en el almacenamiento, con la clave ya en la forma del espejo. */
+/**
+ * Qué archivos hay hoy en el almacenamiento, con la clave ya en la forma del espejo. Se le
+ * pregunta a la base de producción, con la misma conexión que cuenta las filas: el almacenamiento
+ * anota cada archivo en `storage.objects`, con su tamaño. Así no hace falta ninguna llave más.
+ */
 async function inventarioDelAlmacenamiento() {
-  const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'));
-  const almacenamiento = depositosDeSupabase(supabase);
-  const encontrados = {};
-  for (const deposito of await almacenamiento.listarDepositos()) {
-    for (const archivo of await almacenamiento.listarArchivos(deposito)) {
-      encontrados[claveEnElDestino(deposito, archivo.ruta)] = archivo.tamano;
-    }
-  }
-  return encontrados;
+  const filas = await consultar(
+    `select bucket_id, name, coalesce(metadata->>'size', '') from storage.objects order by 1, 2`,
+    { remota: true },
+  );
+  return Object.fromEntries(filas.map(([deposito, ruta, tamano]) => [
+    claveEnElDestino(deposito, ruta),
+    tamano === '' ? null : Number(tamano),
+  ]));
 }
 
 async function main() {

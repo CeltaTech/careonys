@@ -1,17 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
 import { identidadInventada } from './identidadInventada.js';
-dotenv.config();
+import { conexionLocal, PRESTADORA_LOCAL } from './conexionLocal.js';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const PRESTADORA_ID = '4e84b0e7-1729-4d07-9e70-56fdbd54cd89'; // Prestadora Demo
+// Sólo contra la base local (`conexionLocal.js`).
+const supabase = conexionLocal();
+const PRESTADORA_ID = PRESTADORA_LOCAL;
 // La contraseña con la que nacen las cuentas de la demo no vive acá: entra por el entorno, como
-// cualquier credencial. Estaba escrita en este renglón, y eso deja a treinta y ocho cuentas de la
-// nube con una clave que cualquiera que abra el repositorio puede leer. Sin la variable el script
-// no arranca: es preferible que no siembre nada a que siembre cuentas con una clave conocida.
-const PASSWORD = process.env.SEED_DEMO_PASSWORD;
+// cualquier credencial, y es la misma de las demás cuentas de la base local. Sin la variable el
+// script no arranca: es preferible que no siembre nada a que siembre cuentas con una clave conocida.
+const PASSWORD = process.env.SEED_LOCAL_PASSWORD;
 if (!PASSWORD) {
-  console.error('Falta la variable SEED_DEMO_PASSWORD. Es la contraseña con la que nacen las cuentas de la demo, y no se escribe en el código.');
+  console.error('Falta la variable SEED_LOCAL_PASSWORD. Es la contraseña con la que entran las cuentas de la base local, y no se escribe en el código.');
   process.exit(1);
 }
 

@@ -18,8 +18,8 @@
 //      no destraba nada: también corta. Lo único que no cuenta como renglón nuevo es un archivo
 //      que git reconoce como renombrado de uno que ya estaba.
 //
-// Cuando la lista llegue a cero se borra, junto con este chequeo, y la llave se da de
-// baja en Supabase (docs/PLAN_HASTA_PRODUCCION.md, «Los cimientos»).
+// La lista queda vacía y el chequeo sigue: si la llave vuelve a aparecer en cualquier archivo,
+// el push no sale (docs/PLAN_HASTA_PRODUCCION.md, paso 15).
 // ---------------------------------------------------------------------------
 
 import { readFileSync, existsSync } from 'node:fs';

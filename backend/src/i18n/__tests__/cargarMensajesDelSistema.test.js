@@ -1,11 +1,11 @@
 /**
- * La carga de los mensajes del sistema, sin llave maestra.
+ * La carga de los mensajes del sistema, con el trabajo de cada Prestadora.
  *
  *   npm test --prefix backend
  *
  * QUÉ SE PRUEBA. Al arrancar, el backend lee los textos de cada Prestadora adentro de ella, con la
- * credencial del trabajo sin persona de esa Prestadora, y el texto del producto una sola vez. Ningún
- * pedido lleva la llave maestra, y ninguno lee lo de una Prestadora con la credencial de otra.
+ * credencial del trabajo sin persona de esa Prestadora, y el texto del producto una sola vez. Todo
+ * pedido lleva la credencial del trabajo sin persona, y ninguno lee lo de una Prestadora con la credencial de otra.
  *
  * La base es de mentira y se mira qué le llegó y con qué credencial.
  */
@@ -16,7 +16,6 @@ import crypto from 'node:crypto';
 
 const PRESTADORA_A = '11111111-1111-1111-1111-111111111111';
 const PRESTADORA_B = '22222222-2222-2222-2222-222222222222';
-const LLAVE_MAESTRA = 'clave-maestra-de-mentira';
 
 const RENGLONES = {
   producto: [{ clave: 'prueba.saludo', i18n: { 'es-AR': 'Hola' }, prestadora_id: null, activo: true }],
@@ -60,7 +59,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = LLAVE_MAESTRA;
 process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
 const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
 process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA = JSON.stringify({ ...privateKey.export({ format: 'jwk' }), kid: 'prueba' });
@@ -80,8 +78,12 @@ describe('cargar los mensajes del sistema', async () => {
     assert.ok(resultado.cargadas > 0);
   });
 
-  it('ningún pedido lleva la llave maestra', () => {
-    assert.equal(llamadas.some((l) => l.credencial === LLAVE_MAESTRA || l.llave === LLAVE_MAESTRA), false);
+  it('todo pedido va con la llave pública y la credencial del trabajo sin persona', () => {
+    assert.ok(llamadas.length > 0);
+    for (const l of llamadas) {
+      assert.equal(l.llave, 'clave-publica-de-mentira', `${l.ruta} salió con otra llave`);
+      assert.equal(l.contenido.role, 'trabajo_sin_persona', `${l.ruta} salió con otra credencial`);
+    }
   });
 
   it('lo de cada Prestadora se lee con la credencial de esa Prestadora', () => {

@@ -50,13 +50,16 @@ function laClave() {
 
 const enBase64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 
-/** Genera la credencial de un trabajo. Sin Prestadora, la base sólo le deja pedir la lista. */
-export function generarCredencial({ prestadoraId = null, trabajo }) {
+/**
+ * Genera la credencial de un trabajo. Sin Prestadora, la base sólo le deja pedir la lista. La copia
+ * de respaldo lleva su propio rol, que sólo lee los archivos guardados.
+ */
+export function generarCredencial({ prestadoraId = null, trabajo, rol = 'trabajo_sin_persona' }) {
   const llave = laClave();
   const ahora = Math.floor(Date.now() / 1000);
   const cabecera = enBase64({ alg: 'ES256', typ: 'JWT', kid });
   const cuerpo = enBase64({
-    role: 'trabajo_sin_persona',
+    role: rol,
     iat: ahora,
     exp: ahora + DURACION_S,
     trabajo,
@@ -66,12 +69,12 @@ export function generarCredencial({ prestadoraId = null, trabajo }) {
   return { credencial: `${cabecera}.${cuerpo}.${firma.toString('base64url')}`, vence: ahora + DURACION_S };
 }
 
-function conexionDelTrabajo({ prestadoraId, trabajo, region = regionDeLaPrestadora(prestadoraId) }) {
+function conexionDelTrabajo({ prestadoraId, trabajo, rol, region = regionDeLaPrestadora(prestadoraId) }) {
   let vigente = null;
   return createClient(region.url, region.clavePublica, {
     accessToken: async () => {
       if (!vigente || vigente.vence - MARGEN_S < Date.now() / 1000) {
-        vigente = generarCredencial({ prestadoraId, trabajo });
+        vigente = generarCredencial({ prestadoraId, trabajo, rol });
       }
       return vigente.credencial;
     },
@@ -106,6 +109,14 @@ export function enLaPrestadora(prestadoraId, trabajo, hacer) {
  */
 export function sinPrestadora(trabajo, region = regionDeLaPrestadora(null)) {
   return conexionDelTrabajo({ prestadoraId: null, trabajo, region });
+}
+
+/**
+ * La conexión de la copia de respaldo de los archivos. Ve los depósitos de una región y lee lo que
+ * tienen adentro, y nada más: no toca ninguna tabla, no escribe y no borra.
+ */
+export function conexionDeLaCopiaDeRespaldo(region) {
+  return conexionDelTrabajo({ prestadoraId: null, trabajo: 'copia_de_respaldo', rol: 'copia_de_respaldo', region });
 }
 
 /**

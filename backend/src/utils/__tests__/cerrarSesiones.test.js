@@ -1,5 +1,5 @@
 /**
- * Cerrar las sesiones de una persona, sin llave maestra.
+ * Cerrar las sesiones de una persona, con la llave pública.
  *
  *   npm test --prefix backend
  *
@@ -18,7 +18,6 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
 const LLAVE_PUBLICA = 'clave-publica-de-mentira';
-const LLAVE_MAESTRA = 'clave-maestra-de-mentira';
 const PRESTADORA = '22222222-2222-2222-2222-222222222222';
 
 // Una sesión de mentira con la forma de las de verdad: lo único que se lee de ella es quién la
@@ -58,7 +57,6 @@ const accesoFalso = createServer((req, res) => {
 
 await new Promise((listo) => accesoFalso.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${accesoFalso.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = LLAVE_MAESTRA;
 process.env.SUPABASE_ANON_KEY = LLAVE_PUBLICA;
 
 const SESION_DE_LA_PERSONA = sesionEmitidaPor(`${process.env.SUPABASE_URL}/auth/v1`);
@@ -106,9 +104,11 @@ describe('cerrar las sesiones de una persona', () => {
     assert.equal(salidas[0].sesion, 'sesion-de-la-comprobacion');
   });
 
-  it('ningún pedido lleva la llave maestra', async () => {
+  it('todo pedido va con la llave pública', async () => {
     await cerrarTodasLasSesionesDe(SESION_DE_LA_PERSONA);
-    assert.equal(llamadas.some((l) => l.llave === LLAVE_MAESTRA || l.sesion === LLAVE_MAESTRA), false);
+    await esLaClaveActual({ usuarioId: '11111111-1111-1111-1111-111111111111', prestadoraId: PRESTADORA, clave: 'clave-inventada' });
+    assert.ok(llamadas.length > 0);
+    assert.equal(llamadas.every((l) => l.llave === LLAVE_PUBLICA), true);
   });
 });
 

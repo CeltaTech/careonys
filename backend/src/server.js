@@ -57,6 +57,7 @@ import { suspenderLosQueAgotaronLaGracia } from './utils/periodoDeGracia.js';
 import { recordarLosEnlacesDeActivacion } from './utils/activacionCuenta.js';
 import { avisarLosCambiosDeEmail } from './utils/avisosDeEmailCambiado.js';
 import { avisarLosPlazosDeUbicacionVencidos } from './utils/plazoDeLaUbicacion.js';
+import { copiarLosArchivosAlRespaldo } from './utils/copiaDeLosArchivos.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
@@ -313,6 +314,23 @@ programar(avisarLosCambiosDeEmail, CINCO_MINUTOS_MS, { conLaPrestadora: true });
 // El aviso a la Prestadora por cada Asistente que dejó vencer el plazo para aceptar el registro de
 // su ubicación durante el turno. El plazo se cuenta en días; se mira cada hora, como el de arriba.
 programar(avisarLosPlazosDeUbicacionVencidos, UNA_HORA_MS, { conLaPrestadora: true });
+
+// La copia de los archivos a los depósitos de respaldo. No pasa por `programar` porque no trabaja
+// de a una Prestadora: copia todo, con la credencial de la copia de respaldo, que sólo lee los
+// archivos (utils/copiaDeLosArchivos.js). Una vez por día; copia sólo lo que falta, así que
+// volver a correrla al arrancar el backend no repite lo que ya está arriba. Tampoco se encima.
+{
+  let copiando = false;
+  const copiar = () => {
+    if (copiando) return;
+    copiando = true;
+    copiarLosArchivosAlRespaldo()
+      .catch((err) => console.error('copiarLosArchivosAlRespaldo:', err?.message ?? err))
+      .finally(() => { copiando = false; });
+  };
+  copiar();
+  setInterval(copiar, UN_DIA_MS);
+}
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no
 // atrapada en cualquiera de las 129 rutas (Regla 12): nunca se expone el stack ni detalle

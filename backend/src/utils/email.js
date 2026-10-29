@@ -101,9 +101,12 @@ function transporteDelDespachante(clave) {
       });
 
       if (!respuesta.ok) {
-        // Del error sale el número y nada más: el cuerpo de la respuesta repite el mensaje que
-        // se mandó, con los destinatarios adentro (`celtatech/CLAUDE.md` §6).
-        throw new Error(`El despachante rechazó el envío (${respuesta.status})`);
+        // Del error salen el número y el tipo de rechazo, y nada más: el mensaje del cuerpo repite
+        // lo que se mandó, con los destinatarios adentro (`celtatech/CLAUDE.md` §6). El tipo es
+        // lo que separa el tope diario del de velocidad, que con el mismo 429 piden otra cosa.
+        const tipo = await respuesta.json().then((cuerpo) => cuerpo?.name, () => null);
+        const motivo = /^[a-z_]+$/.test(tipo ?? '') ? `, ${tipo}` : '';
+        throw new Error(`El despachante rechazó el envío (${respuesta.status}${motivo})`);
       }
     },
   };

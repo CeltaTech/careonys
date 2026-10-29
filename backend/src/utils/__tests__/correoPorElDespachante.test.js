@@ -204,4 +204,22 @@ describe('enviarEmail por el despachante', () => {
       },
     );
   });
+
+  it('el rechazo dice de qué tipo es, para separar el tope diario del de velocidad', async () => {
+    cargarCredencialDelDespachante();
+    contestarComoElDespachante({
+      estado: 429,
+      cuerpo: { name: 'daily_quota_exceeded', message: 'coordinacion@ejemplo.local' },
+    });
+
+    await assert.rejects(
+      () =>
+        enviarEmail({ to: 'coordinacion@ejemplo.local', asunto: 'Uno', texto: 'Uno' }),
+      (error) => {
+        assert.match(error.message, /\(429, daily_quota_exceeded\)/);
+        assert.doesNotMatch(error.message, /coordinacion@ejemplo\.local/);
+        return true;
+      },
+    );
+  });
 });

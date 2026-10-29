@@ -439,11 +439,10 @@ art. 15 del Marco Civil de Internet, bajo secreto y entregables sólo por orden 
 leyó. Antes de vender en Países Bajos hay que comprarla y comparar campo por campo.
 
 **Comprobación:** todas las pruebas del backend, y las dos de aislamiento con dos Prestadoras con
-datos cargados. Más una que hoy no existe: **quitarle el filtro a una consulta a propósito y
-verificar que sigue sin traer datos de la otra Prestadora.** Si eso pasa, la base está protegiendo.
-Y sobre el registro: se lee un paciente desde dos Prestadoras con dos personas distintas y contesta
-las dos, por paciente, con los seis campos; se altera una entrada del medio y la cadena queda rota y
-el sistema lo dice.
+datos cargados. La del registro de accesos ya está en `scripts/probar_altas_con_sesion.mjs`
+(`probarElRegistroDeAccesos`): dos Prestadoras anotan lecturas de un paciente suyo con dos personas
+distintas, cada una las lee por paciente con los seis campos y ninguna ve las de la otra, ni
+pidiendo sin filtro; y una entrada del medio alterada deja la cadena rota y el sistema dice cuál.
 
 **10.** **Se cierra la puerta, en todos lados.** Sale `SUPABASE_SERVICE_ROLE_KEY` del backend y de
 sus variables de entorno, y también de todo lo demás que la usa: la copia de respaldo diaria, los

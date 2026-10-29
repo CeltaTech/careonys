@@ -149,7 +149,7 @@ async function entrar(base, llavePublica, email, prestadoraId) {
   });
   const cuerpo = await r.json().catch(() => ({}));
   if (!cuerpo.access_token) {
-    throw new Error(`No se pudo entrar como ${email} (${r.status}). ¿Corriste "npx supabase db reset --local"?`);
+    throw new Error(`No se pudo entrar como ${email} (${r.status}). ¿Corrió "npx supabase db reset --local"?`);
   }
   return cuerpo.access_token;
 }
@@ -1621,6 +1621,122 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
 }
 
 // ---------------------------------------------------------------------------
+// El registro de accesos: cada Prestadora lee lo suyo, por paciente, y la cadena delata un cambio
+// ---------------------------------------------------------------------------
+
+// La otra Prestadora de la siembra, con su Administración y un Paciente suyo. Sin ella no hay
+// prueba de aislamiento: una consulta que no trae nada de una Prestadora vacía no prueba nada.
+const ADMINISTRACION_DE_LA_OTRA = 'admin@sur.local';
+const ORIGEN_DE_LA_PRUEBA = 'prueba-registro-de-accesos';
+
+async function probarElRegistroDeAccesos(entorno, d) {
+  console.log('\n== El registro de accesos: por paciente, sin cruzarse, y con la cadena entera ==\n');
+
+  const problemas = [];
+  const bien = (t, n) => { console.log(verde(`  ✓ ${t}`)); if (n) console.log(gris(`      ${n}`)); };
+  const mal = (t, n) => { console.log(rojo(`  ✗ ${t}`)); console.log(rojo(`      ${n}`)); problemas.push(`${t} — ${n}`); };
+  const motivo = (r) => `${r.estado} ${r.cuerpo?.code || ''} ${r.cuerpo?.message || ''}`.trim();
+
+  const [[otra, pacienteDeLaOtra] = []] = consultarBase(`
+    SELECT u.prestadora_id, (SELECT id FROM public.pacientes p WHERE p.prestadora_id = u.prestadora_id ORDER BY id LIMIT 1)
+      FROM public.usuarios u WHERE lower(u.email) = lower('${ADMINISTRACION_DE_LA_OTRA}') AND u.prestadora_id <> '${d.prestadora}' LIMIT 1;`);
+  if (!otra || !pacienteDeLaOtra) {
+    mal('hay una segunda Prestadora con Administración y Paciente', 'Corra "npx supabase db reset --local".');
+    return problemas;
+  }
+
+  const lados = [
+    { nombre: 'Sandbox', prestadora: d.prestadora, paciente: d.paciente,
+      token: await entrar(entorno.base, entorno.llavePublica, ADMINISTRADORA, d.prestadora) },
+    { nombre: 'la otra Prestadora', prestadora: otra, paciente: pacienteDeLaOtra,
+      token: await entrar(entorno.base, entorno.llavePublica, ADMINISTRACION_DE_LA_OTRA, otra) },
+  ];
+  const CAMPOS = ['prestadora_id', 'usuario_id', 'paciente_id', 'categorias', 'momento', 'origen'];
+
+  try {
+    // Tres lecturas por lado: con menos, «una entrada del medio» no existe.
+    for (const lado of lados) {
+      for (let i = 0; i < 3; i++) {
+        const r = await pedir(entorno, lado.token, 'POST', 'consultas_a_hce',
+          { paciente_id: lado.paciente, categorias: ['pacientes'], origen: ORIGEN_DE_LA_PRUEBA });
+        if (!r.ok) { mal(`${lado.nombre} anota una lectura`, motivo(r)); return problemas; }
+      }
+      bien(`${lado.nombre} anota tres lecturas de su paciente`);
+    }
+
+    // Anotar a nombre de la otra Prestadora o de su paciente no se puede.
+    const ajena = await pedir(entorno, lados[0].token, 'POST', 'consultas_a_hce',
+      { prestadora_id: otra, paciente_id: pacienteDeLaOtra, categorias: ['pacientes'], origen: ORIGEN_DE_LA_PRUEBA });
+    if (ajena.ok) mal('no anota en la otra Prestadora', 'la base lo dejó');
+    else bien('no anota en la otra Prestadora', `rebotó con ${ajena.estado}`);
+
+    for (const [lado, ajeno] of [[lados[0], lados[1]], [lados[1], lados[0]]]) {
+      const propio = await pedir(entorno, lado.token, 'GET',
+        `consultas_a_hce?select=${CAMPOS.join(',')}&paciente_id=eq.${lado.paciente}&origen=eq.${ORIGEN_DE_LA_PRUEBA}`);
+      const completas = propio.filas.filter((f) => CAMPOS.every((c) => f[c] !== null && f[c] !== undefined)
+        && f.prestadora_id === lado.prestadora && f.paciente_id === lado.paciente);
+      if (propio.ok && propio.filas.length === 3 && completas.length === 3) {
+        bien(`${lado.nombre} lee por paciente sus tres lecturas, con los seis campos`);
+      } else {
+        mal(`${lado.nombre} lee por paciente sus tres lecturas, con los seis campos`,
+          propio.ok ? `trajo ${propio.filas.length}, completas ${completas.length}` : motivo(propio));
+      }
+
+      const delOtro = await pedir(entorno, lado.token, 'GET', `consultas_a_hce?select=id&paciente_id=eq.${ajeno.paciente}`);
+      if (delOtro.ok && delOtro.filas.length === 0) bien(`${lado.nombre} no ve ninguna lectura del paciente de la otra`);
+      else mal(`${lado.nombre} no ve ninguna lectura del paciente de la otra`, delOtro.ok ? `trajo ${delOtro.filas.length}` : motivo(delOtro));
+
+      // Sin filtro a propósito: lo único que tiene que frenar a la otra Prestadora es la base.
+      for (const tabla of ['consultas_a_hce', 'pacientes']) {
+        const todo = await pedir(entorno, lado.token, 'GET', `${tabla}?select=prestadora_id`);
+        const ajenas = todo.filas.filter((f) => f.prestadora_id !== lado.prestadora).length;
+        if (todo.ok && todo.filas.length > 0 && ajenas === 0) {
+          bien(`${lado.nombre} pide ${tabla} sin filtro y sólo vuelve lo suyo`, `${todo.filas.length} filas`);
+        } else {
+          mal(`${lado.nombre} pide ${tabla} sin filtro y sólo vuelve lo suyo`,
+            todo.ok ? `${todo.filas.length} filas, ${ajenas} ajenas` : motivo(todo));
+        }
+      }
+
+      const cadena = await pedir(entorno, lado.token, 'POST', 'rpc/verificar_cadena_de_consultas', {});
+      const [estado] = cadena.filas;
+      if (cadena.ok && estado?.intacta === true && estado.renglones >= 3) bien(`la cadena de ${lado.nombre} está entera`, `${estado.renglones} renglones`);
+      else mal(`la cadena de ${lado.nombre} está entera`, cadena.ok ? JSON.stringify(cadena.cuerpo) : motivo(cadena));
+    }
+
+    // Se altera la del medio de Sandbox, por debajo de la protección, como lo haría quien tiene la base.
+    const [[medio, comoEstaba]] = consultarBase(`
+      SELECT id, origen FROM public.consultas_a_hce
+       WHERE prestadora_id = '${d.prestadora}' AND origen = '${ORIGEN_DE_LA_PRUEBA}'
+       ORDER BY numero OFFSET 1 LIMIT 1;`);
+    consultarBase(`SET session_replication_role = replica;
+      UPDATE public.consultas_a_hce SET origen = 'alterado' WHERE id = '${medio}';`);
+    try {
+      const rota = await pedir(entorno, lados[0].token, 'POST', 'rpc/verificar_cadena_de_consultas', {});
+      const [estado] = rota.filas;
+      if (rota.ok && estado?.intacta === false && estado.motivo === 'el_renglon_fue_alterado' && estado.rota_en_id === medio) {
+        bien('una entrada del medio alterada rompe la cadena y el sistema dice cuál', `renglón ${estado.rota_en_numero}`);
+      } else {
+        mal('una entrada del medio alterada rompe la cadena y el sistema dice cuál',
+          rota.ok ? JSON.stringify(rota.cuerpo) : motivo(rota));
+      }
+      const laOtra = await pedir(entorno, lados[1].token, 'POST', 'rpc/verificar_cadena_de_consultas', {});
+      if (laOtra.filas[0]?.intacta === true) bien('la cadena de la otra Prestadora sigue entera');
+      else mal('la cadena de la otra Prestadora sigue entera', JSON.stringify(laOtra.cuerpo));
+    } finally {
+      consultarBase(`SET session_replication_role = replica;
+        UPDATE public.consultas_a_hce SET origen = '${comoEstaba}' WHERE id = '${medio}';`);
+    }
+  } finally {
+    // Son las últimas de cada cadena, así que sacarlas no deja ningún hueco.
+    consultarBase(`SET session_replication_role = replica;
+      DELETE FROM public.consultas_a_hce WHERE origen IN ('${ORIGEN_DE_LA_PRUEBA}', 'alterado');`);
+  }
+
+  return problemas;
+}
+
+// ---------------------------------------------------------------------------
 
 function limpiar(creado, idAsistente) {
   // Se borra con la llave del dueño de la base y no con la sesión, porque lo
@@ -1659,9 +1775,10 @@ async function main() {
   const deLasCargas = await probarLoQueCargaOtroCoordinador(entorno, d);
   const delRecorte = await probarCadaCoordinadorVeSoloLoSuyo(entorno, d);
   const deCadaPersona = await probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d);
+  const delRegistro = await probarElRegistroDeAccesos(entorno, d);
   const problemas = [
     ...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador, ...deLasCargas, ...delRecorte,
-    ...deCadaPersona,
+    ...deCadaPersona, ...delRegistro,
   ];
 
   console.log('');

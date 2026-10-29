@@ -144,15 +144,15 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
     tipo: TIPOS_DE_ALARMA.GUARDIA_SIN_CERRAR,
   });
 
-  for (const guardia of guardias) {
-    if (tomadas.has(guardia.id)) continue;
+  await unaPorUna(guardias, 'guardia sin cerrar', async (guardia) => {
+    if (tomadas.has(guardia.id)) return;
     const fin = finDeLaGuardia(guardia);
-    if (!fin) continue;
+    if (!fin) return;
 
     // El plazo que la Prestadora eligió todavía no venció: la guardia recién terminó y el
     // Asistente puede estar cerrándola en este momento.
     const vencimiento = fin.getTime() + minutosDeGracia * MS_POR_MINUTO;
-    if (ahora.getTime() < vencimiento) continue;
+    if (ahora.getTime() < vencimiento) return;
 
     const minutosPremura = (ahora.getTime() - vencimiento) / MS_POR_MINUTO;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
@@ -256,6 +256,20 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
       if (errorGrave) {
         console.error(`Error marcando el aviso grave de guardia sin cerrar (${guardia.id}):`, errorGrave.message);
       }
+    }
+  });
+}
+
+// De a una alarma por vez, y la que falla no frena a las que siguen. Un aviso que no sale —el
+// despachante de correo rechazando el envío, por ejemplo— lanza adentro de la alarma, que queda sin
+// marcar y se vuelve a intentar en la vuelta siguiente; sin esto cortaba la vuelta entera de la
+// Prestadora y las alarmas que venían detrás no se revisaban ni escalaban.
+export async function unaPorUna(alarmas, clase, revisarUna) {
+  for (const alarma of alarmas) {
+    try {
+      await revisarUna(alarma);
+    } catch (err) {
+      console.error(`No salió el aviso de ${clase} (${alarma.id}):`, err?.message ?? err);
     }
   }
 }
@@ -368,8 +382,8 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
 
   const guardias = await datosDeLasGuardias(prestadoraId, (alertas ?? []).map((a) => a.guardia_id));
 
-  for (const alerta of alertas ?? []) {
-    if (tomadas.has(alerta.id)) continue;
+  await unaPorUna(alertas ?? [], 'alerta temprana', async (alerta) => {
+    if (tomadas.has(alerta.id)) return;
     const guardia = guardias.get(alerta.guardia_id) ?? GUARDIA_QUE_NO_SE_PUDO_LEER;
     const minutosPremura = (ahora.getTime() - new Date(alerta.detectado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
@@ -432,7 +446,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
         minutos: minutosPremura,
       }).texto,
     });
-  }
+  });
 }
 
 // La emergencia que nadie atendió insiste a su propio ritmo, más corto que el de las demás alarmas,
@@ -470,8 +484,8 @@ async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
 
   const guardias = await datosDeLasGuardias(prestadoraId, emergencias.map((e) => e.guardia_id));
 
-  for (const emergencia of emergencias) {
-    if (tomadas.has(emergencia.id)) continue;
+  await unaPorUna(emergencias, 'emergencia', async (emergencia) => {
+    if (tomadas.has(emergencia.id)) return;
     const guardia = guardias.get(emergencia.guardia_id) ?? GUARDIA_QUE_NO_SE_PUDO_LEER;
     // El Relevo de emergencia viaja por la misma alarma, con su propio aviso.
     const evento = emergencia.relevo_de_emergencia ? 'relevo_de_emergencia' : 'emergencia_en_guardia';
@@ -506,7 +520,7 @@ async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
       yaSalieron: escalonesQueSalieron,
       texto: mensaje.texto,
     });
-  }
+  });
 }
 
 async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
@@ -545,8 +559,8 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
 
   const guardias = await datosDeLasGuardias(prestadoraId, (incidentes ?? []).map((i) => i.guardia_entrante_id));
 
-  for (const incidente of incidentes ?? []) {
-    if (tomadas.has(incidente.id)) continue;
+  await unaPorUna(incidentes ?? [], 'incidente de relevo', async (incidente) => {
+    if (tomadas.has(incidente.id)) return;
     const guardia = guardias.get(incidente.guardia_entrante_id) ?? GUARDIA_QUE_NO_SE_PUDO_LEER;
     const minutosPremura = (ahora.getTime() - new Date(incidente.iniciado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
@@ -638,7 +652,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
         .eq('prestadora_id', prestadoraId)
         .eq('id', incidente.id);
     }
-  }
+  });
 }
 
 // "Ausente sin relevo previo" es una alerta crítica: a diferencia del respaldo de mensajes de

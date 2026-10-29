@@ -5,11 +5,8 @@ import { impideTrabajarHoy } from './documentos';
 
 // Los documentos que hoy no dejan trabajar a un Asistente activo: faltan, están observados o
 // vencieron, y no tienen gracia que corra. Qué cuenta lo decide `impideTrabajarHoy`, el mismo que
-// usa la base para no dejar asignar. El aviso del Estado actual y la lista de Documentación salen
-// de acá, para que el número y la lista no puedan discrepar.
-
-// El valor del filtro de Documentación que muestra estos documentos; el aviso lo manda al abrirla.
-export const FILTRO_DOCUMENTOS_PENDIENTES = 'pendientes';
+// usa la base para no dejar asignar. El Estado actual lo usa para señalar las guardias asignadas a
+// quien los tiene. El documento que nunca se cargó no es una alerta propia: es del reclutamiento.
 
 export async function documentosQueImpidenTrabajar() {
   const hoy = hoyISO();

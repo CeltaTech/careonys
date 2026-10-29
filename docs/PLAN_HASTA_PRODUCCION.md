@@ -1200,6 +1200,12 @@ verificación, y recién con él se lo pasa a Activo. Hoy el código lo tiene al
 sólo se emite si el Asistente ya está Activo, se lo puede pasar a Activo sin ningún certificado, y
 si después vuelve a Inactivo el certificado sigue figurando vigente en la aplicación del Cliente.
 
+**La documentación que falta es del reclutamiento, y se trata acá.** Un Asistente no llega a Activo
+sin los documentos que su Prestadora le exige. Hoy el código lo deja pasar sin mirarlos, y lo
+único que frena es la asignación de guardias. Los vencidos son otra cosa —se tuvieron y hay que
+renovarlos— y los avisa el Estado actual. Cuando se haga, se resuelve también qué pasa con los
+Asistentes que ya están activos y a quienes les falta un documento pedido después de su alta.
+
 **La ubicación se acepta en el reclutamiento, no en la aplicación.** Cada Prestadora elige en su
 configuración una de dos formas de trabajo:
 

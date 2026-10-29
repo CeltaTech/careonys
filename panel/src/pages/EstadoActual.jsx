@@ -15,7 +15,7 @@ import { excepcionPorId, filtrarPorExcepcion, resumenDeExcepciones } from '../li
 import { estaSinCubrir } from '../lib/cobertura';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { hoyISO, sumarDias } from '../lib/horarios';
-import { FILTRO_DOCUMENTOS_PENDIENTES, documentosQueImpidenTrabajar } from '../lib/documentosQueImpidenTrabajar';
+import { documentosQueImpidenTrabajar } from '../lib/documentosQueImpidenTrabajar';
 import {
   ESTADO_VENCIMIENTO,
   diasParaVencer,
@@ -366,7 +366,6 @@ export function EstadoActual() {
       emergenciasSinAtender: emg.count ?? 0,
       asistentesActivos: (as.data ?? []).filter((a) => a.estado === ESTADO_ACTIVO).length,
       documentosPorVencer: (ds.data ?? []).length,
-      documentosQueImpiden: (em.data ?? []).length,
       desde,
       hasta,
       hayDocumentoVencido,
@@ -472,7 +471,6 @@ export function EstadoActual() {
     emergencias.length > 0 ||
     cantidadDe(EXCEPCION_SIN_CUBRIR) > 0 ||
     datos.documentosPorVencer > 0 ||
-    datos.documentosQueImpiden > 0 ||
     datos.alertasSinResolver > 0 ||
     datos.incidenciasAbiertas > 0 ||
     otrasExcepciones.length > 0 ||
@@ -604,13 +602,6 @@ export function EstadoActual() {
             detalle={con(tx.en_los_proximos_dias, { dias: datos.ctxExtra.diasDePreaviso })}
             cantidad={datos.documentosPorVencer}
             tono={datos.hayDocumentoVencido ? TONO.CRITICO : TONO.ATENCION}
-          />
-          <FilaAlerta
-            a="/documentacion"
-            estado={{ filtro: FILTRO_DOCUMENTOS_PENDIENTES }}
-            titulo={t.asistentes.listado.documentacion_pendiente}
-            cantidad={datos.documentosQueImpiden}
-            tono={TONO.CRITICO}
           />
           <FilaAlerta
             a="/alertas"

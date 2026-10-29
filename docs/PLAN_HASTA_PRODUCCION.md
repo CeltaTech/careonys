@@ -456,7 +456,7 @@ lo saca también de la lista.
 escribe ni borra, y vive sólo en el proceso nocturno. Alcanza a todas las Prestadoras porque su
 trabajo es copiar todo. Antes de escribirla se comprueba qué ofrece Supabase para eso.
 
-**Comprobación:** las dos listas de `scripts/llave_maestra_pendiente.json` están vacías, la llave
+**Comprobación:** la lista de `scripts/llave_maestra_pendiente.json` está vacía, la llave
 está dada de baja en Supabase, y el producto y la copia de respaldo funcionan igual. Es la única
 prueba que no se puede falsear: una llave que no existe no abre nada.
 
@@ -491,7 +491,7 @@ base de hoy. Si no son idénticos, la fundición está mal.
 
 **15.** **Para que no vuelva.** Tres automatismos que cortan la publicación:
 
-- **La llave maestra no vuelve.** El control del paso 10 queda con las listas vacías: si
+- **La llave maestra no vuelve.** El control del paso 10 queda con la lista vacía: si
   `SUPABASE_SERVICE_ROLE_KEY` aparece en cualquier archivo del repositorio, el push no sale.
 - **Ninguna tabla nace sin protección.** Una tabla en el esquema declarado sin protección por fila y
   sin al menos una política corta la publicación. Lo mismo un depósito de archivos sin política.

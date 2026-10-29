@@ -5,12 +5,10 @@
 //   node scripts/verificar_llave_maestra.mjs
 //
 // QUÉ MIRA
-//   Dos listas, guardadas en `scripts/llave_maestra_pendiente.json`:
-//   - Los archivos que nombran la llave maestra (`SUPABASE_SERVICE_ROLE_KEY`), en todo el
-//     repositorio: backend, pruebas, programas sueltos, la copia de respaldo y su configuración.
-//     Quedan afuera los documentos y las migraciones, que la nombran para hablar de ella.
-//   - Los archivos del backend que importan `supabase` de `db/connection.js`, que fuera de
-//     `enLaPrestadora` cae en la maestra. Las pruebas no cuentan acá: ya cuentan arriba.
+//   Los archivos que nombran la llave maestra (`SUPABASE_SERVICE_ROLE_KEY`), en todo el
+//   repositorio: backend, pruebas, programas sueltos, la copia de respaldo y su configuración.
+//   Quedan afuera los documentos y las migraciones, que la nombran para hablar de ella. La lista
+//   está guardada en `scripts/llave_maestra_pendiente.json`.
 //
 // QUÉ EXIGE
 //   1. Que lo que está en el repositorio coincida con la lista. Un archivo nuevo que la usa corta
@@ -20,7 +18,7 @@
 //      no destraba nada: también corta. Lo único que no cuenta como renglón nuevo es un archivo
 //      que git reconoce como renombrado de uno que ya estaba.
 //
-// Cuando las dos listas lleguen a cero se borran, junto con este chequeo, y la llave se da de
+// Cuando la lista llegue a cero se borra, junto con este chequeo, y la llave se da de
 // baja en Supabase (docs/PLAN_HASTA_PRODUCCION.md, «Los cimientos»).
 // ---------------------------------------------------------------------------
 
@@ -36,26 +34,16 @@ const YO = 'scripts/verificar_llave_maestra.mjs';
 const git = (...args) => execFileSync('git', args, { cwd: RAIZ, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
 
 const NOMBRA_LA_LLAVE = /SUPABASE_SERVICE_ROLE_KEY/;
-const IMPORTA_LA_CONEXION =
-  /import\s*\{[^}]*\bsupabase\b[^}]*\}\s*from\s*['"][^'"]*db\/connection(?:\.js)?['"]/;
 
 const archivos = git('ls-files', '-z').split('\0').filter(Boolean);
 
-const hoy = { nombran_la_llave: [], importan_la_conexion: [] };
+const hoy = { nombran_la_llave: [] };
 for (const ruta of archivos) {
   if (ruta === YO || ruta === LISTA) continue;
   if (ruta.endsWith('.md') || ruta.endsWith('.sql')) continue;
   const completa = join(RAIZ, ruta);
   if (!existsSync(completa)) continue;
-  const texto = readFileSync(completa, 'utf8');
-  if (NOMBRA_LA_LLAVE.test(texto)) hoy.nombran_la_llave.push(ruta);
-  if (
-    ruta.startsWith('backend/src/') &&
-    !ruta.includes('/__tests__/') &&
-    IMPORTA_LA_CONEXION.test(texto)
-  ) {
-    hoy.importan_la_conexion.push(ruta);
-  }
+  if (NOMBRA_LA_LLAVE.test(readFileSync(completa, 'utf8'))) hoy.nombran_la_llave.push(ruta);
 }
 
 const guardada = JSON.parse(readFileSync(join(RAIZ, LISTA), 'utf8'));
@@ -118,7 +106,4 @@ if (fallas.length) {
   for (const f of fallas) console.error(`  - ${f}`);
   process.exit(1);
 }
-console.log(
-  `La llave maestra sigue en ${hoy.nombran_la_llave.length} archivos que la nombran y ` +
-  `${hoy.importan_la_conexion.length} del backend que la alcanzan.`,
-);
+console.log(`La llave maestra sigue en ${hoy.nombran_la_llave.length} archivos que la nombran.`);

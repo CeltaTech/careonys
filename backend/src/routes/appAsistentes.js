@@ -723,6 +723,23 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     req.usuarioAsistente.prestadoraId
   );
 
+  // La obra social y el número de afiliado de cada Paciente van sólo mientras la guardia está en
+  // curso: es cuando el Asistente puede necesitarlos, si hay que llamar a una ambulancia. El
+  // nombre de la obra social está en el Directorio de Personas, donde el Asistente no lee: se
+  // busca con el trabajo de la Prestadora y sólo las Fichas que nombran sus Pacientes.
+  let coberturaPorPaciente = {};
+  if (data.estado === 'activa') {
+    try {
+      coberturaPorPaciente = await coberturaDeLosPacientes(
+        db,
+        req.usuarioAsistente.prestadoraId,
+        (guardia.pacientes ?? []).map((p) => p.id),
+      );
+    } catch (e) {
+      return responderError(res, e);
+    }
+  }
+
   // La pantalla necesita saber a quiénes les falta el reporte: ofrece el cierre recién cuando
   // no queda ninguno, en vez de dejar apretar un botón que el backend va a rechazar.
   let reportes;
@@ -782,8 +799,30 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     // significa "ya está todo el trabajo del turno", que es lo que preguntaban.
     reporteCargado: (guardia.pacientes ?? []).every((p) => conReporte.includes(p.id)),
     vitalesPorPaciente,
+    coberturaPorPaciente,
   });
 });
+
+async function coberturaDeLosPacientes(db, prestadoraId, pacienteIds) {
+  if (!pacienteIds.length) return {};
+  const { data: pacientes, error } = await db
+    .from('pacientes')
+    .select('id, obra_social_persona_id, numero_afiliado')
+    .in('id', pacienteIds);
+  if (error) throw error;
+  const fichas = [...new Set((pacientes ?? []).map((p) => p.obra_social_persona_id).filter(Boolean))];
+  const nombres = {};
+  if (fichas.length) {
+    const { data: personas, error: errorPersonas } = await enLaPrestadora(prestadoraId, 'obra social del Paciente en la guardia', (dbp) =>
+      dbp.from('personas').select('id, nombre_visible').in('id', fichas));
+    if (errorPersonas) throw errorPersonas;
+    for (const p of personas ?? []) nombres[p.id] = p.nombre_visible;
+  }
+  return Object.fromEntries((pacientes ?? []).map((p) => [p.id, {
+    obra_social: nombres[p.obra_social_persona_id] ?? null,
+    numero_afiliado: p.numero_afiliado ?? null,
+  }]));
+}
 
 // ============================================================================
 // Check-in — nunca bloquea por distancia (PRD_04_05_App_Servicio.md, flujo de Check-in

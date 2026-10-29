@@ -7,7 +7,9 @@
  * pagaron: las que cubre el período de una liquidación pagada salen de la lista. Qué períodos se le
  * pagaron lo contesta la base con `periodos_pagados_de_la_sesion`, con su propia credencial. Los
  * reportes de otros Asistentes los lee sólo con una guardia en curso con ese Paciente, y sólo los
- * del Servicio de esa guardia. Y su perfil no lleva la credencial interna del código QR.
+ * del Servicio de esa guardia. Durante una guardia en curso recibe la obra social y el número de
+ * afiliado de sus Pacientes, y en ninguna otra. Y su perfil no lleva la credencial interna del
+ * código QR.
  *
  * Qué daría con el sistema roto: si la lista dejara de preguntar los períodos pagados, la guardia
  * de septiembre volvería a aparecer; si se preguntara con otra credencial, falla la comprobación de
@@ -146,6 +148,38 @@ describe('GET /pacientes/:id/reportes — sólo con una guardia en curso, y de e
     assert.ok(enCurso.url.includes('guardias.estado=eq.activa'), 'no pidió que la guardia esté en curso');
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/reportes');
     assert.ok(lectura.url.includes(`guardias.servicio_id=eq.${SERVICIO}`), 'no recortó los reportes al Servicio');
+  });
+});
+
+describe('GET /guardias/:id — la obra social y el número de afiliado, sólo en curso', () => {
+  const PACIENTE = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+  const FICHA_OBRA_SOCIAL = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+
+  beforeEach(() => {
+    respuestas.set('GET /rest/v1/pacientes', () => [{
+      id: PACIENTE, obra_social_persona_id: FICHA_OBRA_SOCIAL, numero_afiliado: 'INV-0001',
+      personas: { nombre_visible: 'Paciente Inventado' },
+    }]);
+    respuestas.set('GET /rest/v1/personas', () => [{ id: FICHA_OBRA_SOCIAL, nombre_visible: 'Obra Social Inventada' }]);
+  });
+
+  it('en curso, la manda junto al Paciente', async () => {
+    respuestas.set('GET /rest/v1/guardias', () => [{ ...SIN_CERRAR, paciente_id: PACIENTE }]);
+    const { estado, cuerpo } = await pedir('/guardias/guardia-sin-cerrar');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.coberturaPorPaciente, {
+      [PACIENTE]: { obra_social: 'Obra Social Inventada', numero_afiliado: 'INV-0001' },
+    });
+    const ficha = llamadas.find((l) => l.clave === 'GET /rest/v1/personas');
+    assert.ok(ficha.url.includes(FICHA_OBRA_SOCIAL), 'no acotó la lectura a la Ficha de su obra social');
+  });
+
+  it('terminada, no la manda ni la busca', async () => {
+    respuestas.set('GET /rest/v1/guardias', () => [{ ...SIN_COBRAR, paciente_id: PACIENTE }]);
+    const { estado, cuerpo } = await pedir('/guardias/guardia-sin-cobrar');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.coberturaPorPaciente, {});
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/personas'), 'buscó la obra social fuera de la guardia');
   });
 });
 

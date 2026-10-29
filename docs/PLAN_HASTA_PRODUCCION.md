@@ -730,8 +730,11 @@ Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
   dejaron de llegarle. Sacarle el Paciente a las otras cambia lo que muestra la tarjeta de la
   guardia, que hoy lleva su nombre y sin él diría «Sin Paciente asignado»: espera que el
   Desarrollador apruebe qué muestra en su lugar.
-- **Durante la guardia, el Asistente recibe el contacto de emergencia, la obra social y el número
-  de afiliado del Paciente**, que hoy no recibe.
+- **Durante la guardia, el Asistente recibe el contacto de emergencia del Paciente.** La obra
+  social y el número de afiliado ya le llegan con la guardia en curso, y la aplicación todavía no
+  los muestra: dónde y cómo se muestran espera la aprobación del Desarrollador. El contacto de
+  emergencia no existe como dato del Paciente: falta decidir quién es —el Cliente que contrata,
+  una Persona autorizada marcada, u otro— antes de construirlo.
 
 Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
 lo suyo y nada de la otra, salvo durante una emergencia abierta, extendida a lo que falta.

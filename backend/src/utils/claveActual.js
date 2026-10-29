@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { ErrorConMotivo } from './errorConMotivo.js';
+import { regionDeLaPrestadora, regionDeLaCredencial } from '../db/regiones.js';
 import { direccionDeAcceso } from '../config/direccionDeAcceso.js';
 
 // COMPROBAR LA CLAVE ACTUAL, DEL LADO DEL BACKEND.
@@ -18,25 +19,35 @@ import { direccionDeAcceso } from '../config/direccionDeAcceso.js';
 // Y EL CLIENTE NO GUARDA LA SESIÓN. `persistSession: false` y `autoRefreshToken: false`: lo único
 // que interesa es si el intento entró o no. Sin eso, el proceso del backend acumularía sesiones de
 // gente que sólo quiso comprobar su clave.
+//
+// Y SE LE PREGUNTA A LA REGIÓN DE LA CUENTA (`db/regiones.js`), nunca a una base supuesta: la de la
+// Prestadora cuando se sabe de quién es la cuenta, y la que emitió la sesión cuando lo que se tiene
+// es la sesión. Sin región reconocida no hay a quién preguntar, y se niega.
 
-let cliente = null;
+let clientes = new Map();
 
-function clientePublico() {
-  const url = process.env.SUPABASE_URL;
-  const llave = process.env.SUPABASE_ANON_KEY;
-  if (!url || !llave) return null;
-
-  if (!cliente) {
-    cliente = createClient(url, llave, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+function regionDe(prestadoraId) {
+  if (!prestadoraId) return null;
+  try {
+    return regionDeLaPrestadora(prestadoraId);
+  } catch {
+    return null;
   }
-  return cliente;
 }
 
-/** Sólo para las pruebas: obliga a rearmar el cliente con las variables de entorno de ahora. */
+function clientePublico(region) {
+  if (!region) return null;
+  if (!clientes.has(region)) {
+    clientes.set(region, createClient(region.url, region.clavePublica, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    }));
+  }
+  return clientes.get(region);
+}
+
+/** Sólo para las pruebas: obliga a rearmar los clientes con las variables de entorno de ahora. */
 export function olvidarClientePublico() {
-  cliente = null;
+  clientes = new Map();
 }
 
 /**
@@ -50,12 +61,12 @@ export function olvidarClientePublico() {
  * negar. Una comprobación que se saltea cuando falta una variable de entorno no es una
  * comprobación (CLAUDE.md de la empresa §5).
  */
-export async function esLaClaveActual({ usuarioId, clave }) {
+export async function esLaClaveActual({ usuarioId, prestadoraId, clave }) {
   if (!usuarioId || !clave) return false;
 
-  const publico = clientePublico();
+  const publico = clientePublico(regionDe(prestadoraId));
   if (!publico) {
-    console.error('claveActual: falta SUPABASE_ANON_KEY; no se puede comprobar la clave y se niega');
+    console.error('claveActual: no hay región para esta cuenta; no se puede comprobar la clave y se niega');
     return false;
   }
 
@@ -78,8 +89,9 @@ export async function esLaClaveActual({ usuarioId, clave }) {
  * Devuelve si el servicio de acceso lo confirmó.
  */
 export async function cerrarTodasLasSesionesDe(token) {
-  const publico = clientePublico();
-  if (!publico || !token) return false;
+  if (!token) return false;
+  const publico = clientePublico(regionDeLaCredencial(token));
+  if (!publico) return false;
   const { error } = await publico.auth.admin.signOut(token, 'global');
   if (error) console.error('claveActual: no se pudieron cerrar las sesiones:', error.message);
   return !error;
@@ -97,16 +109,15 @@ export async function cerrarTodasLasSesionesDe(token) {
  *
  * Lanza `clave_actual_incorrecta` si la actual no entra; cualquier otra falla sube como error.
  */
-export async function cambiarLaClave({ usuarioId, claveActual, claveNueva }) {
-  const url = process.env.SUPABASE_URL;
-  const llave = process.env.SUPABASE_ANON_KEY;
-  if (!url || !llave) {
-    console.error('claveActual: falta SUPABASE_ANON_KEY; no se puede cambiar la clave');
-    throw new Error('falta la llave pública');
+export async function cambiarLaClave({ usuarioId, prestadoraId, claveActual, claveNueva }) {
+  const region = regionDe(prestadoraId);
+  if (!region) {
+    console.error('claveActual: no hay región para esta cuenta; no se puede cambiar la clave');
+    throw new Error('no hay región para esta cuenta');
   }
   if (!usuarioId || !claveActual) throw new ErrorConMotivo('clave_actual_incorrecta');
 
-  const propio = createClient(url, llave, {
+  const propio = createClient(region.url, region.clavePublica, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -125,8 +136,8 @@ export async function cambiarLaClave({ usuarioId, claveActual, claveNueva }) {
 }
 
 /** Lo mismo, pero lanzando el motivo que la pantalla traduce. */
-export async function exigirLaClaveActual({ usuarioId, clave }) {
-  if (!(await esLaClaveActual({ usuarioId, clave }))) {
+export async function exigirLaClaveActual({ usuarioId, prestadoraId, clave }) {
+  if (!(await esLaClaveActual({ usuarioId, prestadoraId, clave }))) {
     throw new ErrorConMotivo('clave_actual_incorrecta');
   }
 }

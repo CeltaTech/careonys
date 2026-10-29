@@ -19,7 +19,14 @@ import { createServer } from 'node:http';
 
 const LLAVE_PUBLICA = 'clave-publica-de-mentira';
 const LLAVE_MAESTRA = 'clave-maestra-de-mentira';
-const SESION_DE_LA_PERSONA = 'sesion-de-la-persona';
+const PRESTADORA = '22222222-2222-2222-2222-222222222222';
+
+// Una sesión de mentira con la forma de las de verdad: lo único que se lee de ella es quién la
+// emitió, que es lo que elige la región a la que se le pide cerrar.
+function sesionEmitidaPor(emisor) {
+  const parte = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  return `${parte({ alg: 'none' })}.${parte({ iss: emisor, sub: 'persona-inventada' })}.firma`;
+}
 
 let llamadas = [];
 
@@ -54,7 +61,13 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${accesoFalso.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = LLAVE_MAESTRA;
 process.env.SUPABASE_ANON_KEY = LLAVE_PUBLICA;
 
-const { cerrarTodasLasSesionesDe, esLaClaveActual } = await import('../claveActual.js');
+const SESION_DE_LA_PERSONA = sesionEmitidaPor(`${process.env.SUPABASE_URL}/auth/v1`);
+
+const { olvidarRegiones } = await import('../../db/regiones.js');
+olvidarRegiones();
+const { cerrarTodasLasSesionesDe, esLaClaveActual, cambiarLaClave, olvidarClientePublico } =
+  await import('../claveActual.js');
+olvidarClientePublico();
 
 after(() => {
   accesoFalso.close();
@@ -83,6 +96,7 @@ describe('cerrar las sesiones de una persona', () => {
   it('comprobar la clave cierra sólo la sesión que se abrió para comprobarla', async () => {
     assert.equal(await esLaClaveActual({
       usuarioId: '11111111-1111-1111-1111-111111111111',
+      prestadoraId: PRESTADORA,
       clave: 'clave-inventada',
     }), true);
 
@@ -95,5 +109,35 @@ describe('cerrar las sesiones de una persona', () => {
   it('ningún pedido lleva la llave maestra', async () => {
     await cerrarTodasLasSesionesDe(SESION_DE_LA_PERSONA);
     assert.equal(llamadas.some((l) => l.llave === LLAVE_MAESTRA || l.sesion === LLAVE_MAESTRA), false);
+  });
+});
+
+describe('sin región reconocida no se le pregunta a nadie', () => {
+  it('una sesión que emitió otro servicio no cierra nada', async () => {
+    const ajena = sesionEmitidaPor('https://otro-servicio.invalid/auth/v1');
+    assert.equal(await cerrarTodasLasSesionesDe(ajena), false);
+    assert.deepEqual(llamadas, []);
+  });
+
+  it('una sesión que no se puede leer no cierra nada', async () => {
+    assert.equal(await cerrarTodasLasSesionesDe('no-es-una-sesion'), false);
+    assert.deepEqual(llamadas, []);
+  });
+
+  it('sin Prestadora la clave no se comprueba, y se niega', async () => {
+    assert.equal(await esLaClaveActual({
+      usuarioId: '11111111-1111-1111-1111-111111111111',
+      clave: 'clave-inventada',
+    }), false);
+    assert.deepEqual(llamadas, []);
+  });
+
+  it('sin Prestadora la clave no se cambia', async () => {
+    await assert.rejects(cambiarLaClave({
+      usuarioId: '11111111-1111-1111-1111-111111111111',
+      claveActual: 'clave-inventada',
+      claveNueva: 'otra-clave-inventada',
+    }));
+    assert.deepEqual(llamadas, []);
   });
 });

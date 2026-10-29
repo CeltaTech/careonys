@@ -156,7 +156,7 @@ export async function verificarElTelefonoAlActivar({ prestadoraId, usuarioId, cl
   // acota nada. Es el mismo corte que hace `ofrecerElCodigoAlActivar` antes de tocar la cuenta.
   if (!cuenta.prestadora_id) throw new ErrorConMotivo('no_encontrado');
 
-  await exigirLaClaveActual({ usuarioId: cuenta.id, clave });
+  await exigirLaClaveActual({ usuarioId: cuenta.id, prestadoraId: cuenta.prestadora_id, clave });
 
   const usado = await comprobarCodigoDelTelefono({
     prestadoraId: cuenta.prestadora_id,

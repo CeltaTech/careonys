@@ -279,7 +279,11 @@ cercanía al paciente, así que nada necesita ser único cruzando el océano.
 
 **En el backend, el punto donde se elige la región ya existe:** `backend/src/db/regiones.js`.
 Hoy hay una sola, armada con `SUPABASE_URL` y `SUPABASE_ANON_KEY`; la credencial de una persona se
-manda a la región que la emitió, y una que no emitió ninguna no entra. Falta lo que
+manda a la región que la emitió, y una que no emitió ninguna no entra. Comprobar, cambiar la
+clave y cerrar las sesiones de una persona también le preguntan a la región de su cuenta
+(`backend/src/utils/claveActual.js`), y sin región se niegan. La única conexión que sigue
+armándose con `SUPABASE_URL` a secas es la de la llave maestra, que sale entera en el paso 10.
+Falta lo que
 todavía no tiene de dónde sacarse: a qué región pertenece cada Prestadora y la puerta de
 entrada de las pantallas.
 

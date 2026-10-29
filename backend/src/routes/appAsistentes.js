@@ -11,7 +11,6 @@ import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import {
   conPacientes,
   pacientesDeGuardia,
-  asistenteAtiendeAlPaciente,
 } from '../utils/pacientesDeGuardia.js';
 import { conDomicilioDelDia, pacientesConDomicilioDelDia } from '../utils/domicilioDelDia.js';
 import { FICHA_DOMICILIO, FICHA_NOMBRE, FICHA_UBICACION, saludCon } from '../utils/fichaDelPaciente.js';
@@ -239,7 +238,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
   const { data: perfil, error } = await db
     .from('asistentes')
-    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, qr_token, canales, disponible, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
+    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, canales, disponible, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
     .eq('id', req.usuarioAsistente.asistenteId)
     .single();
   if (error || !perfil) {
@@ -640,10 +639,17 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
     const { asistenteId, prestadoraId } = req.usuarioAsistente;
     const propias = (data ?? []).map((g) => ({ ...g, asistente_id: asistenteId }));
     const deLicencia = await guardiasEnLicencia(prestadoraId, propias);
-    const visibles = (data ?? []).filter((g) => !deLicencia.has(g.id));
+    const db = clienteDelPedido(req);
+    // De las pasadas quedan sólo las que todavía no se le pagaron: las que cubre el período de
+    // una liquidación pagada ya no tiene nada que reclamar. Una que sigue en curso queda siempre,
+    // porque todavía la tiene que cerrar.
+    const { data: pagados, error: errorPagados } = await db.rpc('periodos_pagados_de_la_sesion');
+    if (errorPagados) throw errorPagados;
+    const yaPagada = (g) =>
+      g.estado !== 'activa' && (pagados ?? []).some((p) => p.desde <= g.fecha && g.fecha <= p.hasta);
+    const visibles = (data ?? []).filter((g) => !deLicencia.has(g.id) && !yaPagada(g));
 
     const visibilidad = await visibilidadDelPedido(req);
-    const db = clienteDelPedido(req);
     const guardias = await conPacientes(db, prestadoraId, visibles, camposDePacienteParaElAsistente(visibilidad));
     res.json({ guardias: await conDomicilioDelDia(db, guardias) });
   } catch (e) {
@@ -1935,8 +1941,22 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async
 
 // Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Guardia Activa).
 appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVisible('asistente_reportes_anteriores'), async (req, res) => {
-  if (!(await asistenteAtiendeAlPaciente(clienteDelPedido(req), req.params.id, req.usuarioAsistente))) {
-    return res.status(403).json({ error: 'No tiene guardias asignadas a este Paciente' });
+  // Los reportes de otros Asistentes se leen sólo mientras tiene una guardia en curso con este
+  // Paciente, y sólo los del Servicio de esa guardia: lo que anotaron en otro Servicio, o cuando
+  // él ya no está ahí, no le hace falta para trabajar.
+  const { data: enCurso, error: errorEnCurso } = await clienteDelPedido(req)
+    .from('guardia_pacientes')
+    .select('guardias!inner(servicio_id)')
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
+    .eq('paciente_id', req.params.id)
+    .eq('guardias.asistente_id', req.usuarioAsistente.asistenteId)
+    .eq('guardias.estado', 'activa')
+    .limit(1)
+    .maybeSingle();
+  if (errorEnCurso) return responderError(res, errorEnCurso);
+  const servicioId = enCurso?.guardias?.servicio_id;
+  if (!servicioId) {
+    return res.status(403).json({ error: 'No tiene una guardia en curso con este Paciente' });
   }
   // Los reportes se leen abajo con el trabajo de la Prestadora, que no pasa por la regla de salud:
   // se le pregunta antes, con su credencial.
@@ -1962,8 +1982,9 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
     data = await enLaPrestadora(req.usuarioAsistente.prestadoraId, 'reportes anteriores', async (dbTrabajo) => {
       const { data: filas, error } = await dbTrabajo
         .from('reportes')
-        .select('id, observaciones, created_at, guardias!inner(fecha)')
+        .select('id, observaciones, created_at, guardias!inner(fecha, servicio_id)')
         .eq('paciente_id', req.params.id)
+        .eq('guardias.servicio_id', servicioId)
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw error;

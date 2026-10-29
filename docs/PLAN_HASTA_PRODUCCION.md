@@ -725,10 +725,11 @@ Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
   se habilitan con un permiso.
 - **El Asistente, en un turno asignado sin responder, ve barrio, distancia, horario, complejidad y
   las tareas especiales que pide el Paciente.** El nombre del Paciente y el domicilio exacto, recién
-  al aceptar. Hoy ve horario, barrio y complejidad; faltan la distancia y las tareas especiales. **De las guardias pasadas ve sólo las que todavía no se le pagaron**, con fecha,
-  horario, horas y estado, para poder reclamar, y ningún dato del Paciente. Hoy una guardia no
-  guarda si se pagó: se deduce de que haya una liquidación pagada cuyo período la cubra. Los reportes de otros Asistentes, sólo del Servicio en curso, mientras tenga una
-  guardia vigente ahí y en cantidad acotada. Deja de recibir la credencial interna de su perfil.
+  al aceptar. Hoy ve horario, barrio y complejidad; faltan la distancia y las tareas especiales.
+  **De las guardias pasadas que todavía no se le pagaron, ningún dato del Paciente.** Las ya pagadas
+  dejaron de llegarle. Sacarle el Paciente a las otras cambia lo que muestra la tarjeta de la
+  guardia, que hoy lleva su nombre y sin él diría «Sin Paciente asignado»: espera que el
+  Desarrollador apruebe qué muestra en su lugar.
 - **Durante la guardia, el Asistente recibe el contacto de emergencia, la obra social y el número
   de afiliado del Paciente**, que hoy no recibe.
 

@@ -231,6 +231,18 @@ próxima— se lo arma el backend con el trabajo de la Prestadora y columnas con
 (`backend/src/routes/appClientes.js`). Y el código QR vale sólo para la guardia de hoy
 (`backend/src/utils/comprobacionDePresencia.js`, `esGuardiaDeHoy`).
 
+Por el mismo motivo, el Cliente no lee de la base ninguna fila de `guardias`, de `personas` del
+Paciente, de `informacion_de_salud_del_paciente` ni de `domicilios_temporales_paciente`. La base no
+distingue entre el titular y la persona autorizada, ni sabe qué le dio el titular a cada una: una
+fila abierta le entregaba a cualquiera de las dos el punto del que salió el Asistente, el domicilio
+y las patologías del Paciente. Con su credencial sólo se comprueba que el Paciente es suyo; lo
+demás lo arma el backend con el trabajo de la Prestadora y con las columnas que corresponden a
+quien pide: el domicilio, sólo con el acceso a la ficha; las coordenadas y el punto del viaje, sólo
+con el mapa en vivo prendido y el acceso a la ubicación; la información de salud, sólo si
+`alcanza_la_informacion_de_salud_la_sesion` contesta que sí (`backend/src/routes/appClientes.js`).
+El punto del viaje se borra en la base apenas la guardia deja de estar programada, con el
+disparador `borrar_el_punto_del_viaje`, cualquiera sea el camino por el que cambió.
+
 **El estado de cuenta del Cliente lo ve la administración.** Cuánto debe cada Cliente y si está
 atrasado entra por la acción `ver_estado_de_cuenta_cliente` del catálogo
 `catalogo_acciones_permisos`, que nace reservada a la administración y que cada Prestadora abre o

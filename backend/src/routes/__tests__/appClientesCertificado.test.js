@@ -157,3 +157,40 @@ describe('el Asistente que ve el Cliente', () => {
     assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/asistentes').length, 0);
   });
 });
+
+// La base no le da al Cliente la Ficha de Persona del Paciente: no sabe si el titular le dio la
+// ficha a quien pide. La Ficha la lee el trabajo de la Prestadora, y el domicilio se pide sólo para
+// quien tiene la ficha.
+describe('la ficha del Paciente que ve el Cliente', () => {
+  /** Las consultas a `pacientes` que piden la Ficha de Persona. */
+  const consultasDeLaFicha = () =>
+    llamadas.filter((l) => l.clave === 'GET /rest/v1/pacientes' && decodeURIComponent(l.url).includes('persona:personas'));
+
+  it('la lista se lee con el trabajo de la Prestadora, ni con la credencial de la persona ni con la llave maestra', async () => {
+    const { estado } = await pedir('/pacientes');
+    assert.equal(estado, 200);
+
+    const consultas = consultasDeLaFicha();
+    assert.equal(consultas.length, 1, 'no se consultó la Ficha');
+    assert.notEqual(consultas[0].autorizacion, credencial, 'la Ficha salió con la credencial de la persona');
+    assert.notEqual(consultas[0].autorizacion, `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'la Ficha salió con la llave maestra');
+    assert.ok(decodeURIComponent(consultas[0].url).includes('calle'), 'al titular no se le pidió el domicilio');
+  });
+
+  it('a la persona autorizada sin la ficha no se le pide el domicilio', async () => {
+    // No es el titular: está anotada como persona autorizada y no tiene ningún acceso guardado.
+    respuestas.set('GET /rest/v1/clientes', []);
+    respuestas.set('GET /rest/v1/personas_autorizadas', [{ cliente_id: CLIENTE }]);
+    respuestas.set('GET /rest/v1/permisos_personas_autorizadas', []);
+
+    const { estado } = await pedir('/pacientes');
+    assert.equal(estado, 200);
+
+    const consultas = consultasDeLaFicha();
+    assert.equal(consultas.length, 1, 'no se consultó la Ficha');
+    const url = decodeURIComponent(consultas[0].url);
+    for (const parte of ['calle', 'numero', 'lat', 'lng']) {
+      assert.ok(!url.includes(parte), `se pidió ${parte}: ${url}`);
+    }
+  });
+});

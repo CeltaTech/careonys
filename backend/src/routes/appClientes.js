@@ -72,10 +72,11 @@ export const appClientesRouter = Router();
 // LO QUE VA CON EL TRABAJO DE LA PRESTADORA, Y POR QUÉ. Cada consulta que entra con `enLaPrestadora`
 // lo dice en su renglón. Son de dos clases: lo que la base no le deja ver a un Cliente y la
 // pantalla sí muestra —la vidriera del Match, que es gente que todavía no lo atendió, y el estado
-// documental agregado—, y lo que hoy se contesta a una persona autorizada sin el acceso que la base
-// pide para esa tabla —las guardias en la pantalla del Paciente—. Pasarlas a la credencial de la
-// persona cambiaría lo que ve, y eso no se decide acá. La base las acota a la Prestadora; lo
-// que las acota al Cliente es el Paciente ya comprobado, o el filtro por el Cliente que llevan.
+// documental agregado—, y lo que la base no le da al Cliente porque no sabe qué le dio el titular a
+// cada persona —las guardias, la Ficha de Persona del Paciente, su información de salud y su
+// domicilio temporal—, que acá se piden con las columnas que corresponden a quien pide. La base las
+// acota a la Prestadora; lo que las acota al Cliente es el Paciente ya comprobado con la credencial
+// de la persona, o el filtro por el Cliente que llevan.
 // También va así el alta de una persona autorizada, porque crear su cuenta y su Ficha no lo puede
 // hacer el titular con su sesión.
 
@@ -115,19 +116,48 @@ async function pacienteDelCliente(db, pacienteId, req) {
     ], visibilidad)
     : `id, ${FICHA_NOMBRE}, cliente_id, prestadora_id`;
 
-  const { data } = await db
+  // Que el Paciente es de este Cliente lo contesta la base con la credencial de quien pide.
+  const { data: delCliente } = await db
     .from('pacientes')
-    .select(columnas)
+    .select('id, prestadora_id')
     .eq('id', pacienteId)
     .eq('cliente_id', usuarioCliente.clienteId)
     .maybeSingle();
-  if (!data) return data;
+  if (!delCliente) return delCliente;
 
-  // La dirección que se muestra es la de hoy, no la de la Ficha del Paciente, y la decide la base. Va acá
-  // adentro y no en cada pantalla para que ninguna se olvide: todas las pantallas del Cliente
-  // que muestran un Paciente pasan por esta función.
-  const [conDomicilio] = await pacientesConDomicilioDeHoy(db, [conSuFicha(data)]);
-  return conDomicilio;
+  // La Ficha de Persona, la información de salud y el domicilio temporal la base no se los da al
+  // Cliente: no distingue entre el titular y la persona autorizada a la que no le dieron la ficha.
+  // Los lee el trabajo de la Prestadora, con las columnas de arriba. La información de salud
+  // conserva su regla: se pide sólo si la base dice que alcanza a quien pide.
+  let columnasDelPedido = columnas;
+  if (columnas.includes('salud:')) {
+    const { data: alcanza } = await db.rpc('alcanza_la_informacion_de_salud_la_sesion', { p_paciente: pacienteId });
+    if (alcanza !== true) {
+      columnasDelPedido = columnasSegunVisibilidad([
+        'id',
+        ficha,
+        'cliente_id',
+        'prestadora_id',
+      ], visibilidad);
+    }
+  }
+
+  return enLaPrestadora(delCliente.prestadora_id, 'la ficha del Paciente', async (dbTrabajo) => {
+    const { data, error } = await dbTrabajo
+      .from('pacientes')
+      .select(columnasDelPedido)
+      .eq('id', pacienteId)
+      .eq('cliente_id', usuarioCliente.clienteId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return data;
+
+    // La dirección que se muestra es la de hoy, no la de la Ficha del Paciente, y la decide la
+    // base. Va acá adentro y no en cada pantalla para que ninguna se olvide: todas las pantallas
+    // del Cliente que muestran un Paciente pasan por esta función.
+    const [conDomicilio] = await pacientesConDomicilioDeHoy(dbTrabajo, [conSuFicha(data)]);
+    return conDomicilio;
+  });
 }
 
 // ============================================================================
@@ -345,20 +375,40 @@ appClientesRouter.post('/instruccion/:instruccionId/confirmar', requiereRolClien
 
 appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
   const db = clienteDelPedido(req);
-  const { data, error } = await db
+  const { data: delCliente, error } = await db
     .from('pacientes')
-    .select(`id, ${fichaCon(['nombre_visible', ...PARTES_DEL_DOMICILIO])}`)
+    .select('id, prestadora_id')
     .eq('cliente_id', req.usuarioCliente.clienteId);
   if (error) {
     return responderError(res, error);
   }
-  // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y no
-  // la de su Ficha de Persona — es la misma respuesta que ve el Asistente en su teléfono, escrita
-  // una sola vez en la base («ningún patrón repetido sin punto único de verdad»). Sin esto, el
-  // Cliente y quien cuida al Paciente leerían direcciones distintas para la misma persona el
-  // mismo día.
-  const pacientes = conSusFichas(data).sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
-  res.json({ pacientes: await pacientesConDomicilioDeHoy(db, pacientes) });
+  if (!delCliente?.length) return res.json({ pacientes: [] });
+
+  // El domicilio va sólo a quien le dieron la ficha, igual que en la pantalla del Paciente. La
+  // Ficha de Persona la lee el trabajo de la Prestadora, porque la base no se la da al Cliente.
+  const accesos = await accesosDelPedido(req);
+  const partes = accesos.persona_autorizada_ficha_del_paciente
+    ? ['nombre_visible', ...PARTES_DEL_DOMICILIO]
+    : ['nombre_visible'];
+  let pacientes;
+  try {
+    pacientes = await enLaPrestadora(delCliente[0].prestadora_id, 'la lista de Pacientes', async (dbTrabajo) => {
+      const { data, error: errorFicha } = await dbTrabajo
+        .from('pacientes')
+        .select(`id, ${fichaCon(partes)}`)
+        .in('id', delCliente.map((p) => p.id))
+        .eq('cliente_id', req.usuarioCliente.clienteId);
+      if (errorFicha) throw new Error(errorFicha.message);
+      // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y
+      // no la de su Ficha de Persona — es la misma respuesta que ve el Asistente en su teléfono,
+      // escrita una sola vez en la base («ningún patrón repetido sin punto único de verdad»).
+      const conFicha = conSusFichas(data).sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
+      return pacientesConDomicilioDeHoy(dbTrabajo, conFicha);
+    });
+  } catch (err) {
+    return responderError(res, err);
+  }
+  res.json({ pacientes });
 });
 
 // ============================================================================
@@ -549,23 +599,29 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
   // —el matrimonio que vive en la misma casa— (ver utils/pacientesDeGuardia.js). Buscando por
   // la columna vieja, ese Cliente vería media semana.
   //
-  // Entra con la credencial de la persona: la base deja ver sólo las guardias de los Pacientes de
-  // este Cliente y de su Prestadora, y la tabla del medio sólo donde la guardia se ve. `paciente_id`
-  // ya salió comprobado contra el Cliente por `pacienteDelCliente`.
-  const { data: filas, error } = await db
-    .from('guardia_pacientes')
-    .select(`
-      guardias!inner(
-        id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, cancelacion_origen,
-        checkin_at, checkout_at, prestadora_id, asistente_id
-      )
-    `)
-    .eq('paciente_id', paciente.id)
-    .gte('guardias.fecha', semana.desde)
-    .lte('guardias.fecha', semana.hasta);
-
-  if (error) {
-    return responderError(res, error);
+  // Con el trabajo de la Prestadora y columnas contadas: la base no le deja al Cliente leer
+  // guardias, porque la protección por fila no recorta columnas y ahí están los puntos de salida y
+  // de llegada. `paciente_id` ya salió comprobado contra el Cliente por `pacienteDelCliente`, y el
+  // permiso de la persona autorizada lo exige la ruta.
+  let filas;
+  try {
+    filas = await enLaPrestadora(paciente.prestadora_id, 'la semana de guardias', async (dbTrabajo) => {
+      const { data, error } = await dbTrabajo
+        .from('guardia_pacientes')
+        .select(`
+          guardias!inner(
+            id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, cancelacion_origen,
+            checkin_at, checkout_at, prestadora_id, asistente_id
+          )
+        `)
+        .eq('paciente_id', paciente.id)
+        .gte('guardias.fecha', semana.desde)
+        .lte('guardias.fecha', semana.hasta);
+      if (error) throw error;
+      return data;
+    });
+  } catch (e) {
+    return responderError(res, e);
   }
 
   // El nombre de cada Asistente, con el trabajo de la Prestadora: la base no le deja al Cliente

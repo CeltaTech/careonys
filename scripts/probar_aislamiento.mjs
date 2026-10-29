@@ -290,11 +290,12 @@ const LO_QUE_VE_CADA_UNO = [
     PACIENTES_DEL_CLIENTE],
 
   // La Ficha del Paciente se lee con el Paciente, y ninguna otra Ficha del Directorio: ni la de
-  // quien contrata, ni la de la obra social, ni la de un Paciente que no le toca.
+  // quien contrata, ni la de la obra social, ni la de un Paciente que no le toca. El Cliente no lee
+  // ninguna: la base no sabe si el titular le dio la ficha a quien pide, y se la arma el backend.
   ['personas',
     `SELECT persona_id FROM pacientes
       WHERE id IN (${PACIENTES_DEL_ASISTENTE}) AND NOT pendiente_conformidad`,
-    `SELECT persona_id FROM pacientes WHERE id IN (${PACIENTES_DEL_CLIENTE})`],
+    NADA],
 
   ['prestadoras', SU_PRESTADORA('prestadoras'), SU_PRESTADORA('prestadoras')],
 

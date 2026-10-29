@@ -731,10 +731,6 @@ Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
   guardia vigente ahí y en cantidad acotada. Deja de recibir la credencial interna de su perfil.
 - **Durante la guardia, el Asistente recibe el contacto de emergencia, la obra social y el número
   de afiliado del Paciente**, que hoy no recibe.
-- **El Cliente ve la ubicación del Asistente sólo en vivo y con el permiso**, y la ubicación se
-  borra al cerrar la guardia. Hoy lee las de salida, llegada y cierre de todas las guardias, sin el
-  permiso. Del Paciente deja de recibir lo que ninguna pantalla usa —patologías, ubicación de la
-  casa—, y el domicilio y su motivo respetan el permiso de la ficha.
 
 Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
 lo suyo y nada de la otra, salvo durante una emergencia abierta, extendida a lo que falta.

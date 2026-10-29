@@ -1158,6 +1158,9 @@ export const T = {
       detalle: {
         volver: 'Volver a Servicios',
         no_encontrado: 'No se encontró ese Servicio.',
+        coordinador: 'Coordinador',
+        elegir_coordinador: 'Elija un Coordinador',
+        no_habilitado: 'El Servicio no está habilitado. Asígnele un Coordinador para programar guardias.',
         sin_prestaciones: 'Este Servicio todavía no tiene prestaciones cargadas.',
         sin_guardias: 'Este Servicio todavía no tiene guardias.',
         col_que: 'Qué',
@@ -4069,6 +4072,9 @@ export const T = {
       detalle: {
         volver: 'Back to Services',
         no_encontrado: 'That service was not found.',
+        coordinador: 'Coordinator',
+        elegir_coordinador: 'Choose a coordinator',
+        no_habilitado: 'This service is not enabled. Assign a coordinator to schedule shifts.',
         sin_prestaciones: 'This service has no line items yet.',
         sin_guardias: 'This service has no shifts yet.',
         col_que: 'What',
@@ -6957,6 +6963,9 @@ export const T = {
       detalle: {
         volver: 'Voltar para Serviços',
         no_encontrado: 'Esse Serviço não foi encontrado.',
+        coordinador: 'Coordenador',
+        elegir_coordinador: 'Escolha um Coordenador',
+        no_habilitado: 'O Serviço não está habilitado. Atribua um Coordenador para programar plantões.',
         sin_prestaciones: 'Este Serviço ainda não tem prestações cadastradas.',
         sin_guardias: 'Este Serviço ainda não tem plantões.',
         col_que: 'O quê',

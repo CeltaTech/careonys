@@ -7,10 +7,13 @@ import { formatearImporte } from '../../lib/dinero';
 import { claseBadge } from '../../lib/tonos';
 import { con } from '../../lib/textos';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { useAuth } from '../../context/AuthContext';
+import { esAdminOSuperior } from '../../lib/roles';
 import { armarBuscadorDeRangos, tieneSignoFueraDeRango } from '../../lib/signosVitales';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { Cabecera } from '../../components/ui/Cabecera';
+import { FormField } from '../../components/ui/FormField';
 import { mensajeDeError } from '../../lib/errores';
 import { clienteDelServicio, contactosDeClientes } from '../../lib/clienteDelServicio';
 import { claseDeResponsable, modalidadesDeGuardias, nombreDeModalidad } from './modalidadesDelServicio';
@@ -38,7 +41,14 @@ export function ServicioDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const prestadoraId = usePrestadoraActual();
+  const { usuario } = useAuth();
+  // Al Coordinador lo asigna la administración; el Coordinador asignado sólo lo ve. La base dice
+  // lo mismo: esto sólo decide si se muestra la lista o el nombre.
+  const asignaCoordinador = esAdminOSuperior(usuario?.rol);
   const [servicio, setServicio] = useState(null);
+  const [coordinadores, setCoordinadores] = useState([]);
+  const [asignando, setAsignando] = useState(false);
+  const [errorAsignacion, setErrorAsignacion] = useState(null);
   const [contactos, setContactos] = useState(new Map());
   // Cómo se llama quien firmó la contratación. `null` es que el Servicio viene de antes del Padrón
   // y no lo dice.
@@ -61,7 +71,7 @@ export function ServicioDetalle() {
       // Quién contrató sale de `tipo_contratante` y `contratante_id`; sus datos de contacto vienen
       // en una consulta aparte, porque esas dos columnas no apuntan siempre a la misma tabla y sin
       // clave foránea la base no sabe anidarlos. De dónde salen lo decide `contactosDeClientes`.
-      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id')
+      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id, coordinador_id')
       .eq('id', id)
       .single();
 
@@ -74,7 +84,9 @@ export function ServicioDetalle() {
 
     // La modalidad la lleva cada guardia, así que se traen todas las del Servicio: de ahí salen
     // las modalidades, y por sus ids se buscan las incidencias.
-    const [pr, gu, rep, rangos] = await Promise.all([
+    // Quiénes pueden coordinarlo: las cuentas de coordinación activas de la Prestadora. Quien no
+    // asigna recibe de la base sólo la suya, que es la del Servicio que está mirando.
+    const [pr, gu, rep, rangos, coord] = await Promise.all([
       supabase
         .from('prestaciones')
         .select('id, tipo_servicio, precio_final, moneda, estado, nota, paciente_id, created_at')
@@ -97,9 +109,16 @@ export function ServicioDetalle() {
         .from('rangos_referencia_vitales')
         .select('signo, paciente_id, valor_min, valor_max, unidad')
         .eq('prestadora_id', prestadoraId),
+      supabase
+        .from('usuarios')
+        .select('id, nombre, apellido')
+        .eq('prestadora_id', prestadoraId)
+        .eq('rol', 'coordinador')
+        .is('desactivada_en', null)
+        .order('apellido'),
     ]);
 
-    const falla = pr.error ?? gu.error ?? rep.error;
+    const falla = pr.error ?? gu.error ?? rep.error ?? coord.error;
     if (falla) {
       setError(mensajeDeError(falla, t));
       setEstado('error');
@@ -143,6 +162,9 @@ export function ServicioDetalle() {
     const buscador = armarBuscadorDeRangos(rangos.data);
 
     setServicio(s);
+    setCoordinadores(
+      (coord.data ?? []).map((u) => ({ id: u.id, nombre: `${u.apellido ?? ''} ${u.nombre ?? ''}`.trim() || '—' })),
+    );
     setContactos(mapaContactos);
     setPrestaciones(pr.data ?? []);
     setGuardias(listaGuardias);
@@ -188,6 +210,24 @@ export function ServicioDetalle() {
 
   const modalidades = useMemo(() => modalidadesDeGuardias(guardias), [guardias]);
 
+  const asignarCoordinador = async (coordinadorId) => {
+    if (!coordinadorId || coordinadorId === servicio.coordinador_id) return;
+    setAsignando(true);
+    setErrorAsignacion(null);
+    const { data, error: falla } = await supabase
+      .from('servicios')
+      .update({ coordinador_id: coordinadorId })
+      .eq('id', servicio.id)
+      .select('coordinador_id')
+      .single();
+    setAsignando(false);
+    if (falla) {
+      setErrorAsignacion(mensajeDeError(falla, t));
+      return;
+    }
+    setServicio((anterior) => ({ ...anterior, coordinador_id: data.coordinador_id }));
+  };
+
   if (estado === 'cargando') {
     return <p className="estado-cargando">{t.comun.cargando}</p>;
   }
@@ -219,6 +259,7 @@ export function ServicioDetalle() {
   const nombreCliente = contacto?.nombre || '—';
   const puedeAgregarPrestacion = servicio.estado === ESTADO_ACTIVO && Boolean(cliente.ruta);
   const guardiasVisibles = guardias.slice(0, GUARDIAS_A_MOSTRAR);
+  const nombreCoordinador = coordinadores.find((c) => c.id === servicio.coordinador_id)?.nombre || '—';
 
   const pestanas = [
     ['resumen', d.tab_resumen],
@@ -241,6 +282,9 @@ export function ServicioDetalle() {
       <span className="panel-mini servicios-subtitulo">
         {[servicio.etiqueta, nombrePacientes, nombreCliente].filter(Boolean).join(' · ')}
       </span>
+
+      {!servicio.coordinador_id && <Alert variant="warning">{d.no_habilitado}</Alert>}
+      {errorAsignacion && <Alert variant="error">{errorAsignacion}</Alert>}
 
       <section className="panel-tarjeta servicios-tarjeta">
         <div className="panel-tabs" role="tablist">
@@ -277,6 +321,28 @@ export function ServicioDetalle() {
                 <span className="panel-mini">
                   {[contacto.telefono, contacto.email, contacto.localidad].filter(Boolean).join(' · ')}
                 </span>
+              )}
+            </div>
+            <div className="servicios-dato">
+              {asignaCoordinador ? (
+                <FormField
+                  label={d.coordinador}
+                  name="coordinador_id"
+                  type="select"
+                  value={servicio.coordinador_id ?? ''}
+                  disabled={asignando}
+                  onChange={(e) => asignarCoordinador(e.target.value)}
+                >
+                  {!servicio.coordinador_id && <option value="" disabled>{d.elegir_coordinador}</option>}
+                  {coordinadores.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </FormField>
+              ) : (
+                <>
+                  <span className="panel-mini">{d.coordinador}</span>
+                  <b>{nombreCoordinador}</b>
+                </>
               )}
             </div>
           </div>

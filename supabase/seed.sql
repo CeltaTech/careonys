@@ -491,11 +491,11 @@ INSERT INTO public.informacion_de_salud_del_paciente (prestadora_id, paciente_id
 -- Para quién se contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué
 -- clase es el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `cliente`,
 -- pero se nombra igual, porque el día que haya otro estos datos de ejemplo no van a tener que
--- cambiar.
-INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta, estado) VALUES
-  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),
-  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente'),
-  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente');
+-- cambiar. Los tres los coordina Carla: sin Coordinador un Servicio no tiene guardias.
+INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta, estado, coordinador_id) VALUES
+  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente', '20000000-0000-4000-8000-000000000003'),
+  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente', '20000000-0000-4000-8000-000000000003'),
+  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente', '20000000-0000-4000-8000-000000000003');
 
 -- La Lista de Precios es el catálogo: lo que la Prestadora ofrece y a cuánto.
 -- No es lo vendido. Lo vendido son las prestaciones de más abajo, que guardan el
@@ -1173,9 +1173,10 @@ INSERT INTO public.pacientes (id, persona_id, prestadora_id, cliente_id)
 VALUES ('60000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004');
 
-INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta)
+INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta, coordinador_id)
 VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
-        'cliente', '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos');
+        'cliente', '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos',
+        '50000000-0000-4000-8000-000000000002');
 
 -- Con Asistente asignado, por el mismo motivo que el Paciente lleva Cliente: un
 -- Asistente sin Guardias no ve nada, y una prueba contra la nada no prueba nada.

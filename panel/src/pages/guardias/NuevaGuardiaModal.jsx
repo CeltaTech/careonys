@@ -93,6 +93,8 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
           .from('servicios')
           .select('id, etiqueta, tipo_contratante, contratante_id')
           .eq('estado', 'vigente')
+          // Sin Coordinador el Servicio no está habilitado y la base rechaza sus guardias.
+          .not('coordinador_id', 'is', null)
           .order('etiqueta'),
       ]);
       setAsistentes(asistentesData ?? []);

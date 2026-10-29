@@ -185,13 +185,25 @@ function anclas() {
            (SELECT id FROM public.pacientes WHERE prestadora_id = (SELECT id FROM p)
              ORDER BY id LIMIT 1),
            (SELECT id FROM elegido),
-           (SELECT array_to_string(canales, ',') FROM elegido);
+           (SELECT array_to_string(canales, ',') FROM elegido),
+           -- El Servicio del Paciente, que es el de quien lo contrata, y con Coordinador: sin él
+           -- no se arma ninguna guardia.
+           (SELECT s.id FROM public.servicios s
+              JOIN public.pacientes pa ON pa.cliente_id = s.contratante_id
+                                      AND pa.prestadora_id = s.prestadora_id
+             WHERE pa.id = (SELECT id FROM public.pacientes WHERE prestadora_id = (SELECT id FROM p)
+                             ORDER BY id LIMIT 1)
+               AND s.tipo_contratante = 'cliente'
+               AND s.estado = 'vigente'
+               AND s.coordinador_id IS NOT NULL
+             ORDER BY s.id LIMIT 1);
   `);
 
-  const [prestadora, moneda, paciente, asistente, canalesEnTexto] = fila || [];
+  const [prestadora, moneda, paciente, asistente, canalesEnTexto, servicio] = fila || [];
   const faltan = [
     !prestadora && 'la Prestadora de pruebas',
     !paciente && 'un Paciente suyo',
+    !servicio && 'un Servicio vigente de ese Paciente, con Coordinador',
     !asistente && 'un Asistente suyo sin documentos que le impidan trabajar y que trabaje en directa',
   ].filter(Boolean);
 
@@ -206,7 +218,7 @@ function anclas() {
   const canalesAhora = (canalesEnTexto || '').split(',').filter(Boolean);
   const canalesDeLaPrueba = canalesAhora.length > 1 ? [canalesAhora[0]] : null;
 
-  return { prestadora, moneda, paciente, asistente, canalesAhora, canalesDeLaPrueba };
+  return { prestadora, moneda, paciente, asistente, servicio, canalesAhora, canalesDeLaPrueba };
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +267,7 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
       fila: {
         prestadora_id: d.prestadora,
         paciente_id: d.paciente,
+        servicio_id: d.servicio,
         asistente_id: d.asistente,
         fecha: hoy,
         hora_inicio: '08:00',
@@ -380,6 +393,7 @@ async function probarElHueco({ base, llavePublica }, d) {
     body: JSON.stringify({
       prestadora_id: d.prestadora,
       paciente_id: d.paciente,
+      servicio_id: d.servicio,
       dias_semana: ['martes'],
       hora_inicio: '09:00',
       hora_fin: '13:00',
@@ -400,7 +414,7 @@ async function probarElHueco({ base, llavePublica }, d) {
   const fila = Array.isArray(cuerpo) ? cuerpo[0] : cuerpo;
   if (fila?.id) consultarBase(`DELETE FROM public.series_guardias WHERE id = '${fila.id}';`);
   console.log(verde('  ✓ series_guardias sin Asistente'));
-  console.log(gris('      coordinador_gestiona_series_guardias_de_su_zona → interno.coordinador_alcanza_guardia'));
+  console.log(gris('      coordinador_gestiona_series_guardias_de_sus_servicios → interno.coordina_el_servicio'));
   return [];
 }
 
@@ -878,6 +892,113 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
 }
 
 // ---------------------------------------------------------------------------
+// Cuarta comprobación: el Coordinador de cada Servicio
+// ---------------------------------------------------------------------------
+// Un Servicio sin Coordinador no tiene guardias, sólo la administración le asigna uno, y cada
+// Coordinador ve sólo los Servicios que tiene asignados. Las tres cosas las decide la base, así que
+// se prueban con la sesión de cada uno, sobre un Servicio que nace sin Coordinador para la prueba.
+
+async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
+  console.log('\n== El Coordinador de cada Servicio ==\n');
+  const problemas = [];
+  const bien = (que) => console.log(verde(`  ✓ ${que}`));
+  const mal = (que, por) => {
+    console.log(rojo(`  ✗ ${que}`));
+    console.log(rojo(`      ${por}`));
+    problemas.push(`coordinador del servicio: ${que} — ${por}`);
+  };
+
+  const admin = await entrar(base, llavePublica, ADMINISTRADORA, d.prestadora);
+  const coordinadora = await entrar(base, llavePublica, COORDINADORA, d.prestadora);
+  const [[carla]] = consultarBase(`SELECT id FROM public.usuarios WHERE lower(email) = '${COORDINADORA}';`);
+  const [[cliente]] = consultarBase(`SELECT cliente_id FROM public.pacientes WHERE id = '${d.paciente}';`);
+
+  const pedir = async (token, metodo, ruta, cuerpo) => {
+    const r = await fetch(`${base}/rest/v1/${ruta}`, {
+      method: metodo,
+      headers: {
+        apikey: llavePublica,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+    });
+    return { estado: r.status, cuerpo: await r.json().catch(() => null) };
+  };
+
+  const alta = await pedir(admin, 'POST', 'servicios', {
+    prestadora_id: d.prestadora,
+    tipo_contratante: 'cliente',
+    contratante_id: cliente,
+    etiqueta: 'Prueba del Coordinador del Servicio',
+  });
+  const servicio = alta.cuerpo?.[0]?.id;
+  if (!servicio) {
+    mal('la administración da de alta un Servicio', `${alta.estado} ${JSON.stringify(alta.cuerpo)}`);
+    return problemas;
+  }
+
+  try {
+    const guardia = {
+      prestadora_id: d.prestadora,
+      paciente_id: d.paciente,
+      servicio_id: servicio,
+      fecha: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      hora_inicio: '08:00',
+      hora_fin: '12:00',
+      modalidad: 'presencial',
+    };
+    const sinCoordinador = await pedir(admin, 'POST', 'guardias', guardia);
+    if (sinCoordinador.estado >= 400 && String(sinCoordinador.cuerpo?.message).startsWith('servicio_sin_coordinador')) {
+      bien('sin Coordinador, el Servicio no tiene guardias');
+    } else {
+      mal('sin Coordinador, el Servicio no tiene guardias', `${sinCoordinador.estado} ${JSON.stringify(sinCoordinador.cuerpo)}`);
+      const id = sinCoordinador.cuerpo?.[0]?.id;
+      if (id) consultarBase(`DELETE FROM public.guardias WHERE id = '${id}';`);
+    }
+
+    const noLoVe = await pedir(coordinadora, 'GET', `servicios?id=eq.${servicio}&select=id`);
+    if (noLoVe.estado === 200 && noLoVe.cuerpo?.length === 0) bien('la Coordinadora no ve un Servicio que no coordina');
+    else mal('la Coordinadora no ve un Servicio que no coordina', `${noLoVe.estado} ${JSON.stringify(noLoVe.cuerpo)}`);
+
+    const seAsigna = await pedir(coordinadora, 'PATCH', `servicios?id=eq.${servicio}`, { coordinador_id: carla });
+    const [[queda]] = consultarBase(`SELECT coalesce(coordinador_id::text, 'nadie') FROM public.servicios WHERE id = '${servicio}';`);
+    if (queda === 'nadie') bien('la Coordinadora no se asigna un Servicio');
+    else mal('la Coordinadora no se asigna un Servicio', `quedó asignado (${seAsigna.estado})`);
+
+    const asigna = await pedir(admin, 'PATCH', `servicios?id=eq.${servicio}`, { coordinador_id: carla });
+    if (asigna.estado === 200 && asigna.cuerpo?.[0]?.coordinador_id === carla) bien('la administración le asigna el Coordinador');
+    else mal('la administración le asigna el Coordinador', `${asigna.estado} ${JSON.stringify(asigna.cuerpo)}`);
+
+    const loVe = await pedir(coordinadora, 'GET', `servicios?id=eq.${servicio}&select=id`);
+    if (loVe.cuerpo?.length === 1) bien('la Coordinadora ve el Servicio que se le asignó');
+    else mal('la Coordinadora ve el Servicio que se le asignó', `${loVe.estado} ${JSON.stringify(loVe.cuerpo)}`);
+
+    const conCoordinador = await pedir(coordinadora, 'POST', 'guardias', guardia);
+    const idGuardia = conCoordinador.cuerpo?.[0]?.id;
+    if (idGuardia) {
+      bien('con Coordinador, su Coordinadora le arma una guardia');
+      consultarBase(`DELETE FROM public.guardias WHERE id = '${idGuardia}';`);
+    } else {
+      mal('con Coordinador, su Coordinadora le arma una guardia', `${conCoordinador.estado} ${JSON.stringify(conCoordinador.cuerpo)}`);
+    }
+
+    const vaciar = await pedir(admin, 'PATCH', `servicios?id=eq.${servicio}`, { coordinador_id: null });
+    if (vaciar.estado >= 400 && String(vaciar.cuerpo?.message) === 'el_servicio_no_se_queda_sin_coordinador') {
+      bien('el Servicio no vuelve a quedarse sin Coordinador');
+    } else {
+      mal('el Servicio no vuelve a quedarse sin Coordinador', `${vaciar.estado} ${JSON.stringify(vaciar.cuerpo)}`);
+    }
+  } finally {
+    consultarBase(`DELETE FROM public.guardias WHERE servicio_id = '${servicio}';`);
+    consultarBase(`DELETE FROM public.servicios WHERE id = '${servicio}';`);
+  }
+
+  return problemas;
+}
+
+// ---------------------------------------------------------------------------
 
 function limpiar(creado, idAsistente) {
   // Se borra con la llave del dueño de la base y no con la sesión, porque lo
@@ -912,7 +1033,8 @@ async function main() {
   const delHueco = await probarElHueco(entorno, d);
   const deLaClase = probarLaClaseEntera();
   const deLaConfiguracion = await probarQuienEscribeLaConfiguracion(entorno, d);
-  const problemas = [...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion];
+  const delCoordinador = await probarElCoordinadorDelServicio(entorno, d);
+  const problemas = [...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador];
 
   console.log('');
   if (problemas.length) {

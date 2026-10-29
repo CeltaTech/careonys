@@ -1,20 +1,3 @@
 {
-    "nombran_la_llave": [
-        ".github/workflows/backup-diario.yml",
-        "backend/.env.example",
-        "backend/scripts/backup_a_buckets.mjs",
-        "backend/scripts/probar_restauracion.mjs",
-        "backend/scripts/seed_demo_continuidad_guardia.js",
-        "backend/scripts/seed_prestadora_demo_guardias.js",
-        "backend/scripts/seed_prestadora_demo_poblacion.js",
-        "backend/scripts/seed_test_cierre_servicio.js",
-        "backend/scripts/test_item_b_scope_superadmin.js",
-        "backend/scripts/test_pendiente_36.mjs",
-        "backend/scripts/test_pendiente_73_escanear_asistente.mjs",
-        "backend/scripts/verificacion/bloque3_verificacion.mjs",
-        "backend/src/db/__tests__/credencialDeLaPersona.test.js",
-        "backend/src/i18n/__tests__/cargarMensajesDelSistema.test.js",
-        "backend/src/routes/__tests__/appClientesCertificado.test.js",
-        "backend/src/utils/__tests__/cerrarSesiones.test.js"
-    ]
+    "nombran_la_llave": []
 }

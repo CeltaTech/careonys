@@ -32,6 +32,23 @@ jobs:
       - name: Anotar qué versión se está subiendo
         run: git rev-parse --short HEAD > backend/version.txt
 
+      # El espejo de la copia nocturna de los archivos (Backblaze B2). Sus valores viven sólo en los
+      # secretos de este repositorio, que también usa la copia de la base: se copian de acá a
+      # Railway en cada publicación, así hay un solo lugar donde cambiarlos y nadie los ve.
+      - name: Pasar a Railway las variables del espejo de la copia
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+        run: |
+          railway variables --service careonys-backend --environment production --skip-deploys \
+            --set "B2_ENDPOINT=$B2_ENDPOINT" \
+            --set "B2_KEY_ID=$B2_KEY_ID" \
+            --set "B2_APPLICATION_KEY=$B2_APPLICATION_KEY" \
+            --set "B2_BUCKET=$B2_BUCKET" > /dev/null
+
       # `|| true` a propósito: Railway corta cada tanto el hilo de los registros de la
       # construcción ("Failed to stream build logs") y el comando devuelve error aunque la
       # construcción siga su curso y termine publicando. Pasó dos veces seguidas el 2026-08-13.

@@ -20,11 +20,17 @@ export async function accesosDeLaPersona({ db, usuarioId, clienteId, esTitular, 
   // anotado en dos personas autorizadas —cada persona tiene una sola fila de membresía—, pero preguntar por
   // media clave es de esas cosas que funcionan hasta el día que dejan de funcionar, y ese día
   // devolvería los accesos que otro titular le dio en otro Cliente.
-  const { data } = await db
+  const { data, error } = await db
     .from('permisos_personas_autorizadas')
     .select('clave, permitido')
     .eq('cliente_id', clienteId)
     .eq('usuario_id', usuarioId);
+
+  // Si no se pudo leer, no se sabe qué le dieron, y ante la duda se niega todo, como la base.
+  if (error) {
+    console.error('[accesosDeLaPersona] no se pudieron leer los accesos:', error.message);
+    return accesosEfectivos({ esTitular: false, filasGuardadas: [], visibilidad });
+  }
 
   return accesosEfectivos({ esTitular: false, filasGuardadas: data, visibilidad });
 }

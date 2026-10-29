@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { PerfilProvider, useOfreceIntermediacion, useSeVe } from './context/PerfilContext';
 import { PersonasAutorizadasProvider, usePersonasAutorizadas } from './context/PersonasAutorizadasContext';
 import { LocaleProvider, useLocale } from './i18n/LocaleContext';
-import { pantallaPermitida } from './lib/interruptorDeCadaPantalla';
+import { ACCESO_DE_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA, pantallaPermitida } from './lib/interruptorDeCadaPantalla';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
@@ -57,12 +57,25 @@ function RutaPrivada({ children }) {
 // Una pantalla puede no tener ninguna de las dos, o tener una sola; lo que no está declarado no
 // restringe nada, y las dos claves salen del mismo archivo.
 //
-// Mientras la respuesta del perfil no llegó, las dos preguntas contestan que sí a todo, así que
-// nadie queda expulsado de una pantalla por un dato que todavía está viajando.
+// Lo que el titular le dio a cada persona autorizada se niega mientras no se sabe. Por eso una
+// pantalla que depende de eso espera la respuesta en vez de expulsar: nadie queda afuera por un
+// dato que todavía está viajando, y nadie entra por uno que no llegó.
 function PantallaPermitida({ pantalla, children }) {
   const seVe = useSeVe();
-  const { puedeVer } = usePersonasAutorizadas();
+  const { estado, puedeVer, recargar } = usePersonasAutorizadas();
+  const { t } = useLocale();
 
+  if (ACCESO_DE_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA[pantalla] && estado === 'cargando') {
+    return <div className="pantalla-cargando estado-cargando" role="status">{t.comun.cargando}</div>;
+  }
+  if (ACCESO_DE_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA[pantalla] && estado === 'error') {
+    return (
+      <div className="pantalla-cargando">
+        <div className="alert alert-error" role="alert">{t.comun.error_generico}</div>
+        <button type="button" className="btn btn-secondary" onClick={recargar}>{t.comun.reintentar}</button>
+      </div>
+    );
+  }
   if (!pantallaPermitida(pantalla, seVe, puedeVer)) return <Navigate to="/pacientes" replace />;
   return children;
 }

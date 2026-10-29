@@ -22,7 +22,7 @@ import { visibilidadDeFabrica } from '../catalogoVisibilidad.js';
 // trae igual. Mismo recurso que en `marcarAusente.test.js`.
 process.env.SUPABASE_URL = 'http://127.0.0.1:1';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
-const { exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } = await import('../accesosDePersonasAutorizadas.js');
+const { accesosDeLaPersona, exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } = await import('../accesosDePersonasAutorizadas.js');
 
 function unPedido({ esTitular = false, accesos = accesosDeFabrica(), visibilidad = visibilidadDeFabrica() } = {}) {
   return {
@@ -169,5 +169,39 @@ describe('visibilidadDeLaPersona', () => {
     const pedido = unPedido({ accesos: { ...accesosDeFabrica(), persona_autorizada_dinero: false } });
     const primera = await visibilidadDeLaPersona(pedido);
     assert.equal(await visibilidadDeLaPersona(pedido), primera);
+  });
+});
+
+describe('accesosDeLaPersona: ante la duda, niega', () => {
+  // Una conexión de mentira que contesta lo que se le diga a la lectura de los accesos.
+  function unaBase(respuesta) {
+    const consulta = { select: () => consulta, eq: () => consulta, then: (ok) => ok(respuesta) };
+    return { from: () => consulta };
+  }
+  const pedir = (respuesta) => accesosDeLaPersona({
+    db: unaBase(respuesta), usuarioId: 'quien-sea', clienteId: 'el-cliente', esTitular: false,
+  });
+
+  it('sin ninguna fila cargada no tiene ningún acceso, igual que para la base', async () => {
+    const accesos = await pedir({ data: [], error: null });
+    assert.ok(Object.keys(accesos).length > 0);
+    assert.ok(Object.values(accesos).every((v) => v === false));
+  });
+
+  it('si la lectura falla, no tiene ningún acceso', async () => {
+    const original = console.error;
+    console.error = () => {};
+    try {
+      const accesos = await pedir({ data: [{ clave: 'persona_autorizada_reportes', permitido: true }], error: { message: 'caída' } });
+      assert.ok(Object.values(accesos).every((v) => v === false));
+    } finally {
+      console.error = original;
+    }
+  });
+
+  it('rige lo que se firmó', async () => {
+    const accesos = await pedir({ data: [{ clave: 'persona_autorizada_reportes', permitido: true }], error: null });
+    assert.equal(accesos.persona_autorizada_reportes, true);
+    assert.equal(accesos.persona_autorizada_guardias, false);
   });
 });

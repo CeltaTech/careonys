@@ -23,16 +23,19 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
 
-const PERSONAS_AUTORIZADAS_VACIO = { esTitular: false, accesos: null, instruccionPendiente: null };
+// `estado` es 'cargando' hasta que llega la respuesta, 'error' si no se la pudo traer y 'listo'
+// cuando se sabe qué le dieron a esta persona.
+const PERSONAS_AUTORIZADAS_VACIO = { estado: 'cargando', esTitular: false, accesos: null, instruccionPendiente: null };
 
 // El valor de afuera del proveedor tiene la misma forma que el de adentro, con `puedeVer`
 // incluido. Un componente dibujado por error fuera del proveedor tiene que comportarse como
 // cuando la respuesta todavía no llegó, no romperse llamando a una función que no está.
 const PersonasAutorizadasContext = createContext({
+  estado: 'cargando',
   esTitular: false,
   instruccionPendiente: null,
   recargar: () => {},
-  puedeVer: () => true,
+  puedeVer: () => false,
 });
 
 export function PersonasAutorizadasProvider({ children }) {
@@ -51,14 +54,16 @@ export function PersonasAutorizadasProvider({ children }) {
       const respuesta = await api.perfil();
       if (vigente.current !== mio) return;
       setPersonasAutorizadas({
+        estado: 'listo',
         esTitular: Boolean(respuesta?.perfil?.esTitular),
         accesos: respuesta?.accesos ?? null,
         instruccionPendiente: respuesta?.instruccionPendiente ?? null,
       });
     } catch {
-      // Sin esta respuesta la aplicación igual abre: se ve todo hasta el próximo intento. Lo
-      // apagado no viene igual desde el backend, así que en el peor caso se ve un botón de más,
-      // nunca un dato de más.
+      // Sin esta respuesta no se sabe qué le dieron, y ante la duda se niega, igual que el backend
+      // y la base. Lo que ya se sabía de un intento anterior se conserva.
+      if (vigente.current !== mio) return;
+      setPersonasAutorizadas((antes) => (antes.accesos ? antes : { ...antes, estado: 'error' }));
     }
   }, []);
 
@@ -73,6 +78,7 @@ export function PersonasAutorizadasProvider({ children }) {
 
   const valor = useMemo(
     () => ({
+      estado: personasAutorizadas.estado,
       esTitular: personasAutorizadas.esTitular,
       instruccionPendiente: personasAutorizadas.instruccionPendiente,
       recargar,
@@ -80,9 +86,10 @@ export function PersonasAutorizadasProvider({ children }) {
       // catálogo de accesos vive en el backend (`backend/src/utils/catalogoPersonasAutorizadas.js`) y
       // no se copia acá, así que un acceso nuevo no obliga a tocar este archivo.
       //
-      // Mientras la respuesta no llegó contesta que sí a todo, por el mismo motivo que aquel:
-      // nadie tiene que quedar expulsado de una pantalla por un dato que todavía está viajando.
-      puedeVer: (clave) => (personasAutorizadas.accesos ? personasAutorizadas.accesos[clave] !== false : true),
+      // Mientras la respuesta no llegó, o si no llegó nunca, contesta que no: lo que no se sabe
+      // que le dieron no se muestra, igual que en el backend y en la base. La ruta que abre una
+      // pantalla entera no expulsa a nadie por eso: espera (`App.jsx`, `PantallaPermitida`).
+      puedeVer: (clave) => personasAutorizadas.accesos?.[clave] === true,
     }),
     [personasAutorizadas, recargar],
   );

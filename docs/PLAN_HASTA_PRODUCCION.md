@@ -744,8 +744,6 @@ Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
   borra al cerrar la guardia. Hoy lee las de salida, llegada y cierre de todas las guardias, sin el
   permiso. Del Paciente deja de recibir lo que ninguna pantalla usa —patologías, ubicación de la
   casa—, y el domicilio y su motivo respetan el permiso de la ficha.
-- **Los permisos de las personas autorizadas niegan ante la duda:** sin permisos cargados, el
-  backend hoy deja pasar y la base niega; y mientras cargan, la pantalla muestra todo.
 
 Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
 lo suyo y nada de la otra, salvo durante una emergencia abierta, extendida a lo que falta.

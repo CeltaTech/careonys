@@ -1312,7 +1312,9 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-.panel-tabla button {
+/* Sólo los botones sueltos. Los del componente `Button` traen su variante, y esta regla les pisaba
+   el fondo y no la letra: el principal quedaba con letra clara sobre fondo claro. */
+.panel-tabla button:not(.btn) {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
   color: var(--texto-principal);
@@ -1324,7 +1326,7 @@ a {
   cursor: pointer;
 }
 
-.panel-tabla button:hover:not(:disabled) {
+.panel-tabla button:not(.btn):hover:not(:disabled) {
   background: var(--superficie-hover);
 }
 

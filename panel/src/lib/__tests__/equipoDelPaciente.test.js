@@ -222,21 +222,21 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
 });
 
 describe('quién coordina a este Paciente', () => {
-  it('sin nadie fijado, son quienes lo alcanzan por sus zonas', () => {
+  it('sin nadie fijado, son quienes coordinan sus Servicios', () => {
     const equipo = equipoDelPaciente({
       pacienteId: PACIENTE,
-      coordinadoresQueAlcanzan: ['u-1', 'u-2', 'u-1'],
+      coordinadoresDeSusServicios: ['u-1', 'u-2', 'u-1'],
       ahora: AHORA,
     });
     expect(equipo.coordinadores.map((c) => c.usuario_id)).toEqual(['u-1', 'u-2']);
-    expect(equipo.coordinadores[0].origen).toBe(ORIGEN.POR_SU_ZONA);
+    expect(equipo.coordinadores[0].origen).toBe(ORIGEN.POR_SU_SERVICIO);
   });
 
   it('con alguien fijado, manda esa persona sola', () => {
     // Un mensaje que le llega a seis personas no le llega a ninguna.
     const equipo = equipoDelPaciente({
       pacienteId: PACIENTE,
-      coordinadoresQueAlcanzan: ['u-1', 'u-2'],
+      coordinadoresDeSusServicios: ['u-1', 'u-2'],
       decisiones: [{ usuario_id: 'u-3', situacion: 'sumada' }],
       ahora: AHORA,
     });
@@ -244,10 +244,10 @@ describe('quién coordina a este Paciente', () => {
     expect(equipo.coordinadores[0].origen).toBe(ORIGEN.A_MANO);
   });
 
-  it('a quien alcanza por zona se lo puede sacar', () => {
+  it('a quien coordina un Servicio se lo puede sacar', () => {
     const equipo = equipoDelPaciente({
       pacienteId: PACIENTE,
-      coordinadoresQueAlcanzan: ['u-1', 'u-2'],
+      coordinadoresDeSusServicios: ['u-1', 'u-2'],
       decisiones: [{ usuario_id: 'u-1', situacion: 'sacada' }],
       ahora: AHORA,
     });

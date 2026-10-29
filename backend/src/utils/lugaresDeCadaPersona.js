@@ -35,24 +35,6 @@ export async function lugaresDeVarias(db, tabla, columna, ids, prestadoraId) {
   return porPersona;
 }
 
-/**
- * Quiénes de esa Prestadora tienen alguno de esos lugares guardados.
- *
- * Es la comparación que antes se hacía entre dos textos escritos a mano. Ahora las dos puntas son
- * el mismo identificador de lugar, así que una coincidencia es una coincidencia de verdad.
- */
-export async function personasEnLosLugares(db, tabla, columna, lugares, prestadoraId) {
-  const buscados = [...new Set((lugares ?? []).filter(Boolean))];
-  if (!buscados.length) return [];
-  const { data, error } = await db
-    .from(tabla)
-    .select(columna)
-    .eq('prestadora_id', prestadoraId)
-    .in('lugar_id', buscados);
-  if (error) throw error;
-  return [...new Set((data ?? []).map((fila) => fila[columna]))];
-}
-
 /** Los lugares guardados de esa persona, en la tabla que corresponda. */
 export async function lugaresDe(db, tabla, columna, id, prestadoraId) {
   const { data, error } = await db

@@ -704,21 +704,27 @@ Cliente.
 
 **27.** Construir los ocho pasos de ese plan, en el orden que tiene escrito.
 
-**28.** La explicación de la coordinación que acompañaba al equipo del Paciente ya salió. Queda la
-etiqueta «Trabaja en la zona de esta persona», en los tres idiomas
-(`panel/src/i18n/translations.js:2676`, `:5584`, `:8481`), que describe el modelo que este plan
-reemplaza. Se cambia junto con el paso del coordinador asignado, no antes, y pasa a decir
-«Coordinador asignado».
+**28.** **Lo que ve cada uno se recorta a lo que necesita para trabajar**, y se cumple en la base y
+en el backend, que hoy filtra sólo por Prestadora.
 
-En la misma pasada, **lo que ve cada uno se recorta a lo que necesita para trabajar**, y se cumple
-en la base y en el backend, que hoy filtra sólo por Prestadora:
+La base ya recorta a la Coordinadora a sus Servicios
+(`supabase/migrations/20270219000000_cada_coordinador_ve_solo_sus_servicios.sql`): los Servicios
+que coordina y los de quien cubre por ausencia; los Clientes que los contratan y sus Pacientes, con
+su información de salud, medicación, alertas, rangos vitales y personas autorizadas; y las guardias
+y series de esos Servicios con todo lo que cuelga de ellas. Una alarma tomada le deja ver esa
+guardia. El equipo del Paciente muestra como Coordinador a quien coordina sus Servicios. Lo prueba
+`scripts/probar_altas_con_sesion.mjs`. Falta:
 
-- **La Coordinadora ve sólo los Clientes y Servicios que tiene asignados**: sus Pacientes, su
-  historia clínica, sus reportes y alertas, sus personas autorizadas y las Personas del Directorio
-  vinculadas a ellos. Los Asistentes, las matrículas y las calificaciones, los de su zona; de cada
-  Asistente, la distancia al domicilio y no el domicilio.
-- **Una emergencia habilita a todas las Coordinadoras** a ver lo necesario para resolverla, hasta
-  que la asignada retoma el problema. La que cubre una ausencia ve lo de la ausente mientras dure.
+- **Las Personas del Directorio** vinculadas a sus Clientes, que hoy ve enteras.
+- **Los depósitos de archivos** `prescripciones-medicacion` y `autorizaciones-monitoreo`, que
+  todavía recortan por Prestadora; las tablas que los nombran ya recortan por Servicio.
+- **`alarmas_tomadas`, `auditoria_reasignaciones_por_emergencia` y `finales_turno_sin_cubrir`**, y las
+  conversaciones de WhatsApp de los Clientes.
+- **Las rutas del backend que trabajan con `enLaPrestadora`** y devuelven datos de Clientes o
+  Pacientes a una persona: ahí la base no recorta, y el recorte por Coordinador lo tiene que hacer la
+  ruta o pasar a la credencial de quien pide.
+- **De cada Asistente, la distancia al domicilio y no el domicilio.** Los Asistentes, las matrículas
+  y las calificaciones siguen por zona, a propósito: un Asistente trabaja para varios Servicios.
 - **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y
   se habilitan con un permiso.
 - **El Asistente, en un turno asignado sin responder, ve barrio, distancia, horario, complejidad y
@@ -743,7 +749,7 @@ en la base y en el backend, que hoy filtra sólo por Prestadora:
   backend hoy deja pasar y la base niega; y mientras cargan, la pantalla muestra todo.
 
 Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
-lo suyo y nada de la otra, salvo durante una emergencia abierta.
+lo suyo y nada de la otra, salvo durante una emergencia abierta, extendida a lo que falta.
 
 **29.** Agregar el tipo «Servicio» a Ajustes › Importación, que hoy no está entre los tipos que se
 pueden importar. Va después de que el acto exista: importar un Servicio sin coordinador asignado

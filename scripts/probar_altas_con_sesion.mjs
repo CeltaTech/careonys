@@ -1101,6 +1101,109 @@ async function probarLoQueCargaOtroCoordinador({ base, llavePublica }, d) {
   return problemas;
 }
 
+// Cada Coordinador ve sólo sus Servicios. Se le pasa a otro Coordinador uno de los Servicios
+// sembrados y se mira con la sesión de la Coordinadora: tiene que dejar de verlo, con su Cliente, su
+// Paciente, la información de salud y las guardias, y seguir viendo lo suyo. Después se le da cada
+// una de las dos puertas que reabren lo ajeno —una alarma tomada y la cobertura de una ausencia— y
+// tiene que volver a verlo. Si el recorte no existiera, la primera tanda ya fallaría.
+async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
+  console.log('\n== Cada Coordinador ve sólo sus Servicios ==\n');
+  const problemas = [];
+  const bien = (que) => console.log(verde(`  ✓ ${que}`));
+  const mal = (que, por) => {
+    console.log(rojo(`  ✗ ${que}`));
+    console.log(rojo(`      ${por}`));
+    problemas.push(`recorte por Coordinador: ${que} — ${por}`);
+  };
+
+  const coordinadora = await entrar(entorno.base, entorno.llavePublica, COORDINADORA, d.prestadora);
+  const [[carla]] = consultarBase(`SELECT id FROM public.usuarios WHERE lower(email) = '${COORDINADORA}';`);
+  const otro = '20000000-0000-4000-8000-0000000000ab';
+
+  // Un Servicio de la Coordinadora cuyo Cliente no tenga otro Servicio suyo, para que al pasarlo
+  // quede del todo afuera; y otro que se quede con ella, para ver que lo propio no se pierde.
+  const [ajeno] = consultarBase(`
+    SELECT s.id, s.contratante_id, p.id,
+           (SELECT g.id FROM public.guardias g WHERE g.servicio_id = s.id ORDER BY g.id LIMIT 1)
+      FROM public.servicios s
+      JOIN public.pacientes p ON p.cliente_id = s.contratante_id AND p.prestadora_id = s.prestadora_id
+     WHERE s.prestadora_id = '${d.prestadora}' AND s.coordinador_id = '${carla}' AND s.tipo_contratante = 'cliente'
+       AND EXISTS (SELECT 1 FROM public.guardias g WHERE g.servicio_id = s.id)
+       AND NOT EXISTS (SELECT 1 FROM public.servicios o WHERE o.contratante_id = s.contratante_id
+                        AND o.id <> s.id AND o.coordinador_id = '${carla}')
+     ORDER BY s.id DESC LIMIT 1;`);
+  const [propio] = consultarBase(`
+    SELECT s.id FROM public.servicios s
+     WHERE s.prestadora_id = '${d.prestadora}' AND s.coordinador_id = '${carla}' AND s.id <> '${ajeno?.[0]}'
+     ORDER BY s.id LIMIT 1;`);
+  if (!ajeno || !propio) {
+    mal('la siembra trae dos Servicios de la Coordinadora con guardias', 'no los encontré');
+    return problemas;
+  }
+  const [servicio, cliente, paciente, guardia] = ajeno;
+
+  const cuenta = async (ruta) => (await pedir(entorno, coordinadora, 'GET', ruta)).filas.length;
+  const lecturas = {
+    'el Servicio': `servicios?id=eq.${servicio}&select=id`,
+    'el Cliente': `clientes?id=eq.${cliente}&select=id`,
+    'el Paciente': `pacientes?id=eq.${paciente}&select=id`,
+    'la información de salud': `informacion_de_salud_del_paciente?paciente_id=eq.${paciente}&select=id`,
+    'la guardia': `guardias?id=eq.${guardia}&select=id`,
+  };
+  const mirar = async (que, espera) => {
+    for (const [nombre, ruta] of Object.entries(lecturas)) {
+      const n = await cuenta(ruta);
+      if ((n > 0) === espera) bien(`${que}: ${espera ? 've' : 'no ve'} ${nombre}`);
+      else mal(`${que}: ${espera ? 've' : 'no ve'} ${nombre}`, `filas=${n}`);
+    }
+  };
+
+  // Antes de pasarlo, lo ve: si no lo viera, el «no lo ve» de después no probaría nada.
+  await mirar('mientras lo coordina', true);
+
+  try {
+    consultarBase(`INSERT INTO auth.users (id, instance_id, aud, role, email)
+      VALUES ('${otro}', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'otra.coordinadora@ejemplo.test');`);
+    consultarBase(`INSERT INTO public.usuarios (id, prestadora_id, rol, nombre)
+      VALUES ('${otro}', '${d.prestadora}', 'coordinador', 'Otra Coordinadora de prueba');`);
+    consultarBase(`UPDATE public.servicios SET coordinador_id = '${otro}' WHERE id = '${servicio}';`);
+
+    await mirar('coordinado por otro', false);
+    const suyo = await cuenta(`servicios?id=eq.${propio[0]}&select=id`);
+    if (suyo === 1) bien('sigue viendo su propio Servicio');
+    else mal('sigue viendo su propio Servicio', `filas=${suyo}`);
+
+    // Con una alarma de esa guardia tomada, la ve mientras la tenga.
+    consultarBase(`INSERT INTO public.alarmas_tomadas (prestadora_id, tipo, referencia_id, tomada_por, vence_at)
+      VALUES ('${d.prestadora}', 'guardia_sin_cerrar', '${guardia}', '${carla}', now() + interval '1 hour');`);
+    const conAlarma = await cuenta(lecturas['la guardia']);
+    if (conAlarma === 1) bien('con la alarma tomada ve la guardia');
+    else mal('con la alarma tomada ve la guardia', `filas=${conAlarma}`);
+    consultarBase(`DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}' AND tomada_por = '${carla}';`);
+
+    // Cubriendo la ausencia de la otra, ve todo lo que la otra coordina.
+    consultarBase(`INSERT INTO public.ausencias (prestadora_id, usuario_id, coordinador_que_cubre_id, tipo, fecha_inicio, fecha_fin)
+      VALUES ('${d.prestadora}', '${otro}', '${carla}', 'otra_licencia', current_date, current_date + 7);`);
+    await mirar('cubriendo la ausencia de quien lo coordina', true);
+    consultarBase(`DELETE FROM public.ausencias WHERE usuario_id = '${otro}';`);
+
+    // El Contratante lo fija la administración: el Coordinador no lo cambia.
+    const cambia = await pedir(entorno, coordinadora, 'PATCH', `servicios?id=eq.${propio[0]}`, { contratante_id: cliente });
+    const [[sigue]] = consultarBase(`SELECT contratante_id FROM public.servicios WHERE id = '${propio[0]}';`);
+    if (cambia.estado >= 400 && sigue !== cliente) bien('no puede cambiar el Contratante del Servicio');
+    else mal('no puede cambiar el Contratante del Servicio', `${cambia.estado} ${JSON.stringify(cambia.cuerpo)}`);
+  } finally {
+    consultarBase(`SET session_replication_role = replica;
+      UPDATE public.servicios SET coordinador_id = '${carla}' WHERE id = '${servicio}';
+      DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}' AND tomada_por = '${carla}';
+      DELETE FROM public.ausencias WHERE usuario_id = '${otro}';
+      DELETE FROM public.usuarios WHERE id = '${otro}';
+      DELETE FROM auth.users WHERE id = '${otro}';`);
+  }
+
+  return problemas;
+}
+
 // ---------------------------------------------------------------------------
 
 function limpiar(creado, idAsistente) {
@@ -1138,7 +1241,10 @@ async function main() {
   const deLaConfiguracion = await probarQuienEscribeLaConfiguracion(entorno, d);
   const delCoordinador = await probarElCoordinadorDelServicio(entorno, d);
   const deLasCargas = await probarLoQueCargaOtroCoordinador(entorno, d);
-  const problemas = [...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador, ...deLasCargas];
+  const delRecorte = await probarCadaCoordinadorVeSoloLoSuyo(entorno, d);
+  const problemas = [
+    ...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador, ...deLasCargas, ...delRecorte,
+  ];
 
   console.log('');
   if (problemas.length) {

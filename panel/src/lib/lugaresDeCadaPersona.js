@@ -37,12 +37,3 @@ export async function lugaresDe(tabla, columna, id) {
   if (error) throw error;
   return (data ?? []).map((fila) => fila.lugar_id);
 }
-
-/** Quiénes tienen alguno de esos lugares guardados. */
-export async function personasEnLosLugares(tabla, columna, lugares) {
-  const buscados = [...new Set((lugares ?? []).filter(Boolean))];
-  if (!buscados.length) return [];
-  const { data, error } = await supabase.from(tabla).select(columna).in('lugar_id', buscados);
-  if (error) throw error;
-  return [...new Set((data ?? []).map((fila) => fila[columna]))];
-}

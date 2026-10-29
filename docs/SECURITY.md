@@ -180,25 +180,19 @@ CREATE POLICY panel_gestiona_guardias ON guardias
   );
 ```
 
-**Patrón OR-de-dos-EXISTS para FK nullable (ejemplo oficial, `incidentes_relevo`):**
+**Patrón OR para FK nullable (ejemplo oficial, `incidentes_relevo`):**
 cuando una tabla tiene una FK opcional que cambia de qué fila derivar el alcance según esté NULL
 o no (acá, `guardia_saliente_id` NULL = "Ausente sin relevo previo"), la policy resuelve ambos
-casos con dos `EXISTS` unidos por `OR`, en vez de intentar una sola condición que cubra los dos:
+casos con dos llamadas a la misma función unidas por `OR`, en vez de intentar una sola condición
+que cubra los dos. `interno.coordinador_ve_la_guardia` devuelve falso ante un NULL:
 
 ```sql
 -- Copiado de la base (pg_policies).
-CREATE POLICY coordinador_gestiona_incidentes_relevo_de_su_zona ON incidentes_relevo
-  FOR ALL USING (
-    prestadora_id = interno.prestadora_actual() AND (
-      EXISTS (SELECT 1 FROM guardias ge
-               WHERE ge.id = incidentes_relevo.guardia_entrante_id
-                 AND interno.coordinador_alcanza_asistente(ge.asistente_id))
-      OR
-      EXISTS (SELECT 1 FROM guardias gs
-               WHERE gs.id = incidentes_relevo.guardia_saliente_id
-                 AND interno.coordinador_alcanza_asistente(gs.asistente_id))
-    )
-  );
+CREATE POLICY coordinador_gestiona_incidentes_relevo_de_sus_servicios ON incidentes_relevo
+  FOR ALL TO authenticated
+  USING (prestadora_id = interno.prestadora_actual()
+         AND (interno.coordinador_ve_la_guardia(guardia_entrante_id)
+              OR interno.coordinador_ve_la_guardia(guardia_saliente_id)));
 ```
 
 Tablas que **nunca** deben tener policy de lectura para `asistente` ni `cliente`:

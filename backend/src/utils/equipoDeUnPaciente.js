@@ -1,5 +1,4 @@
 import { supabase } from '../db/connection.js';
-import { lugaresDeVarias, personasEnLosLugares } from './lugaresDeCadaPersona.js';
 import {
   equipoDelPaciente,
   quienCubreFrancos,
@@ -22,9 +21,7 @@ import { correoDe } from './correoDeUnaPersona.js';
 // pide una tarea programada, sin sesión de nadie. Lo que sí es el mismo en los dos lados —la regla de quién es del
 // equipo— está en el archivo que se copia, y acá no se repite.
 //
-// SE ARMA DOS VECES, igual que en la pantalla: la primera vuelta dice quiénes son las Asistentes,
-// de ahí salen los lugares donde aceptan trabajar, y recién con esos lugares se sabe quién coordina
-// a este Paciente.
+// Quien coordina a este Paciente es quien coordina sus Servicios vigentes, igual que en la pantalla.
 //
 // Corre adentro del trabajo de una sola Prestadora (`paraCadaPrestadora`), y cada consulta nombra
 // además la Prestadora. Mismo criterio que los demás procesos de fondo.
@@ -53,31 +50,23 @@ export async function equipoDeUnPaciente({ pacienteId, prestadoraId, regla = nul
   // Todas las guardias que volvieron tocan a este Paciente: se preguntó por él.
   const pacientesPorGuardia = new Map(guardias.map((g) => [g.id, [pacienteId]]));
 
-  const armar = (coordinadoresQueAlcanzan) =>
-    equipoDelPaciente({
-      pacienteId,
-      guardias,
-      pacientesPorGuardia,
-      series,
-      decisiones,
-      regla: reglaFinal,
-      coordinadoresQueAlcanzan,
-      ahora,
-    });
+  const conCoordinadores = equipoDelPaciente({
+    pacienteId,
+    guardias,
+    pacientesPorGuardia,
+    series,
+    decisiones,
+    regla: reglaFinal,
+    coordinadoresDeSusServicios: await coordinadoresDeSusServicios({ pacienteId, prestadoraId }),
+    ahora,
+  });
 
-  const armado = armar([]);
   const asistentesPorId = await asistentesDelEquipo(
-    [...new Set(armado.asistentes.map((a) => a.asistente_id))],
+    [...new Set(conCoordinadores.asistentes.map((a) => a.asistente_id))],
     prestadoraId
   );
-
-  const lugares = await lugaresDelEquipo([...asistentesPorId.keys()], prestadoraId);
-  const alcanzan = await coordinadoresDeLosLugares({ lugares, prestadoraId });
-  const conCoordinadores = armar(alcanzan.map((u) => u.id));
-
-  const porId = new Map(alcanzan.map((u) => [u.id, u]));
-  const nombresFijados = await nombresDeUsuarios(
-    conCoordinadores.coordinadores.map((c) => c.usuario_id).filter((id) => !porId.has(id)),
+  const nombres = await nombresDeUsuarios(
+    conCoordinadores.coordinadores.map((c) => c.usuario_id),
     prestadoraId
   );
 
@@ -89,7 +78,7 @@ export async function equipoDeUnPaciente({ pacienteId, prestadoraId, regla = nul
   const coordinadores = await Promise.all(
     conCoordinadores.coordinadores.map(async (c) => ({
       ...c,
-      nombre: porId.get(c.usuario_id)?.nombre ?? nombresFijados.get(c.usuario_id) ?? null,
+      nombre: nombres.get(c.usuario_id) ?? null,
       email: await correoDe({ prestadoraId, usuarioId: c.usuario_id }),
     }))
   );
@@ -235,48 +224,34 @@ async function asistentesDelEquipo(ids, prestadoraId) {
   return porId;
 }
 
-/** Dónde acepta trabajar cada Asistente del equipo, para saber después quién los coordina. */
-async function lugaresDelEquipo(ids, prestadoraId) {
-  try {
-    const porAsistente = await lugaresDeVarias(supabase, 'asistente_lugares', 'asistente_id', ids, prestadoraId);
-    return [...new Set([...porAsistente.values()].flat())];
-  } catch (error) {
-    console.error(`Error leyendo los lugares del equipo (prestadora ${prestadoraId}):`, error.message);
-    return [];
-  }
-}
-
-/**
- * Quiénes coordinan esos lugares.
- *
- * Antes esto comparaba el texto que había tecleado la coordinadora contra el que habían tecleado en
- * el Legajo de la Asistente. Una palabra escrita distinta no encontraba a nadie, y nadie se
- * enteraba. Hoy las dos puntas guardan el mismo lugar elegido de una lista.
- */
-async function coordinadoresDeLosLugares({ lugares, prestadoraId }) {
-  let alcanzan = [];
-  try {
-    alcanzan = await personasEnLosLugares(supabase, 'usuario_lugares', 'usuario_id', lugares, prestadoraId);
-  } catch (error) {
-    console.error(`Error leyendo quien coordina cada lugar (prestadora ${prestadoraId}):`, error.message);
-    return [];
-  }
-  if (!alcanzan.length) return [];
-  const { data, error } = await supabase
-    .from('usuarios')
-    .select('id, nombre')
+/** Quiénes coordinan los Servicios vigentes de quien contrata la atención de este Paciente. */
+async function coordinadoresDeSusServicios({ pacienteId, prestadoraId }) {
+  const { data: paciente, error: errorPaciente } = await supabase
+    .from('pacientes')
+    .select('cliente_id')
     .eq('prestadora_id', prestadoraId)
-    .eq('rol', 'coordinador')
-    .is('desactivada_en', null)
-    .in('id', alcanzan);
-  if (error) {
-    console.error(`Error leyendo quien coordina cada lugar (prestadora ${prestadoraId}):`, error.message);
+    .eq('id', pacienteId)
+    .maybeSingle();
+  if (errorPaciente || !paciente?.cliente_id) {
+    if (errorPaciente) console.error(`Error leyendo el Cliente del Paciente (${pacienteId}):`, errorPaciente.message);
     return [];
   }
-  return data ?? [];
+  const { data, error } = await supabase
+    .from('servicios')
+    .select('coordinador_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('tipo_contratante', 'cliente')
+    .eq('contratante_id', paciente.cliente_id)
+    .eq('estado', 'vigente')
+    .not('coordinador_id', 'is', null);
+  if (error) {
+    console.error(`Error leyendo quien coordina los Servicios del Paciente (${pacienteId}):`, error.message);
+    return [];
+  }
+  return [...new Set((data ?? []).map((s) => s.coordinador_id))];
 }
 
-/** Cómo se llama quien fijó la Coordinadora a mano, que puede no alcanzar al Paciente por zona. */
+/** Cómo se llama cada persona que coordina a este Paciente. */
 async function nombresDeUsuarios(ids, prestadoraId) {
   const nombres = new Map();
   if (!ids.length) return nombres;

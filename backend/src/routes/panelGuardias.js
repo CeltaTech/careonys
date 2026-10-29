@@ -13,8 +13,9 @@ import { documentosDelBloqueo } from '../utils/erroresDeDocumentos.js';
 export const panelGuardiasRouter = Router();
 
 /* CON LA CREDENCIAL DE QUIEN PIDE. La guardia se lee siempre así: al Coordinador la base le deja
-   ver sólo las de su zona (`coordinador_gestiona_guardias_de_su_zona`), que son las que el Panel
-   le muestra, y una guardia que no ve no aparece.
+   ver sólo las de los Servicios que coordina, más la de una alarma que tenga tomada
+   (`coordinador_gestiona_guardias_de_sus_servicios`), que son las que el Panel le muestra, y una
+   guardia que no ve no aparece.
 
    Lo que la persona no puede escribir por sí misma va con el trabajo de la Prestadora de esa
    guardia, después de que la base le dejó verla: abrir el incidente de una ausencia, que busca al

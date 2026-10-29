@@ -8,7 +8,6 @@ import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
-import { lugaresDeVarias, personasEnLosLugares } from '../../lib/lugaresDeCadaPersona';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
@@ -82,25 +81,34 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       // Todas las guardias que volvieron tocan a este Paciente: se preguntó por él.
       const pacientesPorGuardia = new Map(guardias.map((g) => [g.id, [paciente.id]]));
 
-      // Se arma dos veces a propósito, y es barato: la primera dice quiénes son las Asistentes,
-      // de ahí salen los lugares donde trabajan, y recién con esos lugares se sabe quién coordina
-      // a este Paciente.
-      const armar = (coordinadoresQueAlcanzan) =>
-        equipoDelPaciente({
-          pacienteId: paciente.id,
-          guardias,
-          pacientesPorGuardia,
-          series,
-          decisiones: decisiones.data ?? [],
-          regla: reglaDeEquipoDe(configuracion.data?.regla),
-          coordinadoresQueAlcanzan,
-        });
-      const armado = armar([]);
+      // Quien coordina a este Paciente es quien coordina sus Servicios vigentes: cada Servicio
+      // tiene uno.
+      const susServicios = await supabase
+        .from('servicios')
+        .select('coordinador_id')
+        .eq('tipo_contratante', 'cliente')
+        .eq('contratante_id', paciente.cliente_id)
+        .eq('estado', 'vigente')
+        .not('coordinador_id', 'is', null);
+      if (susServicios.error) throw susServicios.error;
+      const idsCoordinadores = [...new Set((susServicios.data ?? []).map((s) => s.coordinador_id))];
+      const alcanzan = idsCoordinadores.length
+        ? await supabase.from('usuarios').select('id, nombre, apellido').in('id', idsCoordinadores)
+        : { data: [], error: null };
+      if (alcanzan.error) throw alcanzan.error;
 
-      // Los nombres. Los lugares del equipo —que son los que dicen quién lo coordina— se piden
-      // aparte, porque viven en su propia tabla y no en el Legajo del Asistente.
+      const conCoordinadores = equipoDelPaciente({
+        pacienteId: paciente.id,
+        guardias,
+        pacientesPorGuardia,
+        series,
+        decisiones: decisiones.data ?? [],
+        regla: reglaDeEquipoDe(configuracion.data?.regla),
+        coordinadoresDeSusServicios: idsCoordinadores,
+      });
+
       const idsAsistentes = [
-        ...new Set([...armado.asistentes, ...armado.afuera].map((a) => a.asistente_id)),
+        ...new Set([...conCoordinadores.asistentes, ...conCoordinadores.afuera].map((a) => a.asistente_id)),
       ];
       const [delEquipo, todas] = await Promise.all([
         idsAsistentes.length
@@ -113,32 +121,6 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       if (delEquipo.error) throw delEquipo.error;
       if (todas.error) throw todas.error;
       const porId = new Map((delEquipo.data ?? []).map((a) => [a.id, a]));
-      const lugaresPorAsistente = await lugaresDeVarias('asistente_lugares', 'asistente_id', idsAsistentes);
-
-      // Quién alcanza a este Paciente se resuelve cruzando lugares con lugares: el mismo
-      // identificador de las dos puntas. Antes se comparaban dos textos escritos a mano, y dos
-      // maneras de escribir la misma localidad dejaban afuera a quien sí coordinaba.
-      const lugaresDelEquipo = [
-        ...new Set(
-          armado.asistentes.flatMap((a) => lugaresPorAsistente.get(a.asistente_id) ?? []),
-        ),
-      ];
-      const coordinanEsosLugares = await personasEnLosLugares(
-        'usuario_lugares',
-        'usuario_id',
-        lugaresDelEquipo,
-      );
-      const alcanzan = coordinanEsosLugares.length
-        ? await supabase
-            .from('usuarios')
-            .select('id, nombre, apellido, rol')
-            .eq('rol', 'coordinador')
-            .is('desactivada_en', null)
-            .in('id', coordinanEsosLugares)
-        : { data: [], error: null };
-      if (alcanzan.error) throw alcanzan.error;
-
-      const conCoordinadores = armar((alcanzan.data ?? []).map((u) => u.id));
 
       const nombresDeUsuario = new Map(
         [...(alcanzan.data ?? [])].map((u) => [u.id, `${u.apellido ?? ''} ${u.nombre ?? ''}`.trim()])
@@ -163,7 +145,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       setError(explicar(e));
       setEstado('error');
     }
-  }, [paciente.id, paciente.prestadora_id, explicar]);
+  }, [paciente.id, paciente.cliente_id, paciente.prestadora_id, explicar]);
 
   useEffect(() => {
     recargar();
@@ -219,7 +201,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       [ORIGEN.POR_SUS_TURNOS]: t.equipo_paciente.origen_por_sus_turnos,
       [ORIGEN.POR_SU_SERIE]: t.equipo_paciente.origen_por_su_serie,
       [ORIGEN.A_MANO]: t.equipo_paciente.origen_a_mano,
-      [ORIGEN.POR_SU_ZONA]: t.equipo_paciente.origen_por_su_zona,
+      [ORIGEN.POR_SU_SERVICIO]: t.equipo_paciente.origen_por_su_servicio,
     }),
     [t]
   );

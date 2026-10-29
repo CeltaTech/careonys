@@ -70,8 +70,8 @@ export const ORIGEN = {
   POR_SU_SERIE: 'por_su_serie',
   /** La puso la Coordinadora. */
   A_MANO: 'a_mano',
-  /** Alcanza al Paciente por sus zonas. Sólo para quien coordina. */
-  POR_SU_ZONA: 'por_su_zona',
+  /** Coordina un Servicio vigente de quien contrata la atención de este Paciente. */
+  POR_SU_SERVICIO: 'por_su_servicio',
 };
 
 /** Los números con los que se arma el equipo, con lo que esta Prestadora haya corrido encima. */
@@ -127,7 +127,7 @@ export function soloLoQueCorreDeLaRegla(cambios) {
  * @param {Array} entrada.series Series vigentes que tocan a ese Paciente, con `asistente_id`.
  * @param {Array} entrada.decisiones Lo guardado: `{ asistente_id, usuario_id, situacion,
  *   cubre_francos }`.
- * @param {Array} entrada.coordinadoresQueAlcanzan Ids de quienes hoy alcanzan al Paciente por zona.
+ * @param {Array} entrada.coordinadoresDeSusServicios Ids de quienes coordinan los Servicios vigentes de este Paciente.
  * @param {object} entrada.regla Los números ya resueltos por `reglaDeEquipoDe`.
  * @param {Date} entrada.ahora Desde cuándo se cuenta hacia atrás.
  * @returns {{ asistentes: Array, coordinadores: Array, afuera: Array }}
@@ -138,7 +138,7 @@ export function equipoDelPaciente({
   pacientesPorGuardia = null,
   series = [],
   decisiones = [],
-  coordinadoresQueAlcanzan = [],
+  coordinadoresDeSusServicios = [],
   regla = REGLA_DE_EQUIPO,
   ahora = new Date(),
 } = {}) {
@@ -211,7 +211,7 @@ export function equipoDelPaciente({
 
   return {
     asistentes,
-    coordinadores: coordinadoresDelEquipo(decisiones, decision, coordinadoresQueAlcanzan),
+    coordinadores: coordinadoresDelEquipo(decisiones, decision, coordinadoresDeSusServicios),
     afuera,
   };
 }
@@ -219,19 +219,19 @@ export function equipoDelPaciente({
 /**
  * Quién coordina a este Paciente.
  *
- * Si nadie lo fijó, son todos los que lo alcanzan por sus zonas —que es como el sistema resuelve
- * hoy quién puede ver sus turnos—. En cuanto alguien fija a una persona, manda esa: un aviso que
- * le llega a seis personas no le llega a ninguna.
+ * Si nadie lo fijó, son quienes coordinan sus Servicios vigentes —cada Servicio tiene uno, y es
+ * quien ve sus turnos—. En cuanto alguien fija a una persona, manda esa: un aviso que le llega a
+ * seis personas no le llega a ninguna.
  */
-function coordinadoresDelEquipo(decisiones, decision, coordinadoresQueAlcanzan) {
+function coordinadoresDelEquipo(decisiones, decision, coordinadoresDeSusServicios) {
   const fijados = decisiones
     .filter((d) => d?.usuario_id && d.situacion !== 'sacada')
     .map((d) => ({ usuario_id: d.usuario_id, origen: ORIGEN.A_MANO, decidido: true }));
   if (fijados.length) return fijados;
 
-  return [...new Set(coordinadoresQueAlcanzan)]
+  return [...new Set(coordinadoresDeSusServicios)]
     .filter((id) => decision.get(claveCoordinador(id))?.situacion !== 'sacada')
-    .map((id) => ({ usuario_id: id, origen: ORIGEN.POR_SU_ZONA, decidido: false }));
+    .map((id) => ({ usuario_id: id, origen: ORIGEN.POR_SU_SERVICIO, decidido: false }));
 }
 
 function decisionesPorPersona(decisiones) {

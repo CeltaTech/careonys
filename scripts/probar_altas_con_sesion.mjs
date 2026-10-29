@@ -1158,6 +1158,27 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     }
   };
 
+  const archivosSembrados = [
+    ['prescripciones-medicacion', `${d.prestadora}/${paciente}/prueba-coordinador-receta.pdf`],
+    ['prescripciones-medicacion', `${d.prestadora}/firmas-medicacion/${paciente}/prueba-coordinador-firma.pdf`],
+    ['autorizaciones-monitoreo', `${d.prestadora}/${paciente}/prueba-coordinador-autorizacion.pdf`],
+  ];
+  const archivosDelPaciente = async () => {
+    let n = 0;
+    for (const prefix of [`${d.prestadora}/${paciente}/`, `${d.prestadora}/firmas-medicacion/${paciente}/`]) {
+      for (const deposito of ['prescripciones-medicacion', 'autorizaciones-monitoreo']) {
+        const r = await fetch(`${entorno.base}/storage/v1/object/list/${deposito}`, {
+          method: 'POST',
+          headers: { apikey: entorno.llavePublica, Authorization: `Bearer ${coordinadora}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prefix, limit: 100 }),
+        });
+        const lista = await r.json().catch(() => []);
+        n += Array.isArray(lista) ? lista.filter((o) => o.name?.startsWith('prueba-coordinador')).length : 0;
+      }
+    }
+    return n;
+  };
+
   // Antes de pasarlo, lo ve: si no lo viera, el «no lo ve» de después no probaría nada.
   await mirar('mientras lo coordina', true);
 
@@ -1173,6 +1194,49 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     if (suyo === 1) bien('sigue viendo su propio Servicio');
     else mal('sigue viendo su propio Servicio', `filas=${suyo}`);
 
+    // No puede tomar una alarma de una guardia que no ve, que sería otra puerta para verla.
+    const intento = await pedir(entorno, coordinadora, 'POST', 'alarmas_tomadas', {
+      prestadora_id: d.prestadora, tipo: 'guardia_sin_cerrar', referencia_id: guardia,
+      tomada_por: carla, vence_at: new Date(Date.now() + 3600e3).toISOString(),
+    });
+    const [[tomas]] = consultarBase(`SELECT count(*) FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}';`);
+    if (intento.estado >= 400 && Number(tomas) === 0) bien('no puede tomar la alarma de una guardia que no ve');
+    else mal('no puede tomar la alarma de una guardia que no ve', `${intento.estado} tomas=${tomas}`);
+
+    // Lo que hizo el otro Coordinador con esa guardia no le llega: ni su toma ni su reasignación.
+    // Antes se comprueba que exista, para que el «no la ve» quiera decir algo.
+    consultarBase(`INSERT INTO public.alarmas_tomadas (prestadora_id, tipo, referencia_id, tomada_por, vence_at)
+      VALUES ('${d.prestadora}', 'guardia_sin_cerrar', '${guardia}', '${otro}', now() + interval '1 hour');
+      INSERT INTO public.auditoria_reasignaciones_por_emergencia (prestadora_id, guardia_id, usuario_id, asistente_nuevo_id, motivo)
+      SELECT '${d.prestadora}', '${guardia}', '${otro}', g.asistente_id, 'prueba' FROM public.guardias g WHERE g.id = '${guardia}';`);
+    const [[sembradas]] = consultarBase(`SELECT (SELECT count(*) FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}')
+      + (SELECT count(*) FROM public.auditoria_reasignaciones_por_emergencia WHERE guardia_id = '${guardia}');`);
+    const tomaAjena = await cuenta(`alarmas_tomadas?referencia_id=eq.${guardia}&select=id`);
+    const reasignacionAjena = await cuenta(`auditoria_reasignaciones_por_emergencia?guardia_id=eq.${guardia}&select=id`);
+    if (Number(sembradas) === 2 && tomaAjena === 0) bien('no ve la toma de otro Coordinador');
+    else mal('no ve la toma de otro Coordinador', `sembradas=${sembradas} filas=${tomaAjena}`);
+    if (Number(sembradas) === 2 && reasignacionAjena === 0) bien('no ve la reasignación de una guardia ajena');
+    else mal('no ve la reasignación de una guardia ajena', `sembradas=${sembradas} filas=${reasignacionAjena}`);
+    consultarBase(`DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}';`);
+
+    // Los archivos del Paciente —prescripción, papel firmado, autorización de monitoreo— tampoco.
+    // Se siembran en la base de los depósitos y se listan con la sesión: la lista la filtra la
+    // misma protección por fila que la lectura.
+    consultarBase(archivosSembrados.map(([deposito, ruta]) => `INSERT INTO storage.objects (bucket_id, name)
+      VALUES ('${deposito}', '${ruta}') ON CONFLICT DO NOTHING;`).join('\n'));
+    const [[enLaBase]] = consultarBase(`SELECT count(*) FROM storage.objects WHERE name LIKE '${d.prestadora}/%prueba-coordinador%';`);
+    const archivosAjenos = await archivosDelPaciente();
+    if (Number(enLaBase) === archivosSembrados.length && archivosAjenos === 0) bien('no ve los archivos del Paciente');
+    else mal('no ve los archivos del Paciente', `sembrados=${enLaBase} archivos=${archivosAjenos}`);
+    const subida = await fetch(`${entorno.base}/storage/v1/object/prescripciones-medicacion/${d.prestadora}/firmas-medicacion/${paciente}/prueba-coordinador-subida.pdf`, {
+      method: 'POST',
+      headers: { apikey: entorno.llavePublica, Authorization: `Bearer ${coordinadora}`, 'Content-Type': 'application/pdf' },
+      body: '%PDF-1.4 prueba',
+    });
+    const [[subidos]] = consultarBase(`SELECT count(*) FROM storage.objects WHERE name LIKE '%prueba-coordinador-subida%';`);
+    if (!subida.ok && Number(subidos) === 0) bien('no puede subir el papel firmado de un Paciente que no ve');
+    else mal('no puede subir el papel firmado de un Paciente que no ve', `${subida.status} subidos=${subidos}`);
+
     // Con una alarma de esa guardia tomada, la ve mientras la tenga.
     consultarBase(`INSERT INTO public.alarmas_tomadas (prestadora_id, tipo, referencia_id, tomada_por, vence_at)
       VALUES ('${d.prestadora}', 'guardia_sin_cerrar', '${guardia}', '${carla}', now() + interval '1 hour');`);
@@ -1185,7 +1249,40 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     consultarBase(`INSERT INTO public.ausencias (prestadora_id, usuario_id, coordinador_que_cubre_id, tipo, fecha_inicio, fecha_fin)
       VALUES ('${d.prestadora}', '${otro}', '${carla}', 'otra_licencia', current_date, current_date + 7);`);
     await mirar('cubriendo la ausencia de quien lo coordina', true);
+    const reasignacionCubriendo = await cuenta(`auditoria_reasignaciones_por_emergencia?guardia_id=eq.${guardia}&select=id`);
+    if (reasignacionCubriendo === 1) bien('cubriendo la ausencia ve la reasignación');
+    else mal('cubriendo la ausencia ve la reasignación', `filas=${reasignacionCubriendo}`);
+    const archivosCubriendo = await archivosDelPaciente();
+    if (archivosCubriendo === archivosSembrados.length) bien('cubriendo la ausencia ve los archivos del Paciente');
+    else mal('cubriendo la ausencia ve los archivos del Paciente', `archivos=${archivosCubriendo}`);
     consultarBase(`DELETE FROM public.ausencias WHERE usuario_id = '${otro}';`);
+
+    // WhatsApp va por zona del Asistente: ve la conversación de uno que alcanza y la de un número
+    // sin Asistente, y no la de uno de otra zona. Las tres se siembran, así que un recorte que
+    // negara todo falla en las dos primeras.
+    const [[deSuZona], [deOtraZona]] = [true, false].map((alcanza) => consultarBase(`
+      SELECT a.id FROM public.asistentes a
+       WHERE a.prestadora_id = '${d.prestadora}'
+         AND interno.coordinador_alcanza_asistente_de('${carla}', a.id) = ${alcanza}
+       ORDER BY a.id LIMIT 1;`)[0] ?? [null]);
+    if (!deSuZona || !deOtraZona) {
+      mal('la siembra trae un Asistente de su zona y otro de otra', 'no los encontré');
+    } else {
+      const conversaciones = { 'de un Asistente de su zona': [deSuZona, true],
+        'de un número sin Asistente': [null, true], 'de un Asistente de otra zona': [deOtraZona, false] };
+      let i = 0;
+      for (const [nombre, [asistente, espera]] of Object.entries(conversaciones)) {
+        const id = `30000000-0000-4000-8000-0000000000c${i++}`;
+        consultarBase(`INSERT INTO public.conversaciones_whatsapp (id, prestadora_id, telefono, asistente_id)
+            VALUES ('${id}', '${d.prestadora}', '+5400000000${i}', ${asistente ? `'${asistente}'` : 'NULL'});
+          INSERT INTO public.mensajes_whatsapp (prestadora_id, conversacion_id, direccion, texto)
+            VALUES ('${d.prestadora}', '${id}', 'entrante', 'prueba');`);
+        const n = (await cuenta(`conversaciones_whatsapp?id=eq.${id}&select=id`))
+          + (await cuenta(`mensajes_whatsapp?conversacion_id=eq.${id}&select=id`));
+        if (n === (espera ? 2 : 0)) bien(`WhatsApp: ${espera ? 've' : 'no ve'} la conversación ${nombre}`);
+        else mal(`WhatsApp: ${espera ? 've' : 'no ve'} la conversación ${nombre}`, `filas=${n}`);
+      }
+    }
 
     // El Contratante lo fija la administración: el Coordinador no lo cambia.
     const cambia = await pedir(entorno, coordinadora, 'PATCH', `servicios?id=eq.${propio[0]}`, { contratante_id: cliente });
@@ -1195,7 +1292,11 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
   } finally {
     consultarBase(`SET session_replication_role = replica;
       UPDATE public.servicios SET coordinador_id = '${carla}' WHERE id = '${servicio}';
-      DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}' AND tomada_por = '${carla}';
+      DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}';
+      DELETE FROM public.auditoria_reasignaciones_por_emergencia WHERE guardia_id = '${guardia}' AND motivo = 'prueba';
+      DELETE FROM public.mensajes_whatsapp WHERE conversacion_id::text LIKE '30000000-0000-4000-8000-0000000000c%';
+      DELETE FROM public.conversaciones_whatsapp WHERE id::text LIKE '30000000-0000-4000-8000-0000000000c%';
+      DELETE FROM storage.objects WHERE name LIKE '${d.prestadora}/%prueba-coordinador%';
       DELETE FROM public.ausencias WHERE usuario_id = '${otro}';
       DELETE FROM public.usuarios WHERE id = '${otro}';
       DELETE FROM auth.users WHERE id = '${otro}';`);

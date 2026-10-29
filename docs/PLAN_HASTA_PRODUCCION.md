@@ -712,14 +712,12 @@ La base ya recorta a la Coordinadora a sus Servicios
 que coordina y los de quien cubre por ausencia; los Clientes que los contratan y sus Pacientes, con
 su información de salud, medicación, alertas, rangos vitales y personas autorizadas; y las guardias
 y series de esos Servicios con todo lo que cuelga de ellas. Una alarma tomada le deja ver esa
-guardia. El equipo del Paciente muestra como Coordinador a quien coordina sus Servicios. Lo prueba
-`scripts/probar_altas_con_sesion.mjs`. Falta:
+guardia. El equipo del Paciente muestra como Coordinador a quien coordina sus Servicios. Las tomas
+de alarma y las reasignaciones por emergencia se leen sólo de lo que ve; WhatsApp, por zona del
+Asistente; y los archivos de prescripciones, papel firmado y autorizaciones de monitoreo, sólo de
+los Pacientes que ve. Lo prueba `scripts/probar_altas_con_sesion.mjs`. Falta:
 
 - **Las Personas del Directorio** vinculadas a sus Clientes, que hoy ve enteras.
-- **Los depósitos de archivos** `prescripciones-medicacion` y `autorizaciones-monitoreo`, que
-  todavía recortan por Prestadora; las tablas que los nombran ya recortan por Servicio.
-- **`alarmas_tomadas`, `auditoria_reasignaciones_por_emergencia` y `finales_turno_sin_cubrir`**, y las
-  conversaciones de WhatsApp de los Clientes.
 - **Las rutas del backend que trabajan con `enLaPrestadora`** y devuelven datos de Clientes o
   Pacientes a una persona: ahí la base no recorta, y el recorte por Coordinador lo tiene que hacer la
   ruta o pasar a la credencial de quien pide.

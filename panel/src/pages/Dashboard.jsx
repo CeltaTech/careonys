@@ -10,6 +10,7 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { supabase } from '../lib/supabaseClient';
 import { fechaLimiteDeAviso } from '../lib/reglaVencimientos';
+import { documentosQueVencen } from '../lib/documentosQueVencen';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { ESTADO_EN_CURSO } from '../lib/guardiaSinCerrar';
 import { hoyISO } from '../lib/horarios';
@@ -169,11 +170,10 @@ export function Dashboard() {
     // El plazo de preaviso y hasta qué día hay que mirar salen del mismo lugar que en el Estado
     // actual y en Documentación, así que los tres contadores dicen lo mismo (regla 12).
     const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
-    const { count: countDocumentos, error: errorDocumentos } = await supabase
-      .from('documentos_asistente')
-      .select('id', { count: 'exact', head: true })
-      .not('fecha_vencimiento', 'is', null)
-      .lte('fecha_vencimiento', fechaLimiteDeAviso(diasDePreaviso));
+    // Qué documento cuenta lo decide `lib/documentosQueVencen.js`, el mismo que arma la lista.
+    const { documentos: documentosQueVencenYa, error: errorDocumentos } = await documentosQueVencen({
+      hasta: fechaLimiteDeAviso(diasDePreaviso),
+    });
 
     // Las que la IA dejó escritas y todavía no miró nadie. Qué significa «sin resolver» no se
     // escribe acá: lo dice `lib/alertaSinResolver.js`, el mismo archivo que consultan la lista de
@@ -191,7 +191,7 @@ export function Dashboard() {
     }
     setAusentesSinRelevo(filasAusentes?.length ?? 0);
     setAusentesPorModalidad(contarPorModalidad(filasAusentes, (fila) => fila.guardias?.canal_modalidad));
-    setDocumentosPorVencer(countDocumentos ?? 0);
+    setDocumentosPorVencer(documentosQueVencenYa.length);
     setAlertasIaSinResolver(countAlertasIa ?? 0);
   }, [prestadoraId, t]);
 

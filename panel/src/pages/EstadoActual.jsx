@@ -23,6 +23,7 @@ import {
   fechaLimiteDeAviso,
 } from '../lib/reglaVencimientos';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import { documentosQueVencen } from '../lib/documentosQueVencen';
 import { ESTADO_ACTIVO } from '../lib/candidatos';
 import { soloSinResolver } from '../lib/alertaSinResolver';
 import { MODALIDAD, MODALIDADES, contarPorModalidad } from '../lib/modalidades';
@@ -246,11 +247,7 @@ export function EstadoActual() {
       supabase.from('guardias').select('*').gte('fecha', desde).lte('fecha', hasta),
       supabase.from('asistentes').select('id, estado'),
       supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
-      supabase
-        .from('documentos_asistente')
-        .select('asistente_id, fecha_vencimiento')
-        .not('fecha_vencimiento', 'is', null)
-        .lte('fecha_vencimiento', limiteDocumentos),
+      documentosQueVencen({ hasta: limiteDocumentos }).then(({ documentos, error }) => ({ data: documentos, error })),
       supabase
         .from('documentos_pedidos_al_asistente')
         .select('asistente_id, impide_trabajar, estado, fecha_vencimiento, gracia_hasta')

@@ -20,6 +20,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { hoyISO, sumarDias } from '../lib/horarios';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import { documentosQueVencen } from '../lib/documentosQueVencen';
 import { usePrestadoraActual } from './usePrestadoraActual';
 import { useUmbrales } from '../context/UmbralesContext';
 import {
@@ -54,10 +55,9 @@ export function usePanoramaDelPadron() {
           .gte('fecha', desde)
           .lte('fecha', hasta)
           .not('asistente_id', 'is', null),
-        supabase
-          .from('documentos_asistente')
-          .select('asistente_id, fecha_vencimiento, tipos_documento_asistente(vencimiento)')
-          .not('fecha_vencimiento', 'is', null),
+        // Los mismos documentos que la lista de Documentación, de `lib/documentosQueVencen.js`:
+        // la tabla entera traería los que faltan y los que ya se renovaron.
+        documentosQueVencen().then(({ documentos, error }) => ({ data: documentos, error })),
         diasDePreavisoDeLaPrestadora(prestadoraId),
       ]);
 

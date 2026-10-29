@@ -244,7 +244,12 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
     return responderError(res, e);
   }
 
-  res.json(vigentes.map((a) => ({ ...a, cliente_nombre: nombres.get(a.cliente_id) ?? null })));
+  // Las restricciones se leyeron con el trabajo de la Prestadora, que alcanza a todos sus Clientes.
+  // Se entregan sólo las de los Clientes que la base le deja ver a quien pide: un Coordinador no se
+  // entera de la restricción ni del motivo de un Cliente que no coordina.
+  res.json(vigentes
+    .filter((a) => nombres.has(a.cliente_id))
+    .map((a) => ({ ...a, cliente_nombre: nombres.get(a.cliente_id) ?? null })));
 });
 
 // ---------------------------------------------------------------------------------------

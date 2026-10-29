@@ -475,6 +475,19 @@ describe('el estado de cuenta lo ve solamente quien tiene la acción habilitada'
     assert.equal(estado, 200);
   });
 
+  it('la restricción de un Cliente que la base no le deja ver a quien pide no se entrega', async () => {
+    const OTRO = '66666666-6666-6666-6666-666666666666';
+    respuestas.set('GET /rest/v1/restricciones_de_cobranza', () => [
+      { id: 'r1', cliente_id: CLIENTE, restringida: true, motivo: 'atraso', origen: 'api', created_at: '2026-08-02' },
+      { id: 'r2', cliente_id: OTRO, restringida: true, motivo: 'atraso', origen: 'api', created_at: '2026-08-01' },
+    ]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
+
+    const { estado, cuerpo } = await pedir('GET', '/restricciones');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.map((r) => r.cliente_id), [CLIENTE]);
+  });
+
   it('con la acción habilitada, se entrega como siempre', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
     respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);

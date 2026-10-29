@@ -995,6 +995,216 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
 }
 
 // ---------------------------------------------------------------------------
+// El Asistente y el Cliente escriben sólo lo suyo
+// ---------------------------------------------------------------------------
+// En la guardia, la asignación, la calificación, el reporte y la suscripción a las notificaciones
+// la política alcanza la fila; qué columnas y qué cambios son de la persona lo decide la base.
+// Cada fila que se toca se deja como estaba, con la llave del dueño de la base.
+
+// El titular del Cliente, y una persona autorizada del mismo Cliente que no tiene permiso de calificar.
+const CLIENTE = 'cliente.gomez@sandbox.local';
+const PERSONA_AUTORIZADA = 'marcela.gomez@sandbox.local';
+
+async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
+  console.log('\n== El Asistente y el Cliente escriben sólo lo suyo ==\n');
+
+  const problemas = [];
+  const bien = (t, n) => { console.log(verde(`  ✓ ${t}`)); if (n) console.log(gris(`      ${n}`)); };
+  const mal = (t, n) => { console.log(rojo(`  ✗ ${t}`)); console.log(rojo(`      ${n}`)); problemas.push(`${t} — ${n}`); };
+  const motivo = (r) => `${r.estado} ${r.cuerpo?.code || ''} ${r.cuerpo?.message || ''}`.trim();
+  const rebota = (t, r) => (r.ok && r.filas.length
+    ? mal(t, 'la base lo dejó')
+    : bien(t, r.ok ? 'no tocó ninguna fila' : `rebotó con ${r.estado}`));
+
+  const delAsistente = await entrar(entorno.base, entorno.llavePublica, ASISTENTE, d.prestadora);
+  const deLaAdministracion = await entrar(entorno.base, entorno.llavePublica, ADMINISTRADORA, d.prestadora);
+  const delCliente = await entrar(entorno.base, entorno.llavePublica, CLIENTE, d.prestadora);
+
+  const [[asistenteDeLaSesion]] = consultarBase(`
+    SELECT a.id FROM public.asistentes a JOIN public.usuarios u ON u.id = a.usuario_id
+     WHERE u.email = '${ASISTENTE}' AND a.prestadora_id = '${d.prestadora}' LIMIT 1;
+  `);
+  const [[otroAsistente]] = consultarBase(`
+    SELECT id FROM public.asistentes WHERE prestadora_id = '${d.prestadora}' AND id <> '${asistenteDeLaSesion}'
+     ORDER BY id LIMIT 1;
+  `);
+
+  // ---- La guardia ----------------------------------------------------------
+  const [[guardia, pacienteDeLaGuardia]] = consultarBase(`
+    SELECT g.id, gp.paciente_id FROM public.guardias g
+      JOIN public.guardia_pacientes gp ON gp.guardia_id = g.id
+     WHERE g.asistente_id = '${asistenteDeLaSesion}' AND g.estado = 'programada' AND g.checkin_at IS NULL
+     ORDER BY g.id, gp.paciente_id LIMIT 1;
+  `);
+  const [[fechaOriginal]] = consultarBase(`SELECT fecha FROM public.guardias WHERE id = '${guardia}';`);
+  try {
+    rebota('el Asistente NO cambia la fecha de su guardia',
+      await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`, { fecha: '2001-01-01' }));
+    rebota('el Asistente NO cancela su guardia',
+      await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`, { estado: 'cancelada' }));
+    rebota('el Asistente NO cierra una guardia que no empezó',
+      await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`,
+        { checkout_at: new Date().toISOString(), estado: 'completada' }));
+
+    const llegada = await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`,
+      { checkin_at: '2001-01-01T00:00:00Z', checkin_lat: -34.6, checkin_lng: -58.4, estado: 'activa' });
+    const horaQueQuedo = llegada.filas[0]?.checkin_at;
+    if (!horaQueQuedo) {
+      mal('el Asistente SÍ marca su llegada', motivo(llegada));
+    } else if (new Date(horaQueQuedo).getFullYear() === 2001) {
+      mal('la hora de la llegada la pone la base', 'quedó la que mandó el teléfono');
+    } else {
+      bien('el Asistente SÍ marca su llegada', 'asistente_marca_solo_su_guardia');
+      bien('la hora de la llegada la pone la base', `quedó ${horaQueQuedo}`);
+      rebota('el Asistente NO reescribe su llegada',
+        await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`, { checkin_lat: 0 }));
+    }
+
+    const delPanel = await pedir(entorno, deLaAdministracion, 'PATCH', `guardias?id=eq.${guardia}`,
+      { checkin_at: null, checkin_lat: null, checkin_lng: null, estado: 'programada' });
+    if (delPanel.filas.length === 1) {
+      bien('la administración SÍ sigue escribiendo cualquier columna de la guardia', 'panel_gestiona_guardias');
+    } else {
+      mal('la administración SÍ sigue escribiendo cualquier columna de la guardia', motivo(delPanel));
+    }
+  } finally {
+    consultarBase(`
+      UPDATE public.guardias SET checkin_at = NULL, checkin_lat = NULL, checkin_lng = NULL,
+             estado = 'programada', fecha = '${fechaOriginal}', checkout_at = NULL
+       WHERE id = '${guardia}' RETURNING '';
+    `);
+  }
+
+  // ---- La asignación de un turno --------------------------------------------
+  const [[asignacion]] = consultarBase(`
+    SELECT id FROM public.asignaciones_de_turno
+     WHERE asistente_id = '${asistenteDeLaSesion}' AND estado = 'sin_responder' ORDER BY id LIMIT 1;
+  `);
+  if (asignacion) {
+    try {
+      rebota('el Asistente NO cambia quién asignó el turno',
+        await pedir(entorno, delAsistente, 'PATCH', `asignaciones_de_turno?id=eq.${asignacion}`,
+          { estado: 'rechazada', asistente_anterior_id: otroAsistente }));
+      const rechazo = await pedir(entorno, delAsistente, 'PATCH', `asignaciones_de_turno?id=eq.${asignacion}`,
+        { estado: 'rechazada' });
+      if (rechazo.filas.length === 1) bien('el Asistente SÍ rechaza su asignación', 'asistente_rechaza_su_asignacion');
+      else mal('el Asistente SÍ rechaza su asignación', motivo(rechazo));
+    } finally {
+      // Una respuesta no se deshace ni con la llave del dueño: el disparador de la tabla lo impide, y
+      // para devolver la siembra a como estaba se lo saltea sólo en esta sentencia.
+      consultarBase(`
+        SET session_replication_role = replica;
+        UPDATE public.asignaciones_de_turno SET estado = 'sin_responder', respondida_at = NULL
+         WHERE id = '${asignacion}';
+      `);
+    }
+  } else {
+    mal('hay una asignación sin responder del Asistente para probar', 'la siembra no la trae');
+  }
+
+  // ---- La calificación -------------------------------------------------------
+  const [[calificacion, guardiaCalificada, pacienteCalificado, descargoOriginal, estrellasOriginales]] = consultarBase(`
+    SELECT id, guardia_id, paciente_id, coalesce(descargo_asistente, ''), estrellas FROM public.calificaciones_asistente
+     WHERE asistente_id = '${asistenteDeLaSesion}' ORDER BY id LIMIT 1;
+  `);
+  const calificacionesNuevas = [];
+  try {
+    consultarBase(`UPDATE public.calificaciones_asistente SET descargo_asistente = NULL, descargo_en = NULL WHERE id = '${calificacion}' RETURNING '';`);
+    rebota('el Asistente NO cambia la visibilidad de su calificación',
+      await pedir(entorno, delAsistente, 'PATCH', `calificaciones_asistente?id=eq.${calificacion}`,
+        { descargo_asistente: 'Descargo de prueba.', visible_publica: false }));
+    const descargo = await pedir(entorno, delAsistente, 'PATCH', `calificaciones_asistente?id=eq.${calificacion}`,
+      { descargo_asistente: 'Descargo de prueba.', descargo_en: new Date().toISOString() });
+    if (descargo.filas.length === 1) bien('el Asistente SÍ carga su descargo', 'asistente_carga_su_descargo');
+    else mal('el Asistente SÍ carga su descargo', motivo(descargo));
+    rebota('el Asistente NO reescribe su descargo',
+      await pedir(entorno, delAsistente, 'PATCH', `calificaciones_asistente?id=eq.${calificacion}`,
+        { descargo_asistente: 'Otro descargo.' }));
+
+    rebota('el Cliente NO cambia una calificación ya hecha',
+      await pedir(entorno, delCliente, 'PATCH', `calificaciones_asistente?id=eq.${calificacion}`, { estrellas: 1 }));
+    rebota('el Cliente NO borra una calificación',
+      await pedir(entorno, delCliente, 'DELETE', `calificaciones_asistente?id=eq.${calificacion}`));
+    const [[clienteDeLaCalificacion]] = consultarBase(`SELECT cliente_id FROM public.calificaciones_asistente WHERE id = '${calificacion}';`);
+
+    const ajena = await pedir(entorno, delCliente, 'POST', 'calificaciones_asistente', {
+      prestadora_id: d.prestadora, asistente_id: otroAsistente, cliente_id: clienteDeLaCalificacion,
+      guardia_id: guardiaCalificada, paciente_id: pacienteCalificado, estrellas: 1,
+    });
+    calificacionesNuevas.push(...ajena.filas.map((f) => f.id));
+    rebota('el Cliente NO califica a un Asistente que no tuvo esa guardia', ajena);
+
+    const calificacionPropia = {
+      prestadora_id: d.prestadora, asistente_id: asistenteDeLaSesion, cliente_id: clienteDeLaCalificacion,
+      guardia_id: guardiaCalificada, paciente_id: pacienteCalificado, estrellas: 5, comentario: 'Prueba.',
+    };
+    const deLaPersonaAutorizada = await entrar(entorno.base, entorno.llavePublica, PERSONA_AUTORIZADA, d.prestadora);
+    const sinPermiso = await pedir(entorno, deLaPersonaAutorizada, 'POST', 'calificaciones_asistente', calificacionPropia);
+    calificacionesNuevas.push(...sinPermiso.filas.map((f) => f.id));
+    rebota('la persona autorizada sin ese permiso NO califica', sinPermiso);
+
+    const propia = await pedir(entorno, delCliente, 'POST', 'calificaciones_asistente', calificacionPropia);
+    calificacionesNuevas.push(...propia.filas.map((f) => f.id));
+    if (propia.filas.length === 1) bien('el Cliente SÍ califica al Asistente de su guardia', 'cliente_califica_al_asistente');
+    else mal('el Cliente SÍ califica al Asistente de su guardia', motivo(propia));
+  } finally {
+    if (calificacionesNuevas.length) {
+      consultarBase(`DELETE FROM public.calificaciones_asistente WHERE id IN (${calificacionesNuevas.map((id) => `'${id}'`).join(',')});`);
+    }
+    consultarBase(`
+      UPDATE public.calificaciones_asistente
+         SET descargo_asistente = ${descargoOriginal ? `'${descargoOriginal.replace(/'/g, "''")}'` : 'NULL'},
+             descargo_en = ${descargoOriginal ? 'descargo_en' : 'NULL'}, estrellas = ${estrellasOriginales}, visible_publica = true
+       WHERE id = '${calificacion}' RETURNING '';
+    `);
+  }
+
+  // ---- El reporte ----------------------------------------------------------
+  let reporte;
+  try {
+    const carga = await pedir(entorno, delAsistente, 'POST', 'reportes', {
+      prestadora_id: d.prestadora, guardia_id: guardia, paciente_id: pacienteDeLaGuardia, texto_libre: 'Reporte de prueba.',
+    });
+    reporte = carga.filas[0]?.id;
+    if (reporte) bien('el Asistente SÍ carga el reporte de su guardia', 'asistente_carga_reportes_de_su_guardia');
+    else mal('el Asistente SÍ carga el reporte de su guardia', motivo(carga));
+    if (reporte) {
+      rebota('el Asistente NO reescribe un reporte',
+        await pedir(entorno, delAsistente, 'PATCH', `reportes?id=eq.${reporte}`, { texto_libre: 'Otro texto.' }));
+      rebota('el Asistente NO borra un reporte',
+        await pedir(entorno, delAsistente, 'DELETE', `reportes?id=eq.${reporte}`));
+      const lee = await pedir(entorno, delAsistente, 'GET', `reportes?id=eq.${reporte}&select=id`);
+      if (lee.filas.length === 1) bien('el Asistente SÍ lee el reporte de su guardia', 'asistente_lee_reportes_de_su_guardia');
+      else mal('el Asistente SÍ lee el reporte de su guardia', motivo(lee));
+    }
+  } finally {
+    if (reporte) consultarBase(`DELETE FROM public.reportes WHERE id = '${reporte}';`);
+  }
+
+  // ---- La suscripción a las notificaciones ------------------------------------
+  const ENDPOINT = 'https://push.example.invalid/prueba-de-sesion';
+  try {
+    const guarda = await pedir(entorno, delAsistente, 'POST', 'push_subscriptions', {
+      prestadora_id: d.prestadora, asistente_id: asistenteDeLaSesion, endpoint: ENDPOINT, p256dh: 'x', auth: 'x',
+    });
+    rebota('el Asistente NO guarda la suscripción a las notificaciones por su cuenta', guarda);
+    consultarBase(`
+      DELETE FROM public.push_subscriptions WHERE endpoint = '${ENDPOINT}';
+      INSERT INTO public.push_subscriptions (prestadora_id, asistente_id, endpoint, p256dh, auth)
+      VALUES ('${d.prestadora}', '${asistenteDeLaSesion}', '${ENDPOINT}', 'x', 'x');
+    `);
+    await pedir(entorno, delAsistente, 'DELETE', `push_subscriptions?endpoint=eq.${encodeURIComponent(ENDPOINT)}`);
+    const [[quedan]] = consultarBase(`SELECT count(*) FROM public.push_subscriptions WHERE endpoint = '${ENDPOINT}';`);
+    if (quedan === '0') bien('el Asistente SÍ da de baja su suscripción', 'asistente_borra_sus_push_subscriptions');
+    else mal('el Asistente SÍ da de baja su suscripción', 'la fila sigue ahí');
+  } finally {
+    consultarBase(`DELETE FROM public.push_subscriptions WHERE endpoint = '${ENDPOINT}';`);
+  }
+
+  return problemas;
+}
+
+// ---------------------------------------------------------------------------
 // Cuarta comprobación: el Coordinador de cada Servicio
 // ---------------------------------------------------------------------------
 // Un Servicio sin Coordinador no tiene guardias, sólo la administración le asigna uno, y cada
@@ -1448,8 +1658,10 @@ async function main() {
   const delCoordinador = await probarElCoordinadorDelServicio(entorno, d);
   const deLasCargas = await probarLoQueCargaOtroCoordinador(entorno, d);
   const delRecorte = await probarCadaCoordinadorVeSoloLoSuyo(entorno, d);
+  const deCadaPersona = await probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d);
   const problemas = [
     ...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador, ...deLasCargas, ...delRecorte,
+    ...deCadaPersona,
   ];
 
   console.log('');

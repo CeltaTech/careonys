@@ -30,6 +30,7 @@ import { MODALIDAD, MODALIDADES, contarPorModalidad } from '../lib/modalidades';
 import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
 import { mensajeDeError } from '../lib/errores';
 import { RenglonesDeEmergencias } from '../components/emergencias/RenglonesDeEmergencias';
+import { useEmergenciasSinAtender } from '../context/EmergenciasSinAtenderContext';
 import './EstadoActual.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
@@ -201,7 +202,9 @@ function Kpi({ icono, etiqueta, numero, a, textoEnlace, resaltada = false }) {
   );
 }
 
+// Un renglón en cero no es una alerta: no se dibuja.
 function FilaAlerta({ a, estado, titulo, detalle, cantidad, tono }) {
+  if (!cantidad) return null;
   return (
     <Link className="panel-fila-alerta" to={a} state={estado}>
       <div>
@@ -227,6 +230,7 @@ export function EstadoActual() {
   const navigate = useNavigate();
   const prestadoraId = usePrestadoraActual();
   const umbrales = useUmbrales();
+  const { emergencias } = useEmergenciasSinAtender();
   const { modalidades } = useModalidades();
 
   const [estado, setEstado] = useState('cargando');
@@ -463,6 +467,16 @@ export function EstadoActual() {
     },
   });
   const otrasExcepciones = resumen.filter((r) => !EXCEPCIONES_CON_RENGLON_PROPIO.has(r.id) && r.cantidad > 0);
+  // Sin ninguna alerta en pie, el cuadro no se dibuja: sale el cartel entero.
+  const hayAlertas =
+    emergencias.length > 0 ||
+    cantidadDe(EXCEPCION_SIN_CUBRIR) > 0 ||
+    datos.documentosPorVencer > 0 ||
+    datos.documentosQueImpiden > 0 ||
+    datos.alertasSinResolver > 0 ||
+    datos.incidenciasAbiertas > 0 ||
+    otrasExcepciones.length > 0 ||
+    datos.documentosDeClientes.some((d) => d.cantidad > 0);
   const totalModalidad = porModalidad.reduce((s, x) => s + x.cantidad, 0);
   const pctCobertura = porcentaje(cobertura.total - cobertura.sinCobertura, cobertura.total);
   const serviciosVisibles = datos.servicios.slice(0, SERVICIOS_A_LA_VISTA);
@@ -568,7 +582,7 @@ export function EstadoActual() {
           )}
         </Tarjeta>
 
-        <Tarjeta
+        {hayAlertas && <Tarjeta
           titulo={tx.alertas_importantes}
           enlace={
             <Link className="panel-enlace" to="/alertas">
@@ -632,7 +646,7 @@ export function EstadoActual() {
               tono={TONO.ATENCION}
             />
           ))}
-        </Tarjeta>
+        </Tarjeta>}
       </div>
 
       <div className="panel-grilla panel-columnas-3">

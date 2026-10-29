@@ -283,7 +283,7 @@ export function Dashboard() {
                   {ausentesSinRelevo}
                 </span>
               </Link>
-              <Link to="/asistentes" className="panel-fila-alerta">
+              <Link to="/documentacion" className="panel-fila-alerta">
                 <div><b>{t.dashboard.documentacion_por_vencer}</b></div>
                 <span className={claseBadgeTono(documentosPorVencer > 0 ? TONO.ATENCION : TONO.NEUTRO)}>
                   {documentosPorVencer}

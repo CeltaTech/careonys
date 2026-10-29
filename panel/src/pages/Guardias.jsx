@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
@@ -25,6 +25,8 @@ import {
 import { useConfirmacion } from '../context/ConfirmacionContext';
 import { moverGuardia } from '../lib/moverGuardia';
 import { mensajeDeError } from '../lib/errores';
+import { excepcionPorId } from '../lib/excepciones';
+import { con } from '../lib/textos';
 import { useUmbrales } from '../context/UmbralesContext';
 import { usePedidosDeAutorizacion } from '../context/PedidosDeAutorizacionContext';
 import { SolicitudDeIngresoModal } from './guardias/SolicitudDeIngresoModal';
@@ -84,12 +86,23 @@ export function Guardias() {
   // turno que no deja desactivar una cuenta—. Se calcula una sola vez, al abrir la pantalla.
   const [parametros] = useSearchParams();
   const desdeDelEnlace = parametros.get('desde');
+  const hastaDelEnlace = parametros.get('hasta');
   const filtrosIniciales = useMemo(() => {
-    const desde = /^\d{4}-\d{2}-\d{2}$/.test(desdeDelEnlace ?? '') ? desdeDelEnlace : hoyISO();
-    return { desde, hasta: sumarDias(desde, 14), estado: '', sinCubrir: false, busqueda: '' };
+    const esFecha = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v ?? '');
+    const desde = esFecha(desdeDelEnlace) ? desdeDelEnlace : hoyISO();
+    const hasta = esFecha(hastaDelEnlace) && hastaDelEnlace >= desde ? hastaDelEnlace : sumarDias(desde, 14);
+    return { desde, hasta, estado: '', sinCubrir: false, busqueda: '' };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const { f, set, limpiar, hayFiltros } = useFiltros(filtrosIniciales);
+  // Un aviso del Estado actual trae hasta acá las guardias exactas que contó: la lista muestra
+  // ésas y ninguna más, para que el número del aviso y la lista no puedan discrepar.
+  const { state } = useLocation();
+  const [delAviso, setDelAviso] = useState(() =>
+    excepcionPorId(state?.excepcion) && Array.isArray(state?.guardias)
+      ? { excepcion: excepcionPorId(state.excepcion), parametros: state.parametros ?? {}, ids: new Set(state.guardias) }
+      : null,
+  );
   const [mostrarNueva, setMostrarNueva] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   // La grilla sigue a mano porque hace lo que la tabla no: mover una guardia arrastrándola y
@@ -196,6 +209,7 @@ export function Guardias() {
         paciente_nombre: textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas, null),
       }))
       .filter((g) => {
+        if (delAviso && !delAviso.ids.has(g.id)) return false;
         const coincideEstado = !f.estado || g.estado === f.estado;
         const coincideCobertura = !f.sinCubrir || coberturaDeGuardia(g) !== COBERTURA.CUBIERTA;
         // La búsqueda mira TODOS los nombres del turno, no el resumen: en un asilo el resumen
@@ -206,7 +220,7 @@ export function Guardias() {
           (g.pacientes_nombres ?? []).some((n) => n?.toLowerCase().includes(b));
         return coincideEstado && coincideCobertura && coincideBusqueda;
       });
-  }, [filas, f, t]);
+  }, [filas, f, t, delAviso]);
 
   /* El reloj entra una sola vez por carga, igual que en el Estado actual: si cada guardia
      preguntara la hora por su cuenta, dos guardias de la misma pantalla podrían estar mirando
@@ -340,6 +354,19 @@ export function Guardias() {
             </label>
             <Button variant="secondary" onClick={() => setVerGrilla((v) => !v)} aria-pressed={verGrilla}>
               {t.guardias.grilla_titulo}
+            </Button>
+          </div>
+        )}
+
+        {delAviso && (
+          <div className="estado-actual-filtro-activo">
+            <span>
+              {con(t.estado_actual.filtrando_por, {
+                excepcion: con(t.estado_actual[delAviso.excepcion.claveEtiqueta], delAviso.parametros),
+              })}
+            </span>
+            <Button variant="secondary" onClick={() => setDelAviso(null)}>
+              {t.estado_actual.quitar_filtro}
             </Button>
           </div>
         )}

@@ -11,11 +11,11 @@ import { useModalidades } from '../context/ModalidadesContext';
 import { supabase } from '../lib/supabaseClient';
 import { con } from '../lib/textos';
 import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
-import { excepcionPorId, resumenDeExcepciones } from '../lib/excepciones';
+import { excepcionPorId, filtrarPorExcepcion, resumenDeExcepciones } from '../lib/excepciones';
 import { estaSinCubrir } from '../lib/cobertura';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { hoyISO, sumarDias } from '../lib/horarios';
-import { impideTrabajarHoy } from '../lib/documentos';
+import { FILTRO_DOCUMENTOS_PENDIENTES, documentosQueImpidenTrabajar } from '../lib/documentosQueImpidenTrabajar';
 import {
   ESTADO_VENCIMIENTO,
   diasParaVencer,
@@ -248,10 +248,7 @@ export function EstadoActual() {
       supabase.from('asistentes').select('id, estado'),
       supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
       documentosQueVencen({ hasta: limiteDocumentos }).then(({ documentos, error }) => ({ data: documentos, error })),
-      supabase
-        .from('documentos_pedidos_al_asistente')
-        .select('asistente_id, impide_trabajar, estado, fecha_vencimiento, gracia_hasta')
-        .eq('impide_trabajar', true),
+      documentosQueImpidenTrabajar().then(({ documentos, error }) => ({ data: documentos, error })),
       supabase
         .from('servicios')
         .select(CONSULTA_SERVICIOS)
@@ -325,10 +322,7 @@ export function EstadoActual() {
       }
     }
 
-    const documentosPendientes = new Set();
-    for (const fila of em.data ?? []) {
-      if (impideTrabajarHoy(fila, hoy)) documentosPendientes.add(fila.asistente_id);
-    }
+    const documentosPendientes = new Set((em.data ?? []).map((d) => d.asistente_id));
 
     const servicios = sv.data ?? [];
     const { contactos, error: errorContactos } = await contactosDeClientes(supabase, servicios);
@@ -368,6 +362,9 @@ export function EstadoActual() {
       emergenciasSinAtender: emg.count ?? 0,
       asistentesActivos: (as.data ?? []).filter((a) => a.estado === ESTADO_ACTIVO).length,
       documentosPorVencer: (ds.data ?? []).length,
+      documentosQueImpiden: (em.data ?? []).length,
+      desde,
+      hasta,
       hayDocumentoVencido,
       alertasSinResolver: al.count ?? 0,
       incidenciasAbiertas: incAbiertas.count ?? 0,
@@ -455,6 +452,16 @@ export function EstadoActual() {
   }
 
   const cantidadDe = (id) => resumen.find((r) => r.id === id)?.cantidad ?? 0;
+  // Cada aviso de guardias lleva a Guardias con esas mismas guardias y nada más: las que cuenta
+  // `filtrarPorExcepcion`, que es la función con la que se contó, en el mismo rango de fechas.
+  const aLasGuardias = (id) => ({
+    a: `/guardias?desde=${datos.desde}&hasta=${datos.hasta}`,
+    estado: {
+      excepcion: id,
+      parametros: excepcionPorId(id).parametros(ctx),
+      guardias: filtrarPorExcepcion(datos.guardias, id, ctx).map((g) => g.id),
+    },
+  });
   const otrasExcepciones = resumen.filter((r) => !EXCEPCIONES_CON_RENGLON_PROPIO.has(r.id) && r.cantidad > 0);
   const totalModalidad = porModalidad.reduce((s, x) => s + x.cantidad, 0);
   const pctCobertura = porcentaje(cobertura.total - cobertura.sinCobertura, cobertura.total);
@@ -571,7 +578,7 @@ export function EstadoActual() {
         >
           <RenglonesDeEmergencias />
           <FilaAlerta
-            a="/guardias"
+            {...aLasGuardias(EXCEPCION_SIN_CUBRIR)}
             titulo={tx.guardias_sin_cobertura}
             detalle={tx.requieren_asignacion}
             cantidad={cantidadDe(EXCEPCION_SIN_CUBRIR)}
@@ -583,6 +590,13 @@ export function EstadoActual() {
             detalle={con(tx.en_los_proximos_dias, { dias: datos.ctxExtra.diasDePreaviso })}
             cantidad={datos.documentosPorVencer}
             tono={datos.hayDocumentoVencido ? TONO.CRITICO : TONO.ATENCION}
+          />
+          <FilaAlerta
+            a="/documentacion"
+            estado={{ filtro: FILTRO_DOCUMENTOS_PENDIENTES }}
+            titulo={t.asistentes.listado.documentacion_pendiente}
+            cantidad={datos.documentosQueImpiden}
+            tono={TONO.CRITICO}
           />
           <FilaAlerta
             a="/alertas"
@@ -601,7 +615,7 @@ export function EstadoActual() {
           {otrasExcepciones.map((exc) => (
             <FilaAlerta
               key={exc.id}
-              a="/guardias"
+              {...aLasGuardias(exc.id)}
               titulo={con(tx[exc.claveEtiqueta], exc.parametros)}
               cantidad={exc.cantidad}
               tono={exc.critica ? TONO.CRITICO : TONO.ATENCION}

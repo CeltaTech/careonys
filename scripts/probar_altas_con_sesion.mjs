@@ -208,7 +208,7 @@ function anclas() {
   ].filter(Boolean);
 
   if (faltan.length) {
-    throw new Error(`Falta ${faltan.join(', ')} en la base. Corré "npx supabase db reset --local".`);
+    throw new Error(`Falta ${faltan.join(', ')} en la base. Corra "npx supabase db reset --local".`);
   }
 
   // Para que el disparador de las modalidades llegue a llamar a la función, lo
@@ -641,7 +641,7 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
   const REINCIDENCIA = organismo['Registro Nacional de Reincidencia'];
   const ARCA = organismo.ARCA;
   if (!TITULO || !ANTECEDENTES || !LIBRETA || !REINCIDENCIA || !ARCA || !usuarioDeLaAdministracion) {
-    throw new Error('Faltan en la base los tipos de documento u organismos de la siembra. Corré "npx supabase db reset --local".');
+    throw new Error('Faltan en la base los tipos de documento u organismos de la siembra. Corra "npx supabase db reset --local".');
   }
   const unaFila = (sql) => (consultarBase(sql)[0] || []);
   const queDijo = (r) => {

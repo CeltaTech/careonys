@@ -369,16 +369,13 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.
 
-**Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy el
-Cliente y el Asistente de ese Paciente leen el renglón entero —quién la firmó, en qué carácter,
-cuándo—, aunque no el archivo (políticas `cliente_lee_autorizaciones_de_sus_pacientes` y
-`asistente_lee_autorizaciones_de_sus_pacientes`). El Asistente no es parte: sale. El Cliente la ve
-sólo si quien entra es quien la firmó, y hoy eso no se puede saber, porque el firmante está
-guardado como texto tecleado (`nombre_avala`, `rol_avala`) y no como una Ficha de Persona. **Pasa a ser
-una Ficha de Persona elegida del Directorio de Personas**, igual que el firmante del consentimiento del Pagador. Lo que las
-aplicaciones necesitan saber es si hay autorización vigente, no quién firmó: eso lo contesta una
-función de `interno` que devuelve sí o no (`utils/vitalesReferencia.js` hoy lo lee con el trabajo
-de la Prestadora). **Antes de construirlo se revisa la norma de cada país** sobre quién puede ver un
+**Y la autorización de monitoreo de los signos vitales la ve también quien la firmó.** Hoy la leen
+sólo el personal de la Prestadora y su trabajo sin persona; ni el Asistente ni el Cliente la
+alcanzan, y si hay una vigente se lo contesta el backend (`utils/vitalesReferencia.js`). Falta
+que la vea quien la firmó, y hoy eso no se puede saber, porque el firmante está guardado como
+texto tecleado (`nombre_avala`, `rol_avala`) y no como una Ficha de Persona. **Pasa a ser una
+Ficha de Persona elegida del Directorio de Personas**, igual que el firmante del consentimiento del
+Pagador. **Antes de construirlo se revisa la norma de cada país** sobre quién puede ver un
 consentimiento firmado; la regla de `CLAUDE.md` §6 es el piso, y si una norma pide más, manda la norma.
 **Del lado del Asistente falta una cosa:** su consentimiento sobre la ubicación guarda el texto que
 aceptó (`appAsistentesConsentimientos.js:211`), pero la aplicación le muestra siempre el vigente.

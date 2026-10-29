@@ -330,9 +330,10 @@ const LO_QUE_VE_CADA_UNO = [
     `SELECT id FROM calificaciones_asistente
       WHERE cliente_id = '{p}' OR paciente_id IN (${PACIENTES_DEL_CLIENTE})`],
 
-  ['autorizaciones_monitoreo_paciente',
-    `SELECT id FROM autorizaciones_monitoreo_paciente WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,
-    `SELECT id FROM autorizaciones_monitoreo_paciente WHERE paciente_id IN (${PACIENTES_DEL_CLIENTE})`],
+  // La autorización de signos vitales la ve quien la firmó. El Asistente no es parte; el Cliente,
+  // mientras el firmante no sea una Ficha de Persona, no se sabe si lo es. Si hay autorización
+  // vigente se lo contesta el backend.
+  ['autorizaciones_monitoreo_paciente', NADA, NADA],
 
   ['rangos_referencia_vitales',
     `SELECT id FROM rangos_referencia_vitales WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,
@@ -401,7 +402,9 @@ async function probarLasDosAplicaciones({ base, llavePublica }, sesiones, person
     if (!filasEnLaBase) {
       sinDatos.push(tabla);
       console.log(`  ${etiqueta} ${gris('sin filas en la base: no se probó nada')}`);
-    } else if (!algunoVeAlgo) {
+    } else if (!algunoVeAlgo && !(esperadoAsistente === NADA && esperadoCliente === NADA)) {
+      // Una tabla con filas que ninguna aplicación debe leer sí se prueba: la que se filtre aparece
+      // de más. Lo que no prueba nada es esperar filas y que no haya ninguna para esa persona.
       sinDatos.push(tabla);
       console.log(`  ${etiqueta} ${gris('nadie tenía que ver nada: no se probó nada')}`);
     } else {
@@ -415,7 +418,7 @@ async function probarLasDosAplicaciones({ base, llavePublica }, sesiones, person
     // No hace fallar la prueba, pero se dice: una tabla vacía pasa siempre.
     problemas.push(
       `${sinDatos.length} tabla(s) sin datos con los que probar nada: ${sinDatos.join(', ')}. ` +
-      `Sembralas en supabase/seed.sql o la prueba no puede fallar ahí.`,
+      `Siémbrelas en supabase/seed.sql o la prueba no puede fallar ahí.`,
     );
   }
   if (problemas.length) {
@@ -716,7 +719,7 @@ async function principal() {
   const idB = prestadoras[PRESTADORA_B.nombre];
   if (!idA || !idB) {
     console.log(rojo(`\nFaltan las Prestadoras de prueba (${PRESTADORA_A.nombre} y ${PRESTADORA_B.nombre}).`));
-    console.log('Sembralas con:  npx supabase db reset\n');
+    console.log('Siémbrelas con:  npx supabase db reset\n');
     process.exit(1);
   }
 
@@ -774,7 +777,7 @@ async function principal() {
     respuestasVacias = delBackend.respuestasVacias;
   } else {
     console.log(gris(`\n== El backend no responde en ${entorno.backend}; ese tramo queda sin probar ==`));
-    console.log(gris('   Levantalo con:  cd backend && npm run dev'));
+    console.log(gris('   Levántelo con:  cd backend && npm run dev'));
   }
 
   console.log('');

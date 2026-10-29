@@ -22,7 +22,8 @@ import { hoyISO } from '../utils/horarios.js';
 // ----------------------------------------------------------------------------
 //
 // Todo va con la credencial del Asistente. Mientras no respondió, del turno ve lo necesario para
-// decidir —día, horario, barrio y nivel de complejidad—, y eso lo arma la función
+// decidir —día, horario, barrio, nivel de complejidad, a qué distancia queda y qué tareas se
+// acordaron en el Servicio para alguien de su tipo—, y eso lo arma la función
 // `turnos_asignados_sin_responder` de la base. El nombre del Paciente y el domicilio exacto, recién
 // al aceptar, cuando el turno ya es suyo.
 //
@@ -214,6 +215,8 @@ appAsistentesAsignacionesRouter.get('/', requiereRolAsistente, async (req, res) 
         modalidad: a.modalidad,
         barrios: a.barrios ?? [],
         niveles_de_complejidad: a.niveles_de_complejidad ?? [],
+        distancia_m: a.distancia_m ?? null,
+        tareas: a.tareas ?? [],
       },
     })),
     motivos: (motivos.data ?? []).map((m) => ({

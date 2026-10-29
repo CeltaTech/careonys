@@ -88,6 +88,8 @@ const TURNO = {
   asignacion_id: 'asignacion-1', asignado_at: '2026-09-01T10:00:00Z', guardia_id: GUARDIA,
   fecha: '2099-01-01', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0,
   modalidad: null, barrios: ['Barrio Inventado'], niveles_de_complejidad: ['II'],
+  distancia_m: 1112,
+  tareas: [{ id: 'tarea-1', prestadora_id: null, clave: 'tarea_inventada', texto: 'Tarea inventada', descripcion: null }],
 };
 
 beforeEach(() => {
@@ -120,13 +122,15 @@ describe('la lista de asignaciones sin responder', () => {
     assert.equal(cuerpo.asignaciones[0].id, 'asignacion-1');
   });
 
-  it('del turno muestra día, horario, barrio y complejidad, y nada del Paciente', async () => {
+  it('del turno muestra día, horario, barrio, complejidad, distancia y tareas, y nada del Paciente', async () => {
     const { cuerpo } = await pedir();
     const { guardia } = cuerpo.asignaciones[0];
     assert.equal(guardia.id, GUARDIA);
     assert.equal(guardia.fecha, '2099-01-01');
     assert.deepEqual(guardia.barrios, ['Barrio Inventado']);
     assert.deepEqual(guardia.niveles_de_complejidad, ['II']);
+    assert.equal(guardia.distancia_m, 1112);
+    assert.deepEqual(guardia.tareas.map((t) => t.id), ['tarea-1']);
     assert.equal(guardia.pacientes, undefined);
     assert.equal(guardia.paciente_id, undefined);
   });

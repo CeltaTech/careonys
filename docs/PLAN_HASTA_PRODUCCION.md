@@ -170,13 +170,12 @@ el que evita el enredo.
 
 Medido contra la base en vivo y contra el código, no contra documentos.
 
-**La llave que abre todo sigue existiendo, y nadie la usa.** `SUPABASE_SERVICE_ROLE_KEY`
-alcanza todas las tablas de todas las Prestadoras. Ningún archivo del repositorio la usa: lo que
+**La llave que abría todo ya no existe.** Ningún archivo del repositorio la usa: lo que
 pide una persona entra con su credencial (`clienteDelPedido(req)`), lo que la persona no puede
 hacer, con el trabajo de su Prestadora (`enLaPrestadora`), y la copia nocturna de los archivos, de
 a una Prestadora, con la credencial de la copia de respaldo, que sólo lista y baja los archivos de
-esa Prestadora. Sigue cargada en Railway y
-en los secretos de GitHub, y viva en Supabase.
+esa Prestadora. No está en Railway ni en los secretos de GitHub, y en Supabase la clave secreta
+está borrada y las claves heredadas, apagadas.
 
 **Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` se llama
 unas 25 veces desde 10 archivos; el resto de las consultas escribe el filtro a mano. Cuántas
@@ -196,7 +195,7 @@ Prestadora.
 **Las lecturas de información de salud se anotan encadenadas** en `consultas_a_hce`, con
 `anotarConsultaAHce` de `utils/registroDeConsultas.js`, desde las rutas de las aplicaciones y del
 Panel que la devuelven. `auditoria_de_accesos` tiene `admin_id` no nulo, así que sólo alcanza al
-personal de CeltaTech, y tiene cero filas. Y no es inmutable: la llave maestra puede borrarlo.
+personal de CeltaTech, y tiene cero filas. Y no es inmutable: el dueño de la base puede borrarlo.
 
 **El registro clínico ya no se pisa.** Cada alta, corrección o baja de `indicaciones_medicacion`,
 `rangos_referencia_vitales` y `domicilios_temporales_paciente` deja una copia en
@@ -443,21 +442,6 @@ datos cargados. La del registro de accesos ya está en `scripts/probar_altas_con
 distintas, cada una las lee por paciente con los seis campos y ninguna ve las de la otra, ni
 pidiendo sin filtro; y una entrada del medio alterada deja la cadena rota y el sistema dice cuál.
 
-**10.** **Se cierra la puerta, en todos lados.** Ningún archivo del repositorio usa
-`SUPABASE_SERVICE_ROLE_KEY`. Falta, en este orden:
-
-- Cargar en Railway las variables `R2_*` y `B2_*`, que la copia nocturna de los archivos ahora
-  necesita en el backend.
-- Comprobar en el registro de Railway que esa copia terminó bien, y que el respaldo diario de
-  GitHub salió bien sin la llave.
-- Sacar la llave de las variables de Railway y del secreto del repositorio en GitHub, y darla de
-  baja en Supabase.
-
-**Comprobación:** la llave está dada de baja en Supabase, y el producto y la copia de respaldo
-funcionan igual. Es la única prueba que no se puede falsear: una llave que no existe no abre nada.
-
-**Ninguna Prestadora real entra mientras la llave exista en Supabase.**
-
 **13.** **Cifrado y custodia de claves.** El cifrado en reposo y en tránsito es «Addressable» en
 Estados Unidos, lo que no quiere decir opcional: el 164.306(d)(3) da tres salidas y las dos últimas
 exigen documento conservado seis años.
@@ -487,7 +471,7 @@ base de hoy. Si no son idénticos, la fundición está mal.
 
 **15.** **Para que no vuelva.** Tres automatismos que cortan la publicación:
 
-- **La llave maestra no vuelve.** El control del paso 10 queda con la lista vacía: si
+- **La llave maestra no vuelve.** El control que la buscaba queda con la lista vacía: si
   `SUPABASE_SERVICE_ROLE_KEY` aparece en cualquier archivo del repositorio, el push no sale.
 - **Ninguna tabla nace sin protección.** Una tabla en el esquema declarado sin protección por fila y
   sin al menos una política corta la publicación. Lo mismo un depósito de archivos sin política.
@@ -1343,7 +1327,7 @@ uso.
 
 **96. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
 
-**97.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. La llave maestra no entra acá: se da de baja en el paso 10.
+**97.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Supabase ya no tiene clave secreta: la que había se borró, y las heredadas están apagadas.
 
 **Ya no queda ninguna contraseña escrita en el repositorio.** Todas salen del entorno, y las
 cuentas de la base local nacen sin contraseña: se la pone un programa aparte después de cada

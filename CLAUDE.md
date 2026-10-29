@@ -401,8 +401,8 @@ vez, con `enLaPrestadora`. Las dos las genera `backend/src/db/connection.js`, y 
 (`paraCadaPrestadora` con el rol `copia_de_respaldo`), y sólo lista y baja los archivos de la
 carpeta de esa Prestadora. **Ningún archivo
 del repositorio usa `SUPABASE_SERVICE_ROLE_KEY`**, porque incumple `..\..\CLAUDE.md`, sección
-«Aislamiento entre Organizaciones»; darla de baja es el paso 10 de `docs/PLAN_HASTA_PRODUCCION.md`.
-Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es sacarla.
+«Aislamiento entre Organizaciones», y en Supabase está dada de baja: la clave secreta se borró y
+las heredadas están apagadas. Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es sacarla.
 
 ### Cumplimiento normativo
 

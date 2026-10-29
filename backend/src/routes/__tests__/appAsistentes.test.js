@@ -200,7 +200,8 @@ beforeEach(() => {
     prestadora_id: PRESTADORA,
     asistente_id: LEGAJO,
     paciente_id: PACIENTE,
-    fecha: '2026-09-09',
+    // El código QR vale sólo para la guardia de hoy.
+    fecha: new Date().toISOString().slice(0, 10),
     hora_inicio: '08:00',
     hora_fin: '20:00',
     modalidad: 'con_retiro',
@@ -394,6 +395,23 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     // El Cliente no participó de esta comprobación: tiene que enterarse de que la guardia quedó
     // cubierta y por quién.
     assert.equal(mensajeDeLlegadaArmado(), true);
+  });
+
+  it('el código vale sólo para la guardia de hoy, aunque sea el que el Cliente muestra ahora', async () => {
+    guardiaActual.fecha = '2020-01-01';
+    codigosEnPantalla = [
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
+    ];
+
+    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '123456' },
+    });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'codigo_incorrecto');
+    assert.equal(guardiaMarcada(), false);
+    assert.equal(comprobacionesGuardadas().length, 0);
   });
 
   it('un código vencido no marca nada, aunque sea el que esa persona mostró hace un minuto', async () => {

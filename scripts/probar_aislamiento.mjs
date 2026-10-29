@@ -253,13 +253,6 @@ const PACIENTES_DEL_CLIENTE = `
 const SERVICIOS_DEL_CLIENTE = `
   SELECT id FROM servicios WHERE tipo_contratante = 'cliente' AND contratante_id = '{p}'`;
 
-const ASISTENTES_DEL_CLIENTE = `
-  SELECT DISTINCT g.asistente_id
-    FROM guardia_pacientes gp
-    JOIN guardias g ON g.id = gp.guardia_id
-    JOIN pacientes p ON p.id = gp.paciente_id
-   WHERE p.cliente_id = '{p}' AND g.asistente_id IS NOT NULL`;
-
 const SU_PRESTADORA = (tabla) => `
   SELECT id FROM ${tabla} WHERE id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`;
 
@@ -287,9 +280,9 @@ const POR_PRESTADORA = (tabla) => `
    WHERE prestadora_id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`;
 
 const LO_QUE_VE_CADA_UNO = [
-  ['asistentes', `SELECT id FROM asistentes WHERE id = '{p}' AND NOT pendiente_conformidad`,
-    `SELECT id FROM asistentes
-      WHERE id IN (${ASISTENTES_DEL_CLIENTE}) AND NOT pendiente_conformidad`],
+  // El Cliente no lee ningún Asistente ni ningún certificado de la base: la protección por fila
+  // no recorta columnas, y lo que ve del Asistente se lo arma el backend.
+  ['asistentes', `SELECT id FROM asistentes WHERE id = '{p}' AND NOT pendiente_conformidad`, NADA],
 
   ['pacientes',
     `SELECT id FROM pacientes
@@ -311,8 +304,7 @@ const LO_QUE_VE_CADA_UNO = [
   // de más acá y la prueba lo diría.
   ['servicios', NADA, SERVICIOS_DEL_CLIENTE],
 
-  ['certificados', `SELECT id FROM certificados WHERE asistente_id = '{p}'`,
-    `SELECT id FROM certificados WHERE asistente_id IN (${ASISTENTES_DEL_CLIENTE})`],
+  ['certificados', `SELECT id FROM certificados WHERE asistente_id = '{p}'`, NADA],
 
   // Los documentos del Legajo del Asistente: él ve los suyos, todas las cargas y no sólo la que
   // vale, y ninguno de sus compañeros. El Cliente no ve ninguno.

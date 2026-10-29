@@ -8,6 +8,7 @@ import {
 } from './codigoDeUnSoloUso.js';
 import { MOTIVOS_SIN_COMPROBAR, MOTIVOS_DEL_PEDIDO } from './motivosSinComprobar.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
+import { sumarDias } from './fechas.js';
 
 // Cómo se comprueba que el Asistente está realmente en el domicilio cuando marca la llegada y
 // cuando cierra (pendiente #113). El GPS sigue diciendo dónde está el teléfono; esto dice que
@@ -257,6 +258,19 @@ async function guardarComprobacion(db, fila) {
 }
 
 /**
+ * ¿Hoy cae adentro de esta guardia? Se cuenta del día anterior al de inicio al siguiente al del
+ * fin, porque el servidor cuenta el día en hora universal y la Prestadora en la suya: una guardia
+ * que empieza a las 22 en Buenos Aires ya es «mañana» para el servidor. Un día de margen alcanza
+ * para cualquier huso, y deja afuera las guardias de otros días.
+ */
+export function esGuardiaDeHoy(guardia, hoy = new Date().toISOString().slice(0, 10)) {
+  if (!guardia?.fecha) return false;
+  const desde = sumarDias(guardia.fecha, -1);
+  const hasta = sumarDias(guardia.fecha, (Number(guardia.dias_hasta_el_fin) || 0) + 1);
+  return hoy >= desde && hoy <= hasta;
+}
+
+/**
  * ¿El código QR que escaneó el Asistente, o los números que tipeó, son de alguien que está en esa
  * casa?
  *
@@ -268,6 +282,12 @@ async function guardarComprobacion(db, fila) {
 async function resolverCodigo(db, { guardia, codigo }) {
   const texto = String(codigo ?? '').trim();
   if (!texto) throw new ErrorConMotivo('faltan_datos', 'Falta el código');
+
+  // El código de esa casa vale para la guardia de hoy, no para una de otro día: si no, quien tiene
+  // una guardia el mes que viene con ese Paciente marcaría con él una llegada que no es.
+  if (!esGuardiaDeHoy(guardia)) {
+    throw new ErrorConMotivo('codigo_incorrecto', 'El código no corresponde a nadie de este domicilio');
+  }
 
   const sujetos = await sujetosCon(db, guardia);
   if (sujetos.length > 0) {

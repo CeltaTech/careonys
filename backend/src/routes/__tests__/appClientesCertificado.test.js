@@ -7,12 +7,12 @@
  * trabaja: si el identificador del Asistente se repitiera, el Cliente vería el Certificado de
  * otra Prestadora y la pantalla se vería igual de bien. No lo encuentra nadie mirando.
  *
- * La consulta sale con la credencial de la persona, y la que separa una Prestadora de otra es la
- * protección por fila de la base: acá se comprueba que la consulta salga con esa credencial y no
- * con la llave maestra.
+ * La consulta sale con el trabajo de la Prestadora, que sólo alcanza a la suya, y con columnas
+ * contadas: la base no le deja al Cliente leer Asistentes, porque la protección por fila no
+ * recorta columnas. Y sólo se busca al de la guardia en curso o la próxima.
  *
- * Qué daría con el sistema roto: con la consulta de vuelta en la llave maestra, la comprobación de
- * abajo falla. Los datos son inventados.
+ * Qué daría con el sistema roto: con la consulta en la credencial de la persona o en la llave
+ * maestra, o con el teléfono viajando, las comprobaciones de abajo fallan. Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -53,7 +53,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
-// La última guardia del Paciente la lee el trabajo de la Prestadora.
+// El Asistente del Paciente lo lee el trabajo de la Prestadora.
 prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
@@ -103,22 +103,57 @@ beforeEach(() => {
   ]);
 });
 
-describe('el Certificado en la pantalla del Asistente asignado', () => {
-  it('se pide con la credencial de la persona, no con la llave maestra', async () => {
+describe('el Asistente que ve el Cliente', () => {
+  it('se lee con el trabajo de la Prestadora, ni con la credencial de la persona ni con la llave maestra', async () => {
     respuestas.set('GET /rest/v1/guardias', [
-      { id: 'g-1', estado: 'cerrada', asistente_id: ASISTENTE },
+      { id: 'g-1', estado: 'activa', asistente_id: ASISTENTE },
     ]);
 
     const { estado } = await pedir(`/pacientes/${PACIENTE}/asistente`);
     assert.equal(estado, 200);
 
-    const consultas = llamadas.filter((l) => l.clave === 'GET /rest/v1/certificados');
-    assert.equal(consultas.length, 1, 'no se consultó el Certificado');
-    assert.equal(
-      consultas[0].autorizacion,
-      credencial,
-      'la consulta del Certificado no salió con la credencial de la persona'
-    );
-    assert.ok(consultas[0].url.includes(`asistente_id=eq.${ASISTENTE}`), consultas[0].url);
+    for (const tabla of ['asistentes', 'certificados']) {
+      const consultas = llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`);
+      assert.equal(consultas.length, 1, `no se consultó ${tabla}`);
+      assert.notEqual(consultas[0].autorizacion, credencial, `${tabla} salió con la credencial de la persona`);
+      assert.notEqual(consultas[0].autorizacion, `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, `${tabla} salió con la llave maestra`);
+      assert.ok(consultas[0].url.includes(ASISTENTE), consultas[0].url);
+    }
+  });
+
+  it('del Asistente viajan el nombre y la foto, nada más', async () => {
+    respuestas.set('GET /rest/v1/guardias', [
+      { id: 'g-1', estado: 'activa', asistente_id: ASISTENTE },
+    ]);
+    respuestas.set('GET /rest/v1/asistentes', [
+      { id: ASISTENTE, nombre: 'Asistente Inventado', foto_url: null, tipo_asistente_id: null, telefono: '000' },
+    ]);
+
+    const { cuerpo } = await pedir(`/pacientes/${PACIENTE}/asistente`);
+    assert.deepEqual(cuerpo.asistente, { nombre: 'Asistente Inventado', foto_url: null });
+
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/asistentes');
+    assert.ok(!consulta.url.includes('telefono') && !consulta.url.includes('domicilio'), consulta.url);
+  });
+
+  it('busca sólo la guardia en curso o una próxima', async () => {
+    respuestas.set('GET /rest/v1/guardias', ({ url }) =>
+      (url.includes('estado=eq.activa') ? [] : [{ id: 'g-2', estado: 'programada', asistente_id: ASISTENTE }]));
+
+    const { cuerpo } = await pedir(`/pacientes/${PACIENTE}/asistente`);
+    assert.equal(cuerpo.guardiaId, 'g-2');
+
+    const consultas = llamadas.filter((l) => l.clave === 'GET /rest/v1/guardias').map((l) => l.url);
+    assert.equal(consultas.length, 2, consultas.join('\n'));
+    assert.ok(consultas[0].includes('estado=eq.activa'), consultas[0]);
+    assert.ok(consultas[1].includes('estado=eq.programada') && consultas[1].includes('fecha=gte.'), consultas[1]);
+  });
+
+  it('sin guardia en curso ni próxima, no hay Asistente', async () => {
+    respuestas.set('GET /rest/v1/guardias', []);
+
+    const { cuerpo } = await pedir(`/pacientes/${PACIENTE}/asistente`);
+    assert.equal(cuerpo.asistente, null);
+    assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/asistentes').length, 0);
   });
 });

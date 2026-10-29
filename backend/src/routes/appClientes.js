@@ -518,6 +518,18 @@ async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
 // propio día y el backend devuelve la semana que lo contiene.
 // ============================================================================
 
+/** El nombre de cada Asistente, de una vez para toda la lista. */
+async function nombresDeAsistentes(prestadoraId, asistenteIds) {
+  const ids = [...new Set(asistenteIds.filter(Boolean))];
+  if (!ids.length) return new Map();
+  const filas = await enLaPrestadora(prestadoraId, 'los nombres de los Asistentes', async (dbTrabajo) => {
+    const { data, error } = await dbTrabajo.from('asistentes').select('id, nombre').in('id', ids);
+    if (error) throw error;
+    return data;
+  });
+  return new Map((filas ?? []).map((a) => [a.id, a.nombre]));
+}
+
 appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_guardias'), async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
@@ -545,8 +557,7 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
     .select(`
       guardias!inner(
         id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, cancelacion_origen,
-        checkin_at, checkout_at, prestadora_id,
-        asistentes(nombre)
+        checkin_at, checkout_at, prestadora_id, asistente_id
       )
     `)
     .eq('paciente_id', paciente.id)
@@ -555,6 +566,15 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
 
   if (error) {
     return responderError(res, error);
+  }
+
+  // El nombre de cada Asistente, con el trabajo de la Prestadora: la base no le deja al Cliente
+  // leer Asistentes, porque la protección por fila no recorta columnas. Se pide el nombre y nada más.
+  let nombres;
+  try {
+    nombres = await nombresDeAsistentes(paciente.prestadora_id, (filas ?? []).map(({ guardias: g }) => g.asistente_id));
+  } catch (e) {
+    return responderError(res, e);
   }
 
   // Qué viaja al teléfono: lo que la pantalla dibuja y nada más. El identificador del Asistente
@@ -571,7 +591,7 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
     cancelacion_origen: g.cancelacion_origen,
     checkin_at: g.checkin_at,
     checkout_at: g.checkout_at,
-    asistente: g.asistentes?.nombre ?? null,
+    asistente: nombres.get(g.asistente_id) ?? null,
   }));
 
   // El orden se arma acá y no en la consulta porque el pedido ordena la tabla del medio, no la
@@ -797,6 +817,35 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 // el nombre de ningún tipo de documento ni su número.
 // ============================================================================
 
+/** La guardia que tiene a alguien en la casa ahora, o si no hay ninguna, la próxima con Asistente. */
+async function guardiaEnCursoOProxima(dbTrabajo, pacienteId) {
+  const { data: enCurso, error } = await dbTrabajo
+    .from('guardias')
+    .select('id, estado, asistente_id')
+    .eq('paciente_id', pacienteId)
+    .eq('estado', 'activa')
+    .not('asistente_id', 'is', null)
+    .order('fecha', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (enCurso) return enCurso;
+
+  const { data: proxima, error: errorProxima } = await dbTrabajo
+    .from('guardias')
+    .select('id, estado, asistente_id')
+    .eq('paciente_id', pacienteId)
+    .eq('estado', 'programada')
+    .not('asistente_id', 'is', null)
+    .gte('fecha', new Date().toISOString().slice(0, 10))
+    .order('fecha', { ascending: true })
+    .order('hora_inicio', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (errorProxima) throw errorProxima;
+  return proxima ?? null;
+}
+
 appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
@@ -805,80 +854,84 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  // La última guardia, con el trabajo de la Prestadora, porque esta ruta no pide
-  // `persona_autorizada_guardias` y la base sí, así que con la credencial de la persona una persona
-  // autorizada sin ese acceso se quedaría sin saber quién lo atiende.
+  // Todo con el trabajo de la Prestadora y columnas contadas: la base no le deja al Cliente leer
+  // Asistentes ni certificados, porque la protección por fila no recorta columnas y le abriría el
+  // teléfono y el domicilio de quien trabaja. Lo que viaja es nombre, foto, tipo, si tiene el
+  // certificado vigente y la cuenta de su documentación —nunca qué documento es cuál—.
   //
-  // Y los documentos, con el trabajo de la Prestadora, porque la base no le deja ver a un Cliente
-  // los documentos de nadie —y está bien, porque de acá no sale ninguno—: lo que se entrega es la
-  // cuenta, no el documento.
+  // Y sólo del Asistente de la guardia en curso o de la próxima. El que atendió hace un mes ya no
+  // está en esa casa, y su ficha no es de este Cliente.
   let guardia;
+  let asistente;
+  let certificado;
   let documentos;
+  let diasAviso;
   try {
-    ({ guardia, documentos } = await enLaPrestadora(paciente.prestadora_id, 'el Asistente del Paciente', async (dbTrabajo) => {
-      const { data: ultima, error } = await dbTrabajo
-        .from('guardias')
-        .select('id, estado, asistente_id')
-        .eq('paciente_id', paciente.id)
-        .not('asistente_id', 'is', null)
-        .order('fecha', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      if (!ultima?.asistente_id) return { guardia: ultima, documentos: [] };
-      const { data: docs, error: errorDocs } = await dbTrabajo
-        .from('documentos_pedidos_al_asistente')
-        .select('estado, fecha_vencimiento')
-        .eq('asistente_id', ultima.asistente_id);
+    ({ guardia, asistente, certificado, documentos, diasAviso } = await enLaPrestadora(paciente.prestadora_id, 'el Asistente del Paciente', async (dbTrabajo) => {
+      const vigente = await guardiaEnCursoOProxima(dbTrabajo, paciente.id);
+      if (!vigente?.asistente_id) return { guardia: vigente };
+      const [
+        { data: ficha, error: errorFicha },
+        { data: cert, error: errorCert },
+        { data: docs, error: errorDocs },
+        { data: prestadora, error: errorPrestadora },
+      ] = await Promise.all([
+        dbTrabajo
+          .from('asistentes')
+          .select('id, nombre, foto_url, tipo_asistente_id')
+          .eq('id', vigente.asistente_id)
+          .maybeSingle(),
+        dbTrabajo
+          .from('certificados')
+          .select('activo, fecha_vencimiento')
+          .eq('asistente_id', vigente.asistente_id)
+          .eq('activo', true)
+          .order('fecha_vencimiento', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        dbTrabajo
+          .from('documentos_pedidos_al_asistente')
+          .select('estado, fecha_vencimiento')
+          .eq('asistente_id', vigente.asistente_id),
+        dbTrabajo
+          .from('prestadoras')
+          .select('dias_aviso_vencimiento_documentos')
+          .eq('id', paciente.prestadora_id)
+          .maybeSingle(),
+      ]);
+      if (errorFicha) throw errorFicha;
+      if (errorCert) throw errorCert;
       if (errorDocs) throw errorDocs;
-      return { guardia: ultima, documentos: docs };
+      if (errorPrestadora) throw errorPrestadora;
+      return {
+        guardia: vigente,
+        asistente: ficha,
+        certificado: cert,
+        documentos: docs,
+        diasAviso: prestadora?.dias_aviso_vencimiento_documentos,
+      };
     }));
   } catch (e) {
     return responderError(res, e);
   }
 
-  if (!guardia?.asistente_id) {
+  if (!guardia?.asistente_id || !asistente) {
     return res.json({ asistente: null, certificado: null, documentacion: null, evaluaciones: [], guardiaId: null });
   }
-
-  // La base le deja ver al Cliente el Asistente que atendió a alguno de sus Pacientes, que es
-  // justamente el de esa guardia.
-  const { data: asistente } = await db
-    .from('asistentes')
-    .select('id, nombre, foto_url, tipo_asistente_id')
-    .eq('id', guardia.asistente_id)
-    .maybeSingle();
 
   // Qué es esta persona y qué le toca hacer. Sale del catálogo, que se lee desde un solo
   // lugar para que el Cliente y el Asistente vean exactamente la misma lista.
   const { tipo, tareas } = await tipoConSusTareas(
-    asistente?.tipo_asistente_id,
+    asistente.tipo_asistente_id,
     paciente.prestadora_id
   );
-
-  // El certificado, con la credencial de la persona: la base sólo muestra el del Asistente que
-  // atiende a este Cliente.
-  const { data: certificado } = await db
-    .from('certificados')
-    .select('activo, fecha_vencimiento')
-    .eq('asistente_id', guardia.asistente_id)
-    .eq('activo', true)
-    .order('fecha_vencimiento', { ascending: false })
-    .limit(1)
-    .maybeSingle();
 
   // El estado documental, agregado. El Cliente ve cuánto se cumplió de lo que la Prestadora le
   // pide al Asistente, y nunca qué documento es cuál: el nombre de un tipo de documento puede ser
   // dato de salud.
-  const { data: prestadora } = await db
-    .from('prestadoras')
-    .select('dias_aviso_vencimiento_documentos')
-    .eq('id', paciente.prestadora_id)
-    .maybeSingle();
-
   const documentacion = estadoDocumentalParaElCliente({
     documentos: documentos || [],
-    diasAviso: prestadora?.dias_aviso_vencimiento_documentos ?? undefined,
+    diasAviso: diasAviso ?? undefined,
   });
 
   // Las calificaciones anteriores solo se piden si esta Prestadora deja calificar. Donde la
@@ -896,7 +949,7 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
   }
 
   res.json({
-    asistente: asistente || null,
+    asistente: { nombre: asistente.nombre, foto_url: asistente.foto_url },
     tipo,
     tareas,
     certificado: certificado || null,

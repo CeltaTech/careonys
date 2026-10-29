@@ -719,9 +719,6 @@ los Pacientes que ve. Del Directorio de Personas lee las que tienen un rol en su
 Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
 `scripts/probar_altas_con_sesion.mjs`. Falta:
 
-- **Las rutas del backend que trabajan con `enLaPrestadora`** y devuelven datos de Clientes o
-  Pacientes a una persona: ahí la base no recorta, y el recorte por Coordinador lo tiene que hacer la
-  ruta o pasar a la credencial de quien pide.
 - **De cada Asistente, la distancia al domicilio y no el domicilio.** Los Asistentes, las matrículas
   y las calificaciones siguen por zona, a propósito: un Asistente trabaja para varios Servicios.
 - **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y
@@ -734,12 +731,6 @@ Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
   guardia vigente ahí y en cantidad acotada. Deja de recibir la credencial interna de su perfil.
 - **Durante la guardia, el Asistente recibe el contacto de emergencia, la obra social y el número
   de afiliado del Paciente**, que hoy no recibe.
-- **El Cliente ve del Asistente nombre, foto, tipo y certificado vigente, y sólo del que tiene una
-  guardia en curso o próxima.** Nunca su teléfono: se comunica con la Prestadora. Hoy lee directo de
-  la base todas las columnas de cualquier Asistente que lo atendió alguna vez, sin límite de
-  tiempo, porque la regla que lo habilita alcanza con una guardia de cualquier fecha. El código QR
-  verifica sólo contra el Asistente con guardia hoy con ese Paciente, y hoy responde con cualquiera
-  de la Prestadora.
 - **El Cliente ve la ubicación del Asistente sólo en vivo y con el permiso**, y la ubicación se
   borra al cerrar la guardia. Hoy lee las de salida, llegada y cierre de todas las guardias, sin el
   permiso. Del Paciente deja de recibir lo que ninguna pantalla usa —patologías, ubicación de la

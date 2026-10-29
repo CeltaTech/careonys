@@ -224,9 +224,12 @@ de `asistentes` en lugar de repetir los filtros de tenant y de zona («Ningún p
 así una Coordinadora con el permiso abierto ve los pagos de los Asistentes de su zona y de
 ningún otro. `es_admin_prestadora()` es el punto único de verdad de esa condición.
 
-El Cliente alcanza la fila de `asistentes` sólo mientras ese Asistente lo atiende
-(`cliente_lee_asistente_asignado`, con `interno.asistente_atiende_al_cliente`), y en esa fila no
-están ni lo que se le paga ni lo reservado.
+El Cliente no alcanza ninguna fila de `asistentes` ni de `certificados`: la protección por fila
+no recorta columnas, y una fila abierta le entregaba el teléfono y el domicilio. Lo que ve del
+Asistente —nombre, foto, tipo y certificado vigente, sólo del que tiene una guardia en curso o
+próxima— se lo arma el backend con el trabajo de la Prestadora y columnas contadas
+(`backend/src/routes/appClientes.js`). Y el código QR vale sólo para la guardia de hoy
+(`backend/src/utils/comprobacionDePresencia.js`, `esGuardiaDeHoy`).
 
 **El estado de cuenta del Cliente lo ve la administración.** Cuánto debe cada Cliente y si está
 atrasado entra por la acción `ver_estado_de_cuenta_cliente` del catálogo

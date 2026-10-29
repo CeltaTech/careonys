@@ -173,8 +173,9 @@ Medido contra la base en vivo y contra el código, no contra documentos.
 **La llave que abre todo sigue existiendo, y nadie la usa.** `SUPABASE_SERVICE_ROLE_KEY`
 alcanza todas las tablas de todas las Prestadoras. Ningún archivo del repositorio la usa: lo que
 pide una persona entra con su credencial (`clienteDelPedido(req)`), lo que la persona no puede
-hacer, con el trabajo de su Prestadora (`enLaPrestadora`), y la copia nocturna de los archivos, con
-la credencial de la copia de respaldo, que sólo lista y baja archivos. Sigue cargada en Railway y
+hacer, con el trabajo de su Prestadora (`enLaPrestadora`), y la copia nocturna de los archivos, de
+a una Prestadora, con la credencial de la copia de respaldo, que sólo lista y baja los archivos de
+esa Prestadora. Sigue cargada en Railway y
 en los secretos de GitHub, y viva en Supabase.
 
 **Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` se llama

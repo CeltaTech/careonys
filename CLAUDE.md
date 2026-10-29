@@ -397,8 +397,9 @@ con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
 quien pide, que toma con `clienteDelPedido(req)`; lo que esa persona no puede hacer por sí misma
 —y las tareas automatizadas— va con la credencial del trabajo sin persona, de a una Prestadora por
 vez, con `enLaPrestadora`. Las dos las genera `backend/src/db/connection.js`, y fuera de
-`enLaPrestadora` no hay conexión. La copia nocturna de los archivos entra con una tercera, la de la
-copia de respaldo, que sólo lista y baja archivos (`conexionDeLaCopiaDeRespaldo`). **Ningún archivo
+`enLaPrestadora` no hay conexión. La copia nocturna de los archivos también va de a una Prestadora
+(`paraCadaPrestadora` con el rol `copia_de_respaldo`), y sólo lista y baja los archivos de la
+carpeta de esa Prestadora. **Ningún archivo
 del repositorio usa `SUPABASE_SERVICE_ROLE_KEY`**, porque incumple `..\..\CLAUDE.md`, sección
 «Aislamiento entre Organizaciones»; darla de baja es el paso 10 de `docs/PLAN_HASTA_PRODUCCION.md`.
 Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es sacarla.

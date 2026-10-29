@@ -60,9 +60,9 @@ trabajo extra significativo.
 (`.github/workflows/backup-diario.yml`) `backend/scripts/backup_a_buckets.mjs` sube el volcado
 de la base a Cloudflare R2, que es el principal, y a Backblaze B2, que es el espejo. Los archivos
 de los depósitos los copia el backend, una vez por día y al arrancar, a los mismos dos destinos,
-bajo `archivos/<depósito>/<ruta>` (`backend/src/utils/copiaDeLosArchivos.js`). Entra con la
-credencial de la copia de respaldo, que sólo puede listar y bajar archivos: no lee ninguna tabla,
-no escribe y no borra. Sube sólo lo que falta o cambió, y la lista de depósitos se la pregunta a
+bajo `archivos/<depósito>/<ruta>` (`backend/src/utils/copiaDeLosArchivos.js`). Trabaja de a una
+Prestadora, con la credencial de la copia de respaldo, que sólo puede listar y bajar los archivos
+de la carpeta de esa Prestadora: no lee ninguna tabla, no escribe y no borra. Sube sólo lo que falta o cambió, y la lista de depósitos se la pregunta a
 la base, para que uno nuevo no quede afuera por olvido (`backend/src/utils/copiaDeDepositos.js`).
 
 **La prueba de restauración la hace `backend/scripts/probar_restauracion.mjs`.** Baja el último

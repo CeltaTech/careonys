@@ -35,8 +35,11 @@
  *
  * Existe para que la copia se pueda probar sin nube: lo que la copia necesita son tres
  * preguntas —qué depósitos hay, qué archivos tiene uno, y dame este archivo—, y nada más.
+ *
+ * `carpeta` es la de la Prestadora: el recorrido empieza ahí, que es lo único que la base le deja
+ * ver a la copia.
  */
-export function depositosDeSupabase(supabase) {
+export function depositosDeSupabase(supabase, { carpeta = '' } = {}) {
   return {
     async listarDepositos() {
       const { data, error } = await supabase.storage.listBuckets();
@@ -48,7 +51,7 @@ export function depositosDeSupabase(supabase) {
       // El listado de Supabase es por carpeta y paginado: devuelve las entradas de un nivel, y
       // las carpetas vienen sin `id`. Se recorre hacia abajo hasta que no queda ninguna.
       const encontrados = [];
-      const pendientes = [''];
+      const pendientes = [carpeta];
       while (pendientes.length > 0) {
         const prefijo = pendientes.pop();
         let desde = 0;

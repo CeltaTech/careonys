@@ -112,20 +112,15 @@ export function sinPrestadora(trabajo, region = regionDeLaPrestadora(null)) {
 }
 
 /**
- * La conexión de la copia de respaldo de los archivos. Ve los depósitos de una región y lee lo que
- * tienen adentro, y nada más: no toca ninguna tabla, no escribe y no borra.
- */
-export function conexionDeLaCopiaDeRespaldo(region) {
-  return conexionDelTrabajo({ prestadoraId: null, trabajo: 'copia_de_respaldo', rol: 'copia_de_respaldo', region });
-}
-
-/**
  * Corre `hacer` una vez por cada Prestadora, de a una, cada vez con su propia credencial. Lo que
  * falla en una se anota y no frena a las demás. Recorre todas las regiones: cada una contesta
  * por las Prestadoras que viven en ella. `hacer` recibe la Prestadora y esa conexión, para quien
  * la quiera usar sin pasar por `supabase`.
+ *
+ * `rol` cambia el rol de la credencial de cada Prestadora. Lo usa la copia de respaldo, que sólo
+ * lee los archivos de la Prestadora: no toca ninguna tabla, no escribe y no borra.
  */
-export async function paraCadaPrestadora(trabajo, hacer) {
+export async function paraCadaPrestadora(trabajo, hacer, { rol } = {}) {
   for (const region of lasRegiones()) {
     const { data, error } = await sinPrestadora(trabajo, region).rpc('prestadoras_a_recorrer');
     if (error) {
@@ -134,7 +129,7 @@ export async function paraCadaPrestadora(trabajo, hacer) {
     }
     for (const prestadoraId of data ?? []) {
       try {
-        const conexion = conexionDelTrabajo({ prestadoraId, trabajo, region });
+        const conexion = conexionDelTrabajo({ prestadoraId, trabajo, rol, region });
         await contexto.run(conexion, () => hacer(prestadoraId, conexion));
       } catch (err) {
         console.error(`${trabajo}: falló en la Prestadora ${prestadoraId}:`, err?.message ?? err);

@@ -20,7 +20,6 @@ import { describe, it } from 'node:test';
 // La conexión a la base se arma sola al importar, y `createClient` no acepta una dirección
 // vacía. Acá no se consulta nada —la función que se prueba es pura—, pero el import la trae.
 process.env.SUPABASE_URL = 'http://127.0.0.1:1';
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 const { laQueTerminoJustoAntes } = await import('../marcarAusente.js');
 
 /** El turno que quedó vacío: mañana del sábado. */

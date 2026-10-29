@@ -103,7 +103,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se
 // arma en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -111,7 +110,8 @@ const { conDomicilioDelDia, pacientesConDomicilioDelDia, pacientesConDomicilioDe
   '../domicilioDelDia.js'
 );
 // Las funciones preguntan con la conexión que se les pasa; acá, una que apunta a la base de mentira.
-const { supabase: db } = await import('../../db/connection.js');
+const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const db = conexionDe();
 
 after(() => baseFalsa.close());
 

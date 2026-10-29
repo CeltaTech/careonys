@@ -82,11 +82,12 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
-const { revisarLlegadasDemoradas } = await import('../revisarLlegadasDemoradas.js');
+const { adentro } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const revisarLlegadasDemoradas = adentro((await import('../revisarLlegadasDemoradas.js')).revisarLlegadasDemoradas);
 const { llegadaEstimadaDeGuardia } = await import('../estimarLlegadaDeGuardia.js');
-const { supabase } = await import('../../db/connection.js');
+const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const supabase = conexionDe();
 
 after(() => {
   baseFalsa.close();

@@ -55,7 +55,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 // Sin casilla de correo configurada el envío por correo se saltea solo, que es lo que acá hace
 // falta: lo que se prueba es el otro canal, y el correo tiene sus propias pruebas.

@@ -170,12 +170,10 @@ el que evita el enredo.
 
 Medido contra la base en vivo y contra el código, no contra documentos.
 
-**La llave que abre todo sigue existiendo, y casi nadie la usa.** `SUPABASE_SERVICE_ROLE_KEY` se
-crea en `backend/src/db/connection.js` y alcanza todas las tablas de todas las Prestadoras. Ninguna
-ruta la importa: lo que pide una persona entra con su credencial (`clienteDelPedido(req)`) y lo que
+**La llave que abre todo sigue existiendo, y casi nadie la usa.** `SUPABASE_SERVICE_ROLE_KEY`
+alcanza todas las tablas de todas las Prestadoras. El backend no la usa: lo que pide una persona entra con su credencial (`clienteDelPedido(req)`) y lo que
 la persona no puede hacer, con el trabajo de su Prestadora (`enLaPrestadora`). Quedan con la llave
-los programas sueltos de `backend/scripts`, la copia de respaldo y las pruebas. Las tareas programadas importan
-la conexión pero corren adentro de `paraCadaPrestadora`.
+los programas sueltos de `backend/scripts` y la copia de respaldo.
 
 **Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` se llama
 unas 25 veces desde 10 archivos; el resto de las consultas escribe el filtro a mano. Cuántas
@@ -444,10 +442,10 @@ datos cargados. La del registro de accesos ya está en `scripts/probar_altas_con
 distintas, cada una las lee por paciente con los seis campos y ninguna ve las de la otra, ni
 pidiendo sin filtro; y una entrada del medio alterada deja la cadena rota y el sistema dice cuál.
 
-**10.** **Se cierra la puerta, en todos lados.** Sale `SUPABASE_SERVICE_ROLE_KEY` del backend y de
-sus variables de entorno, y también de todo lo demás que la usa: la copia de respaldo diaria, los
-programas sueltos de `backend/scripts` y las pruebas. Se borra `acotarAPrestadora`. Las consultas
-que confían en un identificador de afuera dejan de ser un riesgo porque la base ya no les cree.
+**10.** **Se cierra la puerta, en todos lados.** El backend y sus pruebas ya no usan
+`SUPABASE_SERVICE_ROLE_KEY`: fuera de `enLaPrestadora` no hay conexión. Falta sacarla de las
+variables de entorno del backend y de lo demás que la usa: la copia de respaldo diaria y los
+programas sueltos de `backend/scripts`.
 
 **Mientras tanto, la llave sólo puede retroceder.** La lista de los archivos que todavía la usan
 está en `scripts/llave_maestra_pendiente.json`, y `scripts/verificar_llave_maestra.mjs` corta la

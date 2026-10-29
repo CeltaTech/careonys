@@ -21,7 +21,6 @@ import { visibilidadDeFabrica } from '../catalogoVisibilidad.js';
 // Acá no se consulta nada —las dos respuestas ya vienen puestas en el pedido—, pero el import la
 // trae igual. Mismo recurso que en `marcarAusente.test.js`.
 process.env.SUPABASE_URL = 'http://127.0.0.1:1';
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 const { accesosDeLaPersona, exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } = await import('../accesosDePersonasAutorizadas.js');
 
 function unPedido({ esTitular = false, accesos = accesosDeFabrica(), visibilidad = visibilidadDeFabrica() } = {}) {

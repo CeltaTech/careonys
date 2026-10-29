@@ -104,7 +104,6 @@ function credencialDe(autorizacion) {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 process.env.SUPABASE_ANON_KEY = 'llave-publica-de-mentira';
 // La clave con la que el backend firma la credencial del trabajo sin persona. Se genera acá, para
 // esta prueba y nada más: la base falsa no la comprueba, sólo lee qué dice la credencial.
@@ -123,7 +122,8 @@ process.env.PWA_CLIENTES_URL = 'https://clientes.ejemplo.com';
 const { default: express } = await import('express');
 await import('express-async-errors');
 const { routerDeLlavesConSesion, comprobarFirma } = await import('../llaveDelDispositivo.js');
-const { supabase } = await import('../../db/connection.js');
+const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const supabase = conexionDe();
 const { requiereRolAsistente } = await import('../../middleware/requiereRolAsistente.js');
 const { requiereRolCliente } = await import('../../middleware/requiereRolCliente.js');
 const { olvidarPedidos } = await import('../../middleware/topeDePedidos.js');

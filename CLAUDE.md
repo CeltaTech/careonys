@@ -396,9 +396,10 @@ con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
 **El aislamiento lo hace cumplir la base.** Cada ruta de persona trabaja con la credencial de
 quien pide, que toma con `clienteDelPedido(req)`; lo que esa persona no puede hacer por sí misma
 —y las tareas automatizadas— va con la credencial del trabajo sin persona, de a una Prestadora por
-vez, con `enLaPrestadora`. Las dos las genera `backend/src/db/connection.js`. **Ninguna ruta usa
-`SUPABASE_SERVICE_ROLE_KEY`**; la siguen usando la copia de respaldo, los programas sueltos de
-`backend/scripts` y las pruebas, y sacarla de ahí es el paso 10 de `docs/PLAN_HASTA_PRODUCCION.md`,
+vez, con `enLaPrestadora`. Las dos las genera `backend/src/db/connection.js`, y fuera de
+`enLaPrestadora` no hay conexión. **El backend no usa `SUPABASE_SERVICE_ROLE_KEY`**, ni sus pruebas;
+la siguen usando la copia de respaldo y los programas sueltos de `backend/scripts`, y sacarla de
+ahí es el paso 10 de `docs/PLAN_HASTA_PRODUCCION.md`,
 porque incumple `..\..\CLAUDE.md`, sección «Aislamiento entre Organizaciones». Ninguna propuesta
 que agregue una red más encima de la llave maestra se acepta: el arreglo es sacarla.
 

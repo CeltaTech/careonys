@@ -37,7 +37,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 process.env.ANTHROPIC_API_KEY = 'clave-de-mentira-que-no-sale-de-acá';
 
 /** Todo lo que se le mandó al modelo, que es la mitad de lo que se prueba acá. */

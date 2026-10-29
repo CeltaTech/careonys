@@ -79,7 +79,6 @@ const baseFalsa = createServer((req, res) => {
 });
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
 // Una clave inventada para generar la credencial del trabajo sin persona, con la que se piden el
 // alta y la baja de la cuenta. Nace acá y se descarta al terminar.
@@ -89,7 +88,8 @@ process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA = JSON.stringify({ ...privateKey.expor
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se lee en
 // el momento del import.
 const { crearClienteImportado } = await import('../cuentasPanel.js');
-const { supabase } = await import('../../db/connection.js');
+const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const supabase = conexionDe();
 
 after(() => {
   baseFalsa.close();

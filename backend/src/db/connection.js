@@ -10,21 +10,19 @@ import {
 /* La conexión con la base.
    ========================
 
-   HAY TRES CREDENCIALES.
+   HAY DOS CREDENCIALES.
    - La de la persona que pide: la misma con la que entró al Panel o a su aplicación. La base ve
-     quién es y le contesta sólo lo de su Prestadora. Es la que usa una ruta migrada, a través de
+     quién es y le contesta sólo lo de su Prestadora. Es la que usa una ruta, a través de
      `clienteDelPedido(req)`.
    - La del trabajo sin persona, que el backend genera para una sola Prestadora y que la base
      limita a lo que ese trabajo usa.
-   - La llave maestra, que alcanza todas las Prestadoras y se saltea la protección por fila. Queda
-     sólo para lo que todavía no se mudó a ninguna de las otras dos, y se va sacando
-     (docs/PLAN_HASTA_PRODUCCION.md, «Los cimientos»).
+   La llave maestra, que alcanza todas las Prestadoras, no la usa el backend.
 
    QUIÉN ELIGE LA DEL TRABAJO. Nadie, adentro del código que consulta. Lo que corre adentro de
    `enLaPrestadora` recibe, sin enterarse, la conexión con la credencial de esa Prestadora a través
    de `supabase`. Así un trabajo se pasa de una a otra envolviéndolo, sin tocar las funciones que
-   llama: mandar un correo, un mensaje de WhatsApp, leer el idioma. Lo que corre afuera sigue con la
-   maestra, que es lo que todavía no se mudó.
+   llama: mandar un correo, un mensaje de WhatsApp, leer el idioma. Lo que corre afuera no tiene
+   conexión: `supabase` se corta, nunca cae a otra credencial.
 
    LA CREDENCIAL DEL TRABAJO ES CORTA. Vive diez minutos y se genera otra antes de que venza, en cada
    pedido que la necesita: un trabajo largo nunca queda con una vencida.
@@ -33,12 +31,6 @@ import {
    trabajo— se arma con la región de la Prestadora (`db/regiones.js`). Hoy hay una sola,
    y el día que haya más, el único lugar que cambia es ése. */
 
-const URL = process.env.SUPABASE_URL;
-
-// Se arma recién la primera vez que alguien la usa. Así lo que ya no la necesita —una ruta que va
-// toda con la credencial de quien pide, y su prueba— carga este archivo sin tenerla.
-let maestra = null;
-const laMaestra = () => (maestra ??= createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY));
 
 const DURACION_S = 10 * 60;
 const MARGEN_S = 60;
@@ -91,7 +83,8 @@ const contexto = new AsyncLocalStorage();
 /** La conexión que corresponde a lo que se está haciendo ahora. */
 export const supabase = new Proxy({}, {
   get(_, propiedad) {
-    const conexion = contexto.getStore() ?? laMaestra();
+    const conexion = contexto.getStore();
+    if (!conexion) throw new Error('supabase: se usó fuera de enLaPrestadora, sin Prestadora no hay conexión');
     const valor = conexion[propiedad];
     return typeof valor === 'function' ? valor.bind(conexion) : valor;
   },

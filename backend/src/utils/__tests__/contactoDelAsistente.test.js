@@ -61,17 +61,19 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 
 // Después de las variables de entorno: la conexión a la base se arma al importar.
 const {
   abrirElContactoDeUnAsistente,
-  accesoQuePagaElContacto,
-  comoEstaElContacto,
+  accesoQuePagaElContacto: accesoSuelto,
+  comoEstaElContacto: comoEstaSuelto,
   enPeriodoGratuito,
   MOTIVO_VER_CONTACTO,
 } = await import('../contactoDelAsistente.js');
+const { adentro } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const accesoQuePagaElContacto = adentro(accesoSuelto);
+const comoEstaElContacto = adentro(comoEstaSuelto);
 
 after(() => baseFalsa.close());
 

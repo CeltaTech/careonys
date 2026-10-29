@@ -32,7 +32,6 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 // pueda importar. Se le da una dirección que no lleva a ningún lado a propósito: si alguna vez
 // esta prueba empieza a preguntarle algo a la base, se va a notar.
 process.env.SUPABASE_URL = 'http://127.0.0.1:1';
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // El correo que sale sin Prestadora se cuenta con el trabajo que no tiene ninguna.
 prepararCredencialDePrueba();
 

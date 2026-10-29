@@ -31,9 +31,13 @@ import {
   VARIABLE_DEL_SECRETO,
   verificadorDelCodigo,
   seAgotaronLosIntentos,
-  sumarIntento,
+  sumarIntento as sumarIntentoSuelto,
 } from '../codigoDeUnSoloUso.js';
 import { verificadorDelEnlace } from '../verificadorDelEnlace.js';
+import { adentro } from '../../__tests__/adentroDeUnaPrestadora.js';
+
+// En el servidor la suma corre siempre adentro de la Prestadora del código.
+const sumarIntento = adentro(sumarIntentoSuelto);
 
 const INSTRUCCION = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const PRESTADORA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
@@ -66,7 +70,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 after(() => baseFalsa.close());
 

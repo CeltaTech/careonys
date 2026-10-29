@@ -60,11 +60,11 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 
 // Después de las variables de entorno: la conexión se arma al importar.
-const { revisarAusenciasAvisadas } = await import('../revisarAusenciasAvisadas.js');
+const { adentro } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const revisarAusenciasAvisadas = adentro((await import('../revisarAusenciasAvisadas.js')).revisarAusenciasAvisadas);
 
 after(() => baseFalsa.close());
 

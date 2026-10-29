@@ -21,7 +21,6 @@ import { describe, it } from 'node:test';
 // una Prestadora, así que al importarse arma la conexión. Con estas dos puestas se arma y no se
 // usa; sin ellas, el archivo no se puede ni importar.
 process.env.SUPABASE_URL ||= 'http://127.0.0.1:1/de-mentira';
-process.env.SUPABASE_SERVICE_ROLE_KEY ||= 'clave-de-mentira';
 
 const {
   MINUTOS_DE_ANTICIPO,

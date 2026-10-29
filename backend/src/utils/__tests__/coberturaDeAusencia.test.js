@@ -57,10 +57,10 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 
-const { supabase } = await import('../../db/connection.js');
+const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const supabase = conexionDe();
 const { hastaDondeCubrir, devolverAlTitular, extenderCoberturasDeAusencia } = await import('../coberturaDeAusencia.js');
 
 after(() => baseFalsa.close());

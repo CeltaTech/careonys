@@ -68,7 +68,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // La autorización se firma con el trabajo de la Prestadora.
 prepararCredencialDePrueba();
 
@@ -76,7 +75,8 @@ prepararCredencialDePrueba();
 const { confirmarConCodigo, pedirCodigo } = await import('../instruccionesPersonasAutorizadas.js');
 const { anularPendiente, cerrarConPapelFirmado } = await import('../consentimientoPagador.js');
 // La conexión que en el backend sería la de la persona del Panel. Acá contesta la base de mentira.
-const { supabase: conexionDeLaPersona } = await import('../../db/connection.js');
+const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
+const conexionDeLaPersona = conexionDe();
 
 after(() => baseFalsa.close());
 

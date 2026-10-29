@@ -99,7 +99,6 @@ await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 await new Promise((listo) => reenvioFalso.listen(0, '127.0.0.1', listo));
 
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 process.env.REMITENTE_AVISOS = 'avisos@ejemplo.test';
 process.env.CLOUDFLARE_API_BASE = `http://127.0.0.1:${reenvioFalso.address().port}`;

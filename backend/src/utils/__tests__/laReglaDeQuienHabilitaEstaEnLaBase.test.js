@@ -20,7 +20,6 @@ import { describe, it } from 'node:test';
 import { definicionDeFuncion, filasDeFabrica, laFoto, permisosDeFuncion } from '../../__tests__/laFotoDeLaBase.js';
 
 process.env.SUPABASE_URL ||= 'http://127.0.0.1:1';
-process.env.SUPABASE_SERVICE_ROLE_KEY ||= 'clave-de-mentira';
 
 const { escalonDelRol, puedeHabilitar } = await import('../habilitarCambioDeClave.js');
 

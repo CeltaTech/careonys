@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 // Acá no se consulta nada —las dos funciones probadas son puras—, pero el import la trae igual.
 // Mismo recurso que en `accesosDePersonasAutorizadas.test.js`.
 process.env.SUPABASE_URL = 'http://127.0.0.1:1';
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 const { turnosDelMensaje, turnosPorCliente } = await import('../avisoCambioDeAsistente.js');
 
 // Las dos armadas del mensaje son puras, así que se prueban sin base de datos. Los datos son

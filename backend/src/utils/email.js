@@ -22,9 +22,10 @@ const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
 // el puerto 443, como cualquier otro pedido web.
 //
 // El despachante es Resend. Se eligió por costo: con una sola dirección de dominio autorizada
-// —careonys.com— cuelgan todas las direcciones que haga falta sin pagar por Prestadora, y el
-// plan gratuito cubre lo que hoy se manda. El día que quede chico se cambia esta pieza sola:
-// el armado de cada correo no sabe por dónde viaja.
+// —careonys.com— cuelgan todas las direcciones que haga falta sin pagar por Prestadora. El plan
+// tiene tope diario, y la insistencia sobre alarmas que nadie toma lo agota: lo que pasa el tope
+// vuelve con `daily_quota_exceeded`. Cambiar de despachante es cambiar esta pieza sola: el
+// armado de cada correo no sabe por dónde viaja.
 //
 // El camino por SMTP no se borra: se usa mientras no haya credencial del despachante. Así el
 // backend corriendo fuera de Railway —la máquina de desarrollo— sigue mandando como siempre.

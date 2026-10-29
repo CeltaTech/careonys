@@ -243,6 +243,14 @@ con el mapa en vivo prendido y el acceso a la ubicación; la información de sal
 El punto del viaje se borra en la base apenas la guardia deja de estar programada, con el
 disparador `borrar_el_punto_del_viaje`, cualquiera sea el camino por el que cambió.
 
+**«Es de esta Prestadora» no alcanza para leer lo del Panel.** `interno.prestadora_actual()`
+contesta también para un Cliente, una persona autorizada y un Asistente, así que una política que
+sólo compara la Prestadora le abre la tabla entera a cualquiera de ellos. Toda lectura pensada para
+el Panel pide además `interno.es_personal_de_la_prestadora()` —o la función del permiso que
+corresponda, como `interno.gestiona_la_facturacion()` en las correcciones de factura—, y el
+Asistente y el Cliente leen lo suyo con su propia política. Las calificaciones piden además, para
+la persona autorizada, el acceso para calificar, y las correcciones el acceso al dinero.
+
 **El estado de cuenta del Cliente lo ve la administración.** Cuánto debe cada Cliente y si está
 atrasado entra por la acción `ver_estado_de_cuenta_cliente` del catálogo
 `catalogo_acciones_permisos`, que nace reservada a la administración y que cada Prestadora abre o

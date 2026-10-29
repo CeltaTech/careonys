@@ -361,6 +361,10 @@ Prestadora de quien pide, en todas las zonas, y sólo al Administrador y a los C
 `revisar_indicacion_medicacion` y `cerrar_firma_medicacion_en_papel`, que le dejan al
 Administrador y a los Coordinadores aceptar o rechazar una indicación y cerrar su firma en papel, tocando sólo el estado, el
 motivo y quién y cuándo, y sólo sobre Pacientes cuya información de salud alcanza.
+El Panel llama además `la_carga_queda_pendiente`, que recibe un Paciente, corre con los permisos de
+quien llama y contesta si lo que esa persona guarde de él queda pendiente del Coordinador asignado;
+y `revisar_carga`, que acepta o rechaza una carga pendiente, resuelve la Prestadora adentro y sólo
+deja revisar al Coordinador asignado de ese Paciente o al Administrador, nunca a quien la cargó.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial. Toda función nueva de política nace en `interno`, y cualquiera que se quede en

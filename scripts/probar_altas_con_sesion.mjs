@@ -999,6 +999,109 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
 }
 
 // ---------------------------------------------------------------------------
+// Quinta comprobación: lo que carga otro Coordinador queda pendiente
+// ---------------------------------------------------------------------------
+// Un Coordinador que no coordina al Paciente puede proponer un domicilio temporal, pero no queda
+// vigente: queda pendiente hasta que lo acepte el Coordinador asignado o la administración. Para
+// probarlo, los Servicios del Paciente pasan un rato a otro Coordinador, creado para la prueba, y
+// la Coordinadora de la siembra queda como «otro».
+
+async function probarLoQueCargaOtroCoordinador({ base, llavePublica }, d) {
+  console.log('\n== Lo que carga otro Coordinador queda pendiente ==\n');
+  const problemas = [];
+  const bien = (que) => console.log(verde(`  ✓ ${que}`));
+  const mal = (que, por) => {
+    console.log(rojo(`  ✗ ${que}`));
+    console.log(rojo(`      ${por}`));
+    problemas.push(`carga pendiente: ${que} — ${por}`);
+  };
+
+  const admin = await entrar(base, llavePublica, ADMINISTRADORA, d.prestadora);
+  const coordinadora = await entrar(base, llavePublica, COORDINADORA, d.prestadora);
+  const [[carla]] = consultarBase(`SELECT id FROM public.usuarios WHERE lower(email) = '${COORDINADORA}';`);
+  const otro = '20000000-0000-4000-8000-0000000000aa';
+  const domicilio = 'Prueba de carga pendiente';
+
+  const pedir = async (token, metodo, ruta, cuerpo) => {
+    const r = await fetch(`${base}/rest/v1/${ruta}`, {
+      method: metodo,
+      headers: {
+        apikey: llavePublica,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+    });
+    return { estado: r.status, cuerpo: await r.json().catch(() => null) };
+  };
+
+  const servicios = consultarBase(
+    `SELECT s.id FROM public.servicios s JOIN public.pacientes p ON p.cliente_id = s.contratante_id
+      WHERE p.id = '${d.paciente}' AND s.tipo_contratante = 'cliente' AND s.coordinador_id = '${carla}';`,
+  ).map(([id]) => id);
+  const lista = servicios.map((id) => `'${id}'`).join(',') || 'NULL';
+
+  try {
+    consultarBase(`INSERT INTO auth.users (id, instance_id, aud, role, email)
+      VALUES ('${otro}', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'otro.coordinador@ejemplo.test');`);
+    consultarBase(`INSERT INTO public.usuarios (id, prestadora_id, rol, nombre)
+      VALUES ('${otro}', '${d.prestadora}', 'coordinador', 'Otro Coordinador de prueba');`);
+    consultarBase(`UPDATE public.servicios SET coordinador_id = '${otro}' WHERE id IN (${lista});`);
+
+    const queda = await pedir(coordinadora, 'POST', 'rpc/la_carga_queda_pendiente', { p_paciente: d.paciente });
+    if (queda.cuerpo === true) bien('para otro Coordinador, la carga queda pendiente');
+    else mal('para otro Coordinador, la carga queda pendiente', `${queda.estado} ${JSON.stringify(queda.cuerpo)}`);
+
+    const directa = await pedir(admin, 'POST', 'rpc/la_carga_queda_pendiente', { p_paciente: d.paciente });
+    if (directa.cuerpo === false) bien('para la administración, la carga no queda pendiente');
+    else mal('para la administración, la carga no queda pendiente', `${directa.estado} ${JSON.stringify(directa.cuerpo)}`);
+
+    const propone = await pedir(coordinadora, 'POST', 'domicilios_temporales_paciente', {
+      prestadora_id: d.prestadora,
+      paciente_id: d.paciente,
+      domicilio,
+      lat: -34.6,
+      lng: -58.4,
+      motivo: 'Prueba',
+      fecha_inicio: '2031-01-01',
+      fecha_fin: '2031-01-10',
+    });
+    const [[vigentes]] = consultarBase(`SELECT count(*) FROM public.domicilios_temporales_paciente WHERE domicilio = '${domicilio}';`);
+    const cargas = consultarBase(`SELECT id FROM public.cargas_sujetas_a_aprobacion WHERE datos->>'domicilio' = '${domicilio}' AND estado = 'pendiente';`);
+    if (propone.estado < 400 && vigentes === '0' && cargas.length === 1) bien('lo que propone no queda vigente, queda pendiente');
+    else mal('lo que propone no queda vigente, queda pendiente', `${propone.estado} vigentes=${vigentes} pendientes=${cargas.length}`);
+    const carga = cargas[0]?.[0];
+
+    if (carga) {
+      const ellaMisma = await pedir(coordinadora, 'POST', 'rpc/revisar_carga', { p_carga: carga, p_acepta: true, p_motivo: null });
+      if (ellaMisma.estado >= 400) bien('quien la cargó no puede aceptarla');
+      else mal('quien la cargó no puede aceptarla', `${ellaMisma.estado} ${JSON.stringify(ellaMisma.cuerpo)}`);
+
+      const sinMotivo = await pedir(admin, 'POST', 'rpc/revisar_carga', { p_carga: carga, p_acepta: false, p_motivo: ' ' });
+      if (sinMotivo.estado >= 400) bien('no se rechaza sin motivo');
+      else mal('no se rechaza sin motivo', `${sinMotivo.estado} ${JSON.stringify(sinMotivo.cuerpo)}`);
+
+      const acepta = await pedir(admin, 'POST', 'rpc/revisar_carga', { p_carga: carga, p_acepta: true, p_motivo: null });
+      const [[despues]] = consultarBase(`SELECT count(*) FROM public.domicilios_temporales_paciente WHERE domicilio = '${domicilio}';`);
+      if (acepta.cuerpo === true && despues === '1') bien('la administración la acepta y queda vigente');
+      else mal('la administración la acepta y queda vigente', `${acepta.estado} ${JSON.stringify(acepta.cuerpo)} vigentes=${despues}`);
+    }
+  } finally {
+    consultarBase(`UPDATE public.servicios SET coordinador_id = '${carla}' WHERE id IN (${lista});`);
+    // El domicilio temporal es historia clínica y un disparador impide borrarlo; lo de la prueba se
+    // borra igual, con los disparadores apagados sólo para esta limpieza.
+    consultarBase(`SET session_replication_role = replica;
+      DELETE FROM public.domicilios_temporales_paciente WHERE domicilio = '${domicilio}';
+      DELETE FROM public.cargas_sujetas_a_aprobacion WHERE datos->>'domicilio' = '${domicilio}';
+      DELETE FROM public.usuarios WHERE id = '${otro}';
+      DELETE FROM auth.users WHERE id = '${otro}';`);
+  }
+
+  return problemas;
+}
+
+// ---------------------------------------------------------------------------
 
 function limpiar(creado, idAsistente) {
   // Se borra con la llave del dueño de la base y no con la sesión, porque lo
@@ -1034,7 +1137,8 @@ async function main() {
   const deLaClase = probarLaClaseEntera();
   const deLaConfiguracion = await probarQuienEscribeLaConfiguracion(entorno, d);
   const delCoordinador = await probarElCoordinadorDelServicio(entorno, d);
-  const problemas = [...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador];
+  const deLasCargas = await probarLoQueCargaOtroCoordinador(entorno, d);
+  const problemas = [...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador, ...deLasCargas];
 
   console.log('');
   if (problemas.length) {

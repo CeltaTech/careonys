@@ -60,6 +60,7 @@ import { ConfiguracionAplicaciones } from './pages/configuracion/LasAplicaciones
 import { ConfiguracionAccesos } from './pages/configuracion/Accesos';
 import { ConfiguracionPuestaEnMarcha } from './pages/configuracion/PuestaEnMarcha';
 import { Medicacion } from './pages/Medicacion';
+import { CargasPendientes } from './pages/CargasPendientes';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
@@ -158,6 +159,7 @@ function App() {
                     <Route path="contenidos" element={<Contenidos />} />
                     <Route path="servicios/:id" element={<ServicioDetalle />} />
                     <Route path="medicacion" element={<Medicacion />} />
+                    <Route path="cargas-pendientes" element={<CargasPendientes />} />
                     <Route path="guardias" element={<Guardias />} />
                     <Route path="reportes" element={<Reportes />} />
                     <Route path="alertas" element={<Alertas />} />

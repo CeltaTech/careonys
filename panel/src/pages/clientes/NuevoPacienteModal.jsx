@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
+import { mensajeDeError } from '../../lib/errores';
+import { avisarSiQuedoPendiente } from '../../lib/cargasPendientes';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -39,10 +41,11 @@ export function NuevoPacienteModal({ clienteId, onClose, onCreado }) {
         paciente_id: paciente.id,
         nivel_complejidad: nivelComplejidad,
       }));
+      if (!errorSalud) await avisarSiQuedoPendiente(paciente.id, t);
     }
     setGuardando(false);
     if (errorInsert || errorSalud) {
-      setError(t.comun.error_generico);
+      setError(mensajeDeError(errorInsert || errorSalud, t, 'nuevo paciente'));
       return;
     }
     onCreado();

@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { avisarSiQuedoPendiente } from '../../lib/cargasPendientes';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { DOMICILIO_VACIO, palabrasDelDomicilio, partesDesdeFila, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
@@ -148,6 +149,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
           ...datos,
         });
 
+    if (!errorGuardar) await avisarSiQuedoPendiente(paciente.id, t);
     setGuardando(false);
     if (errorGuardar) {
       setErrorForm(explicar(errorGuardar));
@@ -176,6 +178,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
       .update({ fecha_fin: fechaTermino })
       .eq('id', periodo.id);
 
+    if (!errorUpdate) await avisarSiQuedoPendiente(paciente.id, t);
     setFilaEnCurso(null);
     if (errorUpdate) {
       setErrorFila(explicar(errorUpdate));

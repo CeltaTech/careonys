@@ -42,6 +42,7 @@ const CODIGOS_POSTGRES = {
   '22001': 'dato_invalido', // el texto es más largo de lo que entra
   '22007': 'dato_invalido', // la fecha está mal escrita
   P0001: 'dato_invalido', // una regla del negocio frenó la operación
+  P0002: 'no_encontrado', // lo que había que cambiar ya no está
   '42501': 'sin_permiso', // la base no lo deja tocar eso
   '42P01': 'falla_del_sistema', // la tabla no existe
   '42703': 'falla_del_sistema', // la columna no existe

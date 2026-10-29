@@ -483,10 +483,18 @@ es otro coordinador distinto al que "atiende" al Cliente, la base le deje hacerl
 pendiente de la aprobación del coordinador "titular" o de la administración de la prestadora. Por
 supuesto siempre queda registrado quien cargo que cosa».
 
-Es el mismo mecanismo que ya tiene la medicación —`indicaciones_medicacion.estado` y
-`motivo_rechazo`, revisadas con `revisar_indicacion_medicacion`—, y se reutiliza: no se escribe un
-segundo. **Depende de la asignación de este paso**, porque es la que dice quién aprueba; mientras un
+**Está construido.** Un disparador sobre la información de salud y los domicilios temporales
+desvía a `cargas_sujetas_a_aprobacion` lo que carga quien no es el Coordinador asignado ni el
+Administrador, y guarda sólo lo que cambia; mientras tanto rige lo anterior. La bandeja es
+«Cambios pendientes» —`panel/src/pages/CargasPendientes.jsx`, con el molde de la medicación—, y
+acepta o rechaza con `revisar_carga`, que vuelve a comprobar quién revisa. Quien cargó ve su carga
+y no la revisa. Al guardar, el Panel pregunta `la_carga_queda_pendiente` y lo avisa. Mientras un
 Servicio no tenga Coordinador asignado, aprueba el Administrador, que es el Coordinador general.
+
+**Dos alcances que no se ven leyendo la regla.** Los rangos de signos vitales no entran, porque
+sólo los escribe la administración, que nunca queda pendiente. Y con la restricción de la
+información de salud encendida —que es lo de fábrica— otro Coordinador ni la ve ni la modifica,
+así que lo único que puede quedar pendiente son los domicilios temporales.
 
 ### Paso 8. Los tres criterios de sugerencia que faltan
 

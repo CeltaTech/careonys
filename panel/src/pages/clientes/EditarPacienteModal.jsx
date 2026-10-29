@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
+import { mensajeDeError } from '../../lib/errores';
+import { avisarSiQuedoPendiente } from '../../lib/cargasPendientes';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -29,20 +31,31 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
       })
       .eq('id', paciente.id);
     // Patologías y nivel de complejidad son información de salud y viven en su propia tabla.
-    const { error: errorSalud } = errorUpdate
-      ? { error: null }
-      : await supabase
+    // Si ya existe se modifica, no se vuelve a dar de alta: un alta encima de lo vigente no dice
+    // qué columnas se dejaron como estaban, y lo que carga otro Coordinador queda pendiente.
+    let errorSalud = null;
+    if (!errorUpdate) {
+      const salud = {
+        nivel_complejidad: nivelComplejidad || null,
+        patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
+      };
+      const { data: vigente, error: errorVigente } = await supabase
         .from('informacion_de_salud_del_paciente')
-        .upsert({
-          prestadora_id: paciente.prestadora_id,
-          paciente_id: paciente.id,
-          nivel_complejidad: nivelComplejidad || null,
-          patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'paciente_id' });
+        .select('paciente_id')
+        .eq('paciente_id', paciente.id)
+        .maybeSingle();
+      errorSalud = errorVigente;
+      if (!errorSalud) {
+        ({ error: errorSalud } = vigente
+          ? await supabase.from('informacion_de_salud_del_paciente').update(salud).eq('paciente_id', paciente.id)
+          : await supabase.from('informacion_de_salud_del_paciente')
+            .insert({ prestadora_id: paciente.prestadora_id, paciente_id: paciente.id, ...salud }));
+      }
+    }
+    if (!errorUpdate && !errorSalud) await avisarSiQuedoPendiente(paciente.id, t);
     setGuardando(false);
     if (errorUpdate || errorSalud) {
-      setError(t.comun.error_generico);
+      setError(mensajeDeError(errorUpdate || errorSalud, t, 'editar paciente'));
       return;
     }
     onGuardado();

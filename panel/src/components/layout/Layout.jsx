@@ -229,6 +229,7 @@ export function Layout() {
       enlaces: [
         { a: '/personas', texto: t.nav.personas, ver: esAdmin || puede('ver_personas') },
         { a: '/clientes', texto: t.nav.clientes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        { a: '/cargas-pendientes', texto: t.nav.cargas_pendientes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/intermediacion/clientes', texto: t.nav.intermediacion_clientes, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION && esAdmin },
       ],
     },

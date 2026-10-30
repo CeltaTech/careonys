@@ -606,7 +606,6 @@ export function EstadoActual() {
           <FilaAlerta
             a="/alertas"
             titulo={tx.alertas_sin_resolver}
-            detalle={tx.sobre_pacientes}
             cantidad={datos.alertasSinResolver}
             tono={TONO.INFO}
           />

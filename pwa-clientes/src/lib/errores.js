@@ -161,7 +161,11 @@ export function errorDeLaRespuesta(respuesta, datos) {
  * idiomas. Si llegara un motivo sin traducción, se cae a la situación y nadie ve un código.
  */
 export function mensajeDeError(error, t, donde = '') {
-  const motivo = error && typeof error === 'object' ? String(error.motivo ?? '') : '';
+  // La base también dice el motivo: una función que rechaza algo lo levanta como mensaje del
+  // error —`asistente_en_otro_turno`—. Se lo toma sólo si tiene forma de código, para no
+  // confundir un texto crudo de Postgres con un motivo.
+  const delMensaje = error && typeof error === 'object' && /^[a-z_]+$/.test(String(error.message ?? '')) ? error.message : '';
+  const motivo = error && typeof error === 'object' ? String(error.motivo ?? delMensaje) : '';
   // Se pregunta si la frase existe antes de leerla: leída a secas, una clave que falta devuelve
   // la marca de faltante, que no está vacía, y tapaba la situación con un guion.
   const motivos = t?.errores?.motivos;

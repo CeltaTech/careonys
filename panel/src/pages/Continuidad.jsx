@@ -10,26 +10,55 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { estaEnElPadron } from '../lib/candidatos';
+import { reasignarGuardia } from '../lib/reasignarGuardia';
+import { esAdminOSuperior } from '../lib/roles';
+import { usePermisos } from '../context/PermisosContext';
+import { AsignarConDocumentosModal } from './guardias/AsignarConDocumentosModal';
 import { laDioUnaPersona } from '../lib/fuentesAlertaTemprana';
 import { diaDelMomento, diasDeEspera, horaDelMomento } from '../lib/horarios';
 import { nombreMotivoGuardado } from '../lib/motivoDeCierre';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
-import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { TurnosSinCubrirAbiertos } from '../components/continuidad/TurnosSinCubrirAbiertos';
 import { ConsentimientosVigentes } from '../components/continuidad/ConsentimientosVigentes';
 import { LaTomoYo } from '../components/continuidad/LaTomoYo';
 import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
 import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
 import { ORIGENES } from '../lib/pacienteSolo';
-import { LoQuePasoEnLaCasa } from '../components/continuidad/LoQuePasoEnLaCasa';
-import { SelectorDePersona } from '../components/personas/SelectorDePersona';
+import { RegistrarConsentimiento, RegistrarFamiliarQueSeQuedo } from '../components/continuidad/LoQuePasoEnLaCasa';
 import '../styles/molde-paginas.css';
 import './seguimientoDeGuardias.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
-const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
+/* QUIÉN RESUELVE UN INCIDENTE DE RELEVO
+   Resolverlo es mandar a alguien a una casa, o dejar escrito que el Paciente quedó con un familiar
+   o solo. Lo decide quien responde por ese Servicio: su Coordinador, el Administrador, o quien
+   tomó la alarma y la está atendiendo. Los demás Coordinadores ven el incidente y pueden tomarlo,
+   pero no resolverlo por encima de quien corresponde. */
+function puedeResolver(incidente, usuario, serviciosQueCoordino, tomas) {
+  if (!usuario?.id) return false;
+  if (tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.INCIDENTE_RELEVO, incidente.id)) return false;
+  if (esAdminOSuperior(usuario.rol)) return true;
+  if (incidente.servicio_id && serviciosQueCoordino.includes(incidente.servicio_id)) return true;
+  return tomas.tomaDe(TIPOS_DE_ALARMA.INCIDENTE_RELEVO, incidente.id)?.tomada_por === usuario.id;
+}
+
+const hhmm = (hora) => String(hora ?? '').slice(0, 5);
+
+function diaCorto(fecha, locale) {
+  if (!fecha) return '—';
+  return new Date(`${fecha}T00:00:00`).toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+}
+
+/** Cuánto hace que se abrió: en minutos la primera hora, después en horas. */
+function haceCuanto(momento, t) {
+  if (!momento) return '';
+  const minutos = Math.max(0, Math.round((Date.now() - new Date(momento).getTime()) / 60000));
+  return minutos < 60
+    ? con(t.continuidad.hace_minutos, { n: minutos })
+    : con(t.continuidad.hace_horas, { n: Math.floor(minutos / 60) });
+}
 
 /* Los mensajes de cierre se leen de la vista y no de la tabla: es la misma tabla con una columna
    más, la del nombre de quien cerró. Ese nombre no se puede pedir consultando `usuarios`: esa
@@ -73,6 +102,7 @@ export function Continuidad() {
   const [incidenteResolviendo, setIncidenteResolviendo] = useState(null);
   const [actualizandoId, setActualizandoId] = useState(null);
   const [asistentesDisponibles, setAsistentesDisponibles] = useState([]);
+  const [serviciosQueCoordino, setServiciosQueCoordino] = useState([]);
   const tomas = useAlarmasTomadas();
 
   const recargar = useCallback(async () => {
@@ -106,13 +136,14 @@ export function Continuidad() {
         ]),
       );
 
-      const [{ data: guardiasData }, { data: nivelesData }, pacientesPorGuardia] = await Promise.all([
+      const [{ data: guardiasData }, { data: coordinados, error: errorCoordinados }, pacientesPorGuardia] = await Promise.all([
         idsGuardias.length
-          ? supabase.from('guardias').select('id, paciente_id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin').in('id', idsGuardias)
+          ? supabase.from('guardias').select('id, paciente_id, asistente_id, servicio_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin').in('id', idsGuardias)
           : Promise.resolve({ data: [] }),
-        supabase.from('configuracion_escalada_relevo').select('*').order('nivel'),
+        supabase.rpc('servicios_que_coordino'),
         cargarPacientesDeGuardias(idsGuardias),
       ]);
+      if (errorCoordinados) throw errorCoordinados;
 
       // Un turno puede cubrir a más de un Paciente. Se piden los nombres de todos: quien mira
       // esta pantalla está decidiendo a quién manda a una casa donde faltó alguien, y saber si
@@ -146,7 +177,6 @@ export function Continuidad() {
       );
       const nombresDelTurno = (g) => (g ? textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas) : '—');
       const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
-      const nivelesPorNumero = Object.fromEntries((nivelesData ?? []).map((n) => [n.nivel, n]));
 
       const filasNotificaciones = (notificacionesData ?? []).map((n) => ({
         ...n,
@@ -169,21 +199,21 @@ export function Continuidad() {
         };
       });
 
-      const filas = (incidentesData ?? []).map((i) => {
-        const gEntrante = guardiasPorId[i.guardia_entrante_id];
-        const gSaliente = i.guardia_saliente_id ? guardiasPorId[i.guardia_saliente_id] : null;
-        return {
-          ...i,
-          paciente_nombre: nombresDelTurno(gEntrante),
-          pacientes: gEntrante?.pacientes ?? [],
-          asistente_ausente_nombre: gEntrante ? asistentesPorId[gEntrante.asistente_id] || '—' : '—',
-          asistente_saliente_nombre: gSaliente ? asistentesPorId[gSaliente.asistente_id] || '—' : null,
-          fecha: gEntrante?.fecha,
-          horario: gEntrante ? `${gEntrante.hora_inicio} – ${gEntrante.hora_fin}` : '—',
-          nivel_config: nivelesPorNumero[i.nivel_actual],
-          hay_nivel_siguiente: Boolean(nivelesPorNumero[i.nivel_actual + 1]),
-        };
-      });
+      // Primero el turno que empezó antes: es la casa que lleva más rato esperando.
+      const filas = (incidentesData ?? [])
+        .map((i) => {
+          const g = guardiasPorId[i.guardia_entrante_id] ?? null;
+          return {
+            ...i,
+            guardia: g,
+            servicio_id: g?.servicio_id ?? null,
+            paciente_nombre: nombresDelTurno(g),
+            pacientes: g?.pacientes ?? [],
+            asistente_ausente_nombre: g ? asistentesPorId[g.asistente_id] || '—' : '—',
+            orden: g ? `${g.fecha}T${g.hora_inicio}` : '',
+          };
+        })
+        .sort((a, b) => a.orden.localeCompare(b.orden));
 
       const filasAlertas = (alertasData ?? []).map((a) => {
         const g = guardiasPorId[a.guardia_id];
@@ -201,6 +231,7 @@ export function Continuidad() {
       setNotificacionesCierre(filasNotificaciones);
       setExcepciones(filasExcepciones);
       setAsistentesDisponibles(asistentesData ?? []);
+      setServiciosQueCoordino(coordinados ?? []);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -265,22 +296,6 @@ export function Continuidad() {
     }
   }
 
-  async function avanzarNivel(incidente) {
-    setActualizandoId(incidente.id);
-    try {
-      const { error: errorUpdate } = await supabase
-        .from('incidentes_relevo')
-        .update({ nivel_actual: incidente.nivel_actual + 1 })
-        .eq('id', incidente.id);
-      if (errorUpdate) throw errorUpdate;
-      recargar();
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setActualizandoId(null);
-    }
-  }
-
   return (
     <div>
       <Cabecera titulo={t.continuidad.titulo} />
@@ -301,51 +316,26 @@ export function Continuidad() {
         {incidentes.map((i) => (
           <div key={i.id} className="panel-fila-alerta seguimiento-fila">
             <div>
-              <b>{i.fecha} · {i.horario}</b>
-              <span className="panel-mini">{t.continuidad.col_paciente}: {i.paciente_nombre}</span>
-              <span className="panel-mini">{t.continuidad.col_ausente}: {i.asistente_ausente_nombre}</span>
-              {i.asistente_saliente_nombre ? (
-                <span className="panel-mini">{t.continuidad.col_saliente}: {i.asistente_saliente_nombre}</span>
-              ) : (
-                <div className="panel-guardia-alerta">{t.continuidad.badge_sin_relevo_previo}</div>
-              )}
-              <span className="panel-mini">{t.continuidad.col_nivel}: {i.nivel_actual}</span>
-              {i.nivel_config ? (
-                <>
-                  <span className="panel-mini">{t.continuidad.orden_prioridad}: {(i.nivel_config.orden_prioridad || []).map((r) => t.configuracion[`escalada_rol_${r}`]).join(' → ') || '—'}</span>
-                  <span className="panel-mini">{t.continuidad.mensaje_sugerido}:</span>
-                  <p className="seguimiento-texto">{i.nivel_config.plantilla_mensaje}</p>
-                </>
-              ) : (
-                <div className="panel-guardia-alerta">{t.continuidad.sin_configuracion_nivel}</div>
-              )}
+              <b>{i.paciente_nombre}</b>
+              <span className="panel-mini">
+                {con(t.continuidad.no_llego, {
+                  asistente: i.asistente_ausente_nombre,
+                  dia: diaCorto(i.guardia?.fecha, locale),
+                  desde: hhmm(i.guardia?.hora_inicio),
+                  hasta: hhmm(i.guardia?.hora_fin),
+                })}
+              </span>
+              <span className="panel-mini">{haceCuanto(i.iniciado_at, t)}</span>
             </div>
             <div className="seguimiento-acciones">
-              {i.hay_nivel_siguiente && (
-                <Button variant="secondary" onClick={() => avanzarNivel(i)} disabled={actualizandoId === i.id}>
-                  {t.continuidad.avanzar_nivel}
-                </Button>
-              )}
-              {!tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.INCIDENTE_RELEVO, i.id) && (
+              {i.guardia && puedeResolver(i, usuario, serviciosQueCoordino, tomas) && (
                 <Button onClick={() => setIncidenteResolviendo(i)} disabled={actualizandoId === i.id}>
                   {t.continuidad.resolver}
                 </Button>
               )}
               {/* Resolver dice que el problema terminó; tomarlo dice que alguien está en eso
-                  ahora. Mientras tanto el incidente no insiste y tampoco escala solo. */}
+                  ahora, y de paso le da a quien lo tomó la mano para resolverlo. */}
               <LaTomoYo tipo={TIPOS_DE_ALARMA.INCIDENTE_RELEVO} referenciaId={i.id} {...tomas} />
-              {/* Lo que puede haber pasado en esa casa mientras tanto. No cierra el incidente:
-                  se registra el hecho y el incidente sigue abierto hasta que alguien diga cómo
-                  terminó. */}
-              {i.guardia_entrante_id && (
-                <LoQuePasoEnLaCasa
-                  guardiaId={i.guardia_entrante_id}
-                  pacientes={i.pacientes}
-                  origen={ORIGENES.RELEVO}
-                  incidenteId={i.id}
-                  alRegistrar={recargar}
-                />
-              )}
             </div>
           </div>
         ))}
@@ -499,7 +489,6 @@ export function Continuidad() {
         <ResolverIncidente
           incidente={incidenteResolviendo}
           asistentes={asistentesDisponibles}
-          usuario={usuario}
           onClose={() => setIncidenteResolviendo(null)}
           onResuelto={() => { setIncidenteResolviendo(null); recargar(); }}
         />
@@ -508,139 +497,155 @@ export function Continuidad() {
   );
 }
 
-function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto }) {
+/* RESOLVER UN INCIDENTE: TRES FORMAS DE TERMINAR, EN UNA SOLA VENTANA
+   Mandar a un Asistente, dejar escrito que se quedó cuidando un familiar, o que el Cliente aceptó
+   que el Paciente quede solo. El tipo de reemplazo no se elige: la base lo deduce de a quién se
+   mandó, y anota sola quién resolvió y cuándo.
+   La lista es la misma del turno vacante en Guardias —el Padrón, sin quien ya se fue—, y la
+   reasignación es la misma función: `lib/reasignarGuardia.js`. A quien ya está en otro turno a esa
+   hora lo rechaza la base. */
+function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
-  const prestadoraId = usePrestadoraActual();
-  const confirmarDestructivo = useConfirmarDestructivo();
-  const [tipo, setTipo] = useState('suplente');
+  const { usuario } = useAuth();
+  const { puede } = usePermisos();
+  const puedeAsignarIgual = esAdminOSuperior(usuario?.rol) || puede('asignar_con_documentos_pendientes');
+  const [forma, setForma] = useState(null);
   const [asistenteId, setAsistenteId] = useState('');
-  const [familiarPersonaId, setFamiliarPersonaId] = useState(null);
   const [motivo, setMotivo] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const [documentosPendientes, setDocumentosPendientes] = useState(null);
+  const [asignandoIgual, setAsignandoIgual] = useState(false);
 
-  const esFamiliar = tipo === 'familiar';
-
-  /* Quién puede cubrir el hueco que dejó la ausencia: solo quien sigue en el Padrón. Resolver
-     un incidente de continuidad es mandar a alguien a una casa, o sea repartir trabajo nuevo, y
-     ahí quien ya se fue de la Prestadora no es un candidato peor puesto: no es un candidato.
-     Se pregunta con `estaEnElPadron`, la misma función que usa el panel de cobertura, y no con
-     una condición escrita de nuevo acá (regla 12 de CLAUDE.md §7). */
+  const guardia = incidente.guardia;
   const asistentesAsignables = useMemo(
-    () => (asistentes ?? []).filter(estaEnElPadron),
-    [asistentes]
+    () => (asistentes ?? []).filter((a) => estaEnElPadron(a) && a.id !== guardia?.asistente_id),
+    [asistentes, guardia?.asistente_id]
   );
 
-  async function handleResolver() {
-    if (!(await confirmarDestructivo(t.continuidad.confirmar_resolver))) return;
+  const reasignar = (motivoExcepcion = null) =>
+    reasignarGuardia(guardia, asistenteId, guardia.fecha, t, motivo.trim(), motivoExcepcion);
+
+  async function mandarAsistente() {
     setGuardando(true);
     setError(null);
-    try {
-      const ahora = new Date().toISOString();
-
-      if (esFamiliar) {
-        // Queda escrito colgando del turno, no del incidente: el mismo hecho llega por tres
-        // caminos y sólo éste abre un incidente de relevo. El incidente se guarda igual, porque
-        // dice de dónde salió. Y quien firma registra el hecho: no autorizó nada, porque a un
-        // familiar no se le pide que se quede.
-        const { error: errorExcepcion } = await supabase.from(TABLA_EXCEPCIONES).insert({
-          prestadora_id: prestadoraId,
-          guardia_id: incidente.guardia_entrante_id,
-          origen: ORIGENES.RELEVO,
-          incidente_id: incidente.id,
-          familiar_persona_id: familiarPersonaId,
-          registrado_por: usuario.id,
-          motivo: motivo.trim() || null,
-          desde_at: ahora,
-        });
-        if (errorExcepcion) throw errorExcepcion;
-      }
-
-      // Si lo cubre un Asistente, la guardia entrante —ausente: ya empezó y nadie la está
-      // haciendo— cambia de Asistente. Es la única emergencia en que una guardia empezada lo
-      // hace, y la base sólo la deja pasar por esta función, que pide el motivo y deja registro.
-      // Va antes de cerrar el incidente: si la base la rechaza, el incidente sigue abierto.
-      if (!esFamiliar && incidente.guardia_entrante_id) {
-        const { error: errorGuardia } = await supabase.rpc('reasignar_guardia_por_emergencia', {
-          p_guardia_id: incidente.guardia_entrante_id,
-          p_asistente_id: asistenteId,
-          p_motivo: motivo.trim(),
-        });
-        if (errorGuardia) throw errorGuardia;
-      }
-
-      const { error: errorIncidente } = await supabase
-        .from('incidentes_relevo')
-        .update({
-          resuelto_at: ahora,
-          resuelto_por_tipo: tipo,
-          resuelto_por_id: esFamiliar ? null : asistenteId,
-        })
-        .eq('id', incidente.id);
-      if (errorIncidente) throw errorIncidente;
-
-      onResuelto();
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setGuardando(false);
+    setDocumentosPendientes(null);
+    const resultado = await reasignar();
+    setGuardando(false);
+    if (resultado.error) {
+      setError(resultado.error);
+      setDocumentosPendientes(resultado.documentosPendientes);
+      return;
     }
+    onResuelto();
   }
 
-  // El familiar no tiene que justificar nada. Cambiarle el Asistente a una guardia empezada sí:
-  // la base no lo hace sin motivo.
-  const puedeGuardar = esFamiliar
-    ? Boolean(familiarPersonaId)
-    : Boolean(asistenteId) && (!incidente.guardia_entrante_id || Boolean(motivo.trim()));
+  // Cerrar el incidente con lo que se acaba de anotar en la casa. Sin Asistente: la base exige
+  // que estas dos formas no nombren a nadie.
+  const cerrarComo = (tipo) => async () => {
+    const { error: errorIncidente } = await supabase
+      .from('incidentes_relevo')
+      .update({ resuelto_at: new Date().toISOString(), resuelto_por_tipo: tipo, resuelto_por_id: null })
+      .eq('id', incidente.id);
+    if (errorIncidente) throw errorIncidente;
+  };
+
+  if (forma === 'familiar') {
+    return (
+      <RegistrarFamiliarQueSeQuedo
+        guardiaId={guardia.id}
+        origen={ORIGENES.RELEVO}
+        incidenteId={incidente.id}
+        onClose={onClose}
+        onGuardado={onResuelto}
+        alGuardar={cerrarComo('familiar')}
+      />
+    );
+  }
+
+  if (forma === 'solo') {
+    return (
+      <RegistrarConsentimiento
+        guardiaId={guardia.id}
+        pacientes={incidente.pacientes.filter((p) => p?.id)}
+        onClose={onClose}
+        onGuardado={onResuelto}
+        alGuardar={cerrarComo('paciente_solo')}
+      />
+    );
+  }
+
+  if (asignandoIgual && documentosPendientes) {
+    return (
+      <AsignarConDocumentosModal
+        documentos={documentosPendientes}
+        reintentar={reasignar}
+        onClose={() => setAsignandoIgual(false)}
+        onAsignado={onResuelto}
+      />
+    );
+  }
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.continuidad.resolver}</h2>
-        {error && <Alert variant="error">{error}</Alert>}
+        <p className="panel-mini">{incidente.paciente_nombre}</p>
 
-        <FormField label={t.continuidad.resolver_tipo} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-          {TIPOS_RESOLUCION.map((opcion) => (
-            <option key={opcion} value={opcion}>{t.configuracion[`escalada_rol_${opcion}`]}</option>
+        <FormField
+          label={t.continuidad.resolver_asistente}
+          name="asistente_id"
+          type="select"
+          required
+          value={asistenteId}
+          onChange={(e) => setAsistenteId(e.target.value)}
+        >
+          <option value="">{t.guardias.nueva_guardia.elegir}</option>
+          {asistentesAsignables.map((a) => (
+            <option key={a.id} value={a.id}>{a.nombre}</option>
           ))}
         </FormField>
+        <FormField
+          label={t.comun.motivo}
+          name="motivo"
+          type="textarea"
+          required
+          maxLength={500}
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+        />
 
-        {esFamiliar ? (
-          <>
-            {/* Se dice en la cara de quien lo está cargando, antes de que lo cargue: esto no es
-                una forma de cubrir el turno. El Cliente contrató para no tener que quedarse. */}
-            <Alert variant="error">{t.continuidad.resolver_familiar_es_defecto_grave}</Alert>
-            {/* Del Directorio de Personas, y Persona física: quien se quedó cuidando es alguien con
-                quien la Prestadora se vuelve a cruzar, y tecleado sería cada vez alguien distinto. */}
-            <SelectorDePersona
-              name="familiar_persona_id"
-              label={t.continuidad.resolver_familiar_legajo}
-              valor={familiarPersonaId}
-              alElegir={setFamiliarPersonaId}
-              clase="fisica"
-            />
-            <FormField label={t.continuidad.resolver_familiar_motivo} name="motivo" type="textarea" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-          </>
-        ) : (
-          <>
-            <FormField label={t.continuidad.resolver_asistente} name="asistente_id" type="select" value={asistenteId} onChange={(e) => setAsistenteId(e.target.value)} required>
-              <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
-              {asistentesAsignables.map((a) => (
-                <option key={a.id} value={a.id}>{a.nombre}</option>
-              ))}
-            </FormField>
-            {incidente.guardia_entrante_id && (
-              <FormField label={t.comun.motivo} name="motivo" type="textarea" required maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        {error && (
+          <Alert variant="error">
+            {error}
+            {documentosPendientes && puedeAsignarIgual && (
+              <>
+                {' '}
+                <Button variant="secondary" onClick={() => setAsignandoIgual(true)}>
+                  {t.documentos_asistente.asignar_igual}
+                </Button>
+              </>
             )}
-          </>
+          </Alert>
         )}
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
-          <Button onClick={handleResolver} disabled={guardando || !puedeGuardar}>
-            {guardando ? t.comun.guardando : t.comun.guardar}
+          <Button onClick={mandarAsistente} disabled={guardando || !asistenteId || !motivo.trim()}>
+            {guardando ? t.comun.guardando : t.continuidad.resolver_mandar}
           </Button>
+        </div>
+
+        <div className="seguimiento-otras-formas">
+          <Button variant="secondary" onClick={() => setForma('familiar')} disabled={guardando}>
+            {t.continuidad.familiar_se_quedo_boton}
+          </Button>
+          {incidente.pacientes.some((p) => p?.id) && (
+            <Button variant="secondary" onClick={() => setForma('solo')} disabled={guardando}>
+              {t.continuidad.paciente_solo_boton}
+            </Button>
+          )}
         </div>
       </div>
     </div>

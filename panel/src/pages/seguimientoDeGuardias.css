@@ -39,6 +39,15 @@
   font-size: 13px;
 }
 
+.seguimiento-otras-formas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borde-card);
+}
+
 .seguimiento-celda-acciones {
   display: flex;
   flex-wrap: wrap;

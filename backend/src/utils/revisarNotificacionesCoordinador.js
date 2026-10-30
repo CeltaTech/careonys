@@ -285,6 +285,12 @@ function finDeLaGuardia(guardia) {
   return new Date(inicio.getTime() + horasEntre(guardia.hora_inicio, guardia.hora_fin, guardia.dias_hasta_el_fin) * MS_POR_HORA);
 }
 
+// Si el turno de un incidente ya terminó. Sin fin conocido —una guardia que no se pudo leer— se
+// contesta que no: mejor seguir avisando que cerrar un incidente a ciegas.
+export function elTurnoYaTermino(guardia, ahora) {
+  return !!guardia?.fin && ahora >= guardia.fin;
+}
+
 // Lo que los dos mensajes de guardia sin cerrar —el de rutina y el que escala— necesitan saber
 // para dejar al Coordinador en condiciones de actuar sin entrar al Panel a averiguar nada: a
 // quién se atendía, a qué hora terminaba, cuánto hace que venció el plazo y —lo que decide qué
@@ -319,7 +325,7 @@ async function datosDeLasGuardias(prestadoraId, guardiaIds) {
 
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, fecha, hora_inicio, hora_fin, paciente_id')
+    .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, paciente_id')
     .eq('prestadora_id', prestadoraId)
     .in('id', ids);
   if (error) {
@@ -340,6 +346,7 @@ async function datosDeLasGuardias(prestadoraId, guardiaIds) {
       horaInicio: guardia.hora_inicio,
       horaFin: guardia.hora_fin,
       pacientes: (pacientesPorGuardia.get(guardia.id) ?? []).map((p) => p.nombre),
+      fin: finDeLaGuardia(guardia),
     });
   }
   return mapa;
@@ -560,8 +567,23 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
   const guardias = await datosDeLasGuardias(prestadoraId, (incidentes ?? []).map((i) => i.guardia_entrante_id));
 
   await unaPorUna(incidentes ?? [], 'incidente de relevo', async (incidente) => {
-    if (tomadas.has(incidente.id)) return;
     const guardia = guardias.get(incidente.guardia_entrante_id) ?? GUARDIA_QUE_NO_SE_PUDO_LEER;
+
+    // Terminado el turno, ya no hay a quién mandar: el incidente se cierra solo como que no fue
+    // nadie, y deja de avisar. Va antes de mirar si alguien lo tomó, porque tomarlo no cambia que
+    // el turno ya pasó.
+    if (elTurnoYaTermino(guardia, ahora)) {
+      const { error: errorCierre } = await supabase
+        .from('incidentes_relevo')
+        .update({ resuelto_at: ahora.toISOString(), resuelto_por_tipo: 'nadie', resuelto_por_id: null })
+        .eq('prestadora_id', prestadoraId)
+        .eq('id', incidente.id)
+        .is('resuelto_at', null);
+      if (errorCierre) throw errorCierre;
+      return;
+    }
+
+    if (tomadas.has(incidente.id)) return;
     const minutosPremura = (ahora.getTime() - new Date(incidente.iniciado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 

@@ -101,11 +101,15 @@ function ahoraParaElCampo(desplazamientoEnHoras = 0) {
     + `T${conCero(momento.getHours())}:${conCero(momento.getMinutes())}`;
 }
 
-function RegistrarConsentimiento({ guardiaId, pacientes, onClose, onGuardado }) {
+/* `alGuardar`, cuando viene, corre después de anotar el hecho y antes de cerrar la ventana: es lo
+   que usa el incidente de relevo para darse por resuelto con lo que se acaba de anotar. Si falla,
+   el hecho ya quedó escrito, así que reintentar no lo vuelve a anotar: sólo repite ese paso. */
+export function RegistrarConsentimiento({ guardiaId, pacientes, onClose, onGuardado, alGuardar }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
+  const [anotado, setAnotado] = useState(false);
   const [pacienteId, setPacienteId] = useState(pacientes[0].id);
   const [quien, setQuien] = useState('');
   const [medio, setMedio] = useState(MEDIOS_POSIBLES[0]);
@@ -128,18 +132,22 @@ function RegistrarConsentimiento({ guardiaId, pacientes, onClose, onGuardado }) 
     setGuardando(true);
     setError(null);
     try {
-      const { error: errorInsert } = await supabase.from(TABLA_CONSENTIMIENTOS).insert({
-        prestadora_id: prestadoraId,
-        guardia_id: guardiaId,
-        paciente_id: pacienteId,
-        quien_consintio: quien.trim(),
-        medio,
-        desde_at: new Date(desde).toISOString(),
-        hasta_at: new Date(hasta).toISOString(),
-        registrado_por: usuario?.id ?? null,
-        nota: nota.trim() || null,
-      });
-      if (errorInsert) throw errorInsert;
+      if (!anotado) {
+        const { error: errorInsert } = await supabase.from(TABLA_CONSENTIMIENTOS).insert({
+          prestadora_id: prestadoraId,
+          guardia_id: guardiaId,
+          paciente_id: pacienteId,
+          quien_consintio: quien.trim(),
+          medio,
+          desde_at: new Date(desde).toISOString(),
+          hasta_at: new Date(hasta).toISOString(),
+          registrado_por: usuario?.id ?? null,
+          nota: nota.trim() || null,
+        });
+        if (errorInsert) throw errorInsert;
+        setAnotado(true);
+      }
+      if (alGuardar) await alGuardar();
       onGuardado();
     } catch (e) {
       setError(mensajeDeError(e, t));
@@ -232,11 +240,12 @@ function RegistrarConsentimiento({ guardiaId, pacientes, onClose, onGuardado }) 
   );
 }
 
-function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, onClose, onGuardado }) {
+export function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, onClose, onGuardado, alGuardar }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
+  const [anotado, setAnotado] = useState(false);
   const [familiarPersonaId, setFamiliarPersonaId] = useState(null);
   const [desde, setDesde] = useState(() => ahoraParaElCampo());
   const [motivo, setMotivo] = useState('');
@@ -254,19 +263,23 @@ function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, onClose, 
     setGuardando(true);
     setError(null);
     try {
-      const { error: errorInsert } = await supabase.from(TABLA_FAMILIAR).insert({
-        prestadora_id: prestadoraId,
-        guardia_id: guardiaId,
-        origen,
-        incidente_id: incidenteId ?? null,
-        familiar_persona_id: familiarPersonaId,
-        // Quien firma deja escrito el hecho. No autorizó nada: a un familiar no se le pide que
-        // se quede, y una columna que dijera lo contrario mentiría sobre lo que pasó.
-        registrado_por: usuario?.id ?? null,
-        motivo: motivo.trim() || null,
-        desde_at: new Date(desde).toISOString(),
-      });
-      if (errorInsert) throw errorInsert;
+      if (!anotado) {
+        const { error: errorInsert } = await supabase.from(TABLA_FAMILIAR).insert({
+          prestadora_id: prestadoraId,
+          guardia_id: guardiaId,
+          origen,
+          incidente_id: incidenteId ?? null,
+          familiar_persona_id: familiarPersonaId,
+          // Quien firma deja escrito el hecho. No autorizó nada: a un familiar no se le pide que
+          // se quede, y una columna que dijera lo contrario mentiría sobre lo que pasó.
+          registrado_por: usuario?.id ?? null,
+          motivo: motivo.trim() || null,
+          desde_at: new Date(desde).toISOString(),
+        });
+        if (errorInsert) throw errorInsert;
+        setAnotado(true);
+      }
+      if (alGuardar) await alGuardar();
       onGuardado();
     } catch (e) {
       setError(mensajeDeError(e, t));

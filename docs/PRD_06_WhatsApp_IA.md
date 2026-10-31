@@ -118,7 +118,7 @@ el Cliente firma una instrucción.
 El aviso previo de una ausencia y el incidente que abre la detección automática de ausencia le
 llegan al Coordinador por `notificarCoordinador` (`backend/src/utils/whatsapp.js`): WhatsApp,
 mensaje de texto o correo, en ese orden, según lo que la Prestadora encendió. Si no responde a
-la primera notificación, recibe una insistencia, con estas condiciones del Desarrollador:
+la primera notificación, recibe una insistencia, con estas condiciones:
 
 - **El intervalo de reintento es configurable por prestadora** — nunca un número fijo en el
   código (regla «Nunca hardcodear», `celtatech/CLAUDE.md`), consistente con el resto de `configuracion_escalada_relevo`.

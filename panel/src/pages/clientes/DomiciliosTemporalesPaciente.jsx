@@ -17,7 +17,7 @@ import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio'
 import { DOMICILIO_VACIO, palabrasDelDomicilio, partesDesdeFila, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
 import { domicilioEscrito } from '../../lib/domicilioEscrito';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
-import { coordenadasDeDomicilio } from '../../lib/coordenadasDeDomicilio';
+import { coordenadasDeDomicilio, coordenadasSiCambio } from '../../lib/coordenadasDeDomicilio';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
@@ -162,15 +162,8 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     setGuardando(true);
     setErrorForm(null);
 
-    // Las coordenadas se piden de nuevo sólo si cambió la dirección: preguntar por lo mismo gasta
-    // el servicio de un tercero para recibir la misma respuesta.
     const partes = partesParaGuardar(domicilio);
-    const mismaDireccion =
-      editando &&
-      ['calle', 'numero', 'lugar_id'].every((parte) => (editando[parte] ?? null) === partes[parte]);
-    const ubicacion = mismaDireccion
-      ? { lat: editando.lat, lng: editando.lng }
-      : await coordenadasDeDomicilio(partes);
+    const ubicacion = await coordenadasSiCambio(editando, partes);
 
     const datos = {
       domicilio: renglonDelDomicilio(domicilio, catalogoDeLugares.lugares),

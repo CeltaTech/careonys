@@ -30,6 +30,7 @@ import { DocumentosDelAsistente } from './DocumentosDelAsistente';
 import { ElegirLugares } from '../../components/lugares/ElegirLugares';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { partesDesdeFila, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
+import { coordenadasSiCambio } from '../../lib/coordenadasDeDomicilio';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
 import { mensajeDeError } from '../../lib/errores';
@@ -301,6 +302,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     }
     setGuardando(true);
     setError(null);
+    const partes = partesParaGuardar(form.domicilio);
     const payload = {
       nombre: form.nombre.trim(),
       genero: form.genero,
@@ -313,17 +315,14 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
       tipo_asistente_id: form.tipo_asistente_id || null,
       estado: form.estado,
       ...(esAdmin && {
-        /* Dónde vive, escrito para que lo lea una persona. Las coordenadas (`lat`/`lng`) no se
-           cargan a mano acá: se sacan de esta dirección con el servicio del país de la
-           Prestadora, que vive en el backend (`backend/src/geocodificacion/`) y hoy corre solo en
-           las altas. Esta pantalla escribe derecho contra la base, sin pasar por el backend, así
-           que un domicilio corregido desde acá deja las coordenadas como estaban — mientras
-           esta pantalla no guarde a través del backend, eso no cambia.
+        /* Dónde vive, escrito para que lo lea una persona, y su punto en el mapa, que calcula el
+           backend sólo si la dirección cambió.
            Viaja solo cuando la pantalla lo tenía para mostrar: la vista que lee el Coordinador
            (`asistentes_coordinador`) no trae esta columna, así que mandarlo igual borraría un
            domicilio ya cargado que esa pantalla nunca llegó a mostrar. */
         domicilio: renglonDelDomicilio(form.domicilio, catalogoDeLugares.lugares) || null,
-        ...partesParaGuardar(form.domicilio),
+        ...partes,
+        ...(await coordenadasSiCambio(asistente, partes)),
         horas_semanales: form.horas_semanales || null,
         // La columna se llama `canales` de antes y no se renombra (regla 13). La palabra del
         // producto, acá y en toda la pantalla, es modalidad de trabajo.

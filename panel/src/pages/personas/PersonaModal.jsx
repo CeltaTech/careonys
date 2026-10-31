@@ -9,6 +9,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePaises } from '../../hooks/usePaises';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { DOMICILIO_VACIO, partesDesdeFila, partesParaGuardar } from '../../lib/partesDeDomicilio';
+import { coordenadasSiCambio } from '../../lib/coordenadasDeDomicilio';
 import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
 import { useGeneros } from '../../hooks/useGeneros';
 import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
@@ -181,6 +182,7 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
         notas: notas.trim() || null,
         apoderado_persona_id: esJuridica ? apoderado || null : null,
         ...partes,
+        ...(await coordenadasSiCambio(persona, partes)),
       };
 
       // Se escribe derecho contra la base: quién puede cargar y corregir lo decide la política.

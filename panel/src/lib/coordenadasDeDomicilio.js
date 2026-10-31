@@ -23,3 +23,17 @@ export async function coordenadasDeDomicilio(partes) {
     return SIN_COORDENADAS;
   }
 }
+
+/**
+ * Las coordenadas para guardar junto con una corrección del domicilio. Si la dirección no cambió
+ * devuelve un objeto vacío y la fila conserva las que tenía: preguntar por lo mismo gasta el
+ * servicio de un tercero para recibir la misma respuesta. Si cambió, las de la dirección nueva;
+ * quedarse con las viejas dejaría a la persona ubicada en la casa anterior.
+ *
+ * @param {object|null} fila    La fila tal como estaba guardada; nula en un alta.
+ * @param {object}      partes  Las partes a guardar, como las arma `partesParaGuardar`.
+ */
+export async function coordenadasSiCambio(fila, partes) {
+  const igual = fila && ['calle', 'numero', 'lugar_id'].every((parte) => (fila[parte] ?? null) === (partes[parte] ?? null));
+  return igual ? {} : coordenadasDeDomicilio(partes);
+}

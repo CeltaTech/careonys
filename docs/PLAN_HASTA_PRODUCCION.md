@@ -97,12 +97,6 @@ apagar, y por dónde sale el mensaje.
   **Contestado. Se aplica cuando cierre el grupo.** Cada Prestadora enciende o apaga cada una de
   las cuatro. Agregar una alerta nueva es programarla, y queda para todas. Hoy las cuatro están
   siempre encendidas.
-- `docs/PRD_06_WhatsApp_IA.md:19` — **[ya construido]** que el número y la cuenta de WhatsApp sean de cada Prestadora.
-
-Y colgada de ese último, una decisión de seguridad que sólo tiene sentido si el número es de cada
-Prestadora:
-
-- `docs/PRD_06_WhatsApp_IA.md:98` — **[ya construido]** que las credenciales de Meta queden donde ni el rol técnico las lea.
 
 ### 4. La marca, el sitio y dónde viven los archivos
 

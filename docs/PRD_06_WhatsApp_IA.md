@@ -17,21 +17,15 @@ que entran los contesta una regla fija, sin IA (punto B).
 
 1. **Integración directa con Meta Cloud API**, no con un BSP intermediario.
 2. **El número de WhatsApp Business y la cuenta de Meta deben ser de cada
-   Prestadora, nunca de CeltaTech como plataforma central.** Dos motivos,
-   ambos explícitos del Desarrollador (2026-07-11):
-   - Operativo: quien manda y recibe respuestas tiene que ser la propia prestadora, no un
-     número compartido entre Prestadoras.
-   - Legal: cualquier decisión tomada en esa conversación (con un suplente, un franquero, un
-     familiar) es responsabilidad exclusiva de la prestadora — **CeltaTech no debe tener
-     ninguna responsabilidad legal sobre el contenido de esas conversaciones**, consistente
-     con su rol de licenciante de software, no de operador del servicio de cuidado.
-   - Consecuencia técnica directa: credenciales de Meta (WABA ID, phone number ID, token de
-     acceso) son un dato **por-`prestadora_id`**, nunca una credencial compartida a nivel de
-     plataforma — mismo patrón multi-tenant que el resto del sistema, pero con una capa extra
-     de cuidado por tratarse de credenciales de una cuenta externa de terceros con costo real
-     asociado (las reglas de `celtatech/CLAUDE.md`, sección «Seguridad, privacidad y auditoría», aplican con el mismo peso que a datos sensibles).
-   - **Costo del envío de mensajes lo paga la prestadora**, no CeltaTech como
-     plataforma — cada Prestadora factura directo con Meta desde su propia cuenta.
+   Prestadora, nunca de CeltaTech.** Dos motivos:
+   - Operativo: quien manda y recibe los mensajes es la propia Prestadora, no un número
+     compartido entre Prestadoras.
+   - Legal: lo que se decida en esa conversación —con un relevo, con un familiar— es
+     responsabilidad de la Prestadora. **CeltaTech no tiene ninguna responsabilidad sobre el
+     contenido de esas conversaciones**, porque licencia el software y no presta el servicio.
+   - Por eso los datos de la cuenta de Meta de cada Prestadora son sólo suyos y se guardan con
+     el mismo cuidado que una clave: es una cuenta ajena, con costo real.
+   - **Lo que cuesta mandar mensajes lo paga la Prestadora**, directo a Meta desde su cuenta.
 3. **La configuración vive en el Panel, en Configuración → «Mensajes», en la tarjeta
    «Notificaciones»** (patrón evento → canal → destinatarios de `configuracion_notificaciones`)
    — no una sección nueva separada. Cada Prestadora define, por evento, si el aviso sale por
@@ -89,20 +83,14 @@ persona; una emergencia, además, se avisa al servicio de emergencias de esa jur
 duda no contesta y deriva. La pieza que le pedía a la IA proponer respuestas está en el estante,
 en `celtatech/Codigos-utiles/respuestas-de-whatsapp-propuestas-por-ia/`.
 
-### C. Almacenamiento de credenciales de Meta por prestadora
+### C. Dónde se guardan las claves de la cuenta de Meta
 
-Token de acceso, WABA ID y phone number ID de cada prestadora son credenciales de una cuenta
-externa con costo real y capacidad de enviar mensajes en su nombre — de sensibilidad
-comparable a una clave de API de pago.
-
-**Decisión (2026-07-13): Supabase Vault** (el mecanismo de secretos cifrados ya integrado en
-Supabase, en vez de una tabla propia con cifrado manual o un servicio externo nuevo) — un
-secreto de Vault por prestadora. El Panel nunca muestra el valor real una vez guardado (solo
-"configurado ✓" / botón "reemplazar", como un campo de contraseña). Solo el backend puede
-pedir el valor descifrado, y solo en el momento de mandar un mensaje — **ni siquiera
-`superadmin` puede leerlo en texto plano desde el Panel**, mismo criterio que sueldos/
-certificados médicos (`celtatech/CLAUDE.md`, sección «Seguridad, privacidad y auditoría»). Acceso para cargar/reemplazar el secreto
-acotado a `admin_prestadora` de esa prestadora únicamente.
+Con las claves de la cuenta de Meta de una Prestadora se pueden mandar mensajes en su nombre y
+a su costo. Se guardan cifradas en la base, una por Prestadora. Una vez guardadas, el Panel no
+las vuelve a mostrar: sólo dice que están cargadas y deja reemplazarlas. Las lee únicamente el
+backend, en el momento de mandar un mensaje y de a una Prestadora por vez; ninguna persona
+puede leerlas, tampoco el soporte técnico de CeltaTech. Cargarlas o reemplazarlas lo hace la
+administración de esa Prestadora.
 
 ### D. Los mensajes del sistema
 

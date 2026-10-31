@@ -11,7 +11,7 @@ significa cada uno están explicados en la introducción de `docs/CUMPLIMIENTO_N
   con el obligado: el personal técnico del proveedor queda alcanzado. **En obra** — paso 125.
 - **§393 SGB V** — desde el 1 de julio de 2025 exige **dictamen BSI C5 Tipo 2 vigente** y limita el
   lugar de tratamiento a Alemania, el Espacio Económico Europeo o un tercer país adecuado donde el
-  proveedor tenga establecimiento nacional. **En obra** — paso 5. Con los datos en Brasil, Alemania
+  proveedor tenga establecimiento nacional. **Para la siguiente versión** — `docs/LEGAJO_PARA_EL_FUTURO.md`, «Más de una región». Con los datos en Brasil, Alemania
   no se puede vender. Qué es el dictamen C5, ver `docs/CUMPLIMIENTO_NORMATIVO.md`, sección «Los
   marcos de auditoría».
 - **No hay obligación legal de conexión a la infraestructura telemática para cuidados

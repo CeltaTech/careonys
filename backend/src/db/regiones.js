@@ -1,8 +1,8 @@
 /* Las regiones: en qué base vive cada Prestadora.
    =====================================================
 
-   Ninguna parte del backend da por sentado que hay una sola base (docs/PLAN_HASTA_PRODUCCION.md,
-   paso 5). Toda conexión nueva se arma con la región que corresponde, y la eligen las dos
+   Ninguna parte del backend da por sentado que hay una sola base (docs/LEGAJO_PARA_EL_FUTURO.md,
+   «Más de una región»). Toda conexión nueva se arma con la región que corresponde, y la eligen las dos
    funciones de este archivo, que son el único lugar donde se decide:
 
    - `regionDeLaPrestadora`, para lo que ya sabe con qué Prestadora trabaja: el trabajo sin

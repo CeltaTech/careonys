@@ -25,7 +25,7 @@ uno están explicados en la introducción de `docs/CUMPLIMIENTO_NORMATIVO.md`.
 | **15, 16, 17, 20** | Acceso, rectificación, supresión y portabilidad | **En obra** — paso 123 |
 | **17(3)** | El borrado es **por dato**, no por cuenta: «en la medida en que» | **En obra** — paso 122 |
 | **9(4)** | Los plazos de conservación de datos de salud los fija la ley nacional | **En obra** — pasos 122 y 127 |
-| **Capítulo V** | Transferencia internacional. Brasil no tiene decisión de adecuación | **En obra** — paso 5 |
+| **Capítulo V** | Transferencia internacional. Brasil no tiene decisión de adecuación | **Para la siguiente versión** — `docs/LEGAJO_PARA_EL_FUTURO.md`, «Más de una región» |
 
 ## Directiva NIS2 — 2022/2555
 

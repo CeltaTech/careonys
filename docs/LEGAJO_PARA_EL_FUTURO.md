@@ -68,6 +68,39 @@ Lo que hay que resolver antes:
   si una de las Prestaciones termina antes que las otras, ni cómo se corrige o se da de baja.
 - **La pieza que lo hacía está en el estante**, en `Codigos-utiles\paquetes-de-prestaciones\`.
 
+## Más de una región
+
+Que Careonys funcione con bases en más de un lugar del mundo. Queda para la siguiente versión del
+producto: hoy hay una sola, en São Paulo, y ningún cliente la pide. Se abre el día que aparezca el
+primer cliente de un país cuya ley exija tener los datos en otro lado, como Alemania o Francia.
+
+**Una región es el lugar del mundo donde viven los datos de una Prestadora, con todo lo que los
+trata**: la base, los archivos, las copias de respaldo, el Backend y los servicios que reciban esos
+datos. La ley alemana limita el lugar donde se tratan los datos de salud, no sólo donde se guardan,
+así que una región europea lleva su propio Backend. En la práctica son dos instalaciones
+independientes del mismo programa, con el mismo código y sin nada compartido.
+
+Lo que ya está decidido:
+
+- **La región la decide CeltaTech al dar el alta**, según el domicilio de la Prestadora, y se la
+  informa a Careonys. Cada Prestadora vive en una sola.
+- **Careonys no se mete con la gente de la Prestadora** para decidir adónde va: la región es de la
+  Prestadora, y sus Asistentes y sus Clientes viven adentro de ella.
+
+Lo que ya existe en el código: el Backend elige la base en un solo lugar,
+`backend/src/db/regiones.js`, que hoy conoce una sola región.
+
+Lo que hay que resolver antes de construirlo:
+
+- **El costo de mantener dos instalaciones**: cada cambio de la base se aplica en las dos, y hay
+  dos Backends que vigilar.
+- **Los clientes con operación en varios países.** La ley argentina declara adecuada a la Unión
+  Europea, así que datos argentinos pueden vivir en una instalación europea sin instrumento
+  aparte. Al revés no: datos franceses no pueden vivir en São Paulo.
+- **Cómo llega cada persona a la instalación de su Prestadora**, sin que ninguna parte del
+  producto busque a nadie por fuera de su Prestadora.
+- **Si Supabase tiene la certificación que exige Francia.** No se comprobó.
+
 ## Una página por Prestadora
 
 Que cada Prestadora tenga su propia página dentro del dominio del producto, del tipo

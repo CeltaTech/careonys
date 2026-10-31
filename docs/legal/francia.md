@@ -8,7 +8,7 @@ significa cada uno están explicados en la introducción de `docs/CUMPLIMIENTO_N
 ## Alojamiento de datos de salud
 
 - **Art. L.1111-8 del Code de la santé publique** — alojar datos de salud exige alojador certificado
-  HDS. **Art. L.1115-1** — hacerlo sin certificación es delito. **En obra** — paso 5. Es condición
+  HDS. **Art. L.1115-1** — hacerlo sin certificación es delito. **Para la siguiente versión** — `docs/LEGAJO_PARA_EL_FUTURO.md`, «Más de una región». Es condición
   para vender en Francia y hoy no se cumple.
 - **El référentiel HDS no se pudo leer** y por eso no se afirma nada sobre su contenido de
   compartimentación entre clientes.

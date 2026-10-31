@@ -335,9 +335,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                   </span>
                 </div>
                 <div className="panel-grilla panel-columnas-3">
-                  <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_domicilio}</div><b>{domicilioEscrito(dondeHoy, palabrasDelDomicilio(t)) || '—'}</b></div>
-                  <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_coordenadas}</div><b>{dondeHoy.lat ?? '—'}, {dondeHoy.lng ?? '—'}</b></div>
-                  {dondeHoy.es_temporal && (
+                  <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_domicilio}</div><b>{domicilioEscrito(dondeHoy, palabrasDelDomicilio(t)) || '—'}</b></div>                  {dondeHoy.es_temporal && (
                     <>
                       <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_motivo}</div><b>{dondeHoy.motivo || '—'}</b></div>
                       <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_desde}</div><b>{dondeHoy.desde || '—'}</b></div>

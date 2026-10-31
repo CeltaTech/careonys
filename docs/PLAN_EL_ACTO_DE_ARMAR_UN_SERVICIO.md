@@ -201,7 +201,7 @@ aplicaciones.**
 |---|---|---|
 | **Clientes › Servicios** | Lista los Servicios con su Cliente, estado, cuántos Pacientes, cuántas prestaciones y cuántos turnos. Dice en pantalla que es de sólo lectura | **Deja de ser de sólo lectura:** es la pantalla donde el Servicio se arma y se mantiene |
 | **Clientes › Servicios › Detalle del servicio** | Cliente, Pacientes deducidos, tabla de prestaciones y las últimas 20 guardias. Lo único que se carga ahí son las tareas acordadas, con el tipo de Asistente que hace cada una (`tareas_del_servicio`, en `panel/src/pages/servicios/TareasDelServicio.jsx`) | Recibe lo que hoy no tiene: los períodos que cubre, la zona, quién realiza, quién coordina, y la cuenta de lo pactado contra lo cubierto |
-| **Clientes › Clientes › Ficha del cliente › Prestaciones del Paciente** | Es un modal, y hoy es el único lugar donde se pacta, se hospitaliza, se pausa, se reactiva y se cierra el Servicio | Los dos casilleros de texto libre pasan a ser días marcados y horarios. La pausa y la reactivación dejan de ser en bloque |
+| **Clientes › Clientes › Ficha del cliente › Prestaciones del Paciente** | Es un modal, y hoy es el único lugar donde se pacta, se pausa, se reactiva y se cierra el Servicio. La hospitalización vive en el modal de Domicilios temporales | Los dos casilleros de texto libre pasan a ser días marcados y horarios. La pausa y la reactivación dejan de ser en bloque |
 | **Cobertura › Guardias › guardia nueva** | Crea la guardia suelta o la serie | Sigue creando, y además queda alcanzada por la cuenta: al crear o cambiar una serie, la cuenta se rehace |
 | **Cobertura › Guardias** | Grilla, filtros, reasignar y mover | Sin cambios de fondo |
 | **Estado actual** | Siete contadores de excepciones sobre el calendario ya generado | Recibe el hueco pactado y no cubierto como una excepción más |
@@ -498,7 +498,9 @@ así que lo único que puede quedar pendiente son los domicilios temporales.
 
 **La internación no queda pendiente: rige en el momento**, la cargue quien la cargue, porque
 suspende las guardias y esperar una aprobación podría mandar a un Asistente a una casa vacía.
-Decidido por el Desarrollador.
+Decidido por el Desarrollador. Si las guardias continúan en la institución, el domicilio temporal
+que nace de la internación también rige en el momento, y termina el día que se cierra; cambiarle
+después la dirección sí queda pendiente.
 
 ### Paso 8. Los tres criterios de sugerencia que faltan
 

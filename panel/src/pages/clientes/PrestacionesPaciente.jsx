@@ -84,24 +84,14 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [asistentesAviso, setAsistentesAviso] = useState([]);
   const [marcandoAvisoId, setMarcandoAvisoId] = useState(null);
 
-  const [hospitalizacionActiva, setHospitalizacionActiva] = useState(null);
-  const [mostrandoFormHosp, setMostrandoFormHosp] = useState(false);
-  const [institucionHosp, setInstitucionHosp] = useState('');
-  const [motivoHosp, setMotivoHosp] = useState('');
-  const [fechaInicioHosp, setFechaInicioHosp] = useState(() => new Date().toISOString().slice(0, 10));
-  const [guardandoHosp, setGuardandoHosp] = useState(false);
-  const [cerrandoHosp, setCerrandoHosp] = useState(false);
-  const [errorHosp, setErrorHosp] = useState(null);
-
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
 
-    const [listaResp, prestacionesResp, cierresResp, hospResp, serviciosResp] = await Promise.all([
+    const [listaResp, prestacionesResp, cierresResp, serviciosResp] = await Promise.all([
       supabase.from('lista_precios').select('*').eq('activo', true).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
       supabase.from('cierres_servicio_paciente').select('id, servicio_id').eq('paciente_id', paciente.id),
-      supabase.from('hospitalizaciones_paciente').select('*').eq('paciente_id', paciente.id).is('fecha_fin', null).maybeSingle(),
       // Los Servicios vigentes que alcanza esta sesión. La protección por fila ya los acota a la
       // Prestadora; cuáles de ellos sirven para este Paciente lo decide abajo la misma regla que
       // aplica la base, y no una consulta escrita a medida acá.
@@ -113,8 +103,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     ]);
 
     const falla =
-      listaResp.error || prestacionesResp.error || cierresResp.error ||
-      hospResp.error || serviciosResp.error;
+      listaResp.error || prestacionesResp.error || cierresResp.error || serviciosResp.error;
     if (falla) {
       setError(mensajeDeError(falla, t));
       setEstado('error');
@@ -125,7 +114,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setPrestaciones(prestacionesResp.data ?? []);
     setCierres(cierresResp.data ?? []);
     setServiciosDelCliente(serviciosResp.data ?? []);
-    setHospitalizacionActiva(hospResp.data ?? null);
 
     const idsCierre = (cierresResp.data ?? []).map((c) => c.id);
     if (idsCierre.length > 0) {
@@ -414,72 +402,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     recargar();
   }
 
-  async function handleRegistrarHospitalizacion() {
-    setGuardandoHosp(true);
-    setErrorHosp(null);
-
-    const { error: errorInsert } = await supabase
-      .from('hospitalizaciones_paciente')
-      .insert({
-        prestadora_id: prestadoraId,
-        paciente_id: paciente.id,
-        institucion: institucionHosp,
-        motivo: motivoHosp || null,
-        fecha_inicio: fechaInicioHosp,
-        registrado_por: usuario.id,
-      });
-
-    if (errorInsert) {
-      setErrorHosp(mensajeDeError(errorInsert, t));
-      setGuardandoHosp(false);
-      return;
-    }
-
-    await Promise.all([
-      supabase
-        .from('guardias')
-        .update({ estado: 'pausada' })
-        .eq('paciente_id', paciente.id)
-        .eq('estado', 'programada')
-        .gte('fecha', fechaInicioHosp),
-      supabase.from('series_guardias').update({ estado: 'pausada' }).eq('paciente_id', paciente.id).eq('estado', 'activa'),
-    ]);
-
-    setGuardandoHosp(false);
-    setMostrandoFormHosp(false);
-    setInstitucionHosp('');
-    setMotivoHosp('');
-    setFechaInicioHosp(new Date().toISOString().slice(0, 10));
-    recargar();
-  }
-
-  async function handleCerrarHospitalizacion() {
-    if (!(await confirmarDestructivo(t.prestaciones.confirmar_cierre_hospitalizacion))) return;
-
-    setCerrandoHosp(true);
-    setErrorHosp(null);
-
-    const hoy = new Date().toISOString().slice(0, 10);
-    const { error: errorUpdate } = await supabase
-      .from('hospitalizaciones_paciente')
-      .update({ fecha_fin: hoy })
-      .eq('id', hospitalizacionActiva.id);
-
-    if (errorUpdate) {
-      setErrorHosp(mensajeDeError(errorUpdate, t));
-      setCerrandoHosp(false);
-      return;
-    }
-
-    await Promise.all([
-      supabase.from('guardias').update({ estado: 'programada' }).eq('paciente_id', paciente.id).eq('estado', 'pausada'),
-      supabase.from('series_guardias').update({ estado: 'activa' }).eq('paciente_id', paciente.id).eq('estado', 'pausada'),
-    ]);
-
-    setCerrandoHosp(false);
-    recargar();
-  }
-
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
@@ -671,74 +593,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     {guardando ? t.comun.guardando : t.comun.guardar}
                   </Button>
                 </div>
-              </section>
-            )}
-
-            {['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
-              <section className="panel-tarjeta">
-                <div className="panel-tarjeta-titulo">
-                  <h2>{t.prestaciones.hospitalizacion_titulo}</h2>
-                  {hospitalizacionActiva ? (
-                    <Button variant="secondary" onClick={handleCerrarHospitalizacion} disabled={cerrandoHosp}>
-                      {cerrandoHosp ? t.prestaciones.hospitalizacion_cerrando : t.prestaciones.hospitalizacion_cerrar}
-                    </Button>
-                  ) : (
-                    !mostrandoFormHosp && (
-                      <Button variant="secondary" onClick={() => setMostrandoFormHosp(true)}>
-                        {t.prestaciones.hospitalizacion_registrar}
-                      </Button>
-                    )
-                  )}
-                </div>
-                {errorHosp && <Alert variant="error">{errorHosp}</Alert>}
-
-                {hospitalizacionActiva ? (
-                  <div className="panel-fila-alerta">
-                    <div className="panel-mini">
-                      {t.prestaciones.hospitalizacion_activa_desde
-                        .replace('{institucion}', hospitalizacionActiva.institucion)
-                        .replace('{fecha}', hospitalizacionActiva.fecha_inicio)}
-                    </div>
-                  </div>
-                ) : (
-                  mostrandoFormHosp && (
-                    <>
-                      <div className="molde-formgrid">
-                        <FormField
-                          label={t.prestaciones.hospitalizacion_institucion}
-                          name="institucion_hosp"
-                          value={institucionHosp}
-                          onChange={(e) => setInstitucionHosp(e.target.value)}
-                          required
-                        />
-                        <FormField
-                          label={t.prestaciones.hospitalizacion_fecha_inicio}
-                          name="fecha_inicio_hosp"
-                          type="date"
-                          value={fechaInicioHosp}
-                          onChange={(e) => setFechaInicioHosp(e.target.value)}
-                          required
-                        />
-                        <div className="molde-ancho">
-                          <FormField
-                            label={t.prestaciones.hospitalizacion_motivo}
-                            name="motivo_hosp"
-                            value={motivoHosp}
-                            onChange={(e) => setMotivoHosp(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <div className="molde-acciones">
-                        <Button variant="secondary" onClick={() => setMostrandoFormHosp(false)} disabled={guardandoHosp}>
-                          {t.comun.cancelar}
-                        </Button>
-                        <Button onClick={handleRegistrarHospitalizacion} disabled={guardandoHosp || !institucionHosp || !fechaInicioHosp}>
-                          {guardandoHosp ? t.prestaciones.hospitalizacion_registrando : t.prestaciones.hospitalizacion_registrar}
-                        </Button>
-                      </div>
-                    </>
-                  )
-                )}
               </section>
             )}
 

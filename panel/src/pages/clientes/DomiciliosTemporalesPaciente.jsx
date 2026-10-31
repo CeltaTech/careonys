@@ -1,6 +1,9 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
+import { con } from '../../lib/textos';
 import { hoyISO } from '../../lib/horarios';
 import { conMotivoDeDomicilioTemporal } from '../../lib/domiciliosTemporales';
 import { TONO, claseBadgeTono } from '../../lib/tonos';
@@ -31,6 +34,8 @@ import '../hojaDeTarjetas.css';
 export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
+  const { usuario } = useAuth();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const catalogoDeLugares = useCatalogoDeLugares();
 
   const [periodos, setPeriodos] = useState([]);
@@ -55,6 +60,22 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const [filaEnCurso, setFilaEnCurso] = useState(null);
   const [errorFila, setErrorFila] = useState(null);
 
+  // La internación vive acá porque decide dónde se atiende al Paciente: o las guardias se pausan,
+  // o continúan en la institución, que pasa a ser su domicilio temporal mientras dure.
+  const puedeInternar = ['admin_prestadora', 'coordinador'].includes(usuario?.rol);
+  const [hospitalizacionActiva, setHospitalizacionActiva] = useState(null);
+  const [mostrandoFormHosp, setMostrandoFormHosp] = useState(false);
+  const [institucionHosp, setInstitucionHosp] = useState('');
+  const [motivoHosp, setMotivoHosp] = useState('');
+  const [fechaInicioHosp, setFechaInicioHosp] = useState(hoyISO);
+  const [continuanHosp, setContinuanHosp] = useState(false);
+  const [domicilioHosp, setDomicilioHosp] = useState(DOMICILIO_VACIO);
+  const [latHosp, setLatHosp] = useState('');
+  const [lngHosp, setLngHosp] = useState('');
+  const [guardandoHosp, setGuardandoHosp] = useState(false);
+  const [cerrandoHosp, setCerrandoHosp] = useState(false);
+  const [errorHosp, setErrorHosp] = useState(null);
+
   // Ningún error de la base llega crudo a la pantalla: primero se lo reconoce (¿un período
   // pisado?, ¿las fechas al revés?) y después se busca la frase en las traducciones.
   const explicar = useCallback(
@@ -67,23 +88,31 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     setError(null);
     setErrorFila(null);
 
-    const [listaResp, hoyResp] = await Promise.all([
+    const [listaResp, hoyResp, hospResp] = await Promise.all([
       supabase
         .from('domicilios_temporales_paciente')
         .select('*')
         .eq('paciente_id', paciente.id)
         .order('fecha_inicio', { ascending: false }),
       supabase.rpc('domicilio_del_paciente_en', { p_paciente_id: paciente.id, p_fecha: hoyISO() }),
+      supabase
+        .from('hospitalizaciones_paciente')
+        .select('id, institucion, fecha_inicio')
+        .eq('paciente_id', paciente.id)
+        .is('fecha_fin', null)
+        .maybeSingle(),
     ]);
 
-    if (listaResp.error || hoyResp.error) {
-      setError(explicar(listaResp.error || hoyResp.error));
+    const falla = listaResp.error || hoyResp.error || hospResp.error;
+    if (falla) {
+      setError(explicar(falla));
       setEstado('error');
       return;
     }
 
     setPeriodos(listaResp.data ?? []);
     setDondeHoy(hoyResp.data?.[0] ?? null);
+    setHospitalizacionActiva(hospResp.data ?? null);
     setEstado(listaResp.data?.length ? 'listo' : 'vacio');
   }, [paciente.id, explicar]);
 
@@ -189,6 +218,80 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     recargar();
   }
 
+  function limpiarFormHosp() {
+    setInstitucionHosp('');
+    setMotivoHosp('');
+    setFechaInicioHosp(hoyISO());
+    setContinuanHosp(false);
+    setDomicilioHosp(DOMICILIO_VACIO);
+    setLatHosp('');
+    setLngHosp('');
+    setErrorHosp(null);
+  }
+
+  // Una sola operación en la base: la internación, y con ella o la pausa de las guardias o el
+  // domicilio temporal en la institución. Se guarda todo junto o no se guarda nada.
+  async function handleRegistrarHospitalizacion() {
+    const renglon = continuanHosp ? renglonDelDomicilio(domicilioHosp, catalogoDeLugares.lugares) : null;
+    if (!institucionHosp.trim() || !fechaInicioHosp || (continuanHosp && (!renglon || latHosp === '' || lngHosp === ''))) {
+      setErrorHosp(t.domicilios_temporales.hospitalizacion_incompleta);
+      return;
+    }
+
+    setGuardandoHosp(true);
+    setErrorHosp(null);
+
+    const { error: errorRegistro } = await supabase.rpc('registrar_hospitalizacion', {
+      p_paciente: paciente.id,
+      p_institucion: institucionHosp.trim(),
+      p_motivo: motivoHosp.trim() || null,
+      p_fecha_inicio: fechaInicioHosp,
+      p_domicilio: continuanHosp
+        ? {
+            domicilio: renglon,
+            ...partesParaGuardar(domicilioHosp),
+            lat: Number(latHosp),
+            lng: Number(lngHosp),
+            motivo: con(t.domicilios_temporales.hospitalizacion_motivo_domicilio, { institucion: institucionHosp.trim() }),
+          }
+        : null,
+    });
+
+    setGuardandoHosp(false);
+    if (errorRegistro) {
+      setErrorHosp(explicar(errorRegistro));
+      return;
+    }
+
+    setMostrandoFormHosp(false);
+    limpiarFormHosp();
+    recargar();
+  }
+
+  async function handleCerrarHospitalizacion() {
+    const continuaban = periodos.some((p) => p.hospitalizacion_id === hospitalizacionActiva.id);
+    const pregunta = continuaban
+      ? t.domicilios_temporales.confirmar_cierre_hospitalizacion_en_institucion
+      : t.domicilios_temporales.confirmar_cierre_hospitalizacion;
+    if (!(await confirmarDestructivo(pregunta))) return;
+
+    setCerrandoHosp(true);
+    setErrorHosp(null);
+
+    const { error: errorCierre } = await supabase.rpc('cerrar_hospitalizacion', {
+      p_hospitalizacion: hospitalizacionActiva.id,
+      p_fecha: hoyISO(),
+    });
+
+    setCerrandoHosp(false);
+    if (errorCierre) {
+      setErrorHosp(explicar(errorCierre));
+      return;
+    }
+
+    recargar();
+  }
+
   const hayDatos = estado === 'listo' || estado === 'vacio';
 
   return (
@@ -219,6 +322,129 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                     </>
                   )}
                 </div>
+              </section>
+            )}
+
+            {puedeInternar && (
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.domicilios_temporales.hospitalizacion_titulo}</h2>
+                  {hospitalizacionActiva ? (
+                    <Button variant="secondary" onClick={handleCerrarHospitalizacion} disabled={cerrandoHosp}>
+                      {cerrandoHosp ? t.domicilios_temporales.hospitalizacion_cerrando : t.domicilios_temporales.hospitalizacion_cerrar}
+                    </Button>
+                  ) : (
+                    !mostrandoFormHosp && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          limpiarFormHosp();
+                          setMostrandoFormHosp(true);
+                        }}
+                      >
+                        {t.domicilios_temporales.hospitalizacion_registrar}
+                      </Button>
+                    )
+                  )}
+                </div>
+                {errorHosp && <Alert variant="error">{errorHosp}</Alert>}
+
+                {hospitalizacionActiva ? (
+                  <div className="panel-fila-alerta">
+                    <div className="panel-mini">
+                      {con(t.domicilios_temporales.hospitalizacion_activa_desde, {
+                        fecha: hospitalizacionActiva.fecha_inicio,
+                        institucion: hospitalizacionActiva.institucion,
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  mostrandoFormHosp && (
+                    <>
+                      <div className="molde-formgrid">
+                        <FormField
+                          label={t.domicilios_temporales.hospitalizacion_institucion}
+                          name="institucion_hosp"
+                          value={institucionHosp}
+                          onChange={(e) => setInstitucionHosp(e.target.value)}
+                          required
+                        />
+                        <FormField
+                          label={t.domicilios_temporales.hospitalizacion_fecha_inicio}
+                          name="fecha_inicio_hosp"
+                          type="date"
+                          value={fechaInicioHosp}
+                          onChange={(e) => setFechaInicioHosp(e.target.value)}
+                          required
+                        />
+                        <div className="molde-ancho">
+                          <FormField
+                            label={t.domicilios_temporales.hospitalizacion_motivo}
+                            name="motivo_hosp"
+                            value={motivoHosp}
+                            onChange={(e) => setMotivoHosp(e.target.value)}
+                          />
+                        </div>
+                        <div className="molde-ancho">
+                          <FormField
+                            label={t.domicilios_temporales.hospitalizacion_continuan}
+                            name="continuan_hosp"
+                            type="checkbox"
+                            checked={continuanHosp}
+                            onChange={(e) => setContinuanHosp(e.target.checked)}
+                          />
+                        </div>
+                        {continuanHosp && (
+                          <>
+                            <div className="molde-ancho">
+                              <CamposDeDomicilio
+                                valor={domicilioHosp}
+                                alCambiar={setDomicilioHosp}
+                                catalogo={catalogoDeLugares}
+                                prefijo="hosp_"
+                                deshabilitado={guardandoHosp}
+                                requerido
+                              />
+                            </div>
+                            <FormField
+                              label={t.domicilios_temporales.lat}
+                              name="lat_hosp"
+                              type="number"
+                              step="any"
+                              value={latHosp}
+                              onChange={(e) => setLatHosp(e.target.value)}
+                              required
+                            />
+                            <FormField
+                              label={t.domicilios_temporales.lng}
+                              name="lng_hosp"
+                              type="number"
+                              step="any"
+                              value={lngHosp}
+                              onChange={(e) => setLngHosp(e.target.value)}
+                              required
+                            />
+                          </>
+                        )}
+                      </div>
+                      <div className="molde-acciones">
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setMostrandoFormHosp(false);
+                            limpiarFormHosp();
+                          }}
+                          disabled={guardandoHosp}
+                        >
+                          {t.comun.cancelar}
+                        </Button>
+                        <Button onClick={handleRegistrarHospitalizacion} disabled={guardandoHosp}>
+                          {guardandoHosp ? t.domicilios_temporales.hospitalizacion_registrando : t.domicilios_temporales.hospitalizacion_registrar}
+                        </Button>
+                      </div>
+                    </>
+                  )
+                )}
               </section>
             )}
 

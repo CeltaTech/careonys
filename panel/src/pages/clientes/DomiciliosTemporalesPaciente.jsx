@@ -17,6 +17,7 @@ import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio'
 import { DOMICILIO_VACIO, palabrasDelDomicilio, partesDesdeFila, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
 import { domicilioEscrito } from '../../lib/domicilioEscrito';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
+import { coordenadasDeDomicilio } from '../../lib/coordenadasDeDomicilio';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
@@ -45,14 +46,14 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
 
   const [mostrandoForm, setMostrandoForm] = useState(false);
   // El período que se está editando; nulo cuando el formulario carga uno nuevo.
-  const [editandoId, setEditandoId] = useState(null);
+  const [editando, setEditando] = useState(null);
+  const editandoId = editando?.id ?? null;
   const [domicilio, setDomicilio] = useState(DOMICILIO_VACIO);
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
   const [motivo, setMotivo] = useState('');
   const [fechaInicio, setFechaInicio] = useState(hoyISO);
   const [fechaFin, setFechaFin] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [intentado, setIntentado] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
 
   const [terminandoId, setTerminandoId] = useState(null);
@@ -70,9 +71,8 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const [fechaInicioHosp, setFechaInicioHosp] = useState(hoyISO);
   const [continuanHosp, setContinuanHosp] = useState(false);
   const [domicilioHosp, setDomicilioHosp] = useState(DOMICILIO_VACIO);
-  const [latHosp, setLatHosp] = useState('');
-  const [lngHosp, setLngHosp] = useState('');
   const [guardandoHosp, setGuardandoHosp] = useState(false);
+  const [intentadoHosp, setIntentadoHosp] = useState(false);
   const [cerrandoHosp, setCerrandoHosp] = useState(false);
   const [errorHosp, setErrorHosp] = useState(null);
 
@@ -122,46 +122,60 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
 
   function limpiarForm() {
     setDomicilio(DOMICILIO_VACIO);
-    setLat('');
-    setLng('');
     setMotivo('');
     setFechaInicio(hoyISO());
     setFechaFin('');
+    setIntentado(false);
     setErrorForm(null);
-    setEditandoId(null);
+    setEditando(null);
   }
 
   function abrirEditar(periodo) {
     setErrorFila(null);
     setTerminandoId(null);
     setDomicilio(partesDesdeFila(periodo));
-    setLat(periodo.lat == null ? '' : String(periodo.lat));
-    setLng(periodo.lng == null ? '' : String(periodo.lng));
     setMotivo(periodo.motivo ?? '');
     setFechaInicio(periodo.fecha_inicio ?? '');
     setFechaFin(periodo.fecha_fin ?? '');
+    setIntentado(false);
     setErrorForm(null);
-    setEditandoId(periodo.id);
+    setEditando(periodo);
     setMostrandoForm(true);
   }
 
+  const faltas = {
+    calle: !domicilio.calle.trim(),
+    lugar_id: !domicilio.lugar_id,
+    motivo: !motivo.trim(),
+    fecha_inicio: !fechaInicio,
+  };
+  const errorDe = (campo) => (intentado && faltas[campo] ? t.formularios.falta_un_dato_obligatorio : null);
+
   async function handleGuardar() {
-    // El renglón se arma con las partes cargadas y el nombre del lugar. Vacío significa que no se
-    // cargó nada del domicilio, que es lo mismo que antes significaba el casillero en blanco.
-    const renglon = renglonDelDomicilio(domicilio, catalogoDeLugares.lugares);
-    if (!renglon || !motivo.trim() || !fechaInicio || lat === '' || lng === '') {
-      setErrorForm(t.domicilios_temporales.form_incompleto);
+    setIntentado(true);
+    if (Object.values(faltas).some(Boolean)) {
+      // Espera a que se pinten los avisos para saltar al primero.
+      setTimeout(() => document.querySelector('.panel-modal [aria-invalid="true"]')?.focus(), 0);
       return;
     }
 
     setGuardando(true);
     setErrorForm(null);
 
+    // Las coordenadas se piden de nuevo sólo si cambió la dirección: preguntar por lo mismo gasta
+    // el servicio de un tercero para recibir la misma respuesta.
+    const partes = partesParaGuardar(domicilio);
+    const mismaDireccion =
+      editando &&
+      ['calle', 'numero', 'lugar_id'].every((parte) => (editando[parte] ?? null) === partes[parte]);
+    const ubicacion = mismaDireccion
+      ? { lat: editando.lat, lng: editando.lng }
+      : await coordenadasDeDomicilio(partes);
+
     const datos = {
-      domicilio: renglon,
-      ...partesParaGuardar(domicilio),
-      lat: Number(lat),
-      lng: Number(lng),
+      domicilio: renglonDelDomicilio(domicilio, catalogoDeLugares.lugares),
+      ...partes,
+      ...ubicacion,
       motivo: motivo.trim(),
       fecha_inicio: fechaInicio,
       fecha_fin: fechaFin || null,
@@ -224,35 +238,46 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     setFechaInicioHosp(hoyISO());
     setContinuanHosp(false);
     setDomicilioHosp(DOMICILIO_VACIO);
-    setLatHosp('');
-    setLngHosp('');
+    setIntentadoHosp(false);
     setErrorHosp(null);
   }
+
+  const faltasHosp = {
+    institucion: !institucionHosp.trim(),
+    fecha_inicio: !fechaInicioHosp,
+    calle: continuanHosp && !domicilioHosp.calle.trim(),
+    lugar_id: continuanHosp && !domicilioHosp.lugar_id,
+  };
+  const errorHospDe = (campo) =>
+    intentadoHosp && faltasHosp[campo] ? t.formularios.falta_un_dato_obligatorio : null;
 
   // Una sola operación en la base: la internación, y con ella o la pausa de las guardias o el
   // domicilio temporal en la institución. Se guarda todo junto o no se guarda nada.
   async function handleRegistrarHospitalizacion() {
-    const renglon = continuanHosp ? renglonDelDomicilio(domicilioHosp, catalogoDeLugares.lugares) : null;
-    if (!institucionHosp.trim() || !fechaInicioHosp || (continuanHosp && (!renglon || latHosp === '' || lngHosp === ''))) {
-      setErrorHosp(t.domicilios_temporales.hospitalizacion_incompleta);
+    setIntentadoHosp(true);
+    if (Object.values(faltasHosp).some(Boolean)) {
+      setTimeout(() => document.querySelector('.panel-modal [aria-invalid="true"]')?.focus(), 0);
       return;
     }
 
     setGuardandoHosp(true);
     setErrorHosp(null);
 
+    const partes = continuanHosp ? partesParaGuardar(domicilioHosp) : null;
+    const ubicacion = partes ? await coordenadasDeDomicilio(partes) : null;
+
     const { error: errorRegistro } = await supabase.rpc('registrar_hospitalizacion', {
       p_paciente: paciente.id,
       p_institucion: institucionHosp.trim(),
       p_motivo: motivoHosp.trim() || null,
       p_fecha_inicio: fechaInicioHosp,
-      p_domicilio: continuanHosp
+      // El motivo del domicilio temporal es el nombre de la institución: dice dónde está.
+      p_domicilio: partes
         ? {
-            domicilio: renglon,
-            ...partesParaGuardar(domicilioHosp),
-            lat: Number(latHosp),
-            lng: Number(lngHosp),
-            motivo: con(t.domicilios_temporales.hospitalizacion_motivo_domicilio, { institucion: institucionHosp.trim() }),
+            domicilio: renglonDelDomicilio(domicilioHosp, catalogoDeLugares.lugares),
+            ...partes,
+            ...ubicacion,
+            motivo: institucionHosp.trim(),
           }
         : null,
     });
@@ -269,11 +294,9 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   }
 
   async function handleCerrarHospitalizacion() {
+    // Sólo se pregunta cuando hay guardias en pausa, que vuelven a correr al cerrar.
     const continuaban = periodos.some((p) => p.hospitalizacion_id === hospitalizacionActiva.id);
-    const pregunta = continuaban
-      ? t.domicilios_temporales.confirmar_cierre_hospitalizacion_en_institucion
-      : t.domicilios_temporales.confirmar_cierre_hospitalizacion;
-    if (!(await confirmarDestructivo(pregunta))) return;
+    if (!continuaban && !(await confirmarDestructivo(t.domicilios_temporales.confirmar_cierre_hospitalizacion))) return;
 
     setCerrandoHosp(true);
     setErrorHosp(null);
@@ -368,6 +391,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                           value={institucionHosp}
                           onChange={(e) => setInstitucionHosp(e.target.value)}
                           required
+                          error={errorHospDe('institucion')}
                         />
                         <FormField
                           label={t.domicilios_temporales.hospitalizacion_fecha_inicio}
@@ -376,6 +400,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                           value={fechaInicioHosp}
                           onChange={(e) => setFechaInicioHosp(e.target.value)}
                           required
+                          error={errorHospDe('fecha_inicio')}
                         />
                         <div className="molde-ancho">
                           <FormField
@@ -404,26 +429,9 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                                 prefijo="hosp_"
                                 deshabilitado={guardandoHosp}
                                 requerido
+                                errores={{ calle: errorHospDe('calle'), lugar_id: errorHospDe('lugar_id') }}
                               />
                             </div>
-                            <FormField
-                              label={t.domicilios_temporales.lat}
-                              name="lat_hosp"
-                              type="number"
-                              step="any"
-                              value={latHosp}
-                              onChange={(e) => setLatHosp(e.target.value)}
-                              required
-                            />
-                            <FormField
-                              label={t.domicilios_temporales.lng}
-                              name="lng_hosp"
-                              type="number"
-                              step="any"
-                              value={lngHosp}
-                              onChange={(e) => setLngHosp(e.target.value)}
-                              required
-                            />
                           </>
                         )}
                       </div>
@@ -567,26 +575,9 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                       prefijo="temporal_"
                       deshabilitado={guardando}
                       requerido
+                      errores={{ calle: errorDe('calle'), lugar_id: errorDe('lugar_id') }}
                     />
                   </div>
-                  <FormField
-                    label={t.domicilios_temporales.lat}
-                    name="lat_temporal"
-                    type="number"
-                    step="any"
-                    value={lat}
-                    onChange={(e) => setLat(e.target.value)}
-                    required
-                  />
-                  <FormField
-                    label={t.domicilios_temporales.lng}
-                    name="lng_temporal"
-                    type="number"
-                    step="any"
-                    value={lng}
-                    onChange={(e) => setLng(e.target.value)}
-                    required
-                  />
                   <div className="molde-ancho">
                     <FormField
                       label={t.domicilios_temporales.col_motivo}
@@ -594,6 +585,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                       value={motivo}
                       onChange={(e) => setMotivo(e.target.value)}
                       required
+                      error={errorDe('motivo')}
                     />
                   </div>
                   <FormField
@@ -603,6 +595,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                     value={fechaInicio}
                     onChange={(e) => setFechaInicio(e.target.value)}
                     required
+                    error={errorDe('fecha_inicio')}
                   />
                   <FormField
                     label={t.domicilios_temporales.col_hasta}

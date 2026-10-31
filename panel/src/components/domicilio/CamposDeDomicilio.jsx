@@ -22,7 +22,10 @@ import { DOMICILIO_VACIO } from '../../lib/partesDeDomicilio';
 
    EL DOMICILIO ES DATO SENSIBLE: no se escribe en registros, ni en direcciones web, ni en mensajes
    de error, ni siquiera para depurar (celtatech/CLAUDE.md §6). */
-export function CamposDeDomicilio({ valor, alCambiar, catalogo, deshabilitado = false, prefijo = '', requerido = false }) {
+// `errores` trae el texto al pie de cada casillero obligatorio que falta, por nombre de parte
+// (`calle`, `lugar_id`); lo decide quien muestra el formulario, que es quien sabe si ya se apretó
+// guardar.
+export function CamposDeDomicilio({ valor, alCambiar, catalogo, deshabilitado = false, prefijo = '', requerido = false, errores = {} }) {
   const { t } = useLocale();
   const propio = useCatalogoDeLugares({ omitir: Boolean(catalogo) });
   const { lugares, zonas, estado } = catalogo ?? propio;
@@ -39,6 +42,7 @@ export function CamposDeDomicilio({ valor, alCambiar, catalogo, deshabilitado = 
         label={t.comun.domicilio_calle}
         name={campo('calle')}
         required={requerido}
+        error={errores.calle}
         value={partes.calle ?? ''}
         onChange={cambiar('calle')}
         disabled={deshabilitado}
@@ -72,6 +76,7 @@ export function CamposDeDomicilio({ valor, alCambiar, catalogo, deshabilitado = 
         valor={partes.lugar_id ?? ''}
         onChange={(lugarId) => alCambiar({ ...partes, lugar_id: lugarId })}
         requerido={requerido}
+        error={errores.lugar_id}
         deshabilitado={deshabilitado}
       />
       <FormField

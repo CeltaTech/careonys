@@ -496,6 +496,10 @@ sólo los escribe la administración, que nunca queda pendiente. Y con la restri
 información de salud encendida —que es lo de fábrica— otro Coordinador ni la ve ni la modifica,
 así que lo único que puede quedar pendiente son los domicilios temporales.
 
+**La internación no queda pendiente: rige en el momento**, la cargue quien la cargue, porque
+suspende las guardias y esperar una aprobación podría mandar a un Asistente a una casa vacía.
+Decidido por el Desarrollador.
+
 ### Paso 8. Los tres criterios de sugerencia que faltan
 
 El Desarrollador los nombró: «Las sugerencias son por zona, por compatibilidad con las tareas, por

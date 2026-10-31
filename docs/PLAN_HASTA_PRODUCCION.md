@@ -23,8 +23,8 @@ cambiarlo.
 cosa, y mientras dure **no sale ninguna pantalla nueva**.
 
 **El plan está aprobado en su ordenamiento y en sus dos decisiones de fondo**, que ya no se
-vuelven a preguntar: los datos viven en São Paulo con el código previsto para más de una
-región, y el segundo nivel de aislamiento se construye ahora.
+vuelven a preguntar: los datos viven en São Paulo, y el segundo nivel de aislamiento está
+construido.
 
 **Los pasos de «Lo que se dijo que decidió usted» no frenan la obra.** Son una conversación con el
 Desarrollador, renglón por renglón, y avanzan cuando él abra un grupo. Ninguno de ellos es
@@ -329,21 +329,6 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 
 **Comprobación:** por cada país donde haya una Prestadora dada de alta, su documento en
 `docs/legal/<país>.md` nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
-
-**6.** **Lo que queda del segundo nivel de aislamiento, el que Chile exige.** La regla ya está
-escrita en la base (la política `la_informacion_de_salud_la_ve_quien_atiende` y la función
-`interno.alcanza_la_informacion_de_salud`),
-y aplicada: la política es restrictiva, de lectura, y está en nueve tablas. Con la restricción de HCE encendida, la información de salud de un paciente la lee
-sólo quien lo atiende y el Administrador de su Prestadora; donde la tabla de requerimientos legales de HCE por país la pide, como en
-Chile, la restricción queda fija y no se apaga. Lo que falta:
-
-- **Escribir un registro clínico también pide atender al paciente** cuando se pide la fila de vuelta: la
-  base rechaza un alta que devuelve una fila que quien la cargó no puede leer, y un cambio o un
-  borrado no alcanza filas que no se leen. Un Coordinador que no lo atiende y carga un rango de un
-  paciente recibe un rechazo; el Administrador sí lee la información de salud de todos los
-  Pacientes de su Prestadora. Decidido: lo que carga un Coordinador que no es el asignado queda
-  pendiente de aprobación, como la medicación (`PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`, paso 7).
-  Cierre: construido junto con la asignación del Coordinador al Servicio.
 
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.

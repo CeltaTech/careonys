@@ -104,14 +104,14 @@ pedir el valor descifrado, y solo en el momento de mandar un mensaje — **ni si
 certificados médicos (`celtatech/CLAUDE.md`, sección «Seguridad, privacidad y auditoría»). Acceso para cargar/reemplazar el secreto
 acotado a `admin_prestadora` de esa prestadora únicamente.
 
-### D. Catálogo inicial de eventos con WhatsApp saliente
+### D. Los mensajes del sistema
 
-El primer evento con lógica de negocio que dispara un mensaje es la escalada de relevo
-(`configuracion_escalada_relevo`, que recorre `backend/src/utils/faseAutomaticaRelevo.js`).
-
-**Decisión:** el catálogo de eventos vive en `backend/src/utils/catalogoAvisos.js` e incluye
-la escalada de relevo y los **vencimientos de documentación** (`vencimiento_documento_asistente`,
-que emite `revisarVencimientos` en `backend/src/utils/vencimientos.js` por `notificarCoordinador`).
+El sistema manda diecinueve mensajes: turnos sin cubrir o sin cerrar, ausencias, alertas
+tempranas, relevos, emergencias, documentos por vencer, cambios de Asistente, entre otros. En la
+pantalla de Avisos del Panel, cada Prestadora enciende o apaga cada uno, elige a quién le llega y
+si sale también por WhatsApp. Tres no se pueden apagar, porque hay alguien esperándolos en ese
+momento: la emergencia en una guardia, el pedido de relevo de emergencia y el código con el que
+el Cliente firma una instrucción.
 
 ### E. Insistencia si el Coordinador no responde a la notificación de una alerta temprana/incidente
 

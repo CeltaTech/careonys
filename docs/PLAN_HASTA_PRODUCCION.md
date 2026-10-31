@@ -93,7 +93,10 @@ apagar, y por dónde sale el mensaje.
   - **A todos los que se les preguntó se les avisa que quedó resuelto**, hayan contestado o no.
   - **Penalizar al titular y compensar al relevo son dos opciones separadas** que cada
     Prestadora usa o no. Hoy no existen.
-- `docs/PRD_04_05_App_Servicio.md:179` — que las alertas se puedan enchufar y sacar.
+- `docs/PRD_04_05_App_Servicio.md:176` — las cuatro alertas tempranas.
+  **Contestado. Se aplica cuando cierre el grupo.** Cada Prestadora enciende o apaga cada una de
+  las cuatro. Agregar una alerta nueva es programarla, y queda para todas. Hoy las cuatro están
+  siempre encendidas.
 - `docs/PRD_06_WhatsApp_IA.md:112` y `:116` — **[ya construido]** el catálogo de mensajes, los reintentos y a quién se escala.
 - `docs/PRD_06_WhatsApp_IA.md:19` — **[ya construido]** que el número y la cuenta de WhatsApp sean de cada Prestadora.
 

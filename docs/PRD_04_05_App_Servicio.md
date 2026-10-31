@@ -173,9 +173,7 @@ Dos reglas de fondo:
    solo, no como el mecanismo principal.
 2. **Cadena de alertas tempranas, previa a que la ausencia se concrete** — para gestionar un
    relevo con tiempo y minimizar el impacto en el Paciente, en vez de reaccionar recién cuando
-   la ausencia ya es un hecho. Las fuentes de alerta son **enchufables**, no una lista cerrada
-   de casos: cada alerta queda en `alertas_tempranas_guardia` con su fuente, y las fuentes viven
-   en un solo lugar (`backend/src/utils/fuentesAlertaTemprana.js`). Hoy son cuatro:
+   la ausencia ya es un hecho. Son cuatro:
    - **Aviso telefónico previo**: el Coordinador registra que el Asistente llamó avisando que no
      va a concurrir, con el motivo elegido de una lista (`motivos_aviso_previo_guardia`) y no
      texto libre; la IA sugiere el motivo a partir de lo que se anotó

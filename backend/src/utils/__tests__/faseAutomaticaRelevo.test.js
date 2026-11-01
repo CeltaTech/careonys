@@ -44,6 +44,8 @@ const GUARDIA_ENTRANTE = {
 
 const respuestas = new Map();
 let consultas = [];
+/** Lo que se pidió anotar en `consultas_de_relevo`, tal como llegó. */
+let anotadas = [];
 /** Quiénes figuran hoy como Padrón activo de la Prestadora. */
 let padronActivo = [];
 /** Quiénes movieron su interruptor a "no disponible" desde su aplicación. */
@@ -52,11 +54,15 @@ let noDisponibles = new Set();
 let desactivados = new Set();
 
 const baseFalsa = createServer((req, res) => {
-  req.on('data', () => {});
+  let cuerpo = '';
+  req.on('data', (parte) => (cuerpo += parte));
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
     consultas.push(clave);
+    if (clave === 'POST /rest/v1/consultas_de_relevo') {
+      anotadas.push({ fila: JSON.parse(cuerpo), conflicto: direccion.searchParams.get('on_conflict'), preferencia: req.headers.prefer });
+    }
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(direccion.searchParams) : preparada;
@@ -110,7 +116,9 @@ function valorDe(busqueda, columna) {
 beforeEach(() => {
   pedidosAMeta = [];
   consultas = [];
+  anotadas = [];
   respuestas.clear();
+  respuestas.set('POST /rest/v1/consultas_de_relevo', () => []);
 
   respuestas.set('GET /rest/v1/configuracion_escalada_relevo', () => [
     { orden_prioridad: ['suplente', 'franquero'], plantilla_mensaje: 'Necesitamos quien cubra esta noche.' },
@@ -307,6 +315,54 @@ describe('a quiénes sale a buscar la fase automática', () => {
 
     assert.deepEqual(pedidosAMeta.map((p) => p.to), [TELEFONOS[SUPLENTE_LIBRE]]);
     assert.equal(hecho.contactados, 1);
+  });
+});
+
+describe('a quién se le preguntó queda anotado', () => {
+  it('una consulta por cada persona a la que le llegó el mensaje, con el rol que la nombró primero', async () => {
+    // El franquero también está libre en el Padrón: queda con el rol que la Prestadora puso antes.
+    respuestas.set('GET /rest/v1/configuracion_escalada_relevo', () => [
+      { orden_prioridad: ['franquero', 'suplente'], plantilla_mensaje: 'Necesitamos quien cubra esta noche.' },
+    ]);
+
+    await correr();
+
+    assert.deepEqual(
+      anotadas.map((a) => a.fila),
+      [
+        { prestadora_id: PRESTADORA, incidente_id: INCIDENTE.id, asistente_id: FRANQUERO, rol: 'franquero' },
+        { prestadora_id: PRESTADORA, incidente_id: INCIDENTE.id, asistente_id: SUPLENTE_LIBRE, rol: 'suplente' },
+      ],
+    );
+  });
+
+  it('si se le vuelve a escribir en otro nivel, no se duplica', async () => {
+    await correr();
+
+    for (const { conflicto, preferencia } of anotadas) {
+      assert.equal(conflicto, 'incidente_id,asistente_id');
+      assert.match(preferencia, /resolution=ignore-duplicates/);
+    }
+  });
+
+  it('a quien no se pudo contactar no se lo anota como consultado', async () => {
+    delete TELEFONOS[FRANQUERO];
+    try {
+      await correr();
+    } finally {
+      TELEFONOS[FRANQUERO] = '+5491100000004';
+    }
+
+    assert.deepEqual(anotadas.map((a) => a.fila.asistente_id), [SUPLENTE_LIBRE]);
+  });
+
+  it('si no se puede anotar, el mensaje al siguiente sale igual', async () => {
+    respuestas.delete('POST /rest/v1/consultas_de_relevo');
+
+    const hecho = await correr();
+
+    assert.deepEqual(pedidosAMeta.map((p) => p.to), [TELEFONOS[SUPLENTE_LIBRE], TELEFONOS[FRANQUERO]]);
+    assert.equal(hecho.contactados, 2);
   });
 });
 

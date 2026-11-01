@@ -200,8 +200,10 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
 
   const config = await configuracionEvento(EVENTO_INCIDENTE, prestadoraId);
   let contactados = 0;
-  for (const { asistenteId } of destinatarios) {
-    if (await avisarAlAsistente({ prestadoraId, asistenteId, titulo, cuerpo, config })) contactados += 1;
+  for (const { asistenteId, rol } of destinatarios) {
+    if (!(await avisarAlAsistente({ prestadoraId, asistenteId, titulo, cuerpo, config }))) continue;
+    contactados += 1;
+    await anotarLaConsulta({ prestadoraId, incidenteId: incidente.id, asistenteId, rol });
   }
 
   return {
@@ -210,6 +212,23 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
     sinOrden: false,
     quedaElFamiliar: rolesPedidos.includes(ROL_FAMILIAR),
   };
+}
+
+/**
+ * Queda anotado a quién se le preguntó, para que conteste y para que quien coordina lo vea.
+ *
+ * Sólo a quien el mensaje le llegó: a quien no se pudo contactar no se le preguntó nada. Si en otro
+ * nivel de la escalada se le vuelve a escribir, la consulta es la misma y no se duplica. Que no se
+ * pueda anotar no frena a los que siguen: el mensaje ya salió, y el próximo también tiene que salir.
+ */
+async function anotarLaConsulta({ prestadoraId, incidenteId, asistenteId, rol }) {
+  const { error } = await supabase
+    .from('consultas_de_relevo')
+    .upsert(
+      { prestadora_id: prestadoraId, incidente_id: incidenteId, asistente_id: asistenteId, rol },
+      { onConflict: 'incidente_id,asistente_id', ignoreDuplicates: true },
+    );
+  if (error) console.error(`Error anotando la consulta de relevo al asistente ${asistenteId}:`, error.message);
 }
 
 /**

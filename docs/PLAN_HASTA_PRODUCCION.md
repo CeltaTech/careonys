@@ -75,6 +75,10 @@ apagar, y por dónde sale el mensaje.
     referencia y el Coordinador los ve juntos. **Los pedidos los dispara el Coordinador**, salvo
     que la Prestadora encienda los automatismos, y recién ahí elige si se pregunta a todos juntos
     o de a uno. Lo demás del relevo está en la sección «El Paciente nunca queda solo».
+    **[ya construido]** que quede anotado a quién se le preguntó y qué contestó
+    (`consultas_de_relevo`; la fase automática anota a cada uno en
+    `backend/src/utils/faseAutomaticaRelevo.js`). Falta la pantalla donde el Asistente contesta y
+    la comparación en Continuidad, que esperan la redacción que aprueba el Desarrollador.
   - **Orden de llamado, configurable por Prestadora:** personal de emergencia, si lo tiene; si
     no, el franquero; después quienes cubren la misma guardia en otros días u horarios. Hoy ese
     último grupo no se puede elegir aparte: está mezclado con todos los Asistentes libres del Padrón, en el grupo

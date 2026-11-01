@@ -191,8 +191,8 @@ Dos reglas de fondo:
 
    **Falta** el seguimiento por GPS de que el Asistente sigue en su domicilio y el medio de
    transporte habitual de cada Asistente hacia cada Paciente: hoy el tiempo de viaje se estima
-   con una velocidad media única y en línea recta. Son decisiones abiertas del paso 74 de
-   `docs/PLAN_HASTA_PRODUCCION.md`.
+   con una velocidad media única y en línea recta. Son decisiones abiertas de
+   `docs/PLAN_HASTA_PRODUCCION.md`, sección «Las dos aplicaciones».
 
 ### Notificaciones
 Nueva guardia asignada, mensajes del coordinador, recordatorios.

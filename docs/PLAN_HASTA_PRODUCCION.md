@@ -54,59 +54,6 @@ decisiones se sostienen entre sí: contestarlas de a una, salteadas, hace que la
 contradiga la de otra que ya se cerró. **Se contesta grupo por grupo**, y adentro de cada uno,
 renglón por renglón.
 
-### 3. Los mensajes: qué detecta el sistema solo y a quién le avisa
-
-Los dos son el mismo mecanismo mirado desde documentos distintos. Qué detecta, si se puede
-apagar, y por dónde sale el mensaje.
-
-- `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
-  **Contestado, con cambios. Se aplica cuando cierre el grupo.** El sistema junta información y
-  sugiere; **decide el Coordinador**, y cada Prestadora ajusta todo a su forma de trabajar.
-  - **Titular que avisa que se demora:** el GPS calcula cuánto le falta. Dentro del margen de
-    espera toma el turno con llegada tarde registrada. Fuera del margen se pregunta a los
-    relevos si están disponibles y cuánto tardan; el Coordinador compara y, si llega antes el
-    titular, se cancela la búsqueda; si llega antes un relevo, la guardia pasa a él y al titular
-    se le avisa que no vaya.
-  - **Titular que no avisa:** si el GPS no lo muestra en camino a tiempo, el Coordinador recibe
-    un preaviso y pone en marcha el reemplazo. Si el titular aparece tarde, esté el relevo
-    trabajando o en camino, el Coordinador decide quién se queda.
-  - **A los relevos se les pregunta** si están disponibles y cuánto tardan, también al
-    personal de emergencia. Cada uno escribe su tiempo y el GPS calcula otro; los dos son
-    referencia y el Coordinador los ve juntos. Al abrirse la alarma el sistema busca solo en
-    todo el Padrón y le muestra al Coordinador en Continuidad la lista ordenada, con lo que
-    cada uno tiene a favor y en contra, sin escribirle a nadie. **Los pedidos los dispara el
-    Coordinador**, marcando a quiénes y apretando un botón, salvo que la Prestadora encienda la
-    convocatoria automática. Lo demás del relevo está en la sección «El Paciente nunca queda
-    solo».
-    **[ya construido]** que quede anotado a quién se le preguntó y qué contestó
-    (`consultas_de_relevo`; la fase automática anota a cada uno en
-    `backend/src/utils/faseAutomaticaRelevo.js`), y la entrada por la que el Asistente lo contesta
-    con sus minutos, a la que el GPS le suma los suyos (`backend/src/routes/appAsistentes.js`,
-    `/consultas-de-relevo`). Faltan la pantalla donde contesta, el aviso al teléfono que lleve a
-    ella y la comparación en Continuidad, que esperan la redacción que aprueba el Desarrollador.
-  - **Orden de llamado, configurable por Prestadora:** personal de emergencia, si lo tiene; si
-    no, el franquero; después quienes cubren la misma guardia en otros días u horarios. Hoy ese
-    último grupo no se puede elegir aparte: está mezclado con todos los Asistentes libres del Padrón, en el grupo
-    guardado como `suplente` (`backend/src/utils/faseAutomaticaRelevo.js:99-131` y `:178-180`). El
-    nombre guardado queda; el visible no: hoy la configuración del orden lo muestra como
-    «Suplente», «Substitute» y «Substituto» (`panel/src/i18n/translations.js:656`, `:3688`,
-    `:6686`), palabra que el glosario no admite. La redacción nueva la aprueba el Desarrollador.
-  - **El Asistente del turno saliente se queda** hasta que lo releven. **[ya construido]** el
-    pedido de extensión del turno.
-  - **Una guardia cubierta nunca figura ausente.** Hoy la que cubrió el Coordinador en persona
-    sigue pintada de rojo como ausente en la grilla (`panel/src/lib/semaforoGuardia.js:166`),
-    porque la guardia no cambia: espera la palabra con que se muestra, que aprueba el
-    Desarrollador.
-  - **El pedido de relevo se cierra como resuelto** también cuando el Coordinador elige entre
-    el titular y el relevo.
-  - **A todos los que se les preguntó se les avisa que quedó resuelto**, hayan contestado o no.
-  - **Penalizar al titular y compensar al relevo son dos opciones separadas** que cada
-    Prestadora usa o no. Hoy no existen.
-- `docs/PRD_04_05_App_Servicio.md:176` — las cuatro alertas tempranas.
-  **Contestado. Se aplica cuando cierre el grupo.** Cada Prestadora enciende o apaga cada una de
-  las cuatro. Agregar una alerta nueva es programarla, y queda para todas. Hoy las cuatro están
-  siempre encendidas.
-
 ### 4. La marca, el sitio y dónde viven los archivos
 
 Los tres se sostienen entre sí: la marca compartida obliga a que el logo de cada Prestadora se vea
@@ -765,9 +712,30 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
 - **«Salida con el Paciente»**, con un motivo de la lista de la Prestadora: mientras dura no hay
   alarma por estar fuera, al Cliente se le avisa al salir y al volver, y si se pasa del tiempo hay
   alarma. Estar fuera sin avisar le manda una alarma al Coordinador.
-- **Si el relevo no llega**, el Asistente se queda y el tiempo de más cuenta como horas extra. Los
-  pedidos a los relevos los dispara el Coordinador. El turno se asigna siempre a uno solo. La
-  continuidad ordena a los candidatos por Ponderación.
+- **El sistema junta información y sugiere; decide el Coordinador**, y cada Prestadora ajusta todo
+  a su forma de trabajar.
+  - **Titular que avisa que se demora:** el GPS calcula cuánto le falta. Dentro del margen de
+    espera toma el turno con llegada tarde registrada. Fuera del margen se pregunta a los relevos;
+    si llega antes el titular, se cancela la búsqueda; si llega antes un relevo, la guardia pasa a
+    él y al titular se le avisa que no vaya.
+  - **Titular que no avisa:** si el GPS no lo muestra en camino a tiempo, el Coordinador recibe un
+    preaviso y pone en marcha el reemplazo. Si el titular aparece tarde, esté el relevo trabajando
+    o en camino, el Coordinador decide quién se queda.
+  - **Las cuatro alertas tempranas** —aviso telefónico previo, aviso de demora del Asistente,
+    llegada tardía calculada y sin aviso ni salida— las enciende o apaga cada Prestadora, una por
+    una. Agregar una alerta nueva es programarla, y queda para todas.
+- **Si el relevo no llega**, el Asistente se queda y el tiempo de más cuenta como horas extra. Al
+  abrirse la alarma el sistema busca en todo el Padrón y le muestra al Coordinador en Continuidad
+  la lista ordenada, con lo que cada uno tiene a favor y en contra, sin escribirle a nadie. Los
+  pedidos a los relevos los dispara el Coordinador, marcando a quiénes. A cada relevo se le
+  pregunta si está disponible y cuánto tarda, también al personal de emergencia: escribe su tiempo
+  y el GPS calcula otro, y el Coordinador los ve juntos, compara y elige. El turno se asigna
+  siempre a uno solo. El pedido se cierra como resuelto también cuando el Coordinador elige entre
+  el titular y el relevo, y a todos los que se les preguntó se les avisa que quedó resuelto, hayan
+  contestado o no.
+- **Una guardia cubierta nunca figura ausente**, tampoco la que cubrió el Coordinador en persona.
+- **Penalizar al titular y compensar al relevo** son dos opciones separadas que cada Prestadora usa
+  o no.
 - **La convocatoria automática** es un automatismo que cada Prestadora enciende o apaga, y viene
   apagada. Si la enciende, elige cuándo arranca: **siempre**, junto con la alarma; o **sólo si el
   Coordinador no actúa**, cuando vence el plazo que ella fija sin que él haya convocado a nadie ni
@@ -783,7 +751,8 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
   Coordinador y un sonido que persiste en el Panel, con insistencia que se acelera.
 - **Configuración obligatoria antes de operar, sin valores de fábrica:** el Coordinador de
   respaldo, el orden de llamado, de a uno o todos juntos, y los tiempos. El sistema muestra una
-  sugerencia —de a uno; emergencia, franquero, los demás del Padrón—, pero no cuenta como
+  sugerencia —de a uno; emergencia, franquero, los demás del Padrón; y los tiempos que hoy trae
+  cada Prestadora—, pero no cuenta como
   configurada hasta que la Prestadora la confirma o la cambia. Mientras tanto figura pendiente en
   la guía de puesta en marcha y la Prestadora no puede asignar turnos.
 - **El relevo confirma antes de ir**, con la anticipación que fija la Prestadora. Si no confirma,
@@ -834,7 +803,10 @@ traba las guardias hasta que esté confirmada, con su paso pendiente en la guía
 marcha. La búsqueda en todo el Padrón al abrirse la alarma, la convocatoria que dispara el
 Coordinador desde Continuidad, la pantalla donde el Asistente contesta con el aviso al teléfono
 que lleva a ella, la comparación de respuestas, y el aviso de cierre a todos los consultados. La
-convocatoria automática con sus dos arranques y sus dos formas.
+convocatoria automática con sus dos arranques y sus dos formas. El titular que se demora y el que
+no avisa, las cuatro alertas tempranas que cada Prestadora enciende o apaga, la guardia cubierta
+que deja de figurar ausente —espera la palabra con que se muestra, que aprueba el Desarrollador—,
+y las dos opciones de penalizar al titular y compensar al relevo.
 
 **Comprobación:** una Prestadora sin esa configuración confirmada no puede asignar un turno; con
 ella, un relevo que no llega hace sonar el Panel y llega al teléfono del Coordinador. De a uno, el

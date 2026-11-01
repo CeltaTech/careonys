@@ -72,9 +72,12 @@ apagar, y por dónde sale el mensaje.
     trabajando o en camino, el Coordinador decide quién se queda.
   - **A los relevos se les pregunta** si están disponibles y cuánto tardan, también al
     personal de emergencia. Cada uno escribe su tiempo y el GPS calcula otro; los dos son
-    referencia y el Coordinador los ve juntos. **Los pedidos los dispara el Coordinador**, salvo
-    que la Prestadora encienda los automatismos, y recién ahí elige si se pregunta a todos juntos
-    o de a uno. Lo demás del relevo está en la sección «El Paciente nunca queda solo».
+    referencia y el Coordinador los ve juntos. Al abrirse la alarma el sistema busca solo en
+    todo el Padrón y le muestra al Coordinador en Continuidad la lista ordenada, con lo que
+    cada uno tiene a favor y en contra, sin escribirle a nadie. **Los pedidos los dispara el
+    Coordinador**, marcando a quiénes y apretando un botón, salvo que la Prestadora encienda la
+    convocatoria automática. Lo demás del relevo está en la sección «El Paciente nunca queda
+    solo».
     **[ya construido]** que quede anotado a quién se le preguntó y qué contestó
     (`consultas_de_relevo`; la fase automática anota a cada uno en
     `backend/src/utils/faseAutomaticaRelevo.js`), y la entrada por la que el Asistente lo contesta
@@ -763,14 +766,26 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
   alarma por estar fuera, al Cliente se le avisa al salir y al volver, y si se pasa del tiempo hay
   alarma. Estar fuera sin avisar le manda una alarma al Coordinador.
 - **Si el relevo no llega**, el Asistente se queda y el tiempo de más cuenta como horas extra. Los
-  pedidos a los relevos los dispara el Coordinador, salvo que la Prestadora encienda los
-  automatismos —hoy vienen apagados—, y recién ahí elige si se pregunta a todos juntos o de a uno.
-  El turno se asigna siempre a uno solo. La continuidad ordena a los candidatos por Ponderación.
+  pedidos a los relevos los dispara el Coordinador. El turno se asigna siempre a uno solo. La
+  continuidad ordena a los candidatos por Ponderación.
+- **La convocatoria automática** es un automatismo que cada Prestadora enciende o apaga, y viene
+  apagada. Si la enciende, elige cuándo arranca: **siempre**, junto con la alarma; o **sólo si el
+  Coordinador no actúa**, cuando vence el plazo que ella fija sin que él haya convocado a nadie ni
+  resuelto la alarma. Nunca le vuelve a preguntar a quien ya le preguntó el Coordinador.
+  - **De a uno:** espera a cada persona el plazo que fija la Prestadora; si dice que no o no
+    contesta, pasa al siguiente; si dice que sí, se detiene y le avisa al Coordinador, que decide,
+    y si él la descarta sigue. Si se termina la lista sin nadie, le avisa al Coordinador.
+  - **Todos juntos:** las respuestas llegan juntas a Continuidad y el Coordinador elige.
+- **El orden de llamado** es una lista de grupos —personal de emergencia, franquero, los demás del
+  Padrón, familiar— que ordena la Prestadora. Adentro de cada grupo, el sistema ordena a las
+  personas por su Ponderación en el momento de la alarma.
 - **Las alarmas:** las de hoy por WhatsApp, mensaje de texto y correo, más el aviso al teléfono del
   Coordinador y un sonido que persiste en el Panel, con insistencia que se acelera.
 - **Configuración obligatoria antes de operar, sin valores de fábrica:** el Coordinador de
-  respaldo, el orden de aviso, todos juntos o de a uno, y los tiempos. Sin eso la Prestadora no
-  opera guardias.
+  respaldo, el orden de llamado, de a uno o todos juntos, y los tiempos. El sistema muestra una
+  sugerencia —de a uno; emergencia, franquero, los demás del Padrón—, pero no cuenta como
+  configurada hasta que la Prestadora la confirma o la cambia. Mientras tanto figura pendiente en
+  la guía de puesta en marcha y la Prestadora no puede asignar turnos.
 - **El relevo confirma antes de ir**, con la anticipación que fija la Prestadora. Si no confirma,
   el Coordinador recibe una alarma temprana.
 - **El Relevo de emergencia** se puede pedir en cualquier momento de la guardia, más de una vez,
@@ -815,11 +830,16 @@ entra queda con su entrada aunque el saliente no haya presentado el reporte.
 
 **32.** **Las alarmas y la configuración obligatoria.** El aviso al teléfono del Coordinador, el
 sonido persistente del Panel con su insistencia, y la configuración sin valores de fábrica que
-traba las guardias hasta que esté completa. Los pedidos a los relevos los dispara el Coordinador,
-y los automatismos, con todos juntos o de a uno, quedan como opción de la Prestadora.
+traba las guardias hasta que esté confirmada, con su paso pendiente en la guía de puesta en
+marcha. La búsqueda en todo el Padrón al abrirse la alarma, la convocatoria que dispara el
+Coordinador desde Continuidad, la pantalla donde el Asistente contesta con el aviso al teléfono
+que lleva a ella, la comparación de respuestas, y el aviso de cierre a todos los consultados. La
+convocatoria automática con sus dos arranques y sus dos formas.
 
-**Comprobación:** una Prestadora sin esa configuración no puede asignar un turno; con ella, un
-relevo que no llega hace sonar el Panel y llega al teléfono del Coordinador.
+**Comprobación:** una Prestadora sin esa configuración confirmada no puede asignar un turno; con
+ella, un relevo que no llega hace sonar el Panel y llega al teléfono del Coordinador. De a uno, el
+segundo consultado recibe el pedido sólo después de que el primero dijo que no o se le venció el
+plazo, y nadie a quien ya le preguntó el Coordinador recibe un segundo pedido.
 
 **33.** **El aviso al Cliente, el botón y el Egreso sin relevo.** Los dos plazos por Prestadora,
 el aviso que sale siempre al vencer, el botón «Paciente sin Asistente» en la aplicación del

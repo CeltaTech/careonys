@@ -55,6 +55,7 @@ import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js
 import { notificarCoordinador } from '../utils/whatsapp.js';
 import { devolverAlTitular } from '../utils/coberturaDeAusencia.js';
 import { hoyISO } from '../utils/horarios.js';
+import { respuestaValida, minutosPorGps } from '../utils/respuestaAlRelevo.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -1390,6 +1391,141 @@ appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsiste
   }
 
   res.json({ ok: true, avisadoAt });
+});
+
+/* Las consultas por un relevo que este Asistente tiene sin contestar.
+   --------------------------------------------------------------------------
+   Cuando nadie cubre una guardia, el sistema les pregunta a varios a la vez quién puede
+   (`utils/faseAutomaticaRelevo.js`) y anota a cada uno en `consultas_de_relevo`. Acá cada uno ve
+   las suyas, mientras el pedido siga abierto, y contesta si puede y en cuánto llega.
+
+   La lista va con el trabajo de la Prestadora, porque el consultado no está en esa guardia y la
+   base no le deja verla; a sus propias consultas la acota el filtro por el Asistente, que sale de
+   la sesión ya verificada. Se le muestra cuándo es la guardia y nada del Paciente: quién es y
+   dónde vive lo sabe recién quien queda asignado. */
+appAsistentesRouter.get('/consultas-de-relevo', requiereRolAsistente, async (req, res) => {
+  const { prestadoraId, asistenteId } = req.usuarioAsistente;
+  let consultas;
+  try {
+    consultas = await enLaPrestadora(prestadoraId, 'ver las consultas de relevo del Asistente', async (db) => {
+      const { data: filas, error } = await db
+        .from('consultas_de_relevo')
+        .select('id, incidente_id, consultado_at')
+        .eq('prestadora_id', prestadoraId)
+        .eq('asistente_id', asistenteId)
+        .is('respuesta', null);
+      if (error) throw error;
+      if (!filas?.length) return [];
+
+      const { data: abiertos, error: errorIncidentes } = await db
+        .from('incidentes_relevo')
+        .select('id, guardia_entrante_id')
+        .eq('prestadora_id', prestadoraId)
+        .in('id', [...new Set(filas.map((f) => f.incidente_id))])
+        .is('resuelto_at', null);
+      if (errorIncidentes) throw errorIncidentes;
+      if (!abiertos?.length) return [];
+
+      const { data: guardias, error: errorGuardias } = await db
+        .from('guardias')
+        .select('id, fecha, hora_inicio, hora_fin')
+        .eq('prestadora_id', prestadoraId)
+        .in('id', abiertos.map((i) => i.guardia_entrante_id));
+      if (errorGuardias) throw errorGuardias;
+
+      const guardiaDelIncidente = new Map(abiertos.map((i) => [i.id, i.guardia_entrante_id]));
+      const guardiaPorId = new Map((guardias ?? []).map((g) => [g.id, g]));
+      return filas
+        .map((f) => ({ fila: f, guardia: guardiaPorId.get(guardiaDelIncidente.get(f.incidente_id)) }))
+        .filter(({ guardia }) => guardia)
+        .map(({ fila, guardia }) => ({
+          id: fila.id,
+          consultado_at: fila.consultado_at,
+          fecha: guardia.fecha,
+          hora_inicio: guardia.hora_inicio,
+          hora_fin: guardia.hora_fin,
+        }));
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
+  res.json({ consultas });
+});
+
+/* Contesta una consulta de relevo: si puede y, si puede, en cuántos minutos llega.
+   --------------------------------------------------------------------------
+   La respuesta la escribe la persona con su propia credencial: la base le deja contestar sólo la
+   suya, una vez, y mientras el pedido esté abierto, y la hora de la respuesta la pone la base.
+
+   Si puede y mandó dónde está, se calcula además cuánto tardaría según el GPS, para que quien
+   coordina compare lo que dice con lo que da la distancia. Ese número lo escribe el trabajo de la
+   Prestadora y no la persona —si lo pudiera escribir ella, la comparación no compararía nada—. El
+   punto se usa sólo si su consentimiento de seguimiento está vigente, y no se guarda: se guardan
+   minutos. Si el cálculo falla, la respuesta ya quedó. */
+appAsistentesRouter.post('/consultas-de-relevo/:id/respuesta', requiereRolAsistente, async (req, res) => {
+  const { prestadoraId, asistenteId } = req.usuarioAsistente;
+  const { respuesta, lat, lng } = req.body ?? {};
+  const minutos = req.body?.minutos ?? null;
+  if (!respuestaValida({ respuesta, minutos })) {
+    return responderError(res, new ErrorConMotivo('faltan_datos', 'respuesta de relevo mal armada'));
+  }
+
+  const db = clienteDelPedido(req);
+  const { data: consulta, error: errorConsulta } = await db
+    .from('consultas_de_relevo')
+    .select('id, incidente_id, respuesta')
+    .eq('id', req.params.id)
+    .eq('asistente_id', asistenteId)
+    .maybeSingle();
+  if (errorConsulta) return responderError(res, errorConsulta);
+  if (!consulta) return responderError(res, new ErrorConMotivo('no_encontrado', 'consulta de relevo ajena o inexistente'));
+  if (consulta.respuesta) return responderError(res, new ErrorConMotivo('ya_resuelta', 'consulta de relevo ya contestada'));
+
+  // La política no deja contestar sobre un pedido cerrado: sin fila tocada, el pedido ya se cerró.
+  const { data: contestada, error } = await db
+    .from('consultas_de_relevo')
+    .update({ respuesta, minutos_que_indica: respuesta === 'disponible' ? minutos : null })
+    .eq('id', consulta.id)
+    .is('respuesta', null)
+    .select('id');
+  if (error) return responderError(res, error);
+  if (!contestada?.length) return responderError(res, new ErrorConMotivo('ya_cerrada', 'el pedido de relevo ya se cerró'));
+
+  if (respuesta === 'disponible' && typeof lat === 'number' && typeof lng === 'number'
+      && await puedeRegistrarUbicacion(asistenteId, prestadoraId)) {
+    try {
+      await enLaPrestadora(prestadoraId, 'minutos por GPS de la respuesta al relevo', async (dbTrabajo) => {
+        const { data: incidente, error: errorIncidente } = await dbTrabajo
+          .from('incidentes_relevo')
+          .select('guardia_entrante_id')
+          .eq('prestadora_id', prestadoraId)
+          .eq('id', consulta.incidente_id)
+          .maybeSingle();
+        if (errorIncidente) throw errorIncidente;
+        if (!incidente) return;
+        const { data: guardia, error: errorGuardia } = await dbTrabajo
+          .from('guardias')
+          .select('id, fecha, paciente_id')
+          .eq('prestadora_id', prestadoraId)
+          .eq('id', incidente.guardia_entrante_id)
+          .maybeSingle();
+        if (errorGuardia) throw errorGuardia;
+        if (!guardia) return;
+        const porGps = await minutosPorGps(dbTrabajo, prestadoraId, guardia, lat, lng);
+        if (porGps == null) return;
+        const { error: errorGps } = await dbTrabajo
+          .from('consultas_de_relevo')
+          .update({ minutos_por_gps: porGps })
+          .eq('prestadora_id', prestadoraId)
+          .eq('id', consulta.id);
+        if (errorGps) throw errorGps;
+      });
+    } catch (e) {
+      console.error('Error calculando los minutos por GPS de una respuesta al relevo:', e.message);
+    }
+  }
+
+  res.json({ ok: true });
 });
 
 /* Los turnos fijos que este Asistente cubre por la ausencia de otro.

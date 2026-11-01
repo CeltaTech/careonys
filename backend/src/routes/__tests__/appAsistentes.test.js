@@ -341,6 +341,62 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
 });
 
 // ============================================================================
+// La llegada tarde: el titular marca sobre una guardia ya marcada ausente
+// ============================================================================
+
+describe('check-in — la llegada tarde cierra el pedido de relevo', () => {
+  function cierresDelPedido() {
+    return llamadas.filter((l) => l.clave === 'PATCH /rest/v1/incidentes_relevo');
+  }
+
+  it('sobre una guardia ausente, el pedido abierto se cierra como resuelto por el titular', async () => {
+    guardiaActual = { ...guardiaActual, estado: 'ausente' };
+    respuestas.set('PATCH /rest/v1/incidentes_relevo', () => []);
+
+    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
+    });
+    assert.equal(estado, 200);
+
+    const [cierre] = cierresDelPedido();
+    assert.ok(cierre, 'el pedido de relevo tiene que cerrarse');
+    assert.equal(cierre.cuerpo.resuelto_por_tipo, 'titular');
+    assert.equal(cierre.cuerpo.resuelto_por_id, LEGAJO);
+    assert.ok(cierre.cuerpo.resuelto_at);
+    // Sólo el pedido de esta guardia, de esta Prestadora, y sólo si sigue abierto.
+    const filtros = new URL(cierre.url, 'http://interno').searchParams;
+    assert.equal(filtros.get('guardia_entrante_id'), `eq.${GUARDIA}`);
+    assert.equal(filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(filtros.get('resuelto_at'), 'is.null');
+  });
+
+  it('sobre una guardia programada no se toca ningún pedido', async () => {
+    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
+    });
+    assert.equal(estado, 200);
+    assert.equal(cierresDelPedido().length, 0);
+  });
+
+  it('si el cierre falla, la llegada queda marcada igual', async () => {
+    guardiaActual = { ...guardiaActual, estado: 'ausente' };
+    // Sin respuesta preparada, la base falsa contesta con error.
+    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
+    });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.ok, true);
+    assert.equal(guardiaMarcada(), true);
+  });
+});
+
+// ============================================================================
 // Plan A — el código lo muestra una persona en la pantalla de su teléfono
 // ============================================================================
 

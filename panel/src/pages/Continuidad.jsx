@@ -497,9 +497,9 @@ export function Continuidad() {
   );
 }
 
-/* RESOLVER UN INCIDENTE: TRES FORMAS DE TERMINAR, EN UNA SOLA VENTANA
-   Mandar a un Asistente, dejar escrito que se quedó cuidando un familiar, o que el Cliente aceptó
-   que el Paciente quede solo. El tipo de reemplazo no se elige: la base lo deduce de a quién se
+/* RESOLVER UN INCIDENTE: CUATRO FORMAS DE TERMINAR, EN UNA SOLA VENTANA
+   Mandar a un Asistente, dejar escrito que fue en persona quien coordina, que se quedó cuidando un
+   familiar, o que el Cliente aceptó que el Paciente quede solo. El tipo de reemplazo no se elige: la base lo deduce de a quién se
    mandó, y anota sola quién resolvió y cuándo.
    La lista es la misma del turno vacante en Guardias —el Padrón, sin quien ya se fue—, y la
    reasignación es la misma función: `lib/reasignarGuardia.js`. A quien ya está en otro turno a esa
@@ -550,6 +550,22 @@ function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
       .eq('id', incidente.id);
     if (errorIncidente) throw errorIncidente;
   };
+
+  // Fue en persona quien coordina: no hay nada más que anotar en la casa, así que cierra en el acto.
+  async function loCubrioElCoordinador() {
+    setGuardando(true);
+    setError(null);
+    setDocumentosPendientes(null);
+    try {
+      await cerrarComo('coordinador')();
+    } catch (err) {
+      setGuardando(false);
+      setError(mensajeDeError(err, t));
+      return;
+    }
+    setGuardando(false);
+    onResuelto();
+  }
 
   if (forma === 'familiar') {
     return (
@@ -638,6 +654,9 @@ function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
         </div>
 
         <div className="seguimiento-otras-formas">
+          <Button variant="secondary" onClick={loCubrioElCoordinador} disabled={guardando}>
+            {t.continuidad.turnos_vacios_cierre_lo_cubrio_la_coordinadora}
+          </Button>
           <Button variant="secondary" onClick={() => setForma('familiar')} disabled={guardando}>
             {t.continuidad.familiar_se_quedo_boton}
           </Button>

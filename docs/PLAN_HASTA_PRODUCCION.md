@@ -56,7 +56,7 @@ renglón por renglón.
 
 ### 3. Los mensajes: qué detecta el sistema solo y a quién le avisa
 
-Los cuatro son el mismo mecanismo mirado desde documentos distintos. Qué detecta, si se puede
+Los dos son el mismo mecanismo mirado desde documentos distintos. Qué detecta, si se puede
 apagar, y por dónde sale el mensaje.
 
 - `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
@@ -84,12 +84,12 @@ apagar, y por dónde sale el mensaje.
     `:6686`), palabra que el glosario no admite. La redacción nueva la aprueba el Desarrollador.
   - **El Asistente del turno saliente se queda** hasta que lo releven. **[ya construido]** el
     pedido de extensión del turno.
-  - **Lo anotado del Asistente y el estado de la guardia son dos cosas.** Si llega tarde y
-    marca, queda «llegada tarde», aunque ya se lo hubiera marcado ausente: esa marca es
-    provisoria. Si no llega nunca, «ausente». Una guardia cubierta nunca figura ausente.
-  - **El pedido de relevo se cierra como resuelto** con la llegada del titular o del relevo, o
-    cuando el Coordinador elige entre los dos, y deja de insistirse. Hoy sigue abierto aunque el
-    titular llegue.
+  - **Una guardia cubierta nunca figura ausente.** Hoy la que cubrió el Coordinador en persona
+    sigue pintada de rojo como ausente en la grilla (`panel/src/lib/semaforoGuardia.js:166`),
+    porque la guardia no cambia: espera la palabra con que se muestra, que aprueba el
+    Desarrollador.
+  - **El pedido de relevo se cierra como resuelto** también cuando el Coordinador elige entre
+    el titular y el relevo.
   - **A todos los que se les preguntó se les avisa que quedó resuelto**, hayan contestado o no.
   - **Penalizar al titular y compensar al relevo son dos opciones separadas** que cada
     Prestadora usa o no. Hoy no existen.

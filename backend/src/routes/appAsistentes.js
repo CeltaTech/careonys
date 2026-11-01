@@ -929,6 +929,27 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     return responderError(res, error);
   }
 
+  // El titular llegó sobre una guardia ya marcada ausente: la base la anota como llegada tarde, y el
+  // pedido de relevo de esa guardia se cierra como resuelto por él, para que deje de insistirse.
+  // El Asistente no puede tocar el incidente, así que va con el trabajo de la Prestadora. Si falla,
+  // la llegada ya quedó marcada y el cierre del turno lo cierra igual.
+  if (guardia.estado === 'ausente') {
+    await enLaPrestadora(guardia.prestadora_id, 'cierre del pedido de relevo por llegada tarde', (dbPrestadora) => dbPrestadora
+      .from('incidentes_relevo')
+      .update({
+        resuelto_at: new Date().toISOString(),
+        resuelto_por_tipo: 'titular',
+        resuelto_por_id: guardia.asistente_id,
+      })
+      .eq('prestadora_id', guardia.prestadora_id)
+      .eq('guardia_entrante_id', guardia.id)
+      .is('resuelto_at', null))
+      .then(({ error: errorCierre }) => {
+        if (errorCierre) console.error('Error cerrando el pedido de relevo por llegada tarde:', errorCierre.message);
+      })
+      .catch((err) => console.error('Error cerrando el pedido de relevo por llegada tarde:', err.message));
+  }
+
   // UN SOLO MENSAJE, Y LO DISPARA FICHAR LA ENTRADA. Antes salían dos que decían casi lo mismo: éste
   // sin ninguna condición, y otro —«la guardia quedó cubierta»— sólo cuando el Cliente no había
   // participado de la comprobación. Con un relevo salían los dos juntos. El Asistente fichó: el

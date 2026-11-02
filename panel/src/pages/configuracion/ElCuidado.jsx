@@ -909,8 +909,6 @@ function TabVitales() {
       .update({
         valor_min: Number(fila.valor_min),
         valor_max: Number(fila.valor_max),
-        unidad: fila.unidad,
-        fuente: fila.fuente,
         updated_at: new Date().toISOString(),
       })
       .eq('id', fila.id);
@@ -936,7 +934,6 @@ function TabVitales() {
               <th>{t.configuracion.vitales_col_min}</th>
               <th>{t.configuracion.vitales_col_max}</th>
               <th>{t.configuracion.vitales_col_unidad}</th>
-              <th>{t.configuracion.vitales_col_fuente}</th>
               <th></th>
             </tr>
           </thead>
@@ -950,8 +947,7 @@ function TabVitales() {
                   <td>{nombreSigno}</td>
                   <td><input type="number" step="0.1" value={fila.valor_min} onChange={(e) => set(fila.signo, 'valor_min', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_min, nombre: nombreSigno })} /></td>
                   <td><input type="number" step="0.1" value={fila.valor_max} onChange={(e) => set(fila.signo, 'valor_max', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_max, nombre: nombreSigno })} /></td>
-                  <td><input type="text" value={fila.unidad} onChange={(e) => set(fila.signo, 'unidad', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_unidad, nombre: nombreSigno })} /></td>
-                  <td><input type="text" value={fila.fuente} onChange={(e) => set(fila.signo, 'fuente', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_fuente, nombre: nombreSigno })} /></td>
+                  <td>{fila.unidad}</td>
                   <td>
                     <div className="cuidado-acciones-fila">
                       <Button variant="secondary" onClick={() => guardar(fila)} disabled={guardandoSigno === fila.signo}>

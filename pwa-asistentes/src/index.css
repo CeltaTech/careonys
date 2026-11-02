@@ -796,19 +796,6 @@ p {
   font-size: 12px;
 }
 
-.consentimiento-acciones {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-/* Los dos botones de decisión ocupan el mismo lugar y pesan lo mismo a propósito: resaltar el
-   "acepto" sería empujar hacia el sí. */
-.consentimiento-acciones .btn {
-  flex: 1 1 auto;
-}
-
 /* Un renglón de la tarjeta Privacidad: el nombre del permiso a la izquierda y su interruptor. */
 .permiso-fila {
   display: flex;

@@ -681,13 +681,11 @@ export const T = {
       guardando: 'Guardando…',
       guardado: 'El descargo quedó guardado.',
     },
-    // Los permisos que da el Asistente: la pregunta al salir hacia el domicilio y la tarjeta de Perfil.
+    // La tarjeta Privacidad de Perfil: lo que el Asistente firmó.
     consentimientos: {
       titulo: 'Privacidad',
       aviso_borrador:
         'Este texto todavía es un borrador de prueba, no tiene validez legal y el seguimiento no se activa con él. Está acá para mostrar cómo va a funcionar la pantalla.',
-      permitir: 'Permitir',
-      no_permitir: 'No permitir',
     },
     // Los documentos que le pide la Prestadora, la Matrícula entre ellos, y su Certificado de
     // Aptitud. Acá sí va el nombre de cada uno: el que mira es el dueño.
@@ -1314,8 +1312,6 @@ export const T = {
       titulo: 'Privacy',
       aviso_borrador:
         'This text is still a draft for testing. It has no legal validity and tracking will not be enabled with it. It is here so you can see how the screen will work.',
-      permitir: 'Allow',
-      no_permitir: 'Don’t allow',
     },
     documentos: {
       titulo: 'Documents',
@@ -1940,8 +1936,6 @@ export const T = {
       titulo: 'Privacidade',
       aviso_borrador:
         'Este texto ainda é um rascunho de teste, não tem validade legal e o rastreamento não é ativado com ele. Está aqui para mostrar como a tela vai funcionar.',
-      permitir: 'Permitir',
-      no_permitir: 'Não permitir',
     },
     documentos: {
       titulo: 'Documentos',

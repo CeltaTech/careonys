@@ -136,12 +136,8 @@ export const api = {
   medicacionDelPaciente: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
   // El enlace a la receta se pide al tocar el botón: preparado de antemano se vence antes de usarlo.
   recetaDeLaOrden: (pacienteId, indicacionId) => pedido(`/medicacion/${pacienteId}/receta/${indicacionId}`),
-  // Pendiente #102 — consentimiento para el registro de ubicación. El idioma
-  // viaja en el pedido porque el texto que se guarda como constancia tiene que
-  // ser el mismo que la persona leyó en pantalla.
-  consentimientos: (idioma) => pedido(`/consentimientos?idioma=${encodeURIComponent(idioma)}`),
-  decidirConsentimiento: (clave, decision, idioma) =>
-    pedido('/consentimientos', { method: 'POST', body: JSON.stringify({ clave, decision, idioma }) }),
+  // Lo que el Asistente firmó, tal como lo firmó.
+  consentimientos: () => pedido('/consentimientos'),
   // Los turnos que se le asignaron y todavía no respondió, con la lista de motivos de rechazo de
   // su Prestadora. Rechazar pide uno de esos motivos, y el detalle cuando el motivo lo pide.
   asignaciones: () => pedido('/asignaciones'),

@@ -296,9 +296,6 @@ texto tecleado (`nombre_avala`, `rol_avala`) y no como una Ficha de Persona. **P
 Ficha de Persona elegida del Directorio de Personas**, igual que el firmante del consentimiento del
 Pagador. **Antes de construirlo se revisa la norma de cada país** sobre quién puede ver un
 consentimiento firmado; la regla de `CLAUDE.md` §6 es el piso, y si una norma pide más, manda la norma.
-**Del lado del Asistente falta una cosa:** su consentimiento sobre la ubicación guarda el texto que
-aceptó (`appAsistentesConsentimientos.js:211`), pero la aplicación le muestra siempre el vigente.
-Cuando la Prestadora lo cambia, deja de poder ver lo que firmó.
 **Y el consentimiento del Pagador lo lee sólo el personal de la Prestadora** (políticas
 `consentimientos_pagador_los_leen_administrador_y_coordinador` y
 `documentos_pagador_los_leen_administrador_y_coordinador`). Falta quien firmó, que tiene derecho a
@@ -1178,8 +1175,7 @@ configuración una de dos formas de trabajo:
    renuncia a saber dónde está el Asistente durante el resto de la guardia.
 
 En ninguna de las dos el Asistente decide nada desde la aplicación: en Perfil → Privacidad sólo
-ve el texto que firmó. Hoy la aplicación ya está así; lo que falta es la opción en la
-configuración de la Prestadora y el paso del reclutamiento donde se firma.
+ve el texto que firmó. Lo que falta es el paso del reclutamiento donde se firma.
 
 El reclutamiento es un módulo común a las dos
 modalidades y la base de Asistentes de cada Prestadora es una sola para las dos; lo que faltaba

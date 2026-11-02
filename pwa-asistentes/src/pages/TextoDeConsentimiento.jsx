@@ -3,18 +3,18 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 
-// El texto completo de un permiso, tal como lo escribió la Prestadora. Se llega desde la tarjeta
-// Privacidad de Perfil, tocando el nombre del permiso.
+// El texto completo de lo que el Asistente firmó, tal como lo firmó. Se llega desde la tarjeta
+// Privacidad de Perfil, tocando su nombre.
 export default function TextoDeConsentimiento() {
   const { clave } = useParams();
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const [item, setItem] = useState(undefined);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let activo = true;
     api
-      .consentimientos(locale)
+      .consentimientos()
       .then(({ consentimientos }) => {
         if (activo) setItem(consentimientos.find((c) => c.clave === clave) || null);
       })
@@ -24,7 +24,7 @@ export default function TextoDeConsentimiento() {
     return () => {
       activo = false;
     };
-  }, [clave, locale]);
+  }, [clave]);
 
   if (item === null) return <Navigate to="/perfil" replace />;
 

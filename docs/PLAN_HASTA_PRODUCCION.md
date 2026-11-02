@@ -218,13 +218,16 @@ exige residencia: lo que pide es el contrato con el proveedor de la nube, que es
 **Preparar el producto para más de una región queda para la siguiente versión**, cuando haya un
 cliente que la pida: está en `docs/LEGAJO_PARA_EL_FUTURO.md`, «Más de una región».
 
-**Lo que no es código: las cláusulas firmadas antes del alta de la primera Prestadora real.**
-Brasil no figura en la lista de países adecuados de la autoridad argentina, así que alojar en São
-Paulo es una transferencia internacional. Lo que la habilita son las cláusulas contractuales tipo
-que esa misma autoridad redactó y publicó: se adoptan tal como están, adentro del contrato entre
-CeltaTech y la Prestadora. No hay que buscar proveedor en Argentina: la ley no obliga a alojar
-dentro del país. **Cuál es esa cláusula, de dónde sale, quién la firma y qué hay que definir antes
-de redactarla está en `celtatech/docs/CLAUSULA_TRANSFERENCIA_INTERNACIONAL.md`.**
+**Lo que no es código: los contratos con los proveedores, firmados y presentados antes del alta de
+la primera Prestadora real.** Brasil no figura en la lista de países adecuados de la autoridad
+argentina, así que alojar en São Paulo es una transferencia internacional. CeltaTech se constituye
+en Argentina, así que quien saca los datos del país es CeltaTech, hacia cada proveedor que los
+guarda o los procesa afuera: Supabase, Railway y Backblaze B2. Ninguno firma el modelo argentino:
+se firma el contrato de tratamiento de datos de cada uno y se lo presenta a la autoridad dentro de
+los 30 días corridos de firmado (Disposición 60-E/2016, art. 2). **Espera a que CeltaTech esté
+constituida**, porque el contrato lo firma la sociedad. No hay que buscar proveedor en Argentina:
+la ley no obliga a alojar dentro del país. **El procedimiento está en
+`celtatech/docs/CLAUSULA_TRANSFERENCIA_INTERNACIONAL.md`.**
 
 Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 
@@ -242,9 +245,9 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 - **Argentina, que es el primer mercado.** Es el caso más fácil y no es automático: Brasil no
   figura en la lista de países adecuados del art. 3 de la Disposición 60-E/2016, sustituido por la
   Resolución AAIP 34/2019. Alojar en São Paulo es transferencia del art. 12 de la Ley 25.326, y lo
-  que la habilita son las cláusulas contractuales tipo del Anexo II de esa disposición, adentro del
-  contrato entre CeltaTech y la Prestadora. **Tiene que estar firmado antes del alta de la primera
-  Prestadora real.** La excepción de datos médicos del art. 12(2)(b) es para un intercambio
+  que la habilita es el contrato de CeltaTech con cada proveedor, presentado a la autoridad dentro
+  de los 30 días corridos de firmado porque no sigue el modelo (art. 2 de esa disposición).
+  **Tiene que estar firmado y presentado antes del alta de la primera Prestadora real.** La excepción de datos médicos del art. 12(2)(b) es para un intercambio
   concreto exigido por el tratamiento de un paciente y no cubre alojar el padrón: no se la invoca.
   **Y hay cuatro destinos donde no haría falta ningún instrumento, porque la lista argentina los
   declara adecuados: la Unión Europea, el Reino Unido, Suiza y Uruguay.** Uruguay es el único de la
@@ -1797,11 +1800,10 @@ tratamiento de dato biométrico, la accesibilidad, la protección de datos perso
 preguntas sobre la ubicación de las personas. Los pasos que dependen de ellas dicen qué se
 construye igual mientras tanto.
 
-**Y hay una tanda que no espera al MVP, porque no es consulta sino contrato:** las cláusulas
-contractuales tipo que habilitan alojar en São Paulo los datos de una Prestadora argentina tienen
-que estar firmadas antes del alta de la primera Prestadora real. Eso está en «Los cimientos», y por
-eso está ahí y no acá. El material para esa consulta —cuál es la cláusula, cuáles son las dos vías
-vigentes y qué hay que definir antes de redactar— está en
+**Y hay una tanda que no espera al MVP, porque no es consulta sino contrato:** los contratos con
+los proveedores que habilitan alojar en São Paulo los datos de una Prestadora argentina tienen que
+estar firmados y presentados a la autoridad antes del alta de la primera Prestadora real. Eso está
+en «Los cimientos», y por eso está ahí y no acá. El procedimiento está en
 `celtatech/docs/CLAUSULA_TRANSFERENCIA_INTERNACIONAL.md`.
 
 **131. Usted** — Las escalas legales: la validación, y el valor que el código usa y no existe

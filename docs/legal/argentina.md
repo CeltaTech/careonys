@@ -195,11 +195,12 @@ inciso 2(b) exceptúa el intercambio de datos médicos cuando lo exija el tratam
 una investigación epidemiológica: **es una excepción angosta, para un intercambio concreto, y no
 habilita alojar el padrón completo de una Prestadora en Brasil.** No se la invoca.
 
-**Lo que sí habilita: las cláusulas contractuales tipo del Anexo II de la Disposición 60-E/2016**,
-que son precisamente las de prestación de servicios de tratamiento, incorporadas al contrato entre
-CeltaTech y la Prestadora. **En obra** — paso 5. Es un requisito del contrato, no del código, y hay
-que tenerlo firmado antes del alta. Si el contrato se aparta del modelo, hay que presentarlo a la
-AAIP dentro de los 30 días corridos de firmado.
+**Lo que sí habilita: el contrato de CeltaTech con cada proveedor que guarda o procesa los datos
+afuera** —Supabase, Railway y Backblaze B2—, presentado a la AAIP dentro de los 30 días corridos de
+firmado, porque se aparta del modelo (art. 2 de la Disposición 60-E/2016). CeltaTech se constituye
+en Argentina, así que es ella quien transfiere. **En obra** — `docs/PLAN_HASTA_PRODUCCION.md`,
+sección «Los cimientos». Es un requisito del contrato, no del código, y hay que tenerlo firmado y
+presentado antes del alta.
 
 **Y hay cuatro países donde alojar no necesita ningún instrumento**, porque la propia lista los
 declara adecuados: la Unión Europea, el Reino Unido, Suiza y **Uruguay**. Uruguay es el único de

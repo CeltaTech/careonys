@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { Button } from '../../components/ui/Button';
+import { PieDeFirmas } from '../../components/ui/PieDeFirmas';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
@@ -203,11 +204,7 @@ export function DocumentoDeLaInstruccion({ texto, fecha, onCerrar }) {
         {/* El pie de firma sale sólo en el papel: en la aplicación se firma con el código. */}
         <div id="area-imprimible">
           <div className="documento-instruccion">{texto}</div>
-          <div className="documento-firmas">
-            <div>{t.clientes.personas_autorizadas.pie_firma}</div>
-            <div>{t.clientes.personas_autorizadas.pie_aclaracion}</div>
-            <div>{t.clientes.personas_autorizadas.pie_fecha}</div>
-          </div>
+          <PieDeFirmas textos={t.clientes.personas_autorizadas} />
         </div>
 
         <div className="panel-modal-acciones no-imprimir">

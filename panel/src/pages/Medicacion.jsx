@@ -4,6 +4,7 @@ import { T } from '../i18n/translations';
 import { llamadorDe } from '../lib/apiPanel';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { Button } from '../components/ui/Button';
+import { PieDeFirmas } from '../components/ui/PieDeFirmas';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { Cabecera } from '../components/ui/Cabecera';
@@ -245,11 +246,7 @@ function HojaParaFirmar({ documento, onCerrar }) {
               </>
             )}
           </dl>
-          <div className="documento-firmas">
-            <div>{delDocumento.pie_firma}</div>
-            <div>{delDocumento.pie_aclaracion}</div>
-            <div>{delDocumento.pie_fecha}</div>
-          </div>
+          <PieDeFirmas textos={delDocumento} />
         </div>
 
         <div className="panel-modal-acciones no-imprimir">

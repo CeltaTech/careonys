@@ -288,15 +288,7 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.
 
-**Y la autorización de monitoreo de los signos vitales la ve también quien la firmó.** Hoy la leen
-sólo el personal de la Prestadora y su trabajo sin persona; ni el Asistente ni el Cliente la
-alcanzan, y si hay una vigente se lo contesta el backend (`utils/vitalesReferencia.js`). Falta
-que la vea quien la firmó, y hoy eso no se puede saber, porque el firmante está guardado como
-texto tecleado (`nombre_avala`, `rol_avala`) y no como una Ficha de Persona. **Pasa a ser una
-Ficha de Persona elegida del Directorio de Personas**, igual que el firmante del consentimiento del
-Pagador. **Antes de construirlo se revisa la norma de cada país** sobre quién puede ver un
-consentimiento firmado; la regla de `CLAUDE.md` §6 es el piso, y si una norma pide más, manda la norma.
-**Y el consentimiento del Pagador lo lee sólo el personal de la Prestadora** (políticas
+**El consentimiento del Pagador lo lee sólo el personal de la Prestadora** (políticas
 `consentimientos_pagador_los_leen_administrador_y_coordinador` y
 `documentos_pagador_los_leen_administrador_y_coordinador`). Falta quien firmó, que tiene derecho a
 verlo y hoy no lo alcanza.

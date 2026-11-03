@@ -16,6 +16,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { ElCalculoDeCandidatos } from './ElCalculoDeCandidatos';
 import { TurnosSinCubrirTab } from './TurnosSinCubrirTab';
+import { AutorizacionSignosVitales } from './AutorizacionSignosVitales';
 import '../../styles/molde-paginas.css';
 import './elcuidado.css';
 
@@ -874,6 +875,7 @@ function TabVitales() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardandoSigno, setGuardandoSigno] = useState(null);
+  const [editandoAutorizacion, setEditandoAutorizacion] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -924,6 +926,9 @@ function TabVitales() {
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
         <h2>{t.configuracion.vitales_titulo}</h2>
+        <Button variant="secondary" onClick={() => setEditandoAutorizacion(true)}>
+          {t.vitales_autorizacion.autorizacion}
+        </Button>
       </div>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && rangos.length === 0} recargar={recargar}>
@@ -961,6 +966,7 @@ function TabVitales() {
           </tbody>
         </table>
       </EstadoLista>
+      {editandoAutorizacion && <AutorizacionSignosVitales onClose={() => setEditandoAutorizacion(false)} />}
     </section>
   );
 }

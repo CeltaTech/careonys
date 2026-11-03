@@ -56,6 +56,7 @@ export default function ReporteDiario() {
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [guardadoPendiente, setGuardadoPendiente] = useState(false);
   const [vitalesHabilitados, setVitalesHabilitados] = useState(false);
+  const [signosQueToma, setSignosQueToma] = useState([]);
   const [rangosVitales, setRangosVitales] = useState({});
   const [enLinea, setEnLinea] = useState(navigator.onLine);
 
@@ -92,6 +93,9 @@ export default function ReporteDiario() {
         // la otra. Por eso se toman los de este Paciente y no los del turno.
         const vitales = vitalesPorPaciente?.[pacienteId];
         setVitalesHabilitados(!!vitales?.habilitados);
+        // Con la autorización del Cliente no entran los que se toman pinchando: ésos sólo los toma
+        // un tipo de Asistente que los tiene habilitados. Cuáles van lo dice el backend.
+        setSignosQueToma(vitales?.signos || []);
         setRangosVitales(vitales?.rangos || {});
       })
       .catch(() => {});
@@ -276,7 +280,7 @@ export default function ReporteDiario() {
           {veLosSignos && (
             <div className="reporte-preview-campo" role="group" aria-labelledby="grupo-signos-vitales">
               <span className="campo-titulo" id="grupo-signos-vitales">{t.reporte.campo_signos_vitales}</span>
-              {SIGNOS_VITALES.map((signo) => {
+              {SIGNOS_VITALES.filter((signo) => signosQueToma.includes(signo)).map((signo) => {
                 const rango = rangosVitales[signo];
                 const color = colorSigno(estructurado.signos_vitales?.[signo], rango);
                 return (

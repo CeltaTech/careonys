@@ -330,10 +330,11 @@ const LO_QUE_VE_CADA_UNO = [
     `SELECT id FROM calificaciones_asistente
       WHERE cliente_id = '{p}' OR paciente_id IN (${PACIENTES_DEL_CLIENTE})`],
 
-  // La autorización de signos vitales la ve quien la firmó. El Asistente no es parte; el Cliente,
-  // mientras el firmante no sea una Ficha de Persona, no se sabe si lo es. Si hay autorización
-  // vigente se lo contesta el backend.
-  ['autorizaciones_monitoreo_paciente', NADA, NADA],
+  // La autorización de signos vitales la ve el Cliente del Paciente, el titular y las personas
+  // autorizadas a ver su Ficha. El Asistente no es parte: si puede tomar los signos se lo contesta
+  // el backend.
+  ['autorizaciones_monitoreo_paciente', NADA,
+    `SELECT id FROM autorizaciones_monitoreo_paciente WHERE paciente_id IN (${PACIENTES_DEL_CLIENTE})`],
 
   ['rangos_referencia_vitales',
     `SELECT id FROM rangos_referencia_vitales WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,

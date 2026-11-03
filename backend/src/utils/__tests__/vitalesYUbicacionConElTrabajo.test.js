@@ -67,7 +67,7 @@ prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const { puedeRegistrarUbicacion } = await import('../consentimientoUbicacion.js');
-const { resolverVitalesHabilitados } = await import('../vitalesReferencia.js');
+const { vitalesDelAsistente, filtrarSignos, rangosParaLosReportes } = await import('../vitalesReferencia.js');
 
 after(() => {
   baseFalsa.close();
@@ -106,25 +106,66 @@ describe('el consentimiento de ubicación', () => {
   });
 });
 
-describe('los signos vitales habilitados', () => {
-  it('los lee el trabajo de la Prestadora del Paciente, y no la llave maestra', async () => {
+const ENFERMERA = { habilitada: [{ clave: 'monitoreo_y_registro_biometrico' }] };
+const CUIDADORA = { habilitada: [{ clave: 'higiene_y_confort' }] };
+const SIN_PUNCION = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion'];
+const SIN_SIGNOS = { habilitados: false, signos: [], rangos: {} };
+
+describe('los signos vitales del Asistente', () => {
+  it('con la autorización aceptada los lee el trabajo de la Prestadora, sin los de punción', async () => {
     respuestas.set('GET /rest/v1/autorizaciones_monitoreo_paciente', [{ id: 'x' }]);
     respuestas.set('GET /rest/v1/rangos_referencia_vitales', [
       { signo: 'pulso', valor_min: 60, valor_max: 100, unidad: 'lpm', paciente_id: null },
       { signo: 'pulso', valor_min: 55, valor_max: 90, unidad: 'lpm', paciente_id: PACIENTE },
     ]);
-    const vitales = await resolverVitalesHabilitados(PACIENTE, PRESTADORA);
-    assert.deepEqual(vitales, { habilitados: true, rangos: { pulso: { min: 55, max: 90, unidad: 'lpm' } } });
+    const vitales = await vitalesDelAsistente(PACIENTE, PRESTADORA, CUIDADORA);
+    assert.deepEqual(vitales, {
+      habilitados: true,
+      signos: SIN_PUNCION,
+      rangos: { pulso: { min: 55, max: 90, unidad: 'lpm' } },
+    });
     todasConElTrabajoDe(PRESTADORA);
+    assert.ok(llamadas.some((l) => l.clave.includes('autorizaciones_monitoreo_paciente') && l.url.includes('estado=eq.aceptada')), 'pide sólo la aceptada');
   });
 
-  it('sin autorización vigente no hay sección', async () => {
+  it('sin autorización aceptada no hay sección', async () => {
     respuestas.set('GET /rest/v1/autorizaciones_monitoreo_paciente', []);
-    assert.deepEqual(await resolverVitalesHabilitados(PACIENTE, PRESTADORA), { habilitados: false, rangos: {} });
+    assert.deepEqual(await vitalesDelAsistente(PACIENTE, PRESTADORA, CUIDADORA), SIN_SIGNOS);
+  });
+
+  it('el tipo con monitoreo biométrico los toma todos sin autorización, también la glucemia', async () => {
+    respuestas.set('GET /rest/v1/autorizaciones_monitoreo_paciente', []);
+    respuestas.set('GET /rest/v1/rangos_referencia_vitales', []);
+    const vitales = await vitalesDelAsistente(PACIENTE, PRESTADORA, ENFERMERA);
+    assert.equal(vitales.habilitados, true);
+    assert.ok(vitales.signos.includes('glucemia'));
+    assert.ok(!llamadas.some((l) => l.clave.includes('autorizaciones_monitoreo_paciente')), 'no pregunta por la autorización');
   });
 
   it('sin Prestadora no hay sección, y ni siquiera le pregunta a la base', async () => {
-    assert.deepEqual(await resolverVitalesHabilitados(PACIENTE, undefined), { habilitados: false, rangos: {} });
+    assert.deepEqual(await vitalesDelAsistente(PACIENTE, undefined, ENFERMERA), SIN_SIGNOS);
     assert.equal(llamadas.length, 0);
+  });
+
+  it('al guardar quedan sólo los signos que puede tomar', () => {
+    assert.deepEqual(filtrarSignos({ temperatura: 36.5, glucemia: 110, saturacion: '' }, SIN_PUNCION), { temperatura: 36.5 });
+    assert.equal(filtrarSignos({ glucemia: 110 }, SIN_PUNCION), null);
+    assert.equal(filtrarSignos({ temperatura: 36.5 }, []), null);
+  });
+});
+
+describe('los rangos que ve el Cliente', () => {
+  it('sin signos en los reportes no van, y ni siquiera le pregunta a la base', async () => {
+    assert.deepEqual(await rangosParaLosReportes(PACIENTE, PRESTADORA, [{ signos_vitales: null }]), { rangos: null });
+    assert.equal(llamadas.length, 0);
+  });
+
+  it('con signos los lee el trabajo de la Prestadora', async () => {
+    respuestas.set('GET /rest/v1/rangos_referencia_vitales', [
+      { signo: 'glucemia', valor_min: 70, valor_max: 140, unidad: 'mg/dL', paciente_id: null },
+    ]);
+    const { rangos } = await rangosParaLosReportes(PACIENTE, PRESTADORA, [{ signos_vitales: { glucemia: 110 } }]);
+    assert.deepEqual(rangos, { glucemia: { min: 70, max: 140, unidad: 'mg/dL' } });
+    todasConElTrabajoDe(PRESTADORA);
   });
 });

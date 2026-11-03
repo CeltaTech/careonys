@@ -14,7 +14,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { PrestacionesPaciente } from './PrestacionesPaciente';
 import { EditarPacienteModal } from './EditarPacienteModal';
 import { NuevoPacienteModal } from './NuevoPacienteModal';
-import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
+import { SignosVitalesPaciente } from './SignosVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { EquipoDelPaciente } from './EquipoDelPaciente';
 import { InvitarPersonaAutorizadaModal } from './InvitarPersonaAutorizadaModal';
@@ -509,7 +509,7 @@ export function ClienteDetalle() {
       )}
 
       {pacienteParaVitales && (
-        <MonitoreoVitalesPaciente paciente={pacienteParaVitales} onClose={() => setPacienteParaVitales(null)} />
+        <SignosVitalesPaciente paciente={pacienteParaVitales} onClose={() => setPacienteParaVitales(null)} />
       )}
 
       {pacienteParaDomicilios && (

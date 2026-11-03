@@ -7,8 +7,8 @@
 // producto muestran cosas distintas de la misma persona. Por eso toda pantalla que muestre o
 // edite signos vitales consume estas constantes en vez de volver a escribirlas.
 //
-// Las aplicaciones de Clientes y de Asistentes se despliegan cada una por su cuenta y no
-// pueden importar este archivo. Tienen entonces una copia idéntica, que se genera desde acá
+// Las aplicaciones de Clientes y de Asistentes y el backend se despliegan cada uno por su cuenta
+// y no pueden importar este archivo. Tienen entonces una copia idéntica, que se genera desde acá
 // con scripts/sincronizar_copias.mjs y que scripts/verificar_identidad.mjs vuelve a comparar,
 // cortando el build si alguna se despegó. Es el punto único de verdad entre carpetas que se
 // despliegan por separado, el mismo mecanismo que ya usa identidadProducto.js.
@@ -16,6 +16,10 @@
 // Nunca se edita una copia: se edita este archivo y se regeneran.
 
 export const SIGNOS_VITALES = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
+
+// Los que se toman pinchando. No entran en la autorización que firma el Cliente: sólo los toma un
+// Asistente cuyo tipo tiene habilitado el monitoreo biométrico.
+export const SIGNOS_CON_PUNCION = ['glucemia'];
 
 // Reportes viejos, anteriores a la separación de la presión en sistólica y diastólica.
 // Se siguen mostrando tal cual quedaron guardados, sin rango de referencia.

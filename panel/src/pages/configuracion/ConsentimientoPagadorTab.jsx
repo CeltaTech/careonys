@@ -132,7 +132,7 @@ function ElTextoQueFirma() {
                   }}
                   disabled={guardando}
                 >
-                  {t.configuracion.consentimiento_pagador_volver_al_modelo}
+                  {t.comun.restablecer_predeterminado}
                 </Button>
               )}
               <Button onClick={guardar} disabled={guardando}>

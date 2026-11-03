@@ -71,6 +71,9 @@ export const T = {
         // problemas distintos y cada uno se sale de una manera: el enlace equivocado o
         // vencido obliga a pedir uno nuevo, y el ya usado se saltea entrando derecho.
         faltan_datos: 'Faltan datos obligatorios. Revise el formulario e intente nuevamente.',
+        ya_hay_una_autorizacion: 'Ya hay una autorización cargada. Actualice la página.',
+        sin_texto: 'No hay texto de autorización para este país.',
+        el_texto_cambio: 'El texto de la autorización cambió. Léalo nuevamente antes de firmar.',
         password_debil: 'La contraseña tiene que tener al menos 8 caracteres.',
         token_invalido: 'Este enlace no es válido. Solicite un enlace nuevo.',
         token_ya_usado: 'Esta cuenta ya fue activada con este enlace. Se entra desde la pantalla de ingreso, con la contraseña que se eligió.',
@@ -671,6 +674,15 @@ export const T = {
       persona_autorizada_califica_al_asistente: 'Calificar al Asistente',
       persona_autorizada_pide_medicacion: 'Pedir un cambio de medicación',
     },
+    // La autorización para que un Asistente le tome los signos vitales al Paciente. Firmar y subir
+    // el documento son sólo del titular; tocar «Firmar» con el texto delante es la firma.
+    vitales_autorizacion: {
+      titulo: 'Signos vitales',
+      autorizacion: 'Autorización',
+      ver: 'Ver',
+      firmar: 'Firmar',
+      subir_documento: 'Subir documento',
+    },
     // La autorización de acceso que firma el titular. Ni un texto de acá dice que algo esté
     // trabado: hasta la firma sigue rigiendo lo anterior.
     instruccion: {
@@ -749,6 +761,9 @@ export const T = {
         acceso_no_vigente: 'The arranged service has expired. Renew it with the Provider to see these details.',
         saldo_agotado: 'You used all the included contacts. Request another pack from the Provider to see more.',
         faltan_datos: 'Required data is missing. Check the form and try again.',
+        ya_hay_una_autorizacion: 'An authorization is already on file. Reload the page.',
+        sin_texto: 'There is no authorization text for this country.',
+        el_texto_cambio: 'The authorization text changed. Read it again before signing.',
         password_debil: 'The password must be at least 8 characters long.',
         token_invalido: 'This link is not valid. Request a new link.',
         token_ya_usado: 'This account has already been activated with this link. You can sign in with the password you chose.',
@@ -1278,6 +1293,13 @@ export const T = {
       persona_autorizada_califica_al_asistente: 'Rating the Assistant',
       persona_autorizada_pide_medicacion: 'Requesting a medication change',
     },
+    vitales_autorizacion: {
+      titulo: 'Vital signs',
+      autorizacion: 'Authorization',
+      ver: 'View',
+      firmar: 'Sign',
+      subir_documento: 'Upload document',
+    },
     instruccion: {
       titulo: 'Access authorization',
       sin_instruccion: 'There is no authorization to sign.',
@@ -1353,6 +1375,9 @@ export const T = {
         acceso_no_vigente: 'O serviço contratado expirou. Renove-o com a Prestadora para ver estes dados.',
         saldo_agotado: 'Você usou todos os contatos incluídos. Solicite outro pacote à Prestadora para ver mais.',
         faltan_datos: 'Faltam dados obrigatórios. Revise o formulário e tente novamente.',
+        ya_hay_una_autorizacion: 'Já existe uma autorização registrada. Atualize a página.',
+        sin_texto: 'Não há texto de autorização para este país.',
+        el_texto_cambio: 'O texto da autorização mudou. Leia-o novamente antes de assinar.',
         password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
         token_invalido: 'Este link não é válido. Solicite um novo link.',
         token_ya_usado: 'Esta conta já foi ativada com este link. O acesso é feito na tela de entrada, com a senha escolhida.',
@@ -1881,6 +1906,13 @@ export const T = {
       persona_autorizada_dinero: 'A mensalidade, as faturas, as cobranças e o código para pagar',
       persona_autorizada_califica_al_asistente: 'Avaliar o Assistente',
       persona_autorizada_pide_medicacion: 'Pedir uma mudança de medicação',
+    },
+    vitales_autorizacion: {
+      titulo: 'Sinais vitais',
+      autorizacion: 'Autorização',
+      ver: 'Ver',
+      firmar: 'Assinar',
+      subir_documento: 'Enviar documento',
     },
     instruccion: {
       titulo: 'Autorização de acesso',

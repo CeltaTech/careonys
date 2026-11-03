@@ -1404,6 +1404,27 @@ a {
   color: var(--tono-neutro-texto);
 }
 
+/* El texto editable con marcadores (`TextoConMarcadores`): se ve como un casillero de texto
+   largo, y cada marcador es una etiqueta que corre con el renglón. */
+.texto-con-marcadores {
+  min-height: 220px;
+  max-height: 55vh;
+  overflow-y: auto;
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-control);
+  padding: 9px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  background: var(--superficie);
+  color: var(--texto-principal);
+}
+
+.texto-con-marcadores .badge {
+  font-size: 12px;
+  vertical-align: baseline;
+}
+
 /* ---------- Comunicación interna (tipo chat) ---------- */
 
 .panel-chat-hilo {
@@ -1793,6 +1814,11 @@ button.panel-kpi-card[aria-pressed='true'] {
   justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 1rem;
+}
+
+/* Lo que no es ni seguir ni volver —volver al texto predeterminado— va solo, a la izquierda. */
+.panel-modal-acciones-aparte {
+  margin-right: auto;
 }
 
 /* «La tomo yo»: el botón cuando nadie se hizo cargo, y el nombre de quien la está atendiendo con

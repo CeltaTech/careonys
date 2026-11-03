@@ -11,6 +11,7 @@ import DomicilioTemporal from '../components/DomicilioTemporal';
 import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 import TarjetaAcciones from '../components/TarjetaAcciones';
+import TarjetaSignosVitales from '../components/TarjetaSignosVitales';
 
 // Lo mismo que espera la aplicación del Asistente entre un punto y el siguiente: pedir más
 // seguido no traería nada nuevo.
@@ -175,6 +176,8 @@ export default function PacienteDetalle() {
           )}
         </section>
       )}
+
+      {puedeVer('persona_autorizada_ficha_del_paciente') && <TarjetaSignosVitales pacienteId={id} />}
 
       {/* Ver guardias va primero a propósito: arriba se ve una sola guardia, y la pregunta que
           sigue siempre es qué pasa el resto de la semana. */}

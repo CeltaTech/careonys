@@ -133,4 +133,14 @@ export const api = {
   sacarLlave: (id) => pedido(`/llaves/${id}`, { method: 'DELETE' }),
   llaveUsada: (id) => pedido(`/llaves/${id}/usada`, { method: 'POST' }),
   desafioDeFirma: () => pedido('/llaves/firma/desafio', { method: 'POST' }),
+  // La autorización de signos vitales de un Paciente. El texto para firmar trae su identificador de
+  // verificación, que vuelve con la firma para que la base compruebe que se firmó lo que se mostró.
+  autorizacionSignosVitales: (pacienteId) => pedido(`/vitales-autorizacion/${pacienteId}`),
+  documentoSignosVitales: (pacienteId, idioma) =>
+    pedido(`/vitales-autorizacion/${pacienteId}/documento?idioma=${encodeURIComponent(idioma)}`),
+  firmarSignosVitales: (pacienteId, datos) =>
+    pedido(`/vitales-autorizacion/${pacienteId}/firmar`, { method: 'POST', body: JSON.stringify(datos) }),
+  subirSignosVitales: (pacienteId, idioma, formData) =>
+    pedido(`/vitales-autorizacion/${pacienteId}/papel?idioma=${encodeURIComponent(idioma)}`, { method: 'POST', body: formData }),
+  verAutorizacionSignosVitales: (id) => pedido(`/vitales-autorizacion/autorizacion/${id}`),
 };

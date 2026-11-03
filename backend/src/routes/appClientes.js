@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
-import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
+import { rangosParaLosReportes } from '../utils/vitalesReferencia.js';
 import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
@@ -744,11 +744,9 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
     return responderError(res, e);
   }
 
-  // Los rangos normales solo tienen sentido junto a los valores: sin signos vitales en
-  // pantalla, mandar el semáforo de "fuera del rango normal" es mandar información clínica de
-  // esa persona sin nada a lo que aplicarla.
+  // Los rangos van sólo si algún reporte trae signos cargados.
   const vitales = visibilidad.cliente_signos_vitales
-    ? await resolverVitalesHabilitados(paciente.id, paciente.prestadora_id)
+    ? await rangosParaLosReportes(paciente.id, paciente.prestadora_id, data)
     : { rangos: null };
 
   // Son dato de salud: queda anotado quién los leyó antes de entregarlos.
@@ -804,7 +802,7 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
   }
 
   const vitales = visibilidad.cliente_signos_vitales
-    ? await resolverVitalesHabilitados(paciente.id, paciente.prestadora_id)
+    ? await rangosParaLosReportes(paciente.id, paciente.prestadora_id, [data])
     : { rangos: null };
 
   try {

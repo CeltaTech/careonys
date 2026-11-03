@@ -1375,18 +1375,21 @@ VALUES ('a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-1111111
         '60000000-0000-4000-8000-000000000001', 'temperatura', 36.0, 37.5, '°C',
         'Valor de referencia general');
 
--- Autorización para monitorear los signos vitales de un Paciente.
+-- Autorización para que un Asistente le tome los signos vitales a un Paciente: un papel firmado
+-- que subió el Panel, una por Prestadora, para que la prueba de aislamiento tenga de los dos lados.
 INSERT INTO public.autorizaciones_monitoreo_paciente
-  (id, prestadora_id, paciente_id, nombre_avala, rol_avala, tipo_firma, archivo_url,
-   fecha_autorizacion, registrado_por)
+  (id, prestadora_id, paciente_id, metodo, estado, documento_texto, documento_verificador,
+   documento_idioma, archivo_url, cargado_por)
 VALUES ('a2000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-        '50000000-0000-4000-8000-000000000001', 'Dra. Inés Falcón', 'profesional', 'digital',
-        '11111111-1111-4111-8111-111111111111/autorizaciones/prueba-a.pdf',
-        current_date - 60, '20000000-0000-4000-8000-000000000003'),
+        '50000000-0000-4000-8000-000000000001', 'papel_panel', 'aceptada',
+        'Texto de prueba de la autorización.', 'verificador-de-prueba-a', 'es-AR',
+        '11111111-1111-4111-8111-111111111111/50000000-0000-4000-8000-000000000001/autorizacion-prueba-a.pdf',
+        '20000000-0000-4000-8000-000000000003'),
        ('a2000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
-        '60000000-0000-4000-8000-000000000001', 'Dr. Omar Vega', 'profesional', 'digital',
-        '22222222-2222-4222-8222-222222222222/autorizaciones/prueba-b.pdf',
-        current_date - 45, '50000000-0000-4000-8000-000000000002');
+        '60000000-0000-4000-8000-000000000001', 'papel_panel', 'aceptada',
+        'Texto de prueba de la autorización.', 'verificador-de-prueba-b', 'es-AR',
+        '22222222-2222-4222-8222-222222222222/60000000-0000-4000-8000-000000000001/autorizacion-prueba-b.pdf',
+        '50000000-0000-4000-8000-000000000002');
 
 -- Una perilla de visibilidad tocada por cada Prestadora. La lista de perillas
 -- posibles no se siembra: vive en `backend/src/utils/catalogoVisibilidad.js` y

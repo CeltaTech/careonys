@@ -27,7 +27,7 @@ import { useCallback, useId, useRef } from 'react';
    señalar un elemento, se les pasa el nombre ya escrito (y traducido, nunca a mano). */
 
 const FOCALIZABLES =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 
 export function useModalAccesible(cerrar, etiqueta) {
   const idTitulo = useId();

@@ -6,7 +6,7 @@ import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsulta
 import { estructurarReporteIA, distanciaMetros } from '../utils/reporteIA.js';
 import { enviarPushCliente } from '../utils/push.js';
 import { analizarPaciente } from '../utils/revisarAlertasIA.js';
-import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
+import { vitalesDelAsistente, filtrarSignos } from '../utils/vitalesReferencia.js';
 import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import {
   conPacientes,
@@ -690,23 +690,6 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     return responderError(res, e);
   }
 
-  // Los signos vitales son de una persona, no de un turno: la presión normal de la señora de
-  // la casa no es la del marido. Por eso van por Paciente, y la autorización de monitoreo
-  // también —puede estar firmada para uno y no para el otro.
-  //
-  // Si la Prestadora no toma signos vitales, ni siquiera se pregunta cuáles corresponden: la
-  // pantalla no va a mostrar el bloque, y los valores de referencia de una persona son un dato
-  // de salud que no tiene por qué llegar al teléfono.
-  const vitalesPorPaciente = {};
-  if (visibilidad.asistente_signos_vitales) {
-    // Los rangos se leen con el trabajo de la Prestadora: la regla de salud se pregunta antes.
-    for (const p of guardia.pacientes ?? []) {
-      vitalesPorPaciente[p.id] = (await alcanzaLaInformacionDeSalud(db, p.id))
-        ? await resolverVitalesHabilitados(p.id, req.usuarioAsistente.prestadoraId)
-        : { habilitados: false, rangos: {} };
-    }
-  }
-
   // Qué le toca hacer en este turno, qué no le toca y qué tiene prohibido. Las tres listas
   // salen del mismo catálogo que ve el Cliente, así que las dos partes leen lo mismo y nadie
   // discute en la puerta con una lista distinta en la mano.
@@ -723,6 +706,24 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     quienEs?.tipo_asistente_id,
     req.usuarioAsistente.prestadoraId
   );
+
+  // Los signos vitales son de una persona, no de un turno: la presión normal de la señora de
+  // la casa no es la del marido. Por eso van por Paciente, y la autorización también —puede
+  // estar firmada para uno y no para el otro. Cuáles toma depende además de su tipo, que por
+  // eso se pide antes.
+  //
+  // Si la Prestadora no toma signos vitales, ni siquiera se pregunta cuáles corresponden: la
+  // pantalla no va a mostrar el bloque, y los valores de referencia de una persona son un dato
+  // de salud que no tiene por qué llegar al teléfono.
+  const vitalesPorPaciente = {};
+  if (visibilidad.asistente_signos_vitales) {
+    // Los rangos se leen con el trabajo de la Prestadora: la regla de salud se pregunta antes.
+    for (const p of guardia.pacientes ?? []) {
+      vitalesPorPaciente[p.id] = (await alcanzaLaInformacionDeSalud(db, p.id))
+        ? await vitalesDelAsistente(p.id, req.usuarioAsistente.prestadoraId, tareas)
+        : { habilitados: false, signos: [], rangos: {} };
+    }
+  }
 
   // La obra social y el número de afiliado de cada Paciente van sólo mientras la guardia está en
   // curso: es cuando el Asistente puede necesitarlos, si hay que llamar a una ambulancia. El
@@ -1856,6 +1857,20 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // historia clínica de un Paciente un dato que esa Prestadora decidió no tomar.
   const visibilidad = await visibilidadDelPedido(req);
 
+  // Y de los signos, sólo los que este Asistente puede tomar de este Paciente: los de punción
+  // sólo si su tipo los tiene habilitados, los demás sólo con la autorización aceptada.
+  let signosQueGuarda = null;
+  if (visibilidad.asistente_signos_vitales && signosVitales) {
+    const { data: quienEs } = await db
+      .from('asistentes')
+      .select('tipo_asistente_id')
+      .eq('id', req.usuarioAsistente.asistenteId)
+      .maybeSingle();
+    const { tareas } = await tipoConSusTareas(quienEs?.tipo_asistente_id, guardia.prestadora_id);
+    const { signos } = await vitalesDelAsistente(paciente.id, guardia.prestadora_id, tareas);
+    signosQueGuarda = filtrarSignos(signosVitales, signos);
+  }
+
   const { data: reporte, error: errorReporte } = await db
     .from('reportes')
     .insert({
@@ -1865,7 +1880,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
       texto_libre: textoLibre || null,
       alimentacion: alimentacion || null,
       medicacion: medicacion || [],
-      signos_vitales: visibilidad.asistente_signos_vitales ? signosVitales || null : null,
+      signos_vitales: signosQueGuarda,
       estado_animo: estadoAnimo || null,
       incidentes: incidentes || null,
       observaciones: observaciones || null,

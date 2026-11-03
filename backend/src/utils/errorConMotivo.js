@@ -210,6 +210,13 @@ const ESTADO_POR_MOTIVO = {
   documentos_bloquean: 409,
   sin_permiso_para_asignar_con_documentos_pendientes: 403,
   motivo_excepcion_invalido: 400,
+  // La autorización de signos vitales. Las tres primeras son 409: el pedido está bien armado y
+  // choca con el estado de las cosas —ya hay una firmada o esperando revisión, el país no tiene
+  // texto, o el texto cambió mientras el Cliente lo leía—. Rechazar sin motivo es dato mal cargado.
+  ya_hay_una_autorizacion: 409,
+  sin_texto: 409,
+  el_texto_cambio: 409,
+  falta_el_motivo: 400,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.

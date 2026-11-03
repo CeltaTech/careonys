@@ -244,7 +244,7 @@ export const GRUPOS = [
   {
     que: 'qué signos vitales se toman y cuándo un valor quedó fuera de rango',
     original: 'panel/src/lib/signosVitales.js',
-    copias: ['pwa-clientes/src/lib/signosVitales.js', 'pwa-asistentes/src/lib/signosVitales.js'],
+    copias: ['pwa-clientes/src/lib/signosVitales.js', 'pwa-asistentes/src/lib/signosVitales.js', 'backend/src/utils/signosVitales.js'],
   },
   {
     que: 'quién de los roles del Panel es la administración de la Prestadora',

@@ -367,14 +367,21 @@ ver, y guarda la indicación y lo firmado en una sola operación;
 Prestadora de quien pide, en todas las zonas, y sólo al Administrador y a los Coordinadores; y
 `revisar_indicacion_medicacion` y `cerrar_firma_medicacion_en_papel`, que le dejan al
 Administrador y a los Coordinadores aceptar o rechazar una indicación y cerrar su firma en papel, tocando sólo el estado, el
-motivo y quién y cuándo, y sólo sobre Pacientes cuya información de salud alcanza.
+motivo y quién y cuándo, y sólo sobre Pacientes cuya información de salud alcanza. Con el mismo
+molde, `revisar_autorizacion_signos_vitales` y `cerrar_autorizacion_signos_vitales_en_papel` hacen
+eso con la autorización de signos vitales; y `documento_autorizacion_signos_vitales` recibe un
+Paciente y un idioma y devuelve el texto para firmar con su identificador de verificación, sólo si
+el Paciente es de la Prestadora de quien pide y quien pide es personal al que le alcanza su
+información de salud, o alguien de su Cliente con acceso a la Ficha del Paciente.
 El Panel llama además `la_carga_queda_pendiente`, que recibe un Paciente, corre con los permisos de
 quien llama y contesta si lo que esa persona guarde de él queda pendiente del Coordinador asignado;
 y `revisar_carga`, que acepta o rechaza una carga pendiente, resuelve la Prestadora adentro y sólo
 deja revisar al Coordinador asignado de ese Paciente o al Administrador, nunca a quien la cargó.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
-credencial. Toda función nueva de política nace en `interno`, y cualquiera que se quede en
+credencial; y `registrar_autorizacion_signos_vitales_del_titular`, que recibe quién firma,
+comprueba que sea el titular de ese Paciente y guarda la firma de la aplicación —sólo si el texto
+firmado es el vigente— o el papel que él subió, que queda pendiente. Toda función nueva de política nace en `interno`, y cualquiera que se quede en
 `public` y llame a una de ahí lleva `interno` en su `search_path`. El reparto de permisos —cuáles
 pierden el alcance anónimo y cuáles conservan `authenticated`— lo guarda la base en los permisos
 de cada función y en los permisos por defecto (`ALTER DEFAULT PRIVILEGES`) de los esquemas

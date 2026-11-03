@@ -56,6 +56,7 @@ import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/i
 import { buscarLugares, listarProvincias } from '../geocodificacion/index.js';
 import { agregarLugar, lugaresDeLaPrestadora, paisDeLaPrestadora } from '../utils/catalogoDeLugares.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { IDIOMAS_SOPORTADOS } from '../i18n/idiomas.js';
 import { direccionDeEnvioDe, esDireccionDeCorreo } from '../utils/email.js';
 import {
   apuntarReenvioDeRespuestas,
@@ -2838,6 +2839,82 @@ panelConfiguracionRouter.put('/consentimiento-medicacion/pide-firma', async (req
     }, { onConflict: 'prestadora_id' });
   if (error) return responderError(res, error);
   res.json({ ok: true });
+});
+
+// ============================================================================
+// La autorización de signos vitales: el texto que firma el Cliente
+// ============================================================================
+//
+// El predeterminado es el de fábrica del país de la Prestadora, uno por idioma, y está en la base
+// (`textos_consentimiento`, clave `autorizacion_signos_vitales`). Rige mientras la Prestadora no
+// escriba el suyo; vaciar el suyo es volver al predeterminado. Los marcadores `{{prestadora}}` y
+// `{{paciente}}` se devuelven crudos: los reemplaza la base al armar el documento de cada Paciente.
+
+const CLAVE_AUTORIZACION_SIGNOS_VITALES = 'autorizacion_signos_vitales';
+
+panelConfiguracionRouter.get('/autorizacion-signos-vitales', async (req, res) => {
+  try {
+    const db = clienteDelPedido(req);
+    const prestadoraId = await prestadoraVisible(db);
+    const [{ data: prestadora, error: errorPrestadora }, { data: propios, error: errorPropios }] = await Promise.all([
+      db.from('prestadoras').select('pais, nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
+      db.from('textos_autorizacion_signos_vitales').select('idioma, cuerpo').eq('prestadora_id', prestadoraId),
+    ]);
+    if (errorPrestadora) throw errorPrestadora;
+    if (errorPropios) throw errorPropios;
+
+    const { data: deFabrica, error: errorFabrica } = await db
+      .from('textos_consentimiento')
+      .select('idioma, cuerpo, version')
+      .eq('clave', CLAVE_AUTORIZACION_SIGNOS_VITALES)
+      .eq('jurisdiccion', prestadora?.pais ?? '')
+      .eq('es_borrador', false)
+      .is('vigente_hasta', null)
+      .order('version', { ascending: false });
+    if (errorFabrica) throw errorFabrica;
+
+    const textos = {};
+    for (const idioma of IDIOMAS_SOPORTADOS) {
+      const predeterminado = deFabrica?.find((t) => t.idioma === idioma)?.cuerpo ?? null;
+      const propio = propios?.find((t) => t.idioma === idioma)?.cuerpo ?? null;
+      // Sin predeterminado en ese idioma, en ese país no hay documento: no se ofrece.
+      if (predeterminado === null) continue;
+      textos[idioma] = { cuerpo: propio ?? predeterminado, predeterminado, esDelProducto: propio === null };
+    }
+    res.json({ prestadora: prestadora?.nombre_fantasia ?? '', textos });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+panelConfiguracionRouter.put('/autorizacion-signos-vitales', async (req, res) => {
+  const { cuerpo, idioma } = req.body || {};
+  if (!IDIOMAS_SOPORTADOS.includes(idioma)) return responderError(res, new ErrorConMotivo('faltan_datos'));
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+
+  if (!String(cuerpo ?? '').trim()) {
+    const { error } = await db
+      .from('textos_autorizacion_signos_vitales')
+      .delete()
+      .eq('prestadora_id', prestadoraId)
+      .eq('idioma', idioma);
+    if (error) return responderError(res, error);
+    return res.json({ ok: true, esDelProducto: true });
+  }
+
+  const { error } = await db
+    .from('textos_autorizacion_signos_vitales')
+    .upsert({
+      prestadora_id: prestadoraId,
+      idioma,
+      cuerpo,
+      actualizado_por: req.usuarioPanel.id,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'prestadora_id,idioma' });
+  if (error) return responderError(res, error);
+  res.json({ ok: true, esDelProducto: false });
 });
 
 // Qué papeles exige cada Pagador. El producto no siembra ninguno: eso lo sabe la Prestadora

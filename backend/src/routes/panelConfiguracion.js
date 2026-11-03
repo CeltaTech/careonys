@@ -83,15 +83,11 @@ import {
   SEGUNDOS_EN_PANTALLA_MAXIMO,
 } from '../utils/comprobacionDePresencia.js';
 import { cuerpoVigente } from '../utils/consentimientoPagador.js';
-import {
-  IDIOMA_DEL_DOCUMENTO,
-  MARCADORES,
-  MODELO_DE_FABRICA,
-} from '../utils/documentoConsentimientoPagador.js';
+import { IDIOMA_DEL_DOCUMENTO, MARCADORES } from '../utils/documentoConsentimientoPagador.js';
+import { textosDeFabrica } from '../utils/textosDeFabrica.js';
 import {
   IDIOMAS_DEL_TEXTO as IDIOMAS_DEL_TEXTO_DE_MEDICACION,
   MARCADORES as MARCADORES_DE_MEDICACION,
-  MODELO_DE_FABRICA as MODELO_DE_MEDICACION,
   cuerpoVigente as cuerpoDeMedicacionVigente,
   pideLaFirma as pideLaFirmaDeLaMedicacion,
 } from '../utils/consentimientoMedicacion.js';
@@ -2728,7 +2724,7 @@ panelConfiguracionRouter.get('/consentimiento-pagador', async (req, res) => {
     const vigente = await cuerpoVigente({ db, prestadoraId: await prestadoraVisible(db) });
     // Los marcadores se devuelven para que quien escriba el suyo sepa cuáles puede usar. Salen del
     // mismo archivo que los reemplaza, para que la lista no se despegue de lo que de verdad anda.
-    res.json({ ...vigente, marcadores: MARCADORES, modeloDelProducto: MODELO_DE_FABRICA });
+    res.json({ ...vigente, marcadores: MARCADORES });
   } catch (error) {
     responderError(res, error);
   }
@@ -2784,7 +2780,6 @@ panelConfiguracionRouter.get('/consentimiento-medicacion', async (req, res) => {
       pideFirma,
       textos: Object.fromEntries(vigentes.map((v) => [v.idioma, v])),
       marcadores: MARCADORES_DE_MEDICACION,
-      modeloDelProducto: MODELO_DE_MEDICACION,
     });
   } catch (error) {
     responderError(res, error);
@@ -2856,26 +2851,17 @@ panelConfiguracionRouter.get('/autorizacion-signos-vitales', async (req, res) =>
   try {
     const db = clienteDelPedido(req);
     const prestadoraId = await prestadoraVisible(db);
-    const [{ data: prestadora, error: errorPrestadora }, { data: propios, error: errorPropios }] = await Promise.all([
-      db.from('prestadoras').select('pais, nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
+    const [{ data: prestadora, error: errorPrestadora }, { data: propios, error: errorPropios }, deFabrica] = await Promise.all([
+      db.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
       db.from('textos_autorizacion_signos_vitales').select('idioma, cuerpo').eq('prestadora_id', prestadoraId),
+      textosDeFabrica({ db, prestadoraId, clave: CLAVE_AUTORIZACION_SIGNOS_VITALES }),
     ]);
     if (errorPrestadora) throw errorPrestadora;
     if (errorPropios) throw errorPropios;
 
-    const { data: deFabrica, error: errorFabrica } = await db
-      .from('textos_consentimiento')
-      .select('idioma, cuerpo, version')
-      .eq('clave', CLAVE_AUTORIZACION_SIGNOS_VITALES)
-      .eq('jurisdiccion', prestadora?.pais ?? '')
-      .eq('es_borrador', false)
-      .is('vigente_hasta', null)
-      .order('version', { ascending: false });
-    if (errorFabrica) throw errorFabrica;
-
     const textos = {};
     for (const idioma of IDIOMAS_SOPORTADOS) {
-      const predeterminado = deFabrica?.find((t) => t.idioma === idioma)?.cuerpo ?? null;
+      const predeterminado = deFabrica[idioma] ?? null;
       const propio = propios?.find((t) => t.idioma === idioma)?.cuerpo ?? null;
       // Sin predeterminado en ese idioma, en ese país no hay documento: no se ofrece.
       if (predeterminado === null) continue;

@@ -1,10 +1,10 @@
 import { ErrorConMotivo } from './errorConMotivo.js';
 import {
   IDIOMA_DEL_DOCUMENTO,
-  MODELO_DE_FABRICA,
   verificadorDelDocumento,
   textoDelConsentimiento,
 } from './documentoConsentimientoPagador.js';
+import { textosDeFabrica } from './textosDeFabrica.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 
 // Todo lo que le pasa al consentimiento del Pagador: se carga, se cierra con la hoja firmada, o se
@@ -29,17 +29,25 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 
 const DEPOSITO = 'documentos-pagador';
 
-// El texto que rige para esta Prestadora: el suyo si lo cargó, el modelo del producto si no.
-export async function cuerpoVigente({ db, prestadoraId, idioma = IDIOMA_DEL_DOCUMENTO }) {
-  const { data } = await db
-    .from('textos_consentimiento_pagador')
-    .select('cuerpo, updated_at')
-    .eq('prestadora_id', prestadoraId)
-    .eq('idioma', idioma)
-    .maybeSingle();
+// El texto de fábrica vive en la base (`textos_consentimiento`, esta clave), por país e idioma.
+export const CLAVE_DEL_TEXTO = 'consentimiento_pagador';
 
+// El texto que rige para esta Prestadora: el suyo si lo cargó, el de fábrica de su país si no.
+export async function cuerpoVigente({ db, prestadoraId, idioma = IDIOMA_DEL_DOCUMENTO }) {
+  const [{ data }, deFabrica] = await Promise.all([
+    db
+      .from('textos_consentimiento_pagador')
+      .select('cuerpo, updated_at')
+      .eq('prestadora_id', prestadoraId)
+      .eq('idioma', idioma)
+      .maybeSingle(),
+    textosDeFabrica({ db, prestadoraId, clave: CLAVE_DEL_TEXTO }),
+  ]);
+
+  const predeterminado = deFabrica[idioma] ?? null;
   return {
-    cuerpo: data?.cuerpo ?? MODELO_DE_FABRICA,
+    cuerpo: data?.cuerpo ?? predeterminado,
+    predeterminado,
     esDelProducto: !data,
     actualizadoEn: data?.updated_at ?? null,
     idioma,

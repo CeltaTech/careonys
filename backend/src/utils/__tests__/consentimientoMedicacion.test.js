@@ -58,8 +58,12 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('/rest/v1/configuracion_medicacion', [{ pide_firma_del_cliente: false }]);
   respuestas.set('/rest/v1/textos_consentimiento_medicacion', [{ cuerpo: 'Acepto lo de {{prestadora}}.', updated_at: null }]);
-  respuestas.set('/rest/v1/prestadoras', [{ nombre_fantasia: 'Cuidar del Sur' }]);
+  respuestas.set('/rest/v1/prestadoras', [{ nombre_fantasia: 'Cuidar del Sur', pais: 'AR' }]);
+  respuestas.set('/rest/v1/textos_consentimiento', [{ idioma: 'es-AR', cuerpo: 'De fábrica, de {{prestadora}}.', version: 1 }]);
 });
+
+// Los textos de fábrica son de todas las Prestadoras de un país: esa consulta no nombra a ninguna.
+const SIN_PRESTADORA = new Set(['/rest/v1/textos_consentimiento']);
 
 /** Que cada pedido haya salido con el trabajo de esa Prestadora, y nombrándola. */
 function todasConElTrabajoDe(prestadoraId) {
@@ -67,6 +71,7 @@ function todasConElTrabajoDe(prestadoraId) {
   for (const llamada of llamadas) {
     assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', llamada.ruta);
     assert.equal(llamada.credencial?.prestadora_id, prestadoraId, llamada.ruta);
+    if (SIN_PRESTADORA.has(llamada.ruta)) continue;
     const columna = llamada.ruta === '/rest/v1/prestadoras' ? 'id' : 'prestadora_id';
     assert.equal(llamada.consulta.get(columna), `eq.${prestadoraId}`, llamada.ruta);
   }
@@ -96,8 +101,18 @@ describe('el consentimiento de la medicación', () => {
     assert.ok(documento.verificador);
     assert.deepEqual([...new Set(llamadas.map((l) => l.ruta))].sort(), [
       '/rest/v1/prestadoras',
+      '/rest/v1/textos_consentimiento',
       '/rest/v1/textos_consentimiento_medicacion',
     ]);
     todasConElTrabajoDe(PRESTADORA);
+  });
+
+  it('si la Prestadora no escribió el suyo, rige el de fábrica de su país, que sale de la base', async () => {
+    respuestas.set('/rest/v1/textos_consentimiento_medicacion', []);
+    const documento = await documentoParaFirmar({ prestadoraId: PRESTADORA, idioma: 'es-AR' });
+    assert.equal(documento.texto, 'De fábrica, de Cuidar del Sur.');
+    const deFabrica = llamadas.find((l) => l.ruta === '/rest/v1/textos_consentimiento');
+    assert.equal(deFabrica.consulta.get('jurisdiccion'), 'eq.AR');
+    assert.equal(deFabrica.consulta.get('clave'), 'eq.consentimiento_medicacion');
   });
 });

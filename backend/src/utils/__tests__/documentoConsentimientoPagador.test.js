@@ -16,7 +16,6 @@ import { describe, it } from 'node:test';
 
 import {
   MARCADORES,
-  MODELO_DE_FABRICA,
   textoDelConsentimiento,
   verificadorDelDocumento,
 } from '../documentoConsentimientoPagador.js';
@@ -29,7 +28,18 @@ const UNA_ENTIDAD = { nombre: 'Obra Social de Prueba', documento: 'CUIT 30-00000
 const UNA_PERSONA = { nombre: 'Prueba, Nadia', documento: 'DNI 00000000' };
 const SU_APODERADA = { nombre: 'Prueba, Nadia' };
 
-function unPapel({ pagador, apoderado, cuerpo }) {
+// Un texto con todos los marcadores y el del apoderado solo en su renglón, como el de fábrica, que
+// vive en la base.
+const UN_TEXTO = [
+  'Prestadora: {{prestadora}}',
+  'Quien se obliga: {{pagador}}',
+  'Documento: {{documento}}',
+  'Firma en su representación: {{apoderado}}',
+  'Servicio contratado para: {{cliente}}',
+  'Fecha: {{fecha}}',
+].join('\n');
+
+function unPapel({ pagador, apoderado, cuerpo = UN_TEXTO }) {
   return textoDelConsentimiento({
     cuerpo,
     prestadora: PRESTADORA,
@@ -121,13 +131,5 @@ describe('El consentimiento de quien paga', () => {
       const sin = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: null }));
       assert.notEqual(con, sin);
     });
-  });
-
-  it('el modelo de fábrica trae el marcador del apoderado solo en su renglón', () => {
-    const renglon = MODELO_DE_FABRICA.split('\n').find((uno) => uno.includes('{{apoderado}}'));
-    assert.ok(renglon, 'el modelo de fábrica perdió el renglón del apoderado');
-    for (const otro of MARCADORES.filter((uno) => uno !== '{{apoderado}}')) {
-      assert.equal(renglon.includes(otro), false, `${otro} comparte renglón con el apoderado y se iría con él`);
-    }
   });
 });

@@ -1,12 +1,13 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { IDIOMAS_SOPORTADOS, normalizarIdioma } from '../i18n/idiomas.js';
 import { verificadorDelDocumento } from './documentoConsentimientoPagador.js';
+import { textosDeFabrica } from './textosDeFabrica.js';
 
 // El texto que acepta el Cliente cuando carga una medicación, y el interruptor que lo pide.
 //
 // DE QUIÉN ES EL TEXTO. Es un documento entre la Prestadora y su Cliente, así que es de ella: el
 // producto trae un modelo y ella lo adopta, lo cambia o lo reemplaza desde Configuración. Lo de
-// acá rige mientras no cargue ninguno, en el idioma en que el Cliente usa la aplicación.
+// de fábrica rige mientras no cargue ninguno, en el idioma en que el Cliente usa la aplicación.
 //
 // LO FIRMADO SE GUARDA ENTERO. Si mañana la Prestadora cambia su texto, lo que el Cliente aceptó
 // fue el de aquel día: se guarda tal cual, con su identificador de verificación y su idioma.
@@ -16,29 +17,8 @@ import { verificadorDelDocumento } from './documentoConsentimientoPagador.js';
 
 export const MARCADORES = ['{{prestadora}}'];
 
-export const MODELO_DE_FABRICA = {
-  'es-AR': [
-    'Declaro bajo juramento que los datos correspondientes a la prescripción médica —incluyendo el tratamiento, la medicación, la dosificación, la frecuencia, la vía de administración y la vigencia del período indicado— concuerdan fiel y exactamente con lo dispuesto por el profesional médico tratante.',
-    '',
-    'En virtud de ello, asumo plena y exclusiva responsabilidad por la correcta carga e ingreso de dicha información en el sistema.',
-    '',
-    'La entidad {{prestadora}} y el personal interviniente en la administración de la medicación actuarán sobre la base de la información registrada en el sistema, la cual reviste carácter de declaración jurada, quedando liberados de toda responsabilidad derivada de errores, omisiones o inexactitudes en la carga efectuada por el declarante.',
-  ].join('\n'),
-  en: [
-    'I declare under oath that the data of the medical prescription —including the treatment, the medication, the dosage, the frequency, the route of administration and the validity of the indicated period— faithfully and exactly match what was ordered by the treating physician.',
-    '',
-    'Accordingly, I assume full and exclusive responsibility for the correct entry of this information into the system.',
-    '',
-    'The entity {{prestadora}} and the staff involved in administering the medication will act on the basis of the information recorded in the system, which has the nature of a sworn statement, and are released from all liability arising from errors, omissions or inaccuracies in the entry made by the declarant.',
-  ].join('\n'),
-  'pt-BR': [
-    'Declaro sob juramento que os dados correspondentes à prescrição médica —incluindo o tratamento, a medicação, a dosagem, a frequência, a via de administração e a vigência do período indicado— correspondem fiel e exatamente ao disposto pelo profissional médico responsável.',
-    '',
-    'Em virtude disso, assumo plena e exclusiva responsabilidade pelo correto cadastro e inserção dessas informações no sistema.',
-    '',
-    'A entidade {{prestadora}} e o pessoal envolvido na administração da medicação atuarão com base nas informações registradas no sistema, as quais têm caráter de declaração juramentada, ficando isentos de toda responsabilidade decorrente de erros, omissões ou inexatidões no cadastro efetuado pelo declarante.',
-  ].join('\n'),
-};
+// El texto de fábrica vive en la base (`textos_consentimiento`, esta clave), por país e idioma.
+export const CLAVE_DEL_TEXTO = 'consentimiento_medicacion';
 
 // Con la conexión que trae quien llama, o, si no trae ninguna, con el trabajo de esa Prestadora, que
 // sólo alcanza lo suyo.
@@ -49,17 +29,22 @@ function conLaPrestadora(prestadoraId, db, trabajo, hacer) {
 // El texto que rige para esta Prestadora en este idioma: el suyo si lo cargó, el modelo si no.
 export async function cuerpoVigente({ prestadoraId, idioma, db }) {
   const elIdioma = normalizarIdioma(idioma);
-  const { data } = await conLaPrestadora(prestadoraId, db, 'leer el texto de la medicación', (con) =>
-    con
-      .from('textos_consentimiento_medicacion')
-      .select('cuerpo, updated_at')
-      .eq('prestadora_id', prestadoraId)
-      .eq('idioma', elIdioma)
-      .maybeSingle(),
+  const [{ data }, deFabrica] = await conLaPrestadora(prestadoraId, db, 'leer el texto de la medicación', (con) =>
+    Promise.all([
+      con
+        .from('textos_consentimiento_medicacion')
+        .select('cuerpo, updated_at')
+        .eq('prestadora_id', prestadoraId)
+        .eq('idioma', elIdioma)
+        .maybeSingle(),
+      textosDeFabrica({ db: con, prestadoraId, clave: CLAVE_DEL_TEXTO }),
+    ]),
   );
 
+  const predeterminado = deFabrica[elIdioma] ?? null;
   return {
-    cuerpo: data?.cuerpo ?? MODELO_DE_FABRICA[elIdioma],
+    cuerpo: data?.cuerpo ?? predeterminado,
+    predeterminado,
     esDelProducto: !data,
     actualizadoEn: data?.updated_at ?? null,
     idioma: elIdioma,

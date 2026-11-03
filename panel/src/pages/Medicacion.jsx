@@ -221,7 +221,7 @@ function HojaParaFirmar({ documento, onCerrar }) {
   return (
     <div className="panel-modal-fondo" onClick={onCerrar}>
       <div className="panel-modal panel-modal-ancho" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo} className="no-imprimir">{t.medicacion.imprimir_para_firmar}</h2>
+        <h2 id={modal.idTitulo} className="no-imprimir">{t.medicacion.titulo_hoja_para_firmar}</h2>
 
         <div id="area-imprimible">
           <div className="documento-instruccion">{documento.texto}</div>

@@ -184,13 +184,14 @@ function NombrarApoderado({ funcion, textos, onCerrar, onHecho }) {
       await api.nombrarApoderado(funcion, cuerpo);
       onHecho();
     } catch (fallo) {
+      setOcupado(false);
       if (fallo.motivo === 'numero_no_valido') {
         setErrores((previos) => ({ ...previos, cuil: mensajeDeError(fallo, t, 'nombrar al apoderado') }));
-        document.getElementById(idDe('cuil'))?.focus();
+        // Se espera a que el casillero vuelva a estar encendido: apagado no recibe el cursor.
+        requestAnimationFrame(() => document.getElementById(idDe('cuil'))?.focus());
       } else {
         setError(mensajeDeError(fallo, t, 'nombrar al apoderado'));
       }
-      setOcupado(false);
     }
   }
 

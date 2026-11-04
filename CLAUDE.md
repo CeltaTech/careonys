@@ -381,7 +381,13 @@ Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama �
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial; y `registrar_autorizacion_signos_vitales_del_titular`, que recibe quién firma,
 comprueba que sea el titular de ese Paciente y guarda la firma de la aplicación —sólo si el texto
-firmado es el vigente— o el documento que él subió, que queda pendiente. Toda función nueva de política nace en `interno`, y cualquiera que se quede en
+firmado es el vigente— o el documento que él subió, que queda pendiente. Con las dos credenciales,
+`nombrar_apoderado`, `reemplazar_poder_del_apoderado` y `quitar_apoderado` reciben un Cliente y una
+función, y sólo aceptan al personal de la Prestadora con permiso sobre ese Cliente o, en el trabajo
+sin persona, al titular de ese mismo Cliente; `revisar_apoderado` recibe un Apoderado, sólo deja a
+la administración de la Prestadora y sólo toca uno que esté en revisión; y
+`completar_genero_de_la_ficha` recibe una Ficha de Persona de la Prestadora actual y le escribe el
+género únicamente si no tenía. Toda función nueva de política nace en `interno`, y cualquiera que se quede en
 `public` y llame a una de ahí lleva `interno` en su `search_path`. El reparto de permisos —cuáles
 pierden el alcance anónimo y cuáles conservan `authenticated`— lo guarda la base en los permisos
 de cada función y en los permisos por defecto (`ALTER DEFAULT PRIVILEGES`) de los esquemas

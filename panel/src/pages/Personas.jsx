@@ -106,7 +106,7 @@ export function Personas() {
 
   // Cómo se nombra cada renglón. La persona física por apellido y nombre; la jurídica por su razón
   // social entera, que no se parte en dos. Está acá, en un solo lugar, porque lo usan el título de
-  // la tabla, la búsqueda y el renglón del Apoderado.
+  // la tabla y la búsqueda.
   const comoSeLlama = useCallback(
     (fila) => (fila?.clase === 'juridica' ? fila.nombre : `${fila?.apellido ?? ''}, ${fila?.nombre ?? ''}`),
     [],
@@ -126,13 +126,6 @@ export function Personas() {
     }
     return porPersona;
   }, [telefonos]);
-
-  // El Apoderado es otra Ficha de este mismo Directorio, así que su nombre ya está cargado y no hace
-  // falta volver a pedirlo.
-  const nombrePorId = useMemo(
-    () => new Map(filas.map((fila) => [fila.id, comoSeLlama(fila)])),
-    [filas, comoSeLlama],
-  );
 
   // La búsqueda primero, la clase después, y por separado: así se puede decir cuántas hay de cada
   // clase entre lo que se está mirando. Contar sobre el total diría siempre lo mismo, y contar
@@ -210,7 +203,6 @@ export function Personas() {
             <thead>
               <tr>
                 <th>{t.personas.nombre}</th>
-                <th>{t.personas.apoderado}</th>
                 <th>{t.personas.telefono}</th>
                 <th>{t.personas.email}</th>
                 <th>{t.personas.domicilio}</th>
@@ -221,18 +213,14 @@ export function Personas() {
               {filtradas.map((fila) => (
                 /* El renglón muestra lo que le corresponde a su clase. Las dos comparten la lista,
                    porque contratan y pagan igual, pero no son la misma cosa: una entidad tiene razón
-                   social, clave fiscal y alguien que firma por ella; una persona tiene apellido,
-                   nombre y documento, y se representa sola. */
+                   social y clave fiscal; una persona tiene apellido, nombre y documento, y se
+                   representa sola. */
                 <tr key={fila.id}>
                   <td>
                     <b>{comoSeLlama(fila)}</b>
                     <div className="panel-mini">
                       {documentoDe(fila)}
                     </div>
-                  </td>
-                  <td>
-                    {fila.clase === 'juridica'
-                      && (nombrePorId.get(fila.apoderado_persona_id) || t.personas.apoderado_sin_elegir)}
                   </td>
                   <td>
                     {(telefonosPorPersona.get(fila.id) ?? []).length === 0

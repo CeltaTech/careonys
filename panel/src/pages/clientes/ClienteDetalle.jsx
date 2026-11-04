@@ -355,7 +355,7 @@ export function ClienteDetalle() {
           </section>
           {/* Si el Pagador elegido firmó y qué documentos faltan, siempre a la vista. Avisa, no bloquea. */}
           {formContacto && puedeEditarCliente && (
-            <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
+            <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} esAdmin={esAdmin} />
           )}
           </>
         )}
@@ -509,7 +509,13 @@ export function ClienteDetalle() {
       )}
 
       {pacienteParaVitales && (
-        <SignosVitalesPaciente paciente={pacienteParaVitales} onClose={() => setPacienteParaVitales(null)} />
+        <SignosVitalesPaciente
+          paciente={pacienteParaVitales}
+          clienteId={cliente.id}
+          puedeRegistrar={puedeRegistrarConsentimiento}
+          esAdmin={esAdmin}
+          onClose={() => setPacienteParaVitales(null)}
+        />
       )}
 
       {pacienteParaDomicilios && (

@@ -12,7 +12,6 @@ import { DOMICILIO_VACIO, partesDesdeFila, partesParaGuardar } from '../../lib/p
 import { coordenadasSiCambio } from '../../lib/coordenadasDeDomicilio';
 import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
 import { useGeneros } from '../../hooks/useGeneros';
-import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
 import { TelefonosDeLaPersona } from './TelefonosDeLaPersona';
 import { cargarUnTelefono } from '../../lib/apiPersonasTelefonos';
 
@@ -30,10 +29,6 @@ import { cargarUnTelefono } from '../../lib/apiPersonasTelefonos';
    emiten afuera piden además el país que lo emitió, porque el mismo número de pasaporte puede
    existir en dos países. Lo que está mal se avisa al pie de su casillero al apretar Guardar, y
    el aviso se va en cuanto el dato se corrige.
-
-   Y LA JURÍDICA TIENE APODERADO. Una entidad no firma con la mano: firma por ella quien tiene
-   poder legal para obligarla. Se anota acá y no en cada contratación, para que el día que haya que
-   firmar ya esté puesto. No otorga ningún permiso: quien figure ahí no gana acceso a nada.
 
    LOS TELÉFONOS SON VARIOS, y por eso no están entre los casilleros. Al dar de alta se pide uno,
    que es lo que se sabe en ese momento; corrigiendo aparece la lista entera, con los que haya, y
@@ -81,7 +76,6 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState(persona?.email ?? '');
   const [notas, setNotas] = useState(persona?.notas ?? '');
-  const [apoderado, setApoderado] = useState(persona?.apoderado_persona_id ?? null);
   const [domicilio, setDomicilio] = useState(persona ? partesDesdeFila(persona) : DOMICILIO_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -148,9 +142,6 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
       setDni('');
       setGenero('');
     }
-    // Una persona física se representa sola, así que el Apoderado que hubiera quedado elegido no
-    // le corresponde. La base lo rechaza igual, pero enterarse al guardar sería enterarse tarde.
-    if (nueva !== 'juridica') setApoderado(null);
   }
 
   async function handleSubmit(e) {
@@ -180,7 +171,6 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
         genero: esJuridica ? null : genero,
         email: email.trim() || null,
         notas: notas.trim() || null,
-        apoderado_persona_id: esJuridica ? apoderado || null : null,
         ...partes,
         ...(await coordenadasSiCambio(persona, partes)),
       };
@@ -339,19 +329,6 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
                 <option key={pais.codigo} value={pais.codigo}>{pais.nombre}</option>
               ))}
             </FormField>
-          )}
-
-          {/* Quién firma por esta entidad. Se elige del Directorio y es siempre una persona física:
-              el poder legal lo ejerce alguien de carne y hueso. */}
-          {esJuridica && (
-            <SelectorDePersona
-              name="apoderado_persona_id"
-              label={t.personas.apoderado}
-              valor={apoderado}
-              alElegir={setApoderado}
-              clase="fisica"
-              deshabilitado={guardando}
-            />
           )}
 
           <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />

@@ -36,10 +36,8 @@ export function SelectorDePersona({
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
-    // `clase` acota la lista cuando el casillero admite una sola: el Apoderado de una entidad es
-    // una persona de carne y hueso, y ofrecer ahí otra entidad sería ofrecer algo que la base
-    // rechaza. Sin `clase` se ofrecen las dos, que es lo corriente, porque contrata y paga
-    // cualquiera de las dos.
+    // `clase` acota la lista cuando el casillero admite una sola. Sin `clase` se ofrecen las dos, que
+    // es lo corriente, porque contrata y paga cualquiera de las dos.
     let consulta = supabase
       .from('personas')
       .select('id, nombre_visible, documento_numero')

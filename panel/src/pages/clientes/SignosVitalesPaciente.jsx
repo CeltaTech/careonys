@@ -9,6 +9,7 @@ import { PieDeFirmas } from '../../components/ui/PieDeFirmas';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { ApoderadoDelCliente } from './ApoderadoDelCliente';
 import '../../styles/molde-paginas.css';
 
 const llamarApi = llamadorDe('/vitales-autorizacion');
@@ -16,7 +17,7 @@ const llamarApi = llamadorDe('/vitales-autorizacion');
 /* La autorización del Cliente para que un Asistente le tome los signos vitales al Paciente. La
    casilla se marca sola cuando hay una aceptada. Sin ninguna, se imprime para firmar o se sube el
    documento firmado; si el Cliente subió uno desde la aplicación, acá se lo acepta o se lo rechaza. */
-export function SignosVitalesPaciente({ paciente, onClose }) {
+export function SignosVitalesPaciente({ paciente, clienteId, puedeRegistrar, esAdmin, onClose }) {
   const { t, locale } = useLocale();
   const modal = useModalAccesible(onClose);
   const [autorizacion, setAutorizacion] = useState(null);
@@ -172,6 +173,8 @@ export function SignosVitalesPaciente({ paciente, onClose }) {
               </div>
             </>
           )}
+
+          <ApoderadoDelCliente clienteId={clienteId} funcion="signos_vitales" puedeRegistrar={puedeRegistrar} esAdmin={esAdmin} embebido />
         </EstadoLista>
 
         <div className="panel-modal-acciones">

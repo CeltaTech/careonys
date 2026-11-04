@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { mensajeDeError } from '../lib/errores';
+import ApoderadoDelCliente from './ApoderadoDelCliente';
 import {
   esteAparatoGuardaLlaves,
   firmarConLaLlaveDelAparato,
@@ -16,6 +17,9 @@ import {
  *
  * Firmar es tocar «Firmar» con el texto delante: no hay casilla de por medio. El texto vuelve con
  * su identificador de verificación, y la base comprueba que se firmó ese y no otro.
+ *
+ * Con un Apoderado aprobado, el titular ya no firma: firma el Apoderado, en un documento impreso, y
+ * lo que queda acá es subirlo.
  */
 export default function TarjetaSignosVitales({ pacienteId }) {
   const { t, locale } = useLocale();
@@ -106,6 +110,7 @@ export default function TarjetaSignosVitales({ pacienteId }) {
 
   const autorizacion = datos?.autorizacion;
   const puedeFirmar = datos?.puedeFirmar && !autorizacion;
+  const firmaEnLaAplicacion = puedeFirmar && !datos?.hayApoderado;
 
   return (
     <section className="pwa-card" aria-labelledby="tarjeta-signos-vitales">
@@ -130,7 +135,7 @@ export default function TarjetaSignosVitales({ pacienteId }) {
                 {t.vitales_autorizacion.ver}
               </button>
             )}
-            {puedeFirmar && paraFirmar && (
+            {firmaEnLaAplicacion && paraFirmar && (
               <>
                 <button type="button" className="btn" onClick={() => setParaFirmar(null)} disabled={ocupado}>
                   {t.comun.cancelar}
@@ -142,7 +147,7 @@ export default function TarjetaSignosVitales({ pacienteId }) {
             )}
             {puedeFirmar && !paraFirmar && (
               <>
-                {guardaLlaves && (
+                {guardaLlaves && firmaEnLaAplicacion && (
                   <button type="button" className="btn" onClick={mostrarTexto} disabled={ocupado}>
                     {t.vitales_autorizacion.firmar}
                   </button>
@@ -160,6 +165,8 @@ export default function TarjetaSignosVitales({ pacienteId }) {
               </>
             )}
           </div>
+
+          {datos?.puedeFirmar && <ApoderadoDelCliente funcion="signos_vitales" embebido onCambio={cargar} />}
         </>
       )}
     </section>

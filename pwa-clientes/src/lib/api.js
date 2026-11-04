@@ -143,4 +143,9 @@ export const api = {
   subirSignosVitales: (pacienteId, idioma, formData) =>
     pedido(`/vitales-autorizacion/${pacienteId}/documento?idioma=${encodeURIComponent(idioma)}`, { method: 'POST', body: formData }),
   verAutorizacionSignosVitales: (id) => pedido(`/vitales-autorizacion/autorizacion/${id}`),
+  apoderado: (funcion, idioma) => pedido(`/apoderado/${funcion}?idioma=${encodeURIComponent(idioma)}`),
+  nombrarApoderado: (funcion, formData) => pedido(`/apoderado/${funcion}`, { method: 'POST', body: formData }),
+  reemplazarPoder: (funcion, formData) => pedido(`/apoderado/${funcion}/poder`, { method: 'POST', body: formData }),
+  quitarApoderado: (funcion) => pedido(`/apoderado/${funcion}/quitar`, { method: 'POST' }),
+  verPoder: (funcion) => pedido(`/apoderado/${funcion}/poder`),
 };

@@ -6,6 +6,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { ApoderadoDelCliente } from './ApoderadoDelCliente';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
@@ -23,7 +24,7 @@ import '../tarjetas.css';
    QUÉ CUENTA COMO DEFINIDO NO SE DECIDE ACÁ. Lo contesta el backend, en un solo lugar, y esta
    pantalla lo muestra. Repartida entre pantallas, la misma pregunta terminaría contestándose
    distinto según dónde se mire. */
-export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
+export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
   const { t, locale } = useLocale();
   const [estado, setEstado] = useState('cargando');
   const [datos, setDatos] = useState(null);
@@ -108,7 +109,6 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
   const {
     pagador,
     apoderado,
-    faltaApoderado,
     definido,
     firmadoPorOtro,
     consentimientoPendiente,
@@ -136,9 +136,6 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
             </Alert>
 
             {firmadoPorOtro && <Alert variant="warning">{textos.firmado_por_otro}</Alert>}
-
-            {/* Una entidad firma por su Apoderado; sin él, el documento saldría sin firmante. */}
-            {faltaApoderado && <Alert variant="warning">{textos.falta_apoderado}</Alert>}
 
             <div className="panel-grilla panel-columnas-3">
               <div className="tarjeta-dato"><div className="panel-mini">{textos.quien_paga}</div><b>{pagador.nombre}</b></div>
@@ -206,6 +203,8 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
           </>
         )}
       </section>
+
+      <ApoderadoDelCliente clienteId={clienteId} funcion="pagos" puedeRegistrar={puedeRegistrar} esAdmin={esAdmin} onCambio={recargar} />
 
       {/* Los documentos son aparte de la firma: se cuentan y se muestran por separado. */}
       {pagador && (

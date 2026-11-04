@@ -6,6 +6,8 @@ import { traducirValor } from '../i18n/valores';
 import { mensajeDeError } from '../lib/errores';
 import { formatearImporte } from '../lib/dinero';
 import { periodoEnPalabras } from '../lib/fechaEnPalabras';
+import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
+import ApoderadoDelCliente from '../components/ApoderadoDelCliente';
 
 // Lo que se le cobra al Cliente, período por período.
 //
@@ -20,6 +22,7 @@ import { periodoEnPalabras } from '../lib/fechaEnPalabras';
 // hueco en la pantalla, y así queda hasta que llegue la maqueta.
 export default function Facturas() {
   const { t, locale } = useLocale();
+  const { esTitular } = usePersonasAutorizadas();
   const [facturas, setFacturas] = useState(undefined);
   const [error, setError] = useState('');
 
@@ -76,6 +79,8 @@ export default function Facturas() {
           ))}
         </section>
       )}
+
+      {esTitular && <ApoderadoDelCliente funcion="pagos" />}
     </>
   );
 }

@@ -205,6 +205,7 @@ beforeEach(() => {
     { id: AUTORIZACION, metodo: 'documento_firmado_cliente', estado: 'pendiente', created_at: '2026-10-01T10:00:00Z' },
   ]);
   respuestas.set('POST /rest/v1/consultas_a_hce', () => []);
+  respuestas.set('GET /rest/v1/apoderados', () => []);
   respuestas.set('POST /rest/v1/rpc/documento_autorizacion_signos_vitales', () => [
     { titulo: 'Autorización inventada', texto: 'Texto inventado para firmar.', verificador: 'verificador-inventado', idioma: 'es-AR' },
   ]);
@@ -253,6 +254,32 @@ describe('quién ve la autorización', () => {
     assert.equal(estado, 404);
     assert.equal(cuerpo.motivo, 'paciente_no_encontrado');
     assert.equal(llamadasA('GET /rest/v1/autorizaciones_monitoreo_paciente').length, 0);
+  });
+});
+
+describe('cuando firma un Apoderado', () => {
+  const conPoder = (estado) => [{ id: 'a', estado, persona: { id: 'p', nombre_visible: 'Inventada' } }];
+
+  it('con el poder aprobado, el titular se entera y no firma; la consulta sale con el trabajo', async () => {
+    respuestas.set('GET /rest/v1/apoderados', () => conPoder('aprobado'));
+
+    const vista = await pedir('GET', `/${PACIENTE}`);
+    const firma = await pedir('POST', `/${PACIENTE}/firmar`, { respuesta: { id: CREDENCIAL_DEL_TELEFONO }, verificador: 'x' });
+
+    assert.equal(vista.cuerpo.hayApoderado, true);
+    esElTrabajoDeLaPrestadora(llamadasA('GET /rest/v1/apoderados')[0].autorizacion, 'la tabla la lee el trabajo');
+    assert.equal(firma.estado, 403);
+    assert.equal(firma.cuerpo.motivo, 'sin_permiso');
+    assert.equal(rpc(REGISTRAR).length, 0);
+  });
+
+  it('con el poder sin aprobar, sigue firmando el titular', async () => {
+    respuestas.set('GET /rest/v1/apoderados', () => conPoder('en_revision'));
+
+    const { cuerpo } = await pedir('GET', `/${PACIENTE}`);
+
+    assert.equal(cuerpo.hayApoderado, false);
+    assert.equal(cuerpo.puedeFirmar, true);
   });
 });
 

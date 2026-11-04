@@ -924,6 +924,12 @@ async function fichaPorDocumento(db, {
         throw new ErrorConMotivo(MOTIVOS_DEL_DOCUMENTO[deQuien].dni_no_coincide, 'El DNI no coincide');
       }
       if (telefono) await sumarTelefono(db, { prestadoraId, personaId: existente.id, telefono });
+      // La Ficha de quien sólo era Apoderado nació sin género; acá se completa con el que se pidió.
+      const { error: errorGenero } = await db.rpc('completar_genero_de_la_ficha', {
+        p_persona: existente.id,
+        p_genero: identidad.genero,
+      });
+      if (errorGenero) throw errorDeLaIdentidad(errorGenero, deQuien);
       return { id: existente.id, yaExistia: true };
     }
   }

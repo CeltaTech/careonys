@@ -8,6 +8,7 @@ import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { normalizarIdioma } from '../i18n/idiomas.js';
 import { comprobarFirma } from './llaveDelDispositivo.js';
+import { hayApoderadoDeSignosVitales } from '../utils/apoderado.js';
 
 // La autorización para que un Asistente le tome los signos vitales al Paciente, vista desde la
 // aplicación del Cliente. La contraparte del Panel está en `panelVitalesAutorizacion.js`.
@@ -60,6 +61,17 @@ function manejarErrorMulter(err, req, res, next) {
 const puedeVer = [requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_ficha_del_paciente')];
 const puedeFirmar = [requiereRolCliente, soloElTitular];
 
+// Con un Apoderado aprobado firma él, y el titular deja de firmar. El Cliente no lee esa tabla: se
+// pregunta con el trabajo de la Prestadora.
+function hayApoderado(usuarioCliente) {
+  return enLaPrestadora(usuarioCliente.prestadoraId, 'saber si firma un Apoderado', (trabajo) =>
+    hayApoderadoDeSignosVitales({
+      db: trabajo,
+      clienteId: usuarioCliente.clienteId,
+      prestadoraId: usuarioCliente.prestadoraId,
+    }));
+}
+
 async function pacienteDelCliente(db, pacienteId, usuarioCliente) {
   const { data, error } = await db
     .from('pacientes')
@@ -85,7 +97,11 @@ appClientesVitalesAutorizacionRouter.get('/:pacienteId', ...puedeVer, async (req
       .order('estado', { ascending: true })
       .limit(1);
     if (error) throw error;
-    res.json({ autorizacion: data?.[0] ?? null, puedeFirmar: req.usuarioCliente.esTitular === true });
+    res.json({
+      autorizacion: data?.[0] ?? null,
+      puedeFirmar: req.usuarioCliente.esTitular === true,
+      hayApoderado: await hayApoderado(req.usuarioCliente),
+    });
   } catch (err) {
     responderError(res, err);
   }
@@ -123,6 +139,7 @@ appClientesVitalesAutorizacionRouter.post('/:pacienteId/firmar', ...puedeFirmar,
     const paciente = await pacienteDelCliente(db, req.params.pacienteId, req.usuarioCliente);
     const { respuesta, verificador, idioma } = req.body || {};
     if (!verificador || !respuesta) throw new ErrorConMotivo('faltan_datos');
+    if (await hayApoderado(req.usuarioCliente)) throw new ErrorConMotivo('sin_permiso');
 
     await comprobarFirma({
       db,

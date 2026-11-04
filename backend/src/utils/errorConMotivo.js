@@ -217,6 +217,8 @@ const ESTADO_POR_MOTIVO = {
   sin_texto: 409,
   el_texto_cambio: 409,
   falta_el_motivo: 400,
+  // El Apoderado: el número fiscal que se escribió no es válido para ese país.
+  numero_no_valido: 400,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.

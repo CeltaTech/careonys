@@ -160,6 +160,7 @@ beforeEach(() => {
   // El alta y la baja de la cuenta las hace la base, cada una en un solo procedimiento.
   respuestas.set('POST /rest/v1/rpc/dar_de_alta_la_cuenta', () => NUEVA_CUENTA);
   respuestas.set('POST /rest/v1/rpc/deshacer_el_alta_de_la_cuenta', () => true);
+  respuestas.set('POST /rest/v1/rpc/completar_genero_de_la_ficha', () => null);
   // Cada documento nuevo, su Ficha.
   respuestas.set('POST /rest/v1/personas', (_, cuerpo) => [
     { id: cuerpo.documento_numero === CUIL_DEL_PACIENTE ? PERSONA_DEL_PACIENTE : NUEVA_PERSONA },

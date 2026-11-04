@@ -19,9 +19,9 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // anula: lo último que se le hizo firmar es lo que vale. La base lo exige además con un índice
 // único, así que esto no es la única defensa.
 //
-// CON LA SESIÓN DE QUIEN PIDE. Todo lo de acá lo hace una persona del Panel, así que cada función
-// recibe `db`, la conexión de esa persona: la base decide qué alcanza, y nada pasa por la conexión
-// maestra.
+// CON LA CONEXIÓN QUE LE PASEN. Cada función recibe `db`: la de la persona del Panel que pide, o la
+// del trabajo de la Prestadora cuando el Cliente nombra o quita a su Apoderado desde la aplicación.
+// En los dos casos la base decide qué alcanza.
 //
 // LOS DOCUMENTOS SON APARTE DE LA FIRMA. El consentimiento lo firma quien paga; los documentos los exige
 // el Pagador, y qué documentos son lo sabe cada Prestadora. Que falte uno no invalida la firma, y
@@ -76,7 +76,7 @@ async function persona({ db, personaId, prestadoraId }) {
 
   const { data } = await db
     .from('personas')
-    .select('id, nombre_visible, clase, documento_tipo, documento_numero, apoderado_persona_id')
+    .select('id, nombre_visible, clase, documento_tipo, documento_numero')
     .eq('prestadora_id', prestadoraId)
     .eq('id', personaId)
     .maybeSingle();
@@ -86,23 +86,51 @@ async function persona({ db, personaId, prestadoraId }) {
     id: data.id,
     nombre: data.nombre_visible,
     clase: data.clase,
-    apoderadoPersonaId: data.apoderado_persona_id,
     documento: data.documento_numero
       ? `${data.documento_tipo} ${data.documento_numero}`
       : null,
   };
 }
 
-// Quién firma de puño y letra. Una persona física firma ella misma; una entidad no tiene mano, y
-// por ella firma su Apoderado, que es quien tiene poder legal para obligarla y está anotado en su
-// Ficha.
-//
-// Devuelve nulo cuando paga una persona física, y también cuando paga una entidad que todavía no
-// tiene Apoderado configurado. Ese segundo caso no rompe nada: el documento se arma igual y la
-// pantalla avisa que falta. No bloquear es la regla, acá como en todo lo demás.
-async function apoderadoDe(db, pagador, prestadoraId) {
-  if (pagador?.clase !== 'juridica' || !pagador.apoderadoPersonaId) return null;
-  return persona({ db, personaId: pagador.apoderadoPersonaId, prestadoraId });
+// Quién firma en nombre del que paga: el Apoderado de este Cliente, si su poder está aprobado. Los
+// poderes son Cliente por Cliente, así que se lee por Cliente y no por la Ficha del Pagador.
+export async function firmantePorApoderado({ db, clienteId, prestadoraId }) {
+  const { data, error } = await db
+    .from('apoderados')
+    .select('persona_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('cliente_id', clienteId)
+    .eq('funcion', 'pagos')
+    .eq('estado', 'aprobado')
+    .is('quitado_en', null)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? persona({ db, personaId: data.persona_id, prestadoraId }) : null;
+}
+
+// Deja el consentimiento pendiente en manos de quien hoy corresponde. Se llama cada vez que cambia
+// el Apoderado o su poder: si firmaba otro, ese pendiente se anula y se arma uno nuevo. Lo cerrado
+// no se toca, porque lo que ya se firmó sigue vigente.
+export async function alinearConsentimientoPendiente({ db, clienteId, prestadoraId, cargadoPor }) {
+  const { data: pendiente, error } = await db
+    .from('consentimientos_pagador')
+    .select('id, firmante_persona_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('cliente_id', clienteId)
+    .eq('estado', 'pendiente_firma')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!pendiente) return;
+
+  const firmante = await firmantePorApoderado({ db, clienteId, prestadoraId });
+  if ((pendiente.firmante_persona_id ?? null) === (firmante?.id ?? null)) return;
+
+  const cliente = await clienteConSuPagador({ db, clienteId, prestadoraId });
+  if (!cliente.pagador_persona_id) {
+    await anularPendiente({ db, consentimientoId: pendiente.id, prestadoraId });
+    return;
+  }
+  await crearConsentimiento({ db, clienteId, prestadoraId, cargadoPor });
 }
 
 // Arma el documento con lo de esta contratación, lo guarda tal cual y lo deja esperando firma.
@@ -124,7 +152,7 @@ export async function crearConsentimiento({ db, clienteId, prestadoraId, cargado
     cuerpoVigente({ db, prestadoraId }),
     db.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
     nombreDeLaContratacion({ db, clienteId, prestadoraId }),
-    apoderadoDe(db, pagador, prestadoraId),
+    firmantePorApoderado({ db, clienteId, prestadoraId }),
   ]);
 
   const texto = textoDelConsentimiento({
@@ -152,8 +180,8 @@ export async function crearConsentimiento({ db, clienteId, prestadoraId, cargado
       cliente_id: clienteId,
       pagador_persona_id: pagador.id,
       pagador_nombre: pagador.nombre,
-      // Quién firmó por la entidad se copia acá el día que se arma, igual que el nombre de quien
-      // paga: si mañana la entidad cambia de apoderado, el documento sigue diciendo quién lo firmó.
+      // Quién firma se copia acá el día que se arma, igual que el nombre de quien paga: si mañana
+      // el Cliente cambia de Apoderado, el documento sigue diciendo quién lo firmó.
       firmante_persona_id: apoderado?.id ?? null,
       firmante_nombre: apoderado?.nombre ?? null,
       documento_texto: texto,
@@ -273,16 +301,11 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
     cerrado && cliente.pagador_persona_id && cerrado.pagador_persona_id !== cliente.pagador_persona_id,
   );
 
-  // Si paga una entidad, quien firma es su Apoderado. Que no lo tenga configurado no impide nada
-  // —el documento se arma igual—, pero saldría sin decir qué persona lo firma, y eso se avisa
-  // antes y no después.
-  const apoderado = await apoderadoDe(db, pagador, prestadoraId);
-  const faltaApoderado = Boolean(pagador && pagador.clase === 'juridica' && !apoderado);
+  const apoderado = await firmantePorApoderado({ db, clienteId, prestadoraId });
 
   return {
     pagador,
     apoderado,
-    faltaApoderado,
     // Definido quiere decir las tres cosas: hay Ficha elegida, hay consentimiento cerrado, y lo
     // firmó justamente quien hoy figura como Pagador.
     definido: Boolean(cliente.pagador_persona_id && cerrado && !firmadoPorOtro),

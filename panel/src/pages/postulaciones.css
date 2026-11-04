@@ -1,5 +1,5 @@
 /* Lo que necesitan las Postulaciones y no traen ni `styles/molde-paginas.css` ni
-   `hojaDeTarjetas.css`. Prefijo `postulaciones-` para no pisar nada de otra página. */
+   `tarjetas.css`. Prefijo `postulaciones-` para no pisar nada de otra página. */
 
 /* El número que además filtra: un botón con forma de tarjeta. */
 .postulaciones-kpi {

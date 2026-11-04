@@ -387,7 +387,7 @@ panelImportacionRouter.post(
       return res.status(400).json({ error: 'Faltan las filas del informe' });
     }
     // Las listas se aceptan sólo sobre columnas del informe y con opciones cortas: Excel no admite
-    // más de 255 caracteres en una lista escrita adentro de la hoja.
+    // más de 255 caracteres en una lista escrita adentro de la planilla.
     const listas = Object.fromEntries(
       Object.entries(req.body.listas && typeof req.body.listas === 'object' ? req.body.listas : {})
         .filter(([columna, opciones]) => encabezados.includes(columna)

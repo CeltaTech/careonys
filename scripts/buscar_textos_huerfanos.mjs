@@ -28,14 +28,14 @@
 //
 // CÓMO RECONOCE QUE UNA CLAVE ESTÁ VIVA. Tres formas, porque el código no
 // siempre escribe la clave entera:
-//   1. El nombre de la hoja aparece tal cual en el código.
+//   1. El nombre de la clave aparece tal cual en el código.
 //   2. La clave se arma al vuelo, `traducirValor(t.guardias, `estado_${x}`)`.
 //      Se juntan todos los comienzos que aparecen en el código (`estado_`,
 //      `nivel_`…) y se da por viva toda clave que empiece con alguno.
 //   3. El grupo entero se pasa como un paquete,
 //      `Object.entries(t.postulaciones.disponibilidad_labels)`, o se lo busca
 //      al vuelo con una variable adentro, `t.errores.motivos[motivo]`. En los
-//      dos casos las hojas están vivas aunque ninguna aparezca escrita. El
+//      dos casos las claves están vivas aunque ninguna aparezca escrita. El
 //      camino se reconoce escrito con puntos comunes o con el punto seguro
 //      `?.` —`t?.errores?.motivos?.[motivo]`—, que es la misma cosa.
 // Los tres coladores son anchos a propósito: dejar pasar una clave muerta es
@@ -64,14 +64,14 @@ function archivosDe(dir) {
   return salida;
 }
 
-/* Recorre el objeto de textos y devuelve una lista de { camino, hoja, grupo }.
-   `camino` es "asistentes.vinculo_monotributo"; `hoja` es la última parte. */
-function hojas(obj, prefijo = []) {
+/* Recorre el objeto de textos y devuelve una lista de { camino, ultima, grupo }.
+   `camino` es "asistentes.vinculo_monotributo"; `ultima` es la última parte. */
+function clavesDe(obj, prefijo = []) {
   const salida = [];
   for (const [clave, valor] of Object.entries(obj)) {
     const camino = [...prefijo, clave];
-    if (valor && typeof valor === 'object' && !Array.isArray(valor)) salida.push(...hojas(valor, camino));
-    else salida.push({ camino: camino.join('.'), hoja: clave, grupo: prefijo.join('.') || '(raíz)' });
+    if (valor && typeof valor === 'object' && !Array.isArray(valor)) salida.push(...clavesDe(valor, camino));
+    else salida.push({ camino: camino.join('.'), ultima: clave, grupo: prefijo.join('.') || '(raíz)' });
   }
   return salida;
 }
@@ -93,7 +93,7 @@ for (const app of APPS) {
   }
 
   const base = T['es-AR'] ?? T.es ?? Object.values(T)[0];
-  const claves = hojas(base);
+  const claves = clavesDe(base);
 
   /* Revisión 2: los tres idiomas tienen que tener exactamente las mismas claves. Se compara
      contra es-AR, que es el idioma en el que se escribe primero. Faltar en uno y sobrar en
@@ -101,7 +101,7 @@ for (const app of APPS) {
   const caminosBase = new Set(claves.map((c) => c.camino));
   for (const idioma of Object.keys(T)) {
     if (T[idioma] === base) continue;
-    const caminosOtro = new Set(hojas(T[idioma]).map((c) => c.camino));
+    const caminosOtro = new Set(clavesDe(T[idioma]).map((c) => c.camino));
     const faltan = [...caminosBase].filter((c) => !caminosOtro.has(c));
     const sobran = [...caminosOtro].filter((c) => !caminosBase.has(c));
     if (faltan.length === 0 && sobran.length === 0) continue;
@@ -126,12 +126,12 @@ for (const app of APPS) {
   /* Forma 3: los grupos que se usan enteros. Se reconoce por el camino completo desde `t.`,
      no por el nombre suelto del grupo: hay mucho `evento.detalle` y `fila.detalle` dando
      vueltas que no tienen nada que ver con los textos. Y se descarta `traducirValor(t.grupo, …)`,
-     que no usa el grupo entero sino una hoja armada al vuelo — ese caso ya lo cubre la forma 2.
+     que no usa el grupo entero sino una clave armada al vuelo — ese caso ya lo cubre la forma 2.
 
      Cada punto del camino puede estar escrito común (`.`) o seguro (`?.`): son la misma cosa
      y el código usa las dos. Después del grupo se acepta o bien nada más —el grupo viaja
      entero como paquete— o bien un corchete, que es buscar adentro con una variable. Las dos
-     dejan vivas a todas las hojas. */
+     dejan vivas a todas las claves. */
   const grupoEnteroUsado = (grupo) => {
     if (grupo === '(raíz)') return false;
     const camino = grupo.split('.').map(escapar).join('\\??\\.');
@@ -154,9 +154,9 @@ for (const app of APPS) {
   // nuevo hacía que la comprobación tardara más de un minuto.
   const palabras = new Set(fuentes.match(/[A-Za-z0-9_]+/g));
 
-  const huerfanas = claves.filter(({ hoja, grupo }) => {
-    if (palabras.has(hoja)) return false;
-    for (const c of comienzos) if (hoja.startsWith(c)) return false;
+  const huerfanas = claves.filter(({ ultima, grupo }) => {
+    if (palabras.has(ultima)) return false;
+    for (const c of comienzos) if (ultima.startsWith(c)) return false;
     if (gruposEnteros.has(grupo)) return false;
     return true;
   });
@@ -169,7 +169,7 @@ for (const app of APPS) {
   huboHuerfanas = true;
   console.log(`\n### ${app.nombre}: ${huerfanas.length} textos huérfanos de ${claves.length} claves`);
   const porGrupo = {};
-  for (const h of huerfanas) (porGrupo[h.grupo] ??= []).push(h.hoja);
+  for (const h of huerfanas) (porGrupo[h.grupo] ??= []).push(h.ultima);
   for (const [grupo, lista] of Object.entries(porGrupo).sort()) {
     console.log(`  ${grupo}: ${lista.join(', ')}`);
   }

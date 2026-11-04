@@ -34,7 +34,7 @@ export function extensionDeArchivo(mimetype) {
 
 // El documento firmado de una indicación de medicación. Afuera de la carpeta del Paciente, que es la
 // que el depósito le deja leer al Asistente.
-export function rutaDelPapelFirmado(prestadoraId, pacienteId, consentimientoId, extension) {
+export function rutaDelDocumentoFirmado(prestadoraId, pacienteId, consentimientoId, extension) {
   return `${prestadoraId}/firmas-medicacion/${pacienteId}/firma-${consentimientoId}.${extension}`;
 }
 

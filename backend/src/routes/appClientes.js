@@ -249,7 +249,7 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
 // Las anota él desde acá o la Prestadora desde el Panel. Las dos puertas terminan en lo mismo:
 // una autorización con las personas anotadas, que rige recién cuando el titular la firma.
 //
-// Y firma esta hoja y ninguna otra. Careonys no es un sistema para firmar documentos.
+// Y firma este documento y ninguna otra. Careonys no es un sistema para firmar documentos.
 // ============================================================================
 
 // Lo que necesita la pantalla para anotar a alguien: quiénes ya están, qué se le puede dar y qué
@@ -1316,7 +1316,7 @@ async function saldoDelCliente(db, req, facturaId) {
  *
  * Es una consulta aparte y no una columna más de la vista: la vista es la resta, y esto es dónde
  * quedó un archivo. La ruta no sale de acá —al teléfono no le sirve y sí serviría para que quede
- * escrita en algún registro—: lo único que viaja es si hay papel o no.
+ * escrita en algún registro—: lo único que viaja es si hay comprobante o no.
  */
 async function facturasConComprobante(db, req, facturaIds) {
   if (facturaIds.length === 0) return new Set();
@@ -1350,17 +1350,17 @@ appClientesRouter.get('/facturas', requiereRolCliente, exigeVisible('cliente_pag
 
   let facturas = laLlevaOtro ? (data || []).map(sinLoQueSeCalculaAca) : data || [];
 
-  // Con la entrega apagada no se dice ni cuáles tienen papel: la Prestadora hace llegar la factura
+  // Con la entrega apagada no se dice ni cuáles tiena mano: la Prestadora hace llegar la factura
   // por su cuenta, y contar acá que existe un archivo que no se puede bajar es peor que no decir
   // nada.
   if (entrega) {
-    let conPapel;
+    let conComprobante;
     try {
-      conPapel = await facturasConComprobante(db, req, facturas.map((f) => f.factura_id));
+      conComprobante = await facturasConComprobante(db, req, facturas.map((f) => f.factura_id));
     } catch (e) {
       return responderError(res, e);
     }
-    facturas = facturas.map((f) => ({ ...f, tiene_comprobante: conPapel.has(f.factura_id) }));
+    facturas = facturas.map((f) => ({ ...f, tiene_comprobante: conComprobante.has(f.factura_id) }));
   }
 
   res.json({ facturas, sigue_la_cobranza: !laLlevaOtro, entrega_la_factura: entrega });
@@ -1370,19 +1370,19 @@ appClientesRouter.get('/facturas/:facturaId', requiereRolCliente, exigeVisible('
   let factura;
   let laLlevaOtro;
   let entrega;
-  let conPapel;
+  let conComprobante;
   const db = clienteDelPedido(req);
   try {
     laLlevaOtro = await laCobranzaLaLlevaOtroSoftware(req.usuarioCliente.prestadoraId);
     entrega = await laPrestadoraEntregaLaFactura(req.usuarioCliente.prestadoraId);
     factura = await saldoDelCliente(db, req, req.params.facturaId);
-    conPapel = entrega && factura ? await facturasConComprobante(db, req, [factura.factura_id]) : new Set();
+    conComprobante = entrega && factura ? await facturasConComprobante(db, req, [factura.factura_id]) : new Set();
   } catch (e) {
     return responderError(res, e);
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
   if (laLlevaOtro) factura = sinLoQueSeCalculaAca(factura);
-  if (entrega) factura = { ...factura, tiene_comprobante: conPapel.has(factura.factura_id) };
+  if (entrega) factura = { ...factura, tiene_comprobante: conComprobante.has(factura.factura_id) };
 
   const { data: renglones, error: errorRenglones } = await db
     .from('facturas_cliente_items')
@@ -1413,7 +1413,7 @@ appClientesRouter.get('/facturas/:facturaId', requiereRolCliente, exigeVisible('
  * QUÉ SE ENTREGA. Un enlace temporal, no el archivo: el depósito es privado y así el
  * teléfono lo baja derecho de ahí sin que el backend tenga que pasar los bytes por el medio.
  *
- * CON LA ENTREGA APAGADA NO HAY PAPEL ACÁ. La Prestadora eligió hacer llegar la factura por su
+ * CON LA ENTREGA APAGADA NO HAY COMPROBANTE ACÁ. La Prestadora eligió hacer llegar la factura por su
  * cuenta, y se contesta lo mismo que si no existiera: la pantalla no ofrece el botón, y quien
  * llame a la dirección igual no llega a ningún lado.
  *

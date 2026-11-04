@@ -354,7 +354,7 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
   if (errorCorrecciones) return responderError(res, errorCorrecciones);
 
   let nombres;
-  // Cuándo se guardó el papel que baja el Cliente. Va la fecha y no la ruta del archivo: la ruta
+  // Cuándo se guardó el comprobante que baja el Cliente. Va la fecha y no la ruta del archivo: la ruta
   // no la necesita ninguna pantalla, y lo que no viaja no se filtra.
   let factura;
   try {
@@ -579,7 +579,7 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
  * Subir a mano el comprobante que emitió el software de facturación.
  *
  * POR QUÉ EXISTE, ADEMÁS DE LA PUERTA CONECTADA. Un software de facturación comprado no siempre
- * puede empujarle el papel a nadie, y hay Prestadoras que facturan sin ninguno conectado. Sin esta
+ * puede empujarle el comprobante a nadie, y hay Prestadoras que facturan sin ninguno conectado. Sin esta
  * puerta, el Cliente no tendría de dónde bajar la factura salvo que el facturador se conecte.
  *
  * EL ARCHIVO LLEGA CRUDO, no adentro de un formulario: es un solo archivo y no lo acompaña ningún

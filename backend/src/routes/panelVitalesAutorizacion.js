@@ -12,13 +12,13 @@ import { normalizarIdioma } from '../i18n/idiomas.js';
 // desde la Ficha del Cliente.
 //
 // Se firma de tres maneras: en la aplicación del Cliente con el acceso guardado del teléfono, en
-// papel impreso desde acá, o en papel que el Cliente sube desde la aplicación. Las dos primeras
+// documento impreso desde acá, o en un documento que el Cliente sube desde la aplicación. Las dos primeras
 // quedan aceptadas en el momento; la tercera espera que alguien de acá la acepte o la rechace con
 // un motivo. El texto es el que la Prestadora escribió en Configuración, o el de fábrica de su país
 // si no escribió ninguno, y lo arma la base con los nombres puestos.
 //
-// CON LA CREDENCIAL DE QUIEN PIDE, toda la ruta. La tabla sólo se lee: cerrar en papel y revisar
-// pasan por funciones de la base (`cerrar_autorizacion_signos_vitales_en_papel`,
+// CON LA CREDENCIAL DE QUIEN PIDE, toda la ruta. La tabla sólo se lee: cerrar a mano y revisar
+// pasan por funciones de la base (`cerrar_autorizacion_signos_vitales_con_documento_firmado`,
 // `revisar_autorizacion_signos_vitales`) que comprueban que quien pide es personal de la Prestadora
 // y alcanza la información de salud del Paciente, y sacan de la sesión quién lo hizo. El depósito
 // deja subir en la carpeta de la Prestadora de quien pide, y reemplazar o borrar sólo el archivo que
@@ -69,7 +69,7 @@ async function pacienteVisible(db, pacienteId) {
 }
 
 // La que rige o la que espera revisión. Puede haber una de cada a la vez sólo si el Cliente subió un
-// papel después de que otra quedara aceptada, cosa que la base no deja: se muestra la aceptada.
+// documento después de que otra quedara aceptada, cosa que la base no deja: se muestra la aceptada.
 panelVitalesAutorizacionRouter.get('/:pacienteId', ...soloPanel, async (req, res) => {
   const db = clienteDelPedido(req);
   try {
@@ -88,7 +88,7 @@ panelVitalesAutorizacionRouter.get('/:pacienteId', ...soloPanel, async (req, res
   }
 });
 
-// La hoja para imprimir y firmar, en el idioma de quien la imprime.
+// El documento para imprimir y firmar, en el idioma de quien lo imprime.
 panelVitalesAutorizacionRouter.get('/:pacienteId/para-firmar', ...soloPanel, async (req, res) => {
   const db = clienteDelPedido(req);
   try {
@@ -112,10 +112,10 @@ panelVitalesAutorizacionRouter.get('/:pacienteId/para-firmar', ...soloPanel, asy
   }
 });
 
-// El papel firmado que sube la Prestadora. Queda aceptado en el momento. Si la base no lo cierra,
+// El documento firmado que sube la Prestadora. Queda aceptado en el momento. Si la base no lo cierra,
 // el archivo no quedó en ninguna autorización y se borra.
 panelVitalesAutorizacionRouter.post(
-  '/:pacienteId/papel',
+  '/:pacienteId/documento',
   ...soloPanel,
   upload.single('archivo'),
   manejarErrorMulter,
@@ -132,7 +132,7 @@ panelVitalesAutorizacionRouter.post(
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
       if (errorSubida) throw errorSubida;
 
-      const { error } = await db.rpc('cerrar_autorizacion_signos_vitales_en_papel', {
+      const { error } = await db.rpc('cerrar_autorizacion_signos_vitales_con_documento_firmado', {
         p_paciente: paciente.id,
         p_archivo: ruta,
         p_idioma: normalizarIdioma(req.query.idioma),
@@ -149,7 +149,7 @@ panelVitalesAutorizacionRouter.post(
   }
 );
 
-// Lo firmado: el enlace temporal al papel, o el texto si se firmó en la aplicación.
+// Lo firmado: el enlace temporal al documento, o el texto si se firmó en la aplicación.
 panelVitalesAutorizacionRouter.get('/autorizacion/:id', ...soloPanel, async (req, res) => {
   const db = clienteDelPedido(req);
   try {
@@ -180,7 +180,7 @@ panelVitalesAutorizacionRouter.get('/autorizacion/:id', ...soloPanel, async (req
   }
 });
 
-// El papel que subió el Cliente: se acepta, o se rechaza con un motivo. Si otra persona ya lo
+// El documento que subió el Cliente: se acepta, o se rechaza con un motivo. Si otra persona ya lo
 // revisó, se contesta que ya estaba resuelto.
 async function revisar(req, res, estado, motivo) {
   const db = clienteDelPedido(req);

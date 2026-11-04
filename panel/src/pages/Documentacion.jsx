@@ -9,7 +9,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { diasParaVencer, estadoDeVencimiento } from '../lib/reglaVencimientos';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 
 export function Documentacion() {
   const { t } = useLocale();

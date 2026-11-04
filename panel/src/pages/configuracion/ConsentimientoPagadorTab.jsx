@@ -13,14 +13,14 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import '../../styles/molde-paginas.css';
 
-/* Lo que el Pagador firma, y los papeles que se le piden.
+/* Lo que el Pagador firma, y los documentos que se le piden.
    ==========================================================================
 
    EL TEXTO ES DE LA PRESTADORA. Es un documento hacia un tercero suyo, no hacia CeltaTech, así
    que lo escribe, lo adopta o lo reemplaza ella. El producto le entrega un modelo a título de
    sugerencia y nada más, y esta pantalla es donde se lo entrega: acá lo tiene delante, y puede
    editarlo, poner el suyo o dejar el modelo. Que es un modelo, que no es asesoramiento legal y
-   que adoptarlo es decisión suya se lo dice esta pantalla, no el papel que firma el Pagador.
+   que adoptarlo es decisión suya se lo dice esta pantalla, no el documento que firma el Pagador.
 
    VACIARLO NO LA DEJA SIN TEXTO: vuelve a regir el modelo del producto. Así, el día que el
    modelo mejore, ninguna Prestadora queda con la versión vieja sin haber decidido nada. */
@@ -28,7 +28,7 @@ export function ConsentimientoPagadorTab() {
   return (
     <>
       <ElTextoQueFirma />
-      <LosPapelesQueSePiden />
+      <LosDocumentosQueSePiden />
     </>
   );
 }
@@ -146,12 +146,12 @@ function ElTextoQueFirma() {
   );
 }
 
-/* Qué papeles exige cada Pagador.
+/* Qué documentos exige cada Pagador.
 
    El producto no siembra ninguno: eso lo sabe la Prestadora que trabaja con ese Pagador, y
    adivinarlo desde acá sería inventar un requisito que nadie pidió. Vacío quiere decir «no se
    exige ninguno», y es una respuesta válida. */
-function LosPapelesQueSePiden() {
+function LosDocumentosQueSePiden() {
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [tipos, setTipos] = useState([]);
@@ -193,10 +193,10 @@ function LosPapelesQueSePiden() {
     }
   }
 
-  // No se borra: se apaga. Un tipo borrado se llevaría puestos los papeles ya cargados con él, y
+  // No se borra: se apaga. Un tipo borrado se llevaría puestos los documentos ya cargados con él, y
   // lo que se quiso decir es «esto ya no se pide más», no «esto nunca se pidió».
   async function dejarDePedir(tipo) {
-    if (!(await confirmarDestructivo(t.configuracion.papeles_pagador_confirmar_apagar))) return;
+    if (!(await confirmarDestructivo(t.configuracion.documentos_pagador_confirmar_apagar))) return;
     setEnCurso(tipo.id);
     setError(null);
     try {
@@ -212,8 +212,8 @@ function LosPapelesQueSePiden() {
   return (
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.papeles_pagador_titulo}</h2>
-        <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.papeles_pagador_nuevo}</Button>
+        <h2>{t.configuracion.documentos_pagador_titulo}</h2>
+        <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.documentos_pagador_nuevo}</Button>
       </div>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
@@ -226,10 +226,10 @@ function LosPapelesQueSePiden() {
         <table className="panel-tabla">
           <thead>
             <tr>
-              <th>{t.configuracion.papeles_pagador_col_nombre}</th>
-              <th>{t.configuracion.papeles_pagador_col_pagador}</th>
-              <th>{t.configuracion.papeles_pagador_col_vencimiento}</th>
-              <th>{t.configuracion.papeles_pagador_col_activo}</th>
+              <th>{t.configuracion.documentos_pagador_col_nombre}</th>
+              <th>{t.configuracion.documentos_pagador_col_pagador}</th>
+              <th>{t.configuracion.documentos_pagador_col_vencimiento}</th>
+              <th>{t.configuracion.documentos_pagador_col_activo}</th>
               <th></th>
             </tr>
           </thead>
@@ -240,7 +240,7 @@ function LosPapelesQueSePiden() {
                 <td>
                   {tipo.pagador_tipo
                     ? traducirValor(t.clientes, `pagador_tipo_${tipo.pagador_tipo}`)
-                    : t.configuracion.papeles_pagador_todos}
+                    : t.configuracion.documentos_pagador_todos}
                 </td>
                 <td>{tipo.requiere_vencimiento ? t.comun.si : t.comun.no}</td>
                 <td>
@@ -250,7 +250,7 @@ function LosPapelesQueSePiden() {
                     onChange={() => toggleActivo(tipo)}
                     disabled={enCurso === tipo.id}
                     aria-label={con(t.comun.campo_de_fila, {
-                      campo: t.configuracion.papeles_pagador_col_activo,
+                      campo: t.configuracion.documentos_pagador_col_activo,
                       nombre: tipo.nombre,
                     })}
                   />
@@ -258,7 +258,7 @@ function LosPapelesQueSePiden() {
                 <td>
                   {tipo.activo && (
                     <Button variant="secondary" onClick={() => dejarDePedir(tipo)} disabled={enCurso === tipo.id}>
-                      {t.configuracion.papeles_pagador_dejar_de_pedir}
+                      {t.configuracion.documentos_pagador_dejar_de_pedir}
                     </Button>
                   )}
                 </td>
@@ -269,7 +269,7 @@ function LosPapelesQueSePiden() {
       </EstadoLista>
 
       {creandoNuevo && (
-        <NuevoPapelDelPagador
+        <NuevoDocumentoDelPagador
           onClose={() => setCreandoNuevo(false)}
           onCreado={() => {
             setCreandoNuevo(false);
@@ -281,7 +281,7 @@ function LosPapelesQueSePiden() {
   );
 }
 
-function NuevoPapelDelPagador({ onClose, onCreado }) {
+function NuevoDocumentoDelPagador({ onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState('');
@@ -313,28 +313,28 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.configuracion.papeles_pagador_nuevo}</h2>
+        <h2 id={modal.idTitulo}>{t.configuracion.documentos_pagador_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
         <div className="molde-formgrid">
           <FormField
-            label={t.configuracion.papeles_pagador_col_nombre}
-            name="papel_pagador_nombre"
+            label={t.configuracion.documentos_pagador_col_nombre}
+            name="documento_pagador_nombre"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             required
           />
 
           {/* Vacío es «a todos los Pagadores», y así se guarda. El Cliente no aparece en la
-              lista: cuando paga el Cliente no hay Pagador a quien pedirle papeles. */}
+              lista: cuando paga el Cliente no hay Pagador a quien pedirle documentos. */}
           <FormField
-            label={t.configuracion.papeles_pagador_col_pagador}
-            name="papel_pagador_tipo"
+            label={t.configuracion.documentos_pagador_col_pagador}
+            name="documento_pagador_tipo"
             type="select"
             value={tipoDePagador}
             onChange={(e) => setTipoDePagador(e.target.value)}
           >
-            <option value="">{t.configuracion.papeles_pagador_todos}</option>
+            <option value="">{t.configuracion.documentos_pagador_todos}</option>
             {TIPOS_DE_PAGADOR_POSIBLES.filter((f) => f !== TIPOS_DE_PAGADOR.CLIENTE).map((f) => (
               <option key={f} value={f}>
                 {traducirValor(t.clientes, `pagador_tipo_${f}`)}
@@ -343,8 +343,8 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
           </FormField>
 
           <FormField
-            label={t.configuracion.papeles_pagador_col_vencimiento}
-            name="papel_pagador_vencimiento"
+            label={t.configuracion.documentos_pagador_col_vencimiento}
+            name="documento_pagador_vencimiento"
             type="checkbox"
             checked={requiereVencimiento}
             onChange={(e) => setRequiereVencimiento(e.target.checked)}

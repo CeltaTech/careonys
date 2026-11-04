@@ -12,7 +12,7 @@ import {
 /**
  * La autorización para que un Asistente le tome los signos vitales al Paciente. La casilla se
  * marca sola cuando hay una aceptada. Sin ninguna —ni pendiente—, el titular la firma acá o sube
- * el papel firmado, que queda pendiente hasta que se lo acepte en el Panel.
+ * el documento firmado, que queda pendiente hasta que se lo acepte en el Panel.
  *
  * Firmar es tocar «Firmar» con el texto delante: no hay casilla de por medio. El texto vuelve con
  * su identificador de verificación, y la base comprueba que se firmó ese y no otro.

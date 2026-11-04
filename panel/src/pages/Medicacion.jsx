@@ -85,12 +85,12 @@ export function Medicacion() {
     });
   }
 
-  function subirPapel(fila) {
+  function subirDocumentoFirmado(fila) {
     setSubiendoPara(fila);
     elegirArchivo.current?.click();
   }
 
-  async function papelElegido(evento) {
+  async function documentoElegido(evento) {
     const archivo = evento.target.files?.[0];
     evento.target.value = '';
     const fila = subiendoPara;
@@ -98,7 +98,7 @@ export function Medicacion() {
     if (!archivo || !fila) return;
     const cuerpo = new FormData();
     cuerpo.append('archivo', archivo);
-    if (await ejecutar(fila, () => llamarApi(`/${fila.id}/papel-firmado`, { method: 'POST', body: cuerpo }))) recargar();
+    if (await ejecutar(fila, () => llamarApi(`/${fila.id}/documento-firmado`, { method: 'POST', body: cuerpo }))) recargar();
   }
 
   async function abrir(fila, path) {
@@ -112,7 +112,7 @@ export function Medicacion() {
     <div>
       <Cabecera titulo={t.medicacion.titulo} />
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      <input ref={elegirArchivo} type="file" accept="application/pdf,image/*" hidden onChange={papelElegido} />
+      <input ref={elegirArchivo} type="file" accept="application/pdf,image/*" hidden onChange={documentoElegido} />
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && pendientes.length === 0} recargar={recargar}>
         <div className="molde-pila">
@@ -132,9 +132,9 @@ export function Medicacion() {
                       {t.medicacion.ver_prescripcion}
                     </button>
                   )}
-                  {fila.firma?.cerradoComo === 'papel_firmado' && (
-                    <button type="button" className="panel-enlace" onClick={() => abrir(fila, `/${fila.id}/papel-firmado`)}>
-                      {t.medicacion.ver_papel_firmado}
+                  {fila.firma?.cerradoComo === 'documento_firmado' && (
+                    <button type="button" className="panel-enlace" onClick={() => abrir(fila, `/${fila.id}/documento-firmado`)}>
+                      {t.medicacion.ver_documento_firmado}
                     </button>
                   )}
                 </div>
@@ -187,8 +187,8 @@ export function Medicacion() {
                         <Button variant="secondary" onClick={() => imprimir(fila)} disabled={ocupada}>
                           {t.medicacion.imprimir_para_firmar}
                         </Button>
-                        <Button variant="secondary" onClick={() => subirPapel(fila)} disabled={ocupada}>
-                          {t.medicacion.subir_papel_firmado}
+                        <Button variant="secondary" onClick={() => subirDocumentoFirmado(fila)} disabled={ocupada}>
+                          {t.medicacion.subir_documento_firmado}
                         </Button>
                       </>
                     )}
@@ -206,14 +206,14 @@ export function Medicacion() {
         </div>
       </EstadoLista>
 
-      {paraFirmar && <HojaParaFirmar documento={paraFirmar} onCerrar={() => setParaFirmar(null)} />}
+      {paraFirmar && <DocumentoParaFirmar documento={paraFirmar} onCerrar={() => setParaFirmar(null)} />}
     </div>
   );
 }
 
-/* La hoja que firma el Cliente. El texto es el que quedó guardado al cargar la indicación, y todo
+/* El documento que firma el Cliente. El texto es el que quedó guardado al cargar la indicación, y todo
    lo demás va en el idioma en que él lo leyó, no en el de quien imprime. */
-function HojaParaFirmar({ documento, onCerrar }) {
+function DocumentoParaFirmar({ documento, onCerrar }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onCerrar);
   const delDocumento = (T[documento.idioma] || T['es-AR']).medicacion;
@@ -222,7 +222,7 @@ function HojaParaFirmar({ documento, onCerrar }) {
   return (
     <div className="panel-modal-fondo" onClick={onCerrar}>
       <div className="panel-modal panel-modal-ancho" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo} className="no-imprimir">{t.medicacion.titulo_hoja_para_firmar}</h2>
+        <h2 id={modal.idTitulo} className="no-imprimir">{t.medicacion.titulo_documento_para_firmar}</h2>
 
         <div id="area-imprimible">
           <div className="documento-instruccion">{documento.texto}</div>

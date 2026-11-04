@@ -24,7 +24,7 @@ import { SIN_ZONA, puntosDeLaZona } from '../../lib/mapaDelPadron';
    mapa mudo: se dice que todavía no hay nada que ubicar. Un mapa vacío parece un mapa roto. */
 
 // De dónde salen los colores de los puntos. Son tokens del sistema de diseño, no colores
-// escritos acá: la librería de mapas necesita un color concreto y los toma de la hoja de estilos.
+// escritos acá: la librería de mapas necesita un color concreto y los toma de la archivo de estilos.
 const COLOR_PUNTO = '--azul-medio';
 const COLOR_APAGADO = '--texto-secundario';
 

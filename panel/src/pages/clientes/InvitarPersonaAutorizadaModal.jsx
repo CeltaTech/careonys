@@ -12,7 +12,7 @@ import { DocumentoDeLaInstruccion } from './AccesosDePersonasAutorizadasModal';
 /* La Prestadora anota a una persona autorizada de un Cliente.
 
    GUARDAR NO DA NINGÚN ACCESO. El backend arma la autorización que la nombra, con lo de fábrica,
-   y los accesos rigen recién cuando el titular la firma: en papel, con lo que se imprime acá al
+   y los accesos rigen recién cuando el titular la firma: a mano, con lo que se imprime acá al
    terminar, o desde su aplicación. Qué ve cada una se cambia después con «Accesos», que arma otra
    autorización.
 

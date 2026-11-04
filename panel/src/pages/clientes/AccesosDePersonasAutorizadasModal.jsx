@@ -16,7 +16,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 
    QUIÉN DECIDE, QUE NO ES UN DETALLE. El titular no configura nada por su cuenta: le dice a la
    Prestadora qué puede ver cada una de sus Personas autorizadas, la Prestadora lo carga acá, y al guardar
-   el backend arma el documento en castellano con eso escrito. El titular lo firma —en papel o
+   el backend arma el documento en castellano con eso escrito. El titular lo firma —a mano o
    confirmándolo desde su aplicación—, y así, el día que alguien diga «yo nunca autoricé eso»,
    está la autorización con nombre, fecha y firma. Por eso el documento aparece DESPUÉS de
    guardar: lo escribe el backend, que es el único que sabe qué quedó guardado.
@@ -182,8 +182,8 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
    mismo que quedó guardado, y el único que sabe qué quedó guardado es quien lo guardó.
 
    Se imprime con el mismo mecanismo que el informe para la Obra Social: `#area-imprimible` es
-   lo único que la hoja conserva (ver la regla `@media print` de `index.css`), y los botones
-   llevan `no-imprimir` para no salir en el papel que alguien va a firmar. */
+   lo único que la impresión conserva (ver la regla `@media print` de `index.css`), y los botones
+   llevan `no-imprimir` para no salir en el documento que alguien va a firmar. */
 export function DocumentoDeLaInstruccion({ texto, fecha, onCerrar }) {
   const { t, locale } = useLocale();
   const modal = useModalAccesible(onCerrar);
@@ -201,7 +201,7 @@ export function DocumentoDeLaInstruccion({ texto, fecha, onCerrar }) {
           )}
         </div>
 
-        {/* El pie de firma sale sólo en el papel: en la aplicación se firma con el código. */}
+        {/* El pie de firma sale sólo impreso: en la aplicación se firma con el código. */}
         <div id="area-imprimible">
           <div className="documento-instruccion">{texto}</div>
           <PieDeFirmas textos={t.clientes.personas_autorizadas} />
@@ -222,10 +222,10 @@ export function DocumentoDeLaInstruccion({ texto, fecha, onCerrar }) {
    ==========================================================================
 
    El archivo es opcional a propósito: lo que cierra la autorización es que la Prestadora declare
-   que el titular firmó, y hay Prestadoras que archivan el papel afuera del sistema. Obligar a
+   que el titular firmó, y hay Prestadoras que archivan el documento afuera del sistema. Obligar a
    subirlo dejaría autorizaciones firmadas sin poder registrarse, que es peor que registrarlas
    sin adjunto. */
-export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, onRegistrado }) {
+export function RegistrarDocumentoFirmadoModal({ clienteId, instruccionId, onClose, onRegistrado }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onClose);
   const [archivo, setArchivo] = useState(null);
@@ -238,7 +238,7 @@ export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, 
     try {
       const cuerpo = new FormData();
       if (archivo) cuerpo.append('archivo', archivo);
-      await llamarApiPanel(`/cuentas/cliente/${clienteId}/personas_autorizadas/instruccion/${instruccionId}/papel`, {
+      await llamarApiPanel(`/cuentas/cliente/${clienteId}/personas_autorizadas/instruccion/${instruccionId}/documento`, {
         method: 'POST',
         body: cuerpo,
       });
@@ -253,12 +253,12 @@ export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.clientes.personas_autorizadas.papel_titulo}</h2>
+        <h2 id={modal.idTitulo}>{t.clientes.personas_autorizadas.documento_firmado_titulo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField
-          label={t.clientes.personas_autorizadas.papel_archivo}
-          name="papel_firmado"
+          label={t.clientes.personas_autorizadas.documento_archivo}
+          name="documento_firmado"
           type="file"
           accept="application/pdf,image/jpeg,image/png"
           onChange={(e) => setArchivo(e.target.files?.[0] || null)}
@@ -269,7 +269,7 @@ export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, 
             {t.comun.cancelar}
           </Button>
           <Button onClick={registrar} disabled={guardando}>
-            {guardando ? t.clientes.personas_autorizadas.papel_registrando : t.clientes.personas_autorizadas.papel_confirmar}
+            {guardando ? t.clientes.personas_autorizadas.documento_registrando : t.clientes.personas_autorizadas.documento_confirmar}
           </Button>
         </div>
       </div>

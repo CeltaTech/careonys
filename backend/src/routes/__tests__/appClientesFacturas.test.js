@@ -121,7 +121,7 @@ function sesionDelCliente({
     'GET /rest/v1/configuracion_facturacion_clientes',
     Object.keys(regla).length === 0 ? [] : [{ regla }]
   );
-  // Cuáles facturas tienen el papel guardado. Ninguna, que es como nacen.
+  // Cuáles facturas tienen el comprobante guardado. Ninguna, que es como nacen.
   respuestas.set('GET /rest/v1/facturas_cliente', []);
 }
 
@@ -323,13 +323,13 @@ describe('cuando la cobranza la lleva otro software', () => {
   });
 });
 
-describe('la factura en papel que baja el Cliente', () => {
+describe('el comprobante de la factura que baja el Cliente', () => {
   /**
-   * Lo que se cuida acá es que el papel de un Cliente no quede al alcance de otro, y que con el
+   * Lo que se cuida acá es que el comprobante de un Cliente no quede al alcance de otro, y que con el
    * interruptor apagado no se diga ni que existe. Contar que hay un archivo que no se puede bajar
    * es peor que no decir nada.
    */
-  it('la lista avisa cuáles tienen papel, sin decir dónde está guardado', async () => {
+  it('la lista avisa cuáles tiena mano, sin decir dónde está guardado', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', [SALDO]);
     respuestas.set('GET /rest/v1/facturas_cliente', [{ id: FACTURA }]);
 
@@ -340,7 +340,7 @@ describe('la factura en papel que baja el Cliente', () => {
     assert.ok(!('comprobante_archivo' in cuerpo.facturas[0]));
   });
 
-  it('y la consulta del papel lleva el filtro de Cliente y sale con la credencial de la persona', async () => {
+  it('y la consulta del comprobante lleva el filtro de Cliente y sale con la credencial de la persona', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', [SALDO]);
     await pedir('/facturas');
 
@@ -349,7 +349,7 @@ describe('la factura en papel que baja el Cliente', () => {
     assert.deepEqual(credencialesDe('facturas_cliente'), [credencial]);
   });
 
-  it('con la entrega apagada no se dice ni que el papel existe', async () => {
+  it('con la entrega apagada no se dice ni que el comprobante existe', async () => {
     sesionDelCliente({ entregaLaFactura: false });
     respuestas.set('GET /rest/v1/saldos_cliente', [SALDO]);
     respuestas.set('GET /rest/v1/facturas_cliente', [{ id: FACTURA }]);

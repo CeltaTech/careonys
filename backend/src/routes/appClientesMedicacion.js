@@ -18,7 +18,7 @@ import { comprobarFirma } from './llaveDelDispositivo.js';
 // LA FIRMA. Salvo que la Prestadora la haya apagado, quien carga la indicación acepta el texto de
 // la Prestadora —o el modelo del producto, si ella no escribió ninguno—, con receta o sin ella.
 // Firma de dos formas: con la llave de su teléfono, que se comprueba acá antes de guardar nada, o
-// en papel, y entonces la indicación entra igual con la firma pendiente y el Panel no la puede
+// a mano, y entonces la indicación entra igual con la firma pendiente y el Panel no la puede
 // aceptar hasta subir el documento firmado. Lo firmado se guarda entero: texto, identificador de verificación e idioma.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE. Todo entra a la base con `clienteDelPedido(req)`, no con la
@@ -35,7 +35,7 @@ export const appClientesMedicacionRouter = Router();
 const BUCKET = 'prescripciones-medicacion';
 const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
 const TAMANO_MAXIMO = 10 * 1024 * 1024; // 10 MB
-const FORMAS_DE_FIRMAR = ['app', 'papel'];
+const FORMAS_DE_FIRMAR = ['app', 'documento_firmado'];
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -148,21 +148,21 @@ appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible
       ...i,
       via_clave: via?.clave ?? null,
       firma: firmaDe.get(i.id)?.estado ?? null,
-      papel_firmado: firmaDe.get(i.id)?.cerrado_como === 'papel_firmado',
+      documento_firmado: firmaDe.get(i.id)?.cerrado_como === 'documento_firmado',
       tipos: ['pendiente', 'aceptada'].includes(i.estado) ? tiposDe.get(i.via_administracion_id) ?? [] : null,
     })),
   });
 });
 
 // El documento firmado, para quien firmó. Que lo pueda ver lo decide la base: el depósito le abre
-// el papel a quien puede leer el consentimiento que lo cita.
-appClientesMedicacionRouter.get('/indicacion/:indicacionId/papel-firmado', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), exigeDePersonasAutorizadas('persona_autorizada_medicacion'), async (req, res) => {
+// el documento a quien puede leer el consentimiento que lo cita.
+appClientesMedicacionRouter.get('/indicacion/:indicacionId/documento-firmado', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), exigeDePersonasAutorizadas('persona_autorizada_medicacion'), async (req, res) => {
   const db = clienteDelPedido(req);
   const { data: consentimiento, error } = await db
     .from('consentimientos_medicacion')
     .select('archivo_firmado_url')
     .eq('indicacion_id', req.params.indicacionId)
-    .eq('cerrado_como', 'papel_firmado')
+    .eq('cerrado_como', 'documento_firmado')
     .not('archivo_firmado_url', 'is', null)
     .maybeSingle();
   if (error) return responderError(res, error);

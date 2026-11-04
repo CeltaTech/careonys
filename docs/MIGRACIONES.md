@@ -26,7 +26,7 @@ que el producto trae de fábrica. No es lo que alguien quiso hacer: es lo que ha
 
 Cuando la carpeta se llenó de archivos ya aplicados en producción y estorba más de lo que
 documenta. **No se borran de a uno**: la carpeta entera es la receta para armar la base desde
-cero y, si falta una hoja, la receta no se puede seguir. Se saca una foto del resultado
+cero y, si falta un paso, la receta no se puede seguir. Se saca una foto del resultado
 (`supabase migration squash`), esa foto queda como único archivo y los viejos se borran juntos.
 
 Tres cosas que hay que saber antes de hacerlo:

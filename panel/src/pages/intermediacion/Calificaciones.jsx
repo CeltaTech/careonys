@@ -7,7 +7,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { Estrellas } from '../../components/ui/Estrellas';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -71,7 +71,7 @@ export function IntermediacionCalificaciones() {
       <Cabecera titulo={t.intermediacion.calificaciones_titulo} />
       {error && <Alert variant="error">{error}</Alert>}
 
-      <section className="panel-tarjeta hoja-desplazable">
+      <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-tarjeta-titulo">
         <h2>{t.intermediacion.calificaciones_titulo}</h2>
         {estado === 'listo' && <span className="panel-mini">{calificaciones.length}</span>}

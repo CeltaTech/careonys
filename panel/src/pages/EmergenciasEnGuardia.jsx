@@ -14,7 +14,7 @@ import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
 import { LaTomoYo } from '../components/continuidad/LaTomoYo';
 import { useEmergenciasSinAtender } from '../context/EmergenciasSinAtenderContext';
 import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 import './seguimientoDeGuardias.css';
 
 /* Las emergencias avisadas desde una guardia.
@@ -80,7 +80,7 @@ export function EmergenciasEnGuardia() {
       </Cabecera>
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
 
-      <section className="panel-tarjeta hoja-desplazable">
+      <section className="panel-tarjeta tarjeta-desplazable">
         <div className="panel-tarjeta-titulo">
           <h2>{soloSinAtender ? t.emergencias.filtro_sin_atender : t.emergencias.filtro_todas}</h2>
         </div>

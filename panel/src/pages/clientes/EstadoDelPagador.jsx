@@ -7,14 +7,14 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 /* Si el Pagador está definido, ahí donde se lo elige.
    ==========================================================================
 
    POR QUÉ ACÁ Y NO EN OTRA PANTALLA. Apuntar una Ficha de Persona como Pagador no la convierte
    en Pagador: lo que la convierte es que haya asumido la obligación de pagar y lo haya firmado.
-   Quien la elige tiene que ver en ese mismo momento si la firma está y qué papeles faltan, sin ir a
+   Quien la elige tiene que ver en ese mismo momento si la firma está y qué documentos faltan, sin ir a
    buscarlo a ningún lado. Enterarse el día que hay que cobrar es tarde.
 
    NO BLOQUEA NADA. La contratación sigue, el Servicio se presta y el Cliente se da de alta igual.
@@ -31,7 +31,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
   const [trabajando, setTrabajando] = useState(false);
   const [documentoAVer, setDocumentoAVer] = useState(null);
   const [firmaARegistrar, setFirmaARegistrar] = useState(null);
-  const [papelACargar, setPapelACargar] = useState(null);
+  const [documentoACargar, setDocumentoACargar] = useState(null);
 
   const textos = t.clientes.pagador;
 
@@ -113,9 +113,9 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
     firmadoPorOtro,
     consentimientoPendiente,
     consentimientoCerrado,
-    papeles,
-    papelesFaltantes,
-    papelesVencidos,
+    documentos,
+    documentosFaltantes,
+    documentosVencidos,
   } = datos;
 
   return (
@@ -141,12 +141,12 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
             {faltaApoderado && <Alert variant="warning">{textos.falta_apoderado}</Alert>}
 
             <div className="panel-grilla panel-columnas-3">
-              <div className="hoja-dato"><div className="panel-mini">{textos.quien_paga}</div><b>{pagador.nombre}</b></div>
+              <div className="tarjeta-dato"><div className="panel-mini">{textos.quien_paga}</div><b>{pagador.nombre}</b></div>
               {apoderado && (
-                <div className="hoja-dato"><div className="panel-mini">{textos.quien_firma}</div><b>{apoderado.nombre}</b></div>
+                <div className="tarjeta-dato"><div className="panel-mini">{textos.quien_firma}</div><b>{apoderado.nombre}</b></div>
               )}
               {consentimientoCerrado && (
-                <div className="hoja-dato">
+                <div className="tarjeta-dato">
                   <div className="panel-mini">{textos.firmado_el}</div>
                   <b>{new Date(consentimientoCerrado.cerrado_en).toLocaleDateString(locale)}</b>
                 </div>
@@ -188,11 +188,11 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
                       variant="secondary"
                       onClick={() =>
                         verArchivo(
-                          `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoCerrado.id}/papel`,
+                          `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoCerrado.id}/documento`,
                         )
                       }
                     >
-                      {textos.ver_papel}
+                      {textos.ver_documento_firmado}
                     </Button>
                   )}
                   {puedeRegistrar && (
@@ -207,68 +207,68 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
         )}
       </section>
 
-      {/* Los papeles son aparte de la firma: se cuentan y se muestran por separado. */}
+      {/* Los documentos son aparte de la firma: se cuentan y se muestran por separado. */}
       {pagador && (
-        <section className="panel-tarjeta hoja-desplazable">
+        <section className="panel-tarjeta tarjeta-desplazable">
           <div className="panel-tarjeta-titulo">
-            <h2>{textos.papeles_titulo}</h2>
+            <h2>{textos.documentos_titulo}</h2>
           </div>
-          {papeles.length === 0 ? (
-            <p className="molde-vacio">{textos.papeles_sin_catalogo}</p>
+          {documentos.length === 0 ? (
+            <p className="molde-vacio">{textos.documentos_sin_catalogo}</p>
           ) : (
             <>
-              {(papelesFaltantes > 0 || papelesVencidos > 0) && (
+              {(documentosFaltantes > 0 || documentosVencidos > 0) && (
                 <Alert variant="warning">
-                  {papelesFaltantes > 0 && (papelesFaltantes === 1 ? textos.papeles_faltan_uno : textos.papeles_faltan.replace('{n}', papelesFaltantes))}
-                  {papelesFaltantes > 0 && papelesVencidos > 0 && ' '}
-                  {papelesVencidos > 0 && (papelesVencidos === 1 ? textos.papeles_vencidos_uno : textos.papeles_vencidos.replace('{n}', papelesVencidos))}
+                  {documentosFaltantes > 0 && (documentosFaltantes === 1 ? textos.documentos_faltan_uno : textos.documentos_faltan.replace('{n}', documentosFaltantes))}
+                  {documentosFaltantes > 0 && documentosVencidos > 0 && ' '}
+                  {documentosVencidos > 0 && (documentosVencidos === 1 ? textos.documentos_vencidos_uno : textos.documentos_vencidos.replace('{n}', documentosVencidos))}
                 </Alert>
               )}
               <table className="panel-tabla">
                 <thead>
                   <tr>
-                    <th>{textos.papel_nombre}</th>
-                    <th>{textos.papel_estado}</th>
-                    <th>{textos.papel_vencimiento}</th>
-                    <th>{textos.papel_acciones}</th>
+                    <th>{textos.documento_nombre}</th>
+                    <th>{textos.documento_estado}</th>
+                    <th>{textos.documento_vencimiento}</th>
+                    <th>{textos.documento_acciones}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {papeles.map((papel) => (
-                    <tr key={papel.tipoId}>
-                      <td><b>{papel.nombre}</b></td>
+                  {documentos.map((documento) => (
+                    <tr key={documento.tipoId}>
+                      <td><b>{documento.nombre}</b></td>
                       <td>
-                        {!papel.cargado ? (
-                          <span className="badge badge-critico">{textos.papel_falta}</span>
-                        ) : papel.vencido ? (
-                          <span className="badge badge-atencion">{textos.papel_vencido}</span>
+                        {!documento.cargado ? (
+                          <span className="badge badge-critico">{textos.documento_falta}</span>
+                        ) : documento.vencido ? (
+                          <span className="badge badge-atencion">{textos.documento_vencido}</span>
                         ) : (
-                          <span className="badge badge-exito">{textos.papel_cargado}</span>
+                          <span className="badge badge-exito">{textos.documento_cargado}</span>
                         )}
                       </td>
                       <td>
-                        {papel.fechaVencimiento
-                          ? new Date(papel.fechaVencimiento).toLocaleDateString(locale)
+                        {documento.fechaVencimiento
+                          ? new Date(documento.fechaVencimiento).toLocaleDateString(locale)
                           : '—'}
                       </td>
                       <td>
-                        {papel.cargado && (
+                        {documento.cargado && (
                           <>
                             <Button
                               variant="secondary"
                               onClick={() =>
                                 verArchivo(
-                                  `/cuentas/cliente/${clienteId}/pagador/papel/${papel.documentoId}/archivo`,
+                                  `/cuentas/cliente/${clienteId}/pagador/documento/${documento.documentoId}/archivo`,
                                 )
                               }
                             >
-                              {textos.papel_ver}
+                              {textos.documento_ver}
                             </Button>{' '}
                           </>
                         )}
                         {puedeRegistrar && (
-                          <Button variant="secondary" onClick={() => setPapelACargar(papel)}>
-                            {papel.cargado ? textos.papel_reemplazar : textos.papel_cargar}
+                          <Button variant="secondary" onClick={() => setDocumentoACargar(documento)}>
+                            {documento.cargado ? textos.documento_reemplazar : textos.documento_cargar}
                           </Button>
                         )}
                       </td>
@@ -300,13 +300,13 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
         />
       )}
 
-      {papelACargar && (
-        <CargarPapelDelPagadorModal
+      {documentoACargar && (
+        <CargarDocumentoDelPagadorModal
           clienteId={clienteId}
-          papel={papelACargar}
-          onClose={() => setPapelACargar(null)}
+          documento={documentoACargar}
+          onClose={() => setDocumentoACargar(null)}
           onCargado={() => {
-            setPapelACargar(null);
+            setDocumentoACargar(null);
             recargar();
           }}
         />
@@ -318,8 +318,8 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
 /* El documento tal como quedó guardado.
 
    El Panel no lo arma ni lo retoca: lo muestra. Se imprime con el mismo mecanismo que el resto
-   —`#area-imprimible` es lo único que la hoja conserva—, y los botones llevan `no-imprimir` para
-   no salir en el papel que alguien va a firmar. */
+   —`#area-imprimible` es lo único que la impresión conserva—, y los botones llevan `no-imprimir` para
+   no salir en el documento que alguien va a firmar. */
 function DocumentoDelConsentimiento({ texto, onCerrar }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onCerrar);
@@ -347,10 +347,10 @@ function DocumentoDelConsentimiento({ texto, onCerrar }) {
   );
 }
 
-/* Registrar que llegó la hoja firmada.
+/* Registrar que llegó el documento firmado.
 
    El archivo es opcional a propósito, igual que en la instrucción de Personas autorizadas: lo que cierra esto
-   es que la Prestadora declare que se firmó, y hay Prestadoras que archivan el papel afuera del
+   es que la Prestadora declare que se firmó, y hay Prestadoras que archivan el documento afuera del
    sistema. */
 function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, onRegistrado }) {
   const { t } = useLocale();
@@ -367,7 +367,7 @@ function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, o
       const cuerpo = new FormData();
       if (archivo) cuerpo.append('archivo', archivo);
       await llamarApiPanel(
-        `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoId}/papel`,
+        `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoId}/documento`,
         { method: 'POST', body: cuerpo },
       );
       onRegistrado();
@@ -385,8 +385,8 @@ function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, o
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField
-          label={textos.papel_archivo}
-          name="papel_firmado_pagador"
+          label={textos.documento_archivo}
+          name="documento_firmado_pagador"
           type="file"
           accept="application/pdf,image/jpeg,image/png"
           onChange={(e) => setArchivo(e.target.files?.[0] || null)}
@@ -405,9 +405,9 @@ function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, o
   );
 }
 
-/* Cargar uno de los papeles que exige el Pagador. Acá el archivo sí es obligatorio: el papel
+/* Cargar uno de los documentos que exige el Pagador. Acá el archivo sí es obligatorio: el documento
    es justamente el archivo, y anotar que existe sin tenerlo no documenta nada. */
-function CargarPapelDelPagadorModal({ clienteId, papel, onClose, onCargado }) {
+function CargarDocumentoDelPagadorModal({ clienteId, documento, onClose, onCargado }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onClose);
   const [archivo, setArchivo] = useState(null);
@@ -423,7 +423,7 @@ function CargarPapelDelPagadorModal({ clienteId, papel, onClose, onCargado }) {
       const cuerpo = new FormData();
       cuerpo.append('archivo', archivo);
       if (vencimiento) cuerpo.append('fechaVencimiento', vencimiento);
-      await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador/papel/${papel.tipoId}`, {
+      await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador/documento/${documento.tipoId}`, {
         method: 'POST',
         body: cuerpo,
       });
@@ -438,23 +438,23 @@ function CargarPapelDelPagadorModal({ clienteId, papel, onClose, onCargado }) {
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{papel.nombre}</h2>
+        <h2 id={modal.idTitulo}>{documento.nombre}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 
         <div className="molde-formgrid">
           <FormField
-            label={textos.papel_archivo}
-            name="papel_del_pagador"
+            label={textos.documento_archivo}
+            name="documento_del_pagador"
             type="file"
             accept="application/pdf,image/jpeg,image/png"
             onChange={(e) => setArchivo(e.target.files?.[0] || null)}
           />
 
-          {papel.requiereVencimiento && (
+          {documento.requiereVencimiento && (
             <FormField
-              label={textos.papel_vencimiento}
-              name="vencimiento_del_papel"
+              label={textos.documento_vencimiento}
+              name="vencimiento_del_documento"
               type="date"
               value={vencimiento}
               onChange={(e) => setVencimiento(e.target.value)}

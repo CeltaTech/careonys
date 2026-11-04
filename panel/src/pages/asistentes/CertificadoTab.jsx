@@ -8,7 +8,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 export function CertificadoTab({ asistente }) {
   const { t, locale } = useLocale();
@@ -75,12 +75,12 @@ export function CertificadoTab({ asistente }) {
         {certificado ? (
           <>
             <div className="panel-grilla panel-columnas-3">
-              <div className="hoja-dato">
+              <div className="tarjeta-dato">
                 <div className="panel-mini">{t.asistentes.certificado.fecha_emision}</div>
                 <b>{new Date(certificado.fecha_emision).toLocaleDateString(locale)}</b>
               </div>
               {certificado.fecha_vencimiento && (
-                <div className="hoja-dato">
+                <div className="tarjeta-dato">
                   <div className="panel-mini">{t.asistentes.certificado.fecha_vencimiento}</div>
                   <b>{new Date(certificado.fecha_vencimiento).toLocaleDateString(locale)}</b>
                 </div>

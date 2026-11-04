@@ -8,10 +8,10 @@ const MARGEN = 20;
 const ANCHO_UTIL = 170;
 
 // EL DOCUMENTO VA EN CASTELLANO. Todo lo que este archivo escribe —el título, los rótulos, la
-// advertencia del pie— está redactado en castellano acá adentro, porque es un papel que se
+// advertencia del pie— está redactado en castellano acá adentro, porque es un documento que se
 // entrega, no una pantalla que cambia de idioma con quien la mira. Entonces las fechas que van
-// adentro de ese papel se escriben también en castellano. El idioma del documento se declara una
-// sola vez, acá: el día que una Prestadora entregue este papel en otro idioma, pasa a ser un dato
+// adentro de ese documento se escriben también en castellano. El idioma del documento se declara una
+// sola vez, acá: el día que una Prestadora entregue este documento en otro idioma, pasa a ser un dato
 // de la Prestadora y hay un solo renglón que tocar.
 export const IDIOMA_DEL_DOCUMENTO = 'es-AR';
 

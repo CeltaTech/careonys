@@ -18,7 +18,7 @@ import { mensajeDeError } from '../lib/errores';
 import { palabrasDelDomicilio, partesDesdeFila, renglonDelDomicilio } from '../lib/partesDeDomicilio';
 import { pedirLosTelefonosDelDirectorio } from '../lib/apiPersonasTelefonos';
 import '../styles/molde-paginas.css';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 
 /* El Directorio de Personas de la Prestadora.
    ==========================================================================
@@ -162,7 +162,7 @@ export function Personas() {
       <Cabecera titulo={t.personas.titulo}>
         {puedeEditar && <Button onClick={() => setEnEdicion('nuevo')}>{t.personas.nuevo_titulo}</Button>}
       </Cabecera>
-      <section className="panel-tarjeta hoja-desplazable">
+      <section className="panel-tarjeta tarjeta-desplazable">
         <div className="panel-tarjeta-titulo">
           <h2>{t.personas.titulo}</h2>
           {estado === 'listo' && <span className="panel-mini">{filtradas.length}</span>}

@@ -119,10 +119,10 @@ describe('el Cliente del pedido se busca con la credencial de quien pide', () =>
   }
 });
 
-describe('la hoja firmada de las personas autorizadas la abre quien ve la fila', () => {
+describe('el documento firmado de las personas autorizadas la abre quien ve la fila', () => {
   it('si la base no le deja ver la autorización, no existe', async () => {
     respuestas.set('GET /rest/v1/instrucciones_acceso_personas_autorizadas', () => []);
-    const { estado } = await pedir('GET', `/cliente/${CLIENTE}/personas_autorizadas/instruccion/${INSTRUCCION}/papel`);
+    const { estado } = await pedir('GET', `/cliente/${CLIENTE}/personas_autorizadas/instruccion/${INSTRUCCION}/documento`);
     assert.equal(estado, 404);
 
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/instrucciones_acceso_personas_autorizadas');
@@ -136,7 +136,7 @@ describe('la hoja firmada de las personas autorizadas la abre quien ve la fila',
     const ARCHIVO = `${PRESTADORA}/${CLIENTE}/${INSTRUCCION}-x.pdf`;
     respuestas.set('GET /rest/v1/instrucciones_acceso_personas_autorizadas', () => [{ archivo_firmado_url: ARCHIVO }]);
     respuestas.set(`POST /storage/v1/object/sign/instrucciones-acceso-personas-autorizadas/${ARCHIVO}`, () => ({ signedURL: '/firmado' }));
-    const { estado } = await pedir('GET', `/cliente/${CLIENTE}/personas_autorizadas/instruccion/${INSTRUCCION}/papel`);
+    const { estado } = await pedir('GET', `/cliente/${CLIENTE}/personas_autorizadas/instruccion/${INSTRUCCION}/documento`);
     assert.equal(estado, 200);
 
     const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));

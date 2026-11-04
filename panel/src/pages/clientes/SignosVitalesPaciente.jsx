@@ -15,7 +15,7 @@ const llamarApi = llamadorDe('/vitales-autorizacion');
 
 /* La autorización del Cliente para que un Asistente le tome los signos vitales al Paciente. La
    casilla se marca sola cuando hay una aceptada. Sin ninguna, se imprime para firmar o se sube el
-   papel firmado; si el Cliente subió uno desde la aplicación, acá se lo acepta o se lo rechaza. */
+   documento firmado; si el Cliente subió uno desde la aplicación, acá se lo acepta o se lo rechaza. */
 export function SignosVitalesPaciente({ paciente, onClose }) {
   const { t, locale } = useLocale();
   const modal = useModalAccesible(onClose);
@@ -63,7 +63,7 @@ export function SignosVitalesPaciente({ paciente, onClose }) {
   }
 
   async function ver() {
-    // El papel va en otra pestaña, que se abre antes de esperar la respuesta: abierta después, el
+    // El documento va en otra pestaña, que se abre antes de esperar la respuesta: abierta después, el
     // navegador la bloquea. Lo firmado en la aplicación se lee acá mismo.
     const pestana = autorizacion.metodo === 'aplicacion' ? null : window.open('', '_blank');
     const documento = await ejecutar(() => llamarApi(`/autorizacion/${autorizacion.id}`));
@@ -87,7 +87,7 @@ export function SignosVitalesPaciente({ paciente, onClose }) {
     if (!archivo) return;
     const cuerpo = new FormData();
     cuerpo.append('archivo', archivo);
-    const hecho = await ejecutar(() => llamarApi(`/${paciente.id}/papel?idioma=${locale}`, { method: 'POST', body: cuerpo }));
+    const hecho = await ejecutar(() => llamarApi(`/${paciente.id}/documento?idioma=${locale}`, { method: 'POST', body: cuerpo }));
     if (hecho) recargar();
   }
 
@@ -179,14 +179,14 @@ export function SignosVitalesPaciente({ paciente, onClose }) {
         </div>
       </div>
 
-      {paraFirmar && <HojaParaFirmar documento={paraFirmar} onCerrar={() => setParaFirmar(null)} />}
+      {paraFirmar && <DocumentoParaFirmar documento={paraFirmar} onCerrar={() => setParaFirmar(null)} />}
     </div>
   );
 }
 
-/* La hoja que firma el Cliente: el texto con los nombres puestos y el pie de firmas, todo en el
+/* El documento que firma el Cliente: el texto con los nombres puestos y el pie de firmas, todo en el
    idioma del documento, no en el de quien imprime. */
-function HojaParaFirmar({ documento, onCerrar }) {
+function DocumentoParaFirmar({ documento, onCerrar }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onCerrar);
   const delDocumento = (T[documento.idioma] || T['es-AR']).vitales_autorizacion;

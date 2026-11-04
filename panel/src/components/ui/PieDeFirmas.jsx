@@ -1,4 +1,4 @@
-// El pie de todo documento que se imprime para firmar en papel. Uno solo para todos, así ninguno
+// El pie de todo documento que se imprime para firmar a mano. Uno solo para todos, así ninguno
 // pide datos distintos que otro. Recibe las frases del documento, que van en el idioma en que lo
 // lee quien firma.
 export function PieDeFirmas({ textos }) {

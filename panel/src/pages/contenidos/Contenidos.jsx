@@ -13,7 +13,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { ContenidoDetalle } from './ContenidoDetalle';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 /* Contenidos.
    ==========================================================================
@@ -81,9 +81,9 @@ export function Contenidos() {
               <div className="panel-tarjeta-titulo">
                 <h2>{contenido.titulo}</h2>
               </div>
-              <p className="hoja-texto-con-renglones">{contenido.cuerpo}</p>
+              <p className="tarjeta-texto-con-renglones">{contenido.cuerpo}</p>
               {contenido.enlace_url && (
-                <p className="hoja-enlace-del-contenido">
+                <p className="tarjeta-enlace-del-contenido">
                   <a href={contenido.enlace_url} target="_blank" rel="noopener noreferrer">
                     {contenido.enlace_url}
                   </a>
@@ -107,7 +107,7 @@ export function Contenidos() {
       )}
 
       {puedeEscribir && (
-      <section className="panel-tarjeta hoja-desplazable">
+      <section className="panel-tarjeta tarjeta-desplazable">
         <div className="panel-tarjeta-titulo">
           <h2>{t.contenidos.titulo}</h2>
           {estado === 'listo' && <span className="panel-mini">{contenidos.length}</span>}
@@ -137,7 +137,7 @@ export function Contenidos() {
                     <b>{contenido.titulo}</b>
                   </td>
                   <td>{nombrarDestinatarios(contenido.destinatarios)}</td>
-                  <td className="hoja-enlace-del-contenido">
+                  <td className="tarjeta-enlace-del-contenido">
                     {contenido.enlace_url ? (
                       <a href={contenido.enlace_url} target="_blank" rel="noopener noreferrer">
                         {contenido.enlace_url}

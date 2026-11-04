@@ -18,7 +18,7 @@ import { situacion } from '../../lib/vigenciaPrestacion';
 import { servicioSirveParaCliente } from '../../lib/serviciosDelPaciente';
 import { lugaresDe, lugaresDeVarias } from '../../lib/lugaresDeCadaPersona';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -412,7 +412,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
         {estado === 'listo' && (
           <div className="molde-pila">
-            <section className="panel-tarjeta hoja-desplazable">
+            <section className="panel-tarjeta tarjeta-desplazable">
               <div className="panel-tarjeta-titulo">
                 <h2>{t.prestaciones.vigentes_titulo}</h2>
                 <div className="molde-acciones">
@@ -571,7 +571,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   </div>
 
                   {precioSeleccionado && (
-                    <div className="hoja-dato molde-ancho">
+                    <div className="tarjeta-dato molde-ancho">
                       <div className="panel-mini">{t.prestaciones.precio_final_calculado}</div>
                       <b>{precioFinalCalculado}</b>
                     </div>
@@ -681,7 +681,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
             )}
 
             {['admin_prestadora', 'coordinador'].includes(usuario.rol) && cierres.length > 0 && asistentesAviso.length > 0 && (
-              <section className="panel-tarjeta hoja-desplazable">
+              <section className="panel-tarjeta tarjeta-desplazable">
                 <div className="panel-tarjeta-titulo">
                   <h2>{t.prestaciones.aviso_asistente_titulo}</h2>
                 </div>

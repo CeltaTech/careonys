@@ -31,7 +31,7 @@ for (const app of APPS) {
   if (!fs.existsSync(fTrad)) continue;
   const trad = fs.readFileSync(fTrad, 'utf8');
 
-  // Las claves hoja: `nombre_de_clave:` seguido de un texto entre comillas.
+  // Las claves finales: `nombre_de_clave:` seguido de un texto entre comillas.
   const claves = new Set();
   for (const m of trad.matchAll(/^\s{4,}([a-z][a-z0-9_]*)\s*:\s*['"`]/gm)) claves.add(m[1]);
 

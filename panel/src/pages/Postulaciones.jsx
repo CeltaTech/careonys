@@ -17,7 +17,7 @@ import { filtrarPostulaciones } from '../lib/filtrarPostulaciones';
 import { formatearImporte } from '../lib/dinero';
 import { claseBadge } from '../lib/tonos';
 import '../styles/molde-paginas.css';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 import './postulaciones.css';
 
 const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
@@ -120,7 +120,7 @@ export function Postulaciones() {
           </div>
         )}
 
-        <section className="panel-tarjeta hoja-desplazable">
+        <section className="panel-tarjeta tarjeta-desplazable">
           <div className="panel-tarjeta-titulo">
             <h2>{t.postulaciones.titulo}</h2>
             {estado === 'listo' && <span className="panel-mini">{filasFiltradas.length}</span>}

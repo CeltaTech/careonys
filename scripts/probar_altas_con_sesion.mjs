@@ -1534,7 +1534,7 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     else mal('no ve la reasignación de una guardia ajena', `sembradas=${sembradas} filas=${reasignacionAjena}`);
     consultarBase(`DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}';`);
 
-    // Los archivos del Paciente —prescripción, papel firmado, autorización de monitoreo— tampoco.
+    // Los archivos del Paciente —prescripción, documento firmado, autorización de monitoreo— tampoco.
     // Se siembran en la base de los depósitos y se listan con la sesión: la lista la filtra la
     // misma protección por fila que la lectura.
     consultarBase(archivosSembrados.map(([deposito, ruta]) => `INSERT INTO storage.objects (bucket_id, name)
@@ -1549,8 +1549,8 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
       body: '%PDF-1.4 prueba',
     });
     const [[subidos]] = consultarBase(`SELECT count(*) FROM storage.objects WHERE name LIKE '%prueba-coordinador-subida%';`);
-    if (!subida.ok && Number(subidos) === 0) bien('no puede subir el papel firmado de un Paciente que no ve');
-    else mal('no puede subir el papel firmado de un Paciente que no ve', `${subida.status} subidos=${subidos}`);
+    if (!subida.ok && Number(subidos) === 0) bien('no puede subir el documento firmado de un Paciente que no ve');
+    else mal('no puede subir el documento firmado de un Paciente que no ve', `${subida.status} subidos=${subidos}`);
 
     // Con una alarma de esa guardia tomada, la ve mientras la tenga.
     consultarBase(`INSERT INTO public.alarmas_tomadas (prestadora_id, tipo, referencia_id, tomada_por, vence_at)

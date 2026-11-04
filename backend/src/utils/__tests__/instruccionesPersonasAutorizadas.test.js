@@ -73,7 +73,7 @@ prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: este archivo sí arma la conexión al cargarse.
 const { confirmarConCodigo, pedirCodigo } = await import('../instruccionesPersonasAutorizadas.js');
-const { anularPendiente, cerrarConPapelFirmado } = await import('../consentimientoPagador.js');
+const { anularPendiente, cerrarConDocumentoFirmado } = await import('../consentimientoPagador.js');
 // La conexión que en el backend sería la de la persona del Panel. Acá contesta la base de mentira.
 const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
 const conexionDeLaPersona = conexionDe();
@@ -326,7 +326,7 @@ describe('el consentimiento de quien paga que ya no espera firma', () => {
 
   it('registrar la firma de uno pendiente lo cierra con el archivo', async () => {
     consentimientos = [unConsentimiento('pendiente_firma')];
-    assert.equal(await cerrarConPapelFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }), true);
+    assert.equal(await cerrarConDocumentoFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }), true);
     assert.equal(consentimientos[0].estado, 'cerrado');
     assert.equal(consentimientos[0].archivo_firmado_url, 'ruta/nueva.pdf');
   });
@@ -335,7 +335,7 @@ describe('el consentimiento de quien paga que ya no espera firma', () => {
     it(`registrar la firma de uno ya ${estado} contesta sin error y no toca nada`, async () => {
       consentimientos = [unConsentimiento(estado)];
       const antes = structuredClone(consentimientos);
-      assert.equal(await cerrarConPapelFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }), false);
+      assert.equal(await cerrarConDocumentoFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }), false);
       assert.deepEqual(consentimientos, antes);
       assert.equal(modificaciones().length, 0, 'no se le pidió ninguna modificación a la base');
     });
@@ -344,7 +344,7 @@ describe('el consentimiento de quien paga que ya no espera firma', () => {
   it('registrar la firma de uno de otra Prestadora no lo encuentra', async () => {
     consentimientos = [{ ...unConsentimiento('pendiente_firma'), prestadora_id: PRESTADORA_AJENA }];
     await assert.rejects(
-      cerrarConPapelFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }),
+      cerrarConDocumentoFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }),
       (err) => err.motivo === 'no_encontrado',
     );
     assert.equal(consentimientos[0].estado, 'pendiente_firma');

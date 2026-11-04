@@ -3,7 +3,7 @@ import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { laViaBloquea, laViaFrenteALosAsignados } from '../utils/medicacionIndicaciones.js';
-import { extensionDeArchivo, rutaDelPapelFirmado } from '../utils/archivosSubidos.js';
+import { extensionDeArchivo, rutaDelDocumentoFirmado } from '../utils/archivosSubidos.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { FICHA_NOMBRE, conSuFicha } from '../utils/fichaDelPaciente.js';
@@ -18,14 +18,14 @@ import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 // no cuenta.
 //
 // LA FIRMA. Si la Prestadora la pide, una indicación sin firma cerrada no se acepta. La que el
-// Cliente eligió firmar en papel se imprime desde acá, y al subir el documento firmado queda cerrada.
+// Cliente eligió firmar a mano se imprime desde acá, y al subir el documento firmado queda cerrada.
 // La base lo exige igual: el disparador que acepta la indicación se niega sin firma.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE, toda la ruta. La base acota la bandeja: con la restricción de la
 // historia clínica activa, cada persona ve las indicaciones de los Pacientes que atiende, y la
 // administración las ve todas. Antes de entregarla queda anotado quién la vio, paciente por paciente.
-// Aceptar, rechazar y cerrar la firma en papel pasan por funciones de la base que tocan sólo lo
-// suyo (`revisar_indicacion_medicacion`, `cerrar_firma_medicacion_en_papel`): quien coordina
+// Aceptar, rechazar y cerrar la firma a mano pasan por funciones de la base que tocan sólo lo
+// suyo (`revisar_indicacion_medicacion`, `cerrar_firma_medicacion_con_documento_firmado`): quien coordina
 // revisa la indicación sin poder cambiarle el medicamento, la dosis ni la vía, y quién revisó sale
 // de la sesión. Quiénes tienen guardia con el Paciente lo contesta la base mirando todas las zonas.
 // El depósito sólo da enlaces y deja subir en la carpeta de la Prestadora de quien pide.
@@ -195,7 +195,7 @@ panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) =
   }
 });
 
-// Lo que se imprime para firmar en papel: el texto tal como quedó guardado al cargarla —no el
+// Lo que se imprime para firmar a mano: el texto tal como quedó guardado al cargarla —no el
 // vigente hoy—, en el idioma en que lo leyó el Cliente, y los datos de la indicación.
 panelMedicacionRouter.get('/:id/para-firmar', requiereRolPanel, async (req, res) => {
   const db = clienteDelPedido(req);
@@ -238,7 +238,7 @@ panelMedicacionRouter.get('/:id/para-firmar', requiereRolPanel, async (req, res)
 // la Prestadora y el Cliente, el Asistente no: por eso no va en la carpeta del Paciente, que es la
 // que el depósito le abre al Asistente para leer la receta.
 panelMedicacionRouter.post(
-  '/:id/papel-firmado',
+  '/:id/documento-firmado',
   requiereRolPanel,
   upload.single('archivo'),
   manejarErrorMulter,
@@ -256,13 +256,13 @@ panelMedicacionRouter.post(
       if (!firma) throw new ErrorConMotivo('no_encontrado');
       if (firma.estado !== 'pendiente_firma') return res.json({ ok: true });
 
-      const ruta = rutaDelPapelFirmado(prestadoraId, indicacion.paciente_id, firma.id, extensionDeArchivo(req.file.mimetype));
+      const ruta = rutaDelDocumentoFirmado(prestadoraId, indicacion.paciente_id, firma.id, extensionDeArchivo(req.file.mimetype));
       const { error: errorSubida } = await db.storage
         .from(BUCKET)
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
       if (errorSubida) throw errorSubida;
 
-      const { data: cerrado, error } = await db.rpc('cerrar_firma_medicacion_en_papel', { p_firma: firma.id, p_archivo: ruta });
+      const { data: cerrado, error } = await db.rpc('cerrar_firma_medicacion_con_documento_firmado', { p_firma: firma.id, p_archivo: ruta });
       if (error) throw error;
       // Otra persona la cerró mientras se subía el archivo. El archivo subido no quedó en ninguna
       // firma y se borra, salvo que esté en la misma ruta que el que sí quedó guardado: ése el
@@ -288,13 +288,13 @@ panelMedicacionRouter.post(
 
 // Volver a ver el documento firmado, con un enlace temporal y la credencial de quien pide: la base
 // tiene que dejarle leer el consentimiento y el depósito, el archivo.
-panelMedicacionRouter.get('/:id/papel-firmado', requiereRolPanel, async (req, res) => {
+panelMedicacionRouter.get('/:id/documento-firmado', requiereRolPanel, async (req, res) => {
   const db = clienteDelPedido(req);
   const { data: consentimiento, error } = await db
     .from('consentimientos_medicacion')
     .select('archivo_firmado_url')
     .eq('indicacion_id', req.params.id)
-    .eq('cerrado_como', 'papel_firmado')
+    .eq('cerrado_como', 'documento_firmado')
     .not('archivo_firmado_url', 'is', null)
     .maybeSingle();
   if (error) return responderError(res, error);

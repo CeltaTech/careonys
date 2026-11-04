@@ -10,7 +10,7 @@
 //
 // Está escrito sin JSX para que las pruebas de las aplicaciones, que corren con `node --test`
 // sin ninguna herramienta de armado, lo puedan importar tal cual. Cómo se ve no está acá: cada
-// producto lo dibuja con sus propios tonos, en su hoja de estilos, sobre las clases
+// producto lo dibuja con sus propios tonos, en su archivo de estilos, sobre las clases
 // `mensaje-emergente-zona` y `mensaje-emergente`.
 
 import { createElement, useSyncExternalStore } from 'react';

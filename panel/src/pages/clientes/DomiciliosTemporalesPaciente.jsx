@@ -19,7 +19,7 @@ import { domicilioEscrito } from '../../lib/domicilioEscrito';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { coordenadasDeDomicilio, coordenadasSiCambio } from '../../lib/coordenadasDeDomicilio';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 // Dónde se atiende al Paciente cuando no está en su domicilio de siempre.
 //
@@ -328,11 +328,11 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                   </span>
                 </div>
                 <div className="panel-grilla panel-columnas-3">
-                  <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_domicilio}</div><b>{domicilioEscrito(dondeHoy, palabrasDelDomicilio(t)) || '—'}</b></div>                  {dondeHoy.es_temporal && (
+                  <div className="tarjeta-dato"><div className="panel-mini">{t.domicilios_temporales.col_domicilio}</div><b>{domicilioEscrito(dondeHoy, palabrasDelDomicilio(t)) || '—'}</b></div>                  {dondeHoy.es_temporal && (
                     <>
-                      <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_motivo}</div><b>{dondeHoy.motivo || '—'}</b></div>
-                      <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_desde}</div><b>{dondeHoy.desde || '—'}</b></div>
-                      <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_hasta}</div><b>{dondeHoy.hasta || t.domicilios_temporales.sin_fecha_fin}</b></div>
+                      <div className="tarjeta-dato"><div className="panel-mini">{t.domicilios_temporales.col_motivo}</div><b>{dondeHoy.motivo || '—'}</b></div>
+                      <div className="tarjeta-dato"><div className="panel-mini">{t.domicilios_temporales.col_desde}</div><b>{dondeHoy.desde || '—'}</b></div>
+                      <div className="tarjeta-dato"><div className="panel-mini">{t.domicilios_temporales.col_hasta}</div><b>{dondeHoy.hasta || t.domicilios_temporales.sin_fecha_fin}</b></div>
                     </>
                   )}
                 </div>
@@ -447,7 +447,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
               </section>
             )}
 
-            <section className="panel-tarjeta hoja-desplazable">
+            <section className="panel-tarjeta tarjeta-desplazable">
               <div className="panel-tarjeta-titulo">
                 <h2>{t.domicilios_temporales.titulo}</h2>
                 {puedeEditar && !mostrandoForm && (

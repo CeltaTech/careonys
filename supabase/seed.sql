@@ -38,7 +38,7 @@
 -- Ese programa lee la variable, se planta si falta, y se la pone a todas las
 -- cuentas de la siembra. Es la misma que después esperan
 -- `scripts/probar_aislamiento.mjs`, `scripts/probar_altas_con_sesion.mjs` y
--- `scripts/probar_papeles_del_legajo.mjs`. **Nunca debe usarse en la nube ni en
+-- `scripts/probar_documentos_del_legajo.mjs`. **Nunca debe usarse en la nube ni en
 -- ningún otro lado.**
 --
 -- POR QUÉ LA PRESTADORA SE LLAMA "SANDBOX". Porque es el nombre que el
@@ -829,7 +829,7 @@ WHERE id = '30000000-0000-4000-8000-000000000003';
 
 
 -- ----------------------------------------------------------------------------
--- 6 ter. Los papeles que vencen
+-- 6 ter. Los documentos que vencen
 -- ----------------------------------------------------------------------------
 -- Sin estas filas, las tres pantallas que avisan vencimientos —Documentación,
 -- Estado actual y el tablero— se ven vacías en la máquina y no hay forma de
@@ -841,7 +841,7 @@ WHERE id = '30000000-0000-4000-8000-000000000003';
 --
 -- El plazo de aviso de la Prestadora se dejó en 45 días a propósito, distinto
 -- del valor de arranque de 30: si una pantalla estuviera usando el número de
--- fábrica en vez del configurado, el papel de 40 días se vería verde en una y
+-- fábrica en vez del configurado, el documento de 40 días se vería verde en una y
 -- amarillo en otra, y el desacuerdo salta a la vista.
 
 UPDATE public.prestadoras
@@ -1375,18 +1375,18 @@ VALUES ('a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-1111111
         '60000000-0000-4000-8000-000000000001', 'temperatura', 36.0, 37.5, '°C',
         'Valor de referencia general');
 
--- Autorización para que un Asistente le tome los signos vitales a un Paciente: un papel firmado
+-- Autorización para que un Asistente le tome los signos vitales a un Paciente: un documento firmado
 -- que subió el Panel, una por Prestadora, para que la prueba de aislamiento tenga de los dos lados.
 INSERT INTO public.autorizaciones_monitoreo_paciente
   (id, prestadora_id, paciente_id, metodo, estado, documento_texto, documento_verificador,
    documento_idioma, archivo_url, cargado_por)
 VALUES ('a2000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-        '50000000-0000-4000-8000-000000000001', 'papel_panel', 'aceptada',
+        '50000000-0000-4000-8000-000000000001', 'documento_firmado_panel', 'aceptada',
         'Texto de prueba de la autorización.', 'verificador-de-prueba-a', 'es-AR',
         '11111111-1111-4111-8111-111111111111/50000000-0000-4000-8000-000000000001/autorizacion-prueba-a.pdf',
         '20000000-0000-4000-8000-000000000003'),
        ('a2000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
-        '60000000-0000-4000-8000-000000000001', 'papel_panel', 'aceptada',
+        '60000000-0000-4000-8000-000000000001', 'documento_firmado_panel', 'aceptada',
         'Texto de prueba de la autorización.', 'verificador-de-prueba-b', 'es-AR',
         '22222222-2222-4222-8222-222222222222/60000000-0000-4000-8000-000000000001/autorizacion-prueba-b.pdf',
         '50000000-0000-4000-8000-000000000002');

@@ -31,16 +31,16 @@ import {
   personasAutorizadasConSusAccesos,
   crearInstruccion,
   instruccionPendiente,
-  cerrarConPapelFirmado,
+  cerrarConDocumentoFirmado,
 } from '../utils/instruccionesPersonasAutorizadas.js';
 import {
   DEPOSITO_PAGADOR,
   anularPendiente,
-  cerrarConPapelFirmado as cerrarConsentimientoPagador,
+  cerrarConDocumentoFirmado as cerrarConsentimientoPagador,
   consentimientoDelPagador,
   crearConsentimiento,
   estadoDelPagador,
-  guardarPapel,
+  guardarDocumento,
   rutaDelArchivo,
 } from '../utils/consentimientoPagador.js';
 
@@ -53,17 +53,17 @@ import {
 
 export const panelCuentasRouter = Router();
 
-// La hoja firmada de las personas autorizadas. Mismo trato que el resto de los archivos del producto:
+// El documento firmado de las personas autorizadas. Mismo trato que el resto de los archivos del producto:
 // depósito privado, tope de tamaño comprobado acá y no sólo en el depósito, y sólo los tres tipos
-// que sirven para una hoja firmada.
+// que sirven para un documento firmado.
 const DEPOSITO_INSTRUCCIONES = 'instrucciones-acceso-personas-autorizadas';
-const TIPOS_DE_PAPEL_FIRMADO = ['application/pdf', 'image/jpeg', 'image/png'];
+const TIPOS_DE_DOCUMENTO_FIRMADO = ['application/pdf', 'image/jpeg', 'image/png'];
 
-const subirPapelFirmado = multer({
+const subirDocumentoFirmado = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter(req, file, cb) {
-    cb(null, TIPOS_DE_PAPEL_FIRMADO.includes(file.mimetype));
+    cb(null, TIPOS_DE_DOCUMENTO_FIRMADO.includes(file.mimetype));
   },
 });
 
@@ -312,7 +312,7 @@ panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas', requiereRolPa
 });
 
 // Arma la autorización que el titular pidió. Los accesos rigen recién cuando la firma, por la
-// aplicación o en papel.
+// aplicación o a mano.
 panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas/instruccion', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_de_personas_autorizadas'), async (req, res) => {
   const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
@@ -332,14 +332,14 @@ panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas/instruccion', 
   }
 });
 
-// El camino de siempre: el titular firmó la hoja en papel y la Prestadora la guarda. El archivo
+// El camino de siempre: el titular firmó el documento a mano y la Prestadora lo guarda. El archivo
 // va a un depósito privado y la ruta empieza por la Prestadora, que es lo que exige su política.
 panelCuentasRouter.post(
-  '/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/papel',
+  '/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/documento',
   requiereRolPanel,
   exigirOrganizacionActiva,
   requierePermiso('configurar_accesos_de_personas_autorizadas'),
-  subirPapelFirmado.single('archivo'),
+  subirDocumentoFirmado.single('archivo'),
   manejarErrorDeArchivo,
   async (req, res) => {
     if (!req.file) {
@@ -351,7 +351,7 @@ panelCuentasRouter.post(
       return res.status(404).json({ error: 'Cliente no encontrado' });
     }
 
-    // El depósito deja crear un archivo y no pisarlo, así que cada hoja lleva nombre propio: si se
+    // El depósito deja crear un archivo y no pisarlo, así que cada documento lleva nombre propio: si se
     // vuelve a subir, la fila apunta a la última.
     const ruta = `${cliente.prestadora_id}/${cliente.id}/${req.params.instruccionId}-${randomUUID()}.${extensionDeArchivo(req.file.mimetype)}`;
     const { error: errorSubida } = await clienteDelPedido(req).storage
@@ -362,7 +362,7 @@ panelCuentasRouter.post(
     }
 
     try {
-      await cerrarConPapelFirmado({
+      await cerrarConDocumentoFirmado({
         instruccionId: req.params.instruccionId,
         prestadoraId: cliente.prestadora_id,
         archivoUrl: ruta,
@@ -374,9 +374,9 @@ panelCuentasRouter.post(
   },
 );
 
-// La hoja firmada, para volver a verla desde el Panel. Nunca dirección pública: un enlace temporal
+// El documento firmado, para volver a verla desde el Panel. Nunca dirección pública: un enlace temporal
 // que dura un minuto, igual que el resto de los archivos del producto.
-panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_de_personas_autorizadas'), async (req, res) => {
+panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/documento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_de_personas_autorizadas'), async (req, res) => {
   const db = clienteDelPedido(req);
   const { data: instruccion } = await db
     .from('instrucciones_acceso_personas_autorizadas')
@@ -386,7 +386,7 @@ panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:in
     .maybeSingle();
 
   if (!instruccion?.archivo_firmado_url) {
-    return res.status(404).json({ error: 'No hay hoja firmada guardada' });
+    return res.status(404).json({ error: 'No hay documento firmado guardado' });
   }
 
   const { data, error } = await db.storage
@@ -405,7 +405,7 @@ panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:in
 //
 // Apuntar un Legajo como Pagador no lo convierte en Pagador: lo que lo convierte es que haya
 // asumido la obligación y lo haya firmado. Estas rutas son lo que la pantalla del Cliente usa
-// para mostrarlo ahí mismo, al lado de donde se lo elige, y para cargar la firma y los papeles.
+// para mostrarlo ahí mismo, al lado de donde se lo elige, y para cargar la firma y los documentos.
 //
 // LEER NO ES ESCRIBIR. El estado lo alcanza quien edita el Cliente, porque saber si firmó hace
 // falta para trabajar. Hacerlo firmar pide el permiso propio, que nace reservado al Admin.
@@ -460,14 +460,14 @@ panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimie
   }
 });
 
-// La hoja firmada. Depósito privado y ruta empezando por la Prestadora, que es lo que exige su
+// El documento firmado. Depósito privado y ruta empezando por la Prestadora, que es lo que exige su
 // política.
 panelCuentasRouter.post(
-  '/cliente/:clienteId/pagador/consentimiento/:consentimientoId/papel',
+  '/cliente/:clienteId/pagador/consentimiento/:consentimientoId/documento',
   requiereRolPanel,
   exigirOrganizacionActiva,
   requierePermiso('registrar_consentimiento_pagador'),
-  subirPapelFirmado.single('archivo'),
+  subirDocumentoFirmado.single('archivo'),
   manejarErrorDeArchivo,
   async (req, res) => {
     const db = clienteDelPedido(req);
@@ -486,7 +486,7 @@ panelCuentasRouter.post(
     }
 
     // El archivo es opcional, igual que en la instrucción de las personas autorizadas: lo que cierra esto es que
-    // la Prestadora declare que se firmó, y hay Prestadoras que archivan el papel afuera del
+    // la Prestadora declare que se firmó, y hay Prestadoras que archivan el documento afuera del
     // sistema. Exigirlo dejaría firmas reales sin poder registrarse, que es peor.
     let ruta = null;
     if (req.file) {
@@ -520,9 +520,9 @@ panelCuentasRouter.post(
   },
 );
 
-// Volver a ver la hoja firmada. Nunca dirección pública: un enlace temporal que dura un minuto,
+// Volver a ver el documento firmado. Nunca dirección pública: un enlace temporal que dura un minuto,
 // igual que el resto de los archivos del producto.
-panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/documento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const db = clienteDelPedido(req);
   const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
@@ -535,7 +535,7 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimien
     .maybeSingle();
 
   if (!consentimiento?.archivo_firmado_url) {
-    return res.status(404).json({ error: 'No hay hoja firmada guardada' });
+    return res.status(404).json({ error: 'No hay documento firmado guardado' });
   }
 
   const { data, error } = await db.storage
@@ -546,14 +546,14 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimien
   res.json({ url: data.signedUrl });
 });
 
-// Los papeles que exige el Pagador. Son aparte de la firma: que falte uno no invalida lo
-// firmado, y que esté la firma no completa los papeles.
+// Los documentos que exige el Pagador. Son aparte de la firma: que falte uno no invalida lo
+// firmado, y que esté la firma no completa los documentos.
 panelCuentasRouter.post(
-  '/cliente/:clienteId/pagador/papel/:tipoDocumentoId',
+  '/cliente/:clienteId/pagador/documento/:tipoDocumentoId',
   requiereRolPanel,
   exigirOrganizacionActiva,
   requierePermiso('registrar_consentimiento_pagador'),
-  subirPapelFirmado.single('archivo'),
+  subirDocumentoFirmado.single('archivo'),
   manejarErrorDeArchivo,
   async (req, res) => {
     if (!req.file) {
@@ -567,7 +567,7 @@ panelCuentasRouter.post(
     const ruta = rutaDelArchivo({
       prestadoraId: cliente.prestadora_id,
       clienteId: cliente.id,
-      nombre: `papel-${req.params.tipoDocumentoId}`,
+      nombre: `documento-${req.params.tipoDocumentoId}`,
       extension: extensionDeArchivo(req.file.mimetype),
     });
     const { error: errorSubida } = await db.storage
@@ -576,7 +576,7 @@ panelCuentasRouter.post(
     if (errorSubida) return responderError(res, errorSubida);
 
     try {
-      await guardarPapel({
+      await guardarDocumento({
         db,
         clienteId: cliente.id,
         prestadoraId: cliente.prestadora_id,
@@ -592,7 +592,7 @@ panelCuentasRouter.post(
   },
 );
 
-panelCuentasRouter.get('/cliente/:clienteId/pagador/papel/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.get('/cliente/:clienteId/pagador/documento/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const db = clienteDelPedido(req);
   const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });

@@ -52,7 +52,7 @@ export const api = {
   viasDeMedicacion: () => pedido('/medicacion/vias'),
   tiposQuePuedenDarLaVia: (viaId) => pedido(`/medicacion/vias/${viaId}/tipos`),
   consentimientoDeMedicacion: (idioma) => pedido(`/medicacion/consentimiento?idioma=${encodeURIComponent(idioma)}`),
-  papelFirmadoDeMedicacion: (indicacionId) => pedido(`/medicacion/indicacion/${indicacionId}/papel-firmado`),
+  documentoFirmadoDeMedicacion: (indicacionId) => pedido(`/medicacion/indicacion/${indicacionId}/documento-firmado`),
   // La instrucción de las personas autorizadas que el titular todavía no firmó. El perfil ya avisa que
   // hay una; esto trae el texto entero, que es lo único que no conviene mandar en cada pedido.
   instruccionPendiente: () => pedido('/instruccion-pendiente'),
@@ -75,7 +75,7 @@ export const api = {
   // vienen: acá se dejó de calcularlos, y la respuesta lo dice en `sigue_la_cobranza`.
   facturas: () => pedido('/facturas'),
   factura: (facturaId) => pedido(`/facturas/${facturaId}`),
-  // La factura en papel, la que emitió el software de facturación de la Prestadora. No vuelve el
+  // El comprobante de la factura, la que emitió el software de facturación de la Prestadora. No vuelve el
   // archivo sino una dirección que vence enseguida: el depósito es privado y el teléfono baja
   // derecho de ahí. Se pide recién cuando alguien toca el botón, porque una dirección preparada
   // de antemano se vence antes de que la usen.
@@ -141,6 +141,6 @@ export const api = {
   firmarSignosVitales: (pacienteId, datos) =>
     pedido(`/vitales-autorizacion/${pacienteId}/firmar`, { method: 'POST', body: JSON.stringify(datos) }),
   subirSignosVitales: (pacienteId, idioma, formData) =>
-    pedido(`/vitales-autorizacion/${pacienteId}/papel?idioma=${encodeURIComponent(idioma)}`, { method: 'POST', body: formData }),
+    pedido(`/vitales-autorizacion/${pacienteId}/documento?idioma=${encodeURIComponent(idioma)}`, { method: 'POST', body: formData }),
   verAutorizacionSignosVitales: (id) => pedido(`/vitales-autorizacion/autorizacion/${id}`),
 };

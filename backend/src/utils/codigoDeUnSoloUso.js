@@ -96,7 +96,7 @@ export function minutosQueFaltan(hasta) {
 // pedir otro código para tener cinco intentos más, y así hasta acertar los seis dígitos.
 //
 // LA CUENTA ES DEL ACTO, NO DEL CÓDIGO. Los intentos se cuentan contra la cosa que se está
-// abriendo —esta instrucción, esta llegada—, no contra el papelito de turno. Pedir un papelito
+// abriendo —esta instrucción, esta llegada—, no contra el código de turno. Pedir un código
 // nuevo no borra los intentos que ya se gastaron, igual que cambiar de llave no borra las veces
 // que uno erró la cerradura.
 //

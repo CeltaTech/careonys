@@ -1,12 +1,12 @@
 import crypto from 'node:crypto';
 
-// Arma la hoja que firma el Pagador, y su identificador de verificación.
+// Arma el documento que firma el Pagador, y su identificador de verificación.
 //
 // QUÉ ES ESTE TEXTO Y DE QUIÉN ES. Es un documento entre la Prestadora y un tercero de ella, así
 // que es de ella: el producto trae un modelo y ella lo adopta, lo cambia o lo reemplaza por el
 // suyo desde Configuración. El de fábrica está en la base y rige mientras no cargue ninguno. Que es un modelo,
 // que no es asesoramiento legal y que adoptarlo es decisión suya se lo dice la pantalla donde lo
-// ve, no este texto: adentro de la hoja que firma el Pagador esa aclaración no tiene sentido.
+// ve, no este texto: adentro del documento que firma el Pagador esa aclaración no tiene sentido.
 //
 // POR QUÉ EL DOCUMENTO SE GUARDA Y NO SE VUELVE A ARMAR. Si mañana la Prestadora cambia su modelo,
 // esta función devolvería otro texto. Lo que el Pagador firmó fue el de aquel día: se guarda

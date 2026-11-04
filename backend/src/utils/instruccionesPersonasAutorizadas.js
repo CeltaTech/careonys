@@ -394,9 +394,9 @@ async function cerrarConCodigo({ instruccionId, clienteId, prestadoraId, codigo,
   return { ok: true };
 }
 
-// El otro camino, el de siempre: el titular firma la hoja en papel, la Prestadora la guarda y
+// El otro camino, el de siempre: el titular firma el documento a mano, la Prestadora lo guarda y
 // carga el archivo. La ruta que sube el archivo se encarga del depósito; acá sólo se cierra.
-async function cerrarConDocumentoFirmado({ instruccionId, prestadoraId, archivoUrl }) {
+async function cerrarLaInstruccionConDocumentoFirmado({ instruccionId, prestadoraId, archivoUrl }) {
   if (!prestadoraId) throw new ErrorConMotivo('no_encontrado', 'Instrucción no encontrada');
 
   const { data: instruccion } = await supabase
@@ -415,7 +415,7 @@ async function cerrarConDocumentoFirmado({ instruccionId, prestadoraId, archivoU
     .from('instrucciones_acceso_personas_autorizadas')
     .update({
       estado: 'cerrada',
-      cerrada_como: 'papel_firmado',
+      cerrada_como: 'documento_firmado',
       cerrada_en: new Date().toISOString(),
       archivo_firmado_url: archivoUrl,
     })
@@ -477,7 +477,7 @@ function enSuPrestadora(hacer) {
 export const crearInstruccion = enSuPrestadora(armarInstruccion);
 export const pedirCodigo = enSuPrestadora(mandarCodigo);
 export const confirmarConCodigo = enSuPrestadora(cerrarConCodigo);
-export const cerrarConPapelFirmado = enSuPrestadora(cerrarConDocumentoFirmado);
+export const cerrarConDocumentoFirmado = enSuPrestadora(cerrarLaInstruccionConDocumentoFirmado);
 export const personasAutorizadasConSusAccesos = enSuPrestadora(accesosDeCadaPersona);
 export const instruccionPendiente = (clienteId, prestadoraId) => enSuPrestadora(
   ({ prestadoraId: deLaPrestadora }) => pendienteDeFirma(clienteId, deLaPrestadora),

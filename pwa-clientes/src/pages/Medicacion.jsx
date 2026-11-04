@@ -85,11 +85,11 @@ export default function Medicacion() {
   const [errorFormulario, setErrorFormulario] = useState('');
   const [tiposDeLaVia, setTiposDeLaVia] = useState([]);
 
-  // La firma: la del teléfono, o la decisión de firmar en papel.
+  // La firma: la del teléfono, o la decisión de firmar a mano.
   const [guardaLlaves, setGuardaLlaves] = useState(false);
   const [firmaApp, setFirmaApp] = useState(null);
   const [firmando, setFirmando] = useState(false);
-  const [enPapel, setEnPapel] = useState(false);
+  const [firmaImpresa, setFirmaImpresa] = useState(false);
 
   const cargar = useCallback(() => {
     api
@@ -157,7 +157,7 @@ export default function Medicacion() {
       setFirmaApp(null);
       return;
     }
-    setEnPapel(false);
+    setFirmaImpresa(false);
     setFirmando(true);
     try {
       let firma;
@@ -178,10 +178,10 @@ export default function Medicacion() {
     }
   }
 
-  function elegirPapel() {
+  function elegirFirmaImpresa() {
     setError('');
     setFirmaApp(null);
-    setEnPapel(true);
+    setFirmaImpresa(true);
   }
 
   async function handleSubmit(e) {
@@ -189,7 +189,7 @@ export default function Medicacion() {
     setError('');
     setExito(false);
     if (!revisarCompletos()) return;
-    if (pideFirma && !firmaApp && !enPapel) return;
+    if (pideFirma && !firmaApp && !firmaImpresa) return;
     setEnviando(true);
     try {
       const formData = new FormData();
@@ -206,7 +206,7 @@ export default function Medicacion() {
           formData.append('firma', 'app');
           formData.append('respuesta', JSON.stringify(firmaApp));
         } else {
-          formData.append('firma', 'papel');
+          formData.append('firma', 'documento_firmado');
         }
       }
       await api.crearIndicacionMedicacion(id, formData);
@@ -214,7 +214,7 @@ export default function Medicacion() {
       setArchivo(null);
       setFaltantes([]);
       setFirmaApp(null);
-      setEnPapel(false);
+      setFirmaImpresa(false);
       setExito(true);
       cargar();
     } catch (fallo) {
@@ -225,10 +225,10 @@ export default function Medicacion() {
     }
   }
 
-  async function verPapelFirmado(indicacionId) {
+  async function verDocumentoFirmado(indicacionId) {
     setAbriendo(indicacionId);
     try {
-      const { url } = await api.papelFirmadoDeMedicacion(indicacionId);
+      const { url } = await api.documentoFirmadoDeMedicacion(indicacionId);
       window.open(url, '_blank', 'noopener');
     } catch (fallo) {
       setError(mensajeDeError(fallo, t, 'documento firmado'));
@@ -237,7 +237,7 @@ export default function Medicacion() {
     }
   }
 
-  const listoParaEnviar = !pideFirma || firmaApp || enPapel;
+  const listoParaEnviar = !pideFirma || firmaApp || firmaImpresa;
 
   return (
     <>
@@ -276,9 +276,9 @@ export default function Medicacion() {
               <div className="pwa-card-pie">
                 <span className={`badge ${ESTADO_CLASE[ind.estado] || ''}`}>{t.medicacion[`estado_${ind.estado}`]}</span>
                 {ind.firma === 'pendiente_firma' && <span className="badge badge-amarilla">{t.medicacion.falta_la_firma}</span>}
-                {ind.papel_firmado && (
-                  <button type="button" className="btn" onClick={() => verPapelFirmado(ind.id)} disabled={abriendo === ind.id}>
-                    {t.medicacion.ver_papel_firmado}
+                {ind.documento_firmado && (
+                  <button type="button" className="btn" onClick={() => verDocumentoFirmado(ind.id)} disabled={abriendo === ind.id}>
+                    {t.medicacion.ver_documento_firmado}
                   </button>
                 )}
               </div>
@@ -372,10 +372,10 @@ export default function Medicacion() {
                       <span>{t.medicacion.acepto_terminos}</span>
                     </label>
                   )}
-                  <button type="button" className="btn btn-full" onClick={elegirPapel} disabled={enviando || enPapel}>
+                  <button type="button" className="btn btn-full" onClick={elegirFirmaImpresa} disabled={enviando || firmaImpresa}>
                     {t.medicacion.aceptar_con_firma_holografa}
                   </button>
-                  {enPapel && <div className="alert alert-info" role="status">{t.medicacion.aviso_firma_holografa}</div>}
+                  {firmaImpresa && <div className="alert alert-info" role="status">{t.medicacion.aviso_firma_holografa}</div>}
                 </>
               )}
 

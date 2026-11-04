@@ -26,7 +26,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 
 /* Los saldos de los Clientes: lo facturado, lo que entró y lo que falta.
    ==========================================================================
@@ -322,7 +322,7 @@ export function Facturacion() {
             mensajeVacio={t.facturacion.estados_de_cuenta_vacio}
             recargar={recargar}
           >
-            <div className="hoja-desplazable"><table className="panel-tabla">
+            <div className="tarjeta-desplazable"><table className="panel-tabla">
               <thead>
                 <tr>
                   <th>{t.facturacion.col_cliente}</th>
@@ -363,7 +363,7 @@ export function Facturacion() {
             mensajeVacio={t.facturacion.restricciones_vacio}
             recargar={recargar}
           >
-            <div className="hoja-desplazable"><table className="panel-tabla">
+            <div className="tarjeta-desplazable"><table className="panel-tabla">
               <thead>
                 <tr>
                   <th>{t.facturacion.col_cliente}</th>
@@ -443,7 +443,7 @@ export function Facturacion() {
         mensajeVacio={t.facturacion.vacio_texto}
         recargar={recargar}
       >
-        <div className="hoja-desplazable"><table className="panel-tabla">
+        <div className="tarjeta-desplazable"><table className="panel-tabla">
           <thead>
             <tr>
               <th>{t.facturacion.col_cliente}</th>
@@ -538,7 +538,7 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
     comprobante_numero: '',
     fecha_vencimiento: '',
   });
-  // El papel que va a bajar el Cliente. Se sube desde acá porque un software de facturación
+  // El comprobante que va a bajar el Cliente. Se sube desde acá porque un software de facturación
   // comprado no siempre puede empujarlo solo, y hay Prestadoras que facturan sin ninguno
   // conectado.
   const campoDelComprobante = useRef(null);

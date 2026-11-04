@@ -7,7 +7,7 @@ import {
 import { textosDeFabrica } from './textosDeFabrica.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 
-// Todo lo que le pasa al consentimiento del Pagador: se carga, se cierra con la hoja firmada, o se
+// Todo lo que le pasa al consentimiento del Pagador: se carga, se cierra con el documento firmado, o se
 // anula porque se cargó otro.
 //
 // SIN ESA FIRMA NO HAY PAGADOR DEFINIDO, Y AUN ASÍ NO SE BLOQUEA NADA. La contratación sigue, el
@@ -23,9 +23,9 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // recibe `db`, la conexión de esa persona: la base decide qué alcanza, y nada pasa por la conexión
 // maestra.
 //
-// LOS PAPELES SON APARTE DE LA FIRMA. El consentimiento lo firma quien paga; los papeles los exige
-// el Pagador, y qué papeles son lo sabe cada Prestadora. Que falte uno no invalida la firma, y
-// que esté la firma no completa los papeles: son dos cosas y la pantalla muestra las dos.
+// LOS DOCUMENTOS SON APARTE DE LA FIRMA. El consentimiento lo firma quien paga; los documentos los exige
+// el Pagador, y qué documentos son lo sabe cada Prestadora. Que falte uno no invalida la firma, y
+// que esté la firma no completa los documentos: son dos cosas y la pantalla muestra las dos.
 
 const DEPOSITO = 'documentos-pagador';
 
@@ -108,7 +108,7 @@ async function apoderadoDe(db, pagador, prestadoraId) {
 // Arma el documento con lo de esta contratación, lo guarda tal cual y lo deja esperando firma.
 //
 // El nombre de quien firma se guarda escrito además de apuntado a su Ficha: la Ficha dice con quién
-// quedó atado, y el nombre, cómo se llamaba el día que leyó la hoja.
+// quedó atado, y el nombre, cómo se llamaba el día que leyó el documento.
 export async function crearConsentimiento({ db, clienteId, prestadoraId, cargadoPor }) {
   const cliente = await clienteConSuPagador({ db, clienteId, prestadoraId });
   if (!cliente.pagador_persona_id) {
@@ -153,7 +153,7 @@ export async function crearConsentimiento({ db, clienteId, prestadoraId, cargado
       pagador_persona_id: pagador.id,
       pagador_nombre: pagador.nombre,
       // Quién firmó por la entidad se copia acá el día que se arma, igual que el nombre de quien
-      // paga: si mañana la entidad cambia de apoderado, el papel sigue diciendo quién lo firmó.
+      // paga: si mañana la entidad cambia de apoderado, el documento sigue diciendo quién lo firmó.
       firmante_persona_id: apoderado?.id ?? null,
       firmante_nombre: apoderado?.nombre ?? null,
       documento_texto: texto,
@@ -198,11 +198,11 @@ export async function consentimientoDelPagador({ db, consentimientoId, prestador
   return data ?? null;
 }
 
-// El camino de siempre: quien paga firmó la hoja y la Prestadora la guarda. La ruta que sube el
+// El camino de siempre: quien paga firmó el documento y la Prestadora lo guarda. La ruta que sube el
 // archivo se encarga del depósito; acá sólo se cierra. Si otra persona ya lo cerró o lo anuló, no
 // queda nada por hacer: no se toca nada, no es un error, y devuelve false para que la ruta sepa
 // que el archivo que subió no quedó guardado en ningún consentimiento.
-export async function cerrarConPapelFirmado({ db, consentimientoId, prestadoraId, archivoUrl }) {
+export async function cerrarConDocumentoFirmado({ db, consentimientoId, prestadoraId, archivoUrl }) {
   const consentimiento = await consentimientoDelPagador({ db, consentimientoId, prestadoraId });
   if (!consentimiento) throw new ErrorConMotivo('no_encontrado', 'Consentimiento no encontrado');
   if (consentimiento.estado !== 'pendiente_firma') return false;
@@ -211,7 +211,7 @@ export async function cerrarConPapelFirmado({ db, consentimientoId, prestadoraId
     .from('consentimientos_pagador')
     .update({
       estado: 'cerrado',
-      cerrado_como: 'papel_firmado',
+      cerrado_como: 'documento_firmado',
       cerrado_en: new Date().toISOString(),
       archivo_firmado_url: archivoUrl,
     })
@@ -249,7 +249,7 @@ export async function anularPendiente({ db, consentimientoId, prestadoraId }) {
 export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
   const cliente = await clienteConSuPagador({ db, clienteId, prestadoraId });
 
-  const [pagador, { data: consentimientos }, papeles] = await Promise.all([
+  const [pagador, { data: consentimientos }, documentos] = await Promise.all([
     persona({ db, personaId: cliente.pagador_persona_id, prestadoraId }),
     db
       .from('consentimientos_pagador')
@@ -260,14 +260,14 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
       .eq('cliente_id', clienteId)
       .in('estado', ['pendiente_firma', 'cerrado'])
       .order('created_at', { ascending: false }),
-    papelesDelPagador({ db, clienteId, prestadoraId, pagadorTipo: cliente.pagador_tipo }),
+    documentosDelPagador({ db, clienteId, prestadoraId, pagadorTipo: cliente.pagador_tipo }),
   ]);
 
   const pendiente = (consentimientos ?? []).find((fila) => fila.estado === 'pendiente_firma') ?? null;
   const cerrado = (consentimientos ?? []).find((fila) => fila.estado === 'cerrado') ?? null;
 
   // Si el consentimiento firmado quedó atado a otra Ficha que la que hoy figura como Pagador, la
-  // firma no vale para éste: firmó otra persona. Se avisa en vez de ocultarlo, porque el papel
+  // firma no vale para éste: firmó otra persona. Se avisa en vez de ocultarlo, porque el documento
   // existe y alguien lo tiene que mirar.
   const firmadoPorOtro = Boolean(
     cerrado && cliente.pagador_persona_id && cerrado.pagador_persona_id !== cliente.pagador_persona_id,
@@ -289,15 +289,15 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
     firmadoPorOtro,
     consentimientoPendiente: pendiente,
     consentimientoCerrado: cerrado,
-    papeles,
-    papelesFaltantes: papeles.filter((papel) => !papel.cargado).length,
-    papelesVencidos: papeles.filter((papel) => papel.vencido).length,
+    documentos,
+    documentosFaltantes: documentos.filter((documento) => !documento.cargado).length,
+    documentosVencidos: documentos.filter((documento) => documento.vencido).length,
   };
 }
 
-// Qué papeles exige este Pagador y cuáles están. Se devuelve el catálogo entero, tenga o no
+// Qué documentos exige este Pagador y cuáles están. Se devuelve el catálogo entero, tenga o no
 // archivo cargado cada uno: lo que falta sólo se ve si el renglón aparece igual.
-export async function papelesDelPagador({ db, clienteId, prestadoraId, pagadorTipo }) {
+export async function documentosDelPagador({ db, clienteId, prestadoraId, pagadorTipo }) {
   let query = db
     .from('tipos_documento_pagador')
     .select('id, nombre, pagador_tipo, requiere_vencimiento')
@@ -339,9 +339,9 @@ export async function papelesDelPagador({ db, clienteId, prestadoraId, pagadorTi
   });
 }
 
-// Guarda un papel que ya se subió al depósito. La ruta del archivo la arma quien sube; acá se anota
+// Guarda un documento que ya se subió al depósito. La ruta del archivo la arma quien sube; acá se anota
 // cuál es y hasta cuándo vale.
-export async function guardarPapel({
+export async function guardarDocumento({
   db, clienteId, prestadoraId, tipoDocumentoId, archivoUrl, fechaVencimiento, cargadoPor,
 }) {
   const { data: tipo } = await db

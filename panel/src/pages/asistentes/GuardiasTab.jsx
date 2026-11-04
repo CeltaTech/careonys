@@ -13,7 +13,7 @@ import {
 } from '../../lib/pacientesDeGuardia';
 import { situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
 import { useUmbrales } from '../../context/UmbralesContext';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
 
 /* Lo que este Asistente ya trabajó.
@@ -99,7 +99,7 @@ export function GuardiasTab({ asistente }) {
   }, [cargar]);
 
   return (
-    <section className="panel-tarjeta hoja-desplazable">
+    <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-tarjeta-titulo">
         <h2>{t.asistentes.tabs.guardias}</h2>
         {datos.tope && (

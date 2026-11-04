@@ -23,7 +23,7 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { claseBadge } from '../lib/tonos';
 import { EntrevistaDePostulacion } from '../components/EntrevistaDePostulacion';
 import '../styles/molde-paginas.css';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 import './postulaciones.css';
 
 // Qué se resuelve en esta pantalla. Es el nombre guardado de la tabla, y con él salen los motivos
@@ -174,7 +174,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           {guardando ? t.comun.guardando : t.comun.guardar}
         </Button>
       </Cabecera>
-      <div className="panel-mini hoja-ficha-datos">
+      <div className="panel-mini tarjeta-ficha-datos">
         {t.postulaciones[`estado_${postulacion.estado}`]} · {postulacion.telefono} · {postulacion.email}
       </div>
 
@@ -186,43 +186,43 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
             <h2>{t.comun.detalle}</h2>
           </div>
           <div className="panel-grilla panel-columnas-3">
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.dni}</div>
               <b>{postulacion.dni || '—'}</b>
             </div>
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.telefono}</div>
               <b>{postulacion.telefono}</b>
             </div>
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.email}</div>
               <b>{postulacion.email}</b>
             </div>
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.col_especialidades}</div>
               <b>{traducirCodigos(postulacion.especialidades, especialidadesLabels)}</b>
             </div>
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.col_zonas}</div>
               <b>{traducirCodigos(postulacion.zonas, zonasLabels)}</b>
             </div>
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.disponibilidad}</div>
               <b>{traducirCodigos(postulacion.disponibilidad, laDisponibilidad.textos)}</b>
             </div>
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.anios_experiencia}</div>
               <b>{postulacion.anios_experiencia || '—'}</b>
             </div>
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.col_situacion_fiscal}</div>
               <b>{laSituacionFiscal.textos[postulacion.situacion_fiscal] ?? postulacion.situacion_fiscal}</b>
             </div>
-            <div className="hoja-dato">
+            <div className="tarjeta-dato">
               <div className="panel-mini">{t.postulaciones.como_conocio}</div>
               <b>{postulacion.como_conocio || '—'}</b>
             </div>
-            <div className="hoja-dato postulaciones-dato-ancho">
+            <div className="tarjeta-dato postulaciones-dato-ancho">
               <div className="panel-mini">{t.postulaciones.mensaje}</div>
               <b>{postulacion.mensaje || '—'}</b>
             </div>

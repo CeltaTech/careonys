@@ -84,7 +84,7 @@ function useSeccion(cargar) {
 /** La tarjeta de cada sección, con su título y, a la derecha, el aviso de tope si lo hay. */
 function TarjetaDeSeccion({ titulo, aviso, children }) {
   return (
-    <section className="panel-tarjeta hoja-desplazable">
+    <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-tarjeta-titulo">
         <h2>{titulo}</h2>
         {aviso && <span className="panel-mini">{aviso}</span>}

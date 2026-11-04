@@ -15,7 +15,7 @@ import {
   tieneSignoFueraDeRango,
 } from '../lib/signosVitales';
 import '../styles/molde-paginas.css';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
 
 // Tope de filas por consulta. Con el rango de fechas por defecto (una semana) no se alcanza
@@ -100,7 +100,7 @@ export function Reportes() {
     <div>
       <Cabecera titulo={t.reportes.titulo} />
       <div className="molde-pila">
-        <section className="panel-tarjeta hoja-desplazable">
+        <section className="panel-tarjeta tarjeta-desplazable">
           <div className="panel-tarjeta-titulo">
             <h2>{t.reportes.titulo}</h2>
             {estado === 'listo' && <span className="panel-mini">{filasFiltradas.length}</span>}
@@ -203,22 +203,22 @@ function DetalleReporte({ reporte, rangoDe, onCerrar }) {
           {t.comun.cerrar}
         </Button>
       </div>
-      <div className="panel-mini hoja-ficha-datos">
+      <div className="panel-mini tarjeta-ficha-datos">
         {reporte.fecha} · {reporte.paciente_nombre} · {reporte.asistente_nombre}
       </div>
 
       <div className="panel-grilla panel-columnas-3">
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.reportes.campo_texto_libre}</div>
           <b>{reporte.texto_libre || t.reportes.sin_datos}</b>
         </div>
 
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.reportes.campo_alimentacion}</div>
           <b>{reporte.alimentacion?.descripcion || t.reportes.sin_datos}</b>
         </div>
 
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.reportes.campo_medicacion}</div>
           {Array.isArray(reporte.medicacion) && reporte.medicacion.length > 0 ? (
             reporte.medicacion.map((m, i) => <b key={i}>{[m.nombre, m.hora, m.via].filter(Boolean).join(' · ')}</b>)
@@ -227,7 +227,7 @@ function DetalleReporte({ reporte, rangoDe, onCerrar }) {
           )}
         </div>
 
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.reportes.campo_signos_vitales}</div>
           {claves.length > 0 &&
             claves.map((clave) => {
@@ -251,12 +251,12 @@ function DetalleReporte({ reporte, rangoDe, onCerrar }) {
           {claves.length === 0 && clavesLegado.length === 0 && <b>{t.reportes.sin_datos}</b>}
         </div>
 
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.reportes.campo_incidentes}</div>
           <b>{reporte.incidentes || t.reportes.sin_datos}</b>
         </div>
 
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.reportes.campo_observaciones}</div>
           <b>{reporte.observaciones || t.reportes.sin_datos}</b>
         </div>

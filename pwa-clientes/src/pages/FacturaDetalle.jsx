@@ -111,7 +111,7 @@ export default function FacturaDetalle() {
           <dd>{diaEnPalabras(factura.fecha_vencimiento, locale)}</dd>
         </dl>
 
-        {/* El papel sólo se ofrece cuando la Prestadora reparte las facturas por acá y el
+        {/* El comprobante sólo se ofrece cuando la Prestadora reparte las facturas por acá y el
             comprobante ya está guardado. Apagado el interruptor, no se dice ni que existe. */}
         {detalle.entrega_la_factura && factura.tiene_comprobante && (
           <button

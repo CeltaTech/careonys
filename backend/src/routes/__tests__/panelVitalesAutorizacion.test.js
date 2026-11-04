@@ -12,7 +12,7 @@
  *      se saltearía la protección por fila sin que nada fallara a la vista.
  *   2. QUE EL PACIENTE DE OTRA PRESTADORA NO EXISTA. Ni se lee su autorización, ni se sube nada a
  *      su nombre, ni se anota una lectura de salud sobre él.
- *   3. QUE EL PAPEL QUE NO QUEDÓ EN NINGUNA AUTORIZACIÓN SE BORRE. Si la base no cierra la
+ *   3. QUE EL DOCUMENTO QUE NO QUEDÓ EN NINGUNA AUTORIZACIÓN SE BORRE. Si la base no cierra la
  *      autorización, el archivo subido queda huérfano en el depósito.
  *   4. QUE VER EL DOCUMENTO QUEDE ANOTADO como lectura de información de salud.
  *   5. QUE REVISAR DOS VECES NO SE CONFUNDA CON REVISAR BIEN. Si la base contesta que no tocó nada,
@@ -146,10 +146,10 @@ async function pedir(metodo, ruta, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-async function subirPapel(pacienteId, { tipo = 'application/pdf' } = {}) {
+async function subirDocumentoFirmado(pacienteId, { tipo = 'application/pdf' } = {}) {
   const cuerpo = new FormData();
   cuerpo.append('archivo', new Blob([new Uint8Array([0x25, 0x50, 0x44, 0x46])], { type: tipo }), 'autorizacion.pdf');
-  const respuesta = await fetch(`${DIRECCION}/${pacienteId}/papel`, {
+  const respuesta = await fetch(`${DIRECCION}/${pacienteId}/documento`, {
     method: 'POST',
     headers: { Authorization: credencial() },
     body: cuerpo,
@@ -220,8 +220,8 @@ describe('la autorización del Paciente', () => {
       assert.equal(estado, 404, ruta);
       assert.equal(cuerpo.motivo, 'paciente_no_encontrado', ruta);
     }
-    const papel = await subirPapel(PACIENTE);
-    assert.equal(papel.estado, 404);
+    const subida = await subirDocumentoFirmado(PACIENTE);
+    assert.equal(subida.estado, 404);
 
     assert.equal(llamadasA('GET /rest/v1/autorizaciones_monitoreo_paciente').length, 0);
     assert.equal(llamadas.some((l) => l.clave.startsWith('POST /rest/v1/rpc/')), false);
@@ -230,7 +230,7 @@ describe('la autorización del Paciente', () => {
   });
 });
 
-describe('la hoja para imprimir y firmar', () => {
+describe('el documento para imprimir y firmar', () => {
   beforeEach(() => {
     respuestas.set('POST /rest/v1/rpc/documento_autorizacion_signos_vitales', () => [
       { titulo: 'Autorización inventada', texto: 'Texto inventado para firmar.', idioma: 'es-AR', verificador: 'abc123' },
@@ -260,7 +260,7 @@ describe('la hoja para imprimir y firmar', () => {
     assert.deepEqual(anotaciones[0].cuerpo.categorias, ['autorizaciones_monitoreo_paciente']);
   });
 
-  it('si el país no tiene texto, no se entrega una hoja vacía ni se anota nada', async () => {
+  it('si el país no tiene texto, no se entrega un documento vacío ni se anota nada', async () => {
     respuestas.set('POST /rest/v1/rpc/documento_autorizacion_signos_vitales', () => [{ titulo: null, texto: null, idioma: 'es-AR' }]);
 
     const { estado, cuerpo } = await pedir('GET', `/${PACIENTE}/para-firmar`);
@@ -280,13 +280,13 @@ describe('la hoja para imprimir y firmar', () => {
   });
 });
 
-describe('el papel firmado que sube la Prestadora', () => {
+describe('el documento firmado que sube la Prestadora', () => {
   beforeEach(() => {
-    respuestas.set('POST /rest/v1/rpc/cerrar_autorizacion_signos_vitales_en_papel', () => null);
+    respuestas.set('POST /rest/v1/rpc/cerrar_autorizacion_signos_vitales_con_documento_firmado', () => null);
   });
 
   it('se sube con la credencial de quien pide, sin reemplazar ninguno, y después se cierra', async () => {
-    const { estado, cuerpo } = await subirPapel(PACIENTE);
+    const { estado, cuerpo } = await subirDocumentoFirmado(PACIENTE);
 
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { ok: true });
@@ -298,7 +298,7 @@ describe('el papel firmado que sube la Prestadora', () => {
     assert.equal(subida.credencial, credencial());
     assert.equal(subida.reemplaza, 'false');
 
-    const [cierre] = rpc('cerrar_autorizacion_signos_vitales_en_papel');
+    const [cierre] = rpc('cerrar_autorizacion_signos_vitales_con_documento_firmado');
     assert.ok(cierre, 'no se cerró la autorización');
     assert.equal(cierre.credencial, credencial());
     assert.equal(cierre.cuerpo.p_paciente, PACIENTE);
@@ -308,12 +308,12 @@ describe('el papel firmado que sube la Prestadora', () => {
   });
 
   it('si la base no la cierra, el archivo se borra y la respuesta dice por qué', async () => {
-    respuestas.set('POST /rest/v1/rpc/cerrar_autorizacion_signos_vitales_en_papel', () => ({
+    respuestas.set('POST /rest/v1/rpc/cerrar_autorizacion_signos_vitales_con_documento_firmado', () => ({
       __estado: 400,
       __cuerpo: { code: 'P0001', message: 'ya_hay_una_autorizacion' },
     }));
 
-    const { estado, cuerpo } = await subirPapel(PACIENTE);
+    const { estado, cuerpo } = await subirDocumentoFirmado(PACIENTE);
 
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'ya_hay_una_autorizacion');
@@ -329,15 +329,15 @@ describe('el papel firmado que sube la Prestadora', () => {
     // subida, como lo haría la política del depósito.
     depositoRechazaSubidas = true;
 
-    const { estado } = await subirPapel(PACIENTE);
+    const { estado } = await subirDocumentoFirmado(PACIENTE);
 
     assert.notEqual(estado, 200);
     assert.equal(subidas().length, 1);
-    assert.equal(rpc('cerrar_autorizacion_signos_vitales_en_papel').length, 0);
+    assert.equal(rpc('cerrar_autorizacion_signos_vitales_con_documento_firmado').length, 0);
   });
 
   it('un archivo de otro tipo no se sube', async () => {
-    const { estado, cuerpo } = await subirPapel(PACIENTE, { tipo: 'text/plain' });
+    const { estado, cuerpo } = await subirDocumentoFirmado(PACIENTE, { tipo: 'text/plain' });
 
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'faltan_datos');
@@ -375,12 +375,12 @@ describe('lo firmado', () => {
     assert.equal(llamadas.some((l) => l.clave.includes('/object/sign/')), false);
   });
 
-  it('firmado en papel, devuelve un enlace temporal pedido con la credencial de quien pide', async () => {
+  it('firmado a mano, devuelve un enlace temporal pedido con la credencial de quien pide', async () => {
     const ruta = `${PRESTADORA}/${PACIENTE}/autorizacion-1.pdf`;
     respuestas.set('GET /rest/v1/autorizaciones_monitoreo_paciente', () => [{
       id: AUTORIZACION,
       paciente_id: PACIENTE,
-      metodo: 'papel_cliente',
+      metodo: 'documento_firmado_cliente',
       estado: 'pendiente',
       documento_texto: null,
       documento_idioma: 'es-AR',
@@ -411,7 +411,7 @@ describe('lo firmado', () => {
   });
 });
 
-describe('revisar el papel que subió el Cliente', () => {
+describe('revisar el documento que subió el Cliente', () => {
   it('aceptar pide a la base el estado aceptada, sin motivo, con la credencial de quien pide', async () => {
     respuestas.set('POST /rest/v1/rpc/revisar_autorizacion_signos_vitales', () => true);
 

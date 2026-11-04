@@ -27,7 +27,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { Button } from '../../components/ui/Button';
 import { CAMPOS_PAGO, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/datosAparteDelAsistente';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 export function AsistenteDetalle() {
   const { t, locale } = useLocale();
@@ -107,7 +107,7 @@ export function AsistenteDetalle() {
         />
       )}
       {datosDelAsistente.length > 0 && (
-        <div className="panel-mini hoja-ficha-datos">{datosDelAsistente.join(' · ')}</div>
+        <div className="panel-mini tarjeta-ficha-datos">{datosDelAsistente.join(' · ')}</div>
       )}
       {pendientes.length > 0 && (
         <Alert variant="warning">

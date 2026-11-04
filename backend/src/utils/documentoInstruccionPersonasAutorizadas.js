@@ -19,7 +19,7 @@ import { CATALOGO_PERSONAS_AUTORIZADAS } from './catalogoPersonasAutorizadas.js'
 // cuenta y el campo ya está puesto para distinguirlos.
 //
 // SIN RENGLONES PARA FIRMAR. En la aplicación firma con el código, y en el Panel el pie de firma
-// lo agrega la hoja impresa: no son parte de lo que se firma.
+// lo agrega el documento impreso: no son parte de lo que se firma.
 export const IDIOMA_DEL_DOCUMENTO = 'es-AR';
 
 // Va en la lista de cada persona y no en el catálogo: no es un acceso que se dé o se niegue, es

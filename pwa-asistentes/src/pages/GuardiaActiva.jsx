@@ -224,7 +224,7 @@ export default function GuardiaActiva() {
   const [salidaPendiente, setSalidaPendiente] = useState(false);
   const [avisoPendiente, setAvisoPendiente] = useState(false);
   // Quiénes del turno ya tienen su reporte. Es una lista y no un sí/no porque cada Paciente
-  // lleva el suyo: si el Asistente atendió a dos personas y escribió una sola hoja, el turno
+  // lleva el suyo: si el Asistente atendió a dos personas y escribió un solo reporte, el turno
   // todavía no está terminado.
   const [conReporte, setConReporte] = useState([]);
   // Qué es esta persona y qué le toca hacer en el turno. Viene del catálogo en cada
@@ -436,7 +436,7 @@ export default function GuardiaActiva() {
       // `falta_reporte` es el único motivo que se sigue mirando acá, y es a propósito: su
       // frase lleva adentro los nombres de los Pacientes cuyo reporte falta, y eso una
       // búsqueda por motivo no lo hace. Si el turno cubrió a dos personas y se escribió una
-      // sola hoja, hay que decir cuál falta, no que "falta el reporte".
+      // sola reporte, hay que decir cuál falta, no que "falta el reporte".
       else if (e.motivo === 'falta_reporte')
         setError(
           e.pacientesSinReporte?.length
@@ -582,7 +582,7 @@ export default function GuardiaActiva() {
             {t.guardia_activa.tiempo_transcurrido}
           </div>
 
-          {/* Un botón por cada persona que todavía no tiene su hoja. Con un solo Paciente se ve
+          {/* Un botón por cada persona que todavía no tiene su reporte. Con un solo Paciente se ve
               igual que siempre; con dos, el nombre está en el botón para que no haya que
               acordarse de cuál ya se cargó. */}
           {faltanReporte.length > 0 && (

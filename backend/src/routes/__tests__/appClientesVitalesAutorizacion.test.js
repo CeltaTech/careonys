@@ -9,11 +9,11 @@
  *
  *   1. QUE LA PERSONA AUTORIZADA SIN LA FICHA NO VEA NADA. La autorización es información de salud
  *      del Paciente, y entra por el mismo acceso que la Ficha.
- *   2. QUE FIRMAR SEA SÓLO DEL TITULAR. Ni la hoja, ni la firma, ni el papel le llegan a otro, y la
+ *   2. QUE FIRMAR SEA SÓLO DEL TITULAR. Ni el documento, ni la firma, ni el documento le llegan a otro, y la
  *      base no recibe nada en su nombre.
  *   3. QUE LO QUE SE ESCRIBE SALGA CON EL TRABAJO DE LA PRESTADORA DEL PACIENTE, y no con la
  *      credencial de quien pide ni con la de otra Prestadora.
- *   4. QUE EL PAPEL QUE NO QUEDÓ EN NINGUNA AUTORIZACIÓN SE BORRE del depósito.
+ *   4. QUE EL DOCUMENTO QUE NO QUEDÓ EN NINGUNA AUTORIZACIÓN SE BORRE del depósito.
  *   5. QUE SIN UNA FIRMA DE VERDAD NO SE ANOTE NADA. La firma se hace con un teléfono de mentira que
  *      firma con una llave P-256 lo mismo que firmaría uno de verdad, así que la comprobación de
  *      WebAuthn corre entera, sin reemplazar ningún módulo.
@@ -160,10 +160,10 @@ async function pedir(metodo, ruta, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-async function subirPapel(pacienteId) {
+async function subirDocumentoFirmado(pacienteId) {
   const cuerpo = new FormData();
   cuerpo.append('archivo', new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: 'image/jpeg' }), 'autorizacion.jpg');
-  const respuesta = await fetch(`${DIRECCION}/${pacienteId}/papel`, {
+  const respuesta = await fetch(`${DIRECCION}/${pacienteId}/documento`, {
     method: 'POST',
     headers: { Authorization: credencial() },
     body: cuerpo,
@@ -202,7 +202,7 @@ beforeEach(() => {
     { id: PACIENTE_DE_OTRO, prestadora_id: PRESTADORA, cliente_id: OTRO_CLIENTE },
   ]));
   respuestas.set('GET /rest/v1/autorizaciones_monitoreo_paciente', () => [
-    { id: AUTORIZACION, metodo: 'papel_cliente', estado: 'pendiente', created_at: '2026-10-01T10:00:00Z' },
+    { id: AUTORIZACION, metodo: 'documento_firmado_cliente', estado: 'pendiente', created_at: '2026-10-01T10:00:00Z' },
   ]);
   respuestas.set('POST /rest/v1/consultas_a_hce', () => []);
   respuestas.set('POST /rest/v1/rpc/documento_autorizacion_signos_vitales', () => [
@@ -257,14 +257,14 @@ describe('quién ve la autorización', () => {
 });
 
 describe('lo que es sólo del titular', () => {
-  it('la persona autorizada, aun con la Ficha, no pide la hoja, no firma y no sube papel', async () => {
+  it('la persona autorizada, aun con la Ficha, no pide el documento, no firma y no sube documento', async () => {
     sesionDelCliente({ titular: false, accesos: CON_LA_FICHA });
 
     const documento = await pedir('GET', `/${PACIENTE}/documento`);
     const firma = await pedir('POST', `/${PACIENTE}/firmar`, { respuesta: { id: CREDENCIAL_DEL_TELEFONO }, verificador: 'x' });
-    const papel = await subirPapel(PACIENTE);
+    const subida = await subirDocumentoFirmado(PACIENTE);
 
-    for (const [nombre, r] of [['documento', documento], ['firmar', firma], ['papel', papel]]) {
+    for (const [nombre, r] of [['documento', documento], ['firmar', firma], ['documento firmado', subida]]) {
       assert.equal(r.estado, 403, nombre);
       assert.equal(r.cuerpo.motivo, 'sin_acceso', nombre);
     }
@@ -274,7 +274,7 @@ describe('lo que es sólo del titular', () => {
     assert.equal(llamadasA('POST /rest/v1/consultas_a_hce').length, 0);
   });
 
-  it('la hoja trae el identificador de verificación, y verla queda anotado', async () => {
+  it('el documento trae el identificador de verificación, y verla queda anotado', async () => {
     const { estado, cuerpo } = await pedir('GET', `/${PACIENTE}/documento?idioma=pt-BR`);
 
     assert.equal(estado, 200);
@@ -294,7 +294,7 @@ describe('lo que es sólo del titular', () => {
     assert.deepEqual(anotaciones[0].cuerpo.categorias, ['autorizaciones_monitoreo_paciente']);
   });
 
-  it('sin texto para el país, no hay hoja ni se anota nada', async () => {
+  it('sin texto para el país, no hay documento ni se anota nada', async () => {
     respuestas.set('POST /rest/v1/rpc/documento_autorizacion_signos_vitales', () => []);
 
     const { estado, cuerpo } = await pedir('GET', `/${PACIENTE}/documento`);
@@ -305,9 +305,9 @@ describe('lo que es sólo del titular', () => {
   });
 });
 
-describe('el papel firmado que sube el titular', () => {
+describe('el documento firmado que sube el titular', () => {
   it('se sube con el trabajo de la Prestadora, sin reemplazar ninguno, y se anota sin verificador', async () => {
-    const { estado, cuerpo } = await subirPapel(PACIENTE);
+    const { estado, cuerpo } = await subirDocumentoFirmado(PACIENTE);
 
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { ok: true });
@@ -338,7 +338,7 @@ describe('el papel firmado que sube el titular', () => {
       __cuerpo: { code: 'P0001', message: 'ya_hay_una_autorizacion' },
     }));
 
-    const { estado, cuerpo } = await subirPapel(PACIENTE);
+    const { estado, cuerpo } = await subirDocumentoFirmado(PACIENTE);
 
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'ya_hay_una_autorizacion');
@@ -352,14 +352,14 @@ describe('el papel firmado que sube el titular', () => {
   it('si el depósito no lo deja subir, no se anota nada', async () => {
     depositoRechazaSubidas = true;
 
-    const { estado } = await subirPapel(PACIENTE);
+    const { estado } = await subirDocumentoFirmado(PACIENTE);
 
     assert.notEqual(estado, 200);
     assert.equal(rpc(REGISTRAR).length, 0);
   });
 
   it('para el Paciente de otro Cliente no se sube nada', async () => {
-    const { estado } = await subirPapel(PACIENTE_DE_OTRO);
+    const { estado } = await subirDocumentoFirmado(PACIENTE_DE_OTRO);
 
     assert.equal(estado, 404);
     assert.equal(subidas().length, 0);
@@ -436,7 +436,7 @@ describe('firmar con el acceso guardado del teléfono', () => {
     respuestas.set('PATCH /rest/v1/desafios_de_llave', ({ url }) => filasQuePasanLosFiltros(url, desafiosEnLaBase).map((f) => ({ id: f.id })));
   });
 
-  it('con una firma de verdad, se anota con el trabajo de la Prestadora y el verificador de la hoja', async () => {
+  it('con una firma de verdad, se anota con el trabajo de la Prestadora y el verificador del documento', async () => {
     const { estado, cuerpo } = await pedir('POST', `/${PACIENTE}/firmar`, {
       respuesta: telefono.firmar('firma-del-titular'),
       verificador: 'verificador-inventado',
@@ -493,7 +493,7 @@ describe('firmar con el acceso guardado del teléfono', () => {
     assert.equal(rpc(REGISTRAR).length, 0);
   });
 
-  it('si la hoja cambió desde que se mostró, la base lo dice y la respuesta lo trae', async () => {
+  it('si el documento cambió desde que se mostró, la base lo dice y la respuesta lo trae', async () => {
     respuestas.set(`POST /rest/v1/rpc/${REGISTRAR}`, () => ({
       __estado: 400,
       __cuerpo: { code: 'P0001', message: 'el_texto_cambio' },
@@ -525,10 +525,10 @@ describe('lo firmado', () => {
     assert.equal(llamadas.some((l) => l.clave.includes('/object/sign/')), false);
   });
 
-  it('firmado en papel, el enlace temporal sale con el trabajo de la Prestadora de la autorización', async () => {
+  it('firmado a mano, el enlace temporal sale con el trabajo de la Prestadora de la autorización', async () => {
     const ruta = `${PRESTADORA}/${PACIENTE}/autorizacion-1.jpg`;
     respuestas.set('GET /rest/v1/autorizaciones_monitoreo_paciente', () => [{
-      id: AUTORIZACION, prestadora_id: PRESTADORA, paciente_id: PACIENTE, metodo: 'papel_cliente', estado: 'pendiente',
+      id: AUTORIZACION, prestadora_id: PRESTADORA, paciente_id: PACIENTE, metodo: 'documento_firmado_cliente', estado: 'pendiente',
       documento_texto: null, documento_idioma: 'es-AR', archivo_url: ruta,
     }]);
 

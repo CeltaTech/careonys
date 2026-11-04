@@ -18,7 +18,7 @@ import { soloSinResolver } from '../lib/alertaSinResolver';
 import { contarPorModalidad, MODALIDADES, modalidadesDelAsistente } from '../lib/modalidades';
 import { ESTADO_ACTIVO, estaEnElPadron } from '../lib/candidatos';
 import { claseBadgeTono, TONO } from '../lib/tonos';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 
 // Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
 // solapa donde se activan y se desactivan, en Configuración → La Prestadora (Regla 12).

@@ -7,7 +7,7 @@ import { sincronizarCola } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { useSeVe } from '../context/PerfilContext';
-// La lista legado no se importa: esta hoja carga un reporte nuevo, y un reporte nuevo se
+// La lista legado no se importa: esta página carga un reporte nuevo, y un reporte nuevo se
 // escribe siempre con la presión separada en sistólica y diastólica.
 import { SIGNOS_VITALES, colorSigno } from '../lib/signosVitales';
 import { ESTADOS_ANIMO, caraDelAnimo } from '../lib/animoDelReporte';
@@ -41,7 +41,7 @@ export default function ReporteDiario() {
   const seVe = useSeVe();
 
   // De quién habla este reporte. El nombre se muestra arriba de todo, siempre, aunque el turno
-  // cubra a una sola persona: escribir la comida y la medicación en la hoja equivocada es un
+  // cubra a una sola persona: escribir la comida y la medicación en el reporte equivocado es un
   // daño que después nadie encuentra.
   const [paciente, setPaciente] = useState(null);
 
@@ -60,7 +60,7 @@ export default function ReporteDiario() {
   const [rangosVitales, setRangosVitales] = useState({});
   const [enLinea, setEnLinea] = useState(navigator.onLine);
 
-  // Las tres interruptores que tocan esta hoja. Se preguntan una sola vez y el mismo valor decide
+  // Las tres interruptores que tocan esta página. Se preguntan una sola vez y el mismo valor decide
   // las dos cosas: qué se dibuja y qué viaja al guardar. Un campo que no se pidió no puede
   // terminar en la historia de un Paciente porque quedó un dato viejo en la memoria de la
   // pantalla (CLAUDE.md §7 regla 12).
@@ -104,7 +104,7 @@ export default function ReporteDiario() {
     };
   }, [id, pacienteId]);
 
-  // Sin la ayuda para redactar no hay ningún relato que contar primero, así que la hoja abre
+  // Sin la ayuda para redactar no hay ningún relato que contar primero, así que la página abre
   // directamente con los campos en blanco. Es exactamente lo que hace hoy "Completar a mano"
   // cuando no hay señal: el camino ya existía, lo único que cambia es que acá es el único.
   useEffect(() => {
@@ -260,7 +260,7 @@ export default function ReporteDiario() {
         <>
           {/* "Revisar y corregir" es el encabezado de lo que escribió la ayuda automática. Sin
               esa ayuda no hay nada escrito que revisar: los campos van en blanco y el título
-              de la hoja, arriba, ya dice de qué se trata. */}
+              de la página, arriba, ya dice de qué se trata. */}
           {veElRelatoConIa && <h2>{t.reporte.revisar_titulo}</h2>}
 
           <div className="reporte-preview-campo">

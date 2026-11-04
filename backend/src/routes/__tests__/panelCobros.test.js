@@ -168,7 +168,7 @@ beforeEach(() => {
   // De fábrica la cobranza la sigue este sistema, que es lo que hace la mayoría. Las pruebas del
   // caso conectado pisan esta respuesta.
   respuestas.set('GET /rest/v1/configuracion_facturacion_clientes', () => [{ regla: {} }]);
-  // La factura como está guardada. Se consulta para saber si ya tiene el papel que baja el
+  // La factura como está guardada. Se consulta para saber si ya tiene el comprobante que baja el
   // Cliente; las pruebas que la cambian pisan esta respuesta.
   respuestas.set('GET /rest/v1/facturas_cliente', () => [FACTURA_EN_LA_BASE]);
   // Los medios de pago salen de la lista `medios_de_pago_del_cliente` de la base. Acá contesta
@@ -593,7 +593,7 @@ describe('subir a mano el comprobante que baja el Cliente', () => {
     assert.equal(estado, 400);
   });
 
-  it('la factura de otra Prestadora no existe para esta, y el papel no se guarda', async () => {
+  it('la factura de otra Prestadora no existe para esta, y el comprobante no se guarda', async () => {
     respuestas.set('GET /rest/v1/facturas_cliente', () => []);
     const { estado } = await subir(Buffer.from('%PDF-1.7 de mentira', 'ascii'));
     assert.equal(estado, 404);

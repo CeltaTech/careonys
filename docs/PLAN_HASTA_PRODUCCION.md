@@ -136,7 +136,7 @@ anterior ya no se pueden sostener. Si falta un filtro, la base contesta igual: n
 darse cuenta.
 
 **Los 12 depósitos de archivos tienen política.** La autorización de monitoreo, los documentos
-del Asistente, los papeles del Pagador y la hoja firmada de las personas autorizadas ya se sirven
+del Asistente, los documentos del Pagador y el documento firmado de las personas autorizadas ya se sirven
 con el acceso de quien pide, y ahí dice que no el depósito.
 
 **La protección por fila está puesta y la base es la que decide.** Todas las tablas la tienen
@@ -468,7 +468,7 @@ exista el nombre o no.
 **Nunca en dos a la vez.** Para hacer o ver algo en la segunda Prestadora hay que salir de la
 primera y entrar a la otra. No existe ninguna pantalla que muestre las dos juntas, ni una lista con
 una columna que diga de cuál es cada cosa. Estando en una, la otra no existe: ni sus turnos, ni sus
-pacientes, ni sus mensajes, ni sus papeles. Al cambiar se descarta todo lo que estaba cargado.
+pacientes, ni sus mensajes, ni sus documentos. Al cambiar se descarta todo lo que estaba cargado.
 
 **Y no hay excepción posible.** Con una sesión abierta en una Prestadora no se entra en otra hasta
 cerrar esa. Ninguna situación la habilita. Lo único que se mueve entre Organizaciones es el permiso
@@ -596,7 +596,7 @@ su información de salud, medicación, alertas, rangos vitales y personas autori
 y series de esos Servicios con todo lo que cuelga de ellas. Una alarma tomada le deja ver esa
 guardia. El equipo del Paciente muestra como Coordinador a quien coordina sus Servicios. Las tomas
 de alarma y las reasignaciones por emergencia se leen sólo de lo que ve; WhatsApp, por zona del
-Asistente; y los archivos de prescripciones, papel firmado y autorizaciones de monitoreo, sólo de
+Asistente; y los archivos de prescripciones, documento firmado y autorizaciones de monitoreo, sólo de
 los Pacientes que ve. Del Directorio de Personas lee las que tienen un rol en sus Clientes y
 Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
 `scripts/probar_altas_con_sesion.mjs`. Falta:
@@ -991,8 +991,8 @@ Los renglones, en este orden:
   mejor. Hoy el Panel lo muestra como «Sin cerrar la salida».
 - **Estado del Paciente.** Los avisos amarillos o rojos que dejó la revisión de los informes y que
   nadie resolvió.
-- **Documentación.** Matrícula y demás papeles de los Asistentes, vencidos o por vencer. Al abrirlo
-  se ve qué papel tiene el problema. El mismo aviso le aparece al Asistente en su aplicación.
+- **Documentación.** Matrícula y demás documentos de los Asistentes, vencidos o por vencer. Al abrirlo
+  se ve qué documento tiene el problema. El mismo aviso le aparece al Asistente en su aplicación.
 - **Informes.** Turnos terminados sin informe. Al hacer clic, quien coordina o administra ve de qué
   se trata.
 - **Contacto, Prospecto o Cliente**, según la etapa comercial en que esté cada uno.
@@ -1137,7 +1137,7 @@ del Panel, y lo hace aunque tenga una sola.
 ## Reclutamiento
 
 **Al llegar acá se vuelve a analizar entera contra Match.** Match tiene un reclutamiento más
-desarrollado que el de acá —formulario de alta por pasos en la web y en el teléfono, papeles
+desarrollado que el de acá —formulario de alta por pasos en la web y en el teléfono, documentos
 adjuntos revisados uno por uno, resolución con motivo obligatorio e historial— y lo que sigue se
 escribió sin mirarlo.
 
@@ -1564,7 +1564,7 @@ Lo que la tabla tiene que poder expresar, porque hay un país que obliga a cada 
   autorización previa de la autoridad, protocolo técnico e informe del ministerio de salud para
   tratar datos de salud **anonimizados**, y no menciona la seudonimización.
 - **Un vencimiento donde lo correcto es no borrar** (Uruguay). Los cinco años del Decreto 355/982
-  son una facultad de destruir, pensada para el papel. Y el art. 13 del Decreto 242/017 va al revés.
+  son una facultad de destruir, pensada para los documentos físicos. Y el art. 13 del Decreto 242/017 va al revés.
 
 **El plazo de Ecuador está sin verificar** y se carga como dato el día que aparezca la fuente
 oficial, sin tocar código.

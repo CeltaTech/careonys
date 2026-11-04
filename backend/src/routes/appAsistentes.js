@@ -208,7 +208,7 @@ async function nombreDeAsistente(db, asistenteId) {
 //
 // Devuelve una lista y no uno solo porque un turno que cubre a varios Pacientes lleva un
 // reporte por cada uno: el de la señora de la casa no es el del marido, y darlos por
-// equivalentes era escribir la comida, la medicación y la presión de los dos en la misma hoja.
+// equivalentes era escribir la comida, la medicación y la presión de los dos en el mismo reporte.
 //
 // Con la credencial de quien pide: la base le deja ver los reportes de sus propias guardias.
 async function reportesDeLaGuardia(db, guardiaId) {
@@ -1822,7 +1822,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // De quién habla este reporte. Cuando el turno cubre a una sola persona no hace falta
   // decirlo —es esa— y así las versiones de la aplicación que todavía no lo mandan siguen
   // funcionando. Cuando cubre a varias, no se adivina: escribir la comida y la medicación en
-  // la hoja de la persona equivocada es un daño que después nadie encuentra.
+  // el reporte de la persona equivocada es un daño que después nadie encuentra.
   let pacientes;
   try {
     pacientes = await pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`);

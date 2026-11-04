@@ -1,7 +1,7 @@
 /**
  * Pruebas del consentimiento que firma quien paga.
  *
- * Lo que se cuida acá es que el papel diga quién se obligó y quién lo firmó de puño y letra, que
+ * Lo que se cuida acá es que el documento diga quién se obligó y quién lo firmó de puño y letra, que
  * no son siempre la misma persona: cuando quien paga es una empresa u organismo, firma su
  * Apoderado, y cuando es una persona, firma ella y no hay nadie en el medio.
  *
@@ -39,7 +39,7 @@ const UN_TEXTO = [
   'Fecha: {{fecha}}',
 ].join('\n');
 
-function unPapel({ pagador, apoderado, cuerpo = UN_TEXTO }) {
+function unDocumento({ pagador, apoderado, cuerpo = UN_TEXTO }) {
   return textoDelConsentimiento({
     cuerpo,
     prestadora: PRESTADORA,
@@ -52,14 +52,14 @@ function unPapel({ pagador, apoderado, cuerpo = UN_TEXTO }) {
 
 describe('El consentimiento de quien paga', () => {
   it('reemplaza todos los marcadores que anuncia', () => {
-    const texto = unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA });
+    const texto = unDocumento({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA });
     for (const marcador of MARCADORES) {
       assert.equal(texto.includes(marcador), false, `quedó sin reemplazar ${marcador}`);
     }
   });
 
   it('nombra a la Prestadora, a quien se obliga, su documento y para quién es el servicio', () => {
-    const texto = unPapel({ pagador: UNA_PERSONA, apoderado: null });
+    const texto = unDocumento({ pagador: UNA_PERSONA, apoderado: null });
     assert.ok(texto.includes(PRESTADORA.nombre));
     assert.ok(texto.includes(UNA_PERSONA.nombre));
     assert.ok(texto.includes(UNA_PERSONA.documento));
@@ -68,13 +68,13 @@ describe('El consentimiento de quien paga', () => {
 
   describe('Cuando paga una empresa u organismo', () => {
     it('dice qué persona firma en su representación', () => {
-      const texto = unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA });
+      const texto = unDocumento({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA });
       const renglon = texto.split('\n').find((uno) => uno.includes(SU_APODERADA.nombre) && uno !== UNA_ENTIDAD.nombre);
-      assert.ok(renglon, 'el papel no dice quién firmó por la entidad');
+      assert.ok(renglon, 'el documento no dice quién firmó por la entidad');
     });
 
     it('y quien se obliga sigue siendo la entidad, no quien firma', () => {
-      const texto = unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA });
+      const texto = unDocumento({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA });
       assert.ok(texto.includes(UNA_ENTIDAD.nombre));
       assert.ok(texto.includes(UNA_ENTIDAD.documento));
     });
@@ -82,8 +82,8 @@ describe('El consentimiento de quien paga', () => {
 
   describe('Cuando paga una persona', () => {
     it('saca el renglón entero del apoderado, no lo deja como una raya', () => {
-      const conRenglon = unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA });
-      const sinRenglon = unPapel({ pagador: UNA_PERSONA, apoderado: null });
+      const conRenglon = unDocumento({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA });
+      const sinRenglon = unDocumento({ pagador: UNA_PERSONA, apoderado: null });
       assert.equal(sinRenglon.split('\n').length, conRenglon.split('\n').length - 1);
       // Y no quedó en su lugar un renglón con una raya, que se leería como un dato sin cargar.
       const rayaSuelta = sinRenglon.split('\n').some((uno) => /^[^:]+:\s*—\s*$/.test(uno));
@@ -91,14 +91,14 @@ describe('El consentimiento de quien paga', () => {
     });
 
     it('y lo saca también cuando la entidad todavía no tiene Apoderado cargado', () => {
-      // Que falte no frena nada: el papel se arma igual, sin ese renglón, y la pantalla avisa.
-      const texto = unPapel({ pagador: UNA_ENTIDAD, apoderado: null });
+      // Que falte no frena nada: el documento se arma igual, sin ese renglón, y la pantalla avisa.
+      const texto = unDocumento({ pagador: UNA_ENTIDAD, apoderado: null });
       assert.equal(texto.includes('{{apoderado}}'), false);
       assert.ok(texto.includes(UNA_ENTIDAD.nombre));
     });
 
     it('un apoderado con el nombre vacío se trata como si no hubiera ninguno', () => {
-      const texto = unPapel({ pagador: UNA_ENTIDAD, apoderado: { nombre: '' } });
+      const texto = unDocumento({ pagador: UNA_ENTIDAD, apoderado: { nombre: '' } });
       assert.equal(texto.includes('{{apoderado}}'), false);
     });
   });
@@ -106,8 +106,8 @@ describe('El consentimiento de quien paga', () => {
   describe('Cuando la Prestadora escribió su propio texto', () => {
     it('el marcador del apoderado funciona igual que en el modelo de fábrica', () => {
       const cuerpo = 'Quien se obliga: {{pagador}}\nFirmante: {{apoderado}}\nFecha: {{fecha}}';
-      const conFirmante = unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA, cuerpo });
-      const sinFirmante = unPapel({ pagador: UNA_PERSONA, apoderado: null, cuerpo });
+      const conFirmante = unDocumento({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA, cuerpo });
+      const sinFirmante = unDocumento({ pagador: UNA_PERSONA, apoderado: null, cuerpo });
       assert.ok(conFirmante.includes(`Firmante: ${SU_APODERADA.nombre}`));
       assert.equal(sinFirmante.includes('Firmante:'), false);
       assert.ok(sinFirmante.includes(UNA_PERSONA.nombre));
@@ -115,20 +115,20 @@ describe('El consentimiento de quien paga', () => {
 
     it('y si no usa ese marcador, el texto sale entero igual', () => {
       const cuerpo = 'Quien se obliga: {{pagador}}';
-      assert.equal(unPapel({ pagador: UNA_PERSONA, apoderado: null, cuerpo }), `Quien se obliga: ${UNA_PERSONA.nombre}`);
+      assert.equal(unDocumento({ pagador: UNA_PERSONA, apoderado: null, cuerpo }), `Quien se obliga: ${UNA_PERSONA.nombre}`);
     });
   });
 
   describe('El identificador de verificación del documento', () => {
     it('cambia cuando cambia quién firmó', () => {
-      const uno = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA }));
-      const otro = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: { nombre: 'Otra, Persona' } }));
+      const uno = verificadorDelDocumento(unDocumento({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA }));
+      const otro = verificadorDelDocumento(unDocumento({ pagador: UNA_ENTIDAD, apoderado: { nombre: 'Otra, Persona' } }));
       assert.notEqual(uno, otro);
     });
 
     it('y también cuando la entidad se queda sin apoderado', () => {
-      const con = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA }));
-      const sin = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: null }));
+      const con = verificadorDelDocumento(unDocumento({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA }));
+      const sin = verificadorDelDocumento(unDocumento({ pagador: UNA_ENTIDAD, apoderado: null }));
       assert.notEqual(con, sin);
     });
   });

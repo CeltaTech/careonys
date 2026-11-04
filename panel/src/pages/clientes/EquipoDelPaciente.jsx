@@ -9,7 +9,7 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 // Quiénes son el equipo de este Paciente.
 //
@@ -220,7 +220,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
           <div className="molde-pila">
             {errorFila && <Alert variant="error">{errorFila}</Alert>}
 
-            <section className="panel-tarjeta hoja-desplazable">
+            <section className="panel-tarjeta tarjeta-desplazable">
               <div className="panel-tarjeta-titulo">
                 <h2>{t.equipo_paciente.asistentes_titulo}</h2>
               </div>

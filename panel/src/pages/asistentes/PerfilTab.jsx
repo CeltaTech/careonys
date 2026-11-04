@@ -39,7 +39,7 @@ import { useTiposDeDocumento } from '../../hooks/useTiposDeDocumento';
 import { useGeneros } from '../../hooks/useGeneros';
 import { usePaises } from '../../hooks/usePaises';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 // Lo que la base rechaza al guardar la identidad, y al pie de qué casillero va.
 // `23505` es el documento repetido, que sólo la base puede saber.
@@ -413,7 +413,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
           <h2>{t.asistentes.tabs.perfil}</h2>
         </div>
         <div className="molde-formgrid">
-          <div className="hoja-dato">
+          <div className="tarjeta-dato">
             <div className="panel-mini">{t.asistentes.numero_legajo}</div>
             <b>{asistente.numero_legajo}</b>
           </div>
@@ -539,7 +539,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
             </FormField>
           )}
 
-          <div className="hoja-dato">
+          <div className="tarjeta-dato">
             <div className="panel-mini">{t.asistentes.fecha_alta}</div>
             <b>{new Date(asistente.fecha_alta).toLocaleDateString(locale)}</b>
           </div>

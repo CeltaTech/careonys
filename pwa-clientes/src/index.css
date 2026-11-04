@@ -769,8 +769,8 @@ a {
   color: var(--tinta);
 }
 
-/* La hoja entera: la marca de la Prestadora arriba, el título y el texto. Adentro de la tarjeta
-   el texto ya no lleva recuadro propio: la tarjeta es la hoja. */
+/* El documento entero: la marca de la Prestadora arriba, el título y el texto. Adentro de la tarjeta
+   el texto ya no lleva recuadro propio: la tarjeta es el documento. */
 .documento-autorizacion .documento-instruccion {
   border: 0;
   padding: 0;

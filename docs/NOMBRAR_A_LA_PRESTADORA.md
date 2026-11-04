@@ -1214,7 +1214,7 @@ bloque de referencias laborales.
 
 ## 131. No hay catálogo de documentación
 
-**Ruta:** `clientes.pagador.papeles_sin_catalogo`
+**Ruta:** `clientes.pagador.documentos_sin_catalogo`
 
 **Texto de hoy:**
 > Esta Prestadora todavía no cargó qué documentación pide. Se configura en Configuración.

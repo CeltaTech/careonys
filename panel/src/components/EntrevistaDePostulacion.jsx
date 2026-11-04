@@ -10,7 +10,7 @@ import { FormField } from './ui/FormField';
 import { Alert } from './ui/Alert';
 import { claseBadge } from '../lib/tonos';
 import '../styles/molde-paginas.css';
-import '../pages/hojaDeTarjetas.css';
+import '../pages/tarjetas.css';
 
 /* La entrevista con un postulante, adentro del producto.
    ==========================================================================
@@ -181,15 +181,15 @@ export function EntrevistaDePostulacion({ postulacionId }) {
           {viva && (
             <>
               <div className="panel-grilla panel-columnas-3">
-                <div className="hoja-dato">
+                <div className="tarjeta-dato">
                   <div className="panel-mini">{tr.cuando}</div>
                   <b>{enPalabras(viva.agendada_para)}</b>
                 </div>
-                <div className="hoja-dato">
+                <div className="tarjeta-dato">
                   <div className="panel-mini">{tr.entrevistador}</div>
                   <b>{viva.entrevistador_nombre}</b>
                 </div>
-                <div className="hoja-dato">
+                <div className="tarjeta-dato">
                   <div className="panel-mini">{tr.enlace_del_postulante}</div>
                   <Button variant="secondary" onClick={handleCopiar}>
                     {copiado ? tr.enlace_copiado : tr.enlace_copiar}

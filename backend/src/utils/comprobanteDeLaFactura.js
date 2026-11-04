@@ -16,7 +16,7 @@
 
    LA FACTURA ANTERIOR NO SE PISA. Cada comprobante se guarda con un nombre nuevo, y la factura
    apunta al último. Un comprobante reemplazado queda en el depósito sin que nadie lo alcance:
-   borrarlo sería tirar el papel que estuvo vigente.
+   borrarlo sería tirar el comprobante que estuvo vigente.
 
    CON QUÉ CREDENCIAL. Con el trabajo de la Prestadora de la factura, nunca con la llave maestra.
    Lo que entra del software de facturación no tiene sesión de nadie, y las dos puertas guardan

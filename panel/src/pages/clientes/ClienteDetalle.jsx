@@ -28,7 +28,7 @@ import {
 import {
   AccesosDePersonasAutorizadasModal,
   DocumentoDeLaInstruccion,
-  RegistrarPapelFirmadoModal,
+  RegistrarDocumentoFirmadoModal,
 } from './AccesosDePersonasAutorizadasModal';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { llamarApiPanel } from '../../lib/apiPanel';
@@ -43,7 +43,7 @@ import { con } from '../../lib/textos';
 import { FICHA_COMPLETA, conSusFichas, saludCon } from '../../lib/fichaDelPaciente';
 import { palabrasDelDomicilio } from '../../lib/partesDeDomicilio';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -103,7 +103,7 @@ export function ClienteDetalle() {
   // quede a la vista. `null` es la ventana cerrada.
   const [accesosDe, setAccesosDe] = useState(null);
   const [documentoAVer, setDocumentoAVer] = useState(null);
-  const [papelAConfirmar, setPapelAConfirmar] = useState(null);
+  const [documentoAConfirmar, setDocumentoAConfirmar] = useState(null);
   const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
   // Quien llega desde un documento pendiente de la Situación operativa entra en la solapa donde
   // se resuelve.
@@ -264,7 +264,7 @@ export function ClienteDetalle() {
           <span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}
         </Button>
       </Cabecera>
-      <div className="panel-mini hoja-ficha-datos">{datosDeLaFichaDelCliente.join(' · ')}</div>
+      <div className="panel-mini tarjeta-ficha-datos">{datosDeLaFichaDelCliente.join(' · ')}</div>
 
       <div className="molde-pila">
         <section className="panel-tarjeta">
@@ -353,7 +353,7 @@ export function ClienteDetalle() {
               </>
             )}
           </section>
-          {/* Si el Pagador elegido firmó y qué papeles faltan, siempre a la vista. Avisa, no bloquea. */}
+          {/* Si el Pagador elegido firmó y qué documentos faltan, siempre a la vista. Avisa, no bloquea. */}
           {formContacto && puedeEditarCliente && (
             <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
           )}
@@ -361,7 +361,7 @@ export function ClienteDetalle() {
         )}
 
         {tab === 'pacientes' && (
-          <section className="panel-tarjeta hoja-desplazable">
+          <section className="panel-tarjeta tarjeta-desplazable">
             <div className="panel-tarjeta-titulo">
               <h2>{t.clientes.pacientes}</h2>
               {puedeEditarPaciente && (
@@ -422,7 +422,7 @@ export function ClienteDetalle() {
         {tab === 'personas_autorizadas' && (
           <>
             {/* La instrucción cargada y todavía sin firmar: los dos caminos de cierre —imprimir el
-                papel, o registrar que ya volvió firmado—, que son lo único que queda por hacer. La
+                documento, o registrar que ya volvió firmado—, que son lo único que queda por hacer. La
                 anuncia la Situación operativa, así que acá no lleva texto. */}
             {instruccionPendiente && (
               <div className="molde-acciones">
@@ -430,13 +430,13 @@ export function ClienteDetalle() {
                   {t.clientes.personas_autorizadas.ver_documento}
                 </Button>
                 {puedeEditarCliente && (
-                  <Button onClick={() => setPapelAConfirmar(instruccionPendiente)}>
-                    {t.clientes.personas_autorizadas.registrar_papel}
+                  <Button onClick={() => setDocumentoAConfirmar(instruccionPendiente)}>
+                    {t.clientes.personas_autorizadas.registrar_documento}
                   </Button>
                 )}
               </div>
             )}
-            <section className="panel-tarjeta hoja-desplazable">
+            <section className="panel-tarjeta tarjeta-desplazable">
             <div className="panel-tarjeta-titulo">
               <h2>{t.clientes.personas_autorizadas.titulo}</h2>
               {puedeEditarCliente && (
@@ -584,13 +584,13 @@ export function ClienteDetalle() {
         />
       )}
 
-      {papelAConfirmar && (
-        <RegistrarPapelFirmadoModal
+      {documentoAConfirmar && (
+        <RegistrarDocumentoFirmadoModal
           clienteId={cliente.id}
-          instruccionId={papelAConfirmar.id}
-          onClose={() => setPapelAConfirmar(null)}
+          instruccionId={documentoAConfirmar.id}
+          onClose={() => setDocumentoAConfirmar(null)}
           onRegistrado={() => {
-            setPapelAConfirmar(null);
+            setDocumentoAConfirmar(null);
             recargarPersonasAutorizadas();
           }}
         />

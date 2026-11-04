@@ -65,8 +65,8 @@ const FORMA_DE_IDENTIFICADOR = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}
 facturacionExternaRouter.use(express.raw({ type: 'application/json', limit: '512kb' }));
 
 // Y el comprobante en sí, que llega como los bytes del PDF y no adentro de un JSON. Va por
-// separado porque son dos cosas distintas: los datos de lo emitido entran aunque el papel no
-// llegue nunca, y el papel puede llegar después. El tope lo acota el depósito también.
+// separado porque son dos cosas distintas: los datos de lo emitido entran aunque el comprobante no
+// llegue nunca, y el comprobante puede llegar después. El tope lo acota el depósito también.
 facturacionExternaRouter.use(express.raw({ type: 'application/pdf', limit: '5mb' }));
 
 /**
@@ -181,7 +181,7 @@ facturacionExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Avi
 // El comprobante en sí: el PDF que emitió ese software.
 //
 // POR QUÉ ENTRA ACÁ Y NO ADENTRO DEL PEDIDO. Son dos cosas distintas y no siempre llegan juntas.
-// Los datos de lo emitido —el número, el monto, el vencimiento— alcanzan para reclamar; el papel
+// Los datos de lo emitido —el número, el monto, el vencimiento— alcanzan para reclamar; el comprobante
 // es lo que el Cliente baja, y puede llegar después. Metido adentro del JSON habría que
 // convertirlo a texto, que lo agranda un tercio y obliga a mover el tope de los pedidos.
 //
@@ -194,7 +194,7 @@ facturacionExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Avi
 //
 // Y EL MISMO COMPROBANTE MANDADO DOS VECES NO HACE DAÑO: el segundo se guarda con nombre propio y
 // la factura apunta al último. El anterior queda en el depósito sin que nadie lo alcance, que es
-// lo que corresponde con un papel que estuvo vigente.
+// lo que corresponde con un comprobante que estuvo vigente.
 facturacionExternaRouter.post('/:prestadoraId/:facturaId/comprobante', enLaPrestadoraDeLaDireccion('Aviso de facturacion'), async (req, res) => {
   const { prestadoraId, facturaId } = req.params;
 

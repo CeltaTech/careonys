@@ -216,7 +216,7 @@ describe('accesosParaGuardar', () => {
 
   it('lo topado por la Prestadora se guarda en falso', () => {
     // El documento que va a firmar el titular tiene que decir lo mismo que rige. Si acá se
-    // guardara el "sí" que pidió, la hoja diría una cosa y el sistema haría otra.
+    // guardara el "sí" que pidió, el documento diría una cosa y el sistema haría otra.
     const visibilidad = { ...visibilidadDeFabrica(), cliente_medicacion_del_paciente: false };
     const paraGuardar = accesosParaGuardar({
       pedido: { persona_autorizada_medicacion: true },

@@ -14,13 +14,13 @@ import { comprobarFirma } from './llaveDelDispositivo.js';
 //
 // La ven el titular y las personas autorizadas a ver la Ficha del Paciente. Firmar es sólo del
 // titular, de dos maneras: con el acceso guardado del teléfono, que la deja aceptada en el momento,
-// o subiendo el papel firmado, que queda pendiente hasta que el Panel lo acepte o lo rechace.
+// o subiendo el documento firmado, que queda pendiente hasta que el Panel lo acepte o lo rechace.
 //
 // CON QUÉ CREDENCIAL. Leer va con la de quien pide: la base le muestra la autorización sólo si el
 // Paciente es de su Cliente y si a esa persona le dieron la Ficha. Firmar y subir van con el trabajo
 // de la Prestadora, porque el Cliente no escribe en esa tabla ni en ese depósito; la función de la
 // base (`registrar_autorizacion_signos_vitales_del_titular`) vuelve a comprobar que quien firma es
-// el titular de ese Paciente. El enlace temporal al papel también sale con el trabajo, después de
+// el titular de ese Paciente. El enlace temporal al documento también sale con el trabajo, después de
 // que la base le dejó ver la fila a quien pide.
 
 export const appClientesVitalesAutorizacionRouter = Router();
@@ -147,10 +147,10 @@ appClientesVitalesAutorizacionRouter.post('/:pacienteId/firmar', ...puedeFirmar,
   }
 });
 
-// El papel firmado que sube el titular. Queda pendiente hasta que el Panel lo revise. Si la base no
+// El documento firmado que sube el titular. Queda pendiente hasta que el Panel lo revise. Si la base no
 // lo anota, el archivo no quedó en ninguna autorización y se borra.
 appClientesVitalesAutorizacionRouter.post(
-  '/:pacienteId/papel',
+  '/:pacienteId/documento',
   ...puedeFirmar,
   upload.single('archivo'),
   manejarErrorMulter,
@@ -188,7 +188,7 @@ appClientesVitalesAutorizacionRouter.post(
   }
 );
 
-// Lo firmado: el enlace temporal al papel, o el texto si se firmó en la aplicación.
+// Lo firmado: el enlace temporal al documento, o el texto si se firmó en la aplicación.
 appClientesVitalesAutorizacionRouter.get('/autorizacion/:id', ...puedeVer, async (req, res) => {
   const db = clienteDelPedido(req);
   try {

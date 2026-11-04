@@ -441,7 +441,7 @@ export const T = {
       certificado_vigente: 'Certificado de Aptitud vigente',
       sin_certificado: 'Sin certificado',
       // El estado documental. Dos reglas gobiernan estos textos y las dos son legales, no de
-      // estilo: de qué papel se trata cada uno no se nombra nunca —puede ser dato de salud—, y
+      // estilo: de qué documento se trata cada uno no se nombra nunca —puede ser dato de salud—, y
       // lo que no se verificó se dice con todas las letras. Lo segundo sale de
       // `docs/PRD_07_Modalidad_Match.md:247`: a Care.com la sancionaron por afirmar una
       // verificación que no hacía.
@@ -634,9 +634,9 @@ export const T = {
       hasta: 'Hasta',
       acepto_terminos: 'Acepto los términos, la responsabilidad por los datos y deslindo de responsabilidad a {{prestadora}} y al personal de cuidado.',
       aceptar_con_firma_holografa: 'Aceptar con firma hológrafa',
-      aviso_firma_holografa: 'La conformidad con esta indicación se prestará mediante firma hológrafa (manuscrita) en soporte papel.',
+      aviso_firma_holografa: 'La conformidad con esta indicación se prestará mediante firma hológrafa (manuscrita).',
       falta_la_firma: 'Falta la firma',
-      ver_papel_firmado: 'Ver documento firmado',
+      ver_documento_firmado: 'Ver documento firmado',
       quienes_pueden_dar_la_via: 'Esta medicación, por vía {via}, la puede administrar: {tipos}.',
       motivo_ningun_asignado_puede_dar_la_via: 'No hay un Asistente asignado habilitado para administrar medicación por esta vía.',
       vias: {
@@ -1260,9 +1260,9 @@ export const T = {
       hasta: 'Until',
       acepto_terminos: 'I accept the terms and responsibility for the data, and hold {{prestadora}} and the care staff harmless.',
       aceptar_con_firma_holografa: 'Accept with handwritten signature',
-      aviso_firma_holografa: 'Consent to this instruction will be given by handwritten signature on paper.',
+      aviso_firma_holografa: 'Consent to this instruction will be given by handwritten signature.',
       falta_la_firma: 'Signature pending',
-      ver_papel_firmado: 'View signed document',
+      ver_documento_firmado: 'View signed document',
       quienes_pueden_dar_la_via: 'This medication, by the {via} route, can be administered by: {tipos}.',
       motivo_ningun_asignado_puede_dar_la_via: 'No assigned Assistant is authorized to administer medication via this route.',
       vias: {
@@ -1874,9 +1874,9 @@ export const T = {
       hasta: 'Até',
       acepto_terminos: 'Aceito os termos e a responsabilidade pelos dados, e isento {{prestadora}} e a equipe de cuidados.',
       aceptar_con_firma_holografa: 'Aceitar com assinatura hológrafa',
-      aviso_firma_holografa: 'A concordância com esta indicação será prestada mediante assinatura hológrafa (manuscrita) em suporte papel.',
+      aviso_firma_holografa: 'A concordância com esta indicação será prestada mediante assinatura hológrafa (manuscrita).',
       falta_la_firma: 'Falta a assinatura',
-      ver_papel_firmado: 'Ver documento assinado',
+      ver_documento_firmado: 'Ver documento assinado',
       quienes_pueden_dar_la_via: 'Esta medicação, por via {via}, pode ser administrada por: {tipos}.',
       motivo_ningun_asignado_puede_dar_la_via: 'Não há um Assistente designado habilitado para administrar medicação por esta via.',
       vias: {

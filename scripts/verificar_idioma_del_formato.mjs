@@ -29,7 +29,7 @@
 //
 // CÓMO SE EXCEPTÚA UN CASO LEGÍTIMO — y esto no está escondido, es la única
 // manera y está acá escrita:
-//   Un papel que se firma no cambia de idioma con quien lo mira. Cuando un
+//   Un documento que se firma no cambia de idioma con quien lo mira. Cuando un
 //   archivo arma un documento así, declara arriba de todo:
 //
 //       // POR QUÉ ESTE DOCUMENTO VA EN UN IDIOMA FIJO: ...el motivo...

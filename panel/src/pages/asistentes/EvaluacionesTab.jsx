@@ -5,7 +5,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Estrellas } from '../../components/ui/Estrellas';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 /* Lo que los Clientes dijeron de este Asistente.
    ==========================================================================
@@ -71,7 +71,7 @@ export function EvaluacionesTab({ asistente }) {
   }, [cargar]);
 
   return (
-    <section className="panel-tarjeta hoja-desplazable">
+    <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-tarjeta-titulo">
         <h2>{t.asistentes.tabs.evaluaciones}</h2>
         {datos.tope && (

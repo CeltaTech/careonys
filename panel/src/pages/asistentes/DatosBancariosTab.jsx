@@ -3,7 +3,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { mensajeDeError } from '../../lib/errores';
 import { EstadoLista } from '../../components/layout/EstadoLista';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 /* Dónde cobra este Asistente, para que la administración le pueda transferir.
    ==========================================================================
@@ -45,7 +45,7 @@ export function DatosBancariosTab({ asistente }) {
   }, [cargar]);
 
   return (
-    <section className="panel-tarjeta hoja-desplazable">
+    <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-tarjeta-titulo">
         <h2>{t.asistentes.tabs.datos_bancarios}</h2>
       </div>

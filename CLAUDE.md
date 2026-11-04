@@ -266,9 +266,9 @@ el Pagador. Cada rol lo pueden tener una o más personas, físicas o jurídicas,
 persona puede tener varios roles**. Los tres pueden ser la misma persona, y eso es lo corriente,
 pero **se anotan aparte igual**: coincidir hoy no es coincidir siempre. Textual del Desarrollador:
 *«Pueden ser 1 o mas personas (físicas o jurídicas)»* y *«una misma persona puede tener varios
-roles»*. **Se dice «rol», nunca «papel».** Cada uno de los tres lleva todos sus datos —nombre,
+roles»*. **Se dice «rol».** Cada uno de los tres lleva todos sus datos —nombre,
 apellido, datos fiscales, domicilio, teléfono—, y esos datos están en la base de la Prestadora, no
-en un papel.
+en un documento.
 
 **El Pagador firma su consentimiento a la obligación de pagar, y sin esa firma no hay Pagador
 definido.** Se establece al contratar, con todos sus datos y con la documentación que ese
@@ -277,7 +277,7 @@ Contratante; de ahí en más el cobro es asunto de créditos y cobranzas, que **
 en qué situación están los pagos** —al día, vencido hace tantos días— y nada más.
 
 **Cada persona ve lo que firmó, y lo que firmó otro no, salvo que sea parte firmante.** Vale para
-todo documento en el que alguien da su consentimiento, firmado en papel o en pantalla. La
+todo documento en el que alguien da su consentimiento, firmado a mano o en pantalla. La
 Prestadora es parte de todos, porque son con ella. Un Asistente que consiente que la Prestadora
 siga su ubicación tiene derecho a ver ese documento; el Cliente podrá ver o no esa ubicación, según
 se configure su aplicación, pero el documento no lo ve nunca. Textual del Desarrollador: *«cada
@@ -365,10 +365,10 @@ con los permisos de quien llama, toma la Prestadora y el Cliente del Paciente qu
 ver, y guarda la indicación y lo firmado en una sola operación;
 `asistentes_asignados_al_paciente`, que devuelve sólo quiénes tienen guardia con un Paciente de la
 Prestadora de quien pide, en todas las zonas, y sólo al Administrador y a los Coordinadores; y
-`revisar_indicacion_medicacion` y `cerrar_firma_medicacion_en_papel`, que le dejan al
-Administrador y a los Coordinadores aceptar o rechazar una indicación y cerrar su firma en papel, tocando sólo el estado, el
+`revisar_indicacion_medicacion` y `cerrar_firma_medicacion_con_documento_firmado`, que le dejan al
+Administrador y a los Coordinadores aceptar o rechazar una indicación y cerrar su firma a mano, tocando sólo el estado, el
 motivo y quién y cuándo, y sólo sobre Pacientes cuya información de salud alcanza. Con el mismo
-molde, `revisar_autorizacion_signos_vitales` y `cerrar_autorizacion_signos_vitales_en_papel` hacen
+molde, `revisar_autorizacion_signos_vitales` y `cerrar_autorizacion_signos_vitales_con_documento_firmado` hacen
 eso con la autorización de signos vitales; y `documento_autorizacion_signos_vitales` recibe un
 Paciente y un idioma y devuelve el texto para firmar con su identificador de verificación, sólo si
 el Paciente es de la Prestadora de quien pide y quien pide es personal al que le alcanza su
@@ -381,7 +381,7 @@ Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama �
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial; y `registrar_autorizacion_signos_vitales_del_titular`, que recibe quién firma,
 comprueba que sea el titular de ese Paciente y guarda la firma de la aplicación —sólo si el texto
-firmado es el vigente— o el papel que él subió, que queda pendiente. Toda función nueva de política nace en `interno`, y cualquiera que se quede en
+firmado es el vigente— o el documento que él subió, que queda pendiente. Toda función nueva de política nace en `interno`, y cualquiera que se quede en
 `public` y llame a una de ahí lleva `interno` en su `search_path`. El reparto de permisos —cuáles
 pierden el alcance anónimo y cuáles conservan `authenticated`— lo guarda la base en los permisos
 de cada función y en los permisos por defecto (`ALTER DEFAULT PRIVILEGES`) de los esquemas

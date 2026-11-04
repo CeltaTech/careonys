@@ -2709,7 +2709,7 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
 });
 
 // ============================================================================
-// El consentimiento del Pagador: el texto y los papeles que se exigen
+// El consentimiento del Pagador: el texto y los documentos que se exigen
 // ============================================================================
 //
 // EL TEXTO ES DE LA PRESTADORA. Es un documento hacia un tercero suyo, así que lo escribe, lo
@@ -2903,7 +2903,7 @@ panelConfiguracionRouter.put('/autorizacion-signos-vitales', async (req, res) =>
   res.json({ ok: true, esDelProducto: false });
 });
 
-// Qué papeles exige cada Pagador. El producto no siembra ninguno: eso lo sabe la Prestadora
+// Qué documentos exige cada Pagador. El producto no siembra ninguno: eso lo sabe la Prestadora
 // que trabaja con ese Pagador, y adivinarlo desde acá sería inventar un requisito que nadie
 // pidió. Vacío quiere decir «no se exige ninguno», y es una respuesta válida.
 panelConfiguracionRouter.get('/documentos-pagador', async (req, res) => {
@@ -2958,7 +2958,7 @@ panelConfiguracionRouter.patch('/documentos-pagador/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// No se borra: se apaga. Un tipo borrado se llevaría puestos los papeles ya cargados con él, y lo
+// No se borra: se apaga. Un tipo borrado se llevaría puestos los documentos ya cargados con él, y lo
 // que se quiso decir es «esto ya no se pide más», no «esto nunca se pidió».
 panelConfiguracionRouter.delete('/documentos-pagador/:id', async (req, res) => {
   const { data, error } = await clienteDelPedido(req)

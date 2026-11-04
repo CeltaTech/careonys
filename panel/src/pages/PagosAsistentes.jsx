@@ -30,7 +30,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import '../styles/molde-paginas.css';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 
 /* Lo que la Prestadora le paga al Asistente, guardado.
    ==========================================================================
@@ -133,7 +133,7 @@ export function PagosAsistentes() {
     <div>
       <Cabecera titulo={t.pagos_asistentes.titulo} />
 
-      <section className="panel-tarjeta hoja-desplazable">
+      <section className="panel-tarjeta tarjeta-desplazable">
         {tabsVisibles.length > 1 && (
           <div className="panel-tabs">
             {tabsVisibles.map((tabId) => (

@@ -46,7 +46,7 @@ export function DocumentosDelAsistente({ asistenteId, documentos, estado, error,
   const hoy = hoyISO();
 
   return (
-    <section className="panel-tarjeta hoja-desplazable">
+    <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-tarjeta-titulo">
         <h2>{td.titulo}</h2>
       </div>

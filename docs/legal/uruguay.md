@@ -74,7 +74,7 @@ Uruguay figura en una:
 - **Uruguay: la historia clínica electrónica no se borra.** El art. 13 del Decreto 242/017: «La
   información no podrá ser alterada o eliminada sin que quede registrada la modificación», y la
   corrección agrega el dato nuevo «sin suprimir lo corregido». Los cinco años del Decreto 355/982
-  son **facultad de destruir**, pensada para el papel: quien no destruye no incumple. Refuerza la
+  son **facultad de destruir**, pensada para los documentos físicos: quien no destruye no incumple. Refuerza la
   regla del paso 122 —vencido el plazo el sistema avisa y espera, nunca borra— con un país donde
   borrar sería lo incorrecto.
 

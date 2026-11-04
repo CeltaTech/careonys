@@ -10,7 +10,7 @@ import { cargarPacientesDeGuardias, pacientesDeGuardia, textoDePacientes } from 
 import { llegoAlDomicilio } from '../lib/toleranciaCheckin';
 import { domiciliosPorFecha, domicilioDe } from '../lib/domicilioDelDia';
 import { mensajeDeError } from '../lib/errores';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 import './seguimientoDeGuardias.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
@@ -177,7 +177,7 @@ export function Evv() {
   return (
     <div>
       <Cabecera titulo={t.evv.titulo} />
-      <section className="panel-tarjeta hoja-desplazable">
+      <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-filtros seguimiento-filtros">
         <label>
           {t.guardias.filtro_desde}

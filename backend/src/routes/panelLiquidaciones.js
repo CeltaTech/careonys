@@ -35,7 +35,7 @@ export { bordesDelPeriodo, calcularLiquidacion, esPeriodoValido, primerDia, ulti
 
    LO QUE NO ES: un comprobante fiscal. El producto no emite facturas ni notas y no está
    previsto que lo haga (CLAUDE.md §7 regla 14). Esto es la cuenta interna de qué se le pagó
-   a quién; el papel con validez impositiva lo hace la Prestadora por fuera. Por eso no hay
+   a quién; el comprobante con validez impositiva lo hace la Prestadora por fuera. Por eso no hay
    tipo de comprobante, ni punto de venta, ni numeración, ni impuestos discriminados.
 
    LO QUE TAMPOCO HACE: inventar un número. Ningún porcentaje ni monto legal está escrito

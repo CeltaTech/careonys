@@ -10,7 +10,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { llamarApiIntermediacion as llamarApi } from '../../lib/apiIntermediacion';
 import { claseBadge } from '../../lib/tonos';
 import '../../styles/molde-paginas.css';
-import '../hojaDeTarjetas.css';
+import '../tarjetas.css';
 
 const LECTOR_ID = 'lector-qr-cobro-efectivo';
 
@@ -199,7 +199,7 @@ export function IntermediacionClientes() {
           </section>
         )}
 
-        <section className="panel-tarjeta hoja-desplazable">
+        <section className="panel-tarjeta tarjeta-desplazable">
           <div className="panel-tarjeta-titulo">
             <h2>{t.intermediacion.clientes_titulo}</h2>
             {estado === 'listo' && <span className="panel-mini">{accesos.length}</span>}
@@ -253,7 +253,7 @@ export function IntermediacionClientes() {
             .filter((s) => s.id === expandida)
             .map((s) => (
               <div key={s.id} className="panel-grilla panel-columnas-2">
-                <section className="panel-tarjeta hoja-desplazable">
+                <section className="panel-tarjeta tarjeta-desplazable">
                   <div className="panel-tarjeta-titulo">
                     <h2>{t.intermediacion.cobros_titulo}</h2>
                     <span className="panel-mini">{s.cliente_nombre || '—'}</span>

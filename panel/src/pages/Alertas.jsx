@@ -11,7 +11,7 @@ import { Button } from '../components/ui/Button';
 import { mensajeDeError } from '../lib/errores';
 import { sigueSinResolver, sigueSinResolverYEsCritica } from '../lib/alertaSinResolver';
 import '../styles/molde-paginas.css';
-import './hojaDeTarjetas.css';
+import './tarjetas.css';
 import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
 
 // Alertas de la IA Nivel 2 (backend/src/utils/revisarAlertasIA.js): la IA lee los últimos
@@ -108,7 +108,7 @@ export function Alertas() {
     <div>
       <Cabecera titulo={t.alertas.titulo} />
       <div className="molde-pila">
-        <section className="panel-tarjeta hoja-desplazable">
+        <section className="panel-tarjeta tarjeta-desplazable">
           <div className="panel-tarjeta-titulo">
             <h2>{t.alertas.titulo}</h2>
             {pendientesRojas > 0 && (
@@ -214,22 +214,22 @@ function DetalleAlerta({ alerta, resolviendo, onResolver, onCerrar }) {
           {t.comun.cerrar}
         </Button>
       </div>
-      <div className="panel-mini hoja-ficha-datos">
+      <div className="panel-mini tarjeta-ficha-datos">
         {alerta.created_at?.slice(0, 10)} · {alerta.paciente_nombre}
       </div>
 
       <div className="panel-grilla panel-columnas-2">
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.alertas.campo_detalle_coordinador}</div>
           <b>{alerta.detalle_coordinador || t.alertas.sin_datos}</b>
         </div>
 
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.alertas.campo_descripcion_cliente}</div>
           <b>{alerta.descripcion || t.alertas.sin_datos}</b>
         </div>
 
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.alertas.campo_campos_preocupantes}</div>
           <b>
             {alerta.campos_preocupantes?.length > 0
@@ -238,7 +238,7 @@ function DetalleAlerta({ alerta, resolviendo, onResolver, onCerrar }) {
           </b>
         </div>
 
-        <div className="hoja-dato">
+        <div className="tarjeta-dato">
           <div className="panel-mini">{t.alertas.campo_reportes_analizados}</div>
           <b>{cantidadReportes === 1 ? t.alertas.reportes_analizados_texto_uno : t.alertas.reportes_analizados_texto.replace('{cantidad}', cantidadReportes)}</b>
         </div>

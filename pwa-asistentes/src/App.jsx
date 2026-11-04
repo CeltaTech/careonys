@@ -83,7 +83,7 @@ function Rutas() {
         <Route path="asignaciones" element={<AsignacionesSinResponder />} />
         <Route path="guardias/:id" element={<GuardiaActiva />} />
         {/* El reporte lleva el Paciente en la dirección: un turno puede cubrir a varias
-            personas y cada una tiene su propia hoja (tarea 93h). */}
+            personas y cada una tiene su propio reporte (tarea 93h). */}
         <Route path="guardias/:id/reporte/:pacienteId" element={<ReporteDiario />} />
         {/* El chat con un Cliente de la vidriera. El hilo lo abre siempre él: acá se
             contestan los que llegaron. */}

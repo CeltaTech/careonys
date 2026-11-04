@@ -76,7 +76,7 @@ export function exigeDePersonasAutorizadas(clave) {
   };
 }
 
-// Deja pasar solamente al titular. Lo usan las tres rutas de la firma: la hoja dice, persona por
+// Deja pasar solamente al titular. Lo usan las tres rutas de la firma: el documento dice, persona por
 // persona, qué se le dio y qué se le negó a cada persona autorizada, y eso es del titular. Además es
 // él quien firma, así que nadie más tiene por qué pedir el código ni confirmarlo.
 //

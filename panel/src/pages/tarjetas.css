@@ -1,6 +1,6 @@
 /* Lo que `styles/molde-paginas.css` no trae: la tabla sin marco propio adentro de su tarjeta,
    la tarjeta que deja correr una tabla ancha, las pestañas de una ficha, el dato suelto de una
-   ficha y el gráfico de barras. Prefijo `hoja-` para no pisar nada de otra página. */
+   ficha y el gráfico de barras. Prefijo `tarjeta-` para no pisar nada de otra página. */
 
 .panel-tarjeta .panel-tabla {
   border: 0;
@@ -8,7 +8,7 @@
   box-shadow: none;
 }
 
-.hoja-desplazable {
+.tarjeta-desplazable {
   overflow-x: auto;
 }
 
@@ -23,19 +23,19 @@
 }
 
 /* La línea de datos que va justo debajo de la cabecera de una ficha. */
-.hoja-ficha-datos {
+.tarjeta-ficha-datos {
   margin: -12px 0 16px;
 }
 
 /* El dato suelto de una ficha: el rótulo chico arriba y el valor en negrita abajo. */
-.hoja-dato b {
+.tarjeta-dato b {
   display: block;
   font-size: 13px;
   margin-top: 3px;
 }
 
 /* Texto escrito por una persona, que conserva sus renglones. */
-.hoja-texto-con-renglones {
+.tarjeta-texto-con-renglones {
   white-space: pre-wrap;
   word-break: break-word;
   margin: 0;
@@ -43,11 +43,11 @@
 
 /* La dirección de un enlace escrita entera: subrayada como cualquier enlace, y cortada donde
    haga falta para que una dirección larga no se salga de su recuadro. */
-.hoja-enlace-del-contenido {
+.tarjeta-enlace-del-contenido {
   overflow-wrap: anywhere;
   margin: 8px 0 0;
 }
 
-.hoja-enlace-del-contenido a {
+.tarjeta-enlace-del-contenido a {
   text-decoration: underline;
 }

@@ -100,8 +100,8 @@ export function parsearArchivo(buffer, nombreArchivo) {
   // exportar desde Excel/Sheets en español) se interpreta con acentos/ñ corrompidos —
   // encontrado en la verificación de esta fase con una planilla de prueba real.
   const libro = XLSX.read(buffer, { type: 'buffer', codepage: 65001 });
-  const hoja = libro.Sheets[libro.SheetNames[0]];
-  const filas = XLSX.utils.sheet_to_json(hoja, { defval: '' });
+  const planilla = libro.Sheets[libro.SheetNames[0]];
+  const filas = XLSX.utils.sheet_to_json(planilla, { defval: '' });
   if (filas.length === 0) {
     throw new Error('El archivo no tiene filas de datos');
   }

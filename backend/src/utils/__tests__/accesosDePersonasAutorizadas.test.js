@@ -89,7 +89,7 @@ describe('soloElTitular', () => {
     assert.equal(siguio, true);
   });
 
-  it('nadie más firma la hoja que le recorta los accesos a él mismo', () => {
+  it('nadie más firma el documento que le recorta los accesos a él mismo', () => {
     const res = unaRespuesta();
     let siguio = false;
     soloElTitular(unPedido(), res, () => { siguio = true; });

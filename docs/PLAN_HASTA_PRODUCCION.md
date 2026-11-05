@@ -288,11 +288,6 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.
 
-**El consentimiento del Pagador lo lee sólo el personal de la Prestadora** (políticas
-`consentimientos_pagador_los_leen_administrador_y_coordinador` y
-`documentos_pagador_los_leen_administrador_y_coordinador`). Falta quien firmó, que tiene derecho a
-verlo y hoy no lo alcanza.
-
 **Qué ve cada rol sale de qué necesita para cumplir su función.** En la Ficha del cliente, el
 coordinador:
 

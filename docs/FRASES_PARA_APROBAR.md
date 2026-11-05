@@ -96,9 +96,9 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Propuesta** | «Envió un documento para firmar» |
 | **¿Aparece hoy?** | sí |
 | **Por qué** | es un texto nuevo: sigue la forma de los demás renglones del registro, como «Desactivó una cuenta». |
-| **Quién lo lee** | quien consulta el registro de actividad en el Panel. |
-| **Dónde está** | Panel → registro de actividad. |
-| **Qué estaba haciendo** | consultaba el registro. |
+| **Quién lo lee** | la administración de la Prestadora. |
+| **Dónde está** | Panel → Auditoría; Panel → Usuarios, historial de una cuenta. |
+| **Qué estaba haciendo** | consultaba la actividad. |
 | **Qué pasó** | alguien mandó un documento por email. |
 | **Qué puede hacer después** | nada. |
 | **Cómo se muestra** | renglón de la lista. |

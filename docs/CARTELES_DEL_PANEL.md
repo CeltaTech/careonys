@@ -5,8 +5,8 @@ los ojos cada cartel que el sistema pone por su cuenta. Cada ficha arranca dicie
 llega a esa pantalla** —el camino por el menú, los clics— y qué hay que hacer para que ese cartel
 aparezca.
 
-**Son seis.** Llevan el mismo número que tienen en el punto 15 de `docs/CARTELES_DEL_PANEL.docx`
-—el 2, el 6, el 9, el 12, el 21 y el 26—, que son los que siguen en el código de los veintiséis de
+**Son cinco.** Llevan el mismo número que tienen en el punto 15 de `docs/CARTELES_DEL_PANEL.docx`
+—el 2, el 9, el 12, el 21 y el 26—, que son los que siguen en el código de los veintiséis de
 ese punto. Están ordenados por el camino del menú, de arriba abajo, para que se puedan ir viendo
 uno atrás del otro sin saltar de un lado al otro del Panel.
 
@@ -103,83 +103,6 @@ cartel.
 # PARTE II — Los carteles propios de cada pantalla
 
 # Clientes → Directorio de Clientes → un Cliente
-
-## 6. Cuando el Pagador no tiene cargada ninguna documentación exigible
-
-**Cómo llegar.** Menú lateral → grupo **Clientes** → **Directorio de Clientes** → clic en un Cliente
-de la lista → pestaña **Contacto**. Ahí, bajar hasta la tarjeta **«Documentación que pide el
-Pagador»**, que está debajo de la tarjeta de la firma del Pagador.
-
-**Qué es esa pantalla y para qué se usa.** Es la parte de la Ficha del cliente donde se responde
-una sola pregunta: quién paga esto y si eso ya está cerrado. Elegir a alguien del Directorio de Personas no alcanza:
-queda definido como Pagador recién cuando firmó que asume la obligación de pagar. Ahí mismo se ve si
-esa firma está, se arma el documento para que la firme, se registra que llegó firmado, y —abajo de
-todo eso— se lleva la cuenta de los documentos que exige quien paga el servicio: cuáles están,
-cuáles faltan, cuáles se vencieron. Nada de eso frena la contratación; avisa nada más, en el momento
-en que se elige a la persona y no el día que hay que cobrarle.
-
-**Qué se ve en pantalla, de arriba abajo.**
-- Título de la pantalla: el nombre del Cliente, y debajo un renglón con la localidad, el teléfono,
-  el email y la fecha de alta.
-- Las pestañas: «Contacto», «Pacientes», «Personas autorizadas», «Guardias activas», «Historial de
-  reportes» y «Alertas activas». Este cartel está en la primera.
-- La tarjeta «Contacto», con el enlace «Abrir WhatsApp» si hay teléfono, y los casilleros «Plan»,
-  «Días para pagar, desde la emisión», «Pagador» —un desplegable con «El Cliente», «Obra social» y
-  «Otro»— y «Quién paga», donde se elige del Directorio de Personas. Al pie, el botón «Guardar».
-- Debajo, la tarjeta «Quién paga», que se ve sólo si quien mira puede modificar el Cliente. Si no
-  hay nadie elegido, dice «Esta contratación todavía no tiene elegido quién paga.» y nada más. Si
-  hay alguien elegido:
-  - Un cartel de estado, que dice «El Pagador está definido: firmó que asume la obligación de
-    pagar.» o «El Pagador todavía no firmó que asume la obligación de pagar.»
-  - Según el caso, un aviso de que el consentimiento guardado lo firmó otra persona, o de que a
-    quien paga le falta anotado quién firma en su representación.
-  - Los datos: «Quién paga» con el nombre, «Firma en su representación» con el nombre de quien
-    firma, si lo hay, y «Firmado el» con la fecha, si ya se firmó.
-  - Los botones de «Armar el consentimiento», «Ver el documento», «Ver el documento firmado»,
-    «Registrar la firma» y «Anular», según en qué punto esté la firma.
-- Debajo, la tarjeta «Documentación que pide el Pagador», que existe sólo si hay alguien elegido como
-  Pagador.
-- Y ahí adentro va la tabla de documentos, o el cartel cuando no hay nada.
-
-**El cartel, textual.**
-Un solo renglón: «Esta Prestadora todavía no cargó qué documentación pide. Se configura en
-Configuración.»
-
-**Cuándo aparece.** Cuando la lista de documentos exigibles vuelve vacía. Esa lista sale de los
-documentos que la Prestadora tiene activos en Configuración → **Prestadora** → «Documentación que
-se le pide al Pagador», y depende del casillero «Pagador» de este Cliente: si ahí dice «Obra
-social» u «Otro», entran los documentos que se piden a todos y los que se piden a ese tipo de
-Pagador; si dice «El Cliente», entran sólo los que se piden a todos. Así que el cartel puede
-aparecer en un Cliente y no en otro de la misma Prestadora, según qué tipo de Pagador tenga cada
-uno.
-
-**Qué desaparece mientras el cartel está puesto.** La tabla entera de documentos, con sus cuatro
-columnas —«Documento», «Situación», «Vence» y «Acciones»—, con el estado de cada renglón, que puede
-ser «Falta», «Cargado» o «Vencido», y con los botones de «Ver», «Cargar» y «Reemplazar». Desaparece
-también el aviso que resume la situación arriba de la tabla, el que dice «Falta cargar tantos
-documentos.» y «Hay tantos documentos vencidos.»
-
-**Qué queda alrededor si el cartel se saca.** Todo lo de la firma queda intacto: el estado del
-Pagador, quién paga, quién firma en su representación, la fecha en que se firmó y los botones de
-armar, ver y registrar. Lo único que queda es el título «Documentación que pide el Pagador» con
-un blanco debajo.
-
-**Problemas que se ven acá.** Son tres. El primero es que el título y el cartel se contradicen sobre
-quién exige los documentos: el título dice que la documentación la pide el Pagador, y el cartel dice
-que la Prestadora «todavía no cargó qué documentación pide», como si fuera ella la que exige. Leídos
-uno atrás del otro, no se entiende de quién es la exigencia. El segundo es que en esta misma pantalla
-la frase «Quién paga» aparece tres veces seguidas y con tres significados distintos: es el rótulo del
-casillero donde se elige, es el título de la tarjeta de la firma, y es el renglón que muestra el nombre
-elegido. El tercero es que la frase «Se configura en Configuración» dice la misma palabra dos veces
-en cinco palabras, y aun así no dice en qué parte de esa pantalla hay que buscar.
-
-
-**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
-`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
-
-> Por favor cargar [documentación] en [lugar donde hacerlo].
-
----
 
 ## 9. Cuando el Cliente no tiene reportes
 

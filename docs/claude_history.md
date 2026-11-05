@@ -613,3 +613,8 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** `CLAUDE.md` contaba cómo apareció la regla —catorce tablas en las que nadie con sesión podía escribir, con `42501`, porque sus disparadores llamaban funciones de `public` cerradas a `authenticated`— y que el Desarrollador la adoptó como propia: *«no era mia, pero desde ahora en mas lo es»*.
 - **Qué dice ahora:** queda sólo la regla: lo que llama un disparador vive en `interno` con el permiso dado ahí, y el disparador no se convierte en `SECURITY DEFINER`.
 - **Motivo:** `CLAUDE.md` refleja el estado vigente y no narra cómo se llegó a él.
+### A la vista, «Responsable de pagos»
+
+- **Qué decía antes:** el Panel escribía «Quién paga» y «Pagador» en títulos y casilleros.
+- **Qué dice ahora:** todo texto visible escribe «Responsable de pagos»; `pagador` queda en el código y en la base.
+- **Motivo:** un título no puede repetir los nombres internos ni transcribir una función. El Desarrollador ofreció «Financiador» o «Responsable de pagos», y se usó la segunda porque la primera él mismo la había retirado.

@@ -123,7 +123,6 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
 
   const {
     pagador,
-    apoderado,
     firmadoPorOtro,
     consentimientoPendiente,
     consentimientoCerrado,
@@ -150,9 +149,6 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
           <>
             <div className="panel-grilla panel-columnas-3">
               <div className="tarjeta-dato"><b>{pagador.nombre}</b></div>
-              {apoderado && (
-                <div className="tarjeta-dato"><div className="panel-mini">{textos.quien_firma}</div><b>{apoderado.nombre}</b></div>
-              )}
               {consentimientoCerrado && (
                 <div className="tarjeta-dato">
                   {firmadoPorOtro && (

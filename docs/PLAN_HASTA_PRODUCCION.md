@@ -568,7 +568,7 @@ opcional, o dos, una por tiempo conocido y otra indefinida—.
 regla dice que quien asume la obligación de pagar queda definido recién cuando firma, y que eso
 tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este acto. Pero
 la firma vive hoy en otra pantalla, dentro de la Ficha del cliente, con su propio estado y sus
-botones de armar el consentimiento y registrar la firma; y el único requisito que este acto pone
+botones de generar el documento y registrar la firma; y el único requisito que este acto pone
 para habilitar un Servicio es el coordinador asignado. ¿Son dos requisitos, y un Servicio sin
 Pagador firmado tampoco se habilita? ¿O el acto muestra cómo está esa firma y deja seguir?
 

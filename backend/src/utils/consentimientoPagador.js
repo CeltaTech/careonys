@@ -299,13 +299,11 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) 
     cerrado && cliente.pagador_persona_id && cerrado.pagador_persona_id !== cliente.pagador_persona_id,
   );
 
-  const apoderado = await firmantePorApoderado({ db, clienteId, prestadoraId });
   const conEmail = async (consentimiento) =>
     Boolean(consentimiento && (await emailDeLaFicha({ db, personaId: quienFirma(consentimiento), prestadoraId })));
 
   return {
     pagador,
-    apoderado,
     firmadoPorOtro,
     consentimientoPendiente: pendiente,
     consentimientoCerrado: cerrado,

@@ -4,9 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 3 fichas.** Panel 3.
+**Total: 2 fichas.** Panel 2.
 
-## Panel (3)
+## Panel (2)
 
 ### 43. Falta cómo recibe el trabajo
 
@@ -39,22 +39,6 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Qué puede hacer después** | ir a «Perfil», pasarlo a Activo y volver. |
 | **Cómo se muestra** | franja. |
 | **Decisión** | queda para después de la mudanza: se decide con el reclutamiento. |
-
-### 49. Consentimiento firmado por otra persona
-
-| | |
-|---|---|
-| **Texto actual** | El consentimiento guardado lo firmó una persona distinta del Pagador actual. Revise el consentimiento. |
-| **Propuesta** | «El consentimiento guardado no lo firmó el Pagador actual. Arme un consentimiento nuevo para que lo firme.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | «Revise» no dice qué hacer. «Arme» es el verbo del botón «Armar el consentimiento», y la salida habitual es un consentimiento nuevo firmado por quien paga hoy. |
-| **Quién lo lee** | la coordinación de la Prestadora que puede editar los datos del Cliente. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Contacto», recuadro «Quién paga». |
-| **Qué estaba haciendo** | revisaba o cambiaba quién paga. |
-| **Qué pasó** | se cambió el Pagador después de la firma, por ejemplo. El aviso no frena nada. |
-| **Qué puede hacer después** | ver el documento firmado, armar un consentimiento nuevo o cambiar el Pagador. |
-| **Cómo se muestra** | franja. |
-| **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
 ## Aplicación del Cliente
 

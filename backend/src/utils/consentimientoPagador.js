@@ -271,10 +271,8 @@ export async function anularPendiente({ db, consentimientoId, prestadoraId }) {
 // El punto único de verdad del estado
 // ---------------------------------------------------------------------------------------
 //
-// Contesta lo mismo a todo el que pregunte: si el Pagador está definido, y qué le falta. Lo
-// consume la pantalla donde se elige el Pagador, y cualquier otra que mañana necesite saberlo. La
-// decisión de qué cuenta como «definido» vive acá y en ningún otro lado: repartida entre pantallas
-// terminaría diciendo cosas distintas según dónde se mire.
+// Contesta lo mismo a todo el que pregunte: qué firmó el Pagador y qué le falta. Lo consume la parte
+// del Panel donde se elige el Pagador, y cualquier otra que mañana necesite saberlo.
 export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) {
   const cliente = await clienteConSuPagador({ db, clienteId, prestadoraId });
 
@@ -296,8 +294,7 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) 
   const cerrado = (consentimientos ?? []).find((fila) => fila.estado === 'cerrado') ?? null;
 
   // Si el consentimiento firmado quedó atado a otra Ficha que la que hoy figura como Pagador, la
-  // firma no vale para éste: firmó otra persona. Se avisa en vez de ocultarlo, porque el documento
-  // existe y alguien lo tiene que mirar.
+  // firma no vale para éste: firmó otra persona, y el Panel muestra su nombre junto a la fecha.
   const firmadoPorOtro = Boolean(
     cerrado && cliente.pagador_persona_id && cerrado.pagador_persona_id !== cliente.pagador_persona_id,
   );
@@ -309,9 +306,6 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) 
   return {
     pagador,
     apoderado,
-    // Definido quiere decir las tres cosas: hay Ficha elegida, hay consentimiento cerrado, y lo
-    // firmó justamente quien hoy figura como Pagador.
-    definido: Boolean(cliente.pagador_persona_id && cerrado && !firmadoPorOtro),
     firmadoPorOtro,
     consentimientoPendiente: pendiente,
     consentimientoCerrado: cerrado,

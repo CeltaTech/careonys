@@ -20,11 +20,9 @@ import '../tarjetas.css';
    buscarlo a ningún lado. Enterarse el día que hay que cobrar es tarde.
 
    NO BLOQUEA NADA. La contratación sigue, el Servicio se presta y el Cliente se da de alta igual.
-   Esto avisa; decidir es de quien tiene la responsabilidad.
 
-   QUÉ CUENTA COMO DEFINIDO NO SE DECIDE ACÁ. Lo contesta el backend, en un solo lugar, y esta
-   pantalla lo muestra. Repartida entre pantallas, la misma pregunta terminaría contestándose
-   distinto según dónde se mire. */
+   LA FIRMA SE VE POR LA FECHA. Con fecha, firmó; sin fecha, no. Si después cambió el Pagador, junto
+   a la fecha aparece quién firmó: sola, se leería como la firma del nombre que tiene al lado. */
 export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
   const { t, locale } = useLocale();
   const [estado, setEstado] = useState('cargando');
@@ -126,7 +124,6 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
   const {
     pagador,
     apoderado,
-    definido,
     firmadoPorOtro,
     consentimientoPendiente,
     consentimientoCerrado,
@@ -151,20 +148,16 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
           <Alert variant="info">{textos.sin_pagador}</Alert>
         ) : (
           <>
-            <Alert variant={definido ? 'success' : 'warning'}>
-              {definido ? textos.definido : textos.sin_firma}
-            </Alert>
-
-            {firmadoPorOtro && <Alert variant="warning">{textos.firmado_por_otro}</Alert>}
-
             <div className="panel-grilla panel-columnas-3">
-              <div className="tarjeta-dato"><div className="panel-mini">{textos.quien_paga}</div><b>{pagador.nombre}</b></div>
+              <div className="tarjeta-dato"><b>{pagador.nombre}</b></div>
               {apoderado && (
                 <div className="tarjeta-dato"><div className="panel-mini">{textos.quien_firma}</div><b>{apoderado.nombre}</b></div>
               )}
               {consentimientoCerrado && (
                 <div className="tarjeta-dato">
-                  <div className="panel-mini">{textos.firmado_el}</div>
+                  {firmadoPorOtro && (
+                    <div><b>{consentimientoCerrado.firmante_nombre ?? consentimientoCerrado.pagador_nombre}</b></div>
+                  )}
                   <b>{new Date(consentimientoCerrado.cerrado_en).toLocaleDateString(locale)}</b>
                   {/* Con un documento pendiente, los botones de abajo son de ése: éste va junto a la fecha. */}
                   {consentimientoPendiente && puedeRegistrar && cerradoConEmail && (
@@ -245,76 +238,70 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
       <ApoderadoDelCliente clienteId={clienteId} funcion="pagos" puedeRegistrar={puedeRegistrar} esAdmin={esAdmin} onCambio={recargar} />
 
       {/* Los documentos son aparte de la firma: se cuentan y se muestran por separado. */}
-      {pagador && (
+      {pagador && documentos.length > 0 && (
         <section className="panel-tarjeta tarjeta-desplazable">
           <div className="panel-tarjeta-titulo">
             <h2>{textos.documentos_titulo}</h2>
           </div>
-          {documentos.length === 0 ? (
-            <p className="molde-vacio">{textos.documentos_sin_catalogo}</p>
-          ) : (
-            <>
-              {(documentosFaltantes > 0 || documentosVencidos > 0) && (
-                <Alert variant="warning">
-                  {documentosFaltantes > 0 && (documentosFaltantes === 1 ? textos.documentos_faltan_uno : textos.documentos_faltan.replace('{n}', documentosFaltantes))}
-                  {documentosFaltantes > 0 && documentosVencidos > 0 && ' '}
-                  {documentosVencidos > 0 && (documentosVencidos === 1 ? textos.documentos_vencidos_uno : textos.documentos_vencidos.replace('{n}', documentosVencidos))}
-                </Alert>
-              )}
-              <table className="panel-tabla">
-                <thead>
-                  <tr>
-                    <th>{textos.documento_nombre}</th>
-                    <th>{textos.documento_estado}</th>
-                    <th>{textos.documento_vencimiento}</th>
-                    <th>{textos.documento_acciones}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documentos.map((documento) => (
-                    <tr key={documento.tipoId}>
-                      <td><b>{documento.nombre}</b></td>
-                      <td>
-                        {!documento.cargado ? (
-                          <span className="badge badge-critico">{textos.documento_falta}</span>
-                        ) : documento.vencido ? (
-                          <span className="badge badge-atencion">{textos.documento_vencido}</span>
-                        ) : (
-                          <span className="badge badge-exito">{textos.documento_cargado}</span>
-                        )}
-                      </td>
-                      <td>
-                        {documento.fechaVencimiento
-                          ? new Date(documento.fechaVencimiento).toLocaleDateString(locale)
-                          : '—'}
-                      </td>
-                      <td>
-                        {documento.cargado && (
-                          <>
-                            <Button
-                              variant="secondary"
-                              onClick={() =>
-                                verArchivo(
-                                  `/cuentas/cliente/${clienteId}/pagador/documento/${documento.documentoId}/archivo`,
-                                )
-                              }
-                            >
-                              {textos.documento_ver}
-                            </Button>{' '}
-                          </>
-                        )}
-                        {puedeRegistrar && (
-                          <Button variant="secondary" onClick={() => setDocumentoACargar(documento)}>
-                            {documento.cargado ? textos.documento_reemplazar : textos.documento_cargar}
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
+          {(documentosFaltantes > 0 || documentosVencidos > 0) && (
+            <Alert variant="warning">
+              {documentosFaltantes > 0 && (documentosFaltantes === 1 ? textos.documentos_faltan_uno : textos.documentos_faltan.replace('{n}', documentosFaltantes))}
+              {documentosFaltantes > 0 && documentosVencidos > 0 && ' '}
+              {documentosVencidos > 0 && (documentosVencidos === 1 ? textos.documentos_vencidos_uno : textos.documentos_vencidos.replace('{n}', documentosVencidos))}
+            </Alert>
           )}
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{textos.documento_nombre}</th>
+                <th>{textos.documento_estado}</th>
+                <th>{textos.documento_vencimiento}</th>
+                <th>{textos.documento_acciones}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {documentos.map((documento) => (
+                <tr key={documento.tipoId}>
+                  <td><b>{documento.nombre}</b></td>
+                  <td>
+                    {!documento.cargado ? (
+                      <span className="badge badge-critico">{textos.documento_falta}</span>
+                    ) : documento.vencido ? (
+                      <span className="badge badge-atencion">{textos.documento_vencido}</span>
+                    ) : (
+                      <span className="badge badge-exito">{textos.documento_cargado}</span>
+                    )}
+                  </td>
+                  <td>
+                    {documento.fechaVencimiento
+                      ? new Date(documento.fechaVencimiento).toLocaleDateString(locale)
+                      : '—'}
+                  </td>
+                  <td>
+                    {documento.cargado && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() =>
+                            verArchivo(
+                              `/cuentas/cliente/${clienteId}/pagador/documento/${documento.documentoId}/archivo`,
+                            )
+                          }
+                        >
+                          {textos.documento_ver}
+                        </Button>{' '}
+                      </>
+                    )}
+                    {puedeRegistrar && (
+                      <Button variant="secondary" onClick={() => setDocumentoACargar(documento)}>
+                        {documento.cargado ? textos.documento_reemplazar : textos.documento_cargar}
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       )}
 

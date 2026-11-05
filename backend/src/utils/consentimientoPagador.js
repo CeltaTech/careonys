@@ -303,7 +303,8 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) 
   );
 
   const apoderado = await firmantePorApoderado({ db, clienteId, prestadoraId });
-  const actual = pendiente ?? cerrado;
+  const conEmail = async (consentimiento) =>
+    Boolean(consentimiento && (await emailDeLaFicha({ db, personaId: quienFirma(consentimiento), prestadoraId })));
 
   return {
     pagador,
@@ -317,7 +318,10 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) 
     documentos,
     documentosFaltantes: documentos.filter((documento) => !documento.cargado).length,
     documentosVencidos: documentos.filter((documento) => documento.vencido).length,
-    firmanteConEmail: Boolean(actual && (await emailDeLaFicha({ db, personaId: quienFirma(actual), prestadoraId }))),
+    // Son dos preguntas: mientras hay un documento pendiente, quien firmó el anterior puede ser
+    // otra persona, y a esa también se le manda lo que firmó.
+    pendienteConEmail: await conEmail(pendiente),
+    cerradoConEmail: await conEmail(cerrado),
     textos: {
       enviar: frase('documento_para_firmar.enviar', idioma, {}, prestadoraId),
       enviado: frase('documento_para_firmar.enviado', idioma, {}, prestadoraId),

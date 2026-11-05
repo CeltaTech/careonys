@@ -133,7 +133,8 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     documentos,
     documentosFaltantes,
     documentosVencidos,
-    firmanteConEmail,
+    pendienteConEmail,
+    cerradoConEmail,
     textos: textosDeLaBase,
   } = datos;
 
@@ -165,6 +166,14 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                 <div className="tarjeta-dato">
                   <div className="panel-mini">{textos.firmado_el}</div>
                   <b>{new Date(consentimientoCerrado.cerrado_en).toLocaleDateString(locale)}</b>
+                  {/* Con un documento pendiente, los botones de abajo son de ése: éste va junto a la fecha. */}
+                  {consentimientoPendiente && puedeRegistrar && cerradoConEmail && (
+                    <div>
+                      <Button variant="secondary" onClick={() => enviar(consentimientoCerrado.id)} disabled={trabajando}>
+                        {textosDeLaBase.enviar}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -183,7 +192,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                       <Button variant="secondary" onClick={() => anular(consentimientoPendiente.id)} disabled={trabajando}>
                         {textos.anular}
                       </Button>
-                      {firmanteConEmail && (
+                      {pendienteConEmail && (
                         <Button variant="secondary" onClick={() => enviar(consentimientoPendiente.id)} disabled={trabajando}>
                           {textosDeLaBase.enviar}
                         </Button>
@@ -216,7 +225,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                       {textos.ver_documento_firmado}
                     </Button>
                   )}
-                  {puedeRegistrar && consentimientoCerrado && firmanteConEmail && (
+                  {puedeRegistrar && cerradoConEmail && (
                     <Button variant="secondary" onClick={() => enviar(consentimientoCerrado.id)} disabled={trabajando}>
                       {textosDeLaBase.enviar}
                     </Button>

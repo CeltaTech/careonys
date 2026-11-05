@@ -17,6 +17,7 @@ export default function ApoderadoDelCliente({ funcion, embebido = false, onCambi
   const [error, setError] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const [nombrando, setNombrando] = useState(false);
+  const [quitando, setQuitando] = useState(false);
   const elegirArchivo = useRef(null);
 
   const recargar = useCallback(async () => {
@@ -75,7 +76,7 @@ export default function ApoderadoDelCliente({ funcion, embebido = false, onCambi
   }
 
   function quitar() {
-    if (!window.confirm(datos.textos.quitar_aviso)) return;
+    setQuitando(false);
     ejecutar(() => api.quitarApoderado(funcion), 'quitar al apoderado');
   }
 
@@ -106,6 +107,14 @@ export default function ApoderadoDelCliente({ funcion, embebido = false, onCambi
               onCerrar={() => setNombrando(false)}
               onHecho={() => { setNombrando(false); alCambiar(); }}
             />
+          ) : quitando ? (
+            <div className="alert alert-info">
+              <p>{textos.quitar_aviso}</p>
+              <div className="pwa-acciones">
+                <button type="button" className="btn" onClick={() => setQuitando(false)}>{textos.cancelar}</button>
+                <button type="button" className="btn btn-primary" onClick={quitar}>{textos.quitar}</button>
+              </div>
+            </div>
           ) : (
             <div className="pwa-acciones">
               {apoderado?.tienePoder && (
@@ -117,7 +126,7 @@ export default function ApoderadoDelCliente({ funcion, embebido = false, onCambi
                     {apoderado.tienePoder ? textos.reemplazar : textos.cargar}
                   </button>
                   <input ref={elegirArchivo} type="file" accept={TIPOS_DEL_PODER} hidden onChange={subirPoder} />
-                  <button type="button" className="btn" onClick={quitar} disabled={ocupado}>{textos.quitar}</button>
+                  <button type="button" className="btn" onClick={() => setQuitando(true)} disabled={ocupado}>{textos.quitar}</button>
                 </>
               )}
               <button type="button" className={apoderado ? 'btn' : 'btn btn-primary'} onClick={() => setNombrando(true)} disabled={ocupado}>

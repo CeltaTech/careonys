@@ -297,16 +297,14 @@ function QuitarApoderado({ camino, textos, onCerrar, onHecho }) {
 
   return (
     <VentanaDelApoderado
-      titulo={textos.quitar}
+      titulo={textos.quitar_aviso}
       error={error}
       onCerrar={onCerrar}
       ocupado={ocupado}
       cancelar={textos.cancelar}
-      confirmar={textos.quitar_confirmar}
+      confirmar={textos.quitar}
       alConfirmar={quitar}
-    >
-      <p>{textos.quitar_aviso}</p>
-    </VentanaDelApoderado>
+    />
   );
 }
 

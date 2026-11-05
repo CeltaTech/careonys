@@ -19,7 +19,7 @@ const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
 const TAMANO_MAXIMO = 10 * 1024 * 1024; // 10 MB
 
 const CLAVES_DE_LOS_TEXTOS = [
-  'titulo', 'nombrar', 'quitar', 'quitar_confirmar', 'poder', 'nombre', 'apellido', 'cuil',
+  'titulo', 'nombrar', 'quitar', 'quitar_aviso', 'poder', 'nombre', 'apellido', 'cuil',
   'cancelar', 'guardar', 'cargar', 'ver', 'reemplazar', 'aprobar', 'observar', 'motivo',
   'campo_obligatorio', 'estado_falta', 'estado_en_revision', 'estado_aprobado', 'estado_observado',
 ];
@@ -85,12 +85,10 @@ export async function hayApoderadoDeSignosVitales({ db, clienteId, prestadoraId 
 
 // Los textos viven en la base y las interfaces no la leen: llegan acá, en el idioma de quien mira y
 // con los propios de la Prestadora si los tiene.
-function textosDelApoderado({ idioma, prestadoraId, nombre }) {
-  const textos = Object.fromEntries(
+function textosDelApoderado({ idioma, prestadoraId }) {
+  return Object.fromEntries(
     CLAVES_DE_LOS_TEXTOS.map((clave) => [clave, frase(`apoderado.${clave}`, idioma, {}, prestadoraId)]),
   );
-  if (nombre) textos.quitar_aviso = frase('apoderado.quitar_aviso', idioma, { nombre }, prestadoraId);
-  return textos;
 }
 
 export async function estadoDelApoderado({ db, clienteId, prestadoraId, funcion, idioma }) {
@@ -107,7 +105,7 @@ export async function estadoDelApoderado({ db, clienteId, prestadoraId, funcion,
           tienePoder: Boolean(vigente.archivo_url),
         }
       : null,
-    textos: textosDelApoderado({ idioma, prestadoraId, nombre }),
+    textos: textosDelApoderado({ idioma, prestadoraId }),
   };
 }
 

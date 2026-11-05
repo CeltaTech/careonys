@@ -30,6 +30,7 @@ const MIGRACIONES_POSTERIORES = [
   '20270126000000_los_documentos_del_asistente.sql',
   '20270127000100_el_relevo_de_emergencia_es_una_emergencia_de_la_guardia.sql',
   '20270228000000_el_apoderado_es_por_cliente.sql',
+  '20270302000000_el_documento_se_firma_con_un_enlace.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;

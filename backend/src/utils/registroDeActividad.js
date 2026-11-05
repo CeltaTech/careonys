@@ -23,6 +23,7 @@ export const ACCION_ENTRADA_AL_PANEL = 'entrada_al_panel';
 export const ACCION_ALTA_DE_CUENTA = 'alta_de_cuenta_del_panel';
 export const ACCION_CAMBIO_DE_CUENTA = 'cambio_de_datos_de_cuenta_del_panel';
 export const ACCION_DESACTIVACION_DE_CUENTA = 'desactivacion_de_cuenta';
+export const ACCION_ENVIO_DE_DOCUMENTO_PARA_FIRMAR = 'envio_de_documento_para_firmar';
 export const ACCION_CAMBIO_DE_PERMISOS = 'cambio_de_permisos_de_la_prestadora';
 export const ACCION_BORRADO_DE_DATOS = 'borrado_de_datos';
 export const ACCION_MODIFICACION_CRITICA = 'modificacion_critica';

@@ -6,6 +6,7 @@ import {
 } from './documentoConsentimientoPagador.js';
 import { textosDeFabrica } from './textosDeFabrica.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
+import { frase } from '../i18n/mensajesDelSistema.js';
 
 // Todo lo que le pasa al consentimiento del Pagador: se carga, se cierra con el documento firmado, o se
 // anula porque se cargó otro.
@@ -274,7 +275,7 @@ export async function anularPendiente({ db, consentimientoId, prestadoraId }) {
 // consume la pantalla donde se elige el Pagador, y cualquier otra que mañana necesite saberlo. La
 // decisión de qué cuenta como «definido» vive acá y en ningún otro lado: repartida entre pantallas
 // terminaría diciendo cosas distintas según dónde se mire.
-export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
+export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) {
   const cliente = await clienteConSuPagador({ db, clienteId, prestadoraId });
 
   const [pagador, { data: consentimientos }, documentos] = await Promise.all([
@@ -283,7 +284,7 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
       .from('consentimientos_pagador')
       // El texto viene entero: la pantalla lo muestra tal como se guardó, y armarlo de nuevo para
       // mostrarlo daría otro documento el día que la Prestadora cambie su modelo.
-      .select('id, estado, pagador_persona_id, pagador_nombre, firmante_nombre, documento_texto, documento_idioma, archivo_firmado_url, cerrado_como, cerrado_en, created_at')
+      .select('id, estado, pagador_persona_id, pagador_nombre, firmante_persona_id, firmante_nombre, documento_texto, documento_idioma, archivo_firmado_url, cerrado_como, cerrado_en, created_at')
       .eq('prestadora_id', prestadoraId)
       .eq('cliente_id', clienteId)
       .in('estado', ['pendiente_firma', 'cerrado'])
@@ -302,6 +303,7 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
   );
 
   const apoderado = await firmantePorApoderado({ db, clienteId, prestadoraId });
+  const actual = pendiente ?? cerrado;
 
   return {
     pagador,
@@ -315,7 +317,45 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId }) {
     documentos,
     documentosFaltantes: documentos.filter((documento) => !documento.cargado).length,
     documentosVencidos: documentos.filter((documento) => documento.vencido).length,
+    firmanteConEmail: Boolean(actual && (await emailDeLaFicha({ db, personaId: quienFirma(actual), prestadoraId }))),
+    textos: {
+      enviar: frase('documento_para_firmar.enviar', idioma, {}, prestadoraId),
+      enviado: frase('documento_para_firmar.enviado', idioma, {}, prestadoraId),
+    },
   };
+}
+
+// Firma el Apoderado si lo hay, y si no quien paga.
+function quienFirma(consentimiento) {
+  return consentimiento.firmante_persona_id ?? consentimiento.pagador_persona_id;
+}
+
+// El email se lee con la conexión de quien pide: el trabajo sin persona no alcanza esa columna.
+async function emailDeLaFicha({ db, personaId, prestadoraId }) {
+  const { data, error } = await db
+    .from('personas')
+    .select('email')
+    .eq('prestadora_id', prestadoraId)
+    .eq('id', personaId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.email?.trim() || null;
+}
+
+// A qué email va el documento de este Cliente, o null si la Ficha de quien firma no tiene ninguno.
+export async function emailDeQuienFirma({ db, consentimientoId, clienteId, prestadoraId }) {
+  const { data: consentimiento, error } = await db
+    .from('consentimientos_pagador')
+    .select('firmante_persona_id, pagador_persona_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('cliente_id', clienteId)
+    .eq('id', consentimientoId)
+    .in('estado', ['pendiente_firma', 'cerrado'])
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!consentimiento) throw new ErrorConMotivo('no_encontrado', 'Consentimiento no encontrado');
+
+  return emailDeLaFicha({ db, personaId: quienFirma(consentimiento), prestadoraId });
 }
 
 // Qué documentos exige este Pagador y cuáles están. Se devuelve el catálogo entero, tenga o no

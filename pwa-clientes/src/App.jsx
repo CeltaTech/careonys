@@ -7,6 +7,7 @@ import { ACCESO_DE_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA, pantallaPermitida } from
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
+import FirmarDocumento from './pages/FirmarDocumento';
 import ClaveNueva from './pages/ClaveNueva';
 import RecuperarClave from './pages/RecuperarClave';
 import MisPacientes from './pages/MisPacientes';
@@ -100,6 +101,8 @@ function Rutas() {
         element={cargando ? <div className="estado-cargando" role="status">{t.comun.cargando}</div> : session ? <Navigate to="/pacientes" replace /> : <Login />}
       />
       <Route path="/activar-cuenta" element={<ActivarCuenta />} />
+      {/* Quien firma no tiene cuenta: entra con el enlace que le llegó por email. */}
+      <Route path="/documento-para-firmar" element={<FirmarDocumento />} />
       {/* Adonde apunta el enlace del correo de recuperación. Va afuera del guardián de sesión
           porque quien llega acá perdió justamente la forma de tener una. */}
       <Route path="/clave-nueva" element={<ClaveNueva />} />

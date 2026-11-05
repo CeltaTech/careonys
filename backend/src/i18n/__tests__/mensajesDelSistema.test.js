@@ -126,6 +126,7 @@ test('una fila apagada no sale', () => {
 // Lo mínimo para poder llamar a cada mensaje. No comprueba qué dice: sólo que ninguna pieza falte.
 const DATOS_MINIMOS = {
   email_cambiado: { empresa: 'Cuidados del Sur' },
+  documento_para_firmar: { link: 'https://ejemplo/documento', producto: 'un producto' },
   origen_de_alerta: { fuente: 'aviso_telefonico' },
   guardia_sin_cerrar: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],

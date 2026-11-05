@@ -19,6 +19,7 @@ import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { configuracionInicialDe, exigirConfiguracionInicial } from '../utils/configuracionInicial.js';
 import {
   ACCION_DESACTIVACION_DE_CUENTA,
+  ACCION_ENVIO_DE_DOCUMENTO_PARA_FIRMAR,
   registrarActividad,
   yaQuedoRegistrado,
 } from '../utils/registroDeActividad.js';
@@ -39,10 +40,13 @@ import {
   cerrarConDocumentoFirmado as cerrarConsentimientoPagador,
   consentimientoDelPagador,
   crearConsentimiento,
+  emailDeQuienFirma,
   estadoDelPagador,
   guardarDocumento,
   rutaDelArchivo,
 } from '../utils/consentimientoPagador.js';
+import { enviarDocumentoParaFirmar } from '../utils/enlaceConsentimientoPagador.js';
+import { normalizarIdioma } from '../i18n/idiomas.js';
 
 // CON LA CREDENCIAL DE QUIEN PIDE. Lo que estas rutas leen y escriben en tablas entra con
 // `clienteDelPedido(req)`: la base sabe quién pide y le contesta sólo lo de su Prestadora, así que
@@ -417,7 +421,12 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador', requiereRolPanel, exigirOr
   if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
   try {
-    res.json(await estadoDelPagador({ db: clienteDelPedido(req), clienteId: cliente.id, prestadoraId: cliente.prestadora_id }));
+    res.json(await estadoDelPagador({
+      db: clienteDelPedido(req),
+      clienteId: cliente.id,
+      prestadoraId: cliente.prestadora_id,
+      idioma: normalizarIdioma(req.query.idioma),
+    }));
   } catch (error) {
     responderError(res, error);
   }
@@ -453,6 +462,36 @@ panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimie
       db: clienteDelPedido(req),
       consentimientoId: req.params.consentimientoId,
       prestadoraId: cliente.prestadora_id,
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// Le manda a quien firma el enlace para leer el documento y firmarlo o, si ya lo firmó, para volver a
+// verlo. Cada envío deja sin efecto el enlace anterior.
+panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/enviar', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
+  const cliente = await clienteContratanteDelPedido(req);
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+  try {
+    const email = await emailDeQuienFirma({
+      db: clienteDelPedido(req),
+      consentimientoId: req.params.consentimientoId,
+      clienteId: cliente.id,
+      prestadoraId: cliente.prestadora_id,
+    });
+    if (!email) throw new ErrorConMotivo('faltan_datos', 'Quien firma no tiene email');
+
+    await enviarDocumentoParaFirmar({
+      consentimientoId: req.params.consentimientoId,
+      prestadoraId: cliente.prestadora_id,
+      email,
+    });
+    await registrarActividad(req.usuarioPanel, ACCION_ENVIO_DE_DOCUMENTO_PARA_FIRMAR, {
+      tablaAfectada: 'consentimientos_pagador',
+      registroId: req.params.consentimientoId,
     });
     res.json({ ok: true });
   } catch (error) {

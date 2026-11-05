@@ -755,6 +755,19 @@ const ARMADORES = {
     asunto: t('email_cambiado.asunto'),
     texto: t('email_cambiado.texto', { empresa: d.empresa }) + pie(t),
   }),
+
+  // Lleva el enlace y nada más: lo que hay que leer está del otro lado.
+  documento_para_firmar: (t, d) => {
+    const marca = t('comun.marca', { producto: d.producto });
+    return {
+      asunto: t('documento_para_firmar.asunto'),
+      texto: [d.link, '', '—', marca].join('\n'),
+      html: [
+        `<p><a href="${comoTextoHTML(d.link)}">${comoTextoHTML(t('documento_para_firmar.boton'))}</a></p>`,
+        `<hr><p>${comoTextoHTML(marca)}</p>`,
+      ].join('\n'),
+    };
+  },
 };
 
 /** Las claves del catálogo, para que una prueba pueda recorrerlas sin que nadie las escriba dos veces. */

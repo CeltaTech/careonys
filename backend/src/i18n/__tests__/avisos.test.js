@@ -132,6 +132,7 @@ const DATOS = {
     empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,
   },
   email_cambiado: { empresa: 'Cuidados del Sur' },
+  documento_para_firmar: { link: 'https://ejemplo/documento', producto: IDENTIDAD.nombre },
   recuperacion_clave: {
     nombre: 'Elena', link: 'https://ejemplo/clave-nueva', horas: 2,
     empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,

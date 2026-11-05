@@ -31,6 +31,7 @@ import { panelCuentaSeguraRouter } from './routes/panelCuentaSegura.js';
 import { panelHabilitarClaveRouter } from './routes/panelHabilitarClave.js';
 import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
 import { activarCuentaRouter } from './routes/activarCuenta.js';
+import { documentoParaFirmarRouter } from './routes/documentoParaFirmar.js';
 import { recuperarClaveRouter } from './routes/recuperarClave.js';
 import { ingresoRouter } from './routes/ingreso.js';
 import { panelEntrevistasRouter } from './routes/panelEntrevistas.js';
@@ -172,6 +173,8 @@ app.use('/api/ingreso', ingresoRouter);
 // no tiene ninguna cuenta con la que entrar. La Prestadora sale de la dirección, y la llave se busca
 // sólo adentro de ella.
 app.use('/api/entrevista', entrevistaPublicaRouter);
+// Sin sesión: quien firma el documento del que paga trae el enlace que le llegó por email.
+app.use('/api/documento-para-firmar', documentoParaFirmarRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/app-asistentes/medicacion', appAsistentesMedicacionRouter);
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);

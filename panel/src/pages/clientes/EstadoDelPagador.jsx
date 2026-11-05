@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { avisar } from '../../lib/mensajeEmergente';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { ApoderadoDelCliente } from './ApoderadoDelCliente';
 import '../../styles/molde-paginas.css';
@@ -40,13 +41,13 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     setEstado('cargando');
     setError(null);
     try {
-      setDatos(await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador`));
+      setDatos(await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador?idioma=${encodeURIComponent(locale)}`));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, [clienteId, t]);
+  }, [clienteId, t, locale]);
 
   useEffect(() => {
     recargar();
@@ -85,6 +86,22 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     }
   }
 
+  async function enviar(consentimientoId) {
+    setTrabajando(true);
+    setError(null);
+    try {
+      await llamarApiPanel(
+        `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoId}/enviar`,
+        { method: 'POST' },
+      );
+      avisar(datos.textos.enviado);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setTrabajando(false);
+    }
+  }
+
   async function verArchivo(camino) {
     setError(null);
     try {
@@ -116,6 +133,8 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     documentos,
     documentosFaltantes,
     documentosVencidos,
+    firmanteConEmail,
+    textos: textosDeLaBase,
   } = datos;
 
   return (
@@ -164,6 +183,11 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                       <Button variant="secondary" onClick={() => anular(consentimientoPendiente.id)} disabled={trabajando}>
                         {textos.anular}
                       </Button>
+                      {firmanteConEmail && (
+                        <Button variant="secondary" onClick={() => enviar(consentimientoPendiente.id)} disabled={trabajando}>
+                          {textosDeLaBase.enviar}
+                        </Button>
+                      )}
                       <Button onClick={() => setFirmaARegistrar(consentimientoPendiente.id)} disabled={trabajando}>
                         {textos.registrar_firma}
                       </Button>
@@ -190,6 +214,11 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                       }
                     >
                       {textos.ver_documento_firmado}
+                    </Button>
+                  )}
+                  {puedeRegistrar && consentimientoCerrado && firmanteConEmail && (
+                    <Button variant="secondary" onClick={() => enviar(consentimientoCerrado.id)} disabled={trabajando}>
+                      {textosDeLaBase.enviar}
                     </Button>
                   )}
                   {puedeRegistrar && (

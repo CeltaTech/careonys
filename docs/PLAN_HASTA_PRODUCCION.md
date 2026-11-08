@@ -578,6 +578,33 @@ Lo que falta: **el cambio de Pagador** con el Servicio en curso, que hoy sólo m
 y **más de un Pagador**, que la regla del producto admite y la base no, porque guarda uno solo por
 Cliente.
 
+**La prueba del enlace por correo para leer y firmar el documento del Pagador está a medias**
+(estado comprobado en la base el 2026-11-08). Se trabaja de a un punto por vez; el primero es el
+envío del enlace, y los otros tres esperan el «sí» del Desarrollador, uno por uno.
+
+- **Lo preparado:** la Ficha de Persona `bfc3f718-d4d3-41b2-826c-9eeec5734de2` (persona jurídica
+  inventada, Responsable de pagos del Cliente número 2 de la Prestadora Demo, sin Apoderado) tiene
+  el Email de prueba que indicó el Desarrollador. Él mira esa casilla; el envío sale por Resend.
+- **Lo que todavía no se hizo:** no se mandó ningún documento: `consentimientos_pagador` y
+  `enlaces_consentimiento_pagador` tienen cero filas.
+- **Por qué se frenó:** Resend avisó que la cuenta pasó su cupo de 100 correos diarios. La causa
+  eran 15 guardias de prueba de la Prestadora Demo, del 2026-07-19, que habían quedado empezadas y
+  sin cerrar: el aviso de guardia sin cerrar se mandaba sin tope y, al rechazarlo Resend, se volvía a
+  intentar en cada vuelta de cinco minutos. **Ya está resuelto:** el 2026-11-05 a las 15:02 UTC las
+  15 se cerraron como lo hace el Panel —terminadas, origen Panel, con el Administrador de la
+  Demo como quien cierra y el motivo escrito—. Hoy no queda ninguna guardia empezada sin cerrar, y
+  desde ese momento `envios_de_correo` no tiene ningún intento nuevo.
+- **El defecto de fondo sigue en el backend:** en
+  `backend/src/utils/revisarNotificacionesCoordinador.js`, la consulta de `revisarGuardiasSinCerrar`
+  toma toda guardia empezada desde cualquier fecha hacia atrás (`:112`), y la vez de aviso se anota
+  recién después de un envío aceptado (`:182`), así que el rechazado se reintenta sin fin. Le
+  alcanza a cualquier Prestadora. **Espera el «sí» del Desarrollador** para arreglarlo.
+- **Próximo paso exacto:** el Desarrollador entra al Panel con la cuenta del Administrador de la
+  Demo, abre la Ficha del cliente número 2 y genera y manda el documento del Responsable de pagos;
+  se comprueba en la base que nacieron el consentimiento y el enlace, que `envios_de_correo` anotó el
+  envío como aceptado, y el Desarrollador confirma que llegó a su casilla y que el enlace abre el
+  documento. Se cierra cuando el correo llegó y el enlace abrió el documento correcto.
+
 **27.** Construir los ocho pasos de ese plan, en el orden que tiene escrito.
 
 **28.** **Lo que ve cada uno se recorta a lo que necesita para trabajar**, y se cumple en la base y

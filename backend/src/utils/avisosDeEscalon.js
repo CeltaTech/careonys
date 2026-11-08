@@ -108,28 +108,33 @@ export async function escalarSiCorresponde({
       minutos: Math.round(minutosPremura),
     });
 
-    let llegaron = 0;
-    for (const to of destinatarios) {
-      try {
-        await enviarEmail({ to, asunto, texto: cuerpo, prestadoraId });
-        llegaron += 1;
-      } catch (e) {
-        console.error(`Error escalando la alarma ${tipo}/${referenciaId} al escalón "${escalon}":`, e.message);
-      }
-    }
-
-    if (!llegaron) continue;
-
+    // LA CONSTANCIA SE DEJA ANTES DE ESCRIBIR. Si se dejara después, un correo rechazado —el cupo
+    // diario agotado, por ejemplo— no dejaría constancia y el escalón saldría de nuevo en cada
+    // vuelta, gastando más cupo. La tabla no deja dos constancias del mismo escalón para la misma
+    // alarma: si otra vuelta llegó primero, ésta no manda nada. `destinatarios` dice a cuántos se
+    // les escribió; los que no llegaron quedan en el registro del servidor.
     const { error } = await supabase.from('escalones_de_alarma_avisados').insert({
       prestadora_id: prestadoraId,
       tipo,
       referencia_id: referenciaId,
       escalon,
       avisado_at: ahora.toISOString(),
-      destinatarios: llegaron,
+      destinatarios: destinatarios.length,
     });
     if (error) {
+      avisados.add(escalon);
+      if (error.code === '23505') continue;
+      // Sin constancia no se manda: un escalón que no se puede anotar saldría en cada vuelta.
       console.error(`Error dejando constancia del escalón "${escalon}" (${tipo}/${referenciaId}):`, error.message);
+      continue;
+    }
+
+    for (const to of destinatarios) {
+      try {
+        await enviarEmail({ to, asunto, texto: cuerpo, prestadoraId });
+      } catch (e) {
+        console.error(`Error escalando la alarma ${tipo}/${referenciaId} al escalón "${escalon}":`, e.message);
+      }
     }
 
     avisados.add(escalon);

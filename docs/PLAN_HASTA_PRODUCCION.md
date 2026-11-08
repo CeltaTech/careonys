@@ -594,11 +594,6 @@ envío del enlace, y los otros tres esperan el «sí» del Desarrollador, uno po
   15 se cerraron como lo hace el Panel —terminadas, origen Panel, con el Administrador de la
   Demo como quien cierra y el motivo escrito—. Hoy no queda ninguna guardia empezada sin cerrar, y
   desde ese momento `envios_de_correo` no tiene ningún intento nuevo.
-- **El defecto de fondo sigue en el backend:** en
-  `backend/src/utils/revisarNotificacionesCoordinador.js`, la consulta de `revisarGuardiasSinCerrar`
-  toma toda guardia empezada desde cualquier fecha hacia atrás (`:112`), y la vez de aviso se anota
-  recién después de un envío aceptado (`:182`), así que el rechazado se reintenta sin fin. Le
-  alcanza a cualquier Prestadora. **Espera el «sí» del Desarrollador** para arreglarlo.
 - **Próximo paso exacto:** el Desarrollador entra al Panel con la cuenta del Administrador de la
   Demo, abre la Ficha del cliente número 2 y genera y manda el documento del Responsable de pagos;
   se comprueba en la base que nacieron el consentimiento y el enlace, que `envios_de_correo` anotó el

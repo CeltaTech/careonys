@@ -157,9 +157,18 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
     const minutosPremura = (ahora.getTime() - vencimiento) / MS_POR_MINUTO;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 
-    if (necesitaNotificar({ ultimaNotificacionAt: guardia.aviso_sin_cerrar_at, intervaloMinutos: intervalo, ahora })) {
-      const veces = (guardia.aviso_sin_cerrar_veces ?? 0) + 1;
-
+    const veces = (guardia.aviso_sin_cerrar_veces ?? 0) + 1;
+    if (
+      necesitaNotificar({ ultimaNotificacionAt: guardia.aviso_sin_cerrar_at, intervaloMinutos: intervalo, ahora })
+      && await anotarElAviso({
+        tabla: 'guardias',
+        prestadoraId,
+        id: guardia.id,
+        columna: 'aviso_sin_cerrar_at',
+        anterior: guardia.aviso_sin_cerrar_at,
+        cambios: { aviso_sin_cerrar_at: ahora.toISOString(), aviso_sin_cerrar_veces: veces },
+      })
+    ) {
       await notificarCoordinador({
         evento: 'guardia_sin_cerrar',
         prestadoraId,
@@ -176,18 +185,19 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
         textos: mensajeDelSistema('guardia_sin_cerrar_cliente', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
         idioma,
       });
-
-      const { error: errorUpdate } = await supabase
-        .from('guardias')
-        .update({ aviso_sin_cerrar_at: ahora.toISOString(), aviso_sin_cerrar_veces: veces })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', guardia.id);
-      if (errorUpdate) {
-        console.error(`Error marcando el aviso de guardia sin cerrar (${guardia.id}):`, errorUpdate.message);
-      }
     }
 
-    if (backupId && !guardia.aviso_sin_cerrar_backup_at && minutosPremura >= minutosAntesBackup) {
+    if (
+      backupId && !guardia.aviso_sin_cerrar_backup_at && minutosPremura >= minutosAntesBackup
+      && await anotarElAviso({
+        tabla: 'guardias',
+        prestadoraId,
+        id: guardia.id,
+        columna: 'aviso_sin_cerrar_backup_at',
+        anterior: null,
+        cambios: { aviso_sin_cerrar_backup_at: ahora.toISOString() },
+      })
+    ) {
       await notificarCoordinadorBackup({
         backupId,
         prestadoraId,
@@ -199,11 +209,6 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
           minutosDeAtraso: minutosPremura,
         }),
       });
-      await supabase
-        .from('guardias')
-        .update({ aviso_sin_cerrar_backup_at: ahora.toISOString() })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', guardia.id);
     }
 
     // Los escalones que siguen: todos los Coordinadores, y después la administración. El cuerpo es
@@ -232,7 +237,15 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
     if (
       horasAntesDeEscalar &&
       !guardia.aviso_sin_cerrar_grave_at &&
-      minutosPremura >= horasAntesDeEscalar * 60
+      minutosPremura >= horasAntesDeEscalar * 60 &&
+      await anotarElAviso({
+        tabla: 'guardias',
+        prestadoraId,
+        id: guardia.id,
+        columna: 'aviso_sin_cerrar_grave_at',
+        anterior: null,
+        cambios: { aviso_sin_cerrar_grave_at: ahora.toISOString() },
+      })
     ) {
       await notificarCoordinador({
         evento: 'guardia_sin_cerrar_grave',
@@ -247,22 +260,30 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
         textos: mensajeDelSistema('guardia_sin_cerrar_grave_cliente', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
         idioma,
       });
-
-      const { error: errorGrave } = await supabase
-        .from('guardias')
-        .update({ aviso_sin_cerrar_grave_at: ahora.toISOString() })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', guardia.id);
-      if (errorGrave) {
-        console.error(`Error marcando el aviso grave de guardia sin cerrar (${guardia.id}):`, errorGrave.message);
-      }
     }
   });
 }
 
+// EL AVISO SE ANOTA ANTES DE SALIR, Y SÓLO LO ANOTA UNA VUELTA.
+//
+// Anotado después, un envío rechazado dejaba la alarma sin marcar y la vuelta siguiente lo volvía a
+// mandar: cada cinco minutos, sin fin. Así se agotó una vez el cupo diario de correo con quince
+// guardias de prueba que nadie había cerrado. Anotado antes, el rechazado espera su intervalo como
+// cualquier otro aviso, y la insistencia sigue al ritmo que eligió la Prestadora.
+//
+// Y se anota sólo si sigue como estaba cuando se leyó: si otra vuelta ya lo anotó en el medio, ésta
+// no lo manda. Devuelve si quedó anotado por esta vuelta.
+export async function anotarElAviso({ tabla, prestadoraId, id, columna, anterior, cambios }) {
+  let consulta = supabase.from(tabla).update(cambios).eq('prestadora_id', prestadoraId).eq('id', id);
+  consulta = anterior ? consulta.eq(columna, anterior) : consulta.is(columna, null);
+  const { data, error } = await consulta.select('id');
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
+}
+
 // De a una alarma por vez, y la que falla no frena a las que siguen. Un aviso que no sale —el
-// despachante de correo rechazando el envío, por ejemplo— lanza adentro de la alarma, que queda sin
-// marcar y se vuelve a intentar en la vuelta siguiente; sin esto cortaba la vuelta entera de la
+// despachante de correo rechazando el envío, por ejemplo— lanza adentro de la alarma, que ya quedó
+// anotada (`anotarElAviso`) y vuelve a salir cuando le toque; sin esto cortaba la vuelta entera de la
 // Prestadora y las alarmas que venían detrás no se revisaban ni escalaban.
 export async function unaPorUna(alarmas, clase, revisarUna) {
   for (const alarma of alarmas) {
@@ -395,7 +416,17 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
     const minutosPremura = (ahora.getTime() - new Date(alerta.detectado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 
-    if (necesitaNotificar({ ultimaNotificacionAt: alerta.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
+    if (
+      necesitaNotificar({ ultimaNotificacionAt: alerta.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })
+      && await anotarElAviso({
+        tabla: 'alertas_tempranas_guardia',
+        prestadoraId,
+        id: alerta.id,
+        columna: 'ultima_notificacion_at',
+        anterior: alerta.ultima_notificacion_at,
+        cambios: { ultima_notificacion_at: ahora.toISOString(), veces_notificado: (alerta.veces_notificado ?? 0) + 1 },
+      })
+    ) {
       await notificarCoordinador({
         evento: 'alerta_temprana_guardia',
         prestadoraId,
@@ -416,26 +447,25 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
         textos: mensajeDelSistema('alerta_temprana_guardia_cliente', idioma, guardia),
         idioma,
       });
-
-      await supabase
-        .from('alertas_tempranas_guardia')
-        .update({ ultima_notificacion_at: ahora.toISOString(), veces_notificado: (alerta.veces_notificado ?? 0) + 1 })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', alerta.id);
     }
 
-    if (backupId && !alerta.backup_notificado_at && minutosPremura >= minutosAntesBackup) {
+    if (
+      backupId && !alerta.backup_notificado_at && minutosPremura >= minutosAntesBackup
+      && await anotarElAviso({
+        tabla: 'alertas_tempranas_guardia',
+        prestadoraId,
+        id: alerta.id,
+        columna: 'backup_notificado_at',
+        anterior: null,
+        cambios: { backup_notificado_at: ahora.toISOString() },
+      })
+    ) {
       await notificarCoordinadorBackup({
         backupId,
         prestadoraId,
         idioma,
         ...mensajeDelSistema('alerta_temprana_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
       });
-      await supabase
-        .from('alertas_tempranas_guardia')
-        .update({ backup_notificado_at: ahora.toISOString() })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', alerta.id);
     }
 
     // Ver el comentario de las guardias sin cerrar.
@@ -505,14 +535,18 @@ async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
     // Con su propio ritmo, no con los tramos de las demás alarmas: ver `intervaloDeEmergencia`.
     const intervalo = intervaloDeEmergencia(config, minutosPremura);
 
-    if (necesitaNotificar({ ultimaNotificacionAt: emergencia.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
+    if (
+      necesitaNotificar({ ultimaNotificacionAt: emergencia.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })
+      && await anotarElAviso({
+        tabla: 'emergencias_guardia',
+        prestadoraId,
+        id: emergencia.id,
+        columna: 'ultima_notificacion_at',
+        anterior: emergencia.ultima_notificacion_at,
+        cambios: { ultima_notificacion_at: ahora.toISOString(), veces_notificado: (emergencia.veces_notificado ?? 0) + 1 },
+      })
+    ) {
       await notificarCoordinador({ evento, prestadoraId, ...mensaje });
-
-      await supabase
-        .from('emergencias_guardia')
-        .update({ ultima_notificacion_at: ahora.toISOString(), veces_notificado: (emergencia.veces_notificado ?? 0) + 1 })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', emergencia.id);
     }
 
     // Ver el comentario de las guardias sin cerrar.
@@ -587,7 +621,17 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
     const minutosPremura = (ahora.getTime() - new Date(incidente.iniciado_at).getTime()) / 60_000;
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 
-    if (necesitaNotificar({ ultimaNotificacionAt: incidente.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
+    if (
+      necesitaNotificar({ ultimaNotificacionAt: incidente.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })
+      && await anotarElAviso({
+        tabla: 'incidentes_relevo',
+        prestadoraId,
+        id: incidente.id,
+        columna: 'ultima_notificacion_at',
+        anterior: incidente.ultima_notificacion_at,
+        cambios: { ultima_notificacion_at: ahora.toISOString(), veces_notificado: (incidente.veces_notificado ?? 0) + 1 },
+      })
+    ) {
       await notificarCoordinador({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
@@ -603,26 +647,25 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
         textos: mensajeDelSistema('incidente_relevo_cliente', idioma, guardia ?? GUARDIA_QUE_NO_SE_PUDO_LEER),
         idioma,
       });
-
-      await supabase
-        .from('incidentes_relevo')
-        .update({ ultima_notificacion_at: ahora.toISOString(), veces_notificado: (incidente.veces_notificado ?? 0) + 1 })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', incidente.id);
     }
 
-    if (backupId && !incidente.backup_notificado_at && minutosPremura >= minutosAntesBackup) {
+    if (
+      backupId && !incidente.backup_notificado_at && minutosPremura >= minutosAntesBackup
+      && await anotarElAviso({
+        tabla: 'incidentes_relevo',
+        prestadoraId,
+        id: incidente.id,
+        columna: 'backup_notificado_at',
+        anterior: null,
+        cambios: { backup_notificado_at: ahora.toISOString() },
+      })
+    ) {
       await notificarCoordinadorBackup({
         backupId,
         prestadoraId,
         idioma,
         ...mensajeDelSistema('incidente_relevo_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
       });
-      await supabase
-        .from('incidentes_relevo')
-        .update({ backup_notificado_at: ahora.toISOString() })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', incidente.id);
     }
 
     // Ver el comentario de las guardias sin cerrar.
@@ -645,6 +688,14 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
       faseAutomaticaActiva
       && !incidente.fase_automatica_notificada_at
       && minutosPremura >= minutosAntesFaseAutomatica
+      && await anotarElAviso({
+        tabla: 'incidentes_relevo',
+        prestadoraId,
+        id: incidente.id,
+        columna: 'fase_automatica_notificada_at',
+        anterior: null,
+        cambios: { fase_automatica_notificada_at: ahora.toISOString() },
+      })
     ) {
       // Acá el sistema deja de esperar a una persona y sale a buscar quién cubre, con el orden de
       // prioridad y el texto que la Prestadora cargó en `configuracion_escalada_relevo`
@@ -668,11 +719,6 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
           ...loQueSeHizo,
         }),
       });
-      await supabase
-        .from('incidentes_relevo')
-        .update({ fase_automatica_notificada_at: ahora.toISOString() })
-        .eq('prestadora_id', prestadoraId)
-        .eq('id', incidente.id);
     }
   });
 }

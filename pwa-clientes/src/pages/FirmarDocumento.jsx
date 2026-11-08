@@ -26,7 +26,7 @@ export default function FirmarDocumento() {
     const respuesta = await fetch(`${API_URL}/api/documento-para-firmar/${encodeURIComponent(prestadora)}${tramo}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, idioma: locale }),
+      body: JSON.stringify({ token, idioma: locale, zona: Intl.DateTimeFormat().resolvedOptions().timeZone }),
     });
     const resultado = await respuesta.json();
     if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
@@ -80,7 +80,7 @@ export default function FirmarDocumento() {
           pestana.location.href = url;
         }
       } else {
-        const direccion = URL.createObjectURL(new Blob([documento.texto], { type: 'text/plain;charset=utf-8' }));
+        const direccion = URL.createObjectURL(new Blob([documento.firmadoCon ? `${documento.texto}\n${documento.firmadoCon}\n` : documento.texto], { type: 'text/plain;charset=utf-8' }));
         const enlace = document.createElement('a');
         enlace.href = direccion;
         enlace.download = `${String(documento.texto ?? '').split('\n')[0].trim()}.txt`;
@@ -122,6 +122,7 @@ export default function FirmarDocumento() {
         </div>
         <h1 className="documento-titulo">{titulo}</h1>
         <pre className="documento-instruccion">{cuerpo}</pre>
+        {documento.firmadoCon && <p>{documento.firmadoCon}</p>}
       </article>
 
       {errorDelBoton && <div className="alert alert-error" role="alert">{errorDelBoton}</div>}

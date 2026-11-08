@@ -246,7 +246,7 @@ function DocumentoParaFirmar({ documento, onCerrar }) {
               </>
             )}
           </dl>
-          <PieDeFirmas textos={delDocumento} />
+          <PieDeFirmas idioma={documento.idioma || 'es-AR'} />
         </div>
 
         <div className="panel-modal-acciones no-imprimir">

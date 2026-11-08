@@ -184,7 +184,7 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
    Se imprime con el mismo mecanismo que el informe para la Obra Social: `#area-imprimible` es
    lo único que la impresión conserva (ver la regla `@media print` de `index.css`), y los botones
    llevan `no-imprimir` para no salir en el documento que alguien va a firmar. */
-export function DocumentoDeLaInstruccion({ texto, fecha, onCerrar }) {
+export function DocumentoDeLaInstruccion({ texto, fecha, idioma, onCerrar }) {
   const { t, locale } = useLocale();
   const modal = useModalAccesible(onCerrar);
 
@@ -204,7 +204,7 @@ export function DocumentoDeLaInstruccion({ texto, fecha, onCerrar }) {
         {/* El pie de firma sale sólo impreso: en la aplicación se firma con el código. */}
         <div id="area-imprimible">
           <div className="documento-instruccion">{texto}</div>
-          <PieDeFirmas textos={t.clientes.personas_autorizadas} />
+          <PieDeFirmas idioma={idioma || locale} />
         </div>
 
         <div className="panel-modal-acciones no-imprimir">

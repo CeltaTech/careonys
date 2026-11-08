@@ -4,6 +4,7 @@ import { llamarApiPanel } from '../../lib/apiPanel';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { PieDeFirmas } from '../../components/ui/PieDeFirmas';
 import { mensajeDeError } from '../../lib/errores';
 import { avisar } from '../../lib/mensajeEmergente';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
@@ -39,7 +40,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     setEstado('cargando');
     setError(null);
     try {
-      setDatos(await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador?idioma=${encodeURIComponent(locale)}`));
+      setDatos(await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador?idioma=${encodeURIComponent(locale)}&zona=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -59,7 +60,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
         `/cuentas/cliente/${clienteId}/pagador/consentimiento`,
         { method: 'POST' },
       );
-      setDocumentoAVer({ texto: consentimiento.documento_texto });
+      setDocumentoAVer({ texto: consentimiento.documento_texto, idioma: consentimiento.documento_idioma });
       await recargar();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -172,7 +173,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                 <>
                   <Button
                     variant="secondary"
-                    onClick={() => setDocumentoAVer({ texto: consentimientoPendiente.documento_texto })}
+                    onClick={() => setDocumentoAVer({ texto: consentimientoPendiente.documento_texto, idioma: consentimientoPendiente.documento_idioma })}
                   >
                     {textos.ver_documento}
                   </Button>
@@ -197,7 +198,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                   {consentimientoCerrado && (
                     <Button
                       variant="secondary"
-                      onClick={() => setDocumentoAVer({ texto: consentimientoCerrado.documento_texto })}
+                      onClick={() => setDocumentoAVer({ texto: consentimientoCerrado.documento_texto, idioma: consentimientoCerrado.documento_idioma, firmadoCon: consentimientoCerrado.firmadoCon })}
                     >
                       {textos.ver_documento}
                     </Button>
@@ -304,6 +305,8 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
       {documentoAVer && (
         <DocumentoDelConsentimiento
           texto={documentoAVer.texto}
+          idioma={documentoAVer.idioma}
+          firmadoCon={documentoAVer.firmadoCon}
           onCerrar={() => setDocumentoAVer(null)}
         />
       )}
@@ -340,7 +343,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
    El Panel no lo arma ni lo retoca: lo muestra. Se imprime con el mismo mecanismo que el resto
    —`#area-imprimible` es lo único que la impresión conserva—, y los botones llevan `no-imprimir` para
    no salir en el documento que alguien va a firmar. */
-function DocumentoDelConsentimiento({ texto, onCerrar }) {
+function DocumentoDelConsentimiento({ texto, idioma, firmadoCon, onCerrar }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onCerrar);
   const textos = t.clientes.pagador;
@@ -354,6 +357,8 @@ function DocumentoDelConsentimiento({ texto, onCerrar }) {
 
         <div id="area-imprimible">
           <div className="documento-instruccion">{texto}</div>
+          {/* Firmado con el enlace, lo dice la frase de la firma; si no, va el pie para firmar a mano. */}
+          {firmadoCon ? <p>{firmadoCon}</p> : <PieDeFirmas idioma={idioma || 'es-AR'} />}
         </div>
 
         <div className="panel-modal-acciones no-imprimir">

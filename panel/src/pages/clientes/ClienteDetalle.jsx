@@ -586,6 +586,7 @@ export function ClienteDetalle() {
         <DocumentoDeLaInstruccion
           texto={documentoAVer.documento_texto}
           fecha={documentoAVer.created_at}
+          idioma={documentoAVer.documento_idioma}
           onCerrar={() => setDocumentoAVer(null)}
         />
       )}

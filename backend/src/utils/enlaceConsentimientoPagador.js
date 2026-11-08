@@ -7,6 +7,7 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { frase } from '../i18n/mensajesDelSistema.js';
 import { DEPOSITO_PAGADOR } from './consentimientoPagador.js';
+import { fraseDeLaFirma } from './fraseDeLaFirma.js';
 import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
 import { enviarEmail } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
@@ -44,6 +45,8 @@ export async function enviarDocumentoParaFirmar({ consentimientoId, prestadoraId
         consentimiento_id: consentimientoId,
         verificador: verificadorDelEnlace(token),
         expira_en: expiraEn,
+        // El Email al que sale este enlace. Es el que dirá lo firmado, aunque después cambie la Ficha.
+        email,
       })
       .select('id')
       .single();
@@ -77,7 +80,7 @@ async function consentimientoDelEnlace(db, prestadoraId, token) {
 
   const { data: enlace, error } = await db
     .from('enlaces_consentimiento_pagador')
-    .select('consentimiento_id, expira_en')
+    .select('consentimiento_id, expira_en, email')
     .eq('prestadora_id', prestadoraId)
     .eq('verificador', verificadorDelEnlace(token))
     .maybeSingle();
@@ -87,17 +90,17 @@ async function consentimientoDelEnlace(db, prestadoraId, token) {
 
   const { data: consentimiento, error: errorConsentimiento } = await db
     .from('consentimientos_pagador')
-    .select('id, estado, documento_texto, archivo_firmado_url')
+    .select('id, estado, documento_texto, documento_idioma, archivo_firmado_url, cerrado_como, cerrado_en, firmado_con_email')
     .eq('prestadora_id', prestadoraId)
     .eq('id', enlace.consentimiento_id)
     .maybeSingle();
   if (errorConsentimiento) throw new Error(errorConsentimiento.message);
   if (!consentimiento || consentimiento.estado === 'anulado') throw new ErrorConMotivo('token_invalido');
 
-  return consentimiento;
+  return { ...consentimiento, emailDelEnlace: enlace.email ?? null };
 }
 
-export async function leerDocumento({ prestadoraId, token, idioma }) {
+export async function leerDocumento({ prestadoraId, token, idioma, zona }) {
   const consentimiento = await enLaPrestadora(prestadoraId, TRABAJO, (db) =>
     consentimientoDelEnlace(db, prestadoraId, token),
   );
@@ -107,6 +110,13 @@ export async function leerDocumento({ prestadoraId, token, idioma }) {
     texto: consentimiento.documento_texto,
     firmado: consentimiento.estado === 'cerrado',
     tieneArchivo: Boolean(consentimiento.archivo_firmado_url),
+    // La frase va en el idioma del documento, porque es parte de él.
+    firmadoCon: fraseDeLaFirma({
+      consentimiento,
+      idioma: consentimiento.documento_idioma ?? idioma,
+      zona,
+      prestadoraId,
+    }),
     marca: { nombre: marca?.nombre ?? null, logoUrl: marca?.logoUrl ?? null },
     textos: {
       firmar: frase('documento_para_firmar.firmar', idioma, {}, prestadoraId),
@@ -116,7 +126,7 @@ export async function leerDocumento({ prestadoraId, token, idioma }) {
 }
 
 // Si ya estaba firmado no queda nada por hacer, y no es un error: quien tocó dos veces ve lo firmado.
-export async function firmarDocumento({ prestadoraId, token, idioma }) {
+export async function firmarDocumento({ prestadoraId, token, idioma, zona }) {
   await enLaPrestadora(prestadoraId, TRABAJO, async (db) => {
     const consentimiento = await consentimientoDelEnlace(db, prestadoraId, token);
     if (consentimiento.estado !== 'pendiente_firma') return;
@@ -127,6 +137,7 @@ export async function firmarDocumento({ prestadoraId, token, idioma }) {
         estado: 'cerrado',
         cerrado_como: 'firmado_con_el_enlace',
         cerrado_en: new Date().toISOString(),
+        firmado_con_email: consentimiento.emailDelEnlace,
       })
       .eq('prestadora_id', prestadoraId)
       .eq('id', consentimiento.id)
@@ -134,7 +145,7 @@ export async function firmarDocumento({ prestadoraId, token, idioma }) {
     if (error) throw new Error(error.message);
   });
 
-  return leerDocumento({ prestadoraId, token, idioma });
+  return leerDocumento({ prestadoraId, token, idioma, zona });
 }
 
 // El archivo firmado, cuando se firmó a mano y se subió. Mientras esté sin firmar no hay nada que bajar.

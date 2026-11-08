@@ -426,6 +426,7 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador', requiereRolPanel, exigirOr
       clienteId: cliente.id,
       prestadoraId: cliente.prestadora_id,
       idioma: normalizarIdioma(req.query.idioma),
+      zona: req.query.zona,
     }));
   } catch (error) {
     responderError(res, error);

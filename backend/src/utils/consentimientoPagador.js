@@ -7,6 +7,7 @@ import {
 import { textosDeFabrica } from './textosDeFabrica.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 import { frase } from '../i18n/mensajesDelSistema.js';
+import { fraseDeLaFirma } from './fraseDeLaFirma.js';
 
 // Todo lo que le pasa al consentimiento del Pagador: se carga, se cierra con el documento firmado, o se
 // anula porque se cargó otro.
@@ -273,7 +274,7 @@ export async function anularPendiente({ db, consentimientoId, prestadoraId }) {
 //
 // Contesta lo mismo a todo el que pregunte: qué firmó el Pagador y qué le falta. Lo consume la parte
 // del Panel donde se elige el Pagador, y cualquier otra que mañana necesite saberlo.
-export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) {
+export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma, zona }) {
   const cliente = await clienteConSuPagador({ db, clienteId, prestadoraId });
 
   const [pagador, { data: consentimientos }, documentos] = await Promise.all([
@@ -282,7 +283,7 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) 
       .from('consentimientos_pagador')
       // El texto viene entero: la pantalla lo muestra tal como se guardó, y armarlo de nuevo para
       // mostrarlo daría otro documento el día que la Prestadora cambie su modelo.
-      .select('id, estado, pagador_persona_id, pagador_nombre, firmante_persona_id, firmante_nombre, documento_texto, documento_idioma, archivo_firmado_url, cerrado_como, cerrado_en, created_at')
+      .select('id, estado, pagador_persona_id, pagador_nombre, firmante_persona_id, firmante_nombre, documento_texto, documento_idioma, archivo_firmado_url, cerrado_como, cerrado_en, firmado_con_email, created_at')
       .eq('prestadora_id', prestadoraId)
       .eq('cliente_id', clienteId)
       .in('estado', ['pendiente_firma', 'cerrado'])
@@ -291,7 +292,12 @@ export async function estadoDelPagador({ db, clienteId, prestadoraId, idioma }) 
   ]);
 
   const pendiente = (consentimientos ?? []).find((fila) => fila.estado === 'pendiente_firma') ?? null;
-  const cerrado = (consentimientos ?? []).find((fila) => fila.estado === 'cerrado') ?? null;
+  const cerradoLeido = (consentimientos ?? []).find((fila) => fila.estado === 'cerrado') ?? null;
+  // Firmado con el enlace, el documento lleva su frase de firma en lugar del pie para firmar a mano.
+  const cerrado = cerradoLeido && {
+    ...cerradoLeido,
+    firmadoCon: fraseDeLaFirma({ consentimiento: cerradoLeido, idioma: cerradoLeido.documento_idioma ?? idioma, zona, prestadoraId }),
+  };
 
   // Si el consentimiento firmado quedó atado a otra Ficha que la que hoy figura como Pagador, la
   // firma no vale para éste: firmó otra persona, y el Panel muestra su nombre junto a la fecha.

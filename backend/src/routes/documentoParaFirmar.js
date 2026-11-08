@@ -16,6 +16,7 @@ function responder(hacer) {
           prestadoraId: req.prestadoraPublica.prestadora_id,
           token: req.body?.token,
           idioma: normalizarIdioma(req.body?.idioma),
+          zona: req.body?.zona,
         }),
       );
     } catch (err) {

@@ -200,7 +200,7 @@ function DocumentoParaFirmar({ documento, onCerrar }) {
         <div id="area-imprimible">
           <h2 id={modal.idTitulo}>{documento.titulo || delDocumento.titulo_texto}</h2>
           <div className="documento-instruccion">{documento.texto}</div>
-          <PieDeFirmas textos={delDocumento} />
+          <PieDeFirmas idioma={documento.idioma || 'es-AR'} />
         </div>
         <div className="panel-modal-acciones no-imprimir">
           <Button variant="secondary" onClick={onCerrar}>{t.comun.cerrar}</Button>

@@ -578,6 +578,21 @@ Lo que falta: **el cambio de Pagador** con el Servicio en curso, que hoy sólo m
 y **más de un Pagador**, que la regla del producto admite y la base no, porque guarda uno solo por
 Cliente.
 
+**Lo comercial de una contratación pasa del Cliente al Servicio**, aprobado por el Desarrollador:
+el Responsable de pagos, lo que firma, sus documentos, el plazo de pago y el Contratante. Una
+factura por Servicio y por período; al facturador sale además el número de cliente y a quién
+facturarle, leído de la Ficha de Persona del Responsable de pagos. Crean y dan de baja Servicios
+el Administrador y quien él delegue, con un permiso nuevo del catálogo; se crean con «Nuevo
+servicio» en la solapa Servicios —que crea el Cliente en el mismo paso si todavía no existe— y
+por la importación; la baja desde ahí usa el procedimiento de baja que ya existe y además marca
+el Servicio de baja. Se hace en tres partes, de a una y con el visto bueno del Desarrollador entre
+cada una: **(1) hecha** — `supabase/migrations/20270306000000_lo_comercial_pasa_al_servicio.sql`
+agregó los lugares en el Servicio y copió lo del Cliente; **(2)** el código —las 11 funciones de la
+base, las políticas, el backend, el Panel, la aplicación del Cliente y la importación— pasa a leer
+y escribir en el Servicio, y `servicios` necesita permiso de lectura para `trabajo_sin_persona`,
+que hoy no tiene; **(3)** se recopia lo escrito en el Cliente entre medio y se borran las columnas
+viejas. Se cierra cuando el Cliente ya no guarda nada de esto.
+
 **La prueba del enlace por correo para leer y firmar el documento del Pagador está a medias**
 (estado comprobado en la base el 2026-11-08). Se trabaja de a un punto por vez; el primero es el
 envío del enlace, y los otros tres esperan el «sí» del Desarrollador, uno por uno.

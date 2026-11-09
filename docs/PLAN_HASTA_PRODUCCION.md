@@ -986,6 +986,13 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
 Prestadoras: la última pisa a la anterior. El backend la valida contra la Prestadora, así que no
 sale ningún dato; es un dato de una Organización viajando adentro del pedido de otra.
 
+**140.** La lista de quiénes atienden se guarda por Paciente, y los Asistentes son del Servicio.
+En un Servicio que cuida a un matrimonio quedan dos listas donde tiene que haber una. Se pasa al
+Servicio: la tabla de las correcciones, la regla que arma la lista —en el Panel y en su copia del
+backend— y la pantalla que la muestra, que se abre desde el Servicio. Hoy no hay ninguna
+corrección guardada, así que no hay datos que mudar. Se cierra cuando la lista es una por
+Servicio y el permiso se llama «Modificar los Asistentes de un Servicio».
+
 ---
 
 ## El tablero de Situación operativa

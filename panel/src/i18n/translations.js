@@ -1189,7 +1189,7 @@ export const T = {
       baja: {
         boton: 'Dar de baja',
         titulo: 'Lista de comprobación',
-        confirmar: '¿Confirma la baja de este Servicio? Se cierra la atención de todos sus Pacientes, se dan de baja sus Prestaciones vigentes y se cancelan sus guardias sin asignar.',
+        confirmar: '¿Confirma la baja de este Servicio?',
         dando_de_baja: 'Dando de baja…',
       },
       reactivacion: {
@@ -4152,7 +4152,7 @@ export const T = {
       baja: {
         boton: 'Discontinue',
         titulo: 'Checklist',
-        confirmar: 'Confirm discontinuing this Service? Care is closed for all its Patients, their current Service Agreements are ended and their unassigned shifts are cancelled.',
+        confirmar: 'Confirm discontinuing this Service?',
         dando_de_baja: 'Discontinuing…',
       },
       reactivacion: {
@@ -7092,7 +7092,7 @@ export const T = {
       baja: {
         boton: 'Encerrar',
         titulo: 'Lista de verificação',
-        confirmar: 'Confirma o encerramento deste Serviço? O atendimento de todos os seus Pacientes é encerrado, suas Prestações vigentes são encerradas e seus plantões sem atribuição são cancelados.',
+        confirmar: 'Confirma o encerramento deste Serviço?',
         dando_de_baja: 'Encerrando…',
       },
       reactivacion: {

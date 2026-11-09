@@ -240,8 +240,7 @@ async function coordinadoresDeSusServicios({ pacienteId, prestadoraId }) {
     .from('servicios')
     .select('coordinador_id')
     .eq('prestadora_id', prestadoraId)
-    .eq('tipo_contratante', 'cliente')
-    .eq('contratante_id', paciente.cliente_id)
+    .eq('cliente_id', paciente.cliente_id)
     .eq('estado', 'vigente')
     .not('coordinador_id', 'is', null);
   if (error) {

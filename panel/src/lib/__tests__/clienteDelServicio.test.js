@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { TIPO_CLIENTE, clienteDelServicio, contactosDeClientes } from '../clienteDelServicio';
+import { clienteDelServicio, contactosDeClientes } from '../clienteDelServicio';
 
 const CLIENTE = '40000000-0000-4000-8000-000000000001';
 const OTRO_CLIENTE = '40000000-0000-4000-8000-000000000002';
@@ -21,44 +21,26 @@ const PERSONA = {
   telefonos_de_la_persona: [{ telefono: '+54 11 5555-0000' }],
 };
 
-const SERVICIO_DE_UN_CLIENTE = {
-  id: 's1',
-  tipo_contratante: TIPO_CLIENTE,
-  contratante_id: CLIENTE,
-};
+const SERVICIO_DE_UN_CLIENTE = { id: 's1', cliente_id: CLIENTE };
 
 const CONTACTOS = new Map([[CLIENTE, CONTACTO]]);
 
 describe('clienteDelServicio', () => {
-  it('cuando el Cliente es un Cliente, devuelve su contacto y el camino a la Ficha del cliente', () => {
+  it('devuelve el contacto del Cliente y el camino a la Ficha del cliente', () => {
     expect(clienteDelServicio(SERVICIO_DE_UN_CLIENTE, CONTACTOS)).toEqual({
-      tipo: TIPO_CLIENTE,
       id: CLIENTE,
       contacto: CONTACTO,
       ruta: `/clientes/${CLIENTE}`,
     });
   });
 
-  // La prueba que hace que este archivo sirva de algo: el día que un Servicio lo contrate algo
-  // que no es un Cliente, la pantalla no puede mandar a nadie a la Ficha del cliente de uno que no
-  // existe. Sin `ruta`, el botón no se dibuja.
-  it('cuando el Cliente no es un Cliente, no ofrece ninguna Ficha del cliente', () => {
-    const otro = { ...SERVICIO_DE_UN_CLIENTE, tipo_contratante: 'obra_social' };
-    expect(clienteDelServicio(otro, CONTACTOS)).toEqual({
-      tipo: 'obra_social',
-      id: CLIENTE,
-      contacto: null,
-      ruta: null,
-    });
-  });
-
   it('no ofrece Ficha del cliente si el identificador del Cliente falta', () => {
-    const sinCliente = { ...SERVICIO_DE_UN_CLIENTE, contratante_id: null };
+    const sinCliente = { ...SERVICIO_DE_UN_CLIENTE, cliente_id: null };
     expect(clienteDelServicio(sinCliente, CONTACTOS).ruta).toBeNull();
   });
 
   it('aguanta que todavía no haya llegado el Servicio, que es el estado «cargando»', () => {
-    expect(clienteDelServicio(null, CONTACTOS)).toEqual({ tipo: null, id: null, contacto: null, ruta: null });
+    expect(clienteDelServicio(null, CONTACTOS)).toEqual({ id: null, contacto: null, ruta: null });
   });
 
   it('aguanta que los contactos todavía no hayan llegado', () => {
@@ -93,19 +75,6 @@ describe('contactosDeClientes', () => {
     expect(contactos.get(CLIENTE)).toEqual(CONTACTO);
   });
 
-  // Si no hay ningún Cliente que buscar, no se consulta: una pantalla de Servicios de Clientes
-  // que no son Clientes no tiene por qué pagar una consulta que va a volver vacía.
-  it('no consulta nada cuando ningún Cliente es un Cliente', async () => {
-    const { supabase, enFrom } = baseFalsa({ data: [], error: null });
-
-    const { contactos } = await contactosDeClientes(supabase, [
-      { ...SERVICIO_DE_UN_CLIENTE, tipo_contratante: 'obra_social' },
-    ]);
-
-    expect(enFrom).not.toHaveBeenCalled();
-    expect(contactos.size).toBe(0);
-  });
-
   it('aguanta que todavía no haya llegado ningún Servicio', async () => {
     const { supabase, enFrom } = baseFalsa({ data: [], error: null });
     const { contactos } = await contactosDeClientes(supabase, null);
@@ -126,7 +95,7 @@ describe('contactosDeClientes', () => {
 
     const { contactos } = await contactosDeClientes(supabase, [
       SERVICIO_DE_UN_CLIENTE,
-      { ...SERVICIO_DE_UN_CLIENTE, id: 's2', contratante_id: OTRO_CLIENTE },
+      { ...SERVICIO_DE_UN_CLIENTE, id: 's2', cliente_id: OTRO_CLIENTE },
     ]);
 
     expect(contactos.size).toBe(1);

@@ -73,7 +73,7 @@ export function Clientes() {
         )
         .is('deleted_at', null)
         .order('created_at', { ascending: false }),
-      supabase.from('servicios').select('id, estado, contratante_id').eq('tipo_contratante', 'cliente'),
+      supabase.from('servicios').select('id, estado, cliente_id'),
     ]);
 
     const falla = errorConsulta || errorServicios;
@@ -122,8 +122,8 @@ export function Clientes() {
   const serviciosPorCliente = useMemo(() => {
     const mapa = new Map();
     for (const s of servicios) {
-      if (!mapa.has(s.contratante_id)) mapa.set(s.contratante_id, []);
-      mapa.get(s.contratante_id).push(s);
+      if (!mapa.has(s.cliente_id)) mapa.set(s.cliente_id, []);
+      mapa.get(s.cliente_id).push(s);
     }
     return mapa;
   }, [servicios]);

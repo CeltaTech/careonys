@@ -97,7 +97,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       // aplica la base, y no una consulta escrita a medida acá.
       supabase
         .from('servicios')
-        .select('id, etiqueta, tipo_contratante, contratante_id')
+        .select('id, etiqueta, cliente_id')
         .eq('estado', 'vigente')
         .order('etiqueta'),
     ]);

@@ -2,10 +2,8 @@
 //
 // La regla no se inventa acá: es la misma que aplica la base en
 // `interno.exigir_paciente_y_servicio_del_mismo_contratante`, que llaman los disparadores de
-// `prestaciones`, `guardias`, `guardia_pacientes` y `cierres_servicio_paciente`. Dice una sola
-// cosa: **cuando el Cliente del Servicio es un Cliente, el Paciente tiene que ser de esa
-// Cliente**. Cuando el Cliente es de otro tipo —una Obra Social, una empresa— ese vínculo no
-// existe en la base y no se supone ninguno.
+// `prestaciones`, `guardias`, `guardia_pacientes` y `cierres_servicio_paciente`: **el Paciente
+// tiene que ser del mismo Cliente que el Servicio**.
 //
 // Está en un archivo aparte porque la usan dos pantallas —el alta de Prestaciones y el alta de
 // Guardias— y una regla repetida en dos lugares se despega en el tercero. Que a qué Prestadora
@@ -13,8 +11,7 @@
 // preguntar.
 
 export function servicioSirveParaCliente(servicio, clienteId) {
-  if (servicio?.tipo_contratante !== 'cliente') return true;
-  return Boolean(clienteId) && servicio.contratante_id === clienteId;
+  return Boolean(clienteId) && servicio?.cliente_id === clienteId;
 }
 
 // Un turno puede cubrir a más de un Paciente, y la base los controla a todos. Así que el

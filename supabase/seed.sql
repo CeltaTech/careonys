@@ -404,18 +404,16 @@ VALUES
 -- ----------------------------------------------------------------------------
 
 -- Quien contrata es una Ficha del Directorio (`contratante_persona_id`): ahí están su nombre, su
--- correo, su localidad y sus teléfonos, y `clientes` no los repite. Quién paga es otra Ficha, y
--- `pagador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente por
--- sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al Directorio:
--- paga Ramiro Pérez, que es una Ficha más y no un nombre tecleado. Teresa Ibáñez queda en el
--- Directorio sin ser Cliente de nadie: es un contacto todavía sin presupuesto aprobado.
-INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_id, pagador_tipo, pagador_persona_id) VALUES
+-- correo, su localidad y sus teléfonos, y `clientes` no los repite. Quién paga se anota en cada
+-- Servicio, más abajo. Teresa Ibáñez queda en el Directorio sin ser Cliente de nadie: es un
+-- contacto todavía sin presupuesto aprobado.
+INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_id) VALUES
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
-   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000004', NULL, NULL),
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000004'),
   ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002',
-   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000005', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000005'),
   ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003',
-   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000006', 'otro', 'c0000000-0000-4000-8000-000000000001');
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000006');
 
 -- Quién está anotado en las personas autorizadas de cada Cliente, con su Ficha de Persona, que es
 -- de donde sale el DNI que dice la autorización. El titular no figura acá: se lo reconoce por su
@@ -488,14 +486,14 @@ INSERT INTO public.informacion_de_salud_del_paciente (prestadora_id, paciente_id
   ('11111111-1111-4111-8111-111111111111', '50000000-0000-4000-8000-000000000003', ARRAY['Demencia senil', 'Movilidad reducida'], 'III'),
   ('11111111-1111-4111-8111-111111111111', '50000000-0000-4000-8000-000000000004', ARRAY['EPOC'], 'II');
 
--- Para quién se contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué
--- clase es el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `cliente`,
--- pero se nombra igual, porque el día que haya otro estos datos de ejemplo no van a tener que
--- cambiar. Los tres los coordina Carla: sin Coordinador un Servicio no tiene guardias.
-INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta, estado, coordinador_id) VALUES
-  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente', '20000000-0000-4000-8000-000000000003'),
-  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente', '20000000-0000-4000-8000-000000000003'),
-  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente', '20000000-0000-4000-8000-000000000003');
+-- Los tres los coordina Carla: sin Coordinador un Servicio no tiene guardias. Quién paga es otra
+-- Ficha, y `pagador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente
+-- por sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al
+-- Directorio: paga Ramiro Pérez, que es una Ficha más y no un nombre tecleado.
+INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, estado, coordinador_id, pagador_tipo, pagador_persona_id) VALUES
+  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente', '20000000-0000-4000-8000-000000000003', NULL, NULL),
+  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente', '20000000-0000-4000-8000-000000000003', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
+  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente', '20000000-0000-4000-8000-000000000003', 'otro', 'c0000000-0000-4000-8000-000000000001');
 
 -- La Lista de Precios es el catálogo: lo que la Prestadora ofrece y a cuánto.
 -- No es lo vendido. Lo vendido son las prestaciones de más abajo, que guardan el
@@ -1173,9 +1171,9 @@ INSERT INTO public.pacientes (id, persona_id, prestadora_id, cliente_id)
 VALUES ('60000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004');
 
-INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta, coordinador_id)
+INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, coordinador_id)
 VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
-        'cliente', '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos',
+        '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos',
         '50000000-0000-4000-8000-000000000002');
 
 -- Con Asistente asignado, por el mismo motivo que el Paciente lleva Cliente: un

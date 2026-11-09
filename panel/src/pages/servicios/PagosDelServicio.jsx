@@ -126,7 +126,7 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
       {/* Si el Responsable de pagos firmó y qué documentos faltan. Avisa, no bloquea. */}
       <EstadoDelPagador
         servicioId={servicio.id}
-        clienteId={servicio.contratante_id}
+        clienteId={servicio.cliente_id}
         puedeRegistrar={puedeRegistrar}
         esAdmin={esAdmin}
       />

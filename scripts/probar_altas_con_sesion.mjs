@@ -189,11 +189,10 @@ function anclas() {
            -- El Servicio del Paciente, que es el de quien lo contrata, y con Coordinador: sin él
            -- no se arma ninguna guardia.
            (SELECT s.id FROM public.servicios s
-              JOIN public.pacientes pa ON pa.cliente_id = s.contratante_id
+              JOIN public.pacientes pa ON pa.cliente_id = s.cliente_id
                                       AND pa.prestadora_id = s.prestadora_id
              WHERE pa.id = (SELECT id FROM public.pacientes WHERE prestadora_id = (SELECT id FROM p)
                              ORDER BY id LIMIT 1)
-               AND s.tipo_contratante = 'cliente'
                AND s.estado = 'vigente'
                AND s.coordinador_id IS NOT NULL
              ORDER BY s.id LIMIT 1);
@@ -1242,8 +1241,7 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
 
   const alta = await pedir(admin, 'POST', 'servicios', {
     prestadora_id: d.prestadora,
-    tipo_contratante: 'cliente',
-    contratante_id: cliente,
+    cliente_id: cliente,
     etiqueta: 'Prueba del Coordinador del Servicio',
   });
   const servicio = alta.cuerpo?.[0]?.id;
@@ -1350,8 +1348,8 @@ async function probarLoQueCargaOtroCoordinador({ base, llavePublica }, d) {
   };
 
   const servicios = consultarBase(
-    `SELECT s.id FROM public.servicios s JOIN public.pacientes p ON p.cliente_id = s.contratante_id
-      WHERE p.id = '${d.paciente}' AND s.tipo_contratante = 'cliente' AND s.coordinador_id = '${carla}';`,
+    `SELECT s.id FROM public.servicios s JOIN public.pacientes p ON p.cliente_id = s.cliente_id
+      WHERE p.id = '${d.paciente}' AND s.coordinador_id = '${carla}';`,
   ).map(([id]) => id);
   const lista = servicios.map((id) => `'${id}'`).join(',') || 'NULL';
 
@@ -1436,13 +1434,13 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
   // Un Servicio de la Coordinadora cuyo Cliente no tenga otro Servicio suyo, para que al pasarlo
   // quede del todo afuera; y otro que se quede con ella, para ver que lo propio no se pierde.
   const [ajeno] = consultarBase(`
-    SELECT s.id, s.contratante_id, p.id,
+    SELECT s.id, s.cliente_id, p.id,
            (SELECT g.id FROM public.guardias g WHERE g.servicio_id = s.id ORDER BY g.id LIMIT 1)
       FROM public.servicios s
-      JOIN public.pacientes p ON p.cliente_id = s.contratante_id AND p.prestadora_id = s.prestadora_id
-     WHERE s.prestadora_id = '${d.prestadora}' AND s.coordinador_id = '${carla}' AND s.tipo_contratante = 'cliente'
+      JOIN public.pacientes p ON p.cliente_id = s.cliente_id AND p.prestadora_id = s.prestadora_id
+     WHERE s.prestadora_id = '${d.prestadora}' AND s.coordinador_id = '${carla}'
        AND EXISTS (SELECT 1 FROM public.guardias g WHERE g.servicio_id = s.id)
-       AND NOT EXISTS (SELECT 1 FROM public.servicios o WHERE o.contratante_id = s.contratante_id
+       AND NOT EXISTS (SELECT 1 FROM public.servicios o WHERE o.cliente_id = s.cliente_id
                         AND o.id <> s.id AND o.coordinador_id = '${carla}')
      ORDER BY s.id DESC LIMIT 1;`);
   const [propio] = consultarBase(`
@@ -1600,8 +1598,8 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     }
 
     // El Contratante lo fija la administración: el Coordinador no lo cambia.
-    const cambia = await pedir(entorno, coordinadora, 'PATCH', `servicios?id=eq.${propio[0]}`, { contratante_id: cliente });
-    const [[sigue]] = consultarBase(`SELECT contratante_id FROM public.servicios WHERE id = '${propio[0]}';`);
+    const cambia = await pedir(entorno, coordinadora, 'PATCH', `servicios?id=eq.${propio[0]}`, { cliente_id: cliente });
+    const [[sigue]] = consultarBase(`SELECT cliente_id FROM public.servicios WHERE id = '${propio[0]}';`);
     if (cambia.estado >= 400 && sigue !== cliente) bien('no puede cambiar el Contratante del Servicio');
     else mal('no puede cambiar el Contratante del Servicio', `${cambia.estado} ${JSON.stringify(cambia.cuerpo)}`);
   } finally {

@@ -246,12 +246,9 @@ const PACIENTES_DEL_ASISTENTE = `
 const PACIENTES_DEL_CLIENTE = `
   SELECT p.id FROM pacientes p WHERE p.cliente_id = '{p}' AND NOT p.pendiente_conformidad`;
 
-// El Servicio no guarda a quién se lo contrató en una columna «cliente»: guarda de qué clase es
-// el Cliente y cuál, porque puede no ser un Cliente. Acá se pide el conjunto por esas dos
-// columnas, que es lo que la base tiene, y no por la vieja `cliente_id`: si la política mirara
-// una y la prueba la otra, las dos podrían estar mal a la vez y darse verde.
+// El Servicio dice de qué Cliente es con `cliente_id`, la misma columna que mira la política.
 const SERVICIOS_DEL_CLIENTE = `
-  SELECT id FROM servicios WHERE tipo_contratante = 'cliente' AND contratante_id = '{p}'`;
+  SELECT id FROM servicios WHERE cliente_id = '{p}'`;
 
 const SU_PRESTADORA = (tabla) => `
   SELECT id FROM ${tabla} WHERE id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`;

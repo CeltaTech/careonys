@@ -449,8 +449,7 @@ describe('el Servicio que trae la planilla', () => {
     assert.deepEqual(loEscritoEn('servicios'), {
       prestadora_id: PRESTADORA,
       etiqueta: 'Cuidado diurno',
-      tipo_contratante: 'cliente',
-      contratante_id: NUEVO_CLIENTE,
+      cliente_id: NUEVO_CLIENTE,
       contratante_persona_id: NUEVA_PERSONA,
     });
     assert.equal(alta.servicioId, SERVICIO);

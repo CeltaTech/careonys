@@ -1102,7 +1102,7 @@ function baseConUnCliente({
     },
   ]);
   respuestas.set('GET /rest/v1/servicios', () => [
-    { id: SERVICIO, prestadora_id: PRESTADORA, contratante_id: CLIENTE, dias_hasta_el_vencimiento: plazoDelCliente },
+    { id: SERVICIO, prestadora_id: PRESTADORA, cliente_id: CLIENTE, dias_hasta_el_vencimiento: plazoDelCliente },
   ]);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
   respuestas.set('GET /rest/v1/facturas_cliente', () => yaFacturadas);

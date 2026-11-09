@@ -23,12 +23,9 @@ import { NuevoServicioModal } from './servicios/NuevoServicioModal';
 // De las prestaciones salen qué incluye el Servicio y a quién cuida; de las guardias, a quién cuida
 // también y en qué modalidades trabaja, porque la modalidad la lleva cada guardia.
 //
-// Quién contrató sale de `tipo_contratante` y `contratante_id`, que es lo que la base guarda: el
-// Cliente puede no ser un Cliente. Sus datos de contacto vienen en una consulta aparte —esas dos
-// columnas no apuntan siempre a la misma tabla, así que no hay clave foránea que permita anidarlos—
-// y quien decide de dónde salen es `contactosDeClientes`, no esta pantalla.
+// De qué Cliente es sale de `cliente_id`. Sus datos de contacto los trae `contactosDeClientes`.
 const CONSULTA =
-  'id, etiqueta, estado, created_at, tipo_contratante, contratante_id, ' +
+  'id, etiqueta, estado, created_at, cliente_id, ' +
   'prestaciones(id, tipo_servicio, paciente_id), guardias(paciente_id, canal_modalidad)';
 
 const ESTADO_ACTIVO = 'vigente';

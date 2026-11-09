@@ -248,9 +248,10 @@ factura que ya tiene comprobante anotado no se pisa: se cuenta aparte y se avisa
 subir el mismo archivo no hace daño. Se leen hasta 500 filas por vez. Las tres
 maneras escriben en la factura por el mismo lugar, `backend/src/utils/anotarLoFacturado.js`.
 
-**La factura nombra al Cliente.** A quién se le reclama vive en la Ficha del cliente
-(`clientes.pagador_tipo` y la Ficha de Persona del Pagador; ver `careonys/CLAUDE.md`, «Lo propio de
-Careonys en el desarrollo»). La factura no lo copia: se lo consulta en la Ficha.
+**La factura nombra al Cliente, y hay una por Servicio.** A quién se le reclama y en qué plazo vive
+en el Servicio (`servicios.pagador_tipo`, `servicios.pagador_persona_id` y
+`servicios.dias_hasta_el_vencimiento`); el Servicio dice de qué Cliente es con `servicios.cliente_id`.
+La factura no lo copia: se lo consulta en el Servicio.
 
 **En la modalidad Match**, cómo cobra la Prestadora está en `docs/PRD_07_Modalidad_Match.md` §3,
 y no se repite acá.

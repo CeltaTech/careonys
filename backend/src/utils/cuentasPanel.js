@@ -327,7 +327,7 @@ export const FILAS_DE_UN_ASISTENTE = [
 ];
 
 export const FILAS_DE_UNA_CLIENTE = [
-  { tabla: 'servicios', columna: 'contratante_id' },
+  { tabla: 'servicios', columna: 'cliente_id' },
   { tabla: 'pacientes', columna: 'cliente_id' },
   { tabla: 'clientes' },
 ];
@@ -774,8 +774,7 @@ export async function crearServicioDelCliente(db, { prestadoraId, clienteId, con
     .insert({
       prestadora_id: prestadoraId,
       etiqueta: nombre,
-      tipo_contratante: 'cliente',
-      contratante_id: clienteId,
+      cliente_id: clienteId,
       contratante_persona_id: contratantePersonaId ?? null,
     })
     .select('id')

@@ -80,10 +80,8 @@ export function ServicioDetalle() {
 
     const { data: s, error: fallaServicio } = await supabase
       .from('servicios')
-      // Quién contrató sale de `tipo_contratante` y `contratante_id`; sus datos de contacto vienen
-      // en una consulta aparte, porque esas dos columnas no apuntan siempre a la misma tabla y sin
-      // clave foránea la base no sabe anidarlos. De dónde salen lo decide `contactosDeClientes`.
-      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id, coordinador_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento, contratante_persona_id')
+      // De qué Cliente es sale de `cliente_id`; sus datos de contacto los trae `contactosDeClientes`.
+      .select('id, etiqueta, estado, created_at, cliente_id, coordinador_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento, contratante_persona_id')
       .eq('id', id)
       .single();
 

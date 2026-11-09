@@ -507,7 +507,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   // escribe en su factura, y su plazo de pago. La deuda sigue siendo del Cliente.
   const { data: servicios, error: errorServicios } = await db
     .from('servicios')
-    .select('id, prestadora_id, contratante_id, dias_hasta_el_vencimiento');
+    .select('id, prestadora_id, cliente_id, dias_hasta_el_vencimiento');
   if (errorServicios) return responderError(res, errorServicios);
 
   let prestaciones = [];
@@ -541,7 +541,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   let sinVencimiento = 0;
 
   for (const servicio of servicios || []) {
-    if (!clientesVisibles.has(servicio.contratante_id)) continue;
+    if (!clientesVisibles.has(servicio.cliente_id)) continue;
     if (yaFacturados.has(servicio.id)) continue;
 
     const renglones = armarLosRenglonesDeLaFactura({
@@ -575,7 +575,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
       .from('facturas_cliente')
       .insert({
         prestadora_id: servicio.prestadora_id,
-        cliente_id: servicio.contratante_id,
+        cliente_id: servicio.cliente_id,
         servicio_id: servicio.id,
         periodo,
         monto_total: montoTotal,

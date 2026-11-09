@@ -64,7 +64,7 @@ export async function cuerpoVigente({ db, prestadoraId, idioma = IDIOMA_DEL_DOCU
 export async function servicioConSuPagador({ db, servicioId, prestadoraId }) {
   const { data: servicio } = await db
     .from('servicios')
-    .select('id, prestadora_id, contratante_id, pagador_persona_id, pagador_tipo')
+    .select('id, prestadora_id, cliente_id, pagador_persona_id, pagador_tipo')
     .eq('prestadora_id', prestadoraId)
     .eq('id', servicioId)
     .maybeSingle();
@@ -72,7 +72,7 @@ export async function servicioConSuPagador({ db, servicioId, prestadoraId }) {
   if (!servicio || servicio.prestadora_id !== prestadoraId) {
     throw new ErrorConMotivo('no_encontrado', 'Servicio no encontrado');
   }
-  return { ...servicio, cliente_id: servicio.contratante_id };
+  return servicio;
 }
 
 // Los Servicios de un Cliente, para lo que cambia en todos a la vez: el Apoderado.
@@ -81,7 +81,7 @@ async function serviciosDelCliente({ db, clienteId, prestadoraId }) {
     .from('servicios')
     .select('id')
     .eq('prestadora_id', prestadoraId)
-    .eq('contratante_id', clienteId);
+    .eq('cliente_id', clienteId);
   if (error) throw new Error(error.message);
   return (data ?? []).map((fila) => fila.id);
 }

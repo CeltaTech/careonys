@@ -91,7 +91,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         supabase.from('prestadoras').select('dias_generacion_series_guardia').eq('id', prestadoraId).single(),
         supabase
           .from('servicios')
-          .select('id, etiqueta, tipo_contratante, contratante_id')
+          .select('id, etiqueta, cliente_id')
           .eq('estado', 'vigente')
           // Sin Coordinador el Servicio no está habilitado y la base rechaza sus guardias.
           .not('coordinador_id', 'is', null)

@@ -86,8 +86,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       const susServicios = await supabase
         .from('servicios')
         .select('coordinador_id')
-        .eq('tipo_contratante', 'cliente')
-        .eq('contratante_id', paciente.cliente_id)
+        .eq('cliente_id', paciente.cliente_id)
         .eq('estado', 'vigente')
         .not('coordinador_id', 'is', null);
       if (susServicios.error) throw susServicios.error;

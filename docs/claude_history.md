@@ -618,3 +618,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el título de la tarjeta y el campo del Panel decían «Quién paga».
 - **Qué dice ahora:** esos dos lugares dicen «Responsable de pagos».
 - **Motivo:** textual del Desarrollador: *«no podes poner un titulo usando la mierda que se te ocurre poner como nombres dentro del codigo y la base. Pone "Financiador" o "Responsable de pagos"»*. Entre las dos eligió Claude Code. También por decisión de Claude Code, sin orden del Desarrollador, la misma palabra se llevó a otros siete textos del Panel.
+
+## Lo comercial de una contratación pasa del Cliente al Servicio
+
+- **Qué decía antes:** el Responsable de pagos, lo que firma, el plazo de pago y el Contratante vivían en la Ficha del cliente; no había alta manual de Servicio ni de Cliente, y la cartera previa entraba sólo por la importación.
+- **Qué dice ahora:** todo eso vive en el Servicio, con una factura por Servicio y por período. El Administrador, y quien tenga el permiso de crear y dar de baja Servicios, crea un Servicio con «Nuevo servicio» —que crea el Cliente en el mismo paso si no existe— y lo da de baja desde la solapa Servicios.
+- **Motivo:** lo aprobó el Desarrollador, que fijó que lo comercial del Cliente va en el Servicio.

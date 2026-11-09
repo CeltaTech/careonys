@@ -327,6 +327,7 @@ export const FILAS_DE_UN_ASISTENTE = [
 ];
 
 export const FILAS_DE_UNA_CLIENTE = [
+  { tabla: 'servicios', columna: 'contratante_id' },
   { tabla: 'pacientes', columna: 'cliente_id' },
   { tabla: 'clientes' },
 ];
@@ -628,7 +629,7 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
 export async function crearClienteImportado({
   nombreContacto, apellidoContacto, documentoContacto, dniContacto, generoContacto, telefono, email,
   nombrePaciente, documentoPaciente, dniPaciente, generoPaciente, domicilioPaciente, domicilioDelPacientePartido,
-  fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
+  fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente, servicio,
   prestadoraId, importacionId, db,
 }) {
   if (!nombreContacto || !apellidoContacto || !email || !nombrePaciente) {
@@ -740,12 +741,116 @@ export async function crearClienteImportado({
       if (errorSalud) throw new Error(errorSalud.message);
     }
 
+    // El Servicio, si la planilla lo trae. Un Cliente sin Servicio también es válido: se le abre
+    // uno después, desde Servicios.
+    const servicioId = String(servicio ?? '').trim()
+      ? await crearServicioDelCliente(db, {
+        prestadoraId, clienteId, contratantePersonaId: persona.id, etiqueta: servicio,
+      })
+      : null;
+
     return {
       clienteId,
       pacienteId: paciente.id,
+      servicioId,
       numeroCliente: clienteNuevo.numero_cliente,
       fichaQueYaExistia: persona.yaExistia,
     };
+  } catch (error) {
+    await deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
+    throw error;
+  }
+}
+
+// Un Servicio nuevo de un Cliente que ya existe. Lo llaman las dos credenciales: la de quien pide,
+// cuando el Panel le abre un Servicio a un Cliente que ya estaba, y la del trabajo sin persona,
+// cuando el Servicio nace junto con el Cliente. La base exige que el Cliente sea de la misma
+// Prestadora, y a una persona con sesión, además, el permiso `gestionar_servicios`.
+export async function crearServicioDelCliente(db, { prestadoraId, clienteId, contratantePersonaId, etiqueta }) {
+  const nombre = String(etiqueta ?? '').trim();
+  if (!prestadoraId || !clienteId || !nombre) throw new ErrorConMotivo('faltan_datos');
+  const { data, error } = await db
+    .from('servicios')
+    .insert({
+      prestadora_id: prestadoraId,
+      etiqueta: nombre,
+      tipo_contratante: 'cliente',
+      contratante_id: clienteId,
+      contratante_persona_id: contratantePersonaId ?? null,
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return data.id;
+}
+
+// Un Cliente nuevo con su primer Servicio, desde Servicios del Panel. Quien contrata y el Paciente
+// ya están en el Directorio de Personas: el Panel manda cuáles, no sus datos. El email y el teléfono
+// de la cuenta salen de la Ficha de quien contrata, que es donde viven.
+//
+// Si esa persona ya contrata en esta Prestadora para ese mismo Paciente, el Cliente ya existe y no
+// se crea otro: se lo elige de la lista.
+export async function crearClienteConServicio(db, {
+  prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta,
+}) {
+  if (!prestadoraId || !contratantePersonaId || !pacientePersonaId || !String(etiqueta ?? '').trim()) {
+    throw new ErrorConMotivo('faltan_datos');
+  }
+
+  const { data: fichas, error: errorFichas } = await db
+    .from('personas')
+    .select('id, nombre, apellido, email')
+    .eq('prestadora_id', prestadoraId)
+    .in('id', [contratantePersonaId, pacientePersonaId]);
+  if (errorFichas) throw new Error(errorFichas.message);
+  const contratante = fichas?.find((ficha) => ficha.id === contratantePersonaId);
+  if (!contratante || !fichas.some((ficha) => ficha.id === pacientePersonaId)) {
+    throw new ErrorConMotivo('persona_no_encontrada');
+  }
+  if (!contratante.email) throw new ErrorConMotivo('la_ficha_no_tiene_email');
+
+  const yaEstaba = await clienteQueYaEstaba(db, {
+    prestadoraId, contratanteId: contratantePersonaId, pacientePersonaId,
+  });
+  if (yaEstaba) throw new ErrorConMotivo('el_cliente_ya_existe');
+
+  const { data: telefono } = await db
+    .from('telefonos_de_la_persona')
+    .select('telefono')
+    .eq('prestadora_id', prestadoraId)
+    .eq('persona_id', contratantePersonaId)
+    .limit(1)
+    .maybeSingle();
+
+  let cuentaId;
+  let clienteId;
+  try {
+    ({ userId: cuentaId } = await crearCuentaConPerfil({
+      email: contratante.email,
+      nombre: [contratante.nombre, contratante.apellido].filter(Boolean).join(' '),
+      telefono: telefono?.telefono ?? null,
+      rol: 'cliente',
+      prestadoraId,
+      enviarActivacion: true,
+    }));
+
+    const { data: clienteNuevo, error: errorCliente } = await db
+      .from('clientes')
+      .insert({ usuario_id: cuentaId, contratante_persona_id: contratantePersonaId, prestadora_id: prestadoraId })
+      .select('id, numero_cliente')
+      .single();
+    if (errorCliente) throw new Error(errorCliente.message);
+    clienteId = clienteNuevo.id;
+
+    const { error: errorPaciente } = await db
+      .from('pacientes')
+      .insert({ cliente_id: clienteId, persona_id: pacientePersonaId, prestadora_id: prestadoraId });
+    if (errorPaciente) throw new Error(errorPaciente.message);
+
+    const servicioId = await crearServicioDelCliente(db, {
+      prestadoraId, clienteId, contratantePersonaId, etiqueta,
+    });
+    return { clienteId, servicioId, numeroCliente: clienteNuevo.numero_cliente };
   } catch (error) {
     await deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
     throw error;

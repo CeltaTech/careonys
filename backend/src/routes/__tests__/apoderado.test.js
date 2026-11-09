@@ -174,6 +174,8 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /rest/v1/apoderados', () => [FILA_APODERADO]);
   respuestas.set('GET /rest/v1/consentimientos_pagador', () => []);
+  // El Apoderado es del Cliente; el consentimiento, de cada uno de sus Servicios.
+  respuestas.set('GET /rest/v1/servicios', () => [{ id: '55555555-5555-4555-8555-555555555555' }]);
   respuestas.set('POST /rest/v1/rpc/nombrar_apoderado', () => APODERADO);
   respuestas.set('POST /rest/v1/rpc/reemplazar_poder_del_apoderado', () => APODERADO);
   respuestas.set('POST /rest/v1/rpc/quitar_apoderado', () => true);

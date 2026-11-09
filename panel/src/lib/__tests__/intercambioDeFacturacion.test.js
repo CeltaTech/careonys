@@ -22,11 +22,11 @@ const BIEN = {
 describe('armarArchivo', () => {
   it('pone los títulos de las columnas y una fila por factura', () => {
     const texto = armarArchivo([
-      { factura_id: 'f1', cliente: 'Pérez', monto_a_facturar: 1500 },
+      { factura_id: 'f1', numero_cliente: 7, cliente: 'Pérez', monto_a_facturar: 1500 },
     ]);
     const renglones = texto.replace(/^﻿/, '').trim().split('\r\n');
     expect(renglones[0]).toBe(COLUMNAS_QUE_SALEN.join(';'));
-    expect(renglones[1].startsWith('f1;Pérez;')).toBe(true);
+    expect(renglones[1].startsWith('f1;7;Pérez;')).toBe(true);
   });
 
   it('protege los valores que traen el separador adentro', () => {

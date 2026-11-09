@@ -8,8 +8,11 @@
 // escrito una sola vez cuáles son, así las tres vías entran por la misma puerta y agregar la
 // tercera no obliga a rehacer las otras dos.
 //
-// QUÉ SALE. Por cada factura que todavía no tiene comprobante anotado: de quién es, de qué
-// período, en qué moneda, por cuánto y para cuándo.
+// QUÉ SALE. Por cada factura que todavía no tiene comprobante anotado: de qué Cliente es y con qué
+// número, a quién se le factura, de qué período, en qué moneda, por cuánto y para cuándo. Hay una
+// factura por Servicio y período. A quién se le factura es el Responsable de pagos de ese Servicio
+// —o su Contratante, si es la misma persona—, con los datos de su Ficha de Persona tal como están
+// hoy: se leen al armar el archivo y no se copian a ningún lado.
 //
 // QUÉ VUELVE. Los tres datos de siempre —cómo se llama el comprobante, qué número tiene y cuánto
 // quedó adeudando el Cliente— más el vencimiento, si quien emitió informa uno distinto del
@@ -30,12 +33,56 @@ import { loQueEstaMalEnLoFacturado } from './facturacionDeClientes.js';
 /** Las columnas del archivo que Careonys entrega para que la Prestadora facture. */
 export const COLUMNAS_QUE_SALEN = [
   'factura_id',
+  'numero_cliente',
   'cliente',
+  'facturar_a_nombre',
+  'facturar_a_documento_tipo',
+  'facturar_a_documento_numero',
+  'facturar_a_documento_pais',
+  'facturar_a_domicilio',
+  'facturar_a_codigo_postal',
+  'facturar_a_email',
   'periodo',
   'moneda',
   'monto_a_facturar',
   'fecha_vencimiento',
 ];
+
+/**
+ * A quién se le factura, armado desde su Ficha de Persona.
+ *
+ * Está acá para que el archivo y una conexión directa entreguen lo mismo. Sin Ficha, sale vacío:
+ * el facturador ve el renglón sin destinatario y la Prestadora lo completa en la Ficha.
+ */
+export function aQuienFacturarle(ficha) {
+  if (!ficha) {
+    return {
+      facturar_a_nombre: '',
+      facturar_a_documento_tipo: '',
+      facturar_a_documento_numero: '',
+      facturar_a_documento_pais: '',
+      facturar_a_domicilio: '',
+      facturar_a_codigo_postal: '',
+      facturar_a_email: '',
+    };
+  }
+  const nombre = String(ficha.nombre_visible ?? '').trim()
+    || [ficha.apellido, ficha.nombre].filter((v) => v && String(v).trim()).join(', ');
+  const domicilio = [
+    [ficha.calle, ficha.numero].filter((v) => v && String(v).trim()).join(' '),
+    ficha.piso ? String(ficha.piso) : '',
+    ficha.unidad ? String(ficha.unidad) : '',
+  ].filter((v) => v.trim()).join(' ');
+  return {
+    facturar_a_nombre: nombre,
+    facturar_a_documento_tipo: ficha.documento_tipo ?? '',
+    facturar_a_documento_numero: ficha.documento_numero ?? '',
+    facturar_a_documento_pais: ficha.documento_pais ?? '',
+    facturar_a_domicilio: domicilio,
+    facturar_a_codigo_postal: ficha.codigo_postal ?? '',
+    facturar_a_email: ficha.email ?? '',
+  };
+}
 
 /** Las columnas del archivo que Careonys lee para anotar lo que se emitió. */
 export const COLUMNAS_QUE_VUELVEN = [

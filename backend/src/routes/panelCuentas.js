@@ -14,6 +14,8 @@ import {
   filasDeUnAsistente,
   identidadDelAsistente,
   errorDeLaIdentidad,
+  crearServicioDelCliente,
+  crearClienteConServicio,
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { configuracionInicialDe, exigirConfiguracionInicial } from '../utils/configuracionInicial.js';
@@ -408,23 +410,76 @@ panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:in
 // ============================================================================
 //
 // Apuntar un Legajo como Pagador no lo convierte en Pagador: lo que lo convierte es que haya
-// asumido la obligación y lo haya firmado. Estas rutas son lo que la pantalla del Cliente usa
+// asumido la obligación y lo haya firmado. Estas rutas son lo que la Ficha del Servicio usa
 // para mostrarlo ahí mismo, al lado de donde se lo elige, y para cargar la firma y los documentos.
 //
-// LEER NO ES ESCRIBIR. El estado lo alcanza quien edita el Cliente, porque saber si firmó hace
+// LEER NO ES ESCRIBIR. El estado lo alcanza quien edita los datos del Cliente, porque saber si firmó hace
 // falta para trabajar. Hacerlo firmar pide el permiso propio, que nace reservado al Admin.
 
 const DEPOSITO_DEL_PAGADOR = DEPOSITO_PAGADOR;
 
-panelCuentasRouter.get('/cliente/:clienteId/pagador', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
-  const cliente = await clienteContratanteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+// El Servicio del pedido, si quien pide lo alcanza. El Responsable de pagos es de cada Servicio.
+async function servicioDelPedido(req) {
+  const { data } = await clienteDelPedido(req)
+    .from('servicios')
+    .select('id, prestadora_id')
+    .eq('id', req.params.servicioId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+// ============================================================================
+// Nuevo servicio
+// ============================================================================
+//
+// Para un Cliente que ya existe, el Servicio lo crea quien pide, con su credencial: la base exige
+// `gestionar_servicios`. Para un Cliente nuevo, el Cliente y su Servicio nacen juntos con el trabajo
+// sin persona, igual que en la importación, porque crear la cuenta del Cliente no lo puede hacer
+// una persona por sí misma.
+panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_servicios'), exigirConfiguracionInicial, async (req, res) => {
+  try {
+    const { clienteId, contratantePersonaId, pacientePersonaId, etiqueta } = req.body ?? {};
+    if (!String(etiqueta ?? '').trim()) throw new ErrorConMotivo('faltan_datos');
+
+    if (clienteId) {
+      const db = clienteDelPedido(req);
+      const { data: cliente } = await db
+        .from('clientes')
+        .select('id, prestadora_id, contratante_persona_id')
+        .eq('id', clienteId)
+        .maybeSingle();
+      if (!cliente) throw new ErrorConMotivo('faltan_datos');
+      // El Cliente se busca con la credencial de quien pide, para que sólo alcance uno que esa
+      // persona ve. El alta va con la de la Prestadora: un Coordinador con el permiso todavía no
+      // coordina el Servicio que está naciendo, y la política de Servicios no lo dejaría crearlo.
+      const servicioId = await enLaPrestadora(cliente.prestadora_id, 'alta de Servicio', (dbPrestadora) => crearServicioDelCliente(dbPrestadora, {
+        prestadoraId: cliente.prestadora_id,
+        clienteId: cliente.id,
+        contratantePersonaId: cliente.contratante_persona_id,
+        etiqueta,
+      }));
+      return res.json({ ok: true, servicioId, clienteId: cliente.id });
+    }
+
+    const prestadoraId = req.usuarioPanel?.prestadoraId;
+    if (!prestadoraId || !contratantePersonaId || !pacientePersonaId) throw new ErrorConMotivo('faltan_datos');
+    const alta = await enLaPrestadora(prestadoraId, 'alta de Cliente con Servicio', (db) =>
+      crearClienteConServicio(db, { prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta }));
+    res.json({ ok: true, servicioId: alta.servicioId, clienteId: alta.clienteId });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+panelCuentasRouter.get('/servicio/:servicioId/pagador', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+  const servicio = await servicioDelPedido(req);
+  if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
   try {
     res.json(await estadoDelPagador({
       db: clienteDelPedido(req),
-      clienteId: cliente.id,
-      prestadoraId: cliente.prestadora_id,
+      servicioId: servicio.id,
+      prestadoraId: servicio.prestadora_id,
       idioma: normalizarIdioma(req.query.idioma),
       zona: req.query.zona,
     }));
@@ -435,15 +490,15 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador', requiereRolPanel, exigirOr
 
 // Arma el documento y lo deja esperando firma. El texto es el que la Prestadora configuró, o el
 // modelo que trae el producto si no configuró ninguno.
-panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
-  const cliente = await clienteContratanteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+panelCuentasRouter.post('/servicio/:servicioId/pagador/consentimiento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
+  const servicio = await servicioDelPedido(req);
+  if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
   try {
     const consentimiento = await crearConsentimiento({
       db: clienteDelPedido(req),
-      clienteId: cliente.id,
-      prestadoraId: cliente.prestadora_id,
+      servicioId: servicio.id,
+      prestadoraId: servicio.prestadora_id,
       cargadoPor: req.usuarioPanel.id,
     });
     res.json({ ok: true, consentimiento });
@@ -454,15 +509,15 @@ panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento', requiereRo
 
 // Se cargó por error, o cambió el Pagador y todavía no se sabe cuál es el nuevo. Lo cerrado no se
 // anula nunca: ya lo firmó alguien.
-panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/anular', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
-  const cliente = await clienteContratanteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+panelCuentasRouter.post('/servicio/:servicioId/pagador/consentimiento/:consentimientoId/anular', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
+  const servicio = await servicioDelPedido(req);
+  if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
   try {
     await anularPendiente({
       db: clienteDelPedido(req),
       consentimientoId: req.params.consentimientoId,
-      prestadoraId: cliente.prestadora_id,
+      prestadoraId: servicio.prestadora_id,
     });
     res.json({ ok: true });
   } catch (error) {
@@ -472,22 +527,22 @@ panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimie
 
 // Le manda a quien firma el enlace para leer el documento y firmarlo o, si ya lo firmó, para volver a
 // verlo. Cada envío deja sin efecto el enlace anterior.
-panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/enviar', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
-  const cliente = await clienteContratanteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+panelCuentasRouter.post('/servicio/:servicioId/pagador/consentimiento/:consentimientoId/enviar', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
+  const servicio = await servicioDelPedido(req);
+  if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
   try {
     const email = await emailDeQuienFirma({
       db: clienteDelPedido(req),
       consentimientoId: req.params.consentimientoId,
-      clienteId: cliente.id,
-      prestadoraId: cliente.prestadora_id,
+      servicioId: servicio.id,
+      prestadoraId: servicio.prestadora_id,
     });
     if (!email) throw new ErrorConMotivo('faltan_datos', 'Quien firma no tiene email');
 
     await enviarDocumentoParaFirmar({
       consentimientoId: req.params.consentimientoId,
-      prestadoraId: cliente.prestadora_id,
+      prestadoraId: servicio.prestadora_id,
       email,
     });
     await registrarActividad(req.usuarioPanel, ACCION_ENVIO_DE_DOCUMENTO_PARA_FIRMAR, {
@@ -503,7 +558,7 @@ panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimie
 // El documento firmado. Depósito privado y ruta empezando por la Prestadora, que es lo que exige su
 // política.
 panelCuentasRouter.post(
-  '/cliente/:clienteId/pagador/consentimiento/:consentimientoId/documento',
+  '/servicio/:servicioId/pagador/consentimiento/:consentimientoId/documento',
   requiereRolPanel,
   exigirOrganizacionActiva,
   requierePermiso('registrar_consentimiento_pagador'),
@@ -511,12 +566,12 @@ panelCuentasRouter.post(
   manejarErrorDeArchivo,
   async (req, res) => {
     const db = clienteDelPedido(req);
-    const cliente = await clienteContratanteDelPedido(req);
-    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+    const servicio = await servicioDelPedido(req);
+    if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
     // Si otra persona ya lo cerró o lo anuló, no queda nada por hacer: se contesta bien sin subir
     // nada, y la pantalla vuelve a leer y muestra cómo quedó.
-    const consentimientoPedido = { db, consentimientoId: req.params.consentimientoId, prestadoraId: cliente.prestadora_id };
+    const consentimientoPedido = { db, consentimientoId: req.params.consentimientoId, prestadoraId: servicio.prestadora_id };
     try {
       const consentimiento = await consentimientoDelPagador(consentimientoPedido);
       if (!consentimiento) throw new ErrorConMotivo('no_encontrado', 'Consentimiento no encontrado');
@@ -531,8 +586,8 @@ panelCuentasRouter.post(
     let ruta = null;
     if (req.file) {
       ruta = rutaDelArchivo({
-        prestadoraId: cliente.prestadora_id,
-        clienteId: cliente.id,
+        prestadoraId: servicio.prestadora_id,
+        servicioId: servicio.id,
         nombre: `consentimiento-${req.params.consentimientoId}`,
         extension: extensionDeArchivo(req.file.mimetype),
       });
@@ -562,16 +617,16 @@ panelCuentasRouter.post(
 
 // Volver a ver el documento firmado. Nunca dirección pública: un enlace temporal que dura un minuto,
 // igual que el resto de los archivos del producto.
-panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/documento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.get('/servicio/:servicioId/pagador/consentimiento/:consentimientoId/documento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const db = clienteDelPedido(req);
-  const cliente = await clienteContratanteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+  const servicio = await servicioDelPedido(req);
+  if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
   const { data: consentimiento } = await db
     .from('consentimientos_pagador')
     .select('archivo_firmado_url')
     .eq('id', req.params.consentimientoId)
-    .eq('cliente_id', cliente.id)
+    .eq('servicio_id', servicio.id)
     .maybeSingle();
 
   if (!consentimiento?.archivo_firmado_url) {
@@ -589,7 +644,7 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimien
 // Los documentos que exige el Pagador. Son aparte de la firma: que falte uno no invalida lo
 // firmado, y que esté la firma no completa los documentos.
 panelCuentasRouter.post(
-  '/cliente/:clienteId/pagador/documento/:tipoDocumentoId',
+  '/servicio/:servicioId/pagador/documento/:tipoDocumentoId',
   requiereRolPanel,
   exigirOrganizacionActiva,
   requierePermiso('registrar_consentimiento_pagador'),
@@ -601,12 +656,12 @@ panelCuentasRouter.post(
     }
 
     const db = clienteDelPedido(req);
-    const cliente = await clienteContratanteDelPedido(req);
-    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+    const servicio = await servicioDelPedido(req);
+    if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
     const ruta = rutaDelArchivo({
-      prestadoraId: cliente.prestadora_id,
-      clienteId: cliente.id,
+      prestadoraId: servicio.prestadora_id,
+      servicioId: servicio.id,
       nombre: `documento-${req.params.tipoDocumentoId}`,
       extension: extensionDeArchivo(req.file.mimetype),
     });
@@ -618,8 +673,8 @@ panelCuentasRouter.post(
     try {
       await guardarDocumento({
         db,
-        clienteId: cliente.id,
-        prestadoraId: cliente.prestadora_id,
+        servicioId: servicio.id,
+        prestadoraId: servicio.prestadora_id,
         tipoDocumentoId: req.params.tipoDocumentoId,
         archivoUrl: ruta,
         fechaVencimiento: req.body?.fechaVencimiento,
@@ -632,16 +687,16 @@ panelCuentasRouter.post(
   },
 );
 
-panelCuentasRouter.get('/cliente/:clienteId/pagador/documento/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.get('/servicio/:servicioId/pagador/documento/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const db = clienteDelPedido(req);
-  const cliente = await clienteContratanteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+  const servicio = await servicioDelPedido(req);
+  if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
   const { data: documento } = await db
     .from('documentos_pagador')
     .select('archivo_url')
     .eq('id', req.params.documentoId)
-    .eq('cliente_id', cliente.id)
+    .eq('servicio_id', servicio.id)
     .maybeSingle();
 
   if (!documento?.archivo_url) {

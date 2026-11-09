@@ -21,6 +21,7 @@ import {
 } from '../utils/facturacionDeClientes.js';
 import {
   TOPE_DE_FILAS,
+  aQuienFacturarle,
   esIdentificador,
   loFacturadoDeLaFila,
   queHacerConLaFilaFacturada,
@@ -123,6 +124,69 @@ async function nombresDeClientes(db, ids) {
     .in('id', unicos);
   if (error) throw new Error(error.message);
   return new Map((data || []).map((f) => [f.id, f.personas?.nombre_visible ?? null]));
+}
+
+/**
+ * A quién se le factura cada una de estas facturas, y el número de su Cliente.
+ *
+ * Cada factura es de un Servicio. Se le factura al Responsable de pagos de ese Servicio; si no
+ * tiene uno aparte, paga quien contrata —el Contratante del Servicio o, si no está anotado, el del
+ * Cliente—. Los datos se leen de la Ficha de Persona en este momento y no se copian: lo que el
+ * facturador recibe es lo que la Ficha dice hoy.
+ */
+const DATOS_PARA_FACTURAR =
+  'id, nombre_visible, nombre, apellido, documento_tipo, documento_numero, documento_pais, calle, numero, piso, unidad, codigo_postal, email';
+
+async function aQuienSeLeFactura(db, facturaIds) {
+  const resultado = new Map();
+  const ids = [...new Set(facturaIds)];
+  if (ids.length === 0) return resultado;
+
+  const { data: facturas, error: e1 } = await db
+    .from('facturas_cliente')
+    .select('id, servicio_id, cliente_id')
+    .in('id', ids);
+  if (e1) throw new Error(e1.message);
+
+  const servicioIds = [...new Set((facturas || []).map((f) => f.servicio_id).filter(Boolean))];
+  const clienteIds = [...new Set((facturas || []).map((f) => f.cliente_id).filter(Boolean))];
+
+  const [{ data: servicios, error: e2 }, { data: clientes, error: e3 }] = await Promise.all([
+    servicioIds.length
+      ? db.from('servicios').select('id, pagador_persona_id, contratante_persona_id').in('id', servicioIds)
+      : Promise.resolve({ data: [], error: null }),
+    clienteIds.length
+      ? db.from('clientes').select('id, numero_cliente, contratante_persona_id').in('id', clienteIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (e2) throw new Error(e2.message);
+  if (e3) throw new Error(e3.message);
+
+  const servicioPorId = new Map((servicios || []).map((s) => [s.id, s]));
+  const clientePorId = new Map((clientes || []).map((c) => [c.id, c]));
+
+  const personaDe = new Map();
+  for (const f of facturas || []) {
+    const s = servicioPorId.get(f.servicio_id);
+    const c = clientePorId.get(f.cliente_id);
+    personaDe.set(f.id, s?.pagador_persona_id || s?.contratante_persona_id || c?.contratante_persona_id || null);
+  }
+
+  const personaIds = [...new Set([...personaDe.values()].filter(Boolean))];
+  let fichas = new Map();
+  if (personaIds.length) {
+    const { data: personas, error: e4 } = await db.from('personas').select(DATOS_PARA_FACTURAR).in('id', personaIds);
+    if (e4) throw new Error(e4.message);
+    fichas = new Map((personas || []).map((p) => [p.id, p]));
+  }
+
+  for (const f of facturas || []) {
+    resultado.set(f.id, {
+      numero_cliente: clientePorId.get(f.cliente_id)?.numero_cliente ?? '',
+      ficha: fichas.get(personaDe.get(f.id)) ?? null,
+    });
+  }
+  return resultado;
 }
 
 /**
@@ -378,7 +442,7 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
 // ---------------------------------------------------------------------------------------
 
 /**
- * Generar las facturas de un período, una por Cliente que todavía no tenga la suya.
+ * Generar las facturas de un período, una por Servicio que todavía no tenga la suya.
  *
  * ESTO SE HACÍA EN EL NAVEGADOR, y la cuenta salía mal: cobraba prestaciones cuya vigencia ya
  * había terminado o todavía no había empezado. Qué lleva cada factura es un cálculo económico y
@@ -399,8 +463,8 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   // La fecha puede venir escrita para toda la tanda —es lo que se hacía hasta ahora—, y en ese
   // caso pisa cualquier plazo acordado. Si no viene, cada factura vence según el plazo de ese
-  // Cliente. Una factura sin vencimiento no se puede reclamar ni mostrar como vencida, así que
-  // sin ninguna de las dos cosas ese Cliente no se factura: no se le inventa una fecha.
+  // Servicio. Una factura sin vencimiento no se puede reclamar ni mostrar como vencida, así que
+  // sin ninguna de las dos cosas ese Servicio no se factura: no se le inventa una fecha.
   const vencimientoDeLaTanda = String(req.body?.fecha_vencimiento ?? '').slice(0, 10);
   const vencimientoEscrito = /^\d{4}-\d{2}-\d{2}$/.test(vencimientoDeLaTanda);
 
@@ -426,17 +490,25 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // Cada Cliente trae su Prestadora: es la que se escribe en su factura. Los pendientes de
-  // conformidad no los devuelve la base, y no se facturan.
+  // Los pendientes de conformidad no los devuelve la base, y no se facturan. Del Cliente salen
+  // los nombres de sus Pacientes para los renglones; la factura es de cada Servicio.
   const { data: clientes, error: errorClientes } = await db
     .from('clientes')
-    .select(`id, prestadora_id, dias_hasta_el_vencimiento, pacientes(id, ${FICHA_NOMBRE})`)
+    .select(`id, prestadora_id, pacientes(id, ${FICHA_NOMBRE})`)
     .is('deleted_at', null);
   if (errorClientes) return responderError(res, errorClientes);
 
   const pacientes = conSusFichas((clientes || []).flatMap((f) => f.pacientes || []));
   const pacienteIds = pacientes.map((p) => p.id);
   const nombresDePacientes = new Map(pacientes.map((p) => [p.id, p.nombre]));
+  const clientesVisibles = new Set((clientes || []).map((c) => c.id));
+
+  // Una factura por Servicio y por período. Cada Servicio trae su Prestadora, que es la que se
+  // escribe en su factura, y su plazo de pago. La deuda sigue siendo del Cliente.
+  const { data: servicios, error: errorServicios } = await db
+    .from('servicios')
+    .select('id, prestadora_id, contratante_id, dias_hasta_el_vencimiento');
+  if (errorServicios) return responderError(res, errorServicios);
 
   let prestaciones = [];
 
@@ -452,39 +524,45 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   const { data: existentes, error: errorExistentes } = await db
     .from('facturas_cliente')
-    .select('cliente_id')
+    .select('servicio_id')
     .eq('periodo', periodo);
   if (errorExistentes) return responderError(res, errorExistentes);
-  const yaFacturadas = new Set((existentes || []).map((f) => f.cliente_id));
+  const yaFacturados = new Set((existentes || []).map((f) => f.servicio_id));
 
-  const porPaciente = new Map();
+  const porServicio = new Map();
   for (const p of prestaciones) {
-    if (!porPaciente.has(p.paciente_id)) porPaciente.set(p.paciente_id, []);
-    porPaciente.get(p.paciente_id).push(p);
+    if (!p.servicio_id) continue;
+    if (!porServicio.has(p.servicio_id)) porServicio.set(p.servicio_id, []);
+    porServicio.get(p.servicio_id).push(p);
   }
 
   let generadas = 0;
   let sinPrestaciones = 0;
   let sinVencimiento = 0;
 
-  for (const cliente of clientes || []) {
-    if (yaFacturadas.has(cliente.id)) continue;
+  for (const servicio of servicios || []) {
+    if (!clientesVisibles.has(servicio.contratante_id)) continue;
+    if (yaFacturados.has(servicio.id)) continue;
+
+    const renglones = armarLosRenglonesDeLaFactura({
+      periodo,
+      nombresDePacientes,
+      prestaciones: porServicio.get(servicio.id) || [],
+    });
+
+    if (renglones.length === 0) {
+      sinPrestaciones += 1;
+      continue;
+    }
 
     const vencimiento = vencimientoEscrito
       ? vencimientoDeLaTanda
-      : vencimientoDe(hoy, plazoDePagoDe(plazoDeLaPrestadora, cliente.dias_hasta_el_vencimiento));
+      : vencimientoDe(hoy, plazoDePagoDe(plazoDeLaPrestadora, servicio.dias_hasta_el_vencimiento));
 
     if (!vencimiento) {
       sinVencimiento += 1;
       continue;
     }
-
-    const suyos = (cliente.pacientes || []).map((p) => p.id);
-    const renglones = armarLosRenglonesDeLaFactura({
-      periodo,
-      nombresDePacientes,
-      prestaciones: suyos.flatMap((id) => porPaciente.get(id) || []),
-    });
 
     if (renglones.length === 0) {
       sinPrestaciones += 1;
@@ -496,8 +574,9 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
     const { data: factura, error: errorFactura } = await db
       .from('facturas_cliente')
       .insert({
-        prestadora_id: cliente.prestadora_id,
-        cliente_id: cliente.id,
+        prestadora_id: servicio.prestadora_id,
+        cliente_id: servicio.contratante_id,
+        servicio_id: servicio.id,
         periodo,
         monto_total: montoTotal,
         // La emisión se escribe en vez de dejarla en el valor por defecto de la base: el plazo
@@ -650,15 +729,19 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
   if (error) return responderError(res, error);
 
   let nombres;
+  let destinatarios;
   try {
     nombres = await nombresDeClientes(db, (data || []).map((s) => s.cliente_id));
+    destinatarios = await aQuienSeLeFactura(db, (data || []).map((s) => s.factura_id));
   } catch (e) {
     return responderError(res, e);
   }
 
   res.json((data || []).map((s) => ({
     factura_id: s.factura_id,
+    numero_cliente: destinatarios.get(s.factura_id)?.numero_cliente ?? '',
     cliente: nombres.get(s.cliente_id) ?? '',
+    ...aQuienFacturarle(destinatarios.get(s.factura_id)?.ficha ?? null),
     periodo: String(s.periodo).slice(0, 7),
     moneda: s.moneda,
     monto_a_facturar: s.monto_total,

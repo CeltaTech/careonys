@@ -15,6 +15,10 @@ import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServic
 import { modalidadesDeGuardias, nombreDeModalidad } from './servicios/modalidadesDelServicio';
 import './servicios/servicios.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
+import { useAuth } from '../context/AuthContext';
+import { usePermisos } from '../context/PermisosContext';
+import { esAdminOSuperior } from '../lib/roles';
+import { NuevoServicioModal } from './servicios/NuevoServicioModal';
 
 // De las prestaciones salen qué incluye el Servicio y a quién cuida; de las guardias, a quién cuida
 // también y en qué modalidades trabaja, porque la modalidad la lleva cada guardia.
@@ -38,6 +42,10 @@ export function Servicios() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: 'todos' });
+  const { usuario } = useAuth();
+  const { puede } = usePermisos();
+  const gestionaServicios = esAdminOSuperior(usuario?.rol) || puede('gestionar_servicios');
+  const [creando, setCreando] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -152,7 +160,21 @@ export function Servicios() {
         >
           {t.servicios.exportar}
         </Button>
+        {gestionaServicios && (
+          <Button onClick={() => setCreando(true)}>{t.servicios.nuevo.boton}</Button>
+        )}
       </Cabecera>
+
+      {creando && (
+        <NuevoServicioModal
+          onClose={() => setCreando(false)}
+          onCreado={(servicioId) => {
+            setCreando(false);
+            if (servicioId) navigate(`/servicios/${servicioId}`);
+            else recargar();
+          }}
+        />
+      )}
 
       <section className="panel-tarjeta servicios-tarjeta">
         <div className="panel-tarjeta-titulo">

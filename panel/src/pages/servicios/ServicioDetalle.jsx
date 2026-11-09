@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { traducirValor } from '../../i18n/valores';
 import { supabase } from '../../lib/supabaseClient';
@@ -8,6 +8,7 @@ import { claseBadge } from '../../lib/tonos';
 import { con } from '../../lib/textos';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { useAuth } from '../../context/AuthContext';
+import { usePermisos } from '../../context/PermisosContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { armarBuscadorDeRangos, tieneSignoFueraDeRango } from '../../lib/signosVitales';
 import { Alert } from '../../components/ui/Alert';
@@ -18,6 +19,8 @@ import { mensajeDeError } from '../../lib/errores';
 import { clienteDelServicio, contactosDeClientes } from '../../lib/clienteDelServicio';
 import { claseDeResponsable, modalidadesDeGuardias, nombreDeModalidad } from './modalidadesDelServicio';
 import { TareasDelServicio } from './TareasDelServicio';
+import { PagosDelServicio } from './PagosDelServicio';
+import { BajaDelServicioModal } from './BajaDelServicioModal';
 import './servicios.css';
 
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
@@ -45,6 +48,14 @@ export function ServicioDetalle() {
   // Al Coordinador lo asigna la administración; el Coordinador asignado sólo lo ve. La base dice
   // lo mismo: esto sólo decide si se muestra la lista o el nombre.
   const asignaCoordinador = esAdminOSuperior(usuario?.rol);
+  const { puede } = usePermisos();
+  const esAdmin = asignaCoordinador;
+  // Lo comercial del Servicio lo ve y lo corrige quien edita los datos del Cliente; hacer firmar al
+  // Responsable de pagos pide su propio permiso.
+  const puedeEditarPagos = esAdmin || puede('editar_datos_cliente');
+  const puedeRegistrarConsentimiento = esAdmin || puede('registrar_consentimiento_pagador');
+  const gestionaServicios = esAdmin || puede('gestionar_servicios');
+  const [dandoDeBaja, setDandoDeBaja] = useState(false);
   const [servicio, setServicio] = useState(null);
   const [coordinadores, setCoordinadores] = useState([]);
   const [asignando, setAsignando] = useState(false);
@@ -60,7 +71,8 @@ export function ServicioDetalle() {
   const [nombresAsistente, setNombresAsistente] = useState({});
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState('resumen');
+  const location = useLocation();
+  const [tab, setTab] = useState(location.state?.solapa ?? 'resumen');
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -71,7 +83,7 @@ export function ServicioDetalle() {
       // Quién contrató sale de `tipo_contratante` y `contratante_id`; sus datos de contacto vienen
       // en una consulta aparte, porque esas dos columnas no apuntan siempre a la misma tabla y sin
       // clave foránea la base no sabe anidarlos. De dónde salen lo decide `contactosDeClientes`.
-      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id, coordinador_id')
+      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id, coordinador_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento, contratante_persona_id')
       .eq('id', id)
       .single();
 
@@ -203,10 +215,14 @@ export function ServicioDetalle() {
 
   // Los Pacientes del Servicio salen de sus prestaciones y sus guardias, que dicen de qué
   // Servicio son.
-  const pacientesDelServicio = useMemo(() => {
-    const ids = [...new Set([...prestaciones, ...guardias].map((r) => r.paciente_id).filter(Boolean))];
-    return ids.map((idPaciente) => nombresPaciente[idPaciente] || '—');
-  }, [prestaciones, guardias, nombresPaciente]);
+  const idsPacienteDelServicio = useMemo(
+    () => [...new Set([...prestaciones, ...guardias].map((r) => r.paciente_id).filter(Boolean))],
+    [prestaciones, guardias],
+  );
+  const pacientesDelServicio = useMemo(
+    () => idsPacienteDelServicio.map((idPaciente) => nombresPaciente[idPaciente] || '—'),
+    [idsPacienteDelServicio, nombresPaciente],
+  );
 
   const modalidades = useMemo(() => modalidadesDeGuardias(guardias), [guardias]);
 
@@ -268,6 +284,7 @@ export function ServicioDetalle() {
     ['guardias', d.tab_guardias],
     ['seguimiento', d.tab_seguimiento],
     ['incidencias', d.tab_incidencias],
+    ...(puedeEditarPagos ? [['pagos', d.tab_pagos]] : []),
   ];
 
   const vacio = (texto) => <p className="estado-vacio">{texto}</p>;
@@ -278,7 +295,24 @@ export function ServicioDetalle() {
         <Button variant="secondary" onClick={() => navigate('/servicios')}>
           {d.volver}
         </Button>
+        {gestionaServicios && servicio.estado === ESTADO_ACTIVO && (
+          <Button variant="secondary" onClick={() => setDandoDeBaja(true)}>
+            {t.servicios.baja.boton}
+          </Button>
+        )}
       </Cabecera>
+
+      {dandoDeBaja && (
+        <BajaDelServicioModal
+          servicioId={servicio.id}
+          pacientesIds={idsPacienteDelServicio}
+          onClose={() => setDandoDeBaja(false)}
+          onDadoDeBaja={() => {
+            setDandoDeBaja(false);
+            recargar();
+          }}
+        />
+      )}
       <span className="panel-mini servicios-subtitulo">
         {[servicio.etiqueta, nombrePacientes, nombreCliente].filter(Boolean).join(' · ')}
       </span>
@@ -501,6 +535,15 @@ export function ServicioDetalle() {
               </table>
             </div>
           ))}
+        {tab === 'pagos' && puedeEditarPagos && (
+          <PagosDelServicio
+            servicio={servicio}
+            puedeEditar={puedeEditarPagos}
+            puedeRegistrar={puedeRegistrarConsentimiento}
+            esAdmin={esAdmin}
+            onGuardado={recargar}
+          />
+        )}
       </section>
 
       {tab === 'resumen' && (

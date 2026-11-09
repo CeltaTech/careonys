@@ -41,6 +41,7 @@ export const CAMPOS_IMPORTACION = {
     'nombrePaciente', 'documentoPaciente', 'dniPaciente', 'generoPaciente',
     'domicilioPaciente', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilioPaciente${parte}`),
     'fechaNacimientoPaciente', 'nivelComplejidadPaciente', 'patologiasPaciente',
+    'servicio',
   ],
 };
 

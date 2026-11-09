@@ -433,3 +433,47 @@ describe('una fila que ya entró', () => {
     assert.equal(loEscritoEn('clientes').contratante_persona_id, PERSONA_QUE_YA_ESTABA);
   });
 });
+
+describe('el Servicio que trae la planilla', () => {
+  const SERVICIO = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+
+  beforeEach(() => {
+    respuestas.set('POST /rest/v1/servicios', () => [{ id: SERVICIO }]);
+  });
+
+  it('con el nombre del Servicio, nace el Servicio de ese Cliente, con quien contrata', async () => {
+    fila.servicio = '  Cuidado diurno ';
+
+    const alta = await darDeAlta();
+
+    assert.deepEqual(loEscritoEn('servicios'), {
+      prestadora_id: PRESTADORA,
+      etiqueta: 'Cuidado diurno',
+      tipo_contratante: 'cliente',
+      contratante_id: NUEVO_CLIENTE,
+      contratante_persona_id: NUEVA_PERSONA,
+    });
+    assert.equal(alta.servicioId, SERVICIO);
+  });
+
+  it('sin nombre del Servicio, el Cliente entra sin ninguno', async () => {
+    fila.servicio = '   ';
+
+    const alta = await darDeAlta();
+
+    assert.equal(loEscritoEn('servicios'), undefined);
+    assert.equal(alta.servicioId, null);
+  });
+
+  it('si la base rechaza el Servicio, no queda ni la cuenta ni el Cliente', async () => {
+    fila.servicio = 'Cuidado diurno';
+    respuestas.set('POST /rest/v1/servicios', () => ({ error: { message: 'rechazado' } }));
+    respuestas.set('DELETE /rest/v1/servicios', () => []);
+
+    await assert.rejects(darDeAlta());
+
+    assert.equal(seLlamo('POST /rest/v1/rpc/deshacer_el_alta_de_la_cuenta'), true);
+    assert.equal(seLlamo('DELETE /rest/v1/servicios'), true);
+    assert.equal(seLlamo('DELETE /rest/v1/clientes'), true);
+  });
+});

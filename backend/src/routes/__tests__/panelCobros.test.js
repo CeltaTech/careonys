@@ -1079,8 +1079,12 @@ describe('la puerta de entrada para lo que viene de afuera', () => {
 // ---------------------------------------------------------------------------------------
 
 const PACIENTE = '55555555-5555-5555-5555-555555555555';
+const SERVICIO = '66666666-6666-4666-8666-666666666666';
 
-/** La base contesta con un Cliente, un Paciente y lo que cada prueba le ponga encima. */
+/**
+ * La base contesta con un Cliente, un Servicio suyo, un Paciente y lo que cada prueba le ponga
+ * encima. La factura es del Servicio, y el plazo acordado también.
+ */
 function baseConUnCliente({
   prestaciones = [],
   yaFacturadas = [],
@@ -1094,9 +1098,11 @@ function baseConUnCliente({
     {
       id: CLIENTE,
       prestadora_id: PRESTADORA,
-      dias_hasta_el_vencimiento: plazoDelCliente,
       pacientes: [{ id: PACIENTE, persona: { nombre_visible: 'Juana Pérez' } }],
     },
+  ]);
+  respuestas.set('GET /rest/v1/servicios', () => [
+    { id: SERVICIO, prestadora_id: PRESTADORA, contratante_id: CLIENTE, dias_hasta_el_vencimiento: plazoDelCliente },
   ]);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
   respuestas.set('GET /rest/v1/facturas_cliente', () => yaFacturadas);
@@ -1108,7 +1114,7 @@ function unaPrestacion(cambios = {}) {
   return {
     id: 1,
     paciente_id: PACIENTE,
-    servicio_id: null,
+    servicio_id: SERVICIO,
     tipo_servicio: 'Acompañamiento',
     precio_final: '10000.00',
     vigente_desde: '2026-01-01',
@@ -1196,8 +1202,8 @@ describe('generar las facturas de un período', () => {
     assert.equal(renglones.cuerpo[0].descripcion, 'Acompañamiento — Juana Pérez');
   });
 
-  it('el Cliente que ya tiene la factura del período no recibe otra', async () => {
-    baseConUnCliente({ prestaciones: [unaPrestacion()], yaFacturadas: [{ cliente_id: CLIENTE }] });
+  it('el Servicio que ya tiene la factura del período no recibe otra', async () => {
+    baseConUnCliente({ prestaciones: [unaPrestacion()], yaFacturadas: [{ servicio_id: SERVICIO }] });
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
     assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 0, sinVencimiento: 0 });
@@ -1236,6 +1242,23 @@ describe('generar las facturas de un período', () => {
     assert.equal(factura.cuerpo.prestadora_id, PRESTADORA);
     const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');
     assert.equal(renglones.cuerpo[0].prestadora_id, PRESTADORA);
+  });
+
+  it('la factura es del Servicio, y la deuda sigue siendo del Cliente', async () => {
+    baseConUnCliente({ prestaciones: [unaPrestacion()] });
+
+    await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
+    assert.equal(factura.cuerpo.servicio_id, SERVICIO);
+    assert.equal(factura.cuerpo.cliente_id, CLIENTE);
+  });
+
+  it('lo que no está en ningún Servicio no se factura', async () => {
+    baseConUnCliente({ prestaciones: [unaPrestacion({ servicio_id: null })] });
+
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 1, sinVencimiento: 0 });
   });
 
   it('quien no es del Panel no genera facturas', async () => {

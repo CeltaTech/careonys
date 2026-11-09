@@ -8,7 +8,6 @@ import { esAdminOSuperior } from '../../lib/roles';
 import { linkWhatsapp } from '../../lib/telefono';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
-import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { PrestacionesPaciente } from './PrestacionesPaciente';
@@ -18,8 +17,6 @@ import { SignosVitalesPaciente } from './SignosVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { EquipoDelPaciente } from './EquipoDelPaciente';
 import { InvitarPersonaAutorizadaModal } from './InvitarPersonaAutorizadaModal';
-import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
-import { EstadoDelPagador } from './EstadoDelPagador';
 import {
   AlertasDelCliente,
   GuardiasActivasDelCliente,
@@ -32,13 +29,6 @@ import {
 } from './AccesosDePersonasAutorizadasModal';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { llamarApiPanel } from '../../lib/apiPanel';
-import {
-  TIPOS_DE_PAGADOR,
-  TIPOS_DE_PAGADOR_POSIBLES,
-  PLAZO_MAXIMO_EN_DIAS,
-  plazoQueSePuedeGuardar,
-} from '../../lib/facturacionDeClientes';
-import { traducirValor } from '../../i18n/valores';
 import { con } from '../../lib/textos';
 import { FICHA_COMPLETA, conSusFichas, saludCon } from '../../lib/fichaDelPaciente';
 import { palabrasDelDomicilio } from '../../lib/partesDeDomicilio';
@@ -90,10 +80,6 @@ export function ClienteDetalle() {
   const [pacienteParaEquipo, setPacienteParaEquipo] = useState(null);
   const [pacienteAEditar, setPacienteAEditar] = useState(null);
   const [mostrarNuevoPaciente, setMostrarNuevoPaciente] = useState(false);
-  const [formContacto, setFormContacto] = useState(null);
-  const [guardandoContacto, setGuardandoContacto] = useState(false);
-  const [errorContacto, setErrorContacto] = useState(null);
-  const [contactoGuardado, setContactoGuardado] = useState(false);
   const [personas_autorizadas, setPersonasAutorizadas] = useState(null);
   const [estadoPersonasAutorizadas, setEstadoPersonasAutorizadas] = useState('cargando');
   const [errorPersonasAutorizadas, setErrorPersonasAutorizadas] = useState(null);
@@ -108,7 +94,7 @@ export function ClienteDetalle() {
   // Quien llega desde un documento pendiente de la Situación operativa entra en la solapa donde
   // se resuelve.
   const location = useLocation();
-  const [tab, setTab] = useState(location.state?.solapa ?? 'contacto');
+  const [tab, setTab] = useState(location.state?.solapa ?? 'pacientes');
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -116,7 +102,7 @@ export function ClienteDetalle() {
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
       .select(
-        `id, dias_hasta_el_vencimiento, pagador_tipo, pagador_persona_id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}, ${saludCon(['patologias', 'nivel_complejidad'])}), ` +
+        `id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}, ${saludCon(['patologias', 'nivel_complejidad'])}), ` +
           // Quién es el Cliente se lee de la Ficha de Persona de quien contrata, en el Directorio de
           // Personas, y se corrige allá.
           'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, lugares!personas_lugar_fkey(nombre), ' +
@@ -132,14 +118,6 @@ export function ClienteDetalle() {
     }
 
     setCliente({ ...data, pacientes: conSusFichas(data.pacientes, palabrasDelDomicilio(t)) });
-    setFormContacto({
-      dias_hasta_el_vencimiento:
-        data.dias_hasta_el_vencimiento === null || data.dias_hasta_el_vencimiento === undefined
-          ? ''
-          : String(data.dias_hasta_el_vencimiento),
-      pagador_tipo: data.pagador_tipo || '',
-      pagador_persona_id: data.pagador_persona_id || null,
-    });
     setEstado('listo');
   }, [id, t]);
 
@@ -188,55 +166,12 @@ export function ClienteDetalle() {
     }
   }
 
-  function setCampoContacto(campo, valor) {
-    setFormContacto((f) => ({ ...f, [campo]: valor }));
-    setContactoGuardado(false);
-  }
-
-  async function guardarContacto() {
-    setGuardandoContacto(true);
-    setErrorContacto(null);
-    const {
-      dias_hasta_el_vencimiento: dias,
-      pagador_tipo: pagadorTipo,
-      pagador_persona_id: pagadorPersonaId,
-    } = formContacto;
-    // Vacío es «no se acordó nada distinto», y entonces rige el plazo de la Prestadora. No es
-    // cero, que sería «paga el mismo día»: por eso se guarda vacío y no un número.
-    const plazo = plazoQueSePuedeGuardar(dias === '' ? '' : Number(dias));
-    if (!plazo.ok) {
-      setGuardandoContacto(false);
-      setErrorContacto(t.clientes.plazo_fuera_de_borde);
-      return;
-    }
-    // El Pagador vacío se guarda vacío y no como «cliente»: los dos quieren decir lo mismo,
-    // y guardar uno de los dos sería inventar una decisión que nadie tomó.
-    //
-    // La Ficha de Persona del Pagador se guarda siempre, pague quien pague. Cuando paga el
-    // Cliente, el Pagador es alguien del Cliente, y hay que saber cuál: alguien firma la
-    // obligación de pagar y esa persona tiene nombre. Borrarla por pagar el Cliente dejaba a esa
-    // contratación sin nadie a quien hacerle firmar nada.
-    const { error: errorCliente } = await supabase.from('clientes').update({
-      dias_hasta_el_vencimiento: plazo.valor,
-      pagador_tipo: pagadorTipo || null,
-      pagador_persona_id: pagadorPersonaId || null,
-    }).eq('id', cliente.id);
-    setGuardandoContacto(false);
-    if (errorCliente) {
-      setErrorContacto(t.comun.error_generico);
-      return;
-    }
-    setContactoGuardado(true);
-    recargar();
-  }
-
   if (estado === 'cargando') return <p className="estado-cargando">{t.comun.cargando}</p>;
   if (estado === 'no_encontrado') return <p className="estado-vacio">{t.comun.no_encontrado}</p>;
   if (estado === 'error') return <p className="estado-vacio">{error || t.comun.error_generico}</p>;
 
   // Una pestaña por sección, con el mismo texto que antes llevaba el título de cada una.
   const pestanas = [
-    ['contacto', t.clientes.contacto],
     ['pacientes', t.clientes.pacientes],
     ['personas_autorizadas', t.clientes.personas_autorizadas.titulo],
     ['guardias', t.clientes.guardias_activas],
@@ -261,7 +196,17 @@ export function ClienteDetalle() {
           <span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}
         </Button>
       </Cabecera>
-      <div className="panel-mini tarjeta-ficha-datos">{datosDeLaFichaDelCliente.join(' · ')}</div>
+      <div className="panel-mini tarjeta-ficha-datos">
+        {datosDeLaFichaDelCliente.join(' · ')}
+        {telefono && (
+          <>
+            {' · '}
+            <a className="panel-enlace" href={linkWhatsapp(telefono)} target="_blank" rel="noreferrer">
+              {t.clientes.abrir_whatsapp}
+            </a>
+          </>
+        )}
+      </div>
 
       <div className="molde-pila">
         <section className="panel-tarjeta">
@@ -280,81 +225,6 @@ export function ClienteDetalle() {
             ))}
           </div>
         </section>
-
-        {tab === 'contacto' && (
-          <>
-          <section className="panel-tarjeta">
-            <div className="panel-tarjeta-titulo">
-              <h2>{t.clientes.contacto}</h2>
-              {telefono && (
-                <a className="panel-enlace" href={linkWhatsapp(telefono)} target="_blank" rel="noreferrer">
-                  {t.clientes.abrir_whatsapp}
-                </a>
-              )}
-            </div>
-            {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
-            {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-            {formContacto && (
-              <>
-              <div className="molde-formgrid">
-                {/* Lo acordado con este Cliente pisa el plazo general de la Prestadora. Vacío quiere
-                    decir que no se acordó nada distinto, no que pague el mismo día. */}
-                <FormField
-                  label={t.clientes.plazo_de_pago}
-                  name="dias_hasta_el_vencimiento"
-                  type="number"
-                  min="0"
-                  max={PLAZO_MAXIMO_EN_DIAS}
-                  value={formContacto.dias_hasta_el_vencimiento}
-                  onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
-                  disabled={!puedeEditarCliente}
-                />
-                {/* A quién se le reclama lo que se le factura a este Cliente. Vacío es el Cliente, que
-                    es lo corriente. Cada factura se lleva este dato copiado el día que se genera, así
-                    que cambiarlo acá no toca ninguna factura ya emitida. */}
-                <FormField
-                  label={t.clientes.pagador_tipo}
-                  name="pagador_tipo"
-                  type="select"
-                  value={formContacto.pagador_tipo}
-                  onChange={(e) => setCampoContacto('pagador_tipo', e.target.value)}
-                  disabled={!puedeEditarCliente}
-                >
-                  <option value="">{t.clientes.pagador_tipo_cliente}</option>
-                  {TIPOS_DE_PAGADOR_POSIBLES.filter((f) => f !== TIPOS_DE_PAGADOR.CLIENTE).map((f) => (
-                    <option key={f} value={f}>{traducirValor(t.clientes, `pagador_tipo_${f}`)}</option>
-                  ))}
-                </FormField>
-                {/* Quién paga se elige del Directorio de Personas y no se teclea: un nombre escrito a
-                    mano crea un ente nuevo que no existe, y la misma obra social terminaría escrita de
-                    cien maneras.
-
-                    Se elige siempre, también cuando paga el Cliente: ahí el Pagador es alguien de la
-                    Cliente, y cuál es no se adivina. */}
-                <div className="molde-ancho">
-                  <SelectorDePersona
-                    name="pagador_persona_id"
-                    label={t.clientes.pagador_legajo}
-                    valor={formContacto.pagador_persona_id}
-                    alElegir={(personaId) => setCampoContacto('pagador_persona_id', personaId)}
-                    deshabilitado={!puedeEditarCliente}
-                  />
-                </div>
-              </div>
-              <div className="molde-acciones">
-                <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarCliente}>
-                  {guardandoContacto ? t.comun.guardando : t.comun.guardar}
-                </Button>
-              </div>
-              </>
-            )}
-          </section>
-          {/* Si el Pagador elegido firmó y qué documentos faltan, siempre a la vista. Avisa, no bloquea. */}
-          {formContacto && puedeEditarCliente && (
-            <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} esAdmin={esAdmin} />
-          )}
-          </>
-        )}
 
         {tab === 'pacientes' && (
           <section className="panel-tarjeta tarjeta-desplazable">

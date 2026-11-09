@@ -12,7 +12,7 @@ import { ApoderadoDelCliente } from './ApoderadoDelCliente';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
-/* Si el Pagador está definido, ahí donde se lo elige.
+/* Si el Pagador de este Servicio está definido, ahí donde se lo elige.
    ==========================================================================
 
    POR QUÉ ACÁ Y NO EN OTRA PANTALLA. Apuntar una Ficha de Persona como Pagador no la convierte
@@ -24,7 +24,7 @@ import '../tarjetas.css';
 
    LA FIRMA SE VE POR LA FECHA. Con fecha, firmó; sin fecha, no. Si después cambió el Pagador, junto
    a la fecha aparece quién firmó: sola, se leería como la firma del nombre que tiene al lado. */
-export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
+export function EstadoDelPagador({ servicioId, clienteId, puedeRegistrar, esAdmin }) {
   const { t, locale } = useLocale();
   const [estado, setEstado] = useState('cargando');
   const [datos, setDatos] = useState(null);
@@ -40,13 +40,13 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     setEstado('cargando');
     setError(null);
     try {
-      setDatos(await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador?idioma=${encodeURIComponent(locale)}&zona=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`));
+      setDatos(await llamarApiPanel(`/cuentas/servicio/${servicioId}/pagador?idioma=${encodeURIComponent(locale)}&zona=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, [clienteId, t, locale]);
+  }, [servicioId, t, locale]);
 
   useEffect(() => {
     recargar();
@@ -57,7 +57,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     setError(null);
     try {
       const { consentimiento } = await llamarApiPanel(
-        `/cuentas/cliente/${clienteId}/pagador/consentimiento`,
+        `/cuentas/servicio/${servicioId}/pagador/consentimiento`,
         { method: 'POST' },
       );
       setDocumentoAVer({ texto: consentimiento.documento_texto, idioma: consentimiento.documento_idioma });
@@ -74,7 +74,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     setError(null);
     try {
       await llamarApiPanel(
-        `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoId}/anular`,
+        `/cuentas/servicio/${servicioId}/pagador/consentimiento/${consentimientoId}/anular`,
         { method: 'POST' },
       );
       await recargar();
@@ -90,7 +90,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
     setError(null);
     try {
       await llamarApiPanel(
-        `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoId}/enviar`,
+        `/cuentas/servicio/${servicioId}/pagador/consentimiento/${consentimientoId}/enviar`,
         { method: 'POST' },
       );
       avisar(datos.textos.enviado);
@@ -208,7 +208,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                       variant="secondary"
                       onClick={() =>
                         verArchivo(
-                          `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoCerrado.id}/documento`,
+                          `/cuentas/servicio/${servicioId}/pagador/consentimiento/${consentimientoCerrado.id}/documento`,
                         )
                       }
                     >
@@ -281,7 +281,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
                           variant="secondary"
                           onClick={() =>
                             verArchivo(
-                              `/cuentas/cliente/${clienteId}/pagador/documento/${documento.documentoId}/archivo`,
+                              `/cuentas/servicio/${servicioId}/pagador/documento/${documento.documentoId}/archivo`,
                             )
                           }
                         >
@@ -313,7 +313,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
 
       {firmaARegistrar && (
         <RegistrarFirmaDelPagadorModal
-          clienteId={clienteId}
+          servicioId={servicioId}
           consentimientoId={firmaARegistrar}
           onClose={() => setFirmaARegistrar(null)}
           onRegistrado={() => {
@@ -325,7 +325,7 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar, esAdmin }) {
 
       {documentoACargar && (
         <CargarDocumentoDelPagadorModal
-          clienteId={clienteId}
+          servicioId={servicioId}
           documento={documentoACargar}
           onClose={() => setDocumentoACargar(null)}
           onCargado={() => {
@@ -377,7 +377,7 @@ function DocumentoDelConsentimiento({ texto, idioma, firmadoCon, onCerrar }) {
    El archivo es opcional a propósito, igual que en la instrucción de Personas autorizadas: lo que cierra esto
    es que la Prestadora declare que se firmó, y hay Prestadoras que archivan el documento afuera del
    sistema. */
-function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, onRegistrado }) {
+function RegistrarFirmaDelPagadorModal({ servicioId, consentimientoId, onClose, onRegistrado }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onClose);
   const [archivo, setArchivo] = useState(null);
@@ -392,7 +392,7 @@ function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, o
       const cuerpo = new FormData();
       if (archivo) cuerpo.append('archivo', archivo);
       await llamarApiPanel(
-        `/cuentas/cliente/${clienteId}/pagador/consentimiento/${consentimientoId}/documento`,
+        `/cuentas/servicio/${servicioId}/pagador/consentimiento/${consentimientoId}/documento`,
         { method: 'POST', body: cuerpo },
       );
       onRegistrado();
@@ -432,7 +432,7 @@ function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, o
 
 /* Cargar uno de los documentos que exige el Pagador. Acá el archivo sí es obligatorio: el documento
    es justamente el archivo, y anotar que existe sin tenerlo no documenta nada. */
-function CargarDocumentoDelPagadorModal({ clienteId, documento, onClose, onCargado }) {
+function CargarDocumentoDelPagadorModal({ servicioId, documento, onClose, onCargado }) {
   const { t } = useLocale();
   const modal = useModalAccesible(onClose);
   const [archivo, setArchivo] = useState(null);
@@ -448,7 +448,7 @@ function CargarDocumentoDelPagadorModal({ clienteId, documento, onClose, onCarga
       const cuerpo = new FormData();
       cuerpo.append('archivo', archivo);
       if (vencimiento) cuerpo.append('fechaVencimiento', vencimiento);
-      await llamarApiPanel(`/cuentas/cliente/${clienteId}/pagador/documento/${documento.tipoId}`, {
+      await llamarApiPanel(`/cuentas/servicio/${servicioId}/pagador/documento/${documento.tipoId}`, {
         method: 'POST',
         body: cuerpo,
       });

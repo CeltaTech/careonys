@@ -71,8 +71,9 @@ const EXCEPCIONES_CON_RENGLON_PROPIO = new Set([EXCEPCION_SIN_CUBRIR, 'documenta
 const ESPERA_FIRMA = 'pendiente_firma';
 
 /* Los documentos de un Cliente sin firmar, un renglón por Cliente y por lugar donde se
-   resuelven: la autorización de acceso y el consentimiento del Pagador en la Ficha del cliente,
-   abierta en la solapa del primero que falte; el de la medicación, en Medicación. */
+   resuelven: la autorización de acceso en la Ficha del cliente y el consentimiento del Responsable
+   de pagos en la Ficha del Servicio, cada una abierta en su solapa; el de la medicación, en
+   Medicación. */
 function documentosDeClientesSinFirmar({ autorizaciones, consentimientosPagador, consentimientosMedicacion }) {
   const renglones = new Map();
   const sumar = (clienteId, a, solapa) => {
@@ -82,7 +83,7 @@ function documentosDeClientesSinFirmar({ autorizaciones, consentimientosPagador,
     renglones.set(clave, renglon);
   };
   for (const fila of autorizaciones) sumar(fila.cliente_id, `/clientes/${fila.cliente_id}`, 'personas_autorizadas');
-  for (const fila of consentimientosPagador) sumar(fila.cliente_id, `/clientes/${fila.cliente_id}`, 'contacto');
+  for (const fila of consentimientosPagador) sumar(fila.cliente_id, `/servicios/${fila.servicio_id}`, 'pagos');
   for (const fila of consentimientosMedicacion) {
     const clienteId = fila.indicaciones_medicacion?.cliente_id;
     if (clienteId) sumar(clienteId, '/medicacion', null);
@@ -267,7 +268,7 @@ export function EstadoActual() {
         .limit(INCIDENCIAS_A_LA_VISTA),
       supabase.from('incidentes_relevo').select('id', { count: 'exact', head: true }).is('resuelto_at', null),
       supabase.from('instrucciones_acceso_personas_autorizadas').select('cliente_id').eq('estado', ESPERA_FIRMA),
-      supabase.from('consentimientos_pagador').select('cliente_id').eq('estado', ESPERA_FIRMA),
+      supabase.from('consentimientos_pagador').select('cliente_id, servicio_id').eq('estado', ESPERA_FIRMA),
       supabase
         .from('consentimientos_medicacion')
         .select('indicaciones_medicacion!consentimientos_medicacion_indicacion_id_prestadora_id_fkey(cliente_id)')

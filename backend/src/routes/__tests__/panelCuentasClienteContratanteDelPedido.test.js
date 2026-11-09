@@ -92,28 +92,33 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => true);
   // El Cliente no aparece: la ruta contesta 404 y lo que se mira es cómo se lo buscó.
   respuestas.set('GET /rest/v1/clientes', () => []);
+  respuestas.set('GET /rest/v1/servicios', () => []);
 });
 
+const SERVICIO = '77777777-7777-4777-8777-777777777777';
+
+// Cada ruta busca lo suyo: las personas autorizadas son del Cliente; el Responsable de pagos, del
+// Servicio.
 const RUTAS_QUE_BUSCAN_EL_CLIENTE = [
-  ['GET', `/cliente/${CLIENTE}/personas_autorizadas`],
-  ['GET', `/cliente/${CLIENTE}/pagador`],
+  ['GET', `/cliente/${CLIENTE}/personas_autorizadas`, 'clientes', CLIENTE],
+  ['GET', `/servicio/${SERVICIO}/pagador`, 'servicios', SERVICIO],
 ];
 
 const INSTRUCCION = '99999999-9999-9999-9999-999999999999';
 
 describe('el Cliente del pedido se busca con la credencial de quien pide', () => {
   for (const rol of ['admin_prestadora', 'coordinador']) {
-    for (const [metodo, ruta] of RUTAS_QUE_BUSCAN_EL_CLIENTE) {
+    for (const [metodo, ruta, tabla, id] of RUTAS_QUE_BUSCAN_EL_CLIENTE) {
       it(`${rol}: ${metodo} ${ruta}`, async () => {
         rolDelUsuario = rol;
         const { estado } = await pedir(metodo, ruta);
         assert.equal(estado, 404);
 
-        const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/clientes');
-        assert.ok(lectura, 'la ruta no buscó el Cliente');
+        const lectura = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
+        assert.ok(lectura, `la ruta no buscó en ${tabla}`);
         assert.equal(lectura.credencial, credencialEnviada, 'el Cliente se buscó con otra credencial');
         assert.doesNotMatch(lectura.busqueda, /prestadora_id=/, 'viajó un filtro de Prestadora escrito a mano');
-        assert.match(lectura.busqueda, new RegExp(`id=eq\\.${CLIENTE}`));
+        assert.match(lectura.busqueda, new RegExp(`id=eq\\.${id}`));
       });
     }
   }

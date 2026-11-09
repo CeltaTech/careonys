@@ -16,7 +16,7 @@ import { con } from '../../lib/textos';
 import { hoyISO } from '../../lib/horarios';
 import { situacion } from '../../lib/vigenciaPrestacion';
 import { servicioSirveParaCliente } from '../../lib/serviciosDelPaciente';
-import { lugaresDe, lugaresDeVarias } from '../../lib/lugaresDeCadaPersona';
+import { cerrarServicioDelPaciente } from '../../lib/cerrarServicioDelPaciente';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
@@ -269,124 +269,19 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setCerrandoServicio(true);
     setErrorCierre(null);
 
-    const { data: cierreInsertado, error: errorInsert } = await supabase
-      .from('cierres_servicio_paciente')
-      .insert({
-        prestadora_id: prestadoraId,
-        // Qué Servicio se cierra y para qué Paciente. Lo que se pactó es el Servicio, así que
-        // todo lo que se da de baja abajo se acota a él: si el Cliente tiene otro Servicio
-        // abierto para este mismo Paciente, ése sigue corriendo.
-        servicio_id: servicioCierreId,
-        paciente_id: paciente.id,
-        motivo: valorGuardado(motivoCierreElegido),
-        motivo_detalle: motivoCierreElegido.pide_detalle ? motivoDetalleCierre.trim() : null,
-        cerrado_por: usuario.id,
-      })
-      .select()
-      .single();
-    if (errorInsert) {
-      setCerrandoServicio(false);
-      setErrorCierre(mensajeDeError(errorInsert, t));
-      return;
-    }
-
-    // La consulta de los Asistentes involucrados corre recién acá, después de insertar el
-    // cierre: la política "coordinador_cierra_servicio_*" que le da visibilidad a un Coordinador
-    // fuera de zona depende de que ese registro ya exista, y pregunta por el
-    // Servicio del cierre y no por el Paciente. Si esta consulta corriera antes del insert (como
-    // en una versión anterior), un Coordinador fuera de zona no vería ninguna fila y la alerta
-    // cruzada nunca se dispararía. Y todavía tiene que ir antes de la baja de más abajo, porque
-    // filtra por estado='activa'/'programada'.
-    const [seriesActivasResp, guardiasProgramadasResp] = await Promise.all([
-      supabase
-        .from('series_guardias')
-        .select('asistente_id')
-        .eq('paciente_id', paciente.id)
-        .eq('servicio_id', servicioCierreId)
-        .eq('estado', 'activa'),
-      supabase
-        .from('guardias')
-        .select('asistente_id')
-        .eq('paciente_id', paciente.id)
-        .eq('servicio_id', servicioCierreId)
-        .eq('estado', 'programada'),
-    ]);
-
-    const asistentesInvolucrados = [
-      ...new Set(
-        [...(seriesActivasResp.data ?? []), ...(guardiasProgramadasResp.data ?? [])]
-          .map((fila) => fila.asistente_id)
-          .filter(Boolean),
-      ),
-    ];
-
-    const ahora = new Date().toISOString();
-    const asistentesAInsertar = asistentesInvolucrados.map((asistenteId) => ({
-      prestadora_id: prestadoraId,
-      cierre_id: cierreInsertado.id,
-      asistente_id: asistenteId,
-    }));
-    const resultados = await Promise.all([
-      // La fecha de fin no se manda desde acá a propósito: la pone la base al ver la baja, con
-      // su propio reloj y no con el de esta computadora, y recorta sola lo que estaba pactado
-      // para más adelante. Escribirla también acá sería tener la misma decisión en dos lugares.
-      supabase
-        .from('prestaciones')
-        .update({ estado: 'de_baja' })
-        .eq('paciente_id', paciente.id)
-        .eq('servicio_id', servicioCierreId)
-        .eq('estado', 'vigente'),
-      supabase
-        .from('series_guardias')
-        .update({ estado: 'cancelada', cancelacion_origen: 'prestadora', cancelado_at: ahora })
-        .eq('paciente_id', paciente.id)
-        .eq('servicio_id', servicioCierreId)
-        .eq('estado', 'activa'),
-      supabase
-        .from('guardias')
-        .update({ estado: 'cancelada', cancelacion_origen: 'prestadora', cancelacion_alcance: 'total' })
-        .eq('paciente_id', paciente.id)
-        .eq('servicio_id', servicioCierreId)
-        .eq('estado', 'programada'),
-      ...(asistentesAInsertar.length > 0 ? [supabase.from('cierre_servicio_asistentes').insert(asistentesAInsertar)] : []),
-    ]);
-
-    const errorCascada = resultados.find((r) => r.error)?.error;
+    const { error: errorDelCierre } = await cerrarServicioDelPaciente({
+      prestadoraId,
+      usuario,
+      servicioId: servicioCierreId,
+      pacienteId: paciente.id,
+      motivo: valorGuardado(motivoCierreElegido),
+      motivoDetalle: motivoCierreElegido.pide_detalle ? motivoDetalleCierre.trim() : null,
+    });
     setCerrandoServicio(false);
-    if (errorCascada) {
-      setErrorCierre(mensajeDeError(errorCascada, t));
+    if (errorDelCierre) {
+      setErrorCierre(mensajeDeError(errorDelCierre, t));
       return;
     }
-
-    if (usuario.rol === 'coordinador') {
-      // Quién quedó fuera del alcance de quien cierra se resuelve cruzando lugares con lugares.
-      // Las dos puntas son el mismo identificador, así que una coincidencia es una coincidencia
-      // de verdad y no dos maneras de escribir la misma localidad.
-      const [lugaresDeQuienCierra, lugaresPorAsistente] = await Promise.all([
-        lugaresDe('usuario_lugares', 'usuario_id', usuario.id),
-        lugaresDeVarias('asistente_lugares', 'asistente_id', asistentesInvolucrados),
-      ]);
-      const asistentesFueraDeZona = asistentesInvolucrados.filter(
-        (asistenteId) =>
-          !(lugaresPorAsistente.get(asistenteId) ?? []).some((lugar) =>
-            lugaresDeQuienCierra.includes(lugar)
-          )
-      );
-      if (asistentesFueraDeZona.length > 0) {
-        await supabase.from('notificaciones_cierre_servicio').insert(
-          asistentesFueraDeZona.map((asistenteId) => ({
-            prestadora_id: prestadoraId,
-            cierre_id: cierreInsertado.id,
-            paciente_id: paciente.id,
-            asistente_id: asistenteId,
-            cerrado_por: usuario.id,
-            motivo: valorGuardado(motivoCierreElegido),
-            motivo_detalle: motivoCierreElegido.pide_detalle ? motivoDetalleCierre.trim() : null,
-          }))
-        );
-      }
-    }
-
     setMotivoCierre('');
     setMotivoDetalleCierre('');
     recargar();

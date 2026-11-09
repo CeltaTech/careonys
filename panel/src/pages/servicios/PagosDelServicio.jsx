@@ -1,0 +1,135 @@
+import { useState } from 'react';
+import { useLocale } from '../../i18n/LocaleContext';
+import { traducirValor } from '../../i18n/valores';
+import { supabase } from '../../lib/supabaseClient';
+import { mensajeDeError } from '../../lib/errores';
+import { Alert } from '../../components/ui/Alert';
+import { Button } from '../../components/ui/Button';
+import { FormField } from '../../components/ui/FormField';
+import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
+import { EstadoDelPagador } from '../clientes/EstadoDelPagador';
+import {
+  TIPOS_DE_PAGADOR,
+  TIPOS_DE_PAGADOR_POSIBLES,
+  PLAZO_MAXIMO_EN_DIAS,
+  plazoQueSePuedeGuardar,
+} from '../../lib/facturacionDeClientes';
+import '../../styles/molde-paginas.css';
+
+/* Lo comercial de un Servicio: quién contrata, quién paga, en qué plazo, y si quien paga firmó.
+   ==========================================================================
+
+   Es del Servicio y no del Cliente: un mismo Cliente puede tener dos Servicios con distinto
+   Responsable de pagos. La deuda sigue siendo del Cliente. Las personas se eligen del Directorio
+   de Personas y no se teclean. */
+export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmin, onGuardado }) {
+  const { t } = useLocale();
+  const [form, setForm] = useState(() => ({
+    dias_hasta_el_vencimiento:
+      servicio.dias_hasta_el_vencimiento === null || servicio.dias_hasta_el_vencimiento === undefined
+        ? ''
+        : String(servicio.dias_hasta_el_vencimiento),
+    pagador_tipo: servicio.pagador_tipo || '',
+    pagador_persona_id: servicio.pagador_persona_id || null,
+    contratante_persona_id: servicio.contratante_persona_id || null,
+  }));
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+  const [guardado, setGuardado] = useState(false);
+
+  function setCampo(campo, valor) {
+    setForm((f) => ({ ...f, [campo]: valor }));
+    setGuardado(false);
+  }
+
+  async function guardar() {
+    // Vacío es «no se acordó nada distinto», y rige el plazo de la Prestadora; no es cero.
+    const plazo = plazoQueSePuedeGuardar(form.dias_hasta_el_vencimiento === '' ? '' : Number(form.dias_hasta_el_vencimiento));
+    if (!plazo.ok) {
+      setError(t.clientes.plazo_fuera_de_borde);
+      return;
+    }
+    setGuardando(true);
+    setError(null);
+    const { error: falla } = await supabase
+      .from('servicios')
+      .update({
+        dias_hasta_el_vencimiento: plazo.valor,
+        pagador_tipo: form.pagador_tipo || null,
+        pagador_persona_id: form.pagador_persona_id || null,
+        contratante_persona_id: form.contratante_persona_id || null,
+      })
+      .eq('id', servicio.id);
+    setGuardando(false);
+    if (falla) {
+      setError(mensajeDeError(falla, t));
+      return;
+    }
+    setGuardado(true);
+    onGuardado?.();
+  }
+
+  return (
+    <>
+      {error && <Alert variant="error">{error}</Alert>}
+      {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+      <div className="molde-formgrid">
+        <div className="molde-ancho">
+          <SelectorDePersona
+            name="contratante_persona_id"
+            label={t.servicios.detalle.contratante}
+            valor={form.contratante_persona_id}
+            alElegir={(personaId) => setCampo('contratante_persona_id', personaId)}
+            deshabilitado={!puedeEditar}
+          />
+        </div>
+        <FormField
+          label={t.clientes.pagador_tipo}
+          name="pagador_tipo"
+          type="select"
+          value={form.pagador_tipo}
+          onChange={(e) => setCampo('pagador_tipo', e.target.value)}
+          disabled={!puedeEditar}
+        >
+          <option value="">{t.clientes.pagador_tipo_cliente}</option>
+          {TIPOS_DE_PAGADOR_POSIBLES.filter((f) => f !== TIPOS_DE_PAGADOR.CLIENTE).map((f) => (
+            <option key={f} value={f}>{traducirValor(t.clientes, `pagador_tipo_${f}`)}</option>
+          ))}
+        </FormField>
+        <FormField
+          label={t.clientes.plazo_de_pago}
+          name="dias_hasta_el_vencimiento"
+          type="number"
+          min="0"
+          max={PLAZO_MAXIMO_EN_DIAS}
+          value={form.dias_hasta_el_vencimiento}
+          onChange={(e) => setCampo('dias_hasta_el_vencimiento', e.target.value)}
+          disabled={!puedeEditar}
+        />
+        <div className="molde-ancho">
+          <SelectorDePersona
+            name="pagador_persona_id"
+            label={t.clientes.pagador_legajo}
+            valor={form.pagador_persona_id}
+            alElegir={(personaId) => setCampo('pagador_persona_id', personaId)}
+            deshabilitado={!puedeEditar}
+          />
+        </div>
+      </div>
+      {puedeEditar && (
+        <div className="molde-acciones">
+          <Button onClick={guardar} disabled={guardando}>
+            {guardando ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      )}
+      {/* Si el Responsable de pagos firmó y qué documentos faltan. Avisa, no bloquea. */}
+      <EstadoDelPagador
+        servicioId={servicio.id}
+        clienteId={servicio.contratante_id}
+        puedeRegistrar={puedeRegistrar}
+        esAdmin={esAdmin}
+      />
+    </>
+  );
+}

@@ -440,6 +440,8 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
   try {
     const { clienteId, contratantePersonaId, pacientePersonaId, etiqueta } = req.body ?? {};
     if (!String(etiqueta ?? '').trim()) throw new ErrorConMotivo('faltan_datos');
+    // Un Coordinador que crea un Servicio queda coordinándolo.
+    const coordinadorId = req.usuarioPanel?.rol === 'coordinador' ? req.usuarioPanel.id : null;
 
     if (clienteId) {
       const db = clienteDelPedido(req);
@@ -457,6 +459,7 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
         clienteId: cliente.id,
         contratantePersonaId: cliente.contratante_persona_id,
         etiqueta,
+        coordinadorId,
       }));
       return res.json({ ok: true, servicioId, clienteId: cliente.id });
     }
@@ -464,7 +467,7 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
     const prestadoraId = req.usuarioPanel?.prestadoraId;
     if (!prestadoraId || !contratantePersonaId || !pacientePersonaId) throw new ErrorConMotivo('faltan_datos');
     const alta = await enLaPrestadora(prestadoraId, 'alta de Cliente con Servicio', (db) =>
-      crearClienteConServicio(db, { prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta }));
+      crearClienteConServicio(db, { prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId }));
     res.json({ ok: true, servicioId: alta.servicioId, clienteId: alta.clienteId });
   } catch (error) {
     responderError(res, error);

@@ -766,7 +766,11 @@ export async function crearClienteImportado({
 // cuando el Panel le abre un Servicio a un Cliente que ya estaba, y la del trabajo sin persona,
 // cuando el Servicio nace junto con el Cliente. La base exige que el Cliente sea de la misma
 // Prestadora, y a una persona con sesión, además, el permiso `gestionar_servicios`.
-export async function crearServicioDelCliente(db, { prestadoraId, clienteId, contratantePersonaId, etiqueta }) {
+//
+// Si lo crea un Coordinador, el Servicio nace coordinado por él.
+export async function crearServicioDelCliente(db, {
+  prestadoraId, clienteId, contratantePersonaId, etiqueta, coordinadorId,
+}) {
   const nombre = String(etiqueta ?? '').trim();
   if (!prestadoraId || !clienteId || !nombre) throw new ErrorConMotivo('faltan_datos');
   const { data, error } = await db
@@ -776,6 +780,7 @@ export async function crearServicioDelCliente(db, { prestadoraId, clienteId, con
       etiqueta: nombre,
       cliente_id: clienteId,
       contratante_persona_id: contratantePersonaId ?? null,
+      ...(coordinadorId ? { coordinador_id: coordinadorId, coordinador_asignado_por: coordinadorId } : {}),
     })
     .select('id')
     .single();
@@ -790,7 +795,7 @@ export async function crearServicioDelCliente(db, { prestadoraId, clienteId, con
 // Si esa persona ya contrata en esta Prestadora para ese mismo Paciente, el Cliente ya existe y no
 // se crea otro: se lo elige de la lista.
 export async function crearClienteConServicio(db, {
-  prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta,
+  prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId,
 }) {
   if (!prestadoraId || !contratantePersonaId || !pacientePersonaId || !String(etiqueta ?? '').trim()) {
     throw new ErrorConMotivo('faltan_datos');
@@ -847,7 +852,7 @@ export async function crearClienteConServicio(db, {
     if (errorPaciente) throw new Error(errorPaciente.message);
 
     const servicioId = await crearServicioDelCliente(db, {
-      prestadoraId, clienteId, contratantePersonaId, etiqueta,
+      prestadoraId, clienteId, contratantePersonaId, etiqueta, coordinadorId,
     });
     return { clienteId, servicioId, numeroCliente: clienteNuevo.numero_cliente };
   } catch (error) {

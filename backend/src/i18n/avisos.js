@@ -471,6 +471,16 @@ const ARMADORES = {
     };
   },
 
+  // El importe llega ya escrito con su moneda, en el idioma del aviso: el formato del número es del
+  // idioma, no de la frase.
+  baja_servicio_con_deuda: (t, d) => ({
+    asunto: t('baja_servicio_con_deuda.asunto'),
+    texto: t(
+      Number(d.dias) > 0 ? segunCantidad('baja_servicio_con_deuda.texto', d.dias) : 'baja_servicio_con_deuda.texto_sin_atraso',
+      { servicio: d.servicio, importe: d.importe, dias: d.dias }
+    ),
+  }),
+
   cobertura_objetada: (t, d) => ({
     asunto: t('cobertura_objetada.asunto', { nombre: d.nombre ?? t('comun.un_asistente') }),
     texto: t('cobertura_objetada.cuerpo', { nombre: d.nombre ?? t('comun.un_asistente') }),

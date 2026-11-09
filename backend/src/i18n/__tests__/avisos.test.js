@@ -100,6 +100,7 @@ const DATOS = {
   vuelta_de_coordinador_sin_confirmar: { nombre: 'Marcos Peña', fecha: '2026-10-14', veces: 1 },
   cobertura_objetada: { nombre: 'Rita Solano' },
   plazo_ubicacion_sin_aceptar: { nombre: 'Rita Solano', dias: 30 },
+  baja_servicio_con_deuda: { servicio: 'Cuidado nocturno', importe: '$ 4.500,00', dias: 12 },
   guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 5,
@@ -237,6 +238,7 @@ test('el número de la frase concuerda con la cantidad', () => {
       nombre: 'Marta', link: 'https://ejemplo.test/activar', dias: n, empresa: 'Cuidados del Sur', producto: 'P',
     },
     plazo_ubicacion_sin_aceptar: { nombre: 'Marta', dias: n },
+    baja_servicio_con_deuda: { servicio: 'Cuidado nocturno', importe: '$ 4.500,00', dias: n },
   });
   const SINGULAR = /\b1 (minuto|minute|día|dia|day)\b/;
   const PLURAL_CON_UNO = /\b1 (minutos|minutes|días|dias|days)\b/;

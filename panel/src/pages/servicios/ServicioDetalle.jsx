@@ -21,6 +21,7 @@ import { claseDeResponsable, modalidadesDeGuardias, nombreDeModalidad } from './
 import { TareasDelServicio } from './TareasDelServicio';
 import { PagosDelServicio } from './PagosDelServicio';
 import { BajaDelServicioModal } from './BajaDelServicioModal';
+import { ReactivarElServicioModal } from './ReactivarElServicioModal';
 import './servicios.css';
 
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
@@ -34,6 +35,7 @@ const GUARDIAS_A_MOSTRAR = 20;
 const REPORTES_A_MOSTRAR = 50;
 
 const ESTADO_ACTIVO = 'vigente';
+const ESTADO_DE_BAJA = 'de_baja';
 
 function fecha(valor, locale) {
   return valor ? new Date(valor).toLocaleDateString(locale) : '—';
@@ -56,6 +58,7 @@ export function ServicioDetalle() {
   const puedeRegistrarConsentimiento = esAdmin || puede('registrar_consentimiento_pagador');
   const gestionaServicios = esAdmin || puede('gestionar_servicios');
   const [dandoDeBaja, setDandoDeBaja] = useState(false);
+  const [reactivando, setReactivando] = useState(false);
   const [servicio, setServicio] = useState(null);
   const [coordinadores, setCoordinadores] = useState([]);
   const [asignando, setAsignando] = useState(false);
@@ -298,15 +301,29 @@ export function ServicioDetalle() {
             {t.servicios.baja.boton}
           </Button>
         )}
+        {gestionaServicios && servicio.estado === ESTADO_DE_BAJA && (
+          <Button variant="secondary" onClick={() => setReactivando(true)}>
+            {t.servicios.reactivacion.boton}
+          </Button>
+        )}
       </Cabecera>
 
       {dandoDeBaja && (
         <BajaDelServicioModal
           servicioId={servicio.id}
-          pacientesIds={idsPacienteDelServicio}
           onClose={() => setDandoDeBaja(false)}
           onDadoDeBaja={() => {
             setDandoDeBaja(false);
+            recargar();
+          }}
+        />
+      )}
+      {reactivando && (
+        <ReactivarElServicioModal
+          servicioId={servicio.id}
+          onClose={() => setReactivando(false)}
+          onReactivado={() => {
+            setReactivando(false);
             recargar();
           }}
         />

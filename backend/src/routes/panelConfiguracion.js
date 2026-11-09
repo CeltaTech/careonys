@@ -2264,6 +2264,66 @@ panelConfiguracionRouter.delete('/motivos-cierre-servicio/:id', async (req, res)
   res.json({ ok: true });
 });
 
+// --- La Lista de comprobación para la baja de un Servicio y los motivos de reactivación. Las dos
+//     las arma cada Prestadora desde cero, con el mismo molde: un nombre escrito por ella, encendido
+//     o apagado, y en los motivos si piden detalle. El nombre no se cambia por lo mismo que el del
+//     motivo de cierre: la baja y la reactivación guardan el texto de ese día. ---
+function catalogoDeLaPrestadora(ruta, tabla, { conDetalle }) {
+  panelConfiguracionRouter.get(ruta, async (req, res) => {
+    const { data, error } = await clienteDelPedido(req)
+      .from(tabla)
+      .select('*')
+      .order('orden')
+      .order('created_at');
+    if (error) return responderError(res, error);
+    res.json({ filas: data });
+  });
+
+  panelConfiguracionRouter.post(ruta, async (req, res) => {
+    const nombre = String(req.body?.nombre ?? '').trim();
+    if (!nombre) return responderError(res, new ErrorConMotivo('faltan_datos'));
+    const db = clienteDelPedido(req);
+    const prestadoraId = await prestadoraVisibleOContestar(db, res);
+    if (!prestadoraId) return;
+    const fila = { nombre, prestadora_id: prestadoraId };
+    if (conDetalle) fila.pide_detalle = req.body?.pide_detalle === true;
+    const { error } = await db.from(tabla).insert(fila);
+    if (error) return responderError(res, error);
+    res.json({ ok: true });
+  });
+
+  panelConfiguracionRouter.patch(`${ruta}/:id`, async (req, res) => {
+    const { activo, pide_detalle } = req.body ?? {};
+    const cambios = {};
+    if (activo !== undefined) cambios.activo = activo === true;
+    if (conDetalle && pide_detalle !== undefined) cambios.pide_detalle = pide_detalle === true;
+    if (Object.keys(cambios).length === 0) return responderError(res, new ErrorConMotivo('faltan_datos'));
+    cambios.updated_at = new Date().toISOString();
+    const { data, error } = await clienteDelPedido(req)
+      .from(tabla)
+      .update(cambios)
+      .eq('id', req.params.id)
+      .select('id');
+    if (error) return responderError(res, error);
+    if (!data?.length) return responderError(res, new ErrorConMotivo('no_encontrado'));
+    res.json({ ok: true });
+  });
+
+  panelConfiguracionRouter.delete(`${ruta}/:id`, async (req, res) => {
+    const { data, error } = await clienteDelPedido(req)
+      .from(tabla)
+      .delete()
+      .eq('id', req.params.id)
+      .select('id');
+    if (error) return responderError(res, error);
+    if (!data?.length) return responderError(res, new ErrorConMotivo('no_encontrado'));
+    res.json({ ok: true });
+  });
+}
+
+catalogoDeLaPrestadora('/lista-de-comprobacion-baja', 'lista_de_comprobacion_baja_servicio', { conDetalle: false });
+catalogoDeLaPrestadora('/motivos-reactivacion-servicio', 'motivos_reactivacion_servicio', { conDetalle: true });
+
 // --- Horizonte de generación de guardias de series abiertas — cron
 //     backend/src/utils/generacionSeriesGuardia.js. Mismo patrón que
 //     /documentos-tipo/plazo-aviso: valor en "prestadoras", expuesto acá para reusar el

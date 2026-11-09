@@ -30,7 +30,7 @@ import { laCobranzaLaLlevaOtroSoftware } from '../utils/seguimientoDeLaCobranza.
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
 import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { requierePermiso } from '../utils/permisos.js';
 
 /* Lo que el Cliente pagó, anotado; y el saldo, que es una resta.
@@ -345,6 +345,53 @@ panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, veElEstadoDeCuenta
   }
 
   res.json((data || []).map((e) => ({ ...e, cliente_nombre: nombres.get(e.cliente_id) ?? null })));
+});
+
+// ---------------------------------------------------------------------------------------
+// La baja de un Servicio con deuda
+//
+// La anota la base al dar la baja (`dar_de_baja_el_servicio`). Acá sólo se muestra, con el
+// Responsable de pagos y el Contratante —que responde solidariamente—, y se marca como visto.
+// Ni la lectura ni la marca tocan la deuda: el reclamo es de créditos y cobranzas.
+// ---------------------------------------------------------------------------------------
+
+panelCobrosRouter.get('/avisos-baja-con-deuda', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
+    .from('avisos_baja_servicio_con_deuda')
+    .select('id, servicio_id, cliente_id, responsable_de_pagos_persona_id, contratante_persona_id, importe, moneda, dias_de_atraso, created_at, servicios(etiqueta)')
+    .is('visto_at', null)
+    .order('created_at', { ascending: false });
+  if (error) return responderError(res, error);
+
+  const personaIds = [...new Set((data || [])
+    .flatMap((a) => [a.responsable_de_pagos_persona_id, a.contratante_persona_id])
+    .filter(Boolean))];
+  let personas = new Map();
+  if (personaIds.length) {
+    const { data: filas, error: e2 } = await db.from('personas').select('id, nombre_visible').in('id', personaIds);
+    if (e2) return responderError(res, e2);
+    personas = new Map((filas || []).map((p) => [p.id, p.nombre_visible]));
+  }
+
+  res.json((data || []).map(({ servicios, ...a }) => ({
+    ...a,
+    servicio_etiqueta: servicios?.etiqueta ?? null,
+    responsable_de_pagos_nombre: personas.get(a.responsable_de_pagos_persona_id) ?? null,
+    contratante_nombre: personas.get(a.contratante_persona_id) ?? null,
+  })));
+});
+
+panelCobrosRouter.patch('/avisos-baja-con-deuda/:id/visto', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
+  const { data, error } = await clienteDelPedido(req)
+    .from('avisos_baja_servicio_con_deuda')
+    .update({ visto_at: new Date().toISOString(), visto_por: req.usuarioPanel.id })
+    .eq('id', req.params.id)
+    .is('visto_at', null)
+    .select('id');
+  if (error) return responderError(res, error);
+  if (!data?.length) return responderError(res, new ErrorConMotivo('no_encontrado'));
+  res.json({ ok: true });
 });
 
 // ---------------------------------------------------------------------------------------

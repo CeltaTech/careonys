@@ -61,6 +61,8 @@
 //   vuelta_de_coordinador_sin_confirmar → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 //   cobertura_objetada             → routes/appAsistentes.js (notificarCoordinador)
 //   plazo_ubicacion_sin_aceptar    → utils/plazoDeLaUbicacion.js (notificarCoordinador)
+//   baja_servicio_con_deuda        → utils/avisoBajaConDeuda.js, pedido por routes/panelCuentas.js
+//                                    (aviso en el Panel + WhatsApp y mensaje de texto, sin correo)
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
 // `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
 // piden a un Asistente lo define el catálogo de cada Prestadora.
@@ -116,6 +118,14 @@ export const CATALOGO_MENSAJES = [
   {
     evento: 'plazo_ubicacion_sin_aceptar',
     descripcion: 'Venció el plazo y un Asistente no aceptó el registro de su ubicación durante el turno',
+    admite_whatsapp: true,
+    admite_cliente: false,
+  },
+  {
+    evento: 'baja_servicio_con_deuda',
+    descripcion: 'Se dio de baja un Servicio cuyo Cliente tiene deuda',
+    // Le llega a créditos y cobranzas: en el Panel, y por WhatsApp o mensaje de texto. Nunca por
+    // correo.
     admite_whatsapp: true,
     admite_cliente: false,
   },

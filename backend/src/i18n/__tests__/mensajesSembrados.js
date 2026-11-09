@@ -32,6 +32,7 @@ const MIGRACIONES_POSTERIORES = [
   '20270228000000_el_apoderado_es_por_cliente.sql',
   '20270302000000_el_documento_se_firma_con_un_enlace.sql',
   '20270304000000_la_firma_por_enlace.sql',
+  '20270313000000_la_baja_y_la_reactivacion_del_servicio.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;

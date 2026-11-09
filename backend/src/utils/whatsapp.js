@@ -198,7 +198,10 @@ export async function telefonoDeMensajes(prestadoraId) {
 // de contacto de la Prestadora. La columna donde vive ese número se llama `whatsapp_numero` desde
 // que se creó y se queda así —lo que se guarda se nombra por su función y no se renombra—, pero lo
 // que guarda es un teléfono, no una cuenta de WhatsApp.
-export async function notificarCoordinador({ evento, prestadoraId, asunto, texto, telefono }) {
+//
+// Un aviso que ya queda a la vista en el Panel —la baja de un Servicio con deuda— no cae a correo:
+// `sinCorreo` corta ahí.
+export async function notificarCoordinador({ evento, prestadoraId, asunto, texto, telefono, sinCorreo = false }) {
   const config = await configuracionEvento(evento, prestadoraId);
   if (config && config.activo === false) return;
 
@@ -232,5 +235,6 @@ export async function notificarCoordinador({ evento, prestadoraId, asunto, texto
     console.error(`Error enviando mensaje de texto (${evento}), cae a email:`, err.message);
   }
 
+  if (sinCorreo) return;
   await enviarEmailCoordinador({ evento, prestadoraId, asunto, texto });
 }

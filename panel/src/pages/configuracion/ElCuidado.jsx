@@ -17,6 +17,7 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { ElCalculoDeCandidatos } from './ElCalculoDeCandidatos';
 import { TurnosSinCubrirTab } from './TurnosSinCubrirTab';
 import { AutorizacionSignosVitales } from './AutorizacionSignosVitales';
+import { ListaPropiaDeLaPrestadora } from './ListaPropiaDeLaPrestadora';
 import '../../styles/molde-paginas.css';
 import './elcuidado.css';
 
@@ -283,6 +284,27 @@ function TabServicios() {
       <TabServiciosPersonalEmergencia />
       <TabServiciosMotivosAvisoPrevio />
       <TabServiciosMotivosCierre />
+      <ListaPropiaDeLaPrestadora
+        ruta="/lista-de-comprobacion-baja"
+        textos={{
+          titulo: t.configuracion.lista_baja.titulo,
+          agregar: t.configuracion.lista_baja.agregar,
+          vacio: t.configuracion.lista_baja.vacio,
+          confirmar_borrar: t.configuracion.lista_baja.confirmar_borrar,
+          col_nombre: t.configuracion.lista_baja.col_nombre,
+        }}
+      />
+      <ListaPropiaDeLaPrestadora
+        ruta="/motivos-reactivacion-servicio"
+        conDetalle
+        textos={{
+          titulo: t.configuracion.motivos_reactivacion.titulo,
+          agregar: t.configuracion.motivos_reactivacion.agregar,
+          vacio: t.configuracion.motivos_reactivacion.vacio,
+          confirmar_borrar: t.configuracion.motivos_reactivacion.confirmar_borrar,
+          col_nombre: t.configuracion.motivos_cierre_col_nombre,
+        }}
+      />
     </>
   );
 }

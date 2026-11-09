@@ -363,6 +363,11 @@ el trabajo de la Prestadora para una persona; `reactivar_la_cuenta`, que recibe 
 reactiva si quien pide es el Administrador de esa misma Prestadora; `pedir_medicacion`, que corre
 con los permisos de quien llama, toma la Prestadora y el Cliente del Paciente que la base le deja
 ver, y guarda la indicación y lo firmado en una sola operación;
+`dar_de_baja_el_servicio` y `reactivar_el_servicio`, que reciben un Servicio, corren con los
+permisos de quien llama, resuelven la Prestadora adentro y guardan en una sola operación la baja
+—con la lista de comprobación, el cierre de la atención, las Prestaciones y las guardias sin
+asignar, y el aviso de la deuda si la hay— o la reactivación con su motivo; la baja se rechaza
+mientras el Servicio tenga guardias asignadas;
 `asistentes_asignados_al_paciente`, que devuelve sólo quiénes tienen guardia con un Paciente de la
 Prestadora de quien pide, en todas las zonas, y sólo al Administrador y a los Coordinadores; y
 `revisar_indicacion_medicacion` y `cerrar_firma_medicacion_con_documento_firmado`, que le dejan al

@@ -219,6 +219,19 @@ const ESTADO_POR_MOTIVO = {
   falta_el_motivo: 400,
   // El Apoderado: el número fiscal que se escribió no es válido para ese país.
   numero_no_valido: 400,
+  // La baja y la reactivación de un Servicio. El Servicio que no existe y el que es de otra
+  // Prestadora contestan lo mismo. Las guardias asignadas, la Lista de comprobación incompleta y el
+  // estado que ya es el pedido son 409: el pedido está bien armado y choca con el estado de las
+  // cosas. El motivo que no está en el catálogo o al que le falta el detalle es dato mal cargado.
+  servicio_inexistente: 404,
+  el_servicio_ya_esta_de_baja: 409,
+  el_servicio_esta_vigente: 409,
+  el_servicio_tiene_guardias_asignadas: 409,
+  faltan_comprobaciones_de_la_baja: 409,
+  motivo_de_cierre_inexistente: 400,
+  motivo_de_cierre_pide_detalle: 400,
+  motivo_de_reactivacion_inexistente: 400,
+  motivo_de_reactivacion_pide_detalle: 400,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.

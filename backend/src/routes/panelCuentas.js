@@ -49,6 +49,7 @@ import {
 } from '../utils/consentimientoPagador.js';
 import { enviarDocumentoParaFirmar } from '../utils/enlaceConsentimientoPagador.js';
 import { normalizarIdioma } from '../i18n/idiomas.js';
+import { avisarLaBajaConDeuda } from '../utils/avisoBajaConDeuda.js';
 
 // CON LA CREDENCIAL DE QUIEN PIDE. Lo que estas rutas leen y escriben en tablas entra con
 // `clienteDelPedido(req)`: la base sabe quién pide y le contesta sólo lo de su Prestadora, así que
@@ -469,6 +470,73 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
     const alta = await enLaPrestadora(prestadoraId, 'alta de Cliente con Servicio', (db) =>
       crearClienteConServicio(db, { prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId }));
     res.json({ ok: true, servicioId: alta.servicioId, clienteId: alta.clienteId });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// ============================================================================
+// Baja y reactivación de un Servicio
+// ============================================================================
+//
+// Las dos las hace la base, con la credencial de quien pide y en una sola operación: la base
+// rechaza la baja con guardias asignadas o con la Lista de comprobación incompleta, y deja el
+// registro. Si el Cliente debe algo, la base anota el aviso para créditos y cobranzas, y acá se
+// manda además por WhatsApp o mensaje de texto.
+
+// Los motivos de la base que la pantalla puede explicar. Los del motivo de cierre llevan detrás
+// el motivo pedido, así que se reconocen por el comienzo.
+const MOTIVOS_DE_LA_BAJA = [
+  'servicio_inexistente',
+  'el_servicio_ya_esta_de_baja',
+  'el_servicio_esta_vigente',
+  'el_servicio_tiene_guardias_asignadas',
+  'faltan_comprobaciones_de_la_baja',
+  'motivo_de_cierre_inexistente',
+  'motivo_de_cierre_pide_detalle',
+  'motivo_de_reactivacion_inexistente',
+  'motivo_de_reactivacion_pide_detalle',
+];
+
+function errorDeLaBaja(error) {
+  const texto = String(error?.message ?? '');
+  const motivo = MOTIVOS_DE_LA_BAJA.find((m) => texto === m || texto.startsWith(`${m}:`));
+  return motivo ? new ErrorConMotivo(motivo, texto) : new Error(texto);
+}
+
+panelCuentasRouter.post('/servicio/:servicioId/baja', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_servicios'), async (req, res) => {
+  try {
+    const { motivo, motivo_detalle: motivoDetalle, comprobaciones } = req.body ?? {};
+    if (!String(motivo ?? '').trim()) throw new ErrorConMotivo('faltan_datos');
+    const servicio = await servicioDelPedido(req);
+    if (!servicio) throw new ErrorConMotivo('servicio_inexistente');
+    const { data: bajaId, error } = await clienteDelPedido(req).rpc('dar_de_baja_el_servicio', {
+      p_servicio: req.params.servicioId,
+      p_motivo: String(motivo),
+      p_motivo_detalle: motivoDetalle ? String(motivoDetalle) : null,
+      p_comprobaciones: Array.isArray(comprobaciones) ? comprobaciones.map(String) : [],
+    });
+    if (error) throw errorDeLaBaja(error);
+
+    res.json({ ok: true, bajaId });
+    // Después de contestar: el aviso no demora a quien dio la baja, y si falla sólo se registra.
+    avisarLaBajaConDeuda(servicio.prestadora_id, bajaId);
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+panelCuentasRouter.post('/servicio/:servicioId/reactivar', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_servicios'), async (req, res) => {
+  try {
+    const { motivo, motivo_detalle: motivoDetalle } = req.body ?? {};
+    if (!String(motivo ?? '').trim()) throw new ErrorConMotivo('faltan_datos');
+    const { data: reactivacionId, error } = await clienteDelPedido(req).rpc('reactivar_el_servicio', {
+      p_servicio: req.params.servicioId,
+      p_motivo: String(motivo),
+      p_motivo_detalle: motivoDetalle ? String(motivoDetalle) : null,
+    });
+    if (error) throw errorDeLaBaja(error);
+    res.json({ ok: true, reactivacionId });
   } catch (error) {
     responderError(res, error);
   }

@@ -26,6 +26,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
+import { AvisosBajaConDeuda } from './AvisosBajaConDeuda';
 import './tarjetas.css';
 
 /* Los saldos de los Clientes: lo facturado, lo que entró y lo que falta.
@@ -307,6 +308,8 @@ export function Facturacion() {
 
       {error && estado !== 'error' && <Alert variant="error">{error}</Alert>}
       {mensajeGeneracion && <Alert variant="info">{mensajeGeneracion}</Alert>}
+
+      {permisosCargados && veElEstadoDeCuenta && <AvisosBajaConDeuda />}
 
       {!sigue && (
         <>

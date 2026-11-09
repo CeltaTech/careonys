@@ -428,7 +428,7 @@ panelImportacionRouter.get(
         .from(tabla)
         .select(lote.tipo === 'asistente'
           ? 'id, nombre, dni, email, telefono'
-          : `id, plan, pacientes(id, ${FICHA_DOMICILIO})`)
+          : `id, pacientes(id, ${FICHA_DOMICILIO})`)
         .eq('importacion_id', lote.id)
         .eq('prestadora_id', prestadoraId);
       if (errorFilas) {

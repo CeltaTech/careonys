@@ -626,7 +626,7 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
 // Ficha del cliente con ese mismo Paciente, la fila se cuenta como que ya estaba y no se crea nada:
 // así la Prestadora puede volver a importar la planilla corregida sin duplicar lo que sí se cargó.
 export async function crearClienteImportado({
-  nombreContacto, apellidoContacto, documentoContacto, dniContacto, generoContacto, telefono, email, plan,
+  nombreContacto, apellidoContacto, documentoContacto, dniContacto, generoContacto, telefono, email,
   nombrePaciente, documentoPaciente, dniPaciente, generoPaciente, domicilioPaciente, domicilioDelPacientePartido,
   fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
   prestadoraId, importacionId, db,
@@ -706,7 +706,6 @@ export async function crearClienteImportado({
         usuario_id: cuentaId,
         contratante_persona_id: persona.id,
         prestadora_id: prestadoraId,
-        plan: plan || null,
         importacion_id: importacionId || null,
         pendiente_conformidad: Boolean(importacionId),
       })

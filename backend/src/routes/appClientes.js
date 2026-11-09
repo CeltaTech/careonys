@@ -200,21 +200,6 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   // un permiso — el candado está en cada ruta, que directamente no contesta lo que no le dieron.
   const accesos = await accesosDelPedido(req);
 
-  // El plan contratado es una condición comercial, no un dato del cuidado: va con el resto de
-  // lo que la Prestadora decide mostrar sobre el dinero. Hay Prestadoras que cobran por fuera
-  // de la aplicación y no quieren que el plan aparezca en el teléfono del Cliente. Apagado
-  // el interruptor, ni siquiera se le pregunta a la base cuál es. Y lo mismo vale persona por
-  // persona: quien acompaña el cuidado no siempre es quien paga.
-  let plan = null;
-  if (visibilidad.cliente_pagos_y_suscripcion && accesos.persona_autorizada_dinero) {
-    const { data: cliente } = await db
-      .from('clientes')
-      .select('plan')
-      .eq('id', req.usuarioCliente.clienteId)
-      .maybeSingle();
-    plan = cliente?.plan ?? null;
-  }
-
   // Y si hay una instrucción esperando su firma, se la ofrece. Sólo al titular: la instrucción
   // dice qué se le dio y qué se le negó a cada persona autorizada, y eso es del titular.
   const pendiente = req.usuarioCliente.esTitular
@@ -231,7 +216,6 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   res.json({
     perfil: {
       ...usuario,
-      plan,
       esTitular: req.usuarioCliente.esTitular,
     },
     marca,

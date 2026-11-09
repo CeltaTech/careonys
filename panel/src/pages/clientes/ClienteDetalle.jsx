@@ -116,7 +116,7 @@ export function ClienteDetalle() {
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
       .select(
-        `id, plan, dias_hasta_el_vencimiento, pagador_tipo, pagador_persona_id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}, ${saludCon(['patologias', 'nivel_complejidad'])}), ` +
+        `id, dias_hasta_el_vencimiento, pagador_tipo, pagador_persona_id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}, ${saludCon(['patologias', 'nivel_complejidad'])}), ` +
           // Quién es el Cliente se lee de la Ficha de Persona de quien contrata, en el Directorio de
           // Personas, y se corrige allá.
           'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, lugares!personas_lugar_fkey(nombre), ' +
@@ -133,7 +133,6 @@ export function ClienteDetalle() {
 
     setCliente({ ...data, pacientes: conSusFichas(data.pacientes, palabrasDelDomicilio(t)) });
     setFormContacto({
-      plan: data.plan || '',
       dias_hasta_el_vencimiento:
         data.dias_hasta_el_vencimiento === null || data.dias_hasta_el_vencimiento === undefined
           ? ''
@@ -198,7 +197,6 @@ export function ClienteDetalle() {
     setGuardandoContacto(true);
     setErrorContacto(null);
     const {
-      plan,
       dias_hasta_el_vencimiento: dias,
       pagador_tipo: pagadorTipo,
       pagador_persona_id: pagadorPersonaId,
@@ -219,7 +217,6 @@ export function ClienteDetalle() {
     // obligación de pagar y esa persona tiene nombre. Borrarla por pagar el Cliente dejaba a esa
     // contratación sin nadie a quien hacerle firmar nada.
     const { error: errorCliente } = await supabase.from('clientes').update({
-      plan,
       dias_hasta_el_vencimiento: plazo.valor,
       pagador_tipo: pagadorTipo || null,
       pagador_persona_id: pagadorPersonaId || null,
@@ -300,7 +297,6 @@ export function ClienteDetalle() {
             {formContacto && (
               <>
               <div className="molde-formgrid">
-                <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarCliente} />
                 {/* Lo acordado con este Cliente pisa el plazo general de la Prestadora. Vacío quiere
                     decir que no se acordó nada distinto, no que pague el mismo día. */}
                 <FormField

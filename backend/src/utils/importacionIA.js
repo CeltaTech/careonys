@@ -37,7 +37,7 @@ export const CAMPOS_IMPORTACION = {
   ],
   cliente: [
     'nombreContacto', 'apellidoContacto', 'documentoContacto', 'dniContacto', 'generoContacto',
-    'telefono', 'email', 'plan',
+    'telefono', 'email',
     'nombrePaciente', 'documentoPaciente', 'dniPaciente', 'generoPaciente',
     'domicilioPaciente', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilioPaciente${parte}`),
     'fechaNacimientoPaciente', 'nivelComplejidadPaciente', 'patologiasPaciente',

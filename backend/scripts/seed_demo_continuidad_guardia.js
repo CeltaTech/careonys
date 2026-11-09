@@ -30,7 +30,7 @@ async function main() {
   }).throwOnError();
 
   await supabase.from('clientes')
-    .insert({ id: clienteAuth.user.id, prestadora_id: PRESTADORA_ID, plan: 'directo' })
+    .insert({ id: clienteAuth.user.id, prestadora_id: PRESTADORA_ID })
     .throwOnError();
 
   const { data: paciente } = await supabase.from('pacientes')

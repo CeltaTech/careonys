@@ -409,13 +409,13 @@ VALUES
 -- sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al Directorio:
 -- paga Ramiro Pérez, que es una Ficha más y no un nombre tecleado. Teresa Ibáñez queda en el
 -- Directorio sin ser Cliente de nadie: es un contacto todavía sin presupuesto aprobado.
-INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_id, plan, pagador_tipo, pagador_persona_id) VALUES
+INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_id, pagador_tipo, pagador_persona_id) VALUES
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
-   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000004', 'directo', NULL, NULL),
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000004', NULL, NULL),
   ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002',
-   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000005', 'directo', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000005', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
   ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003',
-   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000006', 'intermediacion', 'otro', 'c0000000-0000-4000-8000-000000000001');
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000006', 'otro', 'c0000000-0000-4000-8000-000000000001');
 
 -- Quién está anotado en las personas autorizadas de cada Cliente, con su Ficha de Persona, que es
 -- de donde sale el DNI que dice la autorización. El titular no figura acá: se lo reconoce por su

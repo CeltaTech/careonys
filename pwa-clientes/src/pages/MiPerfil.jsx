@@ -172,15 +172,6 @@ export default function MiPerfil() {
           <dd>{perfil.email}</dd>
           <dt>{t.perfil.telefono}</dt>
           <dd>{perfil.telefono || '—'}</dd>
-          {/* El plan contratado es una condición comercial, no un dato del cuidado: va con el
-              resto de lo que la Prestadora decide mostrar sobre el dinero. Hay Prestadoras que
-              cobran por fuera de la aplicación y no quieren que aparezca acá. */}
-          {seVe('cliente_pagos_y_suscripcion') && (
-            <>
-              <dt>{t.perfil.plan}</dt>
-              <dd>{perfil.plan || '—'}</dd>
-            </>
-          )}
         </dl>
       </section>
 

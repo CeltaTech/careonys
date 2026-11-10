@@ -29,6 +29,9 @@ export function queCambio(fila, t) {
     return [permiso, alcance].filter(Boolean).join(' — ') || '—';
   }
 
+  // El borrado del registro de accesos vencido dice de qué año era.
+  if (fila.accion === 'borrado_por_vencimiento' && detalle.anio) return String(detalle.anio);
+
   const rol = detalle.rol_nuevo || detalle.rol_anterior;
   if (rol) return t.usuarios_panel[`rol_${rol}`] || '—';
 

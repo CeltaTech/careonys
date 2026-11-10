@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { mensajeDeError } from '../../lib/errores';
 import { armarCsv, bajarCsv } from '../../lib/exportarCsv';
+import { encabezadosDelRegistroDeAccesos, renglonDelRegistroDeAccesos } from '../../lib/planillaDelRegistroDeAccesos';
 
 /* Quién vio la información de salud de los Pacientes de este Cliente, y desde dónde. Lo ve sólo
    la administración —el backend y la base niegan a cualquier otro— y se le puede entregar al
@@ -33,21 +34,10 @@ export function AccesosALaInformacionDeSalud({ clienteId }) {
     return () => { vigente = false; };
   }, [clienteId, t]);
 
-  const fecha = (momento) => new Date(momento).toLocaleString(locale);
-  const informacion = (categorias) => categorias
-    .map((c) => t.clientes.accesos_salud.categorias[c] ?? textos.categorias.otra)
-    .join(', ');
-  const fila = (a) => [
-    fecha(a.momento),
-    a.persona ?? textos.sistema,
-    a.paciente ?? '—',
-    informacion(a.categorias),
-    t.clientes.accesos_salud.lugares[a.lugar] ?? textos.lugares.sistema,
-  ];
+  const fila = (a) => renglonDelRegistroDeAccesos(a, t, locale);
 
   function bajar() {
-    const encabezados = [textos.col_momento, textos.col_persona, textos.col_paciente, textos.col_informacion, textos.col_lugar];
-    bajarCsv(`${textos.archivo}.csv`, armarCsv(encabezados, accesos.map(fila)));
+    bajarCsv(`${textos.archivo}.csv`, armarCsv(encabezadosDelRegistroDeAccesos(t), accesos.map(fila)));
   }
 
   return (

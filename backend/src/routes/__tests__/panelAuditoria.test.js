@@ -385,11 +385,95 @@ describe('quién vio la información de salud de un Cliente', () => {
     assert.equal(llamadas.some((l) => ['GET /rest/v1/pacientes', 'GET /rest/v1/consultas_a_hce'].includes(l.clave)), false);
   });
 
+  it('el renglón sin persona sigue saliendo con la columna vacía', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { cuerpo } = await pedirAccesos(CLIENTE_A);
+    assert.deepEqual(Object.keys(cuerpo.accesos[1]).sort(), ['categorias', 'id', 'lugar', 'momento', 'paciente', 'persona']);
+  });
+
   it('un identificador mal formado no llega a la base', async () => {
     rolDelUsuario = 'admin_prestadora';
     prestadoraDelUsuario = PRESTADORA_A;
     const { estado } = await pedirAccesos('no-es-un-id');
     assert.equal(estado, 400);
     assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/pacientes'), false);
+  });
+});
+
+describe('el año del registro de accesos que se va a borrar', () => {
+  const anioDeHoy = new Date().getUTCFullYear();
+  /* La base contesta, para la Prestadora de la sesión, el año más viejo y cuándo vence. La de
+     mentira hace lo mismo con dos Prestadoras con datos cargados. */
+  const VENCE = {
+    [PRESTADORA_A]: { anio: anioDeHoy - 3, desde: `${anioDeHoy - 3}-01-01T00:00:00Z`, hasta: `${anioDeHoy - 2}-01-01T00:00:00Z`, se_borra_el: `${anioDeHoy + 1}-01-01` },
+    [PRESTADORA_B]: { anio: anioDeHoy - 1, desde: `${anioDeHoy - 1}-01-01T00:00:00Z`, hasta: `${anioDeHoy}-01-01T00:00:00Z`, se_borra_el: `${anioDeHoy + 3}-01-01` },
+  };
+  const VIEJOS = [
+    { id: 'v-a-1', prestadora_id: PRESTADORA_A, usuario_id: 'ua-1', paciente_id: 'pa-1', categorias: ['reportes'], momento: `${anioDeHoy - 3}-05-01T10:00:00Z`, origen: 'GET /api/panel/x' },
+    { id: 'v-a-2', prestadora_id: PRESTADORA_A, usuario_id: 'ua-1', paciente_id: 'pa-1', categorias: ['alertas'], momento: `${anioDeHoy - 2}-05-01T10:00:00Z`, origen: 'GET /api/panel/x' },
+    { id: 'v-b-1', prestadora_id: PRESTADORA_B, usuario_id: 'ub-1', paciente_id: 'pb-1', categorias: ['reportes'], momento: `${anioDeHoy - 3}-05-01T10:00:00Z`, origen: 'GET /api/panel/x' },
+  ];
+
+  beforeEach(() => {
+    respuestas.set('POST /rest/v1/rpc/consultas_a_hce_por_vencer', () => (VENCE[prestadoraDelUsuario] ? [VENCE[prestadoraDelUsuario]] : []));
+    respuestas.set('GET /rest/v1/consultas_a_hce', (url) => {
+      const desde = url.searchParams.getAll('momento').find((v) => v.startsWith('gte.')).slice(4);
+      const hasta = url.searchParams.getAll('momento').find((v) => v.startsWith('lt.')).slice(3);
+      return VIEJOS.filter((a) => a.prestadora_id === prestadoraDelUsuario
+        && `eq.${a.prestadora_id}` === url.searchParams.get('prestadora_id')
+        && Date.parse(a.momento) >= Date.parse(desde) && Date.parse(a.momento) < Date.parse(hasta));
+    });
+    respuestas.set('GET /rest/v1/pacientes', () => PACIENTES.filter((p) => p.prestadora_id === prestadoraDelUsuario));
+  });
+
+  const pedir = async (ruta = '') => {
+    const r = await fetch(`${DIRECCION}/registro-de-accesos-por-borrar${ruta}`, { headers: { Authorization: sesionDePrueba(SUPERADMIN) } });
+    return { estado: r.status, cuerpo: await r.json() };
+  };
+
+  it('el año anterior al borrado se avisa', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado, cuerpo } = await pedir();
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo, { anio: anioDeHoy - 3, se_borra_el: `${anioDeHoy + 1}-01-01` });
+    assert.notEqual(credencialDe('POST /rest/v1/rpc/consultas_a_hce_por_vencer').role, 'trabajo_sin_persona', 'se preguntó sin la sesión');
+  });
+
+  it('antes de ese año no hay nada que decir, ni nada que bajar', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_B;
+    assert.deepEqual((await pedir()).cuerpo, {});
+    const { cuerpo } = await pedir('/renglones');
+    assert.deepEqual(cuerpo.accesos, []);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/consultas_a_hce'), false);
+  });
+
+  it('sin plazo para el país no hay aviso', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = SANDBOX;
+    assert.deepEqual((await pedir()).cuerpo, {});
+  });
+
+  it('la descarga trae sólo ese año y sólo de su Prestadora, con las columnas de la Ficha', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado, cuerpo } = await pedir('/renglones');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.anio, anioDeHoy - 3);
+    assert.deepEqual(cuerpo.accesos.map((a) => a.id), ['v-a-1']);
+    assert.equal(cuerpo.accesos[0].persona, 'Coordinación Inventada A');
+    assert.equal(cuerpo.accesos[0].paciente, 'Paciente Inventado A');
+    assert.equal(cuerpo.accesos[0].lugar, 'panel');
+    assert.notEqual(credencialDe('GET /rest/v1/consultas_a_hce').role, 'trabajo_sin_persona', 'el registro se leyó sin la sesión');
+  });
+
+  it('el Coordinador no lo ve ni lo baja, y no se pregunta nada', async () => {
+    rolDelUsuario = 'coordinador';
+    prestadoraDelUsuario = PRESTADORA_A;
+    assert.equal((await pedir()).estado, 403);
+    assert.equal((await pedir('/renglones')).estado, 403);
+    assert.equal(llamadas.some((l) => l.clave.startsWith('POST /rest/v1/rpc/') || l.clave === 'GET /rest/v1/consultas_a_hce'), false);
   });
 });

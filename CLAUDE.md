@@ -359,7 +359,9 @@ y le contesta al Asistente de la sesión sólo las fechas de los períodos que y
 importes; `alcanza_la_informacion_de_salud_la_sesion`, que recibe un
 Paciente y contesta si la regla de salud deja leerlo a quien inició sesión —falso si es de otra
 Prestadora—, y que el backend pregunta antes de toda lectura de información de salud que hace con
-el trabajo de la Prestadora para una persona; `reactivar_la_cuenta`, que recibe una cuenta y sólo la
+el trabajo de la Prestadora para una persona; `consultas_a_hce_por_vencer`, que no recibe a nadie y le
+contesta sólo a la administración de la Prestadora de la sesión cuál es el próximo año del
+registro de accesos que se va a borrar y cuándo; `reactivar_la_cuenta`, que recibe una cuenta y sólo la
 reactiva si quien pide es el Administrador de esa misma Prestadora;
 `alcanza_al_asistente_la_sesion`, que recibe un Asistente, corre con los permisos de quien llama y
 contesta si es de su Prestadora y está a su cargo —el Administrador alcanza a todos—, y que el
@@ -387,7 +389,9 @@ y `revisar_carga`, que acepta o rechaza una carga pendiente, resuelve la Prestad
 deja revisar al Coordinador asignado de ese Paciente o al Administrador, nunca a quien la cargó.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
-credencial; y `registrar_autorizacion_signos_vitales_del_titular`, que recibe quién firma,
+credencial; `borrar_consultas_a_hce_vencidas`, que no recibe nada, borra de esa Prestadora los
+años enteros del registro de accesos cuyo plazo de su país ya venció y deja el corte y el
+registro de actividad; y `registrar_autorizacion_signos_vitales_del_titular`, que recibe quién firma,
 comprueba que sea el titular de ese Paciente y guarda la firma de la aplicación —sólo si el texto
 firmado es el vigente— o el documento que él subió, que queda pendiente. Con las dos credenciales,
 `nombrar_apoderado`, `reemplazar_poder_del_apoderado` y `quitar_apoderado` reciben un Cliente y una
@@ -437,6 +441,10 @@ las heredadas están apagadas. Ninguna propuesta que agregue una red más encima
 pide a `/api/panel/informacion-de-salud/<tabla>` con `panel/src/lib/informacionDeSalud.js`, nunca
 con `supabase.from`. El registro se lee por Cliente en
 `/api/panel/auditoria/accesos-a-la-informacion-de-salud/<cliente>`, sólo la administración.
+**El registro se conserva lo que diga el país** —el plazo está en `reglas_de_conservacion`; un
+país sin plazo no borra nada— y se borra solo, de a un año calendario entero, con un corte en
+`cortes_de_consultas_a_hce` que deja seguir comprobando la cadena. Durante el año anterior al
+borrado, la Auditoría muestra la franja y la descarga de ese año.
 
 ### Cumplimiento normativo
 

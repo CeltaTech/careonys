@@ -148,27 +148,116 @@ panelAuditoriaRouter.get('/accesos-a-la-informacion-de-salud/:clienteId', requie
     .limit(5000);
   if (errorRegistro) return responderError(res, errorRegistro);
 
-  const ids = [...new Set((renglones ?? []).map((r) => r.usuario_id).filter(Boolean))];
+  const pacientePorId = new Map(pacientes.map((p) => [p.id, p.persona?.nombre_visible ?? null]));
+  try {
+    res.json({ accesos: await armarLosAccesos(prestadoraId, renglones ?? [], pacientePorId) });
+  } catch (error) {
+    return responderError(res, error);
+  }
+});
+
+// Cómo se muestra cada renglón del registro de accesos, en la Ficha del Cliente y en la descarga
+// del año que se va a borrar: las mismas columnas en los dos lados.
+async function armarLosAccesos(prestadoraId, renglones, pacientePorId) {
+  const ids = [...new Set(renglones.map((r) => r.usuario_id).filter(Boolean))];
   let nombres = new Map();
   if (ids.length) {
-    const { data: usuarios, error: errorNombres } = await enLaPrestadora(prestadoraId, 'nombres del registro de accesos', (conexion) => conexion
+    const { data: usuarios, error } = await enLaPrestadora(prestadoraId, 'nombres del registro de accesos', (conexion) => conexion
       .from('usuarios')
       .select('id, nombre')
       .eq('prestadora_id', prestadoraId)
       .in('id', ids));
-    if (errorNombres) return responderError(res, errorNombres);
+    if (error) throw error;
     nombres = new Map((usuarios ?? []).map((u) => [u.id, u.nombre]));
   }
-  const pacientePorId = new Map(pacientes.map((p) => [p.id, p.persona?.nombre_visible ?? null]));
+  return renglones.map((r) => ({
+    id: r.id,
+    momento: r.momento,
+    persona: r.usuario_id ? (nombres.get(r.usuario_id) ?? null) : null,
+    paciente: pacientePorId.get(r.paciente_id) ?? null,
+    categorias: r.categorias ?? [],
+    lugar: lugarDelOrigen(r.origen),
+  }));
+}
 
-  res.json({
-    accesos: (renglones ?? []).map((r) => ({
-      id: r.id,
-      momento: r.momento,
-      persona: r.usuario_id ? (nombres.get(r.usuario_id) ?? null) : null,
-      paciente: pacientePorId.get(r.paciente_id) ?? null,
-      categorias: r.categorias ?? [],
-      lugar: lugarDelOrigen(r.origen),
-    })),
-  });
+// QUÉ AÑO DEL REGISTRO DE ACCESOS SE BORRA PRÓXIMAMENTE.
+//
+// El plazo lo fija el país de la Prestadora, y la base contesta qué año es el más viejo y cuándo
+// vence (`consultas_a_hce_por_vencer`), con la sesión de quien pide: sólo la administración de la
+// Prestadora lo puede preguntar. Se avisa durante el año calendario anterior al borrado, que es el
+// tiempo que tiene la Prestadora para descargarlo si lo quiere guardar afuera. Fuera de ese año, o
+// sin plazo para el país, no hay nada que decir.
+async function elAnioPorBorrar(req) {
+  const { data, error } = await clienteDelPedido(req).rpc('consultas_a_hce_por_vencer');
+  if (error) throw error;
+  const fila = Array.isArray(data) ? data[0] : data;
+  if (!fila?.anio || !fila?.se_borra_el) return null;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const anioDelBorrado = Number(fila.se_borra_el.slice(0, 4));
+  const anioDeHoy = Number(hoy.slice(0, 4));
+  if (fila.se_borra_el <= hoy || anioDeHoy < anioDelBorrado - 1) return null;
+  return fila;
+}
+
+function soloAdministracion(req, res) {
+  const { rol, prestadoraId } = req.usuarioPanel;
+  if (!esAdminOSuperior(rol) || !prestadoraId) {
+    res.status(403).json({ error: 'sin_permiso', motivo: 'sin_permiso' });
+    return false;
+  }
+  return true;
+}
+
+panelAuditoriaRouter.get('/registro-de-accesos-por-borrar', requiereRolPanel, async (req, res) => {
+  if (!soloAdministracion(req, res)) return;
+  try {
+    const fila = await elAnioPorBorrar(req);
+    res.json(fila ? { anio: fila.anio, se_borra_el: fila.se_borra_el } : {});
+  } catch (error) {
+    return responderError(res, error);
+  }
+});
+
+// La descarga de ese año, entero. Se lee con la sesión de quien pide, de a tandas, y sólo dentro
+// del año que la base dijo que vence: no es una puerta para bajar el registro de cualquier fecha.
+const TANDA = 1000;
+
+panelAuditoriaRouter.get('/registro-de-accesos-por-borrar/renglones', requiereRolPanel, async (req, res) => {
+  if (!soloAdministracion(req, res)) return;
+  const { prestadoraId } = req.usuarioPanel;
+  try {
+    const fila = await elAnioPorBorrar(req);
+    if (!fila) return res.json({ anio: null, accesos: [] });
+
+    const db = clienteDelPedido(req);
+    const renglones = [];
+    for (let desde = 0; ; desde += TANDA) {
+      const { data, error } = await db
+        .from('consultas_a_hce')
+        .select('id, usuario_id, paciente_id, categorias, momento, origen')
+        .eq('prestadora_id', prestadoraId)
+        .gte('momento', fila.desde)
+        .lt('momento', fila.hasta)
+        .order('numero', { ascending: true })
+        .range(desde, desde + TANDA - 1);
+      if (error) throw error;
+      renglones.push(...(data ?? []));
+      if (!data || data.length < TANDA) break;
+    }
+
+    const idsPacientes = [...new Set(renglones.map((r) => r.paciente_id))];
+    const pacientePorId = new Map();
+    for (let i = 0; i < idsPacientes.length; i += 200) {
+      const { data, error } = await db
+        .from('pacientes')
+        .select('id, persona:personas!pacientes_persona_de_la_misma_prestadora(nombre_visible)')
+        .in('id', idsPacientes.slice(i, i + 200));
+      if (error) throw error;
+      for (const p of data ?? []) pacientePorId.set(p.id, p.persona?.nombre_visible ?? null);
+    }
+
+    res.json({ anio: fila.anio, accesos: await armarLosAccesos(prestadoraId, renglones, pacientePorId) });
+  } catch (error) {
+    return responderError(res, error);
+  }
 });

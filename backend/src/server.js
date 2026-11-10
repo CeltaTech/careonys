@@ -61,6 +61,7 @@ import { recordarLosEnlacesDeActivacion } from './utils/activacionCuenta.js';
 import { avisarLosCambiosDeEmail } from './utils/avisosDeEmailCambiado.js';
 import { avisarLosPlazosDeUbicacionVencidos } from './utils/plazoDeLaUbicacion.js';
 import { copiarLosArchivosAlRespaldo } from './utils/copiaDeLosArchivos.js';
+import { borrarLoVencidoDelRegistroDeAccesos } from './utils/borradoDelRegistroDeAccesos.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
@@ -327,6 +328,10 @@ programar(avisarLosCambiosDeEmail, CINCO_MINUTOS_MS, { conLaPrestadora: true });
 // El aviso a la Prestadora por cada Asistente que dejó vencer el plazo para aceptar el registro de
 // su ubicación durante el turno. El plazo se cuenta en días; se mira cada hora, como el de arriba.
 programar(avisarLosPlazosDeUbicacionVencidos, UNA_HORA_MS, { conLaPrestadora: true });
+
+// El borrado del registro de accesos a la información de salud que ya cumplió el plazo de su país.
+// Se borra de a un año entero, así que alcanza con mirar una vez por día.
+programar(borrarLoVencidoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: true });
 
 // La copia de los archivos a los depósitos de respaldo. No pasa por `programar` porque no trabaja
 // de a una Prestadora: copia todo, con la credencial de la copia de respaldo, que sólo lee los

@@ -2858,7 +2858,11 @@ export const T = {
       accion_borrado_de_datos: 'Borró datos',
       accion_modificacion_critica: 'Hizo una modificación crítica',
       accion_cambio_de_moneda: 'Cambió la moneda de la Prestadora',
+      accion_borrado_por_vencimiento: 'Borró el registro de accesos vencido',
       accion_desconocida: 'Acción sin nombre',
+      por_borrar_aviso: 'El registro de accesos de {{anio}} se borrará el {{fecha}}.',
+      por_borrar_descargar: 'Descargar {{anio}}',
+      por_borrar_archivo: 'registro-de-accesos-{{anio}}',
     },
     // Lo que un Asistente avisó apretando el botón de emergencia de su guardia. El aviso
     // inmediato sale por WhatsApp o por correo y no lleva el texto; acá se lee.
@@ -5857,7 +5861,11 @@ export const T = {
       accion_borrado_de_datos: 'Deleted data',
       accion_modificacion_critica: 'Made a critical change',
       accion_cambio_de_moneda: 'Changed the currency of the provider',
+      accion_borrado_por_vencimiento: 'Deleted the expired access record',
       accion_desconocida: 'Unnamed action',
+      por_borrar_aviso: 'The {{anio}} access record will be deleted on {{fecha}}.',
+      por_borrar_descargar: 'Download {{anio}}',
+      por_borrar_archivo: 'access-record-{{anio}}',
     },
     pagina_no_encontrada: {
       titulo: 'Page not found',
@@ -8845,7 +8853,11 @@ export const T = {
       accion_borrado_de_datos: 'Excluiu dados',
       accion_modificacion_critica: 'Fez uma modificação crítica',
       accion_cambio_de_moneda: 'Mudou a moeda da Prestadora',
+      accion_borrado_por_vencimiento: 'Excluiu o registro de acessos vencido',
       accion_desconocida: 'Ação sem nome',
+      por_borrar_aviso: 'O registro de acessos de {{anio}} será excluído em {{fecha}}.',
+      por_borrar_descargar: 'Baixar {{anio}}',
+      por_borrar_archivo: 'registro-de-acessos-{{anio}}',
     },
     pagina_no_encontrada: {
       titulo: 'Página não encontrada',

@@ -158,9 +158,11 @@ CeltaTech con un permiso de acceso.
 `versiones_registro_clinico`, con autor, momento y nota aclaratoria, y ese historial no lo edita ni
 lo borra nadie. Todas esas escrituras van con la credencial de la persona, así que el autor queda.
 
-**La conservación no tiene nada que la haga correr.** Existe la tabla `reglas_de_conservacion`,
-vacía; no hay fecha de fallecimiento guardada ni ninguna tarea que purgue, y la extensión de tareas
-programadas de la base no está instalada. Lo que hay es borrado lógico: un dato marcado como borrado queda para siempre.
+**La conservación corre sólo para el registro de accesos.** `reglas_de_conservacion` tiene un
+renglón: Argentina, `consultas_a_hce`, 36 meses. Una tarea diaria del backend borra, de a una
+Prestadora por vez, los años enteros vencidos, y deja un corte que mantiene comprobable la cadena.
+Para todo lo demás no hay plazo ni tarea que purgue, y no hay fecha de fallecimiento guardada. Lo
+que hay es borrado lógico: un dato marcado como borrado queda para siempre.
 
 **No hay exportación ni portabilidad.** El derecho de acceso se atiende a mano, contra la base.
 
@@ -289,22 +291,11 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **Comprobación:** por cada país donde haya una Prestadora dada de alta, su documento en
 `docs/legal/<país>.md` nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
 
-**9.** **Lo que queda del registro de accesos a la información de salud.** El registro ya anota
-cada lectura con sus seis campos, encadenada, y se consulta por Cliente desde su Ficha. Queda esto:
+**9.** **El registro de accesos para Países Bajos.** La norma holandesa NEN 7513 es de pago y no
+se leyó. Antes de vender en Países Bajos hay que comprarla y comparar campo por campo. **Espera a
+que haya un cliente en Países Bajos.**
 
-Su conservación es por jurisdicción, con piso de tres años (EHDS art. 9), mínimo de dos y
-disponibilidad inmediata por Perú, sin superar el plazo de la historia clínica de ese país, y con
-un piso propio de Brasil que no es de protección de datos: seis meses de registros de acceso por el
-art. 15 del Marco Civil de Internet, bajo secreto y entregables sólo por orden judicial.
-
-**Y lo que no se construye con una lista recordada:** la norma holandesa NEN 7513 es de pago y no se
-leyó. Antes de vender en Países Bajos hay que comprarla y comparar campo por campo.
-
-**Comprobación:** todas las pruebas del backend, y las dos de aislamiento con dos Prestadoras con
-datos cargados. La del registro de accesos ya está en `scripts/probar_altas_con_sesion.mjs`
-(`probarElRegistroDeAccesos`): dos Prestadoras anotan lecturas de un paciente suyo con dos personas
-distintas, cada una las lee por paciente con los seis campos y ninguna ve las de la otra, ni
-pidiendo sin filtro; y una entrada del medio alterada deja la cadena rota y el sistema dice cuál.
+**Comprobación:** cada campo que pide la norma está en `consultas_a_hce`, o se agregó.
 
 **13.** **Cifrado y custodia de claves.** El cifrado en reposo y en tránsito es «Addressable» en
 Estados Unidos, lo que no quiere decir opcional: el 164.306(d)(3) da tres salidas y las dos últimas
@@ -1500,9 +1491,16 @@ requisito de arquitectura, y por eso su parte está en los cimientos y no acá.
 **Comprobación:** la constancia de revisión existe, tiene fecha y nombre, y se puede mostrar para
 cualquier mes.
 
-**122.** **El motor de conservación y borrado.** La tabla de reglas existe y está vacía; las
-columnas de conservación y la fecha de fallecimiento no existen. Acá se agregan, se carga y se
-construye lo que decide.
+**122.** **El motor de conservación y borrado.** La tabla de reglas existe y tiene un solo renglón,
+el del registro de accesos en Argentina; las columnas de conservación y la fecha de fallecimiento
+no existen. Acá se agregan, se carga y se construye lo que decide.
+
+**El registro de accesos ya se borra solo** con el plazo de su país, y el resto de los países se
+carga como dato cuando se escriba su documento legal. Lo que ya se sabe: el piso general es de tres
+años (EHDS art. 9); Perú pide un mínimo de dos con disponibilidad inmediata; ningún plazo supera el
+de la historia clínica de ese país; y Brasil tiene además un piso que no es de protección de datos,
+seis meses de registros de acceso por el art. 15 del Marco Civil de Internet, bajo secreto y
+entregables sólo por orden judicial.
 
 **Antes de construirlo se contesta:** qué clases de registro existen, porque la tabla las guarda
 como texto libre; quién carga las reglas, que hoy sólo entran por migración; si la fecha de

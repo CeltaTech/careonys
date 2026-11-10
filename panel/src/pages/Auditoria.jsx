@@ -5,6 +5,10 @@ import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { nombreDeLaAccion, queCambio } from '../lib/registroDeActividad';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { armarCsv, bajarCsv } from '../lib/exportarCsv';
+import { encabezadosDelRegistroDeAccesos, renglonDelRegistroDeAccesos } from '../lib/planillaDelRegistroDeAccesos';
 import '../styles/molde-paginas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -17,6 +21,55 @@ async function llamarApi(path) {
   const resultado = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
+}
+
+// El año del registro de accesos a la información de salud que se va a borrar por vencimiento,
+// con la descarga para guardarlo afuera si la Prestadora quiere. El backend sólo contesta durante
+// el año anterior al borrado; fuera de ese año, mientras carga o si no pudo preguntar, no se
+// muestra nada, porque la franja es un aviso y no frena ningún trabajo.
+function RegistroDeAccesosPorBorrar() {
+  const { t, locale } = useLocale();
+  const [porBorrar, setPorBorrar] = useState(null);
+  const [bajando, setBajando] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let vigente = true;
+    llamarApi('/auditoria/registro-de-accesos-por-borrar')
+      .then((r) => { if (vigente && r.anio) setPorBorrar(r); })
+      .catch(() => {});
+    return () => { vigente = false; };
+  }, []);
+
+  if (!porBorrar) return null;
+  const anio = String(porBorrar.anio);
+  const fecha = new Date(`${porBorrar.se_borra_el}T12:00:00`).toLocaleDateString(locale);
+
+  async function bajar() {
+    setBajando(true);
+    setError(null);
+    try {
+      const { accesos } = await llamarApi('/auditoria/registro-de-accesos-por-borrar/renglones');
+      const filas = (accesos ?? []).map((a) => renglonDelRegistroDeAccesos(a, t, locale));
+      bajarCsv(`${t.auditoria.por_borrar_archivo.replace('{{anio}}', anio)}.csv`, armarCsv(encabezadosDelRegistroDeAccesos(t), filas));
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setBajando(false);
+    }
+  }
+
+  return (
+    <>
+      <Alert variant="warning">
+        {t.auditoria.por_borrar_aviso.replace('{{anio}}', anio).replace('{{fecha}}', fecha)}{' '}
+        <Button variant="secondary" onClick={bajar} disabled={bajando}>
+          {t.auditoria.por_borrar_descargar.replace('{{anio}}', anio)}
+        </Button>
+      </Alert>
+      {error && <Alert variant="error">{error}</Alert>}
+    </>
+  );
 }
 
 // Lectura del registro de los accesos (auditoria_de_accesos) y del registro de actividad de la
@@ -87,6 +140,7 @@ export function Auditoria() {
       <Cabecera titulo={t.auditoria.titulo} />
 
       <div className="molde-pila">
+        <RegistroDeAccesosPorBorrar />
         <section className="panel-tarjeta">
           <div className="panel-tarjeta-titulo">
             <h2>{t.auditoria.titulo}</h2>
@@ -145,7 +199,7 @@ export function Auditoria() {
                 {actividad.map((fila) => (
                   <tr key={fila.id}>
                     <td className="panel-mini">{new Date(fila.created_at).toLocaleString(locale)}</td>
-                    <td><b>{fila.usuarios?.nombre || '—'}</b></td>
+                    <td><b>{fila.usuarios?.nombre || (fila.usuario_id ? '—' : t.clientes.accesos_salud.sistema)}</b></td>
                     <td>{nombreDeLaAccion(fila, t)}</td>
                     <td>{queCambio(fila, t)}</td>
                   </tr>

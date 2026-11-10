@@ -700,7 +700,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
         <Button onClick={guardar} disabled={guardando || !puedeEditarIdentidad}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
       </div>
 
-      {esAdmin && <DocumentosDelAsistente asistenteId={asistente.id} {...documentosDelAsistente} />}
+      {(esAdmin || puede('ver_documentos_asistente') || puede('cargar_documentos_asistente')) && <DocumentosDelAsistente asistenteId={asistente.id} {...documentosDelAsistente} />}
     </div>
   );
 }

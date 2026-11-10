@@ -15,11 +15,15 @@ import {
   validarDocumento,
 } from '../utils/cargaDeDocumento.js';
 import { ACCION_MODIFICACION_CRITICA, registrarActividad } from '../utils/registroDeActividad.js';
+import { requierePermiso } from '../utils/permisos.js';
+import { esAdminOSuperior } from '../utils/roles.js';
 
 // Los documentos del Legajo de un Asistente, vistos desde el Panel.
 //
-// Leer lo puede cualquiera del Panel que alcance a ese Asistente: la base acota al Coordinador a
-// los de su zona. Aprobar, observar, cargar y prorrogar es de la administración.
+// La lista la ve cualquiera del Panel que alcance a ese Asistente: la base acota al Coordinador a
+// los de su zona. El archivo lo abre el Coordinador con «Ver los documentos de los Asistentes», y
+// lo carga con «Cargar documentos de los Asistentes»: lo que carga queda en revisión. Aprobar,
+// observar y prorrogar es de la administración.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE. Todo entra con `clienteDelPedido(req)`. La Prestadora que se
 // escribe en una fila nueva es la del Legajo que la base dejó ver, nunca un dato del pedido.
@@ -266,10 +270,52 @@ panelDocumentosAsistenteRouter.post('/prorrogar', soloAdministracion, async (req
 });
 
 // ---------------------------------------------------------------------------
-// Cargar un documento desde el Panel: queda aprobado por quien lo carga
+// Cargar un documento desde el Panel: si lo carga la administración queda aprobado; si lo carga
+// quien coordina, queda en revisión hasta que la administración lo apruebe
 // ---------------------------------------------------------------------------
 
-panelDocumentosAsistenteRouter.post('/', soloAdministracion, recibirDocumento, async (req, res) => {
+const puedeCargar = requierePermiso('cargar_documentos_asistente');
+
+// Lo que pide el formulario de carga de un tipo: cómo vence, si lleva número y quién lo otorga.
+// Sale de acá y no de la configuración, que es de la administración: quien coordina con permiso
+// de cargar necesita el formulario, no la configuración entera.
+panelDocumentosAsistenteRouter.get('/tipo/:tipoDocumentoId', puedeCargar, async (req, res) => {
+  try {
+    const db = clienteDelPedido(req);
+    const { data: tipo, error } = await db
+      .from('tipos_documento_asistente')
+      .select('id, nombre, activo, vencimiento, periodo_cantidad, periodo_unidad, lleva_numero')
+      .eq('id', req.params.tipoDocumentoId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!tipo || tipo.activo === false) throw new ErrorConMotivo('tipo_de_documento_invalido');
+
+    const { data: otorgantes, error: errorOtorgantes } = await db
+      .from('organismos_por_tipo_documento')
+      .select('organismo_id')
+      .eq('tipo_documento_id', tipo.id);
+    if (errorOtorgantes) throw errorOtorgantes;
+    const ids = (otorgantes ?? []).map((fila) => fila.organismo_id);
+
+    let organismos = [];
+    if (ids.length) {
+      const { data, error: errorOrganismos } = await db
+        .from('organismos_otorgantes')
+        .select('id, nombre')
+        .in('id', ids)
+        .eq('activo', true)
+        .order('orden');
+      if (errorOrganismos) throw errorOrganismos;
+      organismos = data ?? [];
+    }
+
+    res.json({ tipo, organismos });
+  } catch (error) {
+    return responderError(res, error);
+  }
+});
+
+panelDocumentosAsistenteRouter.post('/', puedeCargar, recibirDocumento, async (req, res) => {
   const db = clienteDelPedido(req);
   let ruta = null;
   try {
@@ -292,7 +338,10 @@ panelDocumentosAsistenteRouter.post('/', soloAdministracion, recibirDocumento, a
       });
     }
 
-    const ahora = new Date().toISOString();
+    const administra = esAdminOSuperior(req.usuarioPanel?.rol);
+    const revision = administra
+      ? { estado: 'aprobado', revisado_por: req.usuarioPanel.id, revisado_at: new Date().toISOString() }
+      : { estado: 'en_revision', revisado_por: null, revisado_at: null };
     const { data: documento, error } = await db
       .from(TABLA)
       .insert({
@@ -300,10 +349,8 @@ panelDocumentosAsistenteRouter.post('/', soloAdministracion, recibirDocumento, a
         prestadora_id: asistente.prestadora_id,
         asistente_id: asistente.id,
         ruta_archivo: ruta,
-        estado: 'aprobado',
         cargado_por: req.usuarioPanel.id,
-        revisado_por: req.usuarioPanel.id,
-        revisado_at: ahora,
+        ...revision,
       })
       .select(COLUMNAS_DEL_DOCUMENTO)
       .single();

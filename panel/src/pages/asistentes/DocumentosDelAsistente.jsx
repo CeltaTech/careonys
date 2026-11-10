@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { useAuth } from '../../context/AuthContext';
+import { usePermisos } from '../../context/PermisosContext';
+import { esAdminOSuperior } from '../../lib/roles';
 import { llamarApiDocumentos } from '../../hooks/useDocumentosDelAsistente';
-import { llamarApiConfiguracion } from '../../lib/apiConfiguracion';
 import { TONO_DEL_ESTADO, TIPOS_ACEPTADOS, TAMANO_MAXIMO } from '../../lib/documentos';
 import { claseBadgeTono } from '../../lib/tonos';
 import { hoyISO } from '../../lib/horarios';
@@ -18,8 +20,9 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 
    La lista la lee una sola vez el Legajo (`useDocumentosDelAsistente`) y llega acá ya cargada, así
    la franja de arriba y esta sección dicen lo mismo. Cada renglón abre el documento: ahí se mira el
-   archivo, se aprueba, se observa, se carga uno nuevo o se prorroga la gracia. Todo eso es de la
-   administración, y el backend lo vuelve a exigir. */
+   archivo, se aprueba, se observa, se carga uno nuevo o se prorroga la gracia. Aprobar, observar y
+   prorrogar es de la administración; mirar el archivo y cargar uno nuevo, también de quien coordina
+   si la Prestadora se lo habilitó. El backend y la base lo vuelven a exigir. */
 
 function fechaLegible(fecha, locale) {
   return fecha ? new Date(`${fecha}T00:00:00`).toLocaleDateString(locale) : '—';
@@ -148,11 +151,17 @@ function VerDocumento({ documento, onModo, onClose, onCambiado }) {
   const hoy = hoyISO();
   const gracia = graciaDelDocumento(documento, hoy);
   const organismo = documento.organismo;
+  const { usuario } = useAuth();
+  const { puede } = usePermisos();
+  const administra = esAdminOSuperior(usuario?.rol);
+  const puedeVerArchivo = administra || puede('ver_documentos_asistente');
+  const puedeCargar = administra || puede('cargar_documentos_asistente');
 
-  const puedeAprobar = documento.documento_id && documento.estado === 'en_revision';
-  const puedeObservar = documento.documento_id && ['en_revision', 'aprobado'].includes(documento.estado);
+  const puedeAprobar = administra && documento.documento_id && documento.estado === 'en_revision';
+  const puedeObservar = administra && documento.documento_id && ['en_revision', 'aprobado'].includes(documento.estado);
   // La gracia sólo existe donde el documento frena el trabajo y no está en regla.
   const puedeProrrogar =
+    administra &&
     documento.impide_trabajar && !['aprobado', 'por_vencer'].includes(documento.estado_visible);
 
   async function verArchivo() {
@@ -226,7 +235,7 @@ function VerDocumento({ documento, onModo, onClose, onCambiado }) {
         <Button variant="secondary" onClick={onClose} disabled={ocupado !== null}>
           {t.comun.cerrar}
         </Button>
-        {documento.documento_id && documento.tiene_archivo && (
+        {puedeVerArchivo && documento.documento_id && documento.tiene_archivo && (
           <Button variant="secondary" onClick={verArchivo} disabled={ocupado !== null}>
             {td.ver_archivo}
           </Button>
@@ -236,9 +245,11 @@ function VerDocumento({ documento, onModo, onClose, onCambiado }) {
             {td.prorrogar}
           </Button>
         )}
-        <Button variant="secondary" onClick={() => onModo('cargar')} disabled={ocupado !== null}>
-          {td.cargar}
-        </Button>
+        {puedeCargar && (
+          <Button variant="secondary" onClick={() => onModo('cargar')} disabled={ocupado !== null}>
+            {td.cargar}
+          </Button>
+        )}
         {puedeObservar && (
           <Button variant="secondary" onClick={() => onModo('observar')} disabled={ocupado !== null}>
             {td.observar}
@@ -330,14 +341,10 @@ function CargarDocumento({ asistenteId, documento, onVolver, onCambiado }) {
     setEstadoTipo('cargando');
     setErrorTipo(null);
     try {
-      const [{ tipos }, { organismos: todos }] = await Promise.all([
-        llamarApiConfiguracion('/documentos-tipo'),
-        llamarApiConfiguracion('/organismos-otorgantes'),
-      ]);
-      const encontrado = (tipos ?? []).find((x) => x.id === documento.tipo_documento_id) ?? null;
-      setTipo(encontrado);
-      const permitidos = new Set(encontrado?.organismo_ids ?? []);
-      const propios = (todos ?? []).filter((o) => permitidos.has(o.id));
+      const { tipo: encontrado, organismos: propios = [] } = await llamarApiDocumentos(
+        `/tipo/${documento.tipo_documento_id}`,
+      );
+      setTipo(encontrado ?? null);
       setOrganismos(propios);
       if (propios.length === 1) setForm((f) => ({ ...f, organismo_id: f.organismo_id || propios[0].id }));
       setEstadoTipo(encontrado ? 'listo' : 'error');

@@ -189,6 +189,67 @@ describe('la administración revisa un documento', () => {
   });
 });
 
+describe('cargar un documento desde el Panel', () => {
+  const cuerpo = { asistente_id: ASISTENTE, tipo_documento_id: TIPO };
+
+  function prepararCarga() {
+    respuestas.set('GET /rest/v1/tipos_documento_asistente', () => [
+      { id: TIPO, prestadora_id: PRESTADORA, nombre: 'Documento inventado', activo: true, vencimiento: 'no_vence', lleva_numero: false },
+    ]);
+    respuestas.set('GET /rest/v1/organismos_por_tipo_documento', () => []);
+    respuestas.set('POST /rest/v1/documentos_asistente', () => [unDocumento()]);
+  }
+
+  it('la administración lo carga aprobado', async () => {
+    prepararCarga();
+    const { estado } = await enviar('', cuerpo);
+    assert.equal(estado, 201);
+    const [alta] = escriturasA('documentos_asistente', 'POST');
+    assert.equal(alta.cuerpo.estado, 'aprobado');
+    assert.equal(alta.cuerpo.revisado_por, USUARIO);
+  });
+
+  it('el Coordinador con el permiso lo carga en revisión, sin revisar', async () => {
+    rolDelUsuario = 'coordinador';
+    prepararCarga();
+    const { estado } = await enviar('', cuerpo);
+    assert.equal(estado, 201);
+    const [alta] = escriturasA('documentos_asistente', 'POST');
+    assert.equal(alta.cuerpo.estado, 'en_revision');
+    assert.equal(alta.cuerpo.revisado_por, null);
+    assert.equal(alta.cuerpo.revisado_at, null);
+    assert.equal(alta.cuerpo.cargado_por, USUARIO);
+  });
+
+  it('el formulario de un tipo sale con sus otorgantes', async () => {
+    rolDelUsuario = 'coordinador';
+    prepararCarga();
+    respuestas.set('GET /rest/v1/organismos_por_tipo_documento', () => [{ organismo_id: 'o1' }]);
+    respuestas.set('GET /rest/v1/organismos_otorgantes', () => [{ id: 'o1', nombre: 'Organismo inventado' }]);
+    const { estado, cuerpo: respuesta } = await llamar(`/tipo/${TIPO}`);
+    assert.equal(estado, 200);
+    assert.equal(respuesta.tipo.id, TIPO);
+    assert.deepEqual(respuesta.organismos.map((o) => o.id), ['o1']);
+  });
+
+  it('sin el permiso no se ve el formulario', async () => {
+    rolDelUsuario = 'coordinador';
+    prepararCarga();
+    respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => false);
+    const { estado } = await llamar(`/tipo/${TIPO}`);
+    assert.equal(estado, 403);
+  });
+
+  it('sin el permiso no se carga nada', async () => {
+    rolDelUsuario = 'coordinador';
+    prepararCarga();
+    respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => false);
+    const { estado } = await enviar('', cuerpo);
+    assert.equal(estado, 403);
+    assert.equal(escriturasA('documentos_asistente', 'POST').length, 0);
+  });
+});
+
 describe('la prórroga de gracia', () => {
   it('con días enteros y positivos se guarda y se anota', async () => {
     const { estado, cuerpo } = await enviar('/prorrogar', { asistente_id: ASISTENTE, tipo_documento_id: TIPO, dias: 10 });

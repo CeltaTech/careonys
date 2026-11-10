@@ -367,13 +367,18 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   );
   const acumuladoDelMes = acumularGuardias(guardias.filter((g) => g.fecha >= desde && g.fecha <= hasta));
 
-  const asistentes = await traerPaginado(() =>
+  // La relación laboral vive en su propia tabla, con permiso propio; la liquidación la recibe
+  // como un dato más del Asistente.
+  const asistentes = (await traerPaginado(() =>
     db
       .from('asistentes')
-      .select('id, nombre, estado, tipo_vinculo, fecha_alta, fecha_baja')
+      .select('id, nombre, estado, relacion_laboral_asistente(relaciones_laborales(nombre)), fecha_alta, fecha_baja')
       .is('deleted_at', null)
       .order('nombre', { ascending: true })
-  );
+  )).map(({ relacion_laboral_asistente: suRelacion, ...asistente }) => ({
+    ...asistente,
+    relaciones_laborales: (Array.isArray(suRelacion) ? suRelacion[0] : suRelacion)?.relaciones_laborales ?? null,
+  }));
 
   // Lo que cobra cada uno vive en su propia tabla, separada del Legajo del Asistente justamente porque las
   // reglas de acceso de la base filtran filas y no columnas.
@@ -544,7 +549,7 @@ panelLiquidacionesRouter.get('/:id', requiereRolPanel, requierePermiso(PERMISO_L
 
   const { data: asistente, error: errorAsistente } = await db
     .from('asistentes')
-    .select('id, nombre, tipo_vinculo')
+    .select('id, nombre')
     .eq('id', liquidacion.asistente_id)
     .maybeSingle();
   if (errorAsistente) return responderError(res, errorAsistente);

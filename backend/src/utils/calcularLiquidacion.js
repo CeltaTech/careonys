@@ -222,7 +222,7 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
       periodo: desde,
       periodo_desde: desde,
       periodo_hasta: hasta,
-      tipo_vinculo: asistente.tipo_vinculo,
+      relacion_laboral: asistente.relaciones_laborales?.nombre ?? null,
       base_unidad: baseUnidad,
       base_valor: baseValor,
       horas,

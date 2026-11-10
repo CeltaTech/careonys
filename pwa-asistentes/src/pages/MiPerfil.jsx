@@ -132,10 +132,10 @@ export default function MiPerfil() {
           <dd>{perfil.telefono || '—'}</dd>
           <dt>{t.perfil.tipo}</dt>
           <dd>{nombreTipo(perfil.tipos_asistente, t)}</dd>
-          {/* Cómo está contratado. Es lo que decide cómo cobra y qué le corresponde, y si quedó
-              cargado al revés conviene que lo vea él, que es el único que lo sabe con certeza. */}
-          <dt>{t.perfil.vinculo}</dt>
-          <dd>{traducirValor(t.perfil, `vinculo_${perfil.tipo_vinculo}`)}</dd>
+          {/* La relación laboral, con el nombre que le da su Prestadora. Si quedó mal cargada, él
+              es el primero en notarlo. */}
+          <dt>{t.perfil.relacion_laboral}</dt>
+          <dd>{perfil.relaciones_laborales?.nombre || '—'}</dd>
           <dt>{t.perfil.zonas}</dt>
           <dd>{(perfil.zonas || []).join(', ') || '—'}</dd>
           <dt>{t.perfil.estado}</dt>

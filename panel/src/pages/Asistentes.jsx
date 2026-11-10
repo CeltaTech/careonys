@@ -56,7 +56,7 @@ export function Asistentes() {
     const reloj = setTimeout(() => setAviso(null), DURACION_DEL_AVISO);
     return () => clearTimeout(reloj);
   }, [aviso]);
-  // Coordinador consulta la vista sin vínculo laboral — ver schema_etapa2i.sql. Esa vista no trae
+  // El Coordinador consulta la vista restringida, sin los datos que la Prestadora reserva. Esa vista no trae
   // las modalidades del Asistente, así que para él la columna queda sin dato, y tampoco trae a los
   // desactivados. La tabla sí los trae, así que para la administración se filtra siempre.
   const { filas, estado, error, recargar } = useSupabaseTable(

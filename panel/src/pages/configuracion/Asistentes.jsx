@@ -8,6 +8,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { TiposAsistenteTab } from './TiposAsistenteTab';
 import { AusenciasTab } from './AusenciasTab';
 import { PagoAsistentesTab } from './PagoAsistentesTab';
+import { ListaPropiaDeLaPrestadora } from './ListaPropiaDeLaPrestadora';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
@@ -20,11 +21,23 @@ import '../../styles/molde-paginas.css';
    se le piden a cada uno, con cuánta anticipación una falta se considera avisada con tiempo y
    cómo se le paga el período a quien cobra un monto fijo. */
 export function ConfiguracionAsistentes() {
+  const { t } = useLocale();
+  const tr = t.configuracion.relaciones_laborales;
   return (
     <div className="molde-pila">
       <TiposAsistenteTab />
       <TabDocumentos />
       <AusenciasTab />
+      <ListaPropiaDeLaPrestadora
+        ruta="/relaciones-laborales"
+        textos={{
+          titulo: tr.titulo,
+          agregar: tr.agregar,
+          vacio: tr.vacio,
+          confirmar_borrar: tr.confirmar_borrar,
+          col_nombre: tr.col_nombre,
+        }}
+      />
       <PagoAsistentesTab />
     </div>
   );

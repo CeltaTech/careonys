@@ -127,7 +127,7 @@ beforeEach(() => {
 const ASISTENTE_POR_HORA = {
   id: 'a-1',
   nombre: 'Asistente de prueba',
-  tipo_vinculo: 'monotributo',
+  relaciones_laborales: { nombre: 'Monotributo' },
   valor_hora: 1500,
 };
 
@@ -135,7 +135,7 @@ const ASISTENTE_POR_HORA = {
 const ASISTENTE_POR_SEMANA = {
   id: 'a-2',
   nombre: 'Otra asistente de prueba',
-  tipo_vinculo: 'monotributo',
+  relaciones_laborales: { nombre: 'Monotributo' },
   unidad_medicion: 'semana',
   valor_semana: 70000,
 };
@@ -230,8 +230,8 @@ describe('la base: valor por hora o por semana', () => {
 
 describe('las otras dos unidades de medición: la guardia y la semana', () => {
   // Agosto de 2026 tiene 31 días, que es el período de `liquidar`.
-  const POR_GUARDIA = { id: 'a-3', nombre: 'Tercera', tipo_vinculo: 'monotributo', unidad_medicion: 'guardia', valor_guardia: 50000 };
-  const POR_SEMANA = { id: 'a-4', nombre: 'Cuarta', tipo_vinculo: 'monotributo', unidad_medicion: 'semana', valor_semana: 70000 };
+  const POR_GUARDIA = { id: 'a-3', nombre: 'Tercera', relaciones_laborales: { nombre: 'Monotributo' }, unidad_medicion: 'guardia', valor_guardia: 50000 };
+  const POR_SEMANA = { id: 'a-4', nombre: 'Cuarta', relaciones_laborales: { nombre: 'Monotributo' }, unidad_medicion: 'semana', valor_semana: 70000 };
 
   it('por guardia se paga lo que hizo, sin mirar cuántas horas duró cada una', () => {
     const { liquidacion } = liquidar(POR_GUARDIA, { guardias: 10, horas: 240 });
@@ -515,7 +515,7 @@ describe('generar el mes', () => {
       { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
     ]);
     respuestas.set('GET /rest/v1/asistentes', () => [
-      { id: 'a-1', nombre: 'Asistente de prueba', estado: 'activo', tipo_vinculo: 'monotributo', fecha_alta: '2020-01-01', fecha_baja: null },
+      { id: 'a-1', nombre: 'Asistente de prueba', estado: 'activo', relacion_laboral_asistente: { relaciones_laborales: { nombre: 'Monotributo' } }, fecha_alta: '2020-01-01', fecha_baja: null },
     ]);
     respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [
       remuneracion ?? { asistente_id: 'a-1', valor_hora: 1500 },
@@ -883,7 +883,7 @@ describe('con qué credencial entra cada ruta', () => {
       { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
     ]);
     respuestas.set('GET /rest/v1/asistentes', () => [
-      { id: 'a-1', nombre: 'Asistente importado de prueba', estado: 'activo', tipo_vinculo: 'monotributo', fecha_alta: '2020-01-01', fecha_baja: null },
+      { id: 'a-1', nombre: 'Asistente importado de prueba', estado: 'activo', relacion_laboral_asistente: { relaciones_laborales: { nombre: 'Monotributo' } }, fecha_alta: '2020-01-01', fecha_baja: null },
     ]);
     respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [{ asistente_id: 'a-1', valor_hora: 1500 }]);
     respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => []);

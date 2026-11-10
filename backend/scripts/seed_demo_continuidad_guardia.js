@@ -61,7 +61,6 @@ async function main() {
     telefono: '+5491122334455',
     ...identidadInventada(30499001, 'femenino'),
     estado: 'activo',
-    tipo_vinculo: 'monotributo',
   }).throwOnError();
 
   const { data: luciaAuth } = await supabase.auth.admin.createUser({
@@ -79,7 +78,6 @@ async function main() {
     telefono: '+5491133445566',
     ...identidadInventada(30499002, 'femenino'),
     estado: 'activo',
-    tipo_vinculo: 'monotributo',
   }).throwOnError();
 
   // El turno era de Marta y lo va a hacer Lucía. Queda a nombre de Lucía, que es como queda

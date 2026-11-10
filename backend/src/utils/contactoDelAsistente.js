@@ -51,7 +51,7 @@ import { abrirElContacto, MOTIVO_CONTACTO } from './contactosIntermediacion.js';
 /** Las columnas del Legajo del Asistente que son el dato que se vende. Están acá, en una sola
  *  lista, por el mismo motivo que `COLUMNAS_PERFIL_PUBLICO` tiene la suya: para que ninguna ruta
  *  nueva arme la propia y termine mostrando de más. */
-export const COLUMNAS_DE_CONTACTO = 'id, nombre, telefono, email, domicilio';
+export const COLUMNAS_DE_CONTACTO = 'id, nombre, telefono, email, domicilio_asistente(domicilio)';
 
 /** Por qué no se pudo ver un contacto. Códigos, no frases: la frase vive en las traducciones de
  *  la aplicación, en los tres idiomas (`celtatech\CLAUDE.md` §8). */
@@ -131,7 +131,11 @@ export async function datosDeContacto({ prestadoraId, asistenteId }) {
     console.error('Error consultando el contacto del Asistente:', error.message);
     return null;
   }
-  return data || null;
+  if (!data) return null;
+  // El domicilio vive en su propia tabla; acá vuelve a ser un dato más del contacto.
+  const { domicilio_asistente: suDomicilio, ...contacto } = data;
+  const fila = Array.isArray(suDomicilio) ? suDomicilio[0] : suDomicilio;
+  return { ...contacto, domicilio: fila?.domicilio ?? null };
 }
 
 /** Lo que la pantalla necesita para preguntar antes de cobrar: qué forma se va a usar, cuánto

@@ -264,7 +264,7 @@ function LiquidacionesTab({ esAdmin }) {
             <tr>
               <th>{t.pagos_asistentes.col_asistente}</th>
               <th>{t.pagos_asistentes.col_tramo}</th>
-              <th>{t.pagos_asistentes.col_vinculo}</th>
+              <th>{t.pagos_asistentes.col_relacion_laboral}</th>
               <th>{t.pagos_asistentes.col_horas}</th>
               <th>{t.pagos_asistentes.col_bruto}</th>
               <th>{t.pagos_asistentes.col_neto}</th>
@@ -280,7 +280,7 @@ function LiquidacionesTab({ esAdmin }) {
                   <b>{l.asistente_nombre || '—'}</b>
                 </td>
                 <td>{tramoDelPeriodo(l, locale)}</td>
-                <td>{traducirValor(t.asistentes, `vinculo_${l.tipo_vinculo}`)}</td>
+                <td>{l.relacion_laboral || '—'}</td>
                 <td>{formatearHoras(l.horas, locale)}</td>
                 <td>{formatearImporte(l.bruto, l.moneda, locale)}</td>
                 <td>{formatearImporte(l.neto, l.moneda, locale)}</td>
@@ -440,8 +440,8 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                 <dd>{mesDelPeriodo(liquidacion.periodo)}</dd>
                 <dt>{t.pagos_asistentes.col_tramo}</dt>
                 <dd>{tramoDelPeriodo(liquidacion, locale)}</dd>
-                <dt>{t.pagos_asistentes.col_vinculo}</dt>
-                <dd>{traducirValor(t.asistentes, `vinculo_${liquidacion.tipo_vinculo}`)}</dd>
+                <dt>{t.pagos_asistentes.col_relacion_laboral}</dt>
+                <dd>{liquidacion.relacion_laboral || '—'}</dd>
                 <dt>{t.pagos_asistentes.detalle_base}</dt>
                 <dd>
                   {formatearImporte(liquidacion.base_valor, liquidacion.moneda, locale)}{' '}

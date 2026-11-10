@@ -634,9 +634,7 @@ export const T = {
       estado_cesado: 'Cesado',
       // Cómo está contratado. Se muestra porque es lo que decide cómo cobra y qué le
       // corresponde, y porque un vínculo mal cargado se corrige antes si la persona lo ve.
-      vinculo: 'Vínculo',
-      vinculo_monotributo: 'Monotributo',
-      vinculo_dependencia: 'Dependencia',
+      relacion_laboral: 'Relación laboral',
       // La foto que ven los Clientes. La descripción la nombra a ella, no dice «foto de perfil»:
       // quien la escucha con un lector ya sabe que es una imagen.
       foto_alt: 'Su foto, la que ven los Clientes',
@@ -1272,9 +1270,7 @@ export const T = {
       estado_activo: 'Active',
       estado_inactivo: 'Inactive',
       estado_cesado: 'Terminated',
-      vinculo: 'Contract type',
-      vinculo_monotributo: 'Independent contractor',
-      vinculo_dependencia: 'Employee',
+      relacion_laboral: 'Work arrangement',
       foto_alt: 'Your photo, the one Clients see',
       notificaciones_titulo: 'Notifications',
       notificaciones_activar: 'Enable notifications',
@@ -1896,9 +1892,7 @@ export const T = {
       estado_activo: 'Ativo',
       estado_inactivo: 'Inativo',
       estado_cesado: 'Desligado',
-      vinculo: 'Tipo de vínculo',
-      vinculo_monotributo: 'Autônomo (contratante independente)',
-      vinculo_dependencia: 'Funcionário',
+      relacion_laboral: 'Relação de trabalho',
       foto_alt: 'Sua foto, a que os Clientes veem',
       notificaciones_titulo: 'Notificações',
       notificaciones_activar: 'Ativar notificações',

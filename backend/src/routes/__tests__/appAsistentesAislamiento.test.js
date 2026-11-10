@@ -146,7 +146,7 @@ describe('la baja del aviso al celular', () => {
 describe('la decisión de consentimiento que ya tomó', () => {
   it('se lee con la credencial de quien pide y por su Legajo', async () => {
     respuestas.set('GET /rest/v1/asistentes', [
-      { id: LEGAJO, prestadora_id: PRESTADORA, tipo_vinculo: 'monotributo' },
+      { id: LEGAJO, prestadora_id: PRESTADORA, relacion_laboral_asistente: { relaciones_laborales: { nombre: 'Monotributo' } } },
     ]);
     respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR', control_de_ubicacion_en_el_turno: true }]);
     respuestas.set('GET /rest/v1/textos_consentimiento', [

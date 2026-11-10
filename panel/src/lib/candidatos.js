@@ -26,7 +26,7 @@
 // La cercanía: cuándo se dice y cuándo se calla
 // ----------------------------------------------------------------------------
 //
-// El legajo del Asistente guarda su domicilio (`asistentes.domicilio`, `lat`, `lng`), así que la
+// El Legajo del Asistente guarda su domicilio (`domicilio_asistente`: `lat`, `lng`), así que la
 // distancia hasta la casa del Paciente entra como un criterio más. Pero **solo cuando los
 // dos puntos existen de verdad**: si a cualquiera de los dos le falta la ubicación, este
 // archivo no dice nada sobre cercanía, ni a favor ni en contra. Un candidato ordenado por una

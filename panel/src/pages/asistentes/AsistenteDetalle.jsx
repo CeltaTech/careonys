@@ -25,7 +25,7 @@ import { con } from '../../lib/textos';
 import { Alert } from '../../components/ui/Alert';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { Button } from '../../components/ui/Button';
-import { CAMPOS_PAGO, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/datosAparteDelAsistente';
+import { CAMPOS_DOMICILIO, CAMPOS_PAGO, CAMPOS_RELACION_LABORAL, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/datosAparteDelAsistente';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
@@ -49,14 +49,14 @@ export function AsistenteDetalle() {
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
-    // Coordinador consulta la vista restringida (sin vínculo laboral) — ver schema_etapa2i.sql.
-    // Los datos delicados son el caso aparte: viven en sus propias tablas y los piden
-    // `CAMPOS_PAGO` y `CAMPOS_RESERVADOS`, donde la base exige el permiso correspondiente para
-    // contestar. Ahí la restricción no depende de qué consulte la pantalla: las reglas de
-    // acceso filtran filas y no columnas, así que separar la tabla es lo único que impide leer
-    // el dato preguntando por fuera del Panel.
+    // El Coordinador consulta la vista restringida. Los datos delicados viven en sus propias
+    // tablas, donde la base exige el permiso correspondiente para contestar: las reglas de acceso
+    // filtran filas y no columnas, así que separar la tabla es lo único que impide leer el dato
+    // preguntando por fuera del Panel.
     const tabla = esAdmin ? 'asistentes' : 'asistentes_coordinador';
-    const columnas = esAdmin ? `*, cuenta_desactivada, ${CAMPOS_PAGO}, ${CAMPOS_RESERVADOS}` : '*';
+    const columnas = esAdmin
+      ? `*, cuenta_desactivada, ${CAMPOS_PAGO}, ${CAMPOS_RESERVADOS}, ${CAMPOS_DOMICILIO}, ${CAMPOS_RELACION_LABORAL}`
+      : '*';
     const { data, error: errorConsulta } = await supabase.from(tabla).select(columnas).eq('id', id).single();
     if (errorConsulta) {
       setError(errorConsulta.code === 'PGRST116' ? null : mensajeDeError(errorConsulta, t));
@@ -70,9 +70,27 @@ export function AsistenteDetalle() {
       const { data: deLaCuenta } = await supabase.from('asistentes').select('usuario_id, cuenta_desactivada').eq('id', id).maybeSingle();
       cuenta = deLaCuenta ?? {};
     }
-    setAsistente(conDatosAparte({ ...data, ...cuenta }));
+    // El domicilio y la relación laboral, sólo si la Prestadora le dio el permiso de verlos.
+    const aparte = {};
+    if (!esAdmin && puede('ver_domicilio_asistente')) {
+      const { data: suDomicilio } = await supabase
+        .from('domicilio_asistente')
+        .select('domicilio, calle, numero, piso, unidad, lugar_id, codigo_postal, lat, lng')
+        .eq('asistente_id', id)
+        .maybeSingle();
+      aparte.domicilio_asistente = suDomicilio;
+    }
+    if (!esAdmin && puede('ver_relacion_laboral_asistente')) {
+      const { data: suRelacion } = await supabase
+        .from('relacion_laboral_asistente')
+        .select('relacion_laboral_id')
+        .eq('asistente_id', id)
+        .maybeSingle();
+      aparte.relacion_laboral_asistente = suRelacion;
+    }
+    setAsistente(conDatosAparte({ ...data, ...cuenta, ...aparte }));
     setEstado('listo');
-  }, [id, esAdmin, puedeDarDeBaja, t]);
+  }, [id, esAdmin, puedeDarDeBaja, puede, t]);
 
   useEffect(() => {
     recargar();

@@ -285,34 +285,45 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 -- El Legajo tiene número propio y `usuario_id` dice de qué cuenta cuelga. Acá los dos coinciden
 -- porque cada una de estas personas está en una sola Prestadora; en cuanto una esté en dos, la
 -- cuenta sigue siendo una y los Legajos son dos.
+-- La relación laboral es una lista que arma cada Prestadora; la de Sandbox tiene una sola.
+INSERT INTO public.relaciones_laborales (id, prestadora_id, nombre, orden) VALUES
+  ('3f100000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Monotributo', 1);
+
 INSERT INTO public.asistentes (
   id, usuario_id, prestadora_id, nombre, telefono, email,
-  estado, tipo_vinculo, fecha_alta, fecha_baja,
+  estado, fecha_alta, fecha_baja,
   horas_semanales, dni, canales, documento_tipo, documento_numero, genero
 ) VALUES
   ('30000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
    '11111111-1111-4111-8111-111111111111',
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
-   'activo', 'monotributo', CURRENT_DATE - 300, NULL,
+   'activo', CURRENT_DATE - 300, NULL,
    40, '20000001', ARRAY['directa'], 'cuil', '27200000019', 'femenino'),
 
   ('30000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
    '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
-   'activo', 'monotributo', CURRENT_DATE - 220, NULL,
+   'activo', CURRENT_DATE - 220, NULL,
    40, '20000002', ARRAY['directa', 'intermediacion'], 'cuil', '20200000022', 'masculino'),
 
   ('30000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
    '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
-   'activo', 'monotributo', CURRENT_DATE - 90, NULL,
+   'activo', CURRENT_DATE - 90, NULL,
    24, '20000003', ARRAY['intermediacion'], 'cuil', '27200000035', 'femenino'),
 
   ('30000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000004',
    '11111111-1111-4111-8111-111111111111',
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
-   'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40,
+   'cesado', CURRENT_DATE - 500, CURRENT_DATE - 40,
    40, '20000004', ARRAY['directa'], 'cuil', '27200000043', 'femenino');
+
+-- Qué relación laboral tiene cada uno vive aparte, donde la base exige el permiso para leerla.
+INSERT INTO public.relacion_laboral_asistente (asistente_id, prestadora_id, relacion_laboral_id)
+SELECT a.id, a.prestadora_id, '3f100000-0000-4000-8000-000000000001'
+FROM public.asistentes a
+WHERE a.id IN ('30000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000002',
+               '30000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000004');
 
 -- Dónde acepta trabajar cada una. Ana en un solo lugar —el caso que mira el indicador de
 -- exclusividad—; Bruno en cuatro, cruzando dos zonas; Clara sólo en la Zona Sur, que es la que
@@ -1015,28 +1026,28 @@ VALUES ('11111111-1111-4111-8111-111111111111', '3e000000-0000-4000-8000-0000000
 --     tiene que saltear e informar en vez de estimar
 
 INSERT INTO public.conceptos_liquidacion
-  (id, prestadora_id, nombre, signo, unidad, origen_valor, valor, escala_tipo, moneda, aplica_a, orden)
+  (id, prestadora_id, nombre, signo, unidad, origen_valor, valor, escala_tipo, moneda, orden)
 VALUES
   -- Importe fijo, para todos. Es el caso más simple y el que prueba que la
   -- moneda se completa sola desde la Prestadora.
   ('6c000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'Adicional por título', 'suma', 'monto_fijo_mensual', 'propio', 35000, NULL, NULL, 'todos', 10),
+   'Adicional por título', 'suma', 'monto_fijo_mensual', 'propio', 35000, NULL, NULL, 10),
 
   -- Porcentaje sobre el bruto. Sin moneda a propósito: un porcentaje no es
   -- plata hasta que se aplica, y la base rechaza la fila si trae moneda.
   ('6c000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
-   'Adicional por antigüedad', 'suma', 'porcentaje', 'propio', 5, NULL, NULL, 'todos', 20),
+   'Adicional por antigüedad', 'suma', 'porcentaje', 'propio', 5, NULL, NULL, 20),
 
   -- Importe por hora efectivamente trabajada. Distingue a quien hizo guardias
   -- de quien no hizo ninguna en el mes.
   ('6c000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
-   'Refrigerio por hora', 'suma', 'monto_por_hora', 'propio', 300, NULL, NULL, 'todos', 30),
+   'Refrigerio por hora', 'suma', 'monto_por_hora', 'propio', 300, NULL, NULL, 30),
 
   -- Atado a una escala legal que hoy no está cargada (`escalas_legales` está
   -- vacía hasta que la complete un abogado, pendiente #130). Tiene que quedar
   -- afuera de la cuenta y aparecer en el aviso de la pantalla, nunca estimado.
   ('6c000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111',
-   'Viático de traslado', 'suma', 'monto_fijo_mensual', 'escala_legal', NULL, 'viatico_traslado', NULL, 'todos', 50);
+   'Viático de traslado', 'suma', 'monto_fijo_mensual', 'escala_legal', NULL, 'viatico_traslado', NULL, 50);
 
 
 -- ----------------------------------------------------------------------------

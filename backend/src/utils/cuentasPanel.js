@@ -419,9 +419,6 @@ export async function crearAsistenteDirecto({
       ...identidad,
       telefono: telefono || null,
       email,
-      domicilio: domicilioDelAsistente,
-      ...partes,
-      ...ubicacion,
       tipo_asistente_id: tipoAsistenteId,
       estado: estado || 'activo',
       horas_semanales: horas_semanales || null,
@@ -439,6 +436,18 @@ export async function crearAsistenteDirecto({
     // Organización, la clave foránea compuesta rechaza la escritura entera, el alta se deshace
     // como cualquier otro tropiezo y no queda un Legajo a medias.
     await guardarLugaresDe(db, 'asistente_lugares', 'asistente_id', asistenteId, prestadoraId, lugares);
+
+    // El domicilio va a su propia tabla, donde la base exige el permiso
+    // `ver_domicilio_asistente` antes de mostrarlo. Sin ningún dato no se crea la fila.
+    const domicilioCompleto = { domicilio: domicilioDelAsistente, ...partes, ...ubicacion };
+    if (Object.values(domicilioCompleto).some((valor) => valor !== null && valor !== undefined && valor !== '')) {
+      const { error: errorDomicilio } = await db.from('domicilio_asistente').insert({
+        asistente_id: asistenteId,
+        prestadora_id: prestadoraId,
+        ...domicilioCompleto,
+      });
+      if (errorDomicilio) throw new Error(errorDomicilio.message);
+    }
 
     // Lo que cobra el Asistente va a su propia tabla, no a su Legajo: ahí la base exige el
     // permiso `ver_pagos_asistente` antes de mostrarlo. Si el alta no trae ningún importe no

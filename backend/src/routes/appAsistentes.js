@@ -239,12 +239,16 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
   const { data: perfil, error } = await db
     .from('asistentes')
-    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, canales, disponible, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
+    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, relacion_laboral_asistente(relaciones_laborales(nombre)), canales, disponible, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
     .eq('id', req.usuarioAsistente.asistenteId)
     .single();
   if (error || !perfil) {
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
+  // Su relación laboral vive en su propia tabla; la aplicación la recibe como un dato más.
+  const { relacion_laboral_asistente: suRelacion } = perfil;
+  delete perfil.relacion_laboral_asistente;
+  perfil.relaciones_laborales = (Array.isArray(suRelacion) ? suRelacion[0] : suRelacion)?.relaciones_laborales ?? null;
 
   // Su Certificado de Aptitud, el último, y con cuántos días de anticipación lo da por vencer su
   // Prestadora: el teléfono calcula el estado con esos días y no con unos fijos. La base le deja

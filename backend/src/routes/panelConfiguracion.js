@@ -2323,6 +2323,7 @@ function catalogoDeLaPrestadora(ruta, tabla, { conDetalle }) {
 
 catalogoDeLaPrestadora('/lista-de-comprobacion-baja', 'lista_de_comprobacion_baja_servicio', { conDetalle: false });
 catalogoDeLaPrestadora('/motivos-reactivacion-servicio', 'motivos_reactivacion_servicio', { conDetalle: true });
+catalogoDeLaPrestadora('/relaciones-laborales', 'relaciones_laborales', { conDetalle: false });
 
 // --- Horizonte de generación de guardias de series abiertas — cron
 //     backend/src/utils/generacionSeriesGuardia.js. Mismo patrón que

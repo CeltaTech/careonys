@@ -44,7 +44,7 @@ const ASISTENTE_COMPLETO = {
   dni: '30111222',
   disponibilidad: { lunes: true },
   horas_semanales: 40,
-  tipo_vinculo: 'monotributo',
+  relacion_laboral_id: 'relacion-de-prueba',
   canales: ['intermediacion'],
   estado: 'activo',
   qr_token: 'tok-123',

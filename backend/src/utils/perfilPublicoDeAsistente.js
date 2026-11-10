@@ -56,7 +56,7 @@ export const NUNCA_SALEN = [
   'domicilio',
   'disponibilidad',
   'horas_semanales',
-  'tipo_vinculo',
+  'relacion_laboral_id',
   'canales',
   'estado',
   'qr_token',

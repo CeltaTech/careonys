@@ -32,7 +32,7 @@ const CONTACTO = {
   nombre: 'Asistente de prueba',
   telefono: '+54 11 5555 0000',
   email: 'asistente@ejemplo.invalido',
-  domicilio: 'Calle Inventada 123',
+  domicilio_asistente: { domicilio: 'Calle Inventada 123' },
 };
 
 const respuestas = new Map();
@@ -178,6 +178,8 @@ describe('cómo está el contacto', () => {
     const resultado = await preguntar();
     assert.equal(resultado.abierto, true);
     assert.equal(resultado.contacto.telefono, CONTACTO.telefono);
+    assert.equal(resultado.contacto.domicilio, 'Calle Inventada 123');
+    assert.equal('domicilio_asistente' in resultado.contacto, false);
     assert.equal(resultado.activacion, null);
     assert.equal(cuantas(ACCESOS), 0, 'un contacto ya abierto no consulta accesos');
   });

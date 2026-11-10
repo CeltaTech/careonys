@@ -29,7 +29,7 @@ export function usePadronEnElMapa() {
     setError(null);
     const { data, error: fallo } = await supabase
       .from('asistentes')
-      .select('id, nombre, estado, disponible, lat, lng, cuenta_desactivada')
+      .select('id, nombre, estado, disponible, cuenta_desactivada, domicilio_asistente(lat, lng)')
       .is('deleted_at', null);
 
     if (fallo) {
@@ -38,7 +38,11 @@ export function usePadronEnElMapa() {
       return;
     }
 
-    setFilas(data ?? []);
+    // El punto sale del domicilio, que la base sólo entrega a quien tiene permiso de verlo.
+    setFilas((data ?? []).map(({ domicilio_asistente: suDomicilio, ...fila }) => {
+      const punto = Array.isArray(suDomicilio) ? suDomicilio[0] : suDomicilio;
+      return { ...fila, lat: punto?.lat ?? null, lng: punto?.lng ?? null };
+    }));
     setEstado('listo');
   }, [t]);
 

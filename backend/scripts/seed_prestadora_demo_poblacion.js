@@ -62,9 +62,7 @@ function construirAsistente(nombre, idx) {
     email: `alas.para.escribir.2026+asistente.demo.${slug(nombre)}@gmail.com`,
     // Los primeros dieciocho nombres de la lista son de mujer.
     ...identidadInventada(30500000 + idx, idx < 18 ? 'femenino' : 'masculino'),
-    // Todos independientes: en Careonys el Asistente no es empleado. Cobra por hora, con un
-    // valor inventado.
-    tipo_vinculo: 'monotributo',
+    // Cobra por hora, con un valor inventado.
     valor_hora: 3500 + (idx % 6) * 450,
     horas_semanales: idx % 3 === 0 ? 24 + (idx % 4) * 6 : null,
     claveTipo: CLAVES_TIPO[idx % CLAVES_TIPO.length],
@@ -172,7 +170,6 @@ async function main() {
       zonas: perfil.zonas,
       canales: perfil.canales,
       estado: perfil.estado,
-      tipo_vinculo: perfil.tipo_vinculo,
       horas_semanales: perfil.horas_semanales,
       fecha_alta: perfil.fecha_alta,
       fecha_baja: perfil.fecha_baja,

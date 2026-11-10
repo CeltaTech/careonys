@@ -55,7 +55,10 @@ const AVISO_DE_LA_BASE = {
   23505: ['documento_numero', 'legajo_repetido'],
 };
 
-const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais'];
+// Las columnas de `domicilio_asistente` que dicen si el Asistente ya tenía un domicilio cargado.
+const PARTES_GUARDADAS = ['domicilio', 'calle', 'numero', 'piso', 'unidad', 'lugar_id', 'codigo_postal'];
+
+const ORDEN_DE_LOS_CASILLEROS =['nombre', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais'];
 
 export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) {
   const { t, locale } = useLocale();
@@ -63,6 +66,11 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
   const puedeEditarIdentidad = esAdmin || puede('gestionar_asistentes');
+  // El domicilio y la relación laboral los ve quien la Prestadora haya habilitado; de fábrica,
+  // sólo la administración. La relación laboral la cambia sólo la administración.
+  const veDomicilio = esAdmin || puede('ver_domicilio_asistente');
+  const editaDomicilio = esAdmin || (veDomicilio && puede('gestionar_asistentes'));
+  const veRelacion = esAdmin || puede('ver_relacion_laboral_asistente');
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   const { modalidades } = useModalidades();
   /* La lista de lugares de la Prestadora, pedida una sola vez para las tres cosas que la usan en
@@ -105,6 +113,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     valor_semana: asistente.valor_semana || '',
     valor_hora_extra: asistente.valor_hora_extra || '',
     horas_semanales: asistente.horas_semanales || '',
+    relacion_laboral_id: asistente.relacion_laboral_id || '',
     modalidades: modalidadesDelAsistente(asistente),
     // Cada cuánto cobra esta persona. Vacío es lo normal y quiere decir «lo que diga la
     // Prestadora»: acá se guarda solamente lo que se arregló distinto con ella. Los campos
@@ -189,6 +198,31 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
   useEffect(() => {
     cargarLugares();
   }, [cargarLugares]);
+
+  /* Las relaciones laborales que arma la Prestadora en Configuración. Se ofrecen las encendidas, y
+     la que ya tenga este Legajo aunque después se haya apagado, para no perderla al guardar. */
+  const [relacionesLaborales, setRelacionesLaborales] = useState([]);
+  const [errorRelaciones, setErrorRelaciones] = useState(null);
+  useEffect(() => {
+    if (!veRelacion) return;
+    let vigente = true;
+    supabase
+      .from('relaciones_laborales')
+      .select('id, nombre, activo')
+      .order('orden')
+      .order('nombre')
+      .then(({ data, error: errorLista }) => {
+        if (!vigente) return;
+        if (errorLista) {
+          setErrorRelaciones(mensajeDeError(errorLista, t));
+          return;
+        }
+        setRelacionesLaborales((data ?? []).filter((r) => r.activo || r.id === asistente.relacion_laboral_id));
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [veRelacion, asistente.relacion_laboral_id, t]);
 
   /* Sus Especialidades, elegidas del catálogo del tipo que tiene. La base sólo acepta las del tipo
      ya guardado en el Legajo, así que se escriben después del Legajo, y al cambiar de tipo se
@@ -315,14 +349,6 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
       tipo_asistente_id: form.tipo_asistente_id || null,
       estado: form.estado,
       ...(esAdmin && {
-        /* Dónde vive, escrito para que lo lea una persona, y su punto en el mapa, que calcula el
-           backend sólo si la dirección cambió.
-           Viaja solo cuando la pantalla lo tenía para mostrar: la vista que lee el Coordinador
-           (`asistentes_coordinador`) no trae esta columna, así que mandarlo igual borraría un
-           domicilio ya cargado que esa pantalla nunca llegó a mostrar. */
-        domicilio: renglonDelDomicilio(form.domicilio, catalogoDeLugares.lugares) || null,
-        ...partes,
-        ...(await coordenadasSiCambio(asistente, partes)),
         horas_semanales: form.horas_semanales || null,
         // La columna se llama `canales` de antes y no se renombra (regla 13). La palabra del
         // producto, acá y en toda la pantalla, es modalidad de trabajo.
@@ -343,6 +369,52 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
       // frase que dice qué pasó y dónde se arregla, nunca el texto crudo del error.
       setError(mensajeDeModalidad(errorUpdate, t.modalidades) ?? t.comun.error_generico);
       return;
+    }
+
+    /* Dónde vive, escrito para que lo lea una persona, y su punto en el mapa, que calcula el
+       backend sólo si la dirección cambió. Va en `domicilio_asistente`, donde la base exige el
+       permiso `ver_domicilio_asistente`. Sin domicilio cargado ni escrito, no se crea la fila. */
+    const domicilioEscrito = renglonDelDomicilio(form.domicilio, catalogoDeLugares.lugares) || null;
+    const teniaDomicilio = PARTES_GUARDADAS.some((parte) => asistente[parte] != null && asistente[parte] !== '');
+    if (editaDomicilio && (domicilioEscrito || teniaDomicilio)) {
+      const { error: errorDomicilio } = await supabase
+        .from('domicilio_asistente')
+        .upsert(
+          {
+            asistente_id: asistente.id,
+            prestadora_id: asistente.prestadora_id,
+            domicilio: domicilioEscrito,
+            ...partes,
+            ...(await coordenadasSiCambio(asistente, partes)),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'asistente_id' },
+        );
+      if (errorDomicilio) {
+        setGuardando(false);
+        setError(mensajeDeError(errorDomicilio, t));
+        return;
+      }
+    }
+
+    // La relación laboral va en `relacion_laboral_asistente`, y la cambia sólo la administración.
+    if (esAdmin && (form.relacion_laboral_id || '') !== (asistente.relacion_laboral_id || '')) {
+      const { error: errorRelacion } = form.relacion_laboral_id
+        ? await supabase.from('relacion_laboral_asistente').upsert(
+            {
+              asistente_id: asistente.id,
+              prestadora_id: asistente.prestadora_id,
+              relacion_laboral_id: form.relacion_laboral_id,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'asistente_id' },
+          )
+        : await supabase.from('relacion_laboral_asistente').delete().eq('asistente_id', asistente.id);
+      if (errorRelacion) {
+        setGuardando(false);
+        setError(mensajeDeError(errorRelacion, t));
+        return;
+      }
     }
 
     // Lo que cobra el Asistente se guarda aparte, en `remuneraciones_asistente`, donde la base
@@ -496,15 +568,13 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
           )}
           <FormField label={t.asistentes.telefono} name="telefono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} disabled={!puedeEditarIdentidad} />
           <FormField label={t.asistentes.email} name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} disabled={!puedeEditarIdentidad} />
-          {/* El domicilio solo lo ve la administración: la vista del Coordinador no trae esa
-              columna, así que ahí el campo aparecería siempre vacío por más que el dato exista. */}
-          {esAdmin && (
+          {veDomicilio && (
             <div className="molde-ancho">
               <CamposDeDomicilio
                 valor={form.domicilio}
                 alCambiar={(partes) => set('domicilio', partes)}
                 catalogo={catalogoDeLugares}
-                deshabilitado={!puedeEditarIdentidad}
+                deshabilitado={!editaDomicilio}
               />
             </div>
           )}
@@ -583,12 +653,23 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
         </EstadoLista>
       </section>
 
-      {esAdmin && (
+      {veRelacion && (
         <section className="panel-tarjeta">
           <div className="panel-tarjeta-titulo">
-            <h2>{t.asistentes.tabs.perfil_vinculo}</h2>
+            <h2>{t.asistentes.tabs.perfil_relacion_laboral}</h2>
           </div>
+          {errorRelaciones && <Alert variant="error">{errorRelaciones}</Alert>}
           <div className="molde-formgrid">
+            <FormField label={t.asistentes.tipo_de_relacion} name="relacion_laboral_id" type="select" value={form.relacion_laboral_id} onChange={(e) => set('relacion_laboral_id', e.target.value)} disabled={!esAdmin}>
+              <option value="">—</option>
+              {relacionesLaborales.map((r) => (
+                <option key={r.id} value={r.id}>{r.nombre}</option>
+              ))}
+            </FormField>
+
+            {esAdmin && (
+            <>
+
             {/* Con qué se mide el trabajo lo elige quien carga el Legajo del Asistente. Se muestra el valor de la unidad elegida y no los cuatro, porque
                 cuatro casillas de importe al lado invitan a llenar la que no se usa, y un valor
                 cargado que no se paga es una pregunta cada vez que alguien abre el Legajo del Asistente. */}
@@ -671,6 +752,8 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
                   }
                 />
               </>
+            )}
+            </>
             )}
           </div>
         </section>

@@ -154,7 +154,7 @@ entrevista.
 Hoy ningún control del sistema impide asignar guardias a quien no es monotributista. Si eso
 avisa o bloquea es una decisión abierta (`docs/PLAN_HASTA_PRODUCCION.md`, pasos 67 y 68); la
 regla de la empresa es que el producto avisa y no prohíbe (`celtatech/CLAUDE.md`, «El riesgo
-legal»). El dato es el mismo campo `tipo_vinculo` de `asistentes`, no una tabla nueva.
+legal»). La relación laboral de cada Asistente se elige de la lista que define cada Prestadora en Configuración.
 
 ### Sección C — Formación y certificaciones
 

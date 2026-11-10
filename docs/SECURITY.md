@@ -292,8 +292,15 @@ El permiso `ver_datos_reservados_asistente` está en `catalogo_acciones_permisos
 a su Coordinadora. Escribir es exclusivo de `es_superadmin() OR es_admin_prestadora()` — el
 permiso habilita a mirar, nunca a cambiar la causa de una baja ni un puntaje de riesgo.
 
-**Qué quedó afuera a propósito.** Los otros siete datos que `asistentes_coordinador` omite
-—`tipo_vinculo`, `fecha_baja`, `canales`, `horas_semanales`, `importacion_id`,
+Con el mismo molde, el domicilio del Asistente vive en `domicilio_asistente` y su relación
+laboral en `relacion_laboral_asistente`. La base las deja leer con `ver_domicilio_asistente` y
+`ver_relacion_laboral_asistente`, las dos con `default_solo_admin = TRUE`: de fábrica sólo las ve
+la administración, y cada Prestadora decide si se las abre a su Coordinadora. El domicilio lo
+cambia también quien, con el permiso de verlo, tiene `gestionar_asistentes`; la relación laboral,
+sólo la administración.
+
+**Qué quedó afuera a propósito.** Los otros seis datos que `asistentes_coordinador` omite
+—`fecha_baja`, `canales`, `horas_semanales`, `importacion_id`,
 `pendiente_conformidad`, `prestadora_id`— siguen siendo columnas de `asistentes` y los lee
 cualquiera que pueda ver el Legajo del Asistente. Es una decisión, no un olvido: la Coordinadora los necesita
 para trabajar, y la lista de omisiones de esa vista nunca fue un criterio pensado. La frontera

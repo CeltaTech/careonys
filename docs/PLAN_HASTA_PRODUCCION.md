@@ -1366,8 +1366,7 @@ el depósito `documentos-cese`, las filas de `escalas_legales` del cese y del ri
 dependencia, las columnas `categoria_cct` y `sueldo_basico` de `remuneraciones_asistente`,
 `causal_baja`, `score_riesgo_reclasificacion` e `indicadores_riesgo` de
 `datos_reservados_asistente`, `aplica_a` de `conceptos_liquidacion`, el valor `dependencia` en las
-restricciones de `asistentes.tipo_vinculo`, `textos_consentimiento.modalidad`,
-`conceptos_liquidacion.aplica_a` y `liquidaciones_asistente.tipo_vinculo`, y los textos de
+restricciones de `textos_consentimiento.modalidad` y `conceptos_liquidacion.aplica_a`, y los textos de
 consentimiento de esa modalidad. Esperan al módulo de sueldos y jornales, o a la decisión de
 borrarlos con una migración.
 

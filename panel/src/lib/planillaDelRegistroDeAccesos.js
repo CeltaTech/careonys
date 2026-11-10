@@ -11,7 +11,7 @@ export function renglonDelRegistroDeAccesos(acceso, t, locale) {
     new Date(acceso.momento).toLocaleString(locale),
     acceso.persona ?? textos.sistema,
     acceso.paciente ?? '—',
-    (acceso.categorias ?? []).map((c) => textos.categorias[c] ?? textos.categorias.otra).join(', '),
-    textos.lugares[acceso.lugar] ?? textos.lugares.sistema,
+    (acceso.categorias ?? []).map((c) => t.clientes.accesos_salud.categorias[c] ?? textos.categorias.otra).join(', '),
+    t.clientes.accesos_salud.lugares[acceso.lugar] ?? textos.lugares.sistema,
   ];
 }

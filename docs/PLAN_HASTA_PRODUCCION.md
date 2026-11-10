@@ -288,7 +288,7 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.
 
-**Qué ve cada rol sale de qué necesita para cumplir su función.** La Ficha del cliente ya está
+**Qué ve cada rol sale de qué necesita para cumplir su función.** La Ficha del Cliente ya está
 cortada así. Falta lo mismo con el Legajo del Asistente y la Ficha de Persona del Paciente: el
 coordinador no ve lo que no necesita, lo ve si el Administrador se lo habilita en «Permisos de
 Coordinadores», con un permiso por parte para ver y para cargar, y el backend y la base aplican el

@@ -15,7 +15,7 @@ import { usePaisDeLaPrestadora } from './usePaisDeLaPrestadora';
 
    SI EL PAÍS NO TIENE NINGUNO CARGADO, DEVUELVE VACÍO Y NO SE INVENTA NADA. Dejar el documento
    como casillero libre haría que cada quien escriba lo que le parezca, y un documento tipeado mal
-   crea una persona que no existe. Sin catálogo no hay qué elegir, y la base rechaza la Ficha.
+   crea una persona que no existe. Sin catálogo no hay qué elegir, y la base rechaza a la persona.
 
    CADA TIPO DICE SI PIDE EL PAÍS QUE LO EMITIÓ, si su número lleva dígito verificador y si lleva
    el DNI adentro, que entonces también se pide. */

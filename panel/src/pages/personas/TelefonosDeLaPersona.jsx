@@ -15,7 +15,7 @@ import {
   borrarUnTelefono,
 } from '../../lib/apiPersonasTelefonos';
 
-/* Los teléfonos de contacto de una Ficha de Persona.
+/* Los teléfonos de contacto de una persona.
    ==========================================================================
 
    PARA QUÉ. Un Cliente tiene el fijo de la casa, el celular de quien contrató y el de la hija que
@@ -26,7 +26,7 @@ import {
    casillero para marcarlo: lo resuelve el backend al entregar la lista. Quien no tiene cuenta no
    tiene preferido, y la lista sale igual de completa.
 
-   SE PUEDEN REPETIR. El mismo número en dos Fichas es lo normal cuando viven juntos, y no se
+   SE PUEDEN REPETIR. El mismo número en dos personas es lo normal cuando viven juntos, y no se
    rechaza ni se avisa.
 
    EL NÚMERO NO VIAJA EN NINGUNA DIRECCIÓN: entra y sale en el cuerpo del pedido. */

@@ -24,13 +24,13 @@ import './tarjetas.css';
    ==========================================================================
 
    La lista de todas las Personas de los Clientes de la Prestadora: quien contrata, quien paga,
-   quien recibe el cuidado, quien acompaña. Una Persona, una Ficha, aunque con el tiempo le toquen
+   quien recibe el cuidado, quien acompaña. Cada Persona se carga una sola vez, aunque con el tiempo le toquen
    varios roles. Los Asistentes no están acá: son del Padrón, cada uno con su Legajo.
 
-   LA FICHA NO GUARDA NINGÚN ROL. Guarda quién es esa Persona y nada más. Qué rol le toca se
+   LOS DATOS DE LA PERSONA NO GUARDAN NINGÚN ROL. Guarda quién es esa Persona y nada más. Qué rol le toca se
    resuelve donde ocurre —la contratación, el Servicio, el Cliente— y desde ahí se señala cuál
-   Ficha es. Así, la misma Persona que hoy contrata para un Cliente y mañana necesita cuidados
-   sigue siendo una sola Ficha, con todo su historial junto.
+   persona es. Así, la misma Persona que hoy contrata para un Cliente y mañana necesita cuidados
+   sigue siendo una sola, con todo su historial junto.
 
    NADIE BORRA UNA FICHA, y por eso esta pantalla no ofrece hacerlo. Lo que se pierde el día que
    alguien borra «porque ya no está activa» es justamente el historial de cómo se comportó esa
@@ -47,13 +47,13 @@ export function Personas() {
   const puedeEditar = esAdmin || puede('editar_personas');
 
   const [filas, setFilas] = useState([]);
-  // Los teléfonos vienen del backend, en un solo pedido para todo el Directorio: pedirlos Ficha por Ficha
+  // Los teléfonos vienen del backend, en un solo pedido para todo el Directorio: pedirlos persona por persona
   // sería un pedido por renglón. Vienen con el preferido ya resuelto.
   const [telefonos, setTelefonos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', clase: '' });
-  // `null` es «cerrado»; `'nuevo'` es un alta; una fila es la corrección de esa Ficha.
+  // `null` es «cerrado»; `'nuevo'` es un alta; una fila es la corrección de esa persona.
   const [enEdicion, setEnEdicion] = useState(null);
 
   const catalogo = useCatalogoDeLugares();
@@ -112,7 +112,7 @@ export function Personas() {
     [],
   );
 
-  // Los teléfonos de cada Ficha, con el preferido adelante: si hay que llamar, ése es el que
+  // Los teléfonos de cada persona, con el preferido adelante: si hay que llamar, ése es el que
   // atiende. Los demás siguen ahí y siguen sirviendo.
   const telefonosPorPersona = useMemo(() => {
     const porPersona = new Map();

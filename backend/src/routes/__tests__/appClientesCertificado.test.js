@@ -164,11 +164,11 @@ describe('el Asistente que ve el Cliente', () => {
   });
 });
 
-// La base no le da al Cliente la Ficha de Persona del Paciente: no sabe si el titular le dio la
-// ficha a quien pide. La Ficha la lee el trabajo de la Prestadora, y el domicilio se pide sólo para
+// La base no le da al Cliente los datos del Paciente: no sabe si el titular le dio la
+// ficha a quien pide. Esos datos los lee el trabajo de la Prestadora, y el domicilio se pide sólo para
 // quien tiene la ficha.
 describe('la ficha del Paciente que ve el Cliente', () => {
-  /** Las consultas a `pacientes` que piden la Ficha de Persona. */
+  /** Las consultas a `pacientes` que piden los datos del Paciente. */
   const consultasDeLaFicha = () =>
     llamadas.filter((l) => l.clave === 'GET /rest/v1/pacientes' && decodeURIComponent(l.url).includes('persona:personas'));
 
@@ -177,9 +177,9 @@ describe('la ficha del Paciente que ve el Cliente', () => {
     assert.equal(estado, 200);
 
     const consultas = consultasDeLaFicha();
-    assert.equal(consultas.length, 1, 'no se consultó la Ficha');
-    assert.notEqual(consultas[0].autorizacion, credencial, 'la Ficha salió con la credencial de la persona');
-    esElTrabajoDeLaPrestadora(consultas[0].autorizacion, 'la Ficha salió con otra credencial');
+    assert.equal(consultas.length, 1, 'no se consultaron los datos del Paciente');
+    assert.notEqual(consultas[0].autorizacion, credencial, 'los datos salieron con la credencial de la persona');
+    esElTrabajoDeLaPrestadora(consultas[0].autorizacion, 'los datos salieron con otra credencial');
     assert.ok(decodeURIComponent(consultas[0].url).includes('calle'), 'al titular no se le pidió el domicilio');
   });
 
@@ -193,7 +193,7 @@ describe('la ficha del Paciente que ve el Cliente', () => {
     assert.equal(estado, 200);
 
     const consultas = consultasDeLaFicha();
-    assert.equal(consultas.length, 1, 'no se consultó la Ficha');
+    assert.equal(consultas.length, 1, 'no se consultaron los datos del Paciente');
     const url = decodeURIComponent(consultas[0].url);
     for (const parte of ['calle', 'numero', 'lat', 'lng']) {
       assert.ok(!url.includes(parte), `se pidió ${parte}: ${url}`);

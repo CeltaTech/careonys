@@ -73,11 +73,11 @@ export const appClientesRouter = Router();
 // lo dice en su renglón. Son de dos clases: lo que la base no le deja ver a un Cliente y la
 // pantalla sí muestra —la vidriera del Match, que es gente que todavía no lo atendió, y el estado
 // documental agregado—, y lo que la base no le da al Cliente porque no sabe qué le dio el titular a
-// cada persona —las guardias, la Ficha de Persona del Paciente, su información de salud y su
+// cada persona —las guardias, los datos del Paciente, su información de salud y su
 // domicilio temporal—, que acá se piden con las columnas que corresponden a quien pide. La base las
 // acota a la Prestadora; lo que las acota al Cliente es el Paciente ya comprobado con la credencial
 // de la persona, o el filtro por el Cliente que llevan.
-// También va así el alta de una persona autorizada, porque crear su cuenta y su Ficha no lo puede
+// También va así el alta de una persona autorizada, porque crear su cuenta y sus datos no lo puede
 // hacer el titular con su sesión.
 
 // La medicación vigente se deriva de indicaciones_medicacion (estado='aceptada').
@@ -99,7 +99,7 @@ async function pacienteDelCliente(db, pacienteId, req) {
   // sin patologías y sin coordenadas. No se lo saca de la lista —dejaría esa aplicación vacía y sin
   // explicación, y quien tenga la agenda o los reportes los sigue necesitando—, y los datos de la
   // persona cuidada directamente no salen de la base.
-  // El nombre y el domicilio están en la Ficha de Persona; las coordenadas, también, y van sólo
+  // El nombre y el domicilio están en los datos del Paciente; las coordenadas, también, y van sólo
   // si la Prestadora muestra la ubicación.
   const ficha = fichaCon([
     'nombre_visible',
@@ -125,7 +125,7 @@ async function pacienteDelCliente(db, pacienteId, req) {
     .maybeSingle();
   if (!delCliente) return delCliente;
 
-  // La Ficha de Persona, la información de salud y el domicilio temporal la base no se los da al
+  // Los datos del Paciente, la información de salud y el domicilio temporal la base no se los da al
   // Cliente: no distingue entre el titular y la persona autorizada a la que no le dieron la ficha.
   // Los lee el trabajo de la Prestadora, con las columnas de arriba. La información de salud
   // conserva su regla: se pide sólo si la base dice que alcanza a quien pide.
@@ -266,7 +266,7 @@ appClientesRouter.post('/personas-autorizadas', requiereRolCliente, soloElTitula
   const { id, clienteId, prestadoraId } = req.usuarioCliente;
 
   try {
-    // Con el trabajo de la Prestadora, porque la cuenta nueva y la Ficha no las puede crear el
+    // Con el trabajo de la Prestadora, porque la cuenta nueva y los datos de la persona no los puede crear el
     // titular con su sesión.
     const { miembroId } = await enLaPrestadora(prestadoraId, 'alta de persona autorizada', (dbTrabajo) =>
       invitarPersonaAutorizada({
@@ -369,7 +369,7 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
   if (!delCliente?.length) return res.json({ pacientes: [] });
 
   // El domicilio va sólo a quien le dieron la ficha, igual que en la pantalla del Paciente. La
-  // Ficha de Persona la lee el trabajo de la Prestadora, porque la base no se la da al Cliente.
+  // los datos del Paciente los lee el trabajo de la Prestadora, porque la base no se los da al Cliente.
   const accesos = await accesosDelPedido(req);
   const partes = accesos.persona_autorizada_ficha_del_paciente
     ? ['nombre_visible', ...PARTES_DEL_DOMICILIO]
@@ -384,7 +384,7 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
         .eq('cliente_id', req.usuarioCliente.clienteId);
       if (errorFicha) throw new Error(errorFicha.message);
       // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y
-      // no la de su Ficha de Persona — es la misma respuesta que ve el Asistente en su teléfono,
+      // no la de sus datos — es la misma respuesta que ve el Asistente en su teléfono,
       // escrita una sola vez en la base («ningún patrón repetido sin punto único de verdad»).
       const conFicha = conSusFichas(data).sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
       return pacientesConDomicilioDeHoy(dbTrabajo, conFicha);

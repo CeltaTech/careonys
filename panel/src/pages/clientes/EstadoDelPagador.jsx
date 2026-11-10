@@ -15,7 +15,7 @@ import '../tarjetas.css';
 /* Si el Pagador de este Servicio está definido, ahí donde se lo elige.
    ==========================================================================
 
-   POR QUÉ ACÁ Y NO EN OTRA PANTALLA. Apuntar una Ficha de Persona como Pagador no la convierte
+   POR QUÉ ACÁ Y NO EN OTRA PANTALLA. Apuntar a una persona como Pagador no la convierte
    en Pagador: lo que la convierte es que haya asumido la obligación de pagar y lo haya firmado.
    Quien la elige tiene que ver en ese mismo momento si la firma está y qué documentos faltan, sin ir a
    buscarlo a ningún lado. Enterarse el día que hay que cobrar es tarde.
@@ -143,7 +143,7 @@ export function EstadoDelPagador({ servicioId, clienteId, puedeRegistrar, esAdmi
         </div>
         {error && <Alert variant="error">{error}</Alert>}
 
-        {/* Sin Ficha de Persona elegida no hay a quién hacerle firmar nada. */}
+        {/* Sin persona elegida no hay a quién hacerle firmar nada. */}
         {!pagador ? (
           <Alert variant="info">{textos.sin_pagador}</Alert>
         ) : (

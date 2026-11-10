@@ -98,7 +98,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
           .order('etiqueta'),
       ]);
       setAsistentes(asistentesData ?? []);
-      // El nombre está en la Ficha de Persona, así que el orden se pone acá y no en la consulta.
+      // El nombre está en los datos de la persona, así que el orden se pone acá y no en la consulta.
       setPacientes(
         conSusFichas(pacientesData, palabrasDelDomicilio(t)).sort((a, b) =>
           (a.nombre ?? '').localeCompare(b.nombre ?? ''),

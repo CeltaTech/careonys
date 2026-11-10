@@ -10,7 +10,7 @@ import { FICHA_UBICACION } from './fichaDelPaciente.js';
 // también del lado del Panel. Este archivo es lo que le falta a esa cuenta para poder hacerse
 // contra la base: de dónde salió la persona, a qué domicilio va, y qué domicilio rige ese día.
 //
-// CONTRA QUÉ DOMICILIO SE MIDE. Contra el que rige la fecha de esa guardia, no el de su Ficha de Persona —el
+// CONTRA QUÉ DOMICILIO SE MIDE. Contra el que rige la fecha de esa guardia, no el de sus datos —el
 // mismo criterio que ya usa el check-in—: quien está pasando una temporada en la casa de un hijo
 // se atiende ahí, y medir contra la casa de siempre daría una estimación falsa. Con varios
 // Pacientes se mide contra el más cercano, por el mismo motivo que en el check-in.

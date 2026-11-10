@@ -8,11 +8,11 @@ import { mensajeDeError } from '../../lib/errores';
 /* El casillero que nombra a una Persona del Directorio de Personas.
    ==========================================================================
 
-   Donde antes se tecleaba un nombre, se elige una Ficha de Persona. Un nombre tecleado crea un ente
-   nuevo que no existe: la misma obra social escrita en la Ficha de cien Pacientes son cien entidades
+   Donde antes se tecleaba un nombre, se elige una persona del Directorio. Un nombre tecleado crea un ente
+   nuevo que no existe: la misma obra social escrita en los datos de cien Pacientes son cien entidades
    distintas, y una mal tipeada no se cruza nunca con la buena.
 
-   ACÁ SE ELIGE Y NADA MÁS. Una Ficha nueva se carga desde el Directorio de Personas, con el botón que
+   ACÁ SE ELIGE Y NADA MÁS. Una persona nueva se carga desde el Directorio de Personas, con el botón que
    lo dice.
 
    CÓMO SE LLAMA CADA PERSONA LO DICE LA BASE, en una sola columna calculada, para que todas las

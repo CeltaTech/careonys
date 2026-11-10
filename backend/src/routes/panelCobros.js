@@ -131,8 +131,8 @@ async function nombresDeClientes(db, ids) {
  *
  * Cada factura es de un Servicio. Se le factura al Responsable de pagos de ese Servicio; si no
  * tiene uno aparte, paga quien contrata —el Contratante del Servicio o, si no está anotado, el del
- * Cliente—. Los datos se leen de la Ficha de Persona en este momento y no se copian: lo que el
- * facturador recibe es lo que la Ficha dice hoy.
+ * Cliente—. Los datos de la persona se leen en este momento y no se copian: lo que el
+ * facturador recibe es lo que esos datos dicen hoy.
  */
 const DATOS_PARA_FACTURAR =
   'id, nombre_visible, nombre, apellido, documento_tipo, documento_numero, documento_pais, calle, numero, piso, unidad, codigo_postal, email';
@@ -180,7 +180,7 @@ async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
     personaDe.set(f.id, s?.pagador_persona_id || s?.contratante_persona_id || c?.contratante_persona_id || null);
   }
 
-  // La Ficha del Responsable de pagos tampoco la alcanza quien coordina sin el permiso, así que
+  // Los datos del Responsable de pagos tampoco los alcanza quien coordina sin el permiso, así que
   // sale por el mismo camino.
   const personaIds = [...new Set([...personaDe.values()].filter(Boolean))];
   let fichas = new Map();

@@ -103,7 +103,7 @@ async function serviciosDelCliente({ db, clienteId, prestadoraId }) {
 async function persona({ db, personaId, prestadoraId }) {
   if (!personaId) return null;
   if (!prestadoraId) {
-    throw new ErrorConMotivo('faltan_datos', 'No se lee una Ficha de Persona sin saber de qué Organización es');
+    throw new ErrorConMotivo('faltan_datos', 'No se leen los datos de una persona sin saber de qué Organización es');
   }
 
   const { data } = await db
@@ -125,7 +125,7 @@ async function persona({ db, personaId, prestadoraId }) {
 }
 
 // Quién firma en nombre del que paga: el Apoderado de este Cliente, si su poder está aprobado. Los
-// poderes son Cliente por Cliente, así que se lee por Cliente y no por la Ficha del Pagador.
+// poderes son Cliente por Cliente, así que se lee por Cliente y no por los datos del Pagador.
 export async function firmantePorApoderado({ db, clienteId, prestadoraId }) {
   const { data, error } = await db
     .from('apoderados')
@@ -172,7 +172,7 @@ export async function alinearConsentimientoPendiente({ db, clienteId, prestadora
 
 // Arma el documento con lo de esta contratación, lo guarda tal cual y lo deja esperando firma.
 //
-// El nombre de quien firma se guarda escrito además de apuntado a su Ficha: la Ficha dice con quién
+// El nombre de quien firma se guarda escrito además de apuntado a sus datos: los datos dicen con quién
 // quedó atado, y el nombre, cómo se llamaba el día que leyó el documento.
 export async function crearConsentimiento({ db, servicioId, prestadoraId, cargadoPor }) {
   const servicio = await servicioConSuPagador({ db, servicioId, prestadoraId });
@@ -183,7 +183,7 @@ export async function crearConsentimiento({ db, servicioId, prestadoraId, cargad
 
   const pagador = await persona({ db, personaId: servicio.pagador_persona_id, prestadoraId });
   if (!pagador) {
-    throw new ErrorConMotivo('no_encontrado', 'La Ficha de Persona del Pagador no existe');
+    throw new ErrorConMotivo('no_encontrado', 'Los datos del Pagador no existen');
   }
 
   const [{ cuerpo, idioma }, { data: prestadora }, nombreDelCliente, apoderado] = await Promise.all([
@@ -336,7 +336,7 @@ export async function estadoDelPagador({ db, servicioId, prestadoraId, idioma, z
     firmadoCon: fraseDeLaFirma({ consentimiento: cerradoLeido, idioma: cerradoLeido.documento_idioma ?? idioma, zona, prestadoraId }),
   };
 
-  // Si el consentimiento firmado quedó atado a otra Ficha que la que hoy figura como Pagador, la
+  // Si el consentimiento firmado quedó atado a otra persona que la que hoy figura como Pagador, la
   // firma no vale para éste: firmó otra persona, y el Panel muestra su nombre junto a la fecha.
   const firmadoPorOtro = Boolean(
     cerrado && servicio.pagador_persona_id && cerrado.pagador_persona_id !== servicio.pagador_persona_id,
@@ -381,7 +381,7 @@ async function emailDeLaFicha({ db, personaId, prestadoraId }) {
   return data?.email?.trim() || null;
 }
 
-// A qué email va el documento de este Servicio, o null si la Ficha de quien firma no tiene ninguno.
+// A qué email va el documento de este Servicio, o null si los datos de quien firma no tienen ninguno.
 export async function emailDeQuienFirma({ db, consentimientoId, servicioId, prestadoraId }) {
   const { data: consentimiento, error } = await db
     .from('consentimientos_pagador')

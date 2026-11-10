@@ -238,7 +238,7 @@ panelImportacionRouter.post(
       }
 
       const errores = [];
-      // Las filas cuya persona ya estaba en el Directorio: no se creó otra Ficha, se usó la que
+      // Las filas cuya persona ya estaba en el Directorio: no se cargó de nuevo, se usó la que
       // había. Viaja sólo el documento y el número de cliente, que la pantalla arma en una frase.
       const vinculadas = [];
       // Las filas que ya habían entrado en una importación anterior: no se volvieron a crear. Es lo

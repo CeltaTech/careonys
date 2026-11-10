@@ -125,7 +125,7 @@ async function revisarUnTurno({ db, guardia, prestadoraId, extension, ahora }) {
  * que no venga nadie.
  *
  * Sólo hacen falta los identificadores de los Pacientes, y salen de la lista del turno sin pasar
- * por la Ficha: así cuentan todos los del turno, cualquiera sea el estado de su Ficha.
+ * por sus datos: así cuentan todos los del turno, cualquiera sea el estado de sus datos.
  */
 async function buscarElRelevo({ db, guardia, prestadoraId }) {
   let pacienteIds;

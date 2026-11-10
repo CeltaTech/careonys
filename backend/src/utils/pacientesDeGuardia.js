@@ -86,11 +86,11 @@ export async function pacientesDeGuardia(db, prestadoraId, guardia, campos = CAM
 }
 
 /**
- * Los identificadores de los Pacientes de una guardia, sin pasar por la Ficha.
+ * Los identificadores de los Pacientes de una guardia, sin pasar por sus datos.
  *
  * Es para quien sólo necesita saber cuáles son —para buscar otra guardia de la misma gente—, no
- * cómo se llaman. Como no lee la Ficha, cuentan todos los del turno, cualquiera sea el estado de
- * su Ficha. Misma red de seguridad que arriba: sin ninguna fila en la lista, el de la columna
+ * cómo se llaman. Como no lee sus datos, cuentan todos los del turno, cualquiera sea el estado de
+ * sus datos. Misma red de seguridad que arriba: sin ninguna fila en la lista, el de la columna
  * vieja. Una falla de la base sube como error.
  */
 export async function idsDePacientesDeGuardia(db, prestadoraId, guardia) {

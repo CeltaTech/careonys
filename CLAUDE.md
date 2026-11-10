@@ -232,8 +232,8 @@ cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los da
 
 **Toda persona de los Clientes de la Prestadora vive en un solo lugar —el Directorio de Personas— y
 de ahí se nutre todo el que la consuma.** Quien contrata, recibe el cuidado o paga puede ser una
-persona, una obra social, una prepaga o lo que sea, y en todos los casos se guarda una sola vez, en
-su Ficha de Persona, con todo lo que se sabe de ella: quién es, cómo se la ubica y cómo figura ante
+persona, una obra social, una prepaga o lo que sea, y en todos los casos se guarda una sola vez,
+con todos sus datos: quién es, cómo se la ubica y cómo figura ante
 el organismo fiscal. Nada de eso se guarda por segunda vez en otra pantalla, en otra tabla ni en el
 software de otro. **El Padrón es otra cosa: es sólo de Asistentes**, y cada uno tiene su Legajo.
 
@@ -283,20 +283,20 @@ siga su ubicación tiene derecho a ver ese documento; el Cliente podrá ver o no
 se configure su aplicación, pero el documento no lo ve nunca. Textual del Desarrollador: *«cada
 persona tiene acceso a ver lo que firma, no asi a lo que firma otra persona, salvo que sea parte
 involucrada»*. **Es el piso:** la norma de cada país sobre seguridad y confidencialidad se revisa,
-y si pide más, manda la norma. Para que se pueda cumplir, **quien firma queda guardado como una
-Ficha de Persona** —o como un Legajo, si es un Asistente—, nunca como un nombre tecleado.
+y si pide más, manda la norma. Para que se pueda cumplir, **quien firma queda guardado con sus
+datos en el Directorio de Personas** —o en su Legajo, si es un Asistente—, nunca como un nombre tecleado.
 
 **La persona se guarda una sola vez, y los roles la citan.** El rol es una anotación de la Ficha
-del Cliente que apunta a una Ficha de Persona, nunca una copia de sus datos ni una Ficha nueva. Si
-la misma persona contrata, recibe el cuidado y paga, hay una Ficha de Persona y tres anotaciones.
-**El Paciente también está en el Directorio de Personas, y su historia clínica cuelga de su
-Ficha de Persona.**
+del Cliente que apunta a una persona del Directorio, nunca una copia de sus datos ni una persona cargada de nuevo. Si
+la misma persona contrata, recibe el cuidado y paga, hay una persona y tres anotaciones.
+**El Paciente también está en el Directorio de Personas, y su historia clínica cuelga de sus
+datos.**
 
-**Una Ficha de Persona no se borra nunca, y un Legajo tampoco.** Que termine el Servicio a un
-Paciente da de baja el Servicio, no la Ficha. La Ficha queda, con el historial de cada rol que esa
+**Los datos de una persona no se borran nunca, y un Legajo tampoco.** Que termine el Servicio a un
+Paciente da de baja el Servicio, no a la persona. Sus datos quedan, con el historial de cada rol que esa
 persona tuvo. Con quien dejó de ser Cliente se vuelve a cruzar: como Pagador de otra contratación,
 como familiar de otro Paciente o como Paciente. Ese historial es justamente lo que se pierde el
-día que alguien borra la Ficha «porque ya no está activa».
+día que alguien borra a la persona «porque ya no está activa».
 
 **Y la cuenta de una persona tampoco se borra, por la misma razón que no se borra una historia
 clínica electrónica (HCE).** Se puede desactivar, suspender, bloquear o marcar con la advertencia
@@ -312,12 +312,12 @@ cargada, el casillero ofrece esa lista y se elige una. **Un nombre tecleado crea
 existe**: se parece a la de al lado, no es la misma para el sistema, y nadie se entera. La lista
 puede tener buscador, pero lo que queda guardado es cuál, no cómo se llama.
 
-**Una Ficha de Persona nueva se carga desde el Directorio de Personas, y un Legajo nuevo desde el
+**Una persona nueva se carga desde el Directorio de Personas, y un Legajo nuevo desde el
 Padrón, cada uno con el botón que lo dice.** Un casillero que elige de una de esas listas sólo
 elige: no da de alta. Y el botón que guarda una corrección dice guardar, porque ahí se están
 cambiando datos de algo que ya existe; agregar es otra cosa y tiene su propio botón.
 
-**El número interno de una Ficha de Persona no se muestra en ningún lado.** A la persona se la
+**El número interno de una persona del Directorio no se muestra en ningún lado.** A la persona se la
 reconoce por su nombre y su número fiscal. **El Número de Legajo sí es del Asistente**: se asigna
 solo, arranca en uno en cada Prestadora, no cambia y no se reasigna.
 
@@ -394,7 +394,7 @@ firmado es el vigente— o el documento que él subió, que queda pendiente. Con
 función, y sólo aceptan al personal de la Prestadora con permiso sobre ese Cliente o, en el trabajo
 sin persona, al titular de ese mismo Cliente; `revisar_apoderado` recibe un Apoderado, sólo deja a
 la administración de la Prestadora y sólo toca uno que esté en revisión; y
-`completar_genero_de_la_ficha` recibe una Ficha de Persona de la Prestadora actual y le escribe el
+`completar_genero_de_la_persona` recibe una persona de la Prestadora actual y le escribe el
 género únicamente si no tenía. Toda función nueva de política nace en `interno`, y cualquiera que se quede en
 `public` y llame a una de ahí lleva `interno` en su `search_path`. El reparto de permisos —cuáles
 pierden el alcance anónimo y cuáles conservan `authenticated`— lo guarda la base en los permisos

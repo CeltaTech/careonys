@@ -319,7 +319,7 @@ la vista y modifica la de la alarma que tomó (`coordinador_ve_la_guardia_de_una
 `coordinador_resuelve_la_alarma_que_tomo`). **Pendiente, no resuelto**:
 `clientes`/`pacientes`/`prestaciones` no filtran por zona — Coordinador sigue viendo todas las
 filas de estas 3 tablas, igual que Admin, hasta que exista una decisión de producto sobre cómo
-derivar la zona de un Cliente. El dato disponible es el lugar de la Ficha de Persona
+derivar la zona de un Cliente. El dato disponible es el lugar de los datos de la persona
 (`personas.lugar_id`). No adivinar esa semántica sin confirmarla primero.
 
 **Guardias:** las tablas de guardias tienen RLS multi-tenant aplicada, incluido el patrón

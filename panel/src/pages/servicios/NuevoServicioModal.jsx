@@ -25,9 +25,9 @@ const ORDEN_DE_LOS_CASILLEROS = ['cliente', 'contratante', 'paciente', 'etiqueta
    ==========================================================================
 
    Un Servicio es de un Cliente. Se elige uno que ya existe, o se crea el Cliente junto con el
-   Servicio a partir de dos Fichas del Directorio de Personas: quien contrata y quien recibe el
-   cuidado. Si alguna de las dos Fichas todavía no existe, se carga ahí mismo con el alta del
-   Directorio, que es la única que da de alta una Ficha. */
+   Servicio a partir de dos personas del Directorio de Personas: quien contrata y quien recibe el
+   cuidado. Si alguna de las dos todavía no existe, se carga ahí mismo con el alta del
+   Directorio, que es la única que da de alta a una persona. */
 export function NuevoServicioModal({ onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
@@ -43,9 +43,9 @@ export function NuevoServicioModal({ onClose, onCreado }) {
   const [contratante, setContratante] = useState(null);
   const [paciente, setPaciente] = useState(null);
   const [etiqueta, setEtiqueta] = useState('');
-  // Para qué casillero se está cargando una Ficha nueva: 'contratante', 'paciente' o null.
+  // Para qué casillero se está cargando una persona nueva: 'contratante', 'paciente' o null.
   const [fichaPara, setFichaPara] = useState(null);
-  // Cambia cada vez que se carga una Ficha, para que las listas vuelvan a pedirle las Fichas a la base.
+  // Cambia cada vez que se carga una persona, para que las listas vuelvan a pedirle las personas a la base.
   const [vueltaDeFichas, setVueltaDeFichas] = useState(0);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);

@@ -101,7 +101,7 @@ export function ClienteDetalle() {
       .from('clientes')
       .select(
         `id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}, ${saludCon(['patologias', 'nivel_complejidad'])}), ` +
-          // Quién es el Cliente se lee de la Ficha de Persona de quien contrata, en el Directorio de
+          // Quién es el Cliente se lee de los datos de quien contrata, en el Directorio de
           // Personas, y se corrige allá.
           'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, lugares!personas_lugar_fkey(nombre), ' +
           'telefonos_de_la_persona!el_telefono_es_de_una_persona_de_esta_prestadora(telefono))',
@@ -177,7 +177,7 @@ export function ClienteDetalle() {
     ['alertas', t.clientes.alertas_activas],
   ];
 
-  // La línea de datos de la Ficha del cliente, con lo que dice la Ficha de Persona de quien contrata.
+  // La línea de datos de la Ficha del cliente, con lo que dicen los datos de quien contrata.
   const persona = cliente.personas;
   const telefono = persona?.telefonos_de_la_persona?.[0]?.telefono;
   const datosDeLaFichaDelCliente = [

@@ -128,7 +128,7 @@ export const GRUPOS = [
     copias: ['panel/src/lib/domicilioEscrito.js'],
   },
   {
-    que: 'quién es el Paciente, leído de su Ficha de Persona',
+    que: 'quién es el Paciente, leído de sus datos',
     original: 'backend/src/utils/fichaDelPaciente.js',
     copias: ['panel/src/lib/fichaDelPaciente.js'],
   },

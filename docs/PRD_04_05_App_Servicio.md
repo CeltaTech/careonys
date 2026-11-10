@@ -247,7 +247,7 @@ notificación — no repetir acá para que no diverjan las dos fuentes.
 Se construye exclusivamente en el Panel de Administración (no en esta PWA, el Cliente no
 participa del proceso ni accede al informe). Es un informe virtual dentro del Panel, con impresión vía `window.print()` +
 `@media print` — sin librería de PDF y sin asumir una única obra social: cada Paciente
-registra la suya como una Ficha del Directorio de Personas (`pacientes.obra_social_persona_id`)
+registra la suya como una persona del Directorio de Personas (`pacientes.obra_social_persona_id`)
 y su `numero_afiliado`.
 
 **Planilla de asistencia**: nombre del Paciente, obra social y número de afiliado, mes de

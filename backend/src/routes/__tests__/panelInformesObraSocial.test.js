@@ -134,7 +134,7 @@ describe('la vista previa del informe para la obra social', () => {
 
     assert.equal(estado, 200, JSON.stringify(cuerpo));
     assert.equal(cuerpo.contenido.paciente.obra_social, 'Obra social inventada');
-    // Y con el nombre del Paciente, que sale de su Ficha de Persona.
+    // Y con el nombre del Paciente, que sale de sus datos.
     assert.equal(cuerpo.contenido.paciente.nombre, 'Paciente de prueba');
     assert.equal(cuerpo.contenido.guardias.length, 1);
     // La Prestadora del Paciente sirve para guardar el informe, no viaja en la vista previa.

@@ -263,7 +263,7 @@ Por cada pedido se devuelve uno de estos códigos: "femenino", "masculino" o "x"
 Se devuelve un código sólo cuando lo escrito no puede querer decir otra cosa. Si puede ser más de
 uno, si no dice un género («otro», «no informa», «-», un nombre, un número), o si no se sabe, el
 código queda vacío. Nunca se deduce el género de otra cosa que lo escrito, y nunca se completa con
-el más probable: un código equivocado queda guardado en la ficha de una persona.
+el más probable: un código equivocado queda guardado en los datos de una persona.
 
 Se responde únicamente con un JSON de esta forma, sin texto adicional:
 {"resultados": [{"clave": "la misma del pedido", "codigo": ""}]}`;

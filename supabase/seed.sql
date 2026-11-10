@@ -352,7 +352,7 @@ INSERT INTO public.datos_reservados_asistente (
 -- 3.b El Directorio de Personas de la Prestadora de prueba
 --
 --     Personas inventadas, como todo lo de acá. Va antes que los Clientes porque
---     quien contrata es una Ficha del Directorio, y quien paga también.
+--     quien contrata es una persona del Directorio, y quien paga también.
 --
 --     TODAS CON DOCUMENTO, y válido: la base lo exige y controla el dígito
 --     verificador del CUIL y del CUIT. Los números son inventados y cierran la
@@ -383,7 +383,7 @@ VALUES
   ('c0000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111', 'fisica', 'Marcela', 'Gómez', 'cuil', '27301112225', '30111222', 'femenino',
    NULL, NULL, 'a1000000-0000-4000-8000-000000000001', 'marcela.gomez@sandbox.local');
 
--- Los teléfonos de contacto del Directorio. Una Ficha puede tener varios, y el primero tiene dos a
+-- Los teléfonos de contacto del Directorio. Una persona puede tener varios, y el primero tiene dos a
 -- propósito: así la base de pruebas ejercita el caso de varios y no sólo el de uno.
 INSERT INTO public.telefonos_de_la_persona (prestadora_id, persona_id, telefono)
 VALUES
@@ -403,7 +403,7 @@ VALUES
 --    Cliente sin Servicio no tendría de dónde colgarlas.
 -- ----------------------------------------------------------------------------
 
--- Quien contrata es una Ficha del Directorio (`contratante_persona_id`): ahí están su nombre, su
+-- Quien contrata es una persona del Directorio (`contratante_persona_id`): ahí están su nombre, su
 -- correo, su localidad y sus teléfonos, y `clientes` no los repite. Quién paga se anota en cada
 -- Servicio, más abajo. Teresa Ibáñez queda en el Directorio sin ser Cliente de nadie: es un
 -- contacto todavía sin presupuesto aprobado.
@@ -415,7 +415,7 @@ INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_
   ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003',
    '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000006');
 
--- Quién está anotado en las personas autorizadas de cada Cliente, con su Ficha de Persona, que es
+-- Quién está anotado en las personas autorizadas de cada Cliente, con sus datos, que es
 -- de donde sale el DNI que dice la autorización. El titular no figura acá: se lo reconoce por su
 -- fila en `clientes`, y ve todo siempre.
 --
@@ -443,7 +443,7 @@ INSERT INTO public.permisos_personas_autorizadas (cliente_id, usuario_id, clave,
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_califica_al_asistente', false),
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_pide_medicacion',       false);
 
--- Quiénes son los Pacientes: su Ficha de Persona, con su nombre, su documento, cuándo nació y dónde
+-- Quiénes son los Pacientes: sus datos, con su nombre, su documento, cuándo nació y dónde
 -- vive. En el Paciente queda sólo lo de recibir el cuidado.
 INSERT INTO public.personas
   (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, dni, genero, fecha_nacimiento,
@@ -464,7 +464,7 @@ VALUES
 INSERT INTO public.pacientes (
   id, prestadora_id, cliente_id, persona_id, obra_social_persona_id, numero_afiliado
 ) VALUES
-  -- La obra social no se teclea: se cita la Ficha de la Mutual del Ejemplo, que ya está en el
+  -- La obra social no se teclea: se cita a la Mutual del Ejemplo, que ya está en el
   -- Directorio de arriba. El número de afiliado sí es un dato de esta persona en esa obra social.
   ('50000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000021',
@@ -487,9 +487,9 @@ INSERT INTO public.informacion_de_salud_del_paciente (prestadora_id, paciente_id
   ('11111111-1111-4111-8111-111111111111', '50000000-0000-4000-8000-000000000004', ARRAY['EPOC'], 'II');
 
 -- Los tres los coordina Carla: sin Coordinador un Servicio no tiene guardias. Quién paga es otra
--- Ficha, y `pagador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente
+-- persona, y `pagador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente
 -- por sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al
--- Directorio: paga Ramiro Pérez, que es una Ficha más y no un nombre tecleado.
+-- Directorio: paga Ramiro Pérez, que es una persona más y no un nombre tecleado.
 -- Lo comercial vive aparte, en `condiciones_comerciales_servicio`: el Servicio nace con su fila
 -- (la crea un disparador, con el Contratante del Cliente) y acá sólo se le dice quién paga.
 INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, estado, coordinador_id) VALUES
@@ -1153,7 +1153,7 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
   ('50000000-0000-4000-8000-000000000002', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
 
 -- El Directorio de esta Prestadora. Va antes que su Cliente, por el mismo motivo que en la
--- otra: quien contrata es una Ficha. La suya es la de Olga Salvatierra.
+-- otra: quien contrata es una persona. La suya es Olga Salvatierra.
 INSERT INTO public.personas
   (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, dni, genero, calle, numero, lugar_id, email)
 VALUES

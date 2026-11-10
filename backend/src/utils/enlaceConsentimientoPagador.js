@@ -45,7 +45,7 @@ export async function enviarDocumentoParaFirmar({ consentimientoId, prestadoraId
         consentimiento_id: consentimientoId,
         verificador: verificadorDelEnlace(token),
         expira_en: expiraEn,
-        // El Email al que sale este enlace. Es el que dirá lo firmado, aunque después cambie la Ficha.
+        // El Email al que sale este enlace. Es el que dirá lo firmado, aunque después cambien los datos de la persona.
         email,
       })
       .select('id')

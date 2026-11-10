@@ -142,7 +142,7 @@ describe('la detección automática de ausencia', () => {
     assert.equal(anotados.length, 0, anotados.join('\n'));
   });
 
-  it('la guardia saliente se busca por todos los Pacientes del turno, sin leer la Ficha', async () => {
+  it('la guardia saliente se busca por todos los Pacientes del turno, sin leer los datos del Paciente', async () => {
     respuestas.set(CONFIGURACION, [{ minutos_tolerancia_checkin: 15 }]);
     respuestas.set(TURNOS, [turnoSinLlegada]);
     respuestas.set(MARCAR, []);

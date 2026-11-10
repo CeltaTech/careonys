@@ -81,7 +81,7 @@ blanco. El botón «Limpiar filtros» se iría con el cartel, que es el único l
 
 El primero es que afirma un hecho que no comprobó. Dice «Hay registros cargados», y eso no se
 miró: lo único que se sabe es que la consulta con filtro volvió vacía. En el Directorio de Personas sin ni una
-Ficha de Persona, basta teclear una letra en el buscador para que la pantalla diga que hay registros
+persona cargada, basta teclear una letra en el buscador para que la pantalla diga que hay registros
 cargados, que es exactamente lo contrario de la verdad.
 
 El segundo es que «lo que se buscó» nombra solamente al buscador, y la mayoría de estas pantallas

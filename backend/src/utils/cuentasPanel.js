@@ -367,7 +367,7 @@ export async function crearAsistenteDirecto({
 
   // Cómo figura ante el organismo fiscal. El Panel manda el tipo elegido de la lista; una planilla
   // manda sólo el número, y entonces el tipo es el primero del país que lleva dígito verificador,
-  // igual que en las Fichas importadas. La base valida el número, el DNI y el género.
+  // igual que en las personas importadas. La base valida el número, el DNI y el género.
   const identidad = await identidadDelAsistente(db, {
     prestadoraId, documento, documento_tipo, documento_numero, documento_pais, dni, genero,
   });
@@ -517,7 +517,7 @@ export async function revertirClienteImportada(db, clienteId, prestadoraId) {
 // `crearCuentaConPerfil` igual que cualquier otro rol de login propio, y en vez de una fila en
 // `clientes` (eso es solo para el titular) crea la fila en `personas_autorizadas` que la vincula.
 //
-// La persona queda en el Directorio de Personas, buscada por su CUIL: si ya tiene Ficha se usa esa,
+// La persona queda en el Directorio de Personas, buscada por su CUIL: si ya está se usa esa,
 // y si no se crea. El DNI no se pide aparte: son los ocho dígitos del medio del CUIL.
 //
 // No se le escribe ningún acceso. Anotada no ve nada: los accesos rigen recién cuando el titular
@@ -539,7 +539,7 @@ export async function invitarPersonaAutorizada({
     throw new ErrorConMotivo('cliente_de_otra_prestadora', `cliente ${clienteId} fuera de la Prestadora`);
   }
 
-  // La Ficha va antes que la cuenta: un CUIL mal escrito vuelve sin dejar una cuenta a medio hacer.
+  // La persona va antes que la cuenta: un CUIL mal escrito vuelve sin dejar una cuenta a medio hacer.
   const persona = await fichaPorDocumento(db, {
     prestadoraId,
     documento: cuil,
@@ -614,14 +614,14 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
 // Da de alta un Cliente que llega en una planilla importada: es la cartera que la Prestadora ya
 // atendía antes de usar Careonys.
 //
-// Quien contrata y el Paciente están en el Directorio de Personas: cada uno tiene su Ficha de
-// Persona, buscada por su documento, y la Ficha del cliente y el Paciente las apuntan. Una Ficha de
-// Persona no se borra nunca, así que si el alta se corta después de crearlas, las personas quedan
+// Quien contrata y el Paciente están en el Directorio de Personas: cada uno tiene sus datos,
+// buscados por su documento, y la Ficha del cliente y el Paciente los apuntan. Los datos de una
+// persona no se borran nunca, así que si el alta se corta después de crearlas, las personas quedan
 // en el Directorio, y la próxima vez que llegue esa fila se las encuentra por su documento.
 //
 // El Paciente se reconoce por su documento. Si la fila no lo trae, se lo da por la misma persona
 // que contrata solamente cuando el nombre es el mismo; si no, la fila no se carga: adivinar quién
-// es abriría una Ficha sin documento, que es una persona que después nadie puede encontrar.
+// es cargaría a alguien sin documento, que es una persona que después nadie puede encontrar.
 //
 // Y una fila que ya entró no entra dos veces. Si quien contrata ya tiene en esta Prestadora una
 // Ficha del cliente con ese mismo Paciente, la fila se cuenta como que ya estaba y no se crea nada:
@@ -669,7 +669,7 @@ export async function crearClienteImportado({
     localidad: nombreDeSuLugar || undefined,
   });
 
-  // Las Fichas van antes que la cuenta: un documento mal escrito rechaza la fila sin dejar una
+  // Las personas van antes que la cuenta: un documento mal escrito rechaza la fila sin dejar una
   // cuenta de acceso a medio hacer.
   const persona = await fichaPorDocumento(db, {
     prestadoraId, documento, dni: dniContacto, genero: generoContacto,
@@ -790,7 +790,7 @@ export async function crearServicioDelCliente(db, {
 
 // Un Cliente nuevo con su primer Servicio, desde Servicios del Panel. Quien contrata y el Paciente
 // ya están en el Directorio de Personas: el Panel manda cuáles, no sus datos. El email y el teléfono
-// de la cuenta salen de la Ficha de quien contrata, que es donde viven.
+// de la cuenta salen de los datos de quien contrata, que es donde viven.
 //
 // Si esa persona ya contrata en esta Prestadora para ese mismo Paciente, el Cliente ya existe y no
 // se crea otro: se lo elige de la lista.
@@ -811,7 +811,7 @@ export async function crearClienteConServicio(db, {
   if (!contratante || !fichas.some((ficha) => ficha.id === pacientePersonaId)) {
     throw new ErrorConMotivo('persona_no_encontrada');
   }
-  if (!contratante.email) throw new ErrorConMotivo('la_ficha_no_tiene_email');
+  if (!contratante.email) throw new ErrorConMotivo('falta_el_email_de_quien_contrata');
 
   const yaEstaba = await clienteQueYaEstaba(db, {
     prestadoraId, contratanteId: contratantePersonaId, pacientePersonaId,
@@ -891,7 +891,7 @@ function nombreYApellido(texto) {
 // Lo que la base contesta cuando el documento, el DNI o el género no sirven. Viajan como motivo: son
 // códigos, y la frase está en las traducciones. Los del Paciente tienen su propio código, porque en
 // la fila hay dos personas y la frase tiene que decir cuál es. El documento repetido de un
-// Asistente dice Legajo, y el de una Ficha dice Ficha.
+// Asistente dice Legajo, y el de una persona del Directorio dice persona.
 const MOTIVOS_DEL_DOCUMENTO = {
   contratante: {
     falta_el_documento: 'falta_el_documento',
@@ -997,17 +997,17 @@ export async function identidadDelAsistente(db, {
   };
 }
 
-// La Ficha de una persona, buscada por su documento. Una persona se guarda una sola vez: si ya está
-// en el Directorio, se usa esa Ficha tal como está —nombre, apellido y correo quedan los que
+// Los datos de una persona, buscada por su documento. Una persona se guarda una sola vez: si ya está
+// en el Directorio, se usan esos datos tal como están —nombre, apellido y correo quedan los que
 // tenía— y lo único que se le suma es el teléfono, si no lo tenía. Si no está, se crea.
 //
 // Se busca entre los tipos del país que llevan dígito verificador, porque el mismo número puede
-// estar cargado como CUIL o como CUIT. Cuál se pone a una Ficha nueva es el primero de esos tipos
+// estar cargado como CUIL o como CUIT. Cuál se pone a una persona nueva es el primero de esos tipos
 // en el orden del catálogo: qué número se pide en cada país lo dice el catálogo, no el código.
 //
-// El DNI y el género se piden siempre, también cuando la Ficha ya existe: una fila que llega sin
-// ellos vuelve con su motivo, como cualquier otro dato que falte. Si la Ficha ya está, el DNI de
-// la fila tiene que ser el que la Ficha tiene, que la base ya comparó con su número fiscal.
+// El DNI y el género se piden siempre, también cuando la persona ya existe: una fila que llega sin
+// ellos vuelve con su motivo, como cualquier otro dato que falte. Si la persona ya está, el DNI de
+// la fila tiene que ser el que ya tiene cargado, que la base ya comparó con su número fiscal.
 async function fichaPorDocumento(db, {
   prestadoraId, documento, dni, genero, nombre, apellido, email, telefono, deQuien = 'contratante',
 }) {
@@ -1032,8 +1032,8 @@ async function fichaPorDocumento(db, {
         throw new ErrorConMotivo(MOTIVOS_DEL_DOCUMENTO[deQuien].dni_no_coincide, 'El DNI no coincide');
       }
       if (telefono) await sumarTelefono(db, { prestadoraId, personaId: existente.id, telefono });
-      // La Ficha de quien sólo era Apoderado nació sin género; acá se completa con el que se pidió.
-      const { error: errorGenero } = await db.rpc('completar_genero_de_la_ficha', {
+      // Quien sólo era Apoderado quedó cargado sin género; acá se completa con el que se pidió.
+      const { error: errorGenero } = await db.rpc('completar_genero_de_la_persona', {
         p_persona: existente.id,
         p_genero: identidad.genero,
       });
@@ -1062,8 +1062,8 @@ async function fichaPorDocumento(db, {
   return { id: persona.id, yaExistia: false };
 }
 
-// Le escribe a una Ficha lo que la fila trae y la Ficha todavía no tiene. Lo que ya estaba cargado
-// no se pisa: la Ficha puede haberse corregido a mano después de la primera importación, y la
+// Le escribe a una persona lo que la fila trae y ella todavía no tiene. Lo que ya estaba cargado
+// no se pisa: sus datos pueden haberse corregido a mano después de la primera importación, y la
 // planilla vieja no sabe nada de eso. La ubicación en el mapa va entera o no va.
 async function completarFicha(db, { prestadoraId, personaId, datos }) {
   const columnas = Object.keys(datos);
@@ -1117,7 +1117,7 @@ async function clienteQueYaEstaba(db, { prestadoraId, contratanteId, pacientePer
   return cliente ?? null;
 }
 
-// Un teléfono más en la Ficha, salvo que ya lo tenga escrito igual.
+// Un teléfono más en los datos de la persona, salvo que ya lo tenga escrito igual.
 async function sumarTelefono(db, { prestadoraId, personaId, telefono }) {
   const { data: yaEsta } = await db
     .from('telefonos_de_la_persona')

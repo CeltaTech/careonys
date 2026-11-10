@@ -1456,7 +1456,7 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
 
   const cuenta = async (ruta) => (await pedir(entorno, coordinadora, 'GET', ruta)).filas.length;
   const lecturas = {
-    'la Ficha del Contratante': `personas?id=eq.${contratante}&select=id`,
+    'los datos del Contratante': `personas?id=eq.${contratante}&select=id`,
     'el Servicio': `servicios?id=eq.${servicio}&select=id`,
     'el Cliente': `clientes?id=eq.${cliente}&select=id`,
     'el Paciente': `pacientes?id=eq.${paciente}&select=id`,

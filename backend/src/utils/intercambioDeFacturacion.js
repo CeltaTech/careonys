@@ -11,7 +11,7 @@
 // QUÉ SALE. Por cada factura que todavía no tiene comprobante anotado: de qué Cliente es y con qué
 // número, a quién se le factura, de qué período, en qué moneda, por cuánto y para cuándo. Hay una
 // factura por Servicio y período. A quién se le factura es el Responsable de pagos de ese Servicio
-// —o su Contratante, si es la misma persona—, con los datos de su Ficha de Persona tal como están
+// —o su Contratante, si es la misma persona—, con sus datos tal como están
 // hoy: se leen al armar el archivo y no se copian a ningún lado.
 //
 // QUÉ VUELVE. Los tres datos de siempre —cómo se llama el comprobante, qué número tiene y cuánto
@@ -49,10 +49,10 @@ export const COLUMNAS_QUE_SALEN = [
 ];
 
 /**
- * A quién se le factura, armado desde su Ficha de Persona.
+ * A quién se le factura, armado desde sus datos.
  *
- * Está acá para que el archivo y una conexión directa entreguen lo mismo. Sin Ficha, sale vacío:
- * el facturador ve el renglón sin destinatario y la Prestadora lo completa en la Ficha.
+ * Está acá para que el archivo y una conexión directa entreguen lo mismo. Sin persona, sale vacío:
+ * el facturador ve el renglón sin destinatario y la Prestadora completa los datos que faltan.
  */
 export function aQuienFacturarle(ficha) {
   if (!ficha) {

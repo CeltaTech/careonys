@@ -1,17 +1,17 @@
 // ---------------------------------------------------------------------------
-// fichaDelPaciente.js — quién es el Paciente, leído de su Ficha de Persona
+// fichaDelPaciente.js — quién es el Paciente, leído de sus datos
 //
 // QUÉ RESUELVE
 // El Paciente no guarda su nombre, su fecha de nacimiento ni su domicilio: eso
-// está en su Ficha de Persona, en el Directorio, que es el único lugar donde se
-// guarda a una persona. Cada consulta de Pacientes trae la Ficha pegada, y acá
-// se la aplana para que quien la usa siga leyendo `nombre`, `fecha_nacimiento`,
+// está en sus datos de persona, en el Directorio, que es el único lugar donde se
+// guarda a una persona. Cada consulta de Pacientes trae esos datos pegados, y acá
+// se los aplana para que quien la usa siga leyendo `nombre`, `fecha_nacimiento`,
 // `domicilio`, `lat` y `lng` sobre el Paciente, como antes.
 //
 // LO QUE NO SE PIDIÓ, NO APARECE. Una consulta que no pidió el domicilio —porque
 // la Prestadora no deja que el Asistente lo vea, o porque sólo mide una
-// distancia— no lo recibe: cada campo se completa sólo si su parte vino en la
-// Ficha. Así `domicilioDelDia.js` sigue sabiendo qué se pidió.
+// distancia— no lo recibe: cada campo se completa sólo si su parte vino en los
+// datos de la persona. Así `domicilioDelDia.js` sigue sabiendo qué se pidió.
 //
 // POR QUÉ ACÁ Y NO EN CADA PANTALLA
 // Lo usan el backend y el Panel. El original vive acá y la copia del Panel se
@@ -21,11 +21,11 @@
 import { domicilioEscrito } from './domicilioEscrito.js';
 
 // La relación tiene nombre porque el Paciente apunta al Directorio por más de un
-// lado —su obra social también es una Ficha de Persona— y sin nombre la base no
+// lado —su obra social también es una persona del Directorio— y sin nombre la base no
 // sabe cuál de las dos se pide.
 const LA_FICHA = 'persona:personas!pacientes_persona_de_la_misma_prestadora';
 
-/** La Ficha con las partes que se nombren, para cuando ninguna de las de abajo calza justo. */
+/** Los datos de la persona con las partes que se nombren, para cuando ninguna de las de abajo calza justo. */
 export function fichaCon(partes) {
   return `${LA_FICHA}(${partes.join(', ')})`;
 }
@@ -42,7 +42,7 @@ export const FICHA_UBICACION = `${LA_FICHA}(nombre_visible, lat, lng)`;
 /** Para nombrarlo, mostrar dónde vive y ubicarlo. */
 export const FICHA_DOMICILIO = `${LA_FICHA}(nombre_visible, calle, numero, piso, unidad, lat, lng, lugar:lugares(nombre))`;
 
-/** Todo lo que la Ficha dice del Paciente. */
+/** Todo lo que dicen los datos del Paciente. */
 export const FICHA_COMPLETA = `${LA_FICHA}(nombre_visible, fecha_nacimiento, calle, numero, piso, unidad, lugar_id, lat, lng, lugar:lugares(nombre))`;
 
 /**
@@ -55,7 +55,7 @@ export function saludCon(partes) {
 }
 
 /**
- * El Paciente con lo de su Ficha puesto encima.
+ * El Paciente con sus datos de persona puestos encima.
  *
  * `textos` son las palabras «piso» y «unidad» en el idioma de quien mira; sin ellas se escriben en
  * castellano, que es lo que hace `domicilioEscrito`.

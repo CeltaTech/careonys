@@ -129,7 +129,7 @@ function guardiaPacientesRespuesta({ url }) {
 
   // `pacientesDeGuardias`: a quién atiende este turno.
   if (select.includes('pacientes(')) {
-    // El nombre y las coordenadas viven en la Ficha de Persona, no en la fila del Paciente.
+    // El nombre y las coordenadas viven en los datos de la persona, no en la fila del Paciente.
     return [{
       guardia_id: GUARDIA,
       pacientes: { id: PACIENTE, cliente_id: CLIENTE, persona: { nombre_visible: 'Paciente de prueba', lat: LAT, lng: LNG } },

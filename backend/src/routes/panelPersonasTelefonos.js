@@ -6,9 +6,9 @@ import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDeLaPersona.js';
 
-// Los teléfonos de contacto de una Ficha del Directorio de Personas.
+// Los teléfonos de contacto de una persona del Directorio de Personas.
 //
-// QUÉ RESUELVE. La Ficha guardaba un teléfono solo. Un Cliente tiene el fijo de la casa y los
+// QUÉ RESUELVE. Los datos de la persona guardaban un teléfono solo. Un Cliente tiene el fijo de la casa y los
 // celulares de los dos o tres que atienden. Ahora se cargan todos, y todos quedan habilitados.
 //
 // SE PUEDEN REPETIR. Dos hermanos que viven juntos dan el mismo número, y acá no hay nada que lo
@@ -31,11 +31,11 @@ import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDeLaPer
 // EL PREFERIDO Y LAS ESCRITURAS VAN CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA ACTIVA, que la
 // base acota a esa Prestadora. El preferido mira el teléfono de las cuentas, y la política de
 // `usuarios` le deja ver a cada persona sólo su propia fila. Y para escribir, la base pide
-// `editar_personas` y además `ver_personas` —para la Ficha y para el renglón que la escritura
+// `editar_personas` y además `ver_personas` —para los datos de la persona y para el renglón que la escritura
 // devuelve—: son dos permisos que cada Prestadora configura por separado, y un Coordinador con el
 // primero y sin el segundo recibiría 404. El de editar lo comprueba esta ruta antes de entrar.
 //
-// La Ficha se comprueba primero: quien pide una de otra Prestadora recibe lo mismo que quien pide
+// La persona se comprueba primero: quien pide una de otra Prestadora recibe lo mismo que quien pide
 // una que no existe.
 
 export const panelPersonasTelefonosRouter = Router();
@@ -45,14 +45,14 @@ const COLUMNAS = 'id, persona_id, telefono, fuera_de_uso_at, created_at, updated
 const veLasPersonas = requierePermiso('ver_personas');
 const escribeLasPersonas = requierePermiso('editar_personas');
 
-/** La Ficha, si la base la deja ver a quien pide. Si no, nada, y desde afuera se ve igual. */
+/** La persona, si la base la deja ver a quien pide. Si no, nada, y desde afuera se ve igual. */
 async function personaVisible(db, personaId) {
   if (!personaId) return null;
   const { data } = await db.from('personas').select('id, prestadora_id').eq('id', personaId).maybeSingle();
   return data ?? null;
 }
 
-/** La Ficha, si es de la Organización de esta sesión. Si no, nada, y desde afuera se ve igual.
+/** La persona, si es de la Organización de esta sesión. Si no, nada, y desde afuera se ve igual.
     La usan las escrituras, con la credencial del trabajo (ver el encabezado). */
 async function personaDeLaPrestadora(db, personaId, usuarioPanel) {
   if (!personaId) return null;
@@ -67,7 +67,7 @@ function noEncontrado(res) {
 }
 
 // Todos los teléfonos del Directorio de esta Organización, de una sola vez. La pantalla muestra una
-// lista de Fichas y cada una con los suyos: pedirlos Ficha por Ficha sería un pedido por renglón.
+// lista de personas y cada una con los suyos: pedirlos persona por persona sería un pedido por renglón.
 panelPersonasTelefonosRouter.get(
   '/',
   requiereRolPanel,
@@ -79,13 +79,13 @@ panelPersonasTelefonosRouter.get(
     if (error) return responderError(res, error);
 
     const prestadoraId = req.usuarioPanel.prestadoraId;
-    const telefonos = await enLaPrestadora(prestadoraId, 'teléfono preferido de las Fichas', (trabajo) =>
+    const telefonos = await enLaPrestadora(prestadoraId, 'teléfono preferido de las personas', (trabajo) =>
       conElPreferidoMarcado(trabajo, data ?? [], prestadoraId));
     res.json({ telefonos });
   },
 );
 
-// Los de una Ficha sola, para cuando se está mirando ésa.
+// Los de una persona sola, para cuando se está mirando ésa.
 panelPersonasTelefonosRouter.get(
   '/:personaId',
   requiereRolPanel,
@@ -103,7 +103,7 @@ panelPersonasTelefonosRouter.get(
       .order('created_at');
     if (error) return responderError(res, error);
 
-    const telefonos = await enLaPrestadora(persona.prestadora_id, 'teléfono preferido de las Fichas', (trabajo) =>
+    const telefonos = await enLaPrestadora(persona.prestadora_id, 'teléfono preferido de las personas', (trabajo) =>
       conElPreferidoMarcado(trabajo, data ?? [], persona.prestadora_id));
     res.json({ telefonos });
   },
@@ -119,11 +119,11 @@ panelPersonasTelefonosRouter.post(
     const telefono = telefonoLimpio(req.body?.telefono);
     if (!telefono) return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
 
-    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las Fichas', async (db) => {
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las personas', async (db) => {
       const persona = await personaDeLaPrestadora(db, req.params.personaId, req.usuarioPanel);
       if (!persona) return noEncontrado(res);
 
-      // Acá no se comprueba si el número ya está cargado en otra Ficha, y es a propósito: se puede
+      // Acá no se comprueba si el número ya está cargado en otra persona, y es a propósito: se puede
       // repetir. Ver el encabezado.
       const { data, error } = await db
         .from('telefonos_de_la_persona')
@@ -148,12 +148,12 @@ panelPersonasTelefonosRouter.patch(
     const telefono = telefonoLimpio(req.body?.telefono);
     if (!telefono) return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
 
-    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las Fichas', async (db) => {
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las personas', async (db) => {
       const persona = await personaDeLaPrestadora(db, req.params.personaId, req.usuarioPanel);
       if (!persona) return noEncontrado(res);
 
       // Los tres filtros van juntos. El de la Organización es el que impide corregir el teléfono de
-      // una Ficha ajena aunque alguien conozca su identificador.
+      // una persona ajena aunque alguien conozca su identificador.
       const { data, error } = await db
         .from('telefonos_de_la_persona')
         .update({ telefono, updated_at: new Date().toISOString() })
@@ -173,11 +173,11 @@ panelPersonasTelefonosRouter.patch(
   },
 );
 
-// Ponerlo fuera de uso, o restaurarlo. Que no atiendan no prueba que el número esté mal: queda en la
-// Ficha, deja de ser el preferido y se lo puede restaurar.
+// Ponerlo fuera de uso, o restaurarlo. Que no atiendan no prueba que el número esté mal: queda en los
+// datos de la persona, deja de ser el preferido y se lo puede restaurar.
 function marcarElUso(fueraDeUso) {
   return async (req, res) => {
-    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las Fichas', async (db) => {
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las personas', async (db) => {
       const persona = await personaDeLaPrestadora(db, req.params.personaId, req.usuarioPanel);
       if (!persona) return noEncontrado(res);
 
@@ -217,7 +217,7 @@ panelPersonasTelefonosRouter.post(
   marcarElUso(false),
 );
 
-// Borrar uno. La Ficha no se borra nunca. Un teléfono sí, a mano y sólo cuando hay certeza de que
+// Borrar uno. La persona no se borra nunca. Un teléfono sí, a mano y sólo cuando hay certeza de que
 // el número está mal; el que no atiende queda fuera de uso.
 panelPersonasTelefonosRouter.delete(
   '/:personaId/:telefonoId',
@@ -225,7 +225,7 @@ panelPersonasTelefonosRouter.delete(
   exigirOrganizacionActiva,
   escribeLasPersonas,
   async (req, res) => {
-    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las Fichas', async (db) => {
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las personas', async (db) => {
       const persona = await personaDeLaPrestadora(db, req.params.personaId, req.usuarioPanel);
       if (!persona) return noEncontrado(res);
 

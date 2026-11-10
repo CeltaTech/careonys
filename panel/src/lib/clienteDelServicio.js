@@ -1,8 +1,8 @@
 // Cómo se lee el Cliente de un Servicio. Escrito una sola vez porque lo necesitan la lista de
 // Servicios, el Estado actual y el Detalle del servicio.
 //
-// El Servicio dice de qué Cliente es con `cliente_id`. Los datos de contacto salen de la Ficha de
-// Persona de quien contrata, en el Directorio de Personas, y llegan aparte, en un mapa que cada
+// El Servicio dice de qué Cliente es con `cliente_id`. Los datos de contacto salen de los datos
+// de quien contrata, en el Directorio de Personas, y llegan aparte, en un mapa que cada
 // pantalla arma con `contactosDeClientes`.
 
 /**
@@ -48,7 +48,7 @@ export async function contactosDeClientes(supabase, servicios) {
   };
 }
 
-/** Lo que se muestra de una Ficha de Persona del Directorio como contacto del Cliente. */
+/** Lo que se muestra de una persona del Directorio como contacto del Cliente. */
 function contactoDeLaPersona(persona) {
   return {
     nombre: persona.nombre_visible ?? null,

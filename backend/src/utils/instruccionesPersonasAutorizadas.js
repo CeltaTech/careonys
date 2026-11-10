@@ -45,8 +45,8 @@ const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
 // ni les da accesos, y el Panel no siempre lee la configuración de la aplicación. La Prestadora
 // llega en cada pedido, y lo que se exporta abajo abre el trabajo de ésa y de ninguna otra.
 
-// Quiénes son las personas autorizadas de este Cliente. El nombre y el DNI salen de su Ficha de
-// Persona, que es donde se guardan una sola vez. El titular no tiene fila acá: ve todo siempre, y
+// Quiénes son las personas autorizadas de este Cliente. El nombre y el DNI salen de sus datos
+// de persona, que es donde se guardan una sola vez. El titular no tiene fila acá: ve todo siempre, y
 // ninguna autorización le puede quitar nada, ni siquiera una suya.
 async function personasAutorizadasDelCliente(clienteId) {
   const { data, error } = await supabase

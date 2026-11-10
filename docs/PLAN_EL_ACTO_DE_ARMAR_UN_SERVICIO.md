@@ -86,7 +86,7 @@ vea las guardias que caen en esos días.
 
 **La estructura de zonas, completa y cargada en las dos puntas.** `lugares`, `zona_lugares`,
 `asistente_lugares` y `usuario_lugares`. Lo guardado son siempre lugares, nunca zonas: la zona es
-atajo para cargar y forma de hablar en pantalla. El lugar del Paciente es el de su Ficha de Persona
+atajo para cargar y forma de hablar en pantalla. El lugar del Paciente es el de sus datos
 —`personas.lugar_id`, por `pacientes.persona_id`—, y el alcance de cada coordinadora se
 guarda también en lugares, para que las dos puntas de la comparación sean la misma cosa.
 
@@ -452,8 +452,8 @@ Asistentes**, no de coordinadores: `resumenDelPadron.js:50` cuenta guardias por 
 coordinador anotado.** Hoy nadie está atribuido a un coordinador concreto, y los lugares de dos
 coordinadores se solapan libremente —`usuario_lugares` no tiene exclusividad—, así que un Paciente de
 un lugar compartido cuenta para todos los que lo alcanzan: repartir esa carga sería inventarla. Con
-la asignación de este paso hecha, contar por lugar sale cruzando con el lugar de la Ficha de
-Persona del Paciente (`personas.lugar_id`).
+la asignación de este paso hecha, contar por lugar sale cruzando con el lugar de los datos
+del Paciente (`personas.lugar_id`).
 
 **Orden, entonces:** primero la asignación —que es lo que crea el dato—, y la sugerencia después, con
 los Servicios ya asignados, que se cuentan por `servicios.coordinador_id`.

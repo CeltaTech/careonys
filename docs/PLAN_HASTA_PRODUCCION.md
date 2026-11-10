@@ -289,7 +289,7 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 maestra; lo que sigue no se pudo cerrar ahí.
 
 **Qué ve cada rol sale de qué necesita para cumplir su función.** La Ficha del Cliente ya está
-cortada así. Falta lo mismo con el Legajo del Asistente y la Ficha de Persona del Paciente: el
+cortada así. Falta lo mismo con el Legajo del Asistente y los datos del Paciente: el
 coordinador no ve lo que no necesita, lo ve si el Administrador se lo habilita en «Permisos de
 Coordinadores», con un permiso por parte para ver y para cargar, y el backend y la base aplican el
 mismo corte que la pantalla.
@@ -573,7 +573,7 @@ Servicio.
 (estado comprobado en la base el 2026-11-08). Se trabaja de a un punto por vez; el primero es el
 envío del enlace, y los otros tres esperan el «sí» del Desarrollador, uno por uno.
 
-- **Lo preparado:** la Ficha de Persona `bfc3f718-d4d3-41b2-826c-9eeec5734de2` (persona jurídica
+- **Lo preparado:** la persona `bfc3f718-d4d3-41b2-826c-9eeec5734de2` (persona jurídica
   inventada, Responsable de pagos del Cliente número 2 de la Prestadora Demo, sin Apoderado) tiene
   el Email de prueba que indicó el Desarrollador. Él mira esa casilla; el envío sale por Resend.
 - **Lo que todavía no se hizo:** no se mandó ningún documento: `consentimientos_pagador` y
@@ -1046,7 +1046,7 @@ en la sección «La entrada y el restablecimiento de la contraseña».
 
 **La etapa no la marca nadie: sale de lo que pasa.** Cargar un presupuesto convierte al Contacto
 en Prospecto; cerrar la negociación de forma positiva lo convierte en Cliente; si la negociación
-fracasa, vuelve a ser Contacto con todo su historial. Es la misma Ficha de Persona del Directorio de Personas en
+fracasa, vuelve a ser Contacto con todo su historial. Es la misma persona del Directorio de Personas en
 las tres etapas, nunca una tabla aparte. Sin presupuesto aprobado no hay Cliente, y no hay alta manual de
 Cliente desde el Panel; la cartera que una Prestadora ya tenía se migra aparte (paso 29).
 
@@ -1539,7 +1539,7 @@ construye lo que decide.
 
 **Antes de construirlo se contesta:** qué clases de registro existen, porque la tabla las guarda
 como texto libre; quién carga las reglas, que hoy sólo entran por migración; si la fecha de
-fallecimiento va en la Ficha de Persona, que el Paciente ya cita; si su cambio se audita; cómo se
+fallecimiento va en los datos de la persona, que el Paciente ya cita; si su cambio se audita; cómo se
 borra lo vencido del historial del registro clínico, que hoy no lo puede borrar nadie; y qué otras
 tablas son clínicas y se versionan, además de las dos que ya lo hacen.
 

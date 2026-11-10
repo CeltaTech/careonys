@@ -15,7 +15,7 @@ import { useGeneros } from '../../hooks/useGeneros';
 import { TelefonosDeLaPersona } from './TelefonosDeLaPersona';
 import { cargarUnTelefono } from '../../lib/apiPersonasTelefonos';
 
-/* El alta y la corrección de una Ficha de Persona.
+/* El alta y la corrección de los datos de una persona.
    ==========================================================================
 
    El mismo formulario para las dos cosas, porque los datos que se piden son los mismos: cargar una
@@ -35,8 +35,8 @@ import { cargarUnTelefono } from '../../lib/apiPersonasTelefonos';
    ahí se agregan, se corrigen y se sacan. Cuál es el preferido para llamar no se elige: es el que
    esa Persona usa en su cuenta.
 
-   NO HAY BOTÓN DE BORRAR, y tampoco lo va a haber. Una Ficha queda con el historial de cómo se
-   comportó esa persona en cada rol que desempeñó, y con quien dejó de ser Cliente se vuelve a
+   NO HAY BOTÓN DE BORRAR, y tampoco lo va a haber. Los datos de una persona quedan con el historial de cómo se
+   comportó en cada rol que desempeñó, y con quien dejó de ser Cliente se vuelve a
    cruzar. La base también lo rechaza, por si alguna pantalla lo intentara igual. */
 
 // Lo que rechaza la base y tiene casillero propio: el aviso va al pie de ese casillero y no a un
@@ -71,7 +71,7 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
   const [dni, setDni] = useState(persona?.dni ?? '');
   const [genero, setGenero] = useState(persona?.genero ?? '');
   const { generos } = useGeneros(prestadoraId);
-  // Sólo sirve en el alta. La Ficha ya cargada no trae ningún teléfono adentro: los tiene aparte,
+  // Sólo sirve en el alta. La persona ya cargada no trae ningún teléfono adentro: los tiene aparte,
   // porque son varios.
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState(persona?.email ?? '');
@@ -177,10 +177,10 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
 
       // Se escribe derecho contra la base: quién puede cargar y corregir lo decide la política.
       // La Prestadora va en el alta y la política comprueba que sea la de quien está trabajando;
-      // en la corrección no viaja, porque una Ficha no cambia de Prestadora.
+      // en la corrección no viaja, porque una persona no cambia de Prestadora.
       //
       // Y vuelve la fila guardada, porque quien abrió este formulario desde otro casillero
-      // necesita saber cuál Ficha quedó cargada para señalarla ahí mismo.
+      // necesita saber cuál persona quedó cargada para señalarla ahí mismo.
       const { data: guardado, error: errorGuardar } = corrigiendo
         ? await supabase.from('personas').update(fila).eq('id', persona.id).select('id, nombre_visible').single()
         : await supabase.from('personas').insert({ ...fila, prestadora_id: prestadoraId }).select('id, nombre_visible').single();
@@ -194,7 +194,7 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
         throw errorGuardar;
       }
 
-      // El teléfono del alta se carga recién con la Ficha creada, porque cuelga de ella. En la
+      // El teléfono del alta se carga recién con la persona creada, porque cuelga de ella. En la
       // corrección no pasa por acá: ahí está la lista entera, que se maneja sola.
       if (!corrigiendo && telefono.trim()) {
         await cargarUnTelefono(guardado.id, telefono.trim());
@@ -334,7 +334,7 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
           <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />
 
           {/* En el alta, un casillero: es el teléfono que se tiene a mano en ese momento. Los
-              demás se agregan después, con la Ficha ya creada. */}
+              demás se agregan después, con la persona ya creada. */}
           {!corrigiendo && (
             <FormField
               label={t.personas.telefono}
@@ -373,7 +373,7 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
         </form>
 
         {/* Afuera del formulario a propósito: cada teléfono se carga, se corrige y se saca solo, y
-            no espera al botón de guardar de la Ficha. */}
+            no espera al botón de guardar de la persona. */}
         {corrigiendo && <TelefonosDeLaPersona personaId={persona.id} puedeEditar />}
       </div>
     </div>

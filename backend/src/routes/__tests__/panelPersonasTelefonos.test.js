@@ -1,5 +1,5 @@
 /**
- * Pruebas de los teléfonos de contacto de una Ficha del Directorio de Personas.
+ * Pruebas de los teléfonos de contacto de una persona del Directorio de Personas.
  *
  * Se corren con el banco de pruebas que ya trae Node, sin instalar nada:
  *
@@ -13,9 +13,9 @@
  * base acota a esa Prestadora—, y que el número no se escriba nunca en una dirección.
  *
  * La base de mentira imita esa protección en lo único que hace falta: con la credencial de quien
- * pide contesta sólo las Fichas de su Prestadora, y con la del trabajo, sólo las de la Prestadora que
+ * pide contesta sólo las personas de su Prestadora, y con la del trabajo, sólo las de la Prestadora que
  * lleva adentro. Así, una escritura que fuera con la credencial de otra Prestadora encontraría la
- * Ficha ajena, y las pruebas de aislamiento darían al revés. La
+ * persona ajena, y las pruebas de aislamiento darían al revés. La
  * protección por fila en sí la prueba `scripts/probar_aislamiento.mjs` contra una base de verdad.
  *
  * Los números son inventados.
@@ -34,7 +34,7 @@ const OTRA_PERSONA = '44444444-4444-4444-4444-444444444444';
 const PERSONA_AJENA = '55555555-5555-5555-5555-555555555555';
 const TELEFONO_ID = '66666666-6666-6666-6666-666666666666';
 
-// Inventados, y a propósito el mismo en dos Fichas distintas.
+// Inventados, y a propósito el mismo en dos personas distintas.
 const CASA = '+54 9 11 5555-1234';
 const CELULAR = '+54 9 11 5555-9876';
 
@@ -137,7 +137,7 @@ async function pedir(metodo, ruta, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-/** Dos Fichas de esta Prestadora y una de otra, que es lo que hace falta para probar aislamiento:
+/** Dos personas de esta Prestadora y una de otra, que es lo que hace falta para probar aislamiento:
  *  una consulta que vuelve vacía no prueba nada, porque una ruta que niega todo devuelve lo mismo. */
 const DIRECTORIO_EN_LA_BASE = [
   { id: PERSONA, prestadora_id: PRESTADORA },
@@ -172,11 +172,11 @@ beforeEach(() => {
   // Sin cuentas cargadas: entonces no hay ningún preferido, que es el caso más común al empezar.
   lasCuentasLlevan();
   laBaseLeDejaVerElDirectorio = true;
-  // El Directorio de la base, con Fichas de dos Prestadoras. Con la credencial de quien pide, la
+  // El Directorio de la base, con personas de dos Prestadoras. Con la credencial de quien pide, la
   // base contesta sólo las de su Prestadora, y ninguna si no tiene el permiso de ver el Directorio;
   // con la del trabajo, sólo las de la Prestadora que lleva adentro; con cualquier otra, ninguna.
   // Es la única forma de que esta prueba pueda fallar: si la escritura fuera con la credencial de
-  // otra Prestadora, la Ficha ajena aparecería. Una base de mentira que devuelve vacío por su cuenta
+  // otra Prestadora, la persona ajena aparecería. Una base de mentira que devuelve vacío por su cuenta
   // aprobaría igual.
   respuestas.set('GET /rest/v1/personas', (_cuerpo, url, credencial) => {
     const pedido = new URL(url, 'http://interno').searchParams;
@@ -262,7 +262,7 @@ describe('cuál es el preferido para llamar', () => {
     const filas = [{ ...filaTelefono('a', PERSONA, CELULAR), fuera_de_uso_at: '2026-10-01T10:00:00Z' }];
     const marcados = await marcar(filas);
     assert.equal(marcados[0].preferido, false);
-    assert.equal(marcados.length, 1, 'sigue en la Ficha');
+    assert.equal(marcados.length, 1, 'sigue en los datos de la persona');
   });
 
   it('no poder comprobarlo deja la lista sin nada señalado, nunca con una señal inventada', async () => {
@@ -276,9 +276,9 @@ describe('cuál es el preferido para llamar', () => {
 // Que se puedan repetir
 // ---------------------------------------------------------------------------------------
 
-describe('un mismo número en dos Fichas', () => {
+describe('un mismo número en dos personas', () => {
   it('se carga sin que nada falle: es un dato de contacto, no una llave para entrar', async () => {
-    // El número ya está cargado en otra Ficha de esta misma Prestadora, y la base lo contesta a
+    // El número ya está cargado en otra persona de esta misma Prestadora, y la base lo contesta a
     // quien pregunte. Si alguien le agregara a la carga un control de que no se repita, acá lo
     // encontraría y rechazaría: por eso esta prueba puede fallar de verdad.
     respuestas.set('GET /rest/v1/telefonos_de_la_persona', () => [filaTelefono('ya', OTRA_PERSONA, CASA)]);
@@ -295,7 +295,7 @@ describe('un mismo número en dos Fichas', () => {
     assert.equal(otro.cuerpo.telefono.telefono, CASA);
   });
 
-  it('y las dos Fichas lo devuelven, cada una con lo suyo', async () => {
+  it('y las dos personas lo devuelven, cada una con lo suyo', async () => {
     lasCuentasLlevan();
     respuestas.set('GET /rest/v1/telefonos_de_la_persona', () => [
       filaTelefono('a', PERSONA, CASA),
@@ -308,7 +308,7 @@ describe('un mismo número en dos Fichas', () => {
     assert.deepEqual(cuerpo.telefonos.map((t) => t.telefono), [CASA, CASA]);
   });
 
-  it('si ese número repetido es el de una cuenta, queda señalado en las dos Fichas', async () => {
+  it('si ese número repetido es el de una cuenta, queda señalado en las dos personas', async () => {
     lasCuentasLlevan(CASA);
     respuestas.set('GET /rest/v1/telefonos_de_la_persona', () => [
       filaTelefono('a', PERSONA, CASA),
@@ -324,7 +324,7 @@ describe('un mismo número en dos Fichas', () => {
 // El aislamiento entre Prestadoras
 // ---------------------------------------------------------------------------------------
 
-describe('una Ficha de otra Prestadora', () => {
+describe('una persona de otra Prestadora', () => {
   it('no se alcanza para cargarle un teléfono', async () => {
     const { estado, cuerpo } = await pedir('POST', `/${PERSONA_AJENA}`, { telefono: CASA });
     assert.equal(estado, 404);
@@ -358,7 +358,7 @@ describe('una Ficha de otra Prestadora', () => {
     assert.deepEqual(ajeno.cuerpo, noExiste.cuerpo);
   });
 
-  it('la Prestadora nunca sale del pedido: viene de la Ficha que la base dejó ver', async () => {
+  it('la Prestadora nunca sale del pedido: viene de la persona que la base dejó ver', async () => {
     respuestas.set('POST /rest/v1/telefonos_de_la_persona', (cuerpo) => [
       filaTelefono(TELEFONO_ID, cuerpo.persona_id, cuerpo.telefono),
     ]);
@@ -383,7 +383,7 @@ describe('la credencial de quien pide', () => {
     respuestas.set('DELETE /rest/v1/telefonos_de_la_persona', () => [{ id: TELEFONO_ID }]);
   });
 
-  it('va en toda consulta de lectura a la Ficha y a sus teléfonos', async () => {
+  it('va en toda consulta de lectura a la persona y a sus teléfonos', async () => {
     const pedidos = [
       ['GET', '/'],
       ['GET', `/${PERSONA}`],
@@ -402,7 +402,7 @@ describe('la credencial de quien pide', () => {
   });
 
   // Cargar, corregir y sacar van con la credencial del trabajo: las políticas de escritura de quien
-  // pide piden `editar_personas`, pero leer la Ficha y el renglón escrito piden además `ver_personas`.
+  // pide piden `editar_personas`, pero leer la persona y el renglón escrito piden además `ver_personas`.
   it('cargar, corregir y sacar van con la credencial del trabajo y el filtro de la Prestadora', async () => {
     const pedidos = [
       ['POST', `/${PERSONA}`, { telefono: CASA }],
@@ -416,7 +416,7 @@ describe('la credencial de quien pide', () => {
       const aLaBase = llamadas.filter(
         (l) => l.clave.includes('/rest/v1/telefonos_de_la_persona') || l.clave.includes('/rest/v1/personas'),
       );
-      assert.ok(aLaBase.length >= 2, `${metodo} ${ruta} tenía que leer la Ficha y escribir`);
+      assert.ok(aLaBase.length >= 2, `${metodo} ${ruta} tenía que leer la persona y escribir`);
       for (const llamada of aLaBase) {
         assert.ok(esDelTrabajoDeLaPrestadora(llamada.credencial), `${llamada.clave} no fue con la credencial del trabajo de la Prestadora`);
         const filtrada = llamada.url.includes(`prestadora_id=eq.${PRESTADORA}`)
@@ -433,7 +433,7 @@ describe('la credencial de quien pide', () => {
     assert.equal((await pedir('DELETE', `/${PERSONA}/${TELEFONO_ID}`)).estado, 200);
   });
 
-  it('corregir y sacar filtran además por la Ficha', async () => {
+  it('corregir y sacar filtran además por la persona', async () => {
     await pedir('PATCH', `/${PERSONA}/${TELEFONO_ID}`, { telefono: CELULAR });
     await pedir('DELETE', `/${PERSONA}/${TELEFONO_ID}`);
 
@@ -476,14 +476,14 @@ describe('cargar, corregir y sacar', () => {
     assert.equal(consultasDeDatos().length, 0);
   });
 
-  it('un teléfono que no está en esa Ficha no se corrige', async () => {
+  it('un teléfono que no es de esa persona no se corrige', async () => {
     respuestas.set('PATCH /rest/v1/telefonos_de_la_persona', () => []);
     const { estado, cuerpo } = await pedir('PATCH', `/${PERSONA}/${TELEFONO_ID}`, { telefono: CELULAR });
     assert.equal(estado, 404);
     assert.equal(cuerpo.motivo, 'telefono_no_encontrado');
   });
 
-  it('un teléfono que no está en esa Ficha no se saca', async () => {
+  it('un teléfono que no es de esa persona no se saca', async () => {
     respuestas.set('DELETE /rest/v1/telefonos_de_la_persona', () => []);
     const { estado, cuerpo } = await pedir('DELETE', `/${PERSONA}/${TELEFONO_ID}`);
     assert.equal(estado, 404);
@@ -510,7 +510,7 @@ describe('cargar, corregir y sacar', () => {
     }
   });
 
-  it('a una Ficha de otra Prestadora no se le pone ninguno fuera de uso', async () => {
+  it('a una persona de otra Prestadora no se le pone ninguno fuera de uso', async () => {
     const { estado } = await pedir('POST', `/${PERSONA_AJENA}/${TELEFONO_ID}/fuera-de-uso`);
     assert.equal(estado, 404);
     assert.equal(consultasDeDatos().length, 0);

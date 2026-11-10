@@ -193,7 +193,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/guardia_pacientes', ({ url }) =>
     idsPedidos(url, 'guardia_id').map((guardiaId) => ({
       guardia_id: guardiaId,
-      // Las coordenadas viven en la Ficha de Persona del Paciente, no en su fila.
+      // Las coordenadas viven en los datos del Paciente, no en su fila.
       pacientes: { id: PACIENTE, persona: { nombre_visible: 'Paciente de prueba', ...DOMICILIO } },
     }))
   );

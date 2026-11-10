@@ -2,7 +2,7 @@ import { verificadorComparable } from './celularDeUnaSolaPersona.js';
 
 // CUÁL DE LOS TELÉFONOS DE UNA PERSONA ES EL PREFERIDO PARA LLAMAR.
 //
-// LA REGLA. Una Ficha de Persona puede tener varios teléfonos de contacto, y todos sirven. El
+// LA REGLA. Una persona puede tener varios teléfonos de contacto, y todos sirven. El
 // preferido es **el que esa Persona usa en su cuenta**, porque es el que atiende: es el que eligió
 // para que el producto la encuentre. Ser el preferido no apaga a ninguno de los demás.
 //
@@ -61,7 +61,7 @@ async function verificadoresQueSonDeUnaCuenta(db, verificadores, prestadoraId) {
  * consulta. Vuelven en el mismo orden y con una sola cosa agregada.
  *
  * ES UNO SOLO POR PERSONA. Si una Persona tuviera dos cuentas con dos números distintos y los dos
- * estuvieran cargados en su Ficha, queda señalado el más antiguo de los dos. «El de preferencia»
+ * estuvieran cargados en sus datos, queda señalado el más antiguo de los dos. «El de preferencia»
  * es uno, y elegirlo por antigüedad hace que la pantalla muestre siempre lo mismo.
  */
 export async function conElPreferidoMarcado(db, telefonos, prestadoraId) {

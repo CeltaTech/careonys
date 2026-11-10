@@ -69,8 +69,8 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         {error && <Alert variant="error">{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
-          {/* Quién es el Paciente —nombre, fecha de nacimiento, domicilio— está en su Ficha de
-              Persona y se corrige en el Directorio de Personas. Acá queda lo que es propio de
+          {/* Quién es el Paciente —nombre, fecha de nacimiento, domicilio— está en sus datos de
+              persona y se corrige en el Directorio de Personas. Acá queda lo que es propio de
               recibir el cuidado. */}
           <FormField label={t.clientes.nivel_complejidad} name="nivel_complejidad" type="select" value={nivelComplejidad} onChange={(e) => setNivelComplejidad(e.target.value)}>
             <option value="">{t.comun.todos}</option>
@@ -80,7 +80,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
           </FormField>
           <FormField label={t.clientes.editar_paciente.patologias} name="patologias" value={patologias} onChange={(e) => setPatologias(e.target.value)} />
           {/* La obra social se elige del Directorio de Personas, donde es una Persona jurídica.
-              Escrita a mano, la misma obra social en la Ficha de cien Pacientes serían cien
+              Escrita a mano, la misma obra social en los datos de cien Pacientes serían cien
               Pagadores distintos. */}
           <SelectorDePersona
             name="obra_social_persona_id"

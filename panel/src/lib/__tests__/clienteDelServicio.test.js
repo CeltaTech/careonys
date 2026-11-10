@@ -12,7 +12,7 @@ const CONTACTO = {
   email: 'contacto.inventado@ejemplo.test',
 };
 
-// Cómo llega ese mismo contacto desde el Directorio de Personas: la Ficha de Persona de quien
+// Cómo llega ese mismo contacto desde el Directorio de Personas: los datos de quien
 // contrata, su lugar y sus teléfonos.
 const PERSONA = {
   nombre_visible: 'Cliente Gómez',
@@ -82,9 +82,9 @@ describe('contactosDeClientes', () => {
     expect(contactos.size).toBe(0);
   });
 
-  // Una Ficha de Persona que la base no devuelve —la protección por fila no la deja ver— no puede
+  // Una persona que la base no devuelve —la protección por fila no la deja ver— no puede
   // dejar un renglón indefinido adentro del mapa: la pantalla muestra un guion.
-  it('deja afuera al Cliente cuya Ficha de Persona no llegó', async () => {
+  it('deja afuera al Cliente cuyos datos no llegaron', async () => {
     const { supabase } = baseFalsa({
       data: [
         { id: CLIENTE, personas: PERSONA },

@@ -47,7 +47,7 @@ function comoPartes({ domicilio, ...resto }) {
   return { ...resto, calle: calle || null, numero: null, piso: null, unidad: null, lugar: lugar.join(', ') || null };
 }
 
-// Copia exacta del criterio de la migración: la temporal vigente ese día, y si no la de su Ficha de Persona.
+// Copia exacta del criterio de la migración: la temporal vigente ese día, y si no la de sus datos.
 // Las fechas se comparan como texto porque `2026-01-05` ordena igual escrito que como fecha.
 function resolver(pacienteId, fecha) {
   const vigente = temporales.find(

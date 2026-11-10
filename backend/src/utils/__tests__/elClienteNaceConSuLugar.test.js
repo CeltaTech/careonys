@@ -9,8 +9,8 @@
  * ninguna búsqueda y nadie se entera: la pantalla no falla, contesta vacío. Es el defecto más
  * caro de los dos, porque parece que funciona.
  *
- * EL PACIENTE ESTÁ EN EL DIRECTORIO. Su nombre, su domicilio y su lugar se escriben en su Ficha de
- * Persona, y el Paciente sólo la apunta. Se lo reconoce por su CUIL; si la fila no lo trae, es la
+ * EL PACIENTE ESTÁ EN EL DIRECTORIO. Su nombre, su domicilio y su lugar se escriben en sus datos de
+ * persona, y el Paciente sólo los apunta. Se lo reconoce por su CUIL; si la fila no lo trae, es la
  * misma persona que contrata sólo cuando el nombre es el mismo, y si no, la fila no se carga.
  *
  * SE MIRA EL IDENTIFICADOR Y NO EL NOMBRE. Lo que se guarda es cuál lugar. Dos localidades que se
@@ -19,8 +19,8 @@
  * LA PRESTADORA DE LA PRUEBA NO TIENE SERVICIO DE MAPAS. Así la prueba no sale a preguntarle a un
  * tercero por una dirección: acá se comprueba la localidad, no las coordenadas.
  *
- * LA PERSONA SE BUSCA POR SU DOCUMENTO ANTES DE CREARLA. Si ya está en el Directorio, se usa su
- * Ficha tal como está y sólo se le suma lo que no tenía: una persona, una Ficha.
+ * LA PERSONA SE BUSCA POR SU DOCUMENTO ANTES DE CREARLA. Si ya está en el Directorio, se usan sus
+ * datos tal como están y sólo se le suma lo que no tenía: una persona se guarda una sola vez.
  *
  * UNA FILA QUE YA ENTRÓ NO ENTRA DOS VECES. Así la planilla corregida se puede volver a importar
  * sin duplicar lo que ya se había cargado.
@@ -34,8 +34,8 @@ import crypto from 'node:crypto';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
-// La Ficha que la base le da a la persona en el Directorio. Es a propósito otro número que el de
-// la cuenta: la misma persona puede tener otra Ficha en otra Prestadora, colgando de esta misma
+// El identificador que la base le da a la persona en el Directorio. Es a propósito otro número que el de
+// la cuenta: la misma persona puede estar cargada también en otra Prestadora, colgando de esta misma
 // cuenta.
 const NUEVA_PERSONA = '66666666-6666-6666-6666-666666666666';
 const PERSONA_DEL_PACIENTE = '99999999-9999-9999-9999-999999999999';
@@ -119,9 +119,9 @@ function seLlamo(clave) {
 
 /** Lo que trae la planilla, con datos inventados. */
 let fila;
-/** Las Fichas que ya están en el Directorio, por documento. */
+/** Las personas que ya están en el Directorio, por documento. */
 let enElDirectorio;
-/** Lo que ya tiene escrito la Ficha a la que se le completan datos. */
+/** Lo que ya tiene escrito la persona a la que se le completan datos. */
 let loQueYaTieneLaFicha;
 
 function darDeAlta() {
@@ -160,12 +160,12 @@ beforeEach(() => {
   // El alta y la baja de la cuenta las hace la base, cada una en un solo procedimiento.
   respuestas.set('POST /rest/v1/rpc/dar_de_alta_la_cuenta', () => NUEVA_CUENTA);
   respuestas.set('POST /rest/v1/rpc/deshacer_el_alta_de_la_cuenta', () => true);
-  respuestas.set('POST /rest/v1/rpc/completar_genero_de_la_ficha', () => null);
-  // Cada documento nuevo, su Ficha.
+  respuestas.set('POST /rest/v1/rpc/completar_genero_de_la_persona', () => null);
+  // Cada documento nuevo, su persona.
   respuestas.set('POST /rest/v1/personas', (_, cuerpo) => [
     { id: cuerpo.documento_numero === CUIL_DEL_PACIENTE ? PERSONA_DEL_PACIENTE : NUEVA_PERSONA },
   ]);
-  // La misma tabla se lee para buscar por documento y para ver qué tiene escrito una Ficha.
+  // La misma tabla se lee para buscar por documento y para ver qué tiene escrito una persona.
   respuestas.set('GET /rest/v1/personas', (filtros) => {
     if (filtros.has('documento_numero')) {
       const id = enElDirectorio[filtros.get('documento_numero').replace(/^eq\./, '')];
@@ -257,7 +257,7 @@ describe('el Cliente que llega en una planilla importada', () => {
     assert.equal(cambio.numero, '742');
   });
 
-  it('lo que la Ficha ya tenía escrito no se pisa', async () => {
+  it('lo que la persona ya tenía escrito no se pisa', async () => {
     loQueYaTieneLaFicha = { calle: 'Calle Corregida', numero: null, lugar_id: null };
 
     await darDeAlta();
@@ -282,7 +282,7 @@ describe('el Cliente que llega en una planilla importada', () => {
     assert.equal(llamadas.length, 0);
   });
 
-  it('la Ficha nueva lleva el documento sin guiones y con el primer tipo del catálogo', async () => {
+  it('la persona nueva lleva el documento sin guiones y con el primer tipo del catálogo', async () => {
     await darDeAlta();
 
     const persona = loEscritoEn('personas');
@@ -299,7 +299,7 @@ describe('el Cliente que llega en una planilla importada', () => {
     assert.equal(busqueda.filtros.get('documento_tipo'), 'in.(cuil,cuit)');
   });
 
-  it('si la persona ya está en el Directorio, se usa su Ficha y no se crea otra', async () => {
+  it('si la persona ya está en el Directorio, se usan sus datos y no se crea otra', async () => {
     enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
 
     const alta = await darDeAlta();
@@ -310,7 +310,7 @@ describe('el Cliente que llega en una planilla importada', () => {
     assert.equal(alta.numeroCliente, 7);
   });
 
-  it('a la Ficha que ya estaba se le suma el teléfono que no tenía', async () => {
+  it('a la persona que ya estaba se le suma el teléfono que no tenía', async () => {
     enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
 
     await darDeAlta();
@@ -320,7 +320,7 @@ describe('el Cliente que llega en una planilla importada', () => {
     });
   });
 
-  it('el teléfono que la Ficha ya tenía no se escribe dos veces', async () => {
+  it('el teléfono que la persona ya tenía no se escribe dos veces', async () => {
     enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
     respuestas.set('GET /rest/v1/telefonos_de_la_persona', () => [{ id: 'uno' }]);
 
@@ -339,7 +339,7 @@ describe('el Cliente que llega en una planilla importada', () => {
 });
 
 describe('quién es el Paciente', () => {
-  it('con otro CUIL, el Paciente tiene su propia Ficha, con su nombre y sin el correo de quien contrata', async () => {
+  it('con otro CUIL, el Paciente es otra persona, con su nombre y sin el correo de quien contrata', async () => {
     await darDeAlta();
 
     const delPaciente = todoLoEscritoEn('personas').find((p) => p.documento_numero === CUIL_DEL_PACIENTE);
@@ -350,7 +350,7 @@ describe('quién es el Paciente', () => {
     assert.equal(loEscritoEn('clientes').contratante_persona_id, NUEVA_PERSONA);
   });
 
-  it('con el mismo CUIL que quien contrata, es la misma Ficha', async () => {
+  it('con el mismo CUIL que quien contrata, es la misma persona', async () => {
     fila.documentoPaciente = '20201112223';
 
     await darDeAlta();
@@ -359,7 +359,7 @@ describe('quién es el Paciente', () => {
     assert.equal(loEscritoEn('pacientes').persona_id, NUEVA_PERSONA);
   });
 
-  it('sin CUIL y con el mismo nombre, en otro orden y sin tildes, es la misma Ficha', async () => {
+  it('sin CUIL y con el mismo nombre, en otro orden y sin tildes, es la misma persona', async () => {
     fila.nombreContacto = 'Álba';
     fila.documentoPaciente = '';
     fila.nombrePaciente = 'FERREYRA Alba';

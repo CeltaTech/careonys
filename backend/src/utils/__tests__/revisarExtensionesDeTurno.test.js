@@ -8,7 +8,7 @@
  * en cada una lee los turnos abiertos, busca el relevo, y abre o cierra extensiones. Lo que hay que
  * sostener acá es que todo lo de una Prestadora vaya con la credencial del trabajo de esa
  * Prestadora y con ninguna otra, y que el relevo se busque por todos los Pacientes del turno sin
- * pasar por la Ficha.
+ * pasar por los datos del Paciente.
  *
  * Con el sistema roto —una consulta con otra credencial, o la credencial de otra Prestadora— la
  * primera prueba da al revés.
@@ -151,7 +151,7 @@ describe('la revisión de las extensiones de turno', () => {
     assert.equal(anotados.length, 0, anotados.join('\n'));
   });
 
-  it('el relevo se busca por todos los Pacientes del turno, sin leer la Ficha', async () => {
+  it('el relevo se busca por todos los Pacientes del turno, sin leer los datos del Paciente', async () => {
     respuestas.set(TURNOS, [turnoVencido()]);
     respuestas.set(LISTA, lista({ pacientes: ['paciente-1', 'paciente-2'] }));
     respuestas.set(ABIERTAS, []);

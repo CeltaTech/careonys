@@ -82,7 +82,7 @@ async function conNombres(emergencias, db) {
 }
 
 /* A quién llama Coordinación cuando entra una emergencia: el Contratante del Cliente, con los
-   teléfonos de su Ficha de Persona que siguen en uso. Se lee con la credencial de quien pide, así
+   teléfonos de sus datos que siguen en uso. Se lee con la credencial de quien pide, así
    que la base decide: quien no tiene permiso para ver Personas no recibe ni el nombre ni el
    número, y la emergencia se muestra igual. Un Contratante sin teléfono cargado viene con la
    lista vacía. */

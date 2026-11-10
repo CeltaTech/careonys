@@ -1,6 +1,6 @@
 import { llamadorDe } from './apiPanel';
 
-/* Los teléfonos de contacto de una Ficha de Persona.
+/* Los teléfonos de contacto de una persona.
    ==========================================================================
 
    Lo que va después de `/api/panel/personas/telefonos`. El `fetch`, la sesión, los encabezados y el
@@ -13,12 +13,12 @@ import { llamadorDe } from './apiPanel';
    @param {object} opciones  Lo mismo que acepta `fetch`. */
 export const llamarApiPersonasTelefonos = llamadorDe('/personas/telefonos');
 
-/** Todos los teléfonos del Directorio de Personas, para agruparlos por Ficha en la lista. */
+/** Todos los teléfonos del Directorio de Personas, para agruparlos por persona en la lista. */
 export function pedirLosTelefonosDelDirectorio() {
   return llamarApiPersonasTelefonos('/');
 }
 
-/** Los de una Ficha sola. */
+/** Los de una persona sola. */
 export function pedirLosTelefonosDeLaPersona(personaId) {
   return llamarApiPersonasTelefonos(`/${personaId}`);
 }
@@ -37,7 +37,7 @@ export function corregirUnTelefono(personaId, telefonoId, telefono) {
   });
 }
 
-/** Queda en la Ficha y deja de ser el preferido para llamar. */
+/** Queda en los datos de la persona y deja de ser el preferido para llamar. */
 export function ponerFueraDeUso(personaId, telefonoId) {
   return llamarApiPersonasTelefonos(`/${personaId}/${telefonoId}/fuera-de-uso`, { method: 'POST' });
 }

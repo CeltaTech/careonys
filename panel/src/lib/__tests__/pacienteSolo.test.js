@@ -129,13 +129,13 @@ describe('revisarFamiliarQueSeQuedo', () => {
       .toEqual({ ok: false, campo: 'origen' });
   });
 
-  it('exige cuál Ficha de Persona del Directorio se quedó', () => {
+  it('exige cuál persona del Directorio se quedó', () => {
     expect(revisarFamiliarQueSeQuedo(familiar({ familiar_persona_id: null })))
       .toEqual({ ok: false, campo: 'familiar_persona_id' });
   });
 
-  // Un nombre tecleado ya no sirve: lo que se guarda es cuál Ficha de Persona, no cómo se llama.
-  it('no acepta un nombre escrito en lugar de la Ficha de Persona', () => {
+  // Un nombre tecleado ya no sirve: lo que se guarda es cuál persona, no cómo se llama.
+  it('no acepta un nombre escrito en lugar de la persona', () => {
     expect(revisarFamiliarQueSeQuedo(familiar({ familiar_persona_id: 'Sobrino del Paciente' })))
       .toEqual({ ok: false, campo: 'familiar_persona_id' });
   });

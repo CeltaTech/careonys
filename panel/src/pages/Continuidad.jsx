@@ -152,7 +152,7 @@ export function Continuidad() {
       const idsPacientesNotificaciones = (notificacionesData ?? []).map((n) => n.paciente_id);
       const idsPacientes = Array.from(new Set([...idsPacientesGuardias, ...idsPacientesNotificaciones]));
 
-      // El familiar que se quedó es una Ficha de Persona del Directorio, y el nombre no está
+      // El familiar que se quedó es una persona del Directorio, y el nombre no está
       // copiado en la fila: se lo busca cada vez, que es lo que permite que cambiarlo en el
       // Directorio de Personas se vea en todos lados. `nombre_visible` lo arma la base.
       const idsPersonasFamiliares = Array.from(

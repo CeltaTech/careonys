@@ -86,8 +86,8 @@ export const appAsistentesRouter = Router();
 // las necesita para trabajar. En la lista de sus turnos no van ni aunque estén prendidas: ahí
 // alcanza con saber a quién y a qué hora.
 function camposDePacienteParaElAsistente(visibilidad, { conPatologias = false } = {}) {
-  // El nombre y el domicilio están en la Ficha de Persona: si la Prestadora no deja ver el
-  // domicilio, de la Ficha se pide sólo el nombre.
+  // El nombre y el domicilio están en los datos de la persona: si la Prestadora no deja ver el
+  // domicilio, de esos datos se pide sólo el nombre.
   const ficha = visibilidad.asistente_domicilio_del_paciente !== false ? FICHA_DOMICILIO : FICHA_NOMBRE;
   return columnasSegunVisibilidad([
     'id',
@@ -728,7 +728,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   // La obra social y el número de afiliado de cada Paciente van sólo mientras la guardia está en
   // curso: es cuando el Asistente puede necesitarlos, si hay que llamar a una ambulancia. El
   // nombre de la obra social está en el Directorio de Personas, donde el Asistente no lee: se
-  // busca con el trabajo de la Prestadora y sólo las Fichas que nombran sus Pacientes.
+  // busca con el trabajo de la Prestadora y sólo las personas que nombran sus Pacientes.
   let coberturaPorPaciente = {};
   if (data.estado === 'activa') {
     try {

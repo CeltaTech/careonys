@@ -1,6 +1,6 @@
 // Dónde se atiende a cada Paciente el día de su guardia, del lado del backend.
 //
-// POR QUÉ EXISTE. El Paciente tiene una sola dirección, la de su Ficha de Persona, y hay temporadas en que
+// POR QUÉ EXISTE. El Paciente tiene una sola dirección, la de sus datos, y hay temporadas en que
 // no está ahí: el verano en la casa de un hijo, una internación, una mudanza mientras arreglan
 // el departamento. Esas temporadas se cargan desde el Panel en
 // `domicilios_temporales_paciente`, y acá es donde se las pregunta. Sin esto el producto mandaría
@@ -9,7 +9,7 @@
 // una alerta automática que sería un falso positivo.
 //
 // LA REGLA NO VIVE ACÁ, Y ES A PROPÓSITO («ningún patrón repetido sin punto único de verdad»).
-// Cuál dirección gana un día dado —la temporal vigente, o la de su Ficha de Persona si no hay
+// Cuál dirección gana un día dado —la temporal vigente, o la de sus datos si no hay
 // ninguna— lo decide una sola vez la función `public.domicilios_de_pacientes_en` de la base. Este archivo no vuelve a comparar
 // fechas ni a elegir: pregunta y aplica lo que le contestan. Si mañana el criterio cambia
 // —porque una internación deja de contar, por ejemplo—, cambia en la base y llega solo a las
@@ -24,7 +24,7 @@
 // `asistente_domicilio_del_paciente`, y entonces la consulta que trajo a los Pacientes ni
 // siquiera pidió la dirección: el dato no viaja al teléfono de nadie. Acá se mira
 // qué campos trae cada Paciente y se pisan solamente esos — a un Paciente que vino sin
-// dirección no se le inventa una, ni temporal ni de su Ficha.
+// dirección no se le inventa una, ni temporal ni de sus datos.
 
 import { domicilioEscrito } from './domicilioEscrito.js';
 
@@ -37,7 +37,7 @@ const CAMPOS_DE_UBICACION = ['domicilio', 'lat', 'lng'];
 /**
  * ¿Esta consulta pidió saber dónde se atiende a este Paciente?
  *
- * Se mira si el campo **está**, no si tiene valor: un Paciente sin dirección cargada en su Ficha
+ * Se mira si el campo **está**, no si tiene valor: un Paciente sin dirección cargada en sus datos
  * igual puede tener una temporal ese día, y ahí la respuesta correcta es la temporal. Lo que no
  * se pidió es lo que no hay que completar.
  */

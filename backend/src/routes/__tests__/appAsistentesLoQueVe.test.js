@@ -171,7 +171,7 @@ describe('GET /guardias/:id — la obra social y el número de afiliado, sólo e
       [PACIENTE]: { obra_social: 'Obra Social Inventada', numero_afiliado: 'INV-0001' },
     });
     const ficha = llamadas.find((l) => l.clave === 'GET /rest/v1/personas');
-    assert.ok(ficha.url.includes(FICHA_OBRA_SOCIAL), 'no acotó la lectura a la Ficha de su obra social');
+    assert.ok(ficha.url.includes(FICHA_OBRA_SOCIAL), 'no acotó la lectura a los datos de su obra social');
   });
 
   it('terminada, no la manda ni la busca', async () => {

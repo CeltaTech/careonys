@@ -288,20 +288,11 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.
 
-**Qué ve cada rol sale de qué necesita para cumplir su función.** En la Ficha del cliente, el
-coordinador:
-
-- **Ve y usa entero:** Contacto (nombre, teléfono, correo, localidad), Pacientes, Personas
-  autorizadas, Guardias activas, Historial de reportes y Alertas activas.
-- **No ve:** los datos comerciales —plan, plazo de pago, quién paga—, que hoy están adentro de
-  Contacto y pasan a ser una parte aparte; y la del Pagador —lo que firma y la documentación que se
-  le pide—. Hoy esa parte la ve con `editar_datos_cliente`, que tiene de fábrica
-  (`routes/panelCuentas.js:493`, `:584` y `:652`).
-- **Lo que no ve, lo ve si el Administrador se lo habilita** en «Permisos de Coordinadores».
-- **Un permiso por parte, para ver y para cargar.** No hay uno para mirar y otro para cargar.
-- El backend y la base aplican el mismo corte que la pantalla.
-
-Después, lo mismo con el Legajo del Asistente y la Ficha de Persona del Paciente.
+**Qué ve cada rol sale de qué necesita para cumplir su función.** La Ficha del cliente ya está
+cortada así. Falta lo mismo con el Legajo del Asistente y la Ficha de Persona del Paciente: el
+coordinador no ve lo que no necesita, lo ve si el Administrador se lo habilita en «Permisos de
+Coordinadores», con un permiso por parte para ver y para cargar, y el backend y la base aplican el
+mismo corte que la pantalla.
 
 **El registro de accesos va en este paso.** Es un registro separado del de actividad,
 porque anotan cosas distintas y tienen plazos distintos. **Seis campos por evento:** la Prestadora,

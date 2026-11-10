@@ -1,0 +1,51 @@
+.icono-info {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.icono-info-boton {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--texto-secundario);
+  background: transparent;
+  color: var(--texto-secundario);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icono-info-boton:hover,
+.icono-info-boton:focus-visible {
+  border-color: var(--azul-medio-texto);
+  color: var(--azul-medio-texto);
+}
+
+.icono-info-texto {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(260px, 80vw);
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  box-shadow: var(--sombra-card);
+  color: var(--texto-principal);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  white-space: normal;
+}

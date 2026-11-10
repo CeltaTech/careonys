@@ -5,6 +5,7 @@ import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion'
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { IconoInfo } from '../../components/ui/IconoInfo';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
@@ -293,7 +294,13 @@ function TabPermisos() {
           <tbody>
             {permisos.map((fila) => (
               <tr key={fila.accion}>
-                <td><b>{t.configuracion[`permisos_accion_${fila.accion}`]}</b></td>
+                <td>
+                  <b>{t.configuracion[`permisos_accion_${fila.accion}`]}</b>
+                  <IconoInfo
+                    texto={t.configuracion[`permisos_incluye_${fila.accion}`]}
+                    etiqueta={t.configuracion.permisos_que_incluye}
+                  />
+                </td>
                 <td>
                   <select
                     value={fila.alcance}

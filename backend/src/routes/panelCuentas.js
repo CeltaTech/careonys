@@ -135,7 +135,7 @@ panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res
 // de incorporación en etapas_incorporacion_asistente, ya no hay 5 etapas fijas para todas).
 // La primera etapa (menor "orden") queda aprobada de entrada porque ya se cumplió: es la
 // postulación misma, que ya pasó.
-panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, exigirConfiguracionInicial, async (req, res) => {
+panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_asistentes'), exigirConfiguracionInicial, async (req, res) => {
   // `tipo_asistente_id` es obligatorio: el tipo decide si a esta persona se le va a exigir
   // Matrícula vigente para poder atender. Lo elige quien aprueba, mirando la postulación —
   // no se adivina a partir del texto que la persona escribió en el formulario público.
@@ -168,72 +168,77 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
   let cuentaId;
   let asistenteId;
   try {
-    const tipoAsistenteId = await validarTipoAsistente(db, tipo_asistente_id, prestadoraId);
-    const identidad = await identidadDelAsistente(db, {
-      prestadoraId,
-      documento: postulacion.cuil,
-      dni: postulacion.dni,
-      genero: postulacion.genero,
-    });
+    // La postulación se leyó con la credencial de quien pide, que es lo que prueba que la ve. Lo
+    // que sigue va con el trabajo de la Prestadora, porque el permiso se le puede dar a quien
+    // coordina y `asistentes` sólo acepta altas de la administración — igual que /asistente-directo.
+    await enLaPrestadora(prestadoraId, 'alta de Asistente', async (db) => {
+      const tipoAsistenteId = await validarTipoAsistente(db, tipo_asistente_id, prestadoraId);
+      const identidad = await identidadDelAsistente(db, {
+        prestadoraId,
+        documento: postulacion.cuil,
+        dni: postulacion.dni,
+        genero: postulacion.genero,
+      });
 
-    ({ userId: cuentaId } = await crearCuentaConPerfil({
-      email: postulacion.email,
-      nombre: postulacion.nombre,
-      telefono: postulacion.telefono,
-      rol: 'asistente',
-      prestadoraId,
-      enviarActivacion: true,
-    }));
-
-    const { data: asistenteNuevo, error: errorAsistente } = await db.from('asistentes').insert({
-      usuario_id: cuentaId,
-      nombre: postulacion.nombre,
-      ...identidad,
-      telefono: postulacion.telefono,
-      email: postulacion.email,
-      tipo_asistente_id: tipoAsistenteId,
-      // Dónde acepta trabajar no se copia de la postulación. Ahí la persona escribió sus zonas a
-      // mano, y lo escrito a mano no es ninguno de los lugares de la Prestadora: casarlos por
-      // parecido crearía una coincidencia que nadie decidió. Se eligen en su Legajo, de la lista.
-      estado: 'inactivo',
-      prestadora_id: prestadoraId,
-    }).select('id').single();
-    if (errorAsistente) throw errorDeLaIdentidad(errorAsistente, 'asistente');
-    asistenteId = asistenteNuevo.id;
-
-    const filasVerificacion = await filasDeIncorporacion(db, asistenteId, prestadoraId, {
-      aprobadas: APROBADAS.LA_PRIMERA,
-      revisadoPor: req.usuarioPanel.id,
-    });
-    const { error: errorVerificaciones } = await db.from('verificaciones_asistente').insert(filasVerificacion);
-    if (errorVerificaciones) throw new Error(errorVerificaciones.message);
-
-    // Las referencias que la persona escribió en el formulario pasan a ser una fila cada una, para
-    // que se las pueda llamar y quede constancia de qué contestaron. Se copian acá y no se vuelven
-    // a tipear. Las que vengan sin nombre o sin teléfono se descartan en silencio: una fila
-    // sin teléfono no se puede llamar, así que no hay nada que avisar.
-    const referenciasDeLaPostulacion = (postulacion.referencias_laborales ?? [])
-      .filter((una) => una?.nombre && una?.telefono)
-      .map((una) => ({
-        prestadora_id: prestadoraId,
-        asistente_id: asistenteId,
-        nombre: String(una.nombre).trim(),
-        telefono: String(una.telefono).trim(),
-        vinculo: una.vinculo ? String(una.vinculo).trim() : null,
-        resultado: RESULTADO_PENDIENTE,
+      ({ userId: cuentaId } = await crearCuentaConPerfil({
+        email: postulacion.email,
+        nombre: postulacion.nombre,
+        telefono: postulacion.telefono,
+        rol: 'asistente',
+        prestadoraId,
+        enviarActivacion: true,
       }));
-    if (referenciasDeLaPostulacion.length > 0) {
-      const { error: errorReferencias } = await db
-        .from('referencias_laborales_asistente')
-        .insert(referenciasDeLaPostulacion);
-      if (errorReferencias) throw new Error(errorReferencias.message);
-    }
 
-    const { error: errorUpdate } = await db
-      .from('postulaciones')
-      .update({ asistente_id: asistenteId })
-      .eq('id', postulacionId);
-    if (errorUpdate) throw new Error(errorUpdate.message);
+      const { data: asistenteNuevo, error: errorAsistente } = await db.from('asistentes').insert({
+        usuario_id: cuentaId,
+        nombre: postulacion.nombre,
+        ...identidad,
+        telefono: postulacion.telefono,
+        email: postulacion.email,
+        tipo_asistente_id: tipoAsistenteId,
+        // Dónde acepta trabajar no se copia de la postulación. Ahí la persona escribió sus zonas a
+        // mano, y lo escrito a mano no es ninguno de los lugares de la Prestadora: casarlos por
+        // parecido crearía una coincidencia que nadie decidió. Se eligen en su Legajo, de la lista.
+        estado: 'inactivo',
+        prestadora_id: prestadoraId,
+      }).select('id').single();
+      if (errorAsistente) throw errorDeLaIdentidad(errorAsistente, 'asistente');
+      asistenteId = asistenteNuevo.id;
+
+      const filasVerificacion = await filasDeIncorporacion(db, asistenteId, prestadoraId, {
+        aprobadas: APROBADAS.LA_PRIMERA,
+        revisadoPor: req.usuarioPanel.id,
+      });
+      const { error: errorVerificaciones } = await db.from('verificaciones_asistente').insert(filasVerificacion);
+      if (errorVerificaciones) throw new Error(errorVerificaciones.message);
+
+      // Las referencias que la persona escribió en el formulario pasan a ser una fila cada una, para
+      // que se las pueda llamar y quede constancia de qué contestaron. Se copian acá y no se vuelven
+      // a tipear. Las que vengan sin nombre o sin teléfono se descartan en silencio: una fila
+      // sin teléfono no se puede llamar, así que no hay nada que avisar.
+      const referenciasDeLaPostulacion = (postulacion.referencias_laborales ?? [])
+        .filter((una) => una?.nombre && una?.telefono)
+        .map((una) => ({
+          prestadora_id: prestadoraId,
+          asistente_id: asistenteId,
+          nombre: String(una.nombre).trim(),
+          telefono: String(una.telefono).trim(),
+          vinculo: una.vinculo ? String(una.vinculo).trim() : null,
+          resultado: RESULTADO_PENDIENTE,
+        }));
+      if (referenciasDeLaPostulacion.length > 0) {
+        const { error: errorReferencias } = await db
+          .from('referencias_laborales_asistente')
+          .insert(referenciasDeLaPostulacion);
+        if (errorReferencias) throw new Error(errorReferencias.message);
+      }
+
+      const { error: errorUpdate } = await db
+        .from('postulaciones')
+        .update({ asistente_id: asistenteId })
+        .eq('id', postulacionId);
+      if (errorUpdate) throw new Error(errorUpdate.message);
+    });
 
     res.json({ ok: true, asistenteId });
   } catch (error) {
@@ -253,7 +258,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 // por defecto y, a diferencia de /asistente, no genera filas en `verificaciones_asistente`
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
-panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), exigirConfiguracionInicial, async (req, res) => {
+panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_asistentes'), exigirConfiguracionInicial, async (req, res) => {
   const { nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, valor_hora, horas_semanales, modalidades } = req.body;
   try {
     // Con el trabajo de la Prestadora, porque el permiso se le puede dar a quien coordina, y

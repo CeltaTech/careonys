@@ -11,6 +11,7 @@ import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { esIdentificador } from '../utils/intercambioDeFacturacion.js';
 import { ROLES_PANEL } from '../utils/roles.js';
+import { requierePermiso } from '../utils/permisos.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { parteBienEscrita, parteComparable, sufijoDeLaPrestadora } from '../utils/nombreDeUsuario.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from '../utils/celularDeUnaSolaPersona.js';
@@ -349,11 +350,18 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
 // entrar y el Asistente deja de aparecer para elegirlo. Se nombra al Asistente, y la cuenta se busca
 // adentro de la Prestadora activa: uno de otra Prestadora o sin cuenta se contesta igual que uno que
 // no existe. Con turnos sin terminar no se desactiva, y la respuesta dice cuáles son.
-panelUsuariosRouter.post('/asistentes/:asistenteId/desactivar', requiereRolPanel, soloAdministracion, async (req, res) => {
+// Es parte de «Alta, baja y modificación de Asistentes»: un Coordinador con ese permiso da de baja
+// sólo a un Asistente que esté a su cargo, y eso lo contesta la base con su propia credencial.
+panelUsuariosRouter.post('/asistentes/:asistenteId/desactivar', requiereRolPanel, requierePermiso('gestionar_asistentes'), async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   if (!prestadoraId || !esIdentificador(req.params.asistenteId)) {
     return responderError(res, new ErrorConMotivo('no_encontrado'));
   }
+
+  const { data: alcanza, error: errorAlcance } = await clienteDelPedido(req)
+    .rpc('alcanza_al_asistente_la_sesion', { p_asistente: req.params.asistenteId });
+  if (errorAlcance) return responderError(res, errorAlcance);
+  if (alcanza !== true) return responderError(res, new ErrorConMotivo('no_encontrado'));
 
   const { data: asistente, error } = await enLaPrestadora(prestadoraId, 'Asistente a desactivar', (db) => db
     .from('asistentes')

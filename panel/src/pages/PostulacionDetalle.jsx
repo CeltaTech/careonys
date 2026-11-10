@@ -10,6 +10,7 @@ import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { esAdminOSuperior } from '../lib/roles';
+import { usePermisos } from '../context/PermisosContext';
 import { nombreTipo } from '../lib/tiposAsistente';
 import { traducirCodigos } from '../lib/postulacionCodigos';
 import { useMotivosDeResolucion } from '../hooks/useMotivosDeResolucion';
@@ -34,6 +35,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const { puede } = usePermisos();
   // Sin la configuración inicial completa no se da de alta al Asistente: el botón se ve, apagado.
   const { cargaDeGenteBloqueada } = usePuestaEnMarchaAlDia();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -300,7 +302,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
             postulación todavía se está mirando. */}
         <EntrevistaDePostulacion postulacionId={postulacion.id} />
 
-        {esAdminOSuperior(usuario?.rol) && postulacion.estado === 'aprobado' && (
+        {(esAdminOSuperior(usuario?.rol) || puede('gestionar_asistentes')) && postulacion.estado === 'aprobado' && (
           <section className="panel-tarjeta">
             <div className="panel-tarjeta-titulo">
               <h2>{t.postulaciones.iniciar_verificacion}</h2>

@@ -43,6 +43,7 @@ export function AsistenteDetalle() {
   const [desactivando, setDesactivando] = useState(false);
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  const puedeDarDeBaja = esAdmin || puede('gestionar_asistentes');
   const documentosDelAsistente = useDocumentosDelAsistente(id);
   const intermediacion = tieneModalidad(MODALIDAD.INTERMEDIACION);
 
@@ -62,9 +63,16 @@ export function AsistenteDetalle() {
       setEstado(errorConsulta.code === 'PGRST116' ? 'no_encontrado' : 'error');
       return;
     }
-    setAsistente(conDatosAparte(data));
+    // La vista del Coordinador no trae la cuenta. Con el permiso de dar de baja la necesita para
+    // saber si hay qué desactivar; si la consulta falla, el botón no aparece.
+    let cuenta = {};
+    if (!esAdmin && puedeDarDeBaja) {
+      const { data: deLaCuenta } = await supabase.from('asistentes').select('usuario_id, cuenta_desactivada').eq('id', id).maybeSingle();
+      cuenta = deLaCuenta ?? {};
+    }
+    setAsistente(conDatosAparte({ ...data, ...cuenta }));
     setEstado('listo');
-  }, [id, esAdmin, t]);
+  }, [id, esAdmin, puedeDarDeBaja, t]);
 
   useEffect(() => {
     recargar();
@@ -92,8 +100,8 @@ export function AsistenteDetalle() {
         <Button variant="secondary" onClick={() => navigate('/asistentes')}>
           <span aria-hidden="true">←</span> {t.asistentes.volver_al_padron}
         </Button>
-        {/* Desactivar es de la administración, y sólo hay qué desactivar si el Asistente tiene cuenta. */}
-        {esAdmin && asistente.usuario_id && asistente.cuenta_desactivada === false && (
+        {/* Desactivar es parte de «Alta, baja y modificación de Asistentes», y sólo hay qué desactivar si el Asistente tiene cuenta. */}
+        {puedeDarDeBaja && asistente.usuario_id && asistente.cuenta_desactivada === false && (
           <Button variant="secondary" onClick={() => setDesactivando(true)}>
             {t.asistentes.cuenta.desactivar}
           </Button>

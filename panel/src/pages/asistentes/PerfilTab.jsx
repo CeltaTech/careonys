@@ -62,7 +62,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
   const { usuario } = useAuth();
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
-  const puedeEditarIdentidad = esAdmin || puede('editar_identidad_asistente');
+  const puedeEditarIdentidad = esAdmin || puede('gestionar_asistentes');
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   const { modalidades } = useModalidades();
   /* La lista de lugares de la Prestadora, pedida una sola vez para las tres cosas que la usan en

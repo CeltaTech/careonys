@@ -30,6 +30,8 @@ let choqueAlReactivar = null;
 let conTurnosPorDelante = false;
 let turnosQueTraban = [];
 let asistenteExiste = true;
+let coordinadorConElPermiso = false;
+let asistenteASuCargo = true;
 const ASISTENTE = '55555555-5555-4555-8555-555555555555';
 
 const DESACTIVADA = {
@@ -86,6 +88,16 @@ const baseFalsa = createServer((req, res) => {
     if (clave === 'GET /rest/v1/asistentes') {
       const fila = credencial?.role === 'trabajo_sin_persona' && asistenteExiste ? { usuario_id: CUENTA } : null;
       respuesta = unoSolo ? fila : (fila ? [fila] : []);
+    }
+    // Las dos preguntas que se le hacen a la base con la credencial de quien pide: con la del
+    // trabajo de la Prestadora contestan que no, porque esa credencial no es nadie.
+    if (clave === 'POST /rest/v1/rpc/tiene_permiso_la_sesion') {
+      respuesta = credencial?.role !== 'trabajo_sin_persona'
+        && (rolDeQuienLlama === 'admin_prestadora' || coordinadorConElPermiso);
+    }
+    if (clave === 'POST /rest/v1/rpc/alcanza_al_asistente_la_sesion') {
+      respuesta = credencial?.role !== 'trabajo_sin_persona' && asistenteExiste
+        && (rolDeQuienLlama === 'admin_prestadora' || asistenteASuCargo);
     }
     if (clave === 'POST /rest/v1/rpc/turnos_que_traban_la_desactivacion') {
       respuesta = credencial?.role === 'trabajo_sin_persona' ? turnosQueTraban : [];
@@ -145,6 +157,8 @@ beforeEach(() => {
   conTurnosPorDelante = false;
   turnosQueTraban = [];
   asistenteExiste = true;
+  coordinadorConElPermiso = false;
+  asistenteASuCargo = true;
 });
 
 async function pedir(metodo, ruta, cuerpo) {
@@ -405,10 +419,31 @@ describe('la baja de un Asistente', () => {
     assert.equal(cuerpo.turnos.length, 2);
   });
 
-  it('un coordinador no desactiva a un Asistente', async () => {
+  it('un coordinador sin el permiso no desactiva a un Asistente', async () => {
     rolDeQuienLlama = 'coordinador';
     const { estado } = await pedir('POST', RUTA, { motivo: 'Motivo inventado' });
     assert.equal(estado, 403);
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/desactivar_la_cuenta'));
+  });
+
+  it('un coordinador con el permiso desactiva a un Asistente a su cargo, preguntándolo con su propia credencial', async () => {
+    rolDeQuienLlama = 'coordinador';
+    coordinadorConElPermiso = true;
+    const { estado } = await pedir('POST', RUTA, { motivo: 'Motivo inventado' });
+    assert.equal(estado, 200);
+    const alcance = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/alcanza_al_asistente_la_sesion');
+    assert.ok(alcance, 'no se preguntó si el Asistente está a su cargo');
+    assert.notEqual(leerCredencial(alcance.credencial)?.role, 'trabajo_sin_persona');
+    assert.deepEqual(JSON.parse(alcance.cuerpo), { p_asistente: ASISTENTE });
+    assert.equal(llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/desactivar_la_cuenta').length, 1);
+  });
+
+  it('un coordinador con el permiso no desactiva a un Asistente que no está a su cargo', async () => {
+    rolDeQuienLlama = 'coordinador';
+    coordinadorConElPermiso = true;
+    asistenteASuCargo = false;
+    const { estado } = await pedir('POST', RUTA, { motivo: 'Motivo inventado' });
+    assert.equal(estado, 404);
     assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/desactivar_la_cuenta'));
   });
 

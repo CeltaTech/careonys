@@ -360,7 +360,10 @@ importes; `alcanza_la_informacion_de_salud_la_sesion`, que recibe un
 Paciente y contesta si la regla de salud deja leerlo a quien inició sesión —falso si es de otra
 Prestadora—, y que el backend pregunta antes de toda lectura de información de salud que hace con
 el trabajo de la Prestadora para una persona; `reactivar_la_cuenta`, que recibe una cuenta y sólo la
-reactiva si quien pide es el Administrador de esa misma Prestadora; `pedir_medicacion`, que corre
+reactiva si quien pide es el Administrador de esa misma Prestadora;
+`alcanza_al_asistente_la_sesion`, que recibe un Asistente, corre con los permisos de quien llama y
+contesta si es de su Prestadora y está a su cargo —el Administrador alcanza a todos—, y que el
+backend pregunta antes de dar de baja a un Asistente; `pedir_medicacion`, que corre
 con los permisos de quien llama, toma la Prestadora y el Cliente del Paciente que la base le deja
 ver, y guarda la indicación y lo firmado en una sola operación;
 `dar_de_baja_el_servicio` y `reactivar_el_servicio`, que reciben un Servicio, corren con los

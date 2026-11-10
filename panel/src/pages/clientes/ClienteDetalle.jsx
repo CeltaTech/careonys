@@ -395,7 +395,7 @@ export function ClienteDetalle() {
       {pacienteParaEquipo && (
         <EquipoDelPaciente
           paciente={pacienteParaEquipo}
-          puedeEditar={esAdmin || puede('corregir_equipo_del_paciente')}
+          puedeEditar={esAdmin || puede('modificar_asistentes_del_servicio')}
           onClose={() => setPacienteParaEquipo(null)}
         />
       )}

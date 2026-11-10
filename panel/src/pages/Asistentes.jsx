@@ -40,7 +40,7 @@ export function Asistentes() {
   const { usuario } = useAuth();
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
-  const puedeAltaManual = esAdmin || puede('alta_manual_asistente');
+  const puedeAltaManual = esAdmin || puede('gestionar_asistentes');
   // Sin la configuración inicial completa no se carga gente: el botón se ve, apagado.
   const { cargaDeGenteBloqueada } = usePuestaEnMarchaAlDia();
   // Los Asistentes desactivados los ve sólo el Administrador, y la elección no se recuerda: cada

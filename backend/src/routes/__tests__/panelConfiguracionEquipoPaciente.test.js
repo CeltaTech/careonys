@@ -19,7 +19,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
-import { REGLA_DE_EQUIPO } from '../../utils/equipoDelPaciente.js';
+import { REGLA_DE_EQUIPO } from '../../utils/equipoDelServicio.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 

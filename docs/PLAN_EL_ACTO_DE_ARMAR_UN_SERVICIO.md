@@ -145,12 +145,8 @@ de suspender una sola serie, ni uno de los horarios pactados, ni de decir hasta 
 
 ### 4.5. La zona está modelada y cargada, y las dos decisiones que dependen de ella la ignoran
 
-- **Quién coordina se deduce desde las Asistentes ya asignadas.** `panel/src/lib/equipoDelPaciente.js`
-  → `coordinadoresDelEquipo()`: si nadie fijó a alguien a mano, son todos los que alcanzan por sus
-  zonas. Pero la lista de zonas sale del equipo, y el equipo sale de los turnos. Sin turnos no hay
-  equipo, sin equipo no hay zona que cruzar, y sin zona no sale ningún coordinador. **Un Cliente
-  recién firmado no muestra a nadie coordinando, teniendo el lugar del Paciente cargado.** Y el
-  casillero que fija a alguien a mano nunca se puebla: nada escribe esa anotación.
+- **Quién coordina es la persona asignada al Servicio**, y el equipo del Servicio la muestra tal
+  cual —`panel/src/lib/equipoDelServicio.js`—. La zona no interviene.
 - **El cálculo de candidatas no tiene el criterio de la zona.** `panel/src/lib/candidatos.js` no
   contiene ni la palabra «zonas» ni la palabra «lugares» (grep vacío). La ubicación entra sólo como
   distancia en línea recta entre las coordenadas de la Asistente y las del Paciente, y **se calla si
@@ -377,15 +373,14 @@ Y de antes, la regla de fondo y los tres estados: «Si no hay nadie coordinando,
 ese cliente», y **sin asignar / asignado, y ahí va el nombre / vacante, y ahí aparece la
 administración.**
 
-**Qué tiene el código hoy, y no es esto.** La coordinación de un Paciente es **una lista**, y el
-sistema la **deduce de las zonas** cuando nadie fijó a alguien a mano —`coordinadoresDelEquipo()`, en
-`panel/src/lib/equipoDelPaciente.js`—. Fijar a una persona es opcional y no es condición de nada. Las
-tres diferencias:
+**Qué tiene el código hoy.** Cada Servicio tiene una sola persona que lo coordina, asignada por la
+administración —`servicios.coordinador_id`—, y el equipo del Servicio la muestra a ella. Lo que
+falta:
 
 | | Hoy | Lo que fijó el Desarrollador |
 |---|---|---|
-| Quién responde por el Servicio | nadie en particular: una lista deducida de las zonas | **una sola persona, asignada** |
-| Cómo se llega | el sistema la deduce | **se asigna a mano al acordar el Servicio** |
+| Quién responde por el Servicio | una sola persona, asignada | **una sola persona, asignada** |
+| Cómo se llega | se asigna a mano | **se asigna a mano al acordar el Servicio** |
 | Si falta | el Servicio funciona igual | **el Servicio no se habilita** |
 
 #### Responder por el Servicio y ver una emergencia son dos cosas distintas
@@ -446,9 +441,8 @@ Acá la sugerencia se acepta o se rechaza al dar de alta el Servicio, y quien de
 | Dónde tiene centrada su carga | contar el trabajo por lugar, y quedarse con los lugares donde se concentra | nada |
 | Qué tan grande es esa carga | contar cuánto trabajo tiene encima | nada |
 
-**Por qué no existen, verificado en el código.** No hay ningún mecanismo que sugiera un coordinador:
-lo único parecido es `coordinadoresDelEquipo()` —`panel/src/lib/equipoDelPaciente.js:226`—, que
-**deduce** una lista por zona y no propone a nadie. Y toda la carga que el sistema mide hoy es **de
+**Por qué no existen, verificado en el código.** No hay ningún mecanismo que sugiera un coordinador.
+Y toda la carga que el sistema mide hoy es **de
 Asistentes**, no de coordinadores: `resumenDelPadron.js:50` cuenta guardias por Asistente y
 `candidatos.js:269` cuenta sus horas semanales. Lo único que se cuenta por usuario del Panel es
 **cuántos lugares alcanza** —`backend/src/routes/panelUsuarios.js:65-77`, mostrado en
@@ -462,9 +456,7 @@ la asignación de este paso hecha, contar por lugar sale cruzando con el lugar d
 Persona del Paciente (`personas.lugar_id`).
 
 **Orden, entonces:** primero la asignación —que es lo que crea el dato—, y la sugerencia después, con
-los Servicios ya asignados. Las dos columnas donde eso podría anotarse ya existen y **hoy no las
-escribe nadie**: `equipo_paciente.usuario_id` sólo se llena a mano, y `guardias.coordinador_id` no la
-escribe ninguna línea del Panel ni del backend. Cuál de las dos se usa es parte de este paso.
+los Servicios ya asignados, que se cuentan por `servicios.coordinador_id`.
 
 **Si no hay coordinador asignado, el Servicio no comienza.** Y hasta que se asigne uno, **el
 Administrador es el Coordinador general**: quien distribuye los Servicios entre los coordinadores. Lo

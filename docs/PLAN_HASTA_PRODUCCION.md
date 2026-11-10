@@ -610,7 +610,7 @@ La base ya recorta a la Coordinadora a sus Servicios
 que coordina y los de quien cubre por ausencia; los Clientes que los contratan y sus Pacientes, con
 su información de salud, medicación, alertas, rangos vitales y personas autorizadas; y las guardias
 y series de esos Servicios con todo lo que cuelga de ellas. Una alarma tomada le deja ver esa
-guardia. El equipo del Paciente muestra como Coordinador a quien coordina sus Servicios. Las tomas
+guardia. El equipo del Servicio muestra como Coordinador a quien lo coordina. Las tomas
 de alarma y las reasignaciones por emergencia se leen sólo de lo que ve; WhatsApp, por zona del
 Asistente; y los archivos de prescripciones, documento firmado y autorizaciones de monitoreo, sólo de
 los Pacientes que ve. Del Directorio de Personas lee las que tienen un rol en sus Clientes y
@@ -1487,8 +1487,7 @@ texto opaco. Lo que cada Prestadora tenga hoy en uso se conserva.
 **Se contesta después del acto de armar el Servicio**, más arriba en esta lista, por dos motivos. El
 primero es que **la premisa con la que estaba escrita esta pregunta no es cierta**: decía que hoy el
 Coordinador se asigna por guardia, y no se asigna en ninguna parte — la columna del coordinador en la
-guardia no la escribe ninguna línea del Panel ni del backend, sólo la siembra `supabase/seed.sql`, y
-lo que hay en pantalla es una lista deducida de las zonas en `panel/src/lib/equipoDelPaciente.js`. El
+guardia no la escribe ninguna línea del Panel ni del backend, sólo la siembra `supabase/seed.sql`. El
 segundo es que ese acto cambia el modelo: **una sola persona coordina todo el Servicio, se la asigna
 al acordarlo, y sin ella el Servicio no se habilita.** Con eso construido, la pregunta es si hace
 falta alguien más además de esa persona, que es otra pregunta.

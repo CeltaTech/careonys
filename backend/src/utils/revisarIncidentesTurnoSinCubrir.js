@@ -2,7 +2,7 @@ import { supabase } from '../db/connection.js';
 import { enviarEmail } from './email.js';
 import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardias } from './pacientesDeGuardia.js';
-import { equipoDeUnPaciente } from './equipoDeUnPaciente.js';
+import { equipoDeUnServicio } from './equipoDeUnServicio.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
@@ -33,14 +33,14 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // SALVO QUE ALGUIEN LE HAYA QUITADO EL ASISTENTE. Ahí el incidente lo abre la base en el momento
 // (`asignar_turno`), falte lo que falte, y esta tarea lo recuerda y lo cierra igual que a los suyos.
 //
-// EL RECORDATORIO NO VA AL DESTINO GENERAL DE LA PRESTADORA, VA A QUIEN COORDINA A ESE PACIENTE.
+// EL RECORDATORIO NO VA AL DESTINO GENERAL DE LA PRESTADORA, VA A QUIEN COORDINA ESE SERVICIO.
 // Un mensaje que le llega a seis personas no le llega a ninguna, y acá hay alguien que puede tapar
-// el turno ahora mismo. Por eso sale por correo a esa persona, con el equipo del Paciente adentro
+// el turno ahora mismo. Por eso sale por correo a esa persona, con el equipo del Servicio adentro
 // —primero quien cubre francos— para que no tenga que ir a buscar a quién llamar.
 //
 // Y POR ESO NO ESTÁ EN EL CATÁLOGO DE MENSAJES. Ese catálogo sirve para elegir a qué dirección va
 // cada mensaje y si se manda o no; acá el destinatario no es una dirección elegible sino la persona
-// que coordina a ese Paciente, y el recordatorio de un defecto grave no se apaga. Lo que sí decide
+// que coordina ese Servicio, y el recordatorio de un defecto grave no se apaga. Lo que sí decide
 // cada Prestadora son los dos números: a cuántas horas se abre y cada cuánto se insiste.
 //
 // QUÉ CIERRA SOLO Y QUÉ NO. Cierra solo lo que la base ya dice: apareció una Asistente asignada
@@ -87,7 +87,7 @@ export async function revisarIncidentesTurnoSinCubrir() {
 async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   const { data: guardias, error: errorGuardias } = await supabase
     .from('guardias')
-    .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
+    .select('id, servicio_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
     .eq('prestadora_id', prestadoraId)
     .gte('fecha', desde)
     .lte('fecha', hasta);
@@ -142,7 +142,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   if (faltan.length) {
     const { data: lejanas, error: errorLejanas } = await supabase
       .from('guardias')
-      .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
+      .select('id, servicio_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
       .eq('prestadora_id', prestadoraId)
       .in('id', faltan);
     if (errorLejanas) {
@@ -169,7 +169,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
     regla: await reglaDeLaToma(prestadoraId),
   });
 
-  // El incidente que lleva demasiado abierto deja de ser asunto de quien coordina a ese Paciente.
+  // El incidente que lleva demasiado abierto deja de ser asunto de quien coordina ese Servicio.
   // Cuándo pasa eso, y a quién le llega, está en `avisosDeEscalon.js`. Dos consultas por vuelta,
   // no dos por incidente.
   const configEscalada = await configuracionDeLaEscalada(prestadoraId);
@@ -324,7 +324,7 @@ async function armarElRecordatorio({ guardia, prestadoraId, idioma, horas, veces
   }
 
   const { destinatarios, candidatos, cubrenFrancos } = await aQuienSeLeAvisa({
-    pacientes,
+    servicioId: guardia.servicio_id,
     prestadoraId,
     ahora,
   });
@@ -386,32 +386,16 @@ async function recordar({ incidente, guardia, prestadoraId, idioma, horas, ahora
 /**
  * A quién se le escribe y con qué lista de nombres adentro.
  *
- * Un turno puede cubrir a más de un Paciente —un matrimonio, una residencia—, así que se junta el
- * equipo de todos: quien coordina a cualquiera de ellos tiene que enterarse, y quien cubre francos
- * de cualquiera de ellos es alguien a quien llamar.
+ * El equipo es del Servicio del turno, aunque el turno cubra a más de un Paciente —un matrimonio,
+ * una residencia—: lo atiende un solo equipo.
  */
-async function aQuienSeLeAvisa({ pacientes, prestadoraId, ahora }) {
-  const destinatarios = new Set();
-  const candidatos = new Set();
-  const cubrenFrancos = new Set();
-
-  for (const paciente of pacientes) {
-    const equipo = await equipoDeUnPaciente({ pacienteId: paciente.id, prestadoraId, ahora });
-    for (const coordinador of equipo.coordinadores) {
-      if (coordinador.email) destinatarios.add(coordinador.email);
-    }
-    for (const asistente of equipo.asistentes) {
-      if (asistente.nombre) candidatos.add(asistente.nombre);
-    }
-    for (const asistente of equipo.cubrenFrancos) {
-      if (asistente.nombre) cubrenFrancos.add(asistente.nombre);
-    }
-  }
-
+async function aQuienSeLeAvisa({ servicioId, prestadoraId, ahora }) {
+  const equipo = await equipoDeUnServicio({ servicioId, prestadoraId, ahora });
+  const nombres = (lista) => [...new Set(lista.map((a) => a.nombre).filter(Boolean))];
   return {
-    destinatarios: [...destinatarios],
-    candidatos: [...candidatos],
-    cubrenFrancos: [...cubrenFrancos],
+    destinatarios: [...new Set(equipo.coordinadores.map((c) => c.email).filter(Boolean))],
+    candidatos: nombres(equipo.asistentes),
+    cubrenFrancos: nombres(equipo.cubrenFrancos),
   };
 }
 

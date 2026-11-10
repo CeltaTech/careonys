@@ -1,16 +1,16 @@
-// Punto único de verdad de QUIÉNES SON EL EQUIPO DE UN PACIENTE.
+// Punto único de verdad de QUIÉNES SON EL EQUIPO DE UN SERVICIO.
 // ============================================================================
 //
-// QUÉ ES UN EQUIPO. Las Asistentes que habitualmente trabajan con un Paciente, más la persona
-// que las coordina. Adentro del equipo puede haber una franquera, que cubre los días francos de
-// las demás y, en general, las emergencias.
+// QUÉ ES UN EQUIPO. Las Asistentes que habitualmente trabajan en un Servicio, más la persona que
+// las coordina. Un Servicio puede atender a varios Pacientes, y el equipo es uno solo para todos.
+// Adentro del equipo puede haber una franquera, que cubre los días francos de las demás y, en
+// general, las emergencias.
 //
-// POR QUÉ HACÍA FALTA. Hasta ahora la continuidad existía solamente como puntos al ordenar la
-// lista de candidatos: se contaban las veces que alguien ya había atendido a ese Paciente, y
-// listo. Esa cuenta no distingue a la que está todas las tardes hace dos años de la que cubrió
-// cinco veces el año pasado, y no hay ningún lugar donde consultar "quiénes son los de este
-// Paciente". Todo lo que viene después —el expediente del turno vacío, a quién se llama cuando
-// falta alguien— necesita esa lista.
+// POR QUÉ HACÍA FALTA. La continuidad existía solamente como puntos al ordenar la lista de
+// candidatos. Esa cuenta no distingue a la que está todas las tardes hace dos años de la que
+// cubrió cinco veces el año pasado, y no había ningún lugar donde consultar "quiénes son los de
+// este Servicio". Todo lo que viene después —el expediente del turno vacío, a quién se llama
+// cuando falta alguien— necesita esa lista.
 //
 // SE ARMA SOLO Y SE CORRIGE A MANO, y ése es el corazón de este archivo. El sistema **propone**
 // el equipo mirando los turnos que ya pasaron y las series vigentes; quien **fija** es la
@@ -38,7 +38,7 @@ import { inicioDeGuardia } from './horarios.js';
  * semana pasada tampoco—, y la ventana es lo que hace que alguien que dejó de venir salga solo.
  */
 export const REGLA_DE_EQUIPO = {
-  /** Cuántos turnos con ese Paciente hacen falta para entrar solo. */
+  /** Cuántos turnos en ese Servicio hacen falta para entrar solo. */
   turnos_para_ser_del_equipo: 3,
   /** Hasta cuántos días hacia atrás se miran esos turnos. */
   dias_hacia_atras: 90,
@@ -66,11 +66,11 @@ export const SITUACIONES = ['sumada', 'sacada'];
 export const ORIGEN = {
   /** Cumple la regla: tiene los turnos que hacen falta en la ventana que se mira. */
   POR_SUS_TURNOS: 'por_sus_turnos',
-  /** Tiene una serie vigente con ese Paciente. Es el caso más claro de "habitual". */
+  /** Tiene una serie vigente en ese Servicio. Es el caso más claro de "habitual". */
   POR_SU_SERIE: 'por_su_serie',
   /** La puso la Coordinadora. */
   A_MANO: 'a_mano',
-  /** Coordina un Servicio vigente de quien contrata la atención de este Paciente. */
+  /** Es quien coordina el Servicio. */
   POR_SU_SERVICIO: 'por_su_servicio',
 };
 
@@ -112,44 +112,40 @@ export function soloLoQueCorreDeLaRegla(cambios) {
 }
 
 /**
- * El equipo de un Paciente.
+ * El equipo de un Servicio.
  *
  * Todo llega ya cargado: este archivo no habla con la base, para poder correr igual en el Panel
  * y en el backend.
  *
  * @param {object} entrada
- * @param {string} entrada.pacienteId De quién es el equipo.
- * @param {Array} entrada.guardias Turnos que tocan a ese Paciente, con `asistente_id`, `estado`,
- *   `fecha` y `hora_inicio`. Los que no lo tocan se ignoran, así que se puede pasar la lista
- *   entera de la pantalla.
- * @param {Map|null} entrada.pacientesPorGuardia Id de guardia → ids de Paciente. Si falta, se usa
- *   la columna vieja `paciente_id` de cada guardia.
- * @param {Array} entrada.series Series vigentes que tocan a ese Paciente, con `asistente_id`.
+ * @param {string} entrada.servicioId De qué Servicio es el equipo.
+ * @param {Array} entrada.guardias Turnos con `servicio_id`, `asistente_id`, `estado`, `fecha` y
+ *   `hora_inicio`. Los de otro Servicio se ignoran, así que se puede pasar la lista entera.
+ * @param {Array} entrada.series Series con `servicio_id` y `asistente_id`.
  * @param {Array} entrada.decisiones Lo guardado: `{ asistente_id, usuario_id, situacion,
  *   cubre_francos }`.
- * @param {Array} entrada.coordinadoresDeSusServicios Ids de quienes coordinan los Servicios vigentes de este Paciente.
+ * @param {string|null} entrada.coordinadorDelServicio Id de quien coordina el Servicio.
  * @param {object} entrada.regla Los números ya resueltos por `reglaDeEquipoDe`.
  * @param {Date} entrada.ahora Desde cuándo se cuenta hacia atrás.
  * @returns {{ asistentes: Array, coordinadores: Array, afuera: Array }}
  */
-export function equipoDelPaciente({
-  pacienteId,
+export function equipoDelServicio({
+  servicioId,
   guardias = [],
-  pacientesPorGuardia = null,
   series = [],
   decisiones = [],
-  coordinadoresDeSusServicios = [],
+  coordinadorDelServicio = null,
   regla = REGLA_DE_EQUIPO,
   ahora = new Date(),
 } = {}) {
   const decision = decisionesPorPersona(decisiones);
   const desde = new Date(ahora.getTime() - regla.dias_hacia_atras * 24 * 60 * 60 * 1000);
 
-  // Cuántos turnos hizo cada una con este Paciente adentro de la ventana, y cuándo fue el último.
+  // Cuántos turnos hizo cada una en este Servicio adentro de la ventana, y cuándo fue el último.
   const cuenta = new Map();
   for (const guardia of guardias) {
     if (!guardia?.asistente_id) continue;
-    if (!tocaAlPaciente(guardia, pacienteId, pacientesPorGuardia)) continue;
+    if (!servicioId || guardia.servicio_id !== servicioId) continue;
     if (guardia.estado === 'cancelada' || guardia.estado === 'ausente') continue;
     const empezo = inicioDeGuardia(guardia);
     if (!empezo || empezo >= ahora || empezo < desde) continue;
@@ -160,7 +156,9 @@ export function equipoDelPaciente({
   }
 
   const conSerie = new Set(
-    series.filter((s) => s?.asistente_id && serieVigente(s)).map((s) => s.asistente_id)
+    series
+      .filter((s) => s?.asistente_id && servicioId && s.servicio_id === servicioId && serieVigente(s))
+      .map((s) => s.asistente_id)
   );
 
   // Candidatas a integrar el equipo: las que llegan solas y las que alguien puso a mano.
@@ -211,27 +209,26 @@ export function equipoDelPaciente({
 
   return {
     asistentes,
-    coordinadores: coordinadoresDelEquipo(decisiones, decision, coordinadoresDeSusServicios),
+    coordinadores: coordinadoresDelEquipo(decisiones, decision, coordinadorDelServicio),
     afuera,
   };
 }
 
 /**
- * Quién coordina a este Paciente.
+ * Quién coordina el equipo.
  *
- * Si nadie lo fijó, son quienes coordinan sus Servicios vigentes —cada Servicio tiene uno, y es
- * quien ve sus turnos—. En cuanto alguien fija a una persona, manda esa: un aviso que le llega a
- * seis personas no le llega a ninguna.
+ * Si nadie lo fijó, es quien coordina el Servicio. En cuanto alguien fija a una persona, manda
+ * esa: un aviso que le llega a seis personas no le llega a ninguna.
  */
-function coordinadoresDelEquipo(decisiones, decision, coordinadoresDeSusServicios) {
+function coordinadoresDelEquipo(decisiones, decision, coordinadorDelServicio) {
   const fijados = decisiones
     .filter((d) => d?.usuario_id && d.situacion !== 'sacada')
     .map((d) => ({ usuario_id: d.usuario_id, origen: ORIGEN.A_MANO, decidido: true }));
   if (fijados.length) return fijados;
 
-  return [...new Set(coordinadoresDeSusServicios)]
-    .filter((id) => decision.get(claveCoordinador(id))?.situacion !== 'sacada')
-    .map((id) => ({ usuario_id: id, origen: ORIGEN.POR_SU_SERVICIO, decidido: false }));
+  if (!coordinadorDelServicio) return [];
+  if (decision.get(claveCoordinador(coordinadorDelServicio))?.situacion === 'sacada') return [];
+  return [{ usuario_id: coordinadorDelServicio, origen: ORIGEN.POR_SU_SERVICIO, decidido: false }];
 }
 
 function decisionesPorPersona(decisiones) {
@@ -246,12 +243,6 @@ function decisionesPorPersona(decisiones) {
 const claveAsistente = (id) => `a:${id}`;
 const claveCoordinador = (id) => `c:${id}`;
 
-function tocaAlPaciente(guardia, pacienteId, pacientesPorGuardia) {
-  const deLaLista = pacientesPorGuardia?.get(guardia.id);
-  if (deLaLista?.length) return deLaLista.includes(pacienteId);
-  return guardia.paciente_id === pacienteId;
-}
-
 function serieVigente(serie) {
   if (serie.estado && serie.estado !== 'activa') return false;
   if (!serie.vigente_hasta) return true;
@@ -265,7 +256,7 @@ function hoyEnTexto() {
   ).padStart(2, '0')}`;
 }
 
-/** Quién cubre los francos de este Paciente, que es a quien se llama primero cuando falta alguien. */
+/** Quién cubre los francos del Servicio, que es a quien se llama primero cuando falta alguien. */
 export function quienCubreFrancos(equipo) {
   return (equipo?.asistentes ?? []).filter((a) => a.cubre_francos);
 }

@@ -1,5 +1,5 @@
-/**
- * Quiénes son el equipo de un Paciente.
+﻿/**
+ * Quiénes son el equipo de un Servicio.
  *
  *   npx vitest run --dir src/lib   (desde `panel/`)
  *
@@ -11,32 +11,32 @@
  *  2. Que lo deducido quede congelado. Por eso se guardan sólo las correcciones: la que dejó de
  *     venir tiene que salir sola, sin que nadie la saque.
  *  3. Que entre quien no corresponde. Un turno cancelado, uno que todavía no pasó o uno de otro
- *     Paciente no hacen a nadie del equipo.
+ *     Servicio no hacen a nadie del equipo.
  */
 import { describe, expect, it } from 'vitest';
 import {
   ORIGEN,
   REGLA_DE_EQUIPO,
   REGLA_QUE_SE_PUEDE_TOCAR,
-  equipoDelPaciente,
+  equipoDelServicio,
   quienCubreFrancos,
   reglaDeEquipoDe,
   revisarRegla,
   soloLoQueCorreDeLaRegla,
-} from '../equipoDelPaciente';
+} from '../equipoDelServicio';
 
-const PACIENTE = 'paciente-1';
-const OTRO_PACIENTE = 'paciente-2';
+const SERVICIO = 'servicio-1';
+const OTRO_SERVICIO = 'servicio-2';
 const AHORA = new Date('2026-09-16T12:00:00');
 
-/** Un turno de ese Paciente, hecho por esa Asistente, hace tantos días. */
+/** Un turno de ese Servicio, hecho por esa Asistente, hace tantos días. */
 function turno(asistenteId, diasAtras, extra = {}) {
   const dia = new Date(AHORA.getTime() - diasAtras * 24 * 60 * 60 * 1000);
   const fecha = dia.toISOString().slice(0, 10);
   return {
-    id: `g-${asistenteId}-${diasAtras}-${extra.paciente_id ?? PACIENTE}`,
+    id: `g-${asistenteId}-${diasAtras}-${extra.servicio_id ?? SERVICIO}`,
     asistente_id: asistenteId,
-    paciente_id: PACIENTE,
+    servicio_id: SERVICIO,
     fecha,
     hora_inicio: '08:00',
     hora_fin: '16:00',
@@ -54,8 +54,8 @@ const idsDe = (equipo) => equipo.asistentes.map((a) => a.asistente_id);
 
 describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   it('con los turnos que pide la regla, entra sola', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: turnosSemanales('ana', 3),
       ahora: AHORA,
     });
@@ -66,8 +66,8 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   });
 
   it('con un turno menos, no entra', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: turnosSemanales('ana', 2),
       ahora: AHORA,
     });
@@ -76,8 +76,8 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
 
   it('los turnos viejos no cuentan, así que quien dejó de venir sale solo', () => {
     // Tres turnos, pero de hace más de un año. Nadie tiene que sacarla a mano.
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: [turno('ana', 400), turno('ana', 407), turno('ana', 414)],
       ahora: AHORA,
     });
@@ -85,8 +85,8 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   });
 
   it('los turnos que todavía no pasaron no cuentan', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: [turno('ana', -1), turno('ana', -8), turno('ana', -15)],
       ahora: AHORA,
     });
@@ -94,8 +94,8 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   });
 
   it('los turnos cancelados y los que la Asistente faltó no cuentan', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: [
         turno('ana', 7),
         turno('ana', 14, { estado: 'cancelada' }),
@@ -106,28 +106,34 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
     expect(idsDe(equipo)).toEqual([]);
   });
 
-  it('los turnos de otro Paciente no cuentan', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
-      guardias: turnosSemanales('ana', 3, { paciente_id: OTRO_PACIENTE }),
+  it('los turnos de otro Servicio no cuentan', () => {
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
+      guardias: turnosSemanales('ana', 3, { servicio_id: OTRO_SERVICIO }),
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual([]);
   });
 
-  it('un turno atiende a varios Pacientes a la vez, y cuenta para todos', () => {
-    // Una guardia puede tocar a más de un Paciente: la respuesta a "a quién atiende" es una lista.
-    const guardias = turnosSemanales('ana', 3, { paciente_id: null });
-    const pacientesPorGuardia = new Map(guardias.map((g) => [g.id, [OTRO_PACIENTE, PACIENTE]]));
-    const equipo = equipoDelPaciente({ pacienteId: PACIENTE, guardias, pacientesPorGuardia, ahora: AHORA });
-    expect(idsDe(equipo)).toEqual(['ana']);
+  it('sin Servicio no hay equipo', () => {
+    const equipo = equipoDelServicio({ servicioId: null, guardias: turnosSemanales('ana', 3), ahora: AHORA });
+    expect(idsDe(equipo)).toEqual([]);
+  });
+
+  it('una serie de otro Servicio no basta', () => {
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
+      series: [{ asistente_id: 'beatriz', estado: 'activa', servicio_id: OTRO_SERVICIO }],
+      ahora: AHORA,
+    });
+    expect(idsDe(equipo)).toEqual([]);
   });
 
   it('una serie vigente basta, aunque todavía no haya hecho ningún turno', () => {
     // Es el caso de quien entra la semana que viene con un turno fijo semanal.
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
-      series: [{ asistente_id: 'beatriz', estado: 'activa' }],
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
+      series: [{ asistente_id: 'beatriz', estado: 'activa', servicio_id: SERVICIO }],
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual(['beatriz']);
@@ -135,18 +141,18 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   });
 
   it('una serie terminada no basta', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
-      series: [{ asistente_id: 'beatriz', estado: 'activa', vigente_hasta: '2026-01-31' }],
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
+      series: [{ asistente_id: 'beatriz', estado: 'activa', vigente_hasta: '2026-01-31', servicio_id: SERVICIO }],
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual([]);
   });
 
   it('una serie sin Asistente fija no mete a nadie', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
-      series: [{ asistente_id: null, estado: 'activa' }],
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
+      series: [{ asistente_id: null, estado: 'activa', servicio_id: SERVICIO }],
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual([]);
@@ -155,8 +161,8 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
 
 describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   it('puede sumar a alguien que no llega sola', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: [turno('ana', 7)],
       decisiones: [{ asistente_id: 'ana', situacion: 'sumada' }],
       ahora: AHORA,
@@ -167,8 +173,8 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   });
 
   it('puede sumar a alguien que nunca hizo un turno', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       decisiones: [{ asistente_id: 'carla', situacion: 'sumada' }],
       ahora: AHORA,
     });
@@ -177,8 +183,8 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   });
 
   it('puede sacar a alguien que el sistema pondría, y no vuelve a entrar', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: turnosSemanales('ana', 5),
       decisiones: [{ asistente_id: 'ana', situacion: 'sacada' }],
       ahora: AHORA,
@@ -189,8 +195,8 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   });
 
   it('marca quién cubre francos, y esa persona va primero', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: [...turnosSemanales('ana', 8), ...turnosSemanales('dora', 3)],
       decisiones: [{ asistente_id: 'dora', situacion: 'sumada', cubre_francos: true }],
       ahora: AHORA,
@@ -200,8 +206,8 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   });
 
   it('el resto se ordena por cuántos turnos hizo', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: [...turnosSemanales('ana', 3), ...turnosSemanales('elsa', 9)],
       ahora: AHORA,
     });
@@ -211,8 +217,8 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   it('la corrección no congela lo deducido: quien sigue viniendo sigue estando', () => {
     // Guardar sólo las correcciones es lo que hace posible esto. Si se guardara la lista entera,
     // Ana tendría que haber sido agregada a mano el día que empezó a venir.
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: turnosSemanales('ana', 4),
       decisiones: [{ asistente_id: 'carla', situacion: 'sumada' }],
       ahora: AHORA,
@@ -221,22 +227,26 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   });
 });
 
-describe('quién coordina a este Paciente', () => {
-  it('sin nadie fijado, son quienes coordinan sus Servicios', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
-      coordinadoresDeSusServicios: ['u-1', 'u-2', 'u-1'],
+describe('quién coordina el equipo', () => {
+  it('sin nadie fijado, es quien coordina el Servicio', () => {
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
+      coordinadorDelServicio: 'u-1',
       ahora: AHORA,
     });
-    expect(equipo.coordinadores.map((c) => c.usuario_id)).toEqual(['u-1', 'u-2']);
+    expect(equipo.coordinadores.map((c) => c.usuario_id)).toEqual(['u-1']);
     expect(equipo.coordinadores[0].origen).toBe(ORIGEN.POR_SU_SERVICIO);
+  });
+
+  it('sin coordinador ni nadie fijado, no hay a quién avisarle', () => {
+    expect(equipoDelServicio({ servicioId: SERVICIO, ahora: AHORA }).coordinadores).toEqual([]);
   });
 
   it('con alguien fijado, manda esa persona sola', () => {
     // Un mensaje que le llega a seis personas no le llega a ninguna.
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
-      coordinadoresDeSusServicios: ['u-1', 'u-2'],
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
+      coordinadorDelServicio: 'u-1',
       decisiones: [{ usuario_id: 'u-3', situacion: 'sumada' }],
       ahora: AHORA,
     });
@@ -244,19 +254,19 @@ describe('quién coordina a este Paciente', () => {
     expect(equipo.coordinadores[0].origen).toBe(ORIGEN.A_MANO);
   });
 
-  it('a quien coordina un Servicio se lo puede sacar', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
-      coordinadoresDeSusServicios: ['u-1', 'u-2'],
+  it('a quien coordina el Servicio se lo puede sacar', () => {
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
+      coordinadorDelServicio: 'u-1',
       decisiones: [{ usuario_id: 'u-1', situacion: 'sacada' }],
       ahora: AHORA,
     });
-    expect(equipo.coordinadores.map((c) => c.usuario_id)).toEqual(['u-2']);
+    expect(equipo.coordinadores).toEqual([]);
   });
 
   it('quien coordina no se mezcla con las Asistentes', () => {
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: turnosSemanales('ana', 3),
       decisiones: [{ usuario_id: 'u-3', situacion: 'sumada' }],
       ahora: AHORA,
@@ -274,8 +284,8 @@ describe('cada Prestadora corre los números de la regla', () => {
   it('lo corrido manda, y cambia de verdad quién entra', () => {
     const regla = reglaDeEquipoDe({ turnos_para_ser_del_equipo: 2 });
     expect(regla.turnos_para_ser_del_equipo).toBe(2);
-    const equipo = equipoDelPaciente({
-      pacienteId: PACIENTE,
+    const equipo = equipoDelServicio({
+      servicioId: SERVICIO,
       guardias: turnosSemanales('ana', 2),
       regla,
       ahora: AHORA,
@@ -285,9 +295,9 @@ describe('cada Prestadora corre los números de la regla', () => {
 
   it('la ventana corrida también cambia quién entra', () => {
     const guardias = [turno('ana', 100), turno('ana', 110), turno('ana', 120)];
-    expect(idsDe(equipoDelPaciente({ pacienteId: PACIENTE, guardias, ahora: AHORA }))).toEqual([]);
+    expect(idsDe(equipoDelServicio({ servicioId: SERVICIO, guardias, ahora: AHORA }))).toEqual([]);
     const regla = reglaDeEquipoDe({ dias_hacia_atras: 365 });
-    expect(idsDe(equipoDelPaciente({ pacienteId: PACIENTE, guardias, regla, ahora: AHORA }))).toEqual(['ana']);
+    expect(idsDe(equipoDelServicio({ servicioId: SERVICIO, guardias, regla, ahora: AHORA }))).toEqual(['ana']);
   });
 
   it('un número fuera de borde o que no es número se ignora', () => {
@@ -319,7 +329,7 @@ describe('cada Prestadora corre los números de la regla', () => {
     }
   });
 
-  it('ninguna ventana puede llegar a cero, que dejaría a todo Paciente sin equipo', () => {
+  it('ninguna ventana puede llegar a cero, que dejaría a todo Servicio sin equipo', () => {
     expect(REGLA_QUE_SE_PUEDE_TOCAR.dias_hacia_atras.minimo).toBeGreaterThan(0);
     expect(REGLA_QUE_SE_PUEDE_TOCAR.turnos_para_ser_del_equipo.minimo).toBeGreaterThan(0);
   });

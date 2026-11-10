@@ -32,7 +32,7 @@ import {
   reglaDeEquipoDe,
   revisarRegla,
   soloLoQueCorreDeLaRegla,
-} from '../utils/equipoDelPaciente.js';
+} from '../utils/equipoDelServicio.js';
 // Con alias porque las tres funciones de configuración se llaman igual en los dos archivos: el
 // molde es el mismo a propósito, y renombrarlas en el original para que no choquen acá escondería
 // que son la misma clase de cosa.

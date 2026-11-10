@@ -271,8 +271,8 @@ cosa que se agregue acá:
   saber algo que el sistema no sabe. Cuando se asigna con una alerta delante, la decisión queda
   escrita en `auditoria_asignaciones_con_aviso`, que no se puede corregir ni borrar. Vive en
   `panel/src/lib/candidatos.js` y `panel/src/lib/avisosAsignacion.js`.
-- **El equipo de un Paciente** son las Asistentes que habitualmente trabajan con él más la persona
-  que los coordina. Dentro del equipo puede haber una franquera, que cubre los días francos y las
+- **El equipo de un Servicio** son las Asistentes que habitualmente trabajan en él más la persona
+  que lo coordina; un Servicio con varios Pacientes tiene un solo equipo. Dentro del equipo puede haber una franquera, que cubre los días francos y las
   emergencias. Lo guardado se llama por su función —*cubre francos*— y no cambia nunca; el nombre
   visible lo configura cada Prestadora, con «franquera / franquero» como valor de fábrica.
 - **La Asistente que está adentro se queda hasta que llegue el relevo.** No se le pregunta —es un

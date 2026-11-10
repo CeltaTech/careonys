@@ -192,9 +192,9 @@ export const GRUPOS = [
     ],
   },
   {
-    que: 'quiénes son el equipo de un Paciente',
-    original: 'panel/src/lib/equipoDelPaciente.js',
-    copias: ['backend/src/utils/equipoDelPaciente.js'],
+    que: 'quiénes son el equipo de un Servicio',
+    original: 'panel/src/lib/equipoDelServicio.js',
+    copias: ['backend/src/utils/equipoDelServicio.js'],
   },
   {
     que: 'si el Asistente está de licencia el día de una guardia',

@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
-import { cargarGuardiasDePacientes } from '../../lib/pacientesDeGuardia';
-import { ORIGEN, equipoDelPaciente, reglaDeEquipoDe } from '../../lib/equipoDelPaciente';
+import { ORIGEN, equipoDelServicio, reglaDeEquipoDe } from '../../lib/equipoDelServicio';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
@@ -11,19 +10,22 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
-// Quiénes son el equipo de este Paciente.
+// Quiénes atienden este Servicio.
 //
-// La lista se arma sola —quienes tienen turnos habituales con él, más quien lo coordina— y la
-// Coordinadora la corrige: puede sumar, sacar y marcar quién cubre francos. Lo único que se
-// guarda son esas correcciones; la lista entera se vuelve a deducir cada vez que se abre esta
-// pantalla, así que quien empezó a venir aparece sola y quien dejó de venir desaparece sola.
+// El equipo es del Servicio, no de cada Paciente: un Servicio con dos Pacientes —un matrimonio, una
+// residencia— tiene un solo equipo. La lista se arma sola —quienes tienen turnos habituales en el
+// Servicio, más quien lo coordina— y la coordinación la corrige: puede sumar, sacar y marcar quién
+// cubre francos. Lo único que se guarda son esas correcciones; la lista entera se vuelve a deducir
+// cada vez que se abre, así que quien empezó a venir aparece sola y quien dejó de venir desaparece
+// sola.
 //
 // Quién entra sin que nadie la ponga no se decide acá: la regla vive en
-// `src/lib/equipoDelPaciente.js`, que se copia al backend, y los dos números que la gobiernan los
+// `src/lib/equipoDelServicio.js`, que se copia al backend, y los dos números que la gobiernan los
 // configura cada Prestadora.
-export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
+export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
+  const e = t.equipo_servicio;
   const confirmarDestructivo = useConfirmarDestructivo();
 
   const [estado, setEstado] = useState('cargando');
@@ -35,7 +37,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
   const [candidatas, setCandidatas] = useState([]);
   const [aSumar, setASumar] = useState('');
 
-  const explicar = useCallback((e) => mensajeDeError(e, t, 'equipo_paciente'), [t]);
+  const explicar = useCallback((falla) => mensajeDeError(falla, t, 'equipo_servicio'), [t]);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -43,108 +45,70 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
     setErrorFila(null);
 
     try {
-      const guardias = await cargarGuardiasDePacientes(
-        [paciente.id],
-        'id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado'
-      );
-
-      const [vinculosSerie, configuracion, decisiones] = await Promise.all([
-        supabase.from('series_guardias_pacientes').select('serie_id').eq('paciente_id', paciente.id),
+      const [guardias, series, configuracion, decisiones] = await Promise.all([
+        supabase
+          .from('guardias')
+          .select('id, servicio_id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado')
+          .eq('servicio_id', servicio.id),
+        supabase
+          .from('series_guardias')
+          .select('id, servicio_id, asistente_id, estado, vigente_hasta')
+          .eq('servicio_id', servicio.id),
         supabase
           .from('configuracion_equipo_paciente')
           .select('regla')
-          .eq('prestadora_id', paciente.prestadora_id)
+          .eq('prestadora_id', servicio.prestadora_id)
           .maybeSingle(),
-        supabase.from('equipo_paciente').select('*').eq('paciente_id', paciente.id),
+        supabase.from('equipo_servicio').select('*').eq('servicio_id', servicio.id),
       ]);
-      if (vinculosSerie.error) throw vinculosSerie.error;
-      if (configuracion.error) throw configuracion.error;
-      if (decisiones.error) throw decisiones.error;
+      for (const respuesta of [guardias, series, configuracion, decisiones]) {
+        if (respuesta.error) throw respuesta.error;
+      }
 
-      // La serie puede venir por la lista o por la columna vieja, igual que las guardias.
-      const idsSerie = [...new Set((vinculosSerie.data ?? []).map((v) => v.serie_id).filter(Boolean))];
-      const [porLista, porColumnaVieja] = await Promise.all([
-        idsSerie.length
-          ? supabase.from('series_guardias').select('id, asistente_id, estado, vigente_hasta').in('id', idsSerie)
-          : Promise.resolve({ data: [], error: null }),
-        supabase
-          .from('series_guardias')
-          .select('id, asistente_id, estado, vigente_hasta')
-          .eq('paciente_id', paciente.id),
-      ]);
-      if (porLista.error) throw porLista.error;
-      if (porColumnaVieja.error) throw porColumnaVieja.error;
-      const series = [
-        ...new Map([...(porLista.data ?? []), ...(porColumnaVieja.data ?? [])].map((s) => [s.id, s])).values(),
-      ];
-
-      // Todas las guardias que volvieron tocan a este Paciente: se preguntó por él.
-      const pacientesPorGuardia = new Map(guardias.map((g) => [g.id, [paciente.id]]));
-
-      // Quien coordina a este Paciente es quien coordina sus Servicios vigentes: cada Servicio
-      // tiene uno.
-      const susServicios = await supabase
-        .from('servicios')
-        .select('coordinador_id')
-        .eq('cliente_id', paciente.cliente_id)
-        .eq('estado', 'vigente')
-        .not('coordinador_id', 'is', null);
-      if (susServicios.error) throw susServicios.error;
-      const idsCoordinadores = [...new Set((susServicios.data ?? []).map((s) => s.coordinador_id))];
-      const alcanzan = idsCoordinadores.length
-        ? await supabase.from('usuarios').select('id, nombre, apellido').in('id', idsCoordinadores)
-        : { data: [], error: null };
-      if (alcanzan.error) throw alcanzan.error;
-
-      const conCoordinadores = equipoDelPaciente({
-        pacienteId: paciente.id,
-        guardias,
-        pacientesPorGuardia,
-        series,
+      const equipo = equipoDelServicio({
+        servicioId: servicio.id,
+        guardias: guardias.data ?? [],
+        series: series.data ?? [],
         decisiones: decisiones.data ?? [],
+        coordinadorDelServicio: servicio.coordinador_id ?? null,
         regla: reglaDeEquipoDe(configuracion.data?.regla),
-        coordinadoresDeSusServicios: idsCoordinadores,
       });
 
-      const idsAsistentes = [
-        ...new Set([...conCoordinadores.asistentes, ...conCoordinadores.afuera].map((a) => a.asistente_id)),
-      ];
-      const [delEquipo, todas] = await Promise.all([
+      const idsAsistentes = [...new Set([...equipo.asistentes, ...equipo.afuera].map((a) => a.asistente_id))];
+      const idsUsuarios = [...new Set(equipo.coordinadores.map((c) => c.usuario_id))];
+      const [delEquipo, todas, usuarios] = await Promise.all([
         idsAsistentes.length
           ? supabase.from('asistentes').select('id, nombre, apellido').in('id', idsAsistentes)
           : Promise.resolve({ data: [], error: null }),
         // Para el desplegable de «sumar a alguien». La vista recorta lo que un Coordinador puede
         // ver de una Asistente; acá alcanza con el nombre.
         supabase.from('asistentes').select('id, nombre, apellido').eq('cuenta_desactivada', false).order('apellido'),
+        idsUsuarios.length
+          ? supabase.from('usuarios').select('id, nombre, apellido').in('id', idsUsuarios)
+          : Promise.resolve({ data: [], error: null }),
       ]);
-      if (delEquipo.error) throw delEquipo.error;
-      if (todas.error) throw todas.error;
-      const porId = new Map((delEquipo.data ?? []).map((a) => [a.id, a]));
+      for (const respuesta of [delEquipo, todas, usuarios]) {
+        if (respuesta.error) throw respuesta.error;
+      }
 
-      const nombresDeUsuario = new Map(
-        [...(alcanzan.data ?? [])].map((u) => [u.id, `${u.apellido ?? ''} ${u.nombre ?? ''}`.trim()])
-      );
+      const nombre = (p) => `${p.apellido ?? ''} ${p.nombre ?? ''}`.trim();
+      const porId = new Map([...(todas.data ?? []), ...(delEquipo.data ?? [])].map((a) => [a.id, a]));
+      const nombresDeUsuario = new Map((usuarios.data ?? []).map((u) => [u.id, nombre(u)]));
 
       setDatos({
-        ...conCoordinadores,
-        nombreDeAsistente: (id) => {
-          const asistente = porId.get(id) ?? (todas.data ?? []).find((a) => a.id === id);
-          return asistente ? `${asistente.apellido ?? ''} ${asistente.nombre ?? ''}`.trim() : id;
-        },
-        nombreDeUsuario: (id) => nombresDeUsuario.get(id) || id,
+        ...equipo,
+        nombreDeAsistente: (id) => (porId.has(id) ? nombre(porId.get(id)) : '—'),
+        nombreDeUsuario: (id) => nombresDeUsuario.get(id) || '—',
       });
 
-      const yaEstan = new Set([
-        ...conCoordinadores.asistentes.map((a) => a.asistente_id),
-        ...conCoordinadores.afuera.map((a) => a.asistente_id),
-      ]);
+      const yaEstan = new Set([...equipo.asistentes, ...equipo.afuera].map((a) => a.asistente_id));
       setCandidatas((todas.data ?? []).filter((a) => !yaEstan.has(a.id)));
       setEstado('listo');
-    } catch (e) {
-      setError(explicar(e));
+    } catch (falla) {
+      setError(explicar(falla));
       setEstado('error');
     }
-  }, [paciente.id, paciente.cliente_id, paciente.prestadora_id, explicar]);
+  }, [servicio.id, servicio.prestadora_id, servicio.coordinador_id, explicar]);
 
   useEffect(() => {
     recargar();
@@ -154,16 +118,16 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
   async function decidir(fila, cambios) {
     setEnCurso(fila.asistente_id ?? fila.usuario_id);
     setErrorFila(null);
-    const { error: errorUpsert } = await supabase.from('equipo_paciente').upsert(
+    const { error: errorUpsert } = await supabase.from('equipo_servicio').upsert(
       {
-        prestadora_id: paciente.prestadora_id,
-        paciente_id: paciente.id,
+        prestadora_id: servicio.prestadora_id,
+        servicio_id: servicio.id,
         asistente_id: fila.asistente_id ?? null,
         usuario_id: fila.usuario_id ?? null,
         situacion: 'sumada',
         ...cambios,
       },
-      { onConflict: fila.asistente_id ? 'paciente_id,asistente_id' : 'paciente_id,usuario_id' }
+      { onConflict: fila.asistente_id ? 'servicio_id,asistente_id' : 'servicio_id,usuario_id' }
     );
     setEnCurso(null);
     if (errorUpsert) {
@@ -177,7 +141,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
   async function volverADeducir(fila) {
     setEnCurso(fila.asistente_id ?? fila.usuario_id);
     setErrorFila(null);
-    let consulta = supabase.from('equipo_paciente').delete().eq('paciente_id', paciente.id);
+    let consulta = supabase.from('equipo_servicio').delete().eq('servicio_id', servicio.id);
     consulta = fila.asistente_id
       ? consulta.eq('asistente_id', fila.asistente_id)
       : consulta.eq('usuario_id', fila.usuario_id);
@@ -191,25 +155,25 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
   }
 
   async function sacar(fila) {
-    if (!(await confirmarDestructivo(t.equipo_paciente.confirmar_retirar))) return;
+    if (!(await confirmarDestructivo(e.confirmar_retirar))) return;
     decidir(fila, { situacion: 'sacada', cubre_francos: false });
   }
 
   const explicacionDeOrigen = useMemo(
     () => ({
-      [ORIGEN.POR_SUS_TURNOS]: t.equipo_paciente.origen_por_sus_turnos,
-      [ORIGEN.POR_SU_SERIE]: t.equipo_paciente.origen_por_su_serie,
-      [ORIGEN.A_MANO]: t.equipo_paciente.origen_a_mano,
-      [ORIGEN.POR_SU_SERVICIO]: t.equipo_paciente.origen_por_su_servicio,
+      [ORIGEN.POR_SUS_TURNOS]: e.origen_por_sus_turnos,
+      [ORIGEN.POR_SU_SERIE]: e.origen_por_su_serie,
+      [ORIGEN.A_MANO]: e.origen_a_mano,
+      [ORIGEN.POR_SU_SERVICIO]: e.origen_por_su_servicio,
     }),
-    [t]
+    [e]
   );
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+      <div className="panel-modal" onClick={(ev) => ev.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>
-          {t.equipo_paciente.titulo} — {paciente.nombre}
+          {e.titulo} — {servicio.etiqueta || '—'}
         </h2>
 
         {estado === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
@@ -221,17 +185,17 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
 
             <section className="panel-tarjeta tarjeta-desplazable">
               <div className="panel-tarjeta-titulo">
-                <h2>{t.equipo_paciente.asistentes_titulo}</h2>
+                <h2>{e.asistentes_titulo}</h2>
               </div>
               {datos.asistentes.length === 0 ? (
-                <p className="molde-vacio">{t.equipo_paciente.sin_asistentes}</p>
+                <p className="molde-vacio">{e.sin_asistentes}</p>
               ) : (
                 <table className="panel-tabla">
                   <thead>
                     <tr>
-                      <th>{t.equipo_paciente.col_persona}</th>
-                      <th>{t.equipo_paciente.col_por_que}</th>
-                      <th>{t.equipo_paciente.col_turnos}</th>
+                      <th>{e.col_persona}</th>
+                      <th>{e.col_por_que}</th>
+                      <th>{e.col_turnos}</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -240,7 +204,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
                       <tr key={a.asistente_id}>
                         <td>
                           <b>{datos.nombreDeAsistente(a.asistente_id)}</b>
-                          {a.cubre_francos && <div className="panel-mini">{t.equipo_paciente.cubre_francos}</div>}
+                          {a.cubre_francos && <div className="panel-mini">{e.cubre_francos}</div>}
                         </td>
                         <td>{explicacionDeOrigen[a.origen]}</td>
                         <td>{a.turnos}</td>
@@ -252,16 +216,14 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
                                 disabled={enCurso === a.asistente_id}
                                 onClick={() => decidir(a, { cubre_francos: !a.cubre_francos })}
                               >
-                                {a.cubre_francos
-                                  ? t.equipo_paciente.no_cubre_francos
-                                  : t.equipo_paciente.marcar_cubre_francos}
+                                {a.cubre_francos ? e.no_cubre_francos : e.marcar_cubre_francos}
                               </Button>{' '}
                               <Button
                                 variant="secondary"
                                 disabled={enCurso === a.asistente_id}
                                 onClick={() => sacar(a)}
                               >
-                                {t.equipo_paciente.retirar}
+                                {e.retirar}
                               </Button>
                             </>
                           )}
@@ -275,8 +237,8 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
               {puedeEditar && candidatas.length > 0 && (
                 <>
                   <div className="molde-campo">
-                    <label htmlFor="equipo-sumar">{t.equipo_paciente.sumar}</label>
-                    <select id="equipo-sumar" value={aSumar} onChange={(e) => setASumar(e.target.value)}>
+                    <label htmlFor="equipo-sumar">{e.sumar}</label>
+                    <select id="equipo-sumar" value={aSumar} onChange={(ev) => setASumar(ev.target.value)}>
                       <option value="">—</option>
                       {candidatas.map((a) => (
                         <option key={a.id} value={a.id}>
@@ -295,7 +257,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
                         decidir({ asistente_id: id }, { situacion: 'sumada' });
                       }}
                     >
-                      {t.equipo_paciente.agregar}
+                      {e.agregar}
                     </Button>
                   </div>
                 </>
@@ -306,7 +268,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
             {datos.coordinadores.length > 0 && (
               <section className="panel-tarjeta">
                 <div className="panel-tarjeta-titulo">
-                  <h2>{t.equipo_paciente.coordinacion_titulo}</h2>
+                  <h2>{e.coordinacion_titulo}</h2>
                 </div>
                 {datos.coordinadores.map((c) => (
                   <div className="panel-fila-alerta" key={c.usuario_id}>
@@ -320,7 +282,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
                         disabled={enCurso === c.usuario_id}
                         onClick={() => volverADeducir(c)}
                       >
-                        {t.equipo_paciente.volver_a_deducir}
+                        {e.volver_a_deducir}
                       </Button>
                     )}
                   </div>
@@ -331,7 +293,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
             {datos.afuera.length > 0 && (
               <section className="panel-tarjeta">
                 <div className="panel-tarjeta-titulo">
-                  <h2>{t.equipo_paciente.afuera_titulo}</h2>
+                  <h2>{e.afuera_titulo}</h2>
                 </div>
                 {datos.afuera.map((a) => (
                   <div className="panel-fila-alerta" key={a.asistente_id}>
@@ -344,7 +306,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
                         disabled={enCurso === a.asistente_id}
                         onClick={() => volverADeducir(a)}
                       >
-                        {t.equipo_paciente.volver_a_deducir}
+                        {e.volver_a_deducir}
                       </Button>
                     )}
                   </div>

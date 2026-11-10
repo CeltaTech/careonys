@@ -22,6 +22,7 @@ import { TareasDelServicio } from './TareasDelServicio';
 import { PagosDelServicio } from './PagosDelServicio';
 import { BajaDelServicioModal } from './BajaDelServicioModal';
 import { ReactivarElServicioModal } from './ReactivarElServicioModal';
+import { EquipoDelServicio } from './EquipoDelServicio';
 import './servicios.css';
 
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
@@ -57,6 +58,8 @@ export function ServicioDetalle() {
   const puedeEditarPagos = esAdmin || puede('editar_datos_cliente');
   const puedeRegistrarConsentimiento = esAdmin || puede('registrar_consentimiento_pagador');
   const gestionaServicios = esAdmin || puede('gestionar_servicios');
+  const modificaAsistentes = esAdmin || puede('modificar_asistentes_del_servicio');
+  const [viendoEquipo, setViendoEquipo] = useState(false);
   const [dandoDeBaja, setDandoDeBaja] = useState(false);
   const [reactivando, setReactivando] = useState(false);
   const [servicio, setServicio] = useState(null);
@@ -84,7 +87,7 @@ export function ServicioDetalle() {
     const { data: s, error: fallaServicio } = await supabase
       .from('servicios')
       // De qué Cliente es sale de `cliente_id`; sus datos de contacto los trae `contactosDeClientes`.
-      .select('id, etiqueta, estado, created_at, cliente_id, coordinador_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento, contratante_persona_id')
+      .select('id, prestadora_id, etiqueta, estado, created_at, cliente_id, coordinador_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento, contratante_persona_id')
       .eq('id', id)
       .single();
 
@@ -296,6 +299,9 @@ export function ServicioDetalle() {
         <Button variant="secondary" onClick={() => navigate('/servicios')}>
           {d.volver}
         </Button>
+        <Button variant="secondary" onClick={() => setViendoEquipo(true)}>
+          {t.equipo_servicio.titulo}
+        </Button>
         {gestionaServicios && servicio.estado === ESTADO_ACTIVO && (
           <Button variant="secondary" onClick={() => setDandoDeBaja(true)}>
             {t.servicios.baja.boton}
@@ -307,6 +313,14 @@ export function ServicioDetalle() {
           </Button>
         )}
       </Cabecera>
+
+      {viendoEquipo && (
+        <EquipoDelServicio
+          servicio={servicio}
+          puedeEditar={modificaAsistentes}
+          onClose={() => setViendoEquipo(false)}
+        />
+      )}
 
       {dandoDeBaja && (
         <BajaDelServicioModal

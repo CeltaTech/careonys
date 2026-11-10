@@ -403,11 +403,13 @@ describe('quién vio la información de salud de un Cliente', () => {
 
 describe('el año del registro de accesos que se va a borrar', () => {
   const anioDeHoy = new Date().getUTCFullYear();
-  /* La base contesta, para la Prestadora de la sesión, el año más viejo y cuándo vence. La de
-     mentira hace lo mismo con dos Prestadoras con datos cargados. */
+  const enDias = (dias) => new Date(Date.now() + dias * 86400000).toISOString().slice(0, 10);
+  /* La base contesta, para la Prestadora de la sesión, el año más viejo, cuándo vence y cuándo
+     salen los avisos. La de mentira hace lo mismo con dos Prestadoras con datos cargados: la A ya
+     pasó el preaviso, la B todavía no llegó. */
   const VENCE = {
-    [PRESTADORA_A]: { anio: anioDeHoy - 3, desde: `${anioDeHoy - 3}-01-01T00:00:00Z`, hasta: `${anioDeHoy - 2}-01-01T00:00:00Z`, se_borra_el: `${anioDeHoy + 1}-01-01` },
-    [PRESTADORA_B]: { anio: anioDeHoy - 1, desde: `${anioDeHoy - 1}-01-01T00:00:00Z`, hasta: `${anioDeHoy}-01-01T00:00:00Z`, se_borra_el: `${anioDeHoy + 3}-01-01` },
+    [PRESTADORA_A]: { anio: anioDeHoy - 3, desde: `${anioDeHoy - 3}-01-01T00:00:00Z`, hasta: `${anioDeHoy - 2}-01-01T00:00:00Z`, se_borra_el: enDias(20), preaviso_el: enDias(-40), notificacion_el: enDias(-10) },
+    [PRESTADORA_B]: { anio: anioDeHoy - 1, desde: `${anioDeHoy - 1}-01-01T00:00:00Z`, hasta: `${anioDeHoy}-01-01T00:00:00Z`, se_borra_el: enDias(61), preaviso_el: enDias(1), notificacion_el: enDias(31) },
   };
   const VIEJOS = [
     { id: 'v-a-1', prestadora_id: PRESTADORA_A, usuario_id: 'ua-1', paciente_id: 'pa-1', categorias: ['reportes'], momento: `${anioDeHoy - 3}-05-01T10:00:00Z`, origen: 'GET /api/panel/x' },
@@ -432,16 +434,16 @@ describe('el año del registro de accesos que se va a borrar', () => {
     return { estado: r.status, cuerpo: await r.json() };
   };
 
-  it('el año anterior al borrado se avisa', async () => {
+  it('desde el preaviso hasta el borrado se avisa', async () => {
     rolDelUsuario = 'admin_prestadora';
     prestadoraDelUsuario = PRESTADORA_A;
     const { estado, cuerpo } = await pedir();
     assert.equal(estado, 200);
-    assert.deepEqual(cuerpo, { anio: anioDeHoy - 3, se_borra_el: `${anioDeHoy + 1}-01-01` });
+    assert.deepEqual(cuerpo, { anio: anioDeHoy - 3, se_borra_el: enDias(20) });
     assert.notEqual(credencialDe('POST /rest/v1/rpc/consultas_a_hce_por_vencer').role, 'trabajo_sin_persona', 'se preguntó sin la sesión');
   });
 
-  it('antes de ese año no hay nada que decir, ni nada que bajar', async () => {
+  it('antes del preaviso no hay nada que decir, ni nada que bajar', async () => {
     rolDelUsuario = 'admin_prestadora';
     prestadoraDelUsuario = PRESTADORA_B;
     assert.deepEqual((await pedir()).cuerpo, {});

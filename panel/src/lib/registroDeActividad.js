@@ -1,6 +1,8 @@
 // Cómo se lee un renglón del registro de actividad. Lo usan la Auditoría y el historial de una
 // cuenta desactivada, así que vive acá y no en cada pantalla.
 
+const ACCIONES_DEL_BORRADO = new Set(['borrado_por_vencimiento', 'preaviso_de_borrado', 'notificacion_de_borrado']);
+
 export function nombreDeLaAccion(fila, t) {
   // Sin frase para esa acción se dice que la acción no tiene nombre, y no se muestra la clave:
   // un identificador interno no le dice nada a quien lee, y además delata cómo se llama algo
@@ -29,8 +31,8 @@ export function queCambio(fila, t) {
     return [permiso, alcance].filter(Boolean).join(' — ') || '—';
   }
 
-  // El borrado del registro de accesos vencido dice de qué año era.
-  if (fila.accion === 'borrado_por_vencimiento' && detalle.anio) return String(detalle.anio);
+  // El borrado del registro de accesos vencido, y sus dos avisos, dicen de qué año era.
+  if (ACCIONES_DEL_BORRADO.has(fila.accion) && detalle.anio) return String(detalle.anio);
 
   const rol = detalle.rol_nuevo || detalle.rol_anterior;
   if (rol) return t.usuarios_panel[`rol_${rol}`] || '—';

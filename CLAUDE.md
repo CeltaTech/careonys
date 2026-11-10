@@ -391,7 +391,11 @@ Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama �
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial; `borrar_consultas_a_hce_vencidas`, que no recibe nada, borra de esa Prestadora los
 años enteros del registro de accesos cuyo plazo de su país ya venció y deja el corte y el
-registro de actividad; y `registrar_autorizacion_signos_vitales_del_titular`, que recibe quién firma,
+registro de actividad; `aviso_de_borrado_de_consultas_a_hce_pendiente`, que no recibe nada y
+contesta qué correo toca hoy —preaviso o notificación— antes de ese borrado, y
+`anotar_aviso_de_borrado_de_consultas_a_hce`, que recibe el año y el aviso, sólo anota el que la
+base tiene pendiente y deja la constancia en el registro de actividad; y
+`registrar_autorizacion_signos_vitales_del_titular`, que recibe quién firma,
 comprueba que sea el titular de ese Paciente y guarda la firma de la aplicación —sólo si el texto
 firmado es el vigente— o el documento que él subió, que queda pendiente. Con las dos credenciales,
 `nombrar_apoderado`, `reemplazar_poder_del_apoderado` y `quitar_apoderado` reciben un Cliente y una
@@ -443,8 +447,10 @@ con `supabase.from`. El registro se lee por Cliente en
 `/api/panel/auditoria/accesos-a-la-informacion-de-salud/<cliente>`, sólo la administración.
 **El registro se conserva lo que diga el país** —el plazo está en `reglas_de_conservacion`; un
 país sin plazo no borra nada— y se borra solo, de a un año calendario entero, con un corte en
-`cortes_de_consultas_a_hce` que deja seguir comprobando la cadena. Durante el año anterior al
-borrado, la Auditoría muestra la franja y la descarga de ese año.
+`cortes_de_consultas_a_hce` que deja seguir comprobando la cadena. Antes del borrado salen dos
+correos al email de contacto de la Prestadora —el preaviso y la notificación, con los días que fija
+el país en la misma tabla— y cada uno deja constancia en el registro de actividad recién después
+de salir. Desde el preaviso hasta el borrado, la Auditoría muestra la franja y la descarga de ese año.
 
 ### Cumplimiento normativo
 

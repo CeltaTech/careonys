@@ -159,8 +159,10 @@ CeltaTech con un permiso de acceso.
 lo borra nadie. Todas esas escrituras van con la credencial de la persona, así que el autor queda.
 
 **La conservación corre sólo para el registro de accesos.** `reglas_de_conservacion` tiene un
-renglón: Argentina, `consultas_a_hce`, 36 meses. Una tarea diaria del backend borra, de a una
-Prestadora por vez, los años enteros vencidos, y deja un corte que mantiene comprobable la cadena.
+renglón: Argentina, `consultas_a_hce`, 36 meses, con preaviso por correo a los 60 días y
+notificación a los 30. Una tarea diaria del backend manda esos dos correos a la Prestadora y deja
+constancia de cada uno; otra borra, de a una Prestadora por vez, los años enteros vencidos, y deja
+un corte que mantiene comprobable la cadena.
 Para todo lo demás no hay plazo ni tarea que purgue, y no hay fecha de fallecimiento guardada. Lo
 que hay es borrado lógico: un dato marcado como borrado queda para siempre.
 

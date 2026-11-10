@@ -62,6 +62,7 @@ import { avisarLosCambiosDeEmail } from './utils/avisosDeEmailCambiado.js';
 import { avisarLosPlazosDeUbicacionVencidos } from './utils/plazoDeLaUbicacion.js';
 import { copiarLosArchivosAlRespaldo } from './utils/copiaDeLosArchivos.js';
 import { borrarLoVencidoDelRegistroDeAccesos } from './utils/borradoDelRegistroDeAccesos.js';
+import { avisarElBorradoDelRegistroDeAccesos } from './utils/avisoDeBorradoDelRegistroDeAccesos.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
@@ -332,6 +333,10 @@ programar(avisarLosPlazosDeUbicacionVencidos, UNA_HORA_MS, { conLaPrestadora: tr
 // El borrado del registro de accesos a la información de salud que ya cumplió el plazo de su país.
 // Se borra de a un año entero, así que alcanza con mirar una vez por día.
 programar(borrarLoVencidoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: true });
+
+// Los dos correos que avisan ese borrado antes de que ocurra: el preaviso y la notificación. Qué
+// aviso toca hoy lo decide la base; el que no salió hoy sale mañana.
+programar(avisarElBorradoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: true });
 
 // La copia de los archivos a los depósitos de respaldo. No pasa por `programar` porque no trabaja
 // de a una Prestadora: copia todo, con la credencial de la copia de respaldo, que sólo lee los

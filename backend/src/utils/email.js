@@ -217,7 +217,7 @@ async function destinatariosEvento(evento, prestadoraId) {
 // La dirección que la Prestadora declaró como suya. Se usa para dos cosas distintas y por eso
 // vive en una sola función: es el destino de los mensajes que no tienen destinatario configurado,
 // y es adonde tienen que llegar las respuestas de la gente que recibe un correo del sistema.
-async function emailDeContactoDePrestadora(prestadoraId) {
+export async function emailDeContactoDePrestadora(prestadoraId) {
   if (!prestadoraId) return null;
 
   const { data } = await enLaPrestadora(prestadoraId, 'correo de contacto de la Prestadora', (db) => db

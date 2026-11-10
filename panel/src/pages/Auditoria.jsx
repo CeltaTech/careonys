@@ -24,8 +24,8 @@ async function llamarApi(path) {
 }
 
 // El año del registro de accesos a la información de salud que se va a borrar por vencimiento,
-// con la descarga para guardarlo afuera si la Prestadora quiere. El backend sólo contesta durante
-// el año anterior al borrado; fuera de ese año, mientras carga o si no pudo preguntar, no se
+// con la descarga para guardarlo afuera si la Prestadora quiere. El backend sólo contesta desde el
+// preaviso por correo hasta el borrado; fuera de ese tramo, mientras carga o si no pudo preguntar, no se
 // muestra nada, porque la franja es un aviso y no frena ningún trabajo.
 function RegistroDeAccesosPorBorrar() {
   const { t, locale } = useLocale();

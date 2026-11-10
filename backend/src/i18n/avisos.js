@@ -766,6 +766,18 @@ const ARMADORES = {
     texto: t('email_cambiado.texto', { empresa: d.empresa }) + pie(t),
   }),
 
+  // Los dos avisos del borrado del registro de accesos a la información de salud. Le llegan a la
+  // Prestadora, al email de contacto. El texto es el mismo; cambia el asunto.
+  borrado_del_registro_de_accesos_preaviso: (t, d) => ({
+    asunto: t('borrado_del_registro_de_accesos_preaviso.asunto', { anio: d.anio }),
+    texto: t('borrado_del_registro_de_accesos_preaviso.texto', { anio: d.anio, fecha: d.fecha }) + pie(t),
+  }),
+
+  borrado_del_registro_de_accesos_notificacion: (t, d) => ({
+    asunto: t('borrado_del_registro_de_accesos_notificacion.asunto', { anio: d.anio, dias: d.dias }),
+    texto: t('borrado_del_registro_de_accesos_notificacion.texto', { anio: d.anio, fecha: d.fecha }) + pie(t),
+  }),
+
   // Lleva el enlace y nada más: lo que hay que leer está del otro lado.
   documento_para_firmar: (t, d) => {
     const marca = t('comun.marca', { producto: d.producto });

@@ -184,18 +184,16 @@ async function armarLosAccesos(prestadoraId, renglones, pacientePorId) {
 //
 // El plazo lo fija el país de la Prestadora, y la base contesta qué año es el más viejo y cuándo
 // vence (`consultas_a_hce_por_vencer`), con la sesión de quien pide: sólo la administración de la
-// Prestadora lo puede preguntar. Se avisa durante el año calendario anterior al borrado, que es el
-// tiempo que tiene la Prestadora para descargarlo si lo quiere guardar afuera. Fuera de ese año, o
-// sin plazo para el país, no hay nada que decir.
+// Prestadora lo puede preguntar. Se avisa desde el día del preaviso por correo, que también fija el
+// país, hasta la víspera del borrado: es el tiempo que tiene la Prestadora para descargarlo si lo
+// quiere guardar afuera. Fuera de ese tramo, o sin plazo para el país, no hay nada que decir.
 async function elAnioPorBorrar(req) {
   const { data, error } = await clienteDelPedido(req).rpc('consultas_a_hce_por_vencer');
   if (error) throw error;
   const fila = Array.isArray(data) ? data[0] : data;
-  if (!fila?.anio || !fila?.se_borra_el) return null;
+  if (!fila?.anio || !fila?.se_borra_el || !fila?.preaviso_el) return null;
   const hoy = new Date().toISOString().slice(0, 10);
-  const anioDelBorrado = Number(fila.se_borra_el.slice(0, 4));
-  const anioDeHoy = Number(hoy.slice(0, 4));
-  if (fila.se_borra_el <= hoy || anioDeHoy < anioDelBorrado - 1) return null;
+  if (hoy < fila.preaviso_el || hoy >= fila.se_borra_el) return null;
   return fila;
 }
 

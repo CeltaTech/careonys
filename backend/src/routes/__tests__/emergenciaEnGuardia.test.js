@@ -31,6 +31,7 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { respuestaDeSalud, traducirPedidoDeSalud } from '../../__tests__/saludEnLaBaseFalsa.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-4999-8999-999999999999';
@@ -56,17 +57,23 @@ const baseFalsa = createServer((req, res) => {
   });
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
-    const clave = `${req.method} ${ruta}`;
-    const cuerpo = crudo ? JSON.parse(crudo) : null;
+    let clave = `${req.method} ${ruta}`;
+    let cuerpo = crudo ? JSON.parse(crudo) : null;
+    let url = req.url;
+    let metodo = req.method;
     const credencial = req.headers.authorization;
-    llamadas.push({ clave, url: req.url, cuerpo, credencial });
+    // Lo de salud llega por las funciones que anotan: se lo mira como el pedido directo que reemplaza.
+    const deSalud = traducirPedidoDeSalud(clave, cuerpo);
+    if (deSalud) ({ clave, url, cuerpo, metodo } = deSalud);
+    llamadas.push({ clave, url, cuerpo, credencial, porLaFuncion: deSalud?.porLaFuncion, origen: deSalud?.origen });
 
     const preparada = respuestas.get(clave);
-    let valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url, credencial }) : preparada;
+    let valor = typeof preparada === 'function' ? preparada({ cuerpo, url, credencial }) : preparada;
     // La protección por fila de mentira: a quien pide, sólo lo de su Prestadora.
-    if (req.method === 'GET' && Array.isArray(valor) && credencial === credencialEnviada) {
+    if (metodo === 'GET' && Array.isArray(valor) && credencial === credencialEnviada) {
       valor = valor.filter((fila) => !Object.hasOwn(fila, 'prestadora_id') || fila.prestadora_id === PRESTADORA);
     }
+    if (deSalud) valor = respuestaDeSalud(deSalud, valor);
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -406,7 +413,7 @@ describe('la bandeja del Panel', () => {
   it('la lista y los nombres van con la credencial de quien pide', async () => {
     await enElPanel('/');
     const consultadas = llamadas.filter((l) => l.clave.startsWith('GET /rest/v1/'));
-    for (const tabla of ['emergencias_guardia', 'guardia_pacientes', 'guardias', 'asistentes', 'pacientes']) {
+    for (const tabla of ['emergencias_guardia', 'guardias', 'asistentes', 'pacientes']) {
       const consulta = consultadas.find((l) => l.clave.endsWith(`/${tabla}`));
       assert.ok(consulta, `tiene que haberse consultado ${tabla}`);
       assert.equal(consulta.credencial, credencialEnviada, `${tabla} no fue con la credencial de quien pide`);
@@ -437,18 +444,23 @@ describe('la bandeja del Panel', () => {
     assert.equal(cuerpo.emergencias[0].guardia, null);
   });
 
-  it('antes de entregar el detalle queda anotado quién lo vio, con su credencial', async () => {
+  // Quién vio el detalle lo anota la base en la misma lectura: la emergencia sólo se lee por la
+  // función que anota, con la credencial de quien pide y el origen del pedido.
+  it('el detalle se lee por la función que anota quién lo vio, con su credencial', async () => {
     const { estado } = await enElPanel('/');
     assert.equal(estado, 200);
-    const anotaciones = llamadas.filter((l) => l.clave === 'POST /rest/v1/consultas_a_hce');
-    assert.equal(anotaciones.length, 1);
-    const anotada = Array.isArray(anotaciones[0].cuerpo) ? anotaciones[0].cuerpo[0] : anotaciones[0].cuerpo;
-    assert.equal(anotada.paciente_id, PACIENTE);
-    assert.equal(anotaciones[0].credencial, credencialEnviada);
+    const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/emergencias_guardia');
+    assert.ok(lecturas.length > 0);
+    for (const l of lecturas) {
+      assert.equal(l.porLaFuncion, 'leer_informacion_de_salud', 'la emergencia se leyó directo de la tabla');
+      assert.equal(l.credencial, credencialEnviada);
+      assert.ok(l.origen?.includes('/api/panel/emergencias'), `origen: ${l.origen}`);
+    }
   });
 
-  it('si no se puede anotar quién lo vio, el detalle no se entrega', async () => {
-    respuestas.set('POST /rest/v1/consultas_a_hce', () => ({ __estado: 500, __cuerpo: { message: 'falla' } }));
+  it('si la base no puede anotar quién lo vio, el detalle no se entrega', async () => {
+    // La anotación y la lectura son una sola operación: si la anotación falla, la función falla.
+    respuestas.set('GET /rest/v1/emergencias_guardia', () => ({ __estado: 500, __cuerpo: { message: 'falla' } }));
     const { estado, cuerpo } = await enElPanel('/');
     assert.notEqual(estado, 200);
     assert.equal(JSON.stringify(cuerpo).includes(DETALLE), false);

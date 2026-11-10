@@ -5,7 +5,6 @@ import { clienteDelPedido } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { exigeDePersonasAutorizadas } from '../utils/accesosDePersonasAutorizadas.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
-import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { documentoParaFirmar, pideLaFirma } from '../utils/consentimientoMedicacion.js';
 import { tiposQuePuedenDarLaVia } from '../utils/medicacionIndicaciones.js';
@@ -131,18 +130,7 @@ appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible
     tiposDe.set(viaId, tipos.map(({ id, clave, nombre, prestadora_id }) => ({ id, clave, nombre, prestadora_id })));
   }
 
-  // Antes de entregar la medicación queda anotado quién la vio. Si no se puede anotar, no se
-  // entrega (docs/PLAN_HASTA_PRODUCCION.md, paso 9).
-  try {
-    await anotarConsultaAHce(req.usuarioCliente, {
-      pacienteId: paciente.id,
-      categorias: ['indicaciones_medicacion'],
-      origen: origenDelPedido(req),
-    }, { cliente: db });
-  } catch (errorAnotacion) {
-    return responderError(res, errorAnotacion);
-  }
-
+  // Quién vio la medicación quedó anotado en la base, en la misma lectura.
   res.json({
     indicaciones: (data || []).map(({ via, ...i }) => ({
       ...i,

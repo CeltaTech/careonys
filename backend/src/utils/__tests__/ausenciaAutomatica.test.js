@@ -8,7 +8,7 @@
  * encendida de a una y en cada una lee su tolerancia, los turnos sin llegada, y marca ausente al
  * que se pasó. Lo que hay que sostener acá es que todo lo de una Prestadora vaya con la credencial
  * del trabajo de esa Prestadora y con ninguna otra, y que la guardia saliente se busque sin pasar
- * por la Ficha del Paciente.
+ * por los datos del Paciente.
  *
  * Con el sistema roto —una consulta con otra credencial, o la credencial de otra Prestadora— la
  * primera prueba da al revés.
@@ -151,7 +151,7 @@ describe('la detección automática de ausencia', () => {
 
     await revisarLasAusenciasDeUnaPrestadora(PRESTADORA, AHORA);
 
-    assert.ok(!llamadas.some((l) => l.clave === FICHAS), 'leyó la Ficha del Paciente');
+    assert.ok(!llamadas.some((l) => l.clave === FICHAS), 'leyó los datos del Paciente');
     const saliente = llamadas.find((l) => l.clave === LISTA && l.filtros.get('select').includes('guardias!inner'));
     assert.equal(saliente.filtros.get('paciente_id'), 'in.(paciente-1,paciente-2)');
   });

@@ -3,7 +3,6 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
-import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 
@@ -117,18 +116,6 @@ async function contratantesDeLosClientes(db, clienteIds) {
   return porCliente;
 }
 
-/* De quién es la información de salud que se va a entregar: los pacientes de cada guardia con
-   una emergencia en la lista. Son los mismos que mira la base para dejar ver el detalle. Si no se
-   pueden saber, no se entrega nada: se lanza el error y la ruta contesta que falló. */
-async function pacientesDeLasGuardias(db, emergencias) {
-  const guardiaIds = [...new Set(emergencias.map((e) => e.guardia_id))];
-  if (guardiaIds.length === 0) return [];
-
-  const { data, error } = await db.from('guardia_pacientes').select('paciente_id').in('guardia_id', guardiaIds);
-  if (error) throw error;
-  return [...new Set((data ?? []).map((fila) => fila.paciente_id).filter(Boolean))];
-}
-
 /* La más nueva primero, y con un filtro para ver sólo las que están esperando: lo primero que hace
    quien abre esta pantalla es mirar si hay algo sin atender. El tope existe para que una Prestadora
    con años de historia no se traiga todo de una vez. */
@@ -149,21 +136,8 @@ panelEmergenciasRouter.get('/', requiereRolPanel, exigirOrganizacionActiva, asyn
     return responderError(res, error);
   }
 
+  // La lectura ya quedó anotada en la base, en la misma operación (db/informacionDeSalud.js).
   const emergencias = data ?? [];
-
-  // Antes de entregar el detalle queda anotado quién lo vio. Si no se puede anotar, no se
-  // entrega (docs/PLAN_HASTA_PRODUCCION.md, paso 9).
-  try {
-    for (const pacienteId of await pacientesDeLasGuardias(db, emergencias)) {
-      await anotarConsultaAHce(
-        req.usuarioPanel,
-        { pacienteId, categorias: ['emergencias_guardia'], origen: origenDelPedido(req) },
-        { cliente: db },
-      );
-    }
-  } catch (errorAnotacion) {
-    return responderError(res, errorAnotacion);
-  }
 
   try {
     res.json({ emergencias: await conNombres(emergencias, db) });

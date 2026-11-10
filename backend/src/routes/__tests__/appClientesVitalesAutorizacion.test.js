@@ -213,7 +213,7 @@ beforeEach(() => {
 });
 
 describe('quién ve la autorización', () => {
-  it('la persona autorizada sin la Ficha del Paciente no ve nada, y no se consulta nada del Paciente', async () => {
+  it('la persona autorizada sin los datos del Paciente no ve nada, y no se consulta nada del Paciente', async () => {
     sesionDelCliente({ titular: false, accesos: [] });
 
     for (const ruta of [`/${PACIENTE}`, `/autorizacion/${AUTORIZACION}`]) {

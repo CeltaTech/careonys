@@ -191,7 +191,7 @@ panelInformesObraSocialRouter.post('/', requiereRolPanel, requierePermiso('valid
     const { prestadora_id: prestadoraId, ...contenido } = await construirContenido(db, { pacienteId, tipo, periodoDesde, periodoHasta });
     await anotarConsultaAHce(
       req.usuarioPanel,
-      { pacienteId, categorias: ['pacientes', 'guardias', 'informes_obra_social'], origen: origenDelPedido(req) },
+      { pacienteId, categorias: ['pacientes', 'guardias'], origen: origenDelPedido(req) },
       { cliente: db },
     );
 
@@ -242,15 +242,7 @@ panelInformesObraSocialRouter.get('/:id', requiereRolPanel, async (req, res) => 
     .maybeSingle();
   if (error) return responderError(res, error);
   if (!data) return res.status(404).json({ error: 'Informe no encontrado' });
-  try {
-    await anotarConsultaAHce(
-      req.usuarioPanel,
-      { pacienteId: data.paciente_id, categorias: ['informes_obra_social'], origen: origenDelPedido(req) },
-      { cliente: db },
-    );
-  } catch (errorAnotacion) {
-    return responderError(res, errorAnotacion);
-  }
+  // Quién lo leyó quedó anotado en la base, en la misma lectura.
   res.json(data);
 });
 
@@ -271,17 +263,7 @@ panelInformesObraSocialRouter.post('/:id/anular', requiereRolPanel, requierePerm
     return res.status(400).json({ error: 'Este informe ya está anulado' });
   }
 
-  // Lo que se devuelve es el informe entero, con su contenido: se anota antes de tocarlo.
-  try {
-    await anotarConsultaAHce(
-      req.usuarioPanel,
-      { pacienteId: informe.paciente_id, categorias: ['informes_obra_social'], origen: origenDelPedido(req) },
-      { cliente: db },
-    );
-  } catch (errorAnotacion) {
-    return responderError(res, errorAnotacion);
-  }
-
+  // Lo que se devuelve es el informe entero: la base anota la lectura y la modificación.
   const { data, error } = await db
     .from('informes_obra_social')
     .update({

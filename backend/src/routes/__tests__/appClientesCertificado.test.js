@@ -167,7 +167,7 @@ describe('el Asistente que ve el Cliente', () => {
 // La base no le da al Cliente los datos del Paciente: no sabe si el titular le dio la
 // ficha a quien pide. Esos datos los lee el trabajo de la Prestadora, y el domicilio se pide sólo para
 // quien tiene la ficha.
-describe('la ficha del Paciente que ve el Cliente', () => {
+describe('los datos del Paciente que ve el Cliente', () => {
   /** Las consultas a `pacientes` que piden los datos del Paciente. */
   const consultasDeLaFicha = () =>
     llamadas.filter((l) => l.clave === 'GET /rest/v1/pacientes' && decodeURIComponent(l.url).includes('persona:personas'));

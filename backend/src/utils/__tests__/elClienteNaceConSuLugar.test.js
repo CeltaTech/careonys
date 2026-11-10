@@ -1,6 +1,6 @@
 /**
  * Un Cliente que llega en una planilla importada nace en el Directorio de Personas, con su Paciente
- * reconocido y con el lugar puesto en la Ficha del Paciente.
+ * reconocido y con el lugar puesto en los datos del Paciente.
  *
  *   npm test --prefix backend
  *
@@ -212,7 +212,7 @@ describe('el Cliente que llega en una planilla importada', () => {
     assert.equal(loEscritoEn('clientes').contratante_persona_id, NUEVA_PERSONA);
   });
 
-  it('el lugar queda en la Ficha del Paciente, y el Paciente sólo la apunta', async () => {
+  it('el lugar queda en los datos del Paciente, y el Paciente sólo la apunta', async () => {
     await darDeAlta();
 
     const cambio = loCambiadoEn('personas');

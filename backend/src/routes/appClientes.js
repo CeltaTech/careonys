@@ -142,7 +142,7 @@ async function pacienteDelCliente(db, pacienteId, req) {
     }
   }
 
-  return enLaPrestadora(delCliente.prestadora_id, 'la ficha del Paciente', async (dbTrabajo) => {
+  return enLaPrestadora(delCliente.prestadora_id, 'los datos del Paciente', async (dbTrabajo) => {
     const { data, error } = await dbTrabajo
       .from('pacientes')
       .select(columnasDelPedido)
@@ -152,7 +152,7 @@ async function pacienteDelCliente(db, pacienteId, req) {
     if (error) throw new Error(error.message);
     if (!data) return data;
 
-    // La dirección que se muestra es la de hoy, no la de la Ficha del Paciente, y la decide la
+    // La dirección que se muestra es la de hoy, no la de los datos del Paciente, y la decide la
     // base. Va acá adentro y no en cada pantalla para que ninguna se olvide: todas las pantallas
     // del Cliente que muestran un Paciente pasan por esta función.
     const [conDomicilio] = await pacientesConDomicilioDeHoy(dbTrabajo, [conSuFicha(data)]);
@@ -826,17 +826,7 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
     return responderError(res, error);
   }
 
-  // Son dato de salud: queda anotado quién las leyó antes de entregarlas.
-  try {
-    await anotarConsultaAHce(
-      req.usuarioCliente,
-      { pacienteId: paciente.id, categorias: ['alertas'], origen: origenDelPedido(req) },
-      { cliente: db },
-    );
-  } catch (e) {
-    return responderError(res, e);
-  }
-
+  // Son dato de salud: quién las leyó quedó anotado en la base, en la misma lectura.
   res.json({ alertas: data });
 });
 

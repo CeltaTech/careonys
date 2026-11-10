@@ -13,7 +13,7 @@ import { hayApoderadoDeSignosVitales } from '../utils/apoderado.js';
 // La autorización para que un Asistente le tome los signos vitales al Paciente, vista desde la
 // aplicación del Cliente. La contraparte del Panel está en `panelVitalesAutorizacion.js`.
 //
-// La ven el titular y las personas autorizadas a ver la Ficha del Paciente. Firmar es sólo del
+// La ven el titular y las personas autorizadas a ver los datos del Paciente. Firmar es sólo del
 // titular, de dos maneras: con el acceso guardado del teléfono, que la deja aceptada en el momento,
 // o subiendo el documento firmado, que queda pendiente hasta que el Panel lo acepte o lo rechace.
 //

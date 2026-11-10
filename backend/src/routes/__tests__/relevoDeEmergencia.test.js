@@ -25,6 +25,7 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { respuestaDeSalud, traducirPedidoDeSalud } from '../../__tests__/saludEnLaBaseFalsa.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-4999-8999-999999999999';
@@ -48,17 +49,23 @@ const baseFalsa = createServer((req, res) => {
   });
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
-    const clave = `${req.method} ${ruta}`;
-    const cuerpo = crudo ? JSON.parse(crudo) : null;
+    let clave = `${req.method} ${ruta}`;
+    let cuerpo = crudo ? JSON.parse(crudo) : null;
+    let url = req.url;
+    let metodo = req.method;
     const credencial = req.headers.authorization;
-    llamadas.push({ clave, url: req.url, cuerpo, credencial });
+    // Lo de salud llega por las funciones que anotan: se lo mira como el pedido directo que reemplaza.
+    const deSalud = traducirPedidoDeSalud(clave, cuerpo);
+    if (deSalud) ({ clave, url, cuerpo, metodo } = deSalud);
+    llamadas.push({ clave, url, cuerpo, credencial, porLaFuncion: deSalud?.porLaFuncion });
 
     const preparada = respuestas.get(clave);
-    let valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
+    let valor = typeof preparada === 'function' ? preparada({ cuerpo, url }) : preparada;
     // La protección por fila de mentira: a quien pide, sólo lo de su Prestadora.
-    if (req.method === 'GET' && Array.isArray(valor) && credencial === sesionDePrueba(USUARIO)) {
+    if (metodo === 'GET' && Array.isArray(valor) && credencial === sesionDePrueba(USUARIO)) {
       valor = valor.filter((fila) => !Object.hasOwn(fila, 'prestadora_id') || fila.prestadora_id === PRESTADORA);
     }
+    if (deSalud) valor = respuestaDeSalud(deSalud, valor);
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));

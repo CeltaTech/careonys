@@ -5,7 +5,6 @@ import { clienteDelPedido } from '../db/connection.js';
 import { laViaBloquea, laViaFrenteALosAsignados } from '../utils/medicacionIndicaciones.js';
 import { extensionDeArchivo, rutaDelDocumentoFirmado } from '../utils/archivosSubidos.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
-import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { FICHA_NOMBRE, conSuFicha } from '../utils/fichaDelPaciente.js';
 import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 
@@ -23,7 +22,7 @@ import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 //
 // CON LA CREDENCIAL DE QUIEN PIDE, toda la ruta. La base acota la bandeja: con la restricción de la
 // historia clínica activa, cada persona ve las indicaciones de los Pacientes que atiende, y la
-// administración las ve todas. Antes de entregarla queda anotado quién la vio, paciente por paciente.
+// administración las ve todas. La base anota quién la vio en la misma lectura.
 // Aceptar, rechazar y cerrar la firma a mano pasan por funciones de la base que tocan sólo lo
 // suyo (`revisar_indicacion_medicacion`, `cerrar_firma_medicacion_con_documento_firmado`): quien coordina
 // revisa la indicación sin poder cambiarle el medicamento, la dosis ni la vía, y quién revisó sale
@@ -69,21 +68,7 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
     return responderError(res, errorFirmas);
   }
 
-  // Antes de entregar la medicación queda anotado quién la vio. Si no se puede anotar, no se
-  // entrega (docs/PLAN_HASTA_PRODUCCION.md, paso 9).
-  const pacienteIds = [...new Set(data.map((indicacion) => indicacion.pacientes.id))];
-  try {
-    for (const pacienteId of pacienteIds) {
-      await anotarConsultaAHce(
-        req.usuarioPanel,
-        { pacienteId, categorias: ['indicaciones_medicacion'], origen: origenDelPedido(req) },
-        { cliente: db },
-      );
-    }
-  } catch (errorAnotacion) {
-    return responderError(res, errorAnotacion);
-  }
-
+  // Quién vio la medicación quedó anotado en la base, en la misma lectura.
   try {
     const pendientes = await Promise.all(
       data.map(async ({ via, ...indicacion }) => {
@@ -206,16 +191,6 @@ panelMedicacionRouter.get('/:id/para-firmar', requiereRolPanel, async (req, res)
     .maybeSingle();
   if (error) return responderError(res, error);
   if (!indicacion?.pacientes) return responderError(res, new ErrorConMotivo('no_encontrado'));
-
-  try {
-    await anotarConsultaAHce(
-      req.usuarioPanel,
-      { pacienteId: indicacion.pacientes.id, categorias: ['indicaciones_medicacion'], origen: origenDelPedido(req) },
-      { cliente: db },
-    );
-  } catch (errorAnotacion) {
-    return responderError(res, errorAnotacion);
-  }
 
   const { data: consentimiento, error: errorConsentimiento } = await db
     .from('consentimientos_medicacion')

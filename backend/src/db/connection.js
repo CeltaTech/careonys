@@ -6,6 +6,8 @@ import {
   regionDeLaPrestadora,
   lasRegiones,
 } from './regiones.js';
+import { conRegistroDeSalud } from './informacionDeSalud.js';
+import { origenDelPedido } from '../utils/registroDeConsultas.js';
 
 /* La conexión con la base.
    ========================
@@ -204,9 +206,11 @@ export async function abrirSesionDelPedido(req) {
   if (datos.role !== 'authenticated') return null;
   if (typeof datos.sub !== 'string' || !datos.sub) return null;
 
-  conexionesDePedidos.set(req, createClient(region.url, region.clavePublica, {
+  // La información de salud, con la sesión de una persona, sale sólo anotada: la envoltura manda
+  // esas consultas por las funciones que anotan, con el origen que tenga el pedido al ejecutarlas.
+  conexionesDePedidos.set(req, conRegistroDeSalud(createClient(region.url, region.clavePublica, {
     accessToken: async () => credencial,
-  }));
+  }), () => origenDelPedido(req)));
   return { id: datos.sub, aal: datos.aal ?? null };
 }
 

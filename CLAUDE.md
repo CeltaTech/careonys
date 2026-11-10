@@ -380,7 +380,7 @@ molde, `revisar_autorizacion_signos_vitales` y `cerrar_autorizacion_signos_vital
 eso con la autorización de signos vitales; y `documento_autorizacion_signos_vitales` recibe un
 Paciente y un idioma y devuelve el texto para firmar con su identificador de verificación, sólo si
 el Paciente es de la Prestadora de quien pide y quien pide es personal al que le alcanza su
-información de salud, o alguien de su Cliente con acceso a la Ficha del Paciente.
+información de salud, o alguien de su Cliente con acceso a los datos del Paciente.
 El Panel llama además `la_carga_queda_pendiente`, que recibe un Paciente, corre con los permisos de
 quien llama y contesta si lo que esa persona guarde de él queda pendiente del Coordinador asignado;
 y `revisar_carga`, que acepta o rechaza una carga pendiente, resuelve la Prestadora adentro y sólo

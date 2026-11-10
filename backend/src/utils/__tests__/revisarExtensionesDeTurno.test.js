@@ -159,7 +159,7 @@ describe('la revisión de las extensiones de turno', () => {
 
     await revisarLasExtensionesDeUnaPrestadora(PRESTADORA, AHORA);
 
-    assert.ok(!llamadas.some((l) => l.clave === FICHAS), 'leyó la Ficha del Paciente');
+    assert.ok(!llamadas.some((l) => l.clave === FICHAS), 'leyó los datos del Paciente');
     const relevo = llamadas.find((l) => l.clave === LISTA && l.filtros.get('select').includes('guardias!inner'));
     assert.equal(relevo.filtros.get('paciente_id'), 'in.(paciente-1,paciente-2)');
   });

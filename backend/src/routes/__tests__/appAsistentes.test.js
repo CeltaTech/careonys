@@ -27,6 +27,7 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 import { verificadorDelCodigo } from '../../utils/codigoDeUnSoloUso.js';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { respuestaDeSalud, traducirPedidoDeSalud } from '../../__tests__/saludEnLaBaseFalsa.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
@@ -56,12 +57,17 @@ const baseFalsa = createServer((req, res) => {
   });
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
-    const clave = `${req.method} ${ruta}`;
-    const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    let clave = `${req.method} ${ruta}`;
+    let cuerpo = crudo ? JSON.parse(crudo) : null;
+    let url = req.url;
+    // Lo de salud llega por las funciones que anotan: se lo mira como el pedido directo que reemplaza.
+    const deSalud = traducirPedidoDeSalud(clave, cuerpo);
+    if (deSalud) ({ clave, url, cuerpo } = deSalud);
+    llamadas.push({ clave, url, cuerpo, porLaFuncion: deSalud?.porLaFuncion });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
+    let valor = typeof preparada === 'function' ? preparada({ cuerpo, url }) : preparada;
+    if (deSalud) valor = respuestaDeSalud(deSalud, valor);
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -262,7 +268,7 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
       assert.equal(cuerpo.ok, true);
       assert.equal(cuerpo.comprobacion, 'sin_comprobar');
       assert.equal(guardiaMarcada(), true);
-      // Se midió contra las coordenadas de la Ficha del Paciente: llegó justo a la puerta.
+      // Se midió contra las coordenadas de los datos del Paciente: llegó justo a la puerta.
       assert.equal(cuerpo.distanciaMetros, 0);
 
       const [fila] = comprobacionesGuardadas();

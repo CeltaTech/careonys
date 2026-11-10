@@ -115,6 +115,32 @@ function consultarBase(sql) {
   return salida.trim().split('\n').filter(Boolean).map((l) => l.split('|'));
 }
 
+// La información de salud no se lee directo de la tabla: la base la entrega sólo por
+// `leer_informacion_de_salud`, que anota cada lectura en el registro de accesos. La prueba la lee
+// por ese mismo camino, que es el del backend. La lista de tablas sale de la base.
+let tablasDeSalud = null;
+function esDeSalud(tabla) {
+  tablasDeSalud ??= new Set(consultarBase('SELECT unnest(interno.tablas_de_salud());').map((f) => f[0]));
+  return tablasDeSalud.has(tabla);
+}
+
+function leerTabla(base, llavePublica, token, tabla, columnas) {
+  const headers = { apikey: llavePublica, Authorization: `Bearer ${token}` };
+  if (!esDeSalud(tabla)) {
+    return fetch(`${base}/rest/v1/${tabla}?select=${columnas}&limit=1000`, { headers });
+  }
+  return fetch(`${base}/rest/v1/rpc/leer_informacion_de_salud`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      p_tabla: tabla,
+      p_origen: 'prueba de aislamiento',
+      p_columnas: columnas === '*' ? null : columnas.split(','),
+      p_limite: 1000,
+    }),
+  });
+}
+
 // Entra como esa persona en esa Prestadora. La siembra la conoce por su email, que es dato de
 // contacto; el servicio de acceso la conoce por otra dirección, que no es la misma para todas:
 // coordinación, Asistentes y Clientes entran con `<cuenta>@acceso.careonys.invalid`, y
@@ -178,9 +204,17 @@ async function probarLaBase({ base, llavePublica }, idA, idB, sesiones) {
     [PRESTADORA_B, sesiones.adminB, idB, idA],
   ]) {
     for (const [tabla] of tablas) {
-      const r = await fetch(`${base}/rest/v1/${tabla}?select=prestadora_id&limit=1000`, {
-        headers: { apikey: llavePublica, Authorization: `Bearer ${token}` },
-      });
+      if (esDeSalud(tabla)) {
+        // Directo, la tabla de salud no entrega nada aunque la fila sea propia.
+        const directo = await fetch(`${base}/rest/v1/${tabla}?select=prestadora_id&limit=1000`, {
+          headers: { apikey: llavePublica, Authorization: `Bearer ${token}` },
+        });
+        const crudas = directo.ok ? await directo.json().catch(() => []) : [];
+        if (Array.isArray(crudas) && crudas.length) {
+          problemas.push(`${tabla}: ${nombre} lee ${crudas.length} fila(s) de salud sin pasar por el registro`);
+        }
+      }
+      const r = await leerTabla(base, llavePublica, token, tabla, 'prestadora_id');
       if (!r.ok) continue; // Sin permiso de lectura no hay filtración posible.
       const filas = await r.json().catch(() => []);
       if (!Array.isArray(filas)) continue;
@@ -370,9 +404,7 @@ async function probarLasDosAplicaciones({ base, llavePublica }, sesiones, person
         consultarBase(`${plantilla.replaceAll('{p}', persona.id)};`).map((f) => f[0]).filter(Boolean),
       );
 
-      const r = await fetch(`${base}/rest/v1/${tabla}?select=*&limit=1000`, {
-        headers: { apikey: llavePublica, Authorization: `Bearer ${persona.token}` },
-      });
+      const r = await leerTabla(base, llavePublica, persona.token, tabla, '*');
       const cuerpo = r.ok ? await r.json().catch(() => []) : [];
       const vistas = new Set(Array.isArray(cuerpo) ? cuerpo.map(clave) : []);
 

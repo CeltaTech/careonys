@@ -1161,18 +1161,31 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
   // ---- El reporte ----------------------------------------------------------
   let reporte;
   try {
-    const carga = await pedir(entorno, delAsistente, 'POST', 'reportes', {
+    // El reporte es información de salud: se carga, se modifica y se lee por el registro de
+    // accesos, como lo hace el backend. Directo, la base no lo entrega ni lo deja cargar.
+    const delReporte = { p_tabla: 'reportes', p_origen: 'prueba de permisos' };
+    const fila = {
       prestadora_id: d.prestadora, guardia_id: guardia, paciente_id: pacienteDeLaGuardia, texto_libre: 'Reporte de prueba.',
-    });
+    };
+    rebota('el Asistente NO carga un reporte sin pasar por el registro',
+      await pedir(entorno, delAsistente, 'POST', 'reportes', fila));
+    const carga = await pedir(entorno, delAsistente, 'POST', 'rpc/agregar_informacion_de_salud',
+      { ...delReporte, p_fila: fila, p_columnas_devueltas: ['id'] });
     reporte = carga.filas[0]?.id;
     if (reporte) bien('el Asistente SÍ carga el reporte de su guardia', 'asistente_carga_reportes_de_su_guardia');
     else mal('el Asistente SÍ carga el reporte de su guardia', motivo(carga));
     if (reporte) {
+      const esteReporte = [{ columna: 'id', op: 'eq', valor: reporte }];
       rebota('el Asistente NO reescribe un reporte',
-        await pedir(entorno, delAsistente, 'PATCH', `reportes?id=eq.${reporte}`, { texto_libre: 'Otro texto.' }));
+        await pedir(entorno, delAsistente, 'POST', 'rpc/modificar_informacion_de_salud',
+          { ...delReporte, p_cambios: { texto_libre: 'Otro texto.' }, p_filtros: esteReporte, p_columnas_devueltas: ['id'] }));
       rebota('el Asistente NO borra un reporte',
         await pedir(entorno, delAsistente, 'DELETE', `reportes?id=eq.${reporte}`));
-      const lee = await pedir(entorno, delAsistente, 'GET', `reportes?id=eq.${reporte}&select=id`);
+      const directo = await pedir(entorno, delAsistente, 'GET', `reportes?id=eq.${reporte}&select=id`);
+      if (directo.filas.length === 0) bien('el Asistente NO lee el reporte sin pasar por el registro');
+      else mal('el Asistente NO lee el reporte sin pasar por el registro', 'la base se lo entregó');
+      const lee = await pedir(entorno, delAsistente, 'POST', 'rpc/leer_informacion_de_salud',
+        { ...delReporte, p_columnas: ['id'], p_filtros: esteReporte });
       if (lee.filas.length === 1) bien('el Asistente SÍ lee el reporte de su guardia', 'asistente_lee_reportes_de_su_guardia');
       else mal('el Asistente SÍ lee el reporte de su guardia', motivo(lee));
     }
@@ -1454,13 +1467,22 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
   const [servicio, cliente, paciente, guardia] = ajeno;
   const [[contratante]] = consultarBase(`SELECT contratante_persona_id FROM public.clientes WHERE id = '${cliente}';`);
 
-  const cuenta = async (ruta) => (await pedir(entorno, coordinadora, 'GET', ruta)).filas.length;
+  // La información de salud se lee por el registro de accesos, como la lee el backend: directo, la
+  // base no la entrega.
+  const cuenta = async (ruta) => (typeof ruta === 'string'
+    ? await pedir(entorno, coordinadora, 'GET', ruta)
+    : await pedir(entorno, coordinadora, 'POST', ...ruta)).filas.length;
   const lecturas = {
     'los datos del Contratante': `personas?id=eq.${contratante}&select=id`,
     'el Servicio': `servicios?id=eq.${servicio}&select=id`,
     'el Cliente': `clientes?id=eq.${cliente}&select=id`,
     'el Paciente': `pacientes?id=eq.${paciente}&select=id`,
-    'la información de salud': `informacion_de_salud_del_paciente?paciente_id=eq.${paciente}&select=id`,
+    'la información de salud': ['rpc/leer_informacion_de_salud', {
+      p_tabla: 'informacion_de_salud_del_paciente',
+      p_origen: 'prueba de permisos',
+      p_columnas: ['id'],
+      p_filtros: [{ columna: 'paciente_id', op: 'eq', valor: paciente }],
+    }],
     'la guardia': `guardias?id=eq.${guardia}&select=id`,
   };
   const mirar = async (que, espera) => {

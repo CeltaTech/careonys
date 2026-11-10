@@ -34,6 +34,13 @@ const AGREGADOS = {
   guardias: 'guardia_id',
 };
 
+// Lo que se pega nombrando la relación, cuando hay más de una entre las dos tablas: la relación dice
+// qué tabla y por qué columna.
+const RELACIONES = {
+  cargas_sujetas_a_aprobacion_cargado_por_fkey: { tabla: 'usuarios', columna: 'cargado_por' },
+  cargas_sujetas_a_aprobacion_del_paciente: { tabla: 'pacientes', columna: 'paciente_id' },
+};
+
 class PedidoInvalido extends Error {
   constructor(detalle) {
     super(`consulta de salud: ${detalle}`);
@@ -65,12 +72,15 @@ function leerColumnas(seleccion) {
   const columnas = [];
   const agregados = [];
   for (const parte of partir(seleccion ?? '*')) {
-    const agregado = parte.match(/^(?:(\w+):)?(\w+)(!inner)?\((.*)\)$/s);
+    const agregado = parte.match(/^(?:(\w+):)?(\w+)(?:!(\w+))?(!inner)?\((.*)\)$/s);
     if (agregado) {
-      const [, alias, tabla, inner, interior] = agregado;
-      const columna = AGREGADOS[tabla];
+      const [, alias, tabla, marca, innerAparte, interior] = agregado;
+      const inner = marca === 'inner' || Boolean(innerAparte);
+      const relacion = marca && marca !== 'inner' ? RELACIONES[marca] : null;
+      if (marca && marca !== 'inner' && relacion?.tabla !== tabla) throw new PedidoInvalido(`no sabe pegar ${tabla}!${marca}`);
+      const columna = relacion?.columna ?? AGREGADOS[tabla];
       if (!columna || TABLAS_DE_SALUD.has(tabla)) throw new PedidoInvalido(`no sabe pegar ${tabla}`);
-      agregados.push({ nombre: alias || tabla, tabla, columna, interior: interior.trim() || '*', inner: Boolean(inner) });
+      agregados.push({ nombre: alias || tabla, tabla, columna, interior: interior.trim() || '*', inner });
     } else if (parte === '*' || /^\w+$/.test(parte)) {
       columnas.push(parte);
     } else {

@@ -144,10 +144,14 @@ encendida y con política, y ninguna depende de nada que aporte el backend: la P
 `interno.prestadora_actual()` con la cuenta de quien entró, o la credencial del trabajo de esa
 Prestadora.
 
-**Las lecturas de información de salud se anotan encadenadas** en `consultas_a_hce`, con
-`anotarConsultaAHce` de `utils/registroDeConsultas.js`, desde las rutas de las aplicaciones y del
-Panel que la devuelven. `auditoria_de_accesos` tiene `admin_id` no nulo, así que sólo alcanza al
-personal de CeltaTech, y tiene cero filas. Y no es inmutable: el dueño de la base puede borrarlo.
+**La información de salud sale sólo por el registro.** Las diez tablas de
+`interno.tablas_de_salud()` llevan la política restrictiva `la_informacion_de_salud_pasa_por_el_registro`,
+y nadie las lee directo: el backend las lee con `backend/src/db/informacionDeSalud.js`, que anota
+cada lectura encadenada en `consultas_a_hce`, y el Panel las pide a
+`/api/panel/informacion-de-salud/<tabla>`. Quién vio la información de salud de un Cliente se ve en
+su Ficha, en «Accesos a la información de salud», sólo para la administración, y se baja como
+planilla para entregársela. `auditoria_de_accesos` es otra cosa: lo que hace el personal de
+CeltaTech con un permiso de acceso.
 
 **El registro clínico ya no se pisa.** Cada alta, corrección o baja de `indicaciones_medicacion`,
 `rangos_referencia_vitales` y `domicilios_temporales_paciente` deja una copia en
@@ -285,38 +289,8 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **Comprobación:** por cada país donde haya una Prestadora dada de alta, su documento en
 `docs/legal/<país>.md` nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
 
-**9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
-maestra; lo que sigue no se pudo cerrar ahí.
-
-**El registro de accesos va en este paso.** Es un registro separado del de actividad,
-porque anotan cosas distintas y tienen plazos distintos. **Seis campos por evento:** la Prestadora,
-la persona que accedió, el paciente, las categorías de dato alcanzadas, el momento y el origen. Los
-cinco primeros son el Anexo II sección 3 del EHDS; el paciente lo piden Suecia y Países Bajos, y sin
-él no se puede acotar un incidente.
-
-Tres propiedades que no son opcionales:
-
-- **Consultable por paciente.** Un registro que sólo se lee por fecha no contesta «quién vio lo
-  mío», que es el derecho del art. 9 del EHDS, ni sirve para acotar una notificación de brecha. En
-  Uruguay es derecho del paciente: el art. 12 del Decreto 122/019 obliga a registrar todo acceso a
-  la historia clínica, y los arts. 13 a 17 le dan al paciente la vía para verlo.
-- **Integridad demostrable.** Ninguna norma usa la palabra «inmutable»: lo que exigen es poder
-  demostrar que no fue alterado. Cada entrada encadenada con la anterior alcanza, y no depende de
-  ningún privilegio de base de datos. El último eslabón queda resguardado fuera de la base por la
-  copia de respaldo diaria (`backend/scripts/backup_a_buckets.mjs`): si alguien borra las últimas
-  entradas, la copia de esa noche las sigue teniendo.
-- **Disponible para el cliente cuando lo pida** (C5 OPS-15.01AC, y Panamá con la identificación y el
-  período de todas las personas que ingresaron).
-
-**Qué operaciones se anotan lo fija Perú, que es el más preciso:** el art. 46 del DS 016-2024-JUS
-enumera cuentas de usuario, hora de inicio y de fin de sesión, y las operaciones de tratamiento,
-**visualización**, modificación, eliminación, importación y exportación. Brasil lo dice distinto y
-pide lo mismo: el art. 13 III del Decreto 8.771/2016 exige inventario de accesos con momento,
-duración, identidad del responsable y archivo alcanzado. Y Argentina, por el art. 7 de la Ley
-27.706, pide que cada acción quede asociada inequívocamente a una persona. Se construye
-contra el más exigente y alcanza a los tres. Y el art. 9 del Decreto 41/2012 chileno lo escribe como
-requisito reglamentario fiscalizado: «Este sistema debe llevar registro de las fechas y personas que
-han accedido a las fichas.»
+**9.** **Lo que queda del registro de accesos a la información de salud.** El registro ya anota
+cada lectura con sus seis campos, encadenada, y se consulta por Cliente desde su Ficha. Queda esto:
 
 Su conservación es por jurisdicción, con piso de tres años (EHDS art. 9), mínimo de dos y
 disponibilidad inmediata por Perú, sin superar el plazo de la historia clínica de ese país, y con

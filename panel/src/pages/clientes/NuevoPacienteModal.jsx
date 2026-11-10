@@ -9,6 +9,7 @@ import { Alert } from '../../components/ui/Alert';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
+import { informacionDeSalud } from '../../lib/informacionDeSalud';
 
 export function NuevoPacienteModal({ clienteId, onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
@@ -36,7 +37,7 @@ export function NuevoPacienteModal({ clienteId, onClose, onCreado }) {
     // El nivel de complejidad es información de salud y vive en su propia tabla.
     let errorSalud = null;
     if (!errorInsert && nivelComplejidad) {
-      ({ error: errorSalud } = await supabase.from('informacion_de_salud_del_paciente').insert({
+      ({ error: errorSalud } = await informacionDeSalud.from('informacion_de_salud_del_paciente').insert({
         prestadora_id: prestadoraId,
         paciente_id: paciente.id,
         nivel_complejidad: nivelComplejidad,

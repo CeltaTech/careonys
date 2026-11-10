@@ -2,9 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useAuth } from './AuthContext';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useLocale } from '../i18n/LocaleContext';
-import { supabase } from '../lib/supabaseClient';
 import { escucharEnVivo, ASUNTOS } from '../lib/avisosEnVivo';
 import { mensajeDeError } from '../lib/errores';
+import { informacionDeSalud } from '../lib/informacionDeSalud';
 
 /* Las emergencias que todavía no se marcaron atendidas, miradas desde cualquier pantalla del Panel.
    ==========================================================================
@@ -46,7 +46,7 @@ export function EmergenciasSinAtenderProvider({ children }) {
     if (enVueloRef.current) return;
     enVueloRef.current = true;
     try {
-      const { data, error: errorConsulta } = await supabase
+      const { data, error: errorConsulta } = await informacionDeSalud
         .from('emergencias_guardia')
         .select('id, reportado_at')
         .eq('prestadora_id', prestadoraId)

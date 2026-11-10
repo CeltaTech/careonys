@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { supabase } from '../../lib/supabaseClient';
 import { mensajeDeError } from '../../lib/errores';
 import { claseBadge, claseBadgeTono } from '../../lib/tonos';
 import { hoyISO } from '../../lib/horarios';
@@ -17,6 +16,7 @@ import { estaActiva, situacionDeGuardia, tonoDeGuardia } from '../../lib/semafor
 import { useUmbrales } from '../../context/UmbralesContext';
 import { armarBuscadorDeRangos, tieneSignoFueraDeRango } from '../../lib/signosVitales';
 import { soloSinResolver } from '../../lib/alertaSinResolver';
+import { informacionDeSalud } from '../../lib/informacionDeSalud';
 
 /* Lo que le está pasando a los Pacientes de un Cliente: guardias, reportes y alertas.
    ==========================================================================
@@ -210,7 +210,7 @@ export function ReportesDelCliente({ pacientes }) {
     if (ids.length === 0) return { filas: [], tope: false };
 
     const [{ data, error: errorReportes }, { data: rangosData }] = await Promise.all([
-      supabase
+      informacionDeSalud
         .from('reportes')
         .select(
           'id, created_at, paciente_id, estado_animo, signos_vitales, incidentes, confirmado_asistente, guardias(fecha, asistentes(nombre))',
@@ -218,7 +218,7 @@ export function ReportesDelCliente({ pacientes }) {
         .in('paciente_id', ids)
         .order('created_at', { ascending: false })
         .limit(TOPE_REPORTES),
-      supabase
+      informacionDeSalud
         .from('rangos_referencia_vitales')
         .select('signo, paciente_id, valor_min, valor_max, unidad')
         .eq('prestadora_id', prestadoraId),
@@ -303,7 +303,7 @@ export function AlertasDelCliente({ pacientes }) {
     if (ids.length === 0) return { filas: [], tope: false };
 
     const { data, error: errorAlertas } = await soloSinResolver(
-      supabase
+      informacionDeSalud
         .from('alertas')
         .select('id, created_at, nivel, descripcion, paciente_id'),
     )

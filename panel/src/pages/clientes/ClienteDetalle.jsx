@@ -16,6 +16,7 @@ import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { SignosVitalesPaciente } from './SignosVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { InvitarPersonaAutorizadaModal } from './InvitarPersonaAutorizadaModal';
+import { AccesosALaInformacionDeSalud } from './AccesosALaInformacionDeSalud';
 import {
   AlertasDelCliente,
   GuardiasActivasDelCliente,
@@ -29,7 +30,8 @@ import {
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { con } from '../../lib/textos';
-import { FICHA_COMPLETA, conSusFichas, saludCon } from '../../lib/fichaDelPaciente';
+import { FICHA_COMPLETA, conSusFichas } from '../../lib/fichaDelPaciente';
+import { informacionDeSalud } from '../../lib/informacionDeSalud';
 import { palabrasDelDomicilio } from '../../lib/partesDeDomicilio';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
@@ -100,7 +102,7 @@ export function ClienteDetalle() {
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
       .select(
-        `id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}, ${saludCon(['patologias', 'nivel_complejidad'])}), ` +
+        `id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}), ` +
           // Quién es el Cliente se lee de los datos de quien contrata, en el Directorio de
           // Personas, y se corrige allá.
           'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, lugares!personas_lugar_fkey(nombre), ' +
@@ -115,7 +117,25 @@ export function ClienteDetalle() {
       return;
     }
 
-    setCliente({ ...data, pacientes: conSusFichas(data.pacientes, palabrasDelDomicilio(t)) });
+    // La información de salud no viaja pegada a la consulta: se pide aparte, por la ruta que anota
+    // a qué Pacientes alcanzó.
+    const ids = (data.pacientes ?? []).map((p) => p.id);
+    let saludPorPaciente = new Map();
+    if (ids.length) {
+      const { data: salud, error: errorSalud } = await informacionDeSalud
+        .from('informacion_de_salud_del_paciente')
+        .select('paciente_id, patologias, nivel_complejidad')
+        .in('paciente_id', ids);
+      if (errorSalud) {
+        setError(mensajeDeError(errorSalud, t));
+        setEstado('error');
+        return;
+      }
+      saludPorPaciente = new Map((salud ?? []).map((s) => [s.paciente_id, s]));
+    }
+    const pacientes = (data.pacientes ?? []).map((p) => ({ ...p, salud: saludPorPaciente.get(p.id) ?? null }));
+
+    setCliente({ ...data, pacientes: conSusFichas(pacientes, palabrasDelDomicilio(t)) });
     setEstado('listo');
   }, [id, t]);
 
@@ -175,6 +195,7 @@ export function ClienteDetalle() {
     ['guardias', t.clientes.guardias_activas],
     ['reportes', t.clientes.historial_reportes],
     ['alertas', t.clientes.alertas_activas],
+    ...(esAdmin ? [['accesos_salud', t.clientes.accesos_salud.titulo]] : []),
   ];
 
   // La línea de datos de la Ficha del cliente, con lo que dicen los datos de quien contrata.
@@ -363,6 +384,7 @@ export function ClienteDetalle() {
         {tab === 'guardias' && <GuardiasActivasDelCliente pacientes={cliente.pacientes} />}
         {tab === 'reportes' && <ReportesDelCliente pacientes={cliente.pacientes} />}
         {tab === 'alertas' && <AlertasDelCliente pacientes={cliente.pacientes} />}
+        {tab === 'accesos_salud' && esAdmin && <AccesosALaInformacionDeSalud clienteId={cliente.id} />}
       </div>
 
       {pacienteSeleccionado && (

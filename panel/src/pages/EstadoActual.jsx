@@ -33,6 +33,7 @@ import { RenglonesDeEmergencias } from '../components/emergencias/RenglonesDeEme
 import { useEmergenciasSinAtender } from '../context/EmergenciasSinAtenderContext';
 import './EstadoActual.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
+import { informacionDeSalud } from '../lib/informacionDeSalud';
 
 /* La Situación operativa: la página de entrada del Panel.
    ==========================================================================
@@ -259,8 +260,8 @@ export function EstadoActual() {
         .select(CONSULTA_SERVICIOS)
         .eq('estado', SERVICIO_EN_PIE)
         .order('created_at', { ascending: false }),
-      supabase.from('emergencias_guardia').select('id', { count: 'exact', head: true }).is('atendida_at', null),
-      soloSinResolver(supabase.from('alertas').select('id', { count: 'exact', head: true })),
+      informacionDeSalud.from('emergencias_guardia').select('id', { count: 'exact', head: true }).is('atendida_at', null),
+      soloSinResolver(informacionDeSalud.from('alertas').select('id', { count: 'exact', head: true })),
       supabase
         .from('incidentes_relevo')
         .select('id, guardia_saliente_id, iniciado_at, resuelto_at')
@@ -303,7 +304,7 @@ export function EstadoActual() {
     const completadas = guardias.filter((g) => g.estado === 'completada');
     const sinReporte = new Set();
     if (completadas.length > 0) {
-      const { data: reportes, error: errorReportes } = await supabase
+      const { data: reportes, error: errorReportes } = await informacionDeSalud
         .from('reportes')
         .select('guardia_id, paciente_id')
         .in(

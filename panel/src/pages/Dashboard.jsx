@@ -18,6 +18,7 @@ import { soloSinResolver } from '../lib/alertaSinResolver';
 import { contarPorModalidad, MODALIDADES, modalidadesDelAsistente } from '../lib/modalidades';
 import { ESTADO_ACTIVO, estaEnElPadron } from '../lib/candidatos';
 import { claseBadgeTono, TONO } from '../lib/tonos';
+import { informacionDeSalud } from '../lib/informacionDeSalud';
 import './tarjetas.css';
 
 // Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
@@ -182,7 +183,7 @@ export function Dashboard() {
     // Van todos los niveles juntos: separar lo que urge de lo que no es trabajo de la pantalla de
     // Alertas, que las tiene delante; acá el número dice cuánto quedó sin mirar.
     const { count: countAlertasIa, error: errorAlertasIa } = await soloSinResolver(
-      supabase.from('alertas').select('id', { count: 'exact', head: true }),
+      informacionDeSalud.from('alertas').select('id', { count: 'exact', head: true }),
     );
 
     if (errorAusentes || errorDocumentos || errorAlertasIa) {

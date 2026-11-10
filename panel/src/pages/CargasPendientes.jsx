@@ -10,6 +10,7 @@ import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { Cabecera } from '../components/ui/Cabecera';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { informacionDeSalud } from '../lib/informacionDeSalud';
 import '../styles/molde-paginas.css';
 
 // Lo que cargó un Coordinador sobre un Paciente que no coordina, esperando que lo acepte el
@@ -65,7 +66,7 @@ export function CargasPendientes() {
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
-    const { data, error: errorLista } = await supabase
+    const { data, error: errorLista } = await informacionDeSalud
       .from('cargas_sujetas_a_aprobacion')
       .select(`id, tabla, operacion, datos, cargado_por, cargado_en,
         cargador:usuarios!cargas_sujetas_a_aprobacion_cargado_por_fkey(nombre),

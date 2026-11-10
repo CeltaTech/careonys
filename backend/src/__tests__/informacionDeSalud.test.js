@@ -89,6 +89,24 @@ test('!inner descarta las filas sin lo pegado, y el filtro de la guardia va a la
   assert.deepEqual(falsa.pedidos[0].args.p_filtros, [{ guardia: [{ columna: 'servicio_id', op: 'eq', valor: 's1' }] }]);
 });
 
+test('la relación nombrada dice qué tabla y por qué columna se pega', async () => {
+  const falsa = conexionFalsa({
+    leer_informacion_de_salud: [{ id: 'c', cargado_por: 'u1', paciente_id: 'p1' }],
+    usuarios: [{ id: 'u1', nombre: 'Ana' }],
+    pacientes: [{ id: 'p1', apellido: 'Paz' }],
+  });
+  const db = conRegistroDeSalud(falsa, 'GET /x');
+  const { data, error } = await db.from('cargas_sujetas_a_aprobacion').select(
+    'id, cargador:usuarios!cargas_sujetas_a_aprobacion_cargado_por_fkey(nombre), paciente:pacientes!cargas_sujetas_a_aprobacion_del_paciente(apellido)',
+  );
+  assert.equal(error, null);
+  assert.deepEqual(data, [{ id: 'c', cargador: { nombre: 'Ana' }, paciente: { apellido: 'Paz' } }]);
+  assert.deepEqual(falsa.pedidos[0].args.p_columnas, ['id', 'cargado_por', 'paciente_id']);
+  // Una relación que no conoce, o que no lleva a esa tabla, se rechaza.
+  assert.ok((await db.from('reportes').select('id, usuarios!otra_fkey(nombre)')).error);
+  assert.ok((await db.from('reportes').select('id, usuarios!cargas_sujetas_a_aprobacion_del_paciente(nombre)')).error);
+});
+
 test('el conteo sin filas pide sólo el número', async () => {
   const falsa = conexionFalsa({ leer_informacion_de_salud: 17 });
   const db = conRegistroDeSalud(falsa, 'GET /x');

@@ -40,6 +40,24 @@ const REGISTRO = [
   { id: 'ev-b-1', prestadora_id: PRESTADORA_B, tipo_evento: 'mutacion', detalle: { metodo: 'DELETE', ruta: '/api/panel/asistentes/y' }, created_at: '2026-09-03T10:00:00Z' },
 ];
 
+/* Quién leyó la información de salud, en dos Prestadoras con datos cargados. La base de mentira
+   hace lo que hace la de verdad con la sesión: cada uno ve sólo los de su Prestadora. */
+const CLIENTE_A = 'c1111111-1111-1111-1111-111111111111';
+const CLIENTE_B = 'c2222222-2222-2222-2222-222222222222';
+const PACIENTES = [
+  { id: 'pa-1', prestadora_id: PRESTADORA_A, cliente_id: CLIENTE_A, persona: { nombre_visible: 'Paciente Inventado A' } },
+  { id: 'pb-1', prestadora_id: PRESTADORA_B, cliente_id: CLIENTE_B, persona: { nombre_visible: 'Paciente Inventado B' } },
+];
+const USUARIOS = [
+  { id: 'ua-1', prestadora_id: PRESTADORA_A, nombre: 'Coordinación Inventada A' },
+  { id: 'ub-1', prestadora_id: PRESTADORA_B, nombre: 'Coordinación Inventada B' },
+];
+const ACCESOS = [
+  { id: 'acc-a-1', prestadora_id: PRESTADORA_A, usuario_id: 'ua-1', paciente_id: 'pa-1', categorias: ['reportes'], momento: '2026-11-01T10:00:00Z', origen: 'POST /api/panel/informacion-de-salud/reportes' },
+  { id: 'acc-a-2', prestadora_id: PRESTADORA_A, usuario_id: null, paciente_id: 'pa-1', categorias: ['alertas'], momento: '2026-11-01T09:00:00Z', origen: 'tarea programada' },
+  { id: 'acc-b-1', prestadora_id: PRESTADORA_B, usuario_id: 'ub-1', paciente_id: 'pb-1', categorias: ['reportes'], momento: '2026-11-02T10:00:00Z', origen: 'GET /api/app-asistentes/guardias/:id' },
+];
+
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
 /** Todo lo que el backend le pidió a la base, con su dirección entera —filtros incluidos—. */
@@ -132,7 +150,15 @@ beforeEach(() => {
   sesionDeSoporte = null;
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: SUPERADMIN, aud: 'authenticated' }));
-  respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]);
+  respuestas.set('GET /rest/v1/usuarios', (url) => (url.searchParams.get('select') === 'id,nombre'
+    ? USUARIOS.filter((u) => `eq.${u.prestadora_id}` === url.searchParams.get('prestadora_id'))
+    : [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]));
+  respuestas.set('GET /rest/v1/pacientes', (url) => PACIENTES.filter((p) => p.prestadora_id === prestadoraDelUsuario
+    && url.searchParams.get('cliente_id') === `eq.${p.cliente_id}`));
+  respuestas.set('GET /rest/v1/consultas_a_hce', (url) => {
+    const ids = (url.searchParams.get('paciente_id') ?? '').replace(/^in\.\(|\)$/g, '').split(',');
+    return ACCESOS.filter((a) => a.prestadora_id === prestadoraDelUsuario && ids.includes(a.paciente_id));
+  });
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => (sesionDeSoporte ? [sesionDeSoporte] : []));
   respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('POST /rest/v1/auditoria_de_accesos', () => []);
@@ -296,5 +322,74 @@ describe('falla cerrado', () => {
 
     assert.equal(estado, 403);
     assert.equal(consultaAlRegistro(), undefined, 'el backend consultó el registro antes de negar');
+  });
+});
+
+describe('quién vio la información de salud de un Cliente', () => {
+  const pedirAccesos = async (clienteId) => {
+    const r = await fetch(`${DIRECCION}/accesos-a-la-informacion-de-salud/${clienteId}`, { headers: { Authorization: sesionDePrueba(SUPERADMIN) } });
+    return { estado: r.status, cuerpo: await r.json() };
+  };
+
+  it('la administración ve los accesos de su Cliente, con nombres y por dónde llegaron', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado, cuerpo } = await pedirAccesos(CLIENTE_A);
+
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.accesos.map((a) => a.id), ['acc-a-1', 'acc-a-2']);
+    assert.equal(cuerpo.accesos[0].persona, 'Coordinación Inventada A');
+    assert.equal(cuerpo.accesos[0].paciente, 'Paciente Inventado A');
+    assert.equal(cuerpo.accesos[0].lugar, 'panel');
+    assert.equal(cuerpo.accesos[1].persona, null);
+    assert.equal(cuerpo.accesos[1].lugar, 'sistema');
+  });
+
+  it('el registro se lee con la sesión, y los nombres con el trabajo de esa Prestadora', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    await pedirAccesos(CLIENTE_A);
+
+    assert.notEqual(credencialDe('GET /rest/v1/consultas_a_hce').role, 'trabajo_sin_persona', 'el registro se leyó sin la sesión');
+    assert.notEqual(credencialDe('GET /rest/v1/pacientes').role, 'trabajo_sin_persona', 'los Pacientes se leyeron sin la sesión');
+    const nombres = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios' && l.url.searchParams.get('select') === 'id,nombre');
+    const cuerpo64 = nombres.credencial.replace('Bearer ', '').split('.')[1];
+    const credencial = JSON.parse(Buffer.from(cuerpo64, 'base64url').toString());
+    assert.equal(credencial.role, 'trabajo_sin_persona');
+    assert.equal(credencial.prestadora_id, PRESTADORA_A);
+  });
+
+  it('un Cliente de otra Prestadora no trae nada', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado, cuerpo } = await pedirAccesos(CLIENTE_B);
+
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.accesos, []);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/consultas_a_hce'), false);
+  });
+
+  it('cada Prestadora ve lo suyo y no lo de la otra', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_B;
+    const { cuerpo } = await pedirAccesos(CLIENTE_B);
+    assert.deepEqual(cuerpo.accesos.map((a) => a.id), ['acc-b-1']);
+    assert.equal(cuerpo.accesos[0].lugar, 'aplicacion_asistentes');
+  });
+
+  it('el Coordinador no lo ve, y no se consulta nada', async () => {
+    rolDelUsuario = 'coordinador';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado } = await pedirAccesos(CLIENTE_A);
+    assert.equal(estado, 403);
+    assert.equal(llamadas.some((l) => ['GET /rest/v1/pacientes', 'GET /rest/v1/consultas_a_hce'].includes(l.clave)), false);
+  });
+
+  it('un identificador mal formado no llega a la base', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado } = await pedirAccesos('no-es-un-id');
+    assert.equal(estado, 400);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/pacientes'), false);
   });
 });

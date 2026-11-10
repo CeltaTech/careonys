@@ -26,6 +26,7 @@ import { EquipoDelServicio } from './EquipoDelServicio';
 import './servicios.css';
 
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
+import { informacionDeSalud } from '../../lib/informacionDeSalud';
 
 // Cuántas guardias se listan en la pestaña. Un Servicio de meses puede tener cientos, y esta
 // pantalla no es la grilla de guardias: quien quiera verlas todas va a Guardias. Las modalidades y
@@ -114,7 +115,7 @@ export function ServicioDetalle() {
         .select('id, fecha, hora_inicio, hora_fin, estado, paciente_id, asistente_id, canal_modalidad')
         .eq('servicio_id', id)
         .order('fecha', { ascending: false }),
-      supabase
+      informacionDeSalud
         .from('reportes')
         .select(
           `id, created_at, estado_animo, incidentes, signos_vitales, confirmado_asistente, pacientes!inner(id, ${FICHA_NOMBRE}), guardias!inner(fecha, servicio_id, asistentes(nombre))`,
@@ -122,7 +123,7 @@ export function ServicioDetalle() {
         .eq('guardias.servicio_id', id)
         .order('created_at', { ascending: false })
         .limit(REPORTES_A_MOSTRAR),
-      supabase
+      informacionDeSalud
         .from('rangos_referencia_vitales')
         .select('signo, paciente_id, valor_min, valor_max, unidad')
         .eq('prestadora_id', prestadoraId),

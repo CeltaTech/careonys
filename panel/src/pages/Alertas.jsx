@@ -3,7 +3,6 @@ import { useLocale } from '../i18n/LocaleContext';
 import { Cabecera } from '../components/ui/Cabecera';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
-import { supabase } from '../lib/supabaseClient';
 import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -13,6 +12,7 @@ import { sigueSinResolver, sigueSinResolverYEsCritica } from '../lib/alertaSinRe
 import '../styles/molde-paginas.css';
 import './tarjetas.css';
 import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
+import { informacionDeSalud } from '../lib/informacionDeSalud';
 
 // Alertas de la IA Nivel 2 (backend/src/utils/revisarAlertasIA.js): la IA lee los últimos
 // reportes de cada Paciente y, si detecta un patrón preocupante, deja una alerta con dos
@@ -40,7 +40,7 @@ export function Alertas() {
     setEstado('cargando');
     setError(null);
 
-    const { data, error: errorConsulta } = await supabase
+    const { data, error: errorConsulta } = await informacionDeSalud
       .from('alertas')
       .select(
         `id, created_at, nivel, descripcion, detalle_coordinador, campos_preocupantes, reportes_relacionados, resuelta, resuelta_at, paciente_id, pacientes(${FICHA_NOMBRE})`,
@@ -70,7 +70,7 @@ export function Alertas() {
     if (!(await confirmarDestructivo(t.alertas.confirmar_resolver))) return;
     setResolviendoId(alerta.id);
     try {
-      const { error: errorUpdate } = await supabase
+      const { error: errorUpdate } = await informacionDeSalud
         .from('alertas')
         .update({ resuelta: true, resuelta_por: usuario.id, resuelta_at: new Date().toISOString() })
         .eq('id', alerta.id);

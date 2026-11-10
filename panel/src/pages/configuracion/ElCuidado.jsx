@@ -18,6 +18,7 @@ import { ElCalculoDeCandidatos } from './ElCalculoDeCandidatos';
 import { TurnosSinCubrirTab } from './TurnosSinCubrirTab';
 import { AutorizacionSignosVitales } from './AutorizacionSignosVitales';
 import { ListaPropiaDeLaPrestadora } from './ListaPropiaDeLaPrestadora';
+import { informacionDeSalud } from '../../lib/informacionDeSalud';
 import '../../styles/molde-paginas.css';
 import './elcuidado.css';
 
@@ -902,7 +903,7 @@ function TabVitales() {
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
-    const { data, error: errorConsulta } = await supabase
+    const { data, error: errorConsulta } = await informacionDeSalud
       .from('rangos_referencia_vitales')
       .select('*')
       .eq('prestadora_id', prestadoraId)
@@ -928,7 +929,7 @@ function TabVitales() {
   async function guardar(fila) {
     setGuardandoSigno(fila.signo);
     setError(null);
-    const { error: errorUpdate } = await supabase
+    const { error: errorUpdate } = await informacionDeSalud
       .from('rangos_referencia_vitales')
       .update({
         valor_min: Number(fila.valor_min),

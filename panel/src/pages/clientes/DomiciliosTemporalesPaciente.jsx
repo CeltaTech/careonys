@@ -18,6 +18,7 @@ import { DOMICILIO_VACIO, palabrasDelDomicilio, partesDesdeFila, partesParaGuard
 import { domicilioEscrito } from '../../lib/domicilioEscrito';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { coordenadasDeDomicilio, coordenadasSiCambio } from '../../lib/coordenadasDeDomicilio';
+import { informacionDeSalud } from '../../lib/informacionDeSalud';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
@@ -95,7 +96,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
         .eq('paciente_id', paciente.id)
         .order('fecha_inicio', { ascending: false }),
       supabase.rpc('domicilio_del_paciente_en', { p_paciente_id: paciente.id, p_fecha: hoyISO() }),
-      supabase
+      informacionDeSalud
         .from('hospitalizaciones_paciente')
         .select('id, institucion, fecha_inicio')
         .eq('paciente_id', paciente.id)

@@ -8,6 +8,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
+import { informacionDeSalud } from '../../lib/informacionDeSalud';
 
 export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
@@ -39,7 +40,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         nivel_complejidad: nivelComplejidad || null,
         patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
       };
-      const { data: vigente, error: errorVigente } = await supabase
+      const { data: vigente, error: errorVigente } = await informacionDeSalud
         .from('informacion_de_salud_del_paciente')
         .select('paciente_id')
         .eq('paciente_id', paciente.id)
@@ -47,8 +48,8 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
       errorSalud = errorVigente;
       if (!errorSalud) {
         ({ error: errorSalud } = vigente
-          ? await supabase.from('informacion_de_salud_del_paciente').update(salud).eq('paciente_id', paciente.id)
-          : await supabase.from('informacion_de_salud_del_paciente')
+          ? await informacionDeSalud.from('informacion_de_salud_del_paciente').update(salud).eq('paciente_id', paciente.id)
+          : await informacionDeSalud.from('informacion_de_salud_del_paciente')
             .insert({ prestadora_id: paciente.prestadora_id, paciente_id: paciente.id, ...salud }));
       }
     }

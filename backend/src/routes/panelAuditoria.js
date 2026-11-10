@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { enLaPrestadora } from '../db/connection.js';
+import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { esAdminOSuperior } from '../utils/roles.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -98,4 +98,77 @@ panelAuditoriaRouter.get('/actividad', requiereRolPanel, async (req, res) => {
 
   if (error) return responderError(res, error);
   res.json({ actividad: data });
+});
+
+// Por dónde llegó cada lectura, dicho por la parte del producto y no por la ruta interna.
+export function lugarDelOrigen(origen) {
+  const ruta = String(origen ?? '').split(' ').pop();
+  if (ruta.startsWith('/api/panel/')) return 'panel';
+  if (ruta.startsWith('/api/app-asistentes/')) return 'aplicacion_asistentes';
+  if (ruta.startsWith('/api/app-clientes/')) return 'aplicacion_clientes';
+  return 'sistema';
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Quién vio la información de salud de los Pacientes de un Cliente: lo que se muestra en su Ficha y
+// lo que se le entrega a él cuando lo pide.
+//
+// El registro se lee con la sesión de quien pide: la base sólo se lo deja leer a la administración
+// de su propia Prestadora (`lo_lee_la_administracion_de_la_prestadora`), y los Pacientes del Cliente
+// salen de la misma sesión, así que un Cliente de otra Prestadora no trae ninguno. Los nombres de
+// quienes leyeron salen con el trabajo de esa misma Prestadora, por el mismo motivo que el registro
+// de actividad: con la sesión, cada persona ve sólo su propia cuenta.
+panelAuditoriaRouter.get('/accesos-a-la-informacion-de-salud/:clienteId', requiereRolPanel, async (req, res) => {
+  const { rol, prestadoraId } = req.usuarioPanel;
+  if (!esAdminOSuperior(rol)) {
+    return res.status(403).json({ error: 'sin_permiso', motivo: 'sin_permiso' });
+  }
+  if (!prestadoraId) {
+    return res.status(403).json({ error: 'sin_permiso', motivo: 'sin_permiso' });
+  }
+  const { clienteId } = req.params;
+  if (!UUID.test(clienteId)) {
+    return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
+  }
+
+  const db = clienteDelPedido(req);
+  const { data: pacientes, error: errorPacientes } = await db
+    .from('pacientes')
+    .select('id, persona:personas!pacientes_persona_de_la_misma_prestadora(nombre_visible)')
+    .eq('cliente_id', clienteId);
+  if (errorPacientes) return responderError(res, errorPacientes);
+  if (!pacientes?.length) return res.json({ accesos: [] });
+
+  const { data: renglones, error: errorRegistro } = await db
+    .from('consultas_a_hce')
+    .select('id, usuario_id, paciente_id, categorias, momento, origen')
+    .in('paciente_id', pacientes.map((p) => p.id))
+    .order('momento', { ascending: false })
+    .limit(5000);
+  if (errorRegistro) return responderError(res, errorRegistro);
+
+  const ids = [...new Set((renglones ?? []).map((r) => r.usuario_id).filter(Boolean))];
+  let nombres = new Map();
+  if (ids.length) {
+    const { data: usuarios, error: errorNombres } = await enLaPrestadora(prestadoraId, 'nombres del registro de accesos', (conexion) => conexion
+      .from('usuarios')
+      .select('id, nombre')
+      .eq('prestadora_id', prestadoraId)
+      .in('id', ids));
+    if (errorNombres) return responderError(res, errorNombres);
+    nombres = new Map((usuarios ?? []).map((u) => [u.id, u.nombre]));
+  }
+  const pacientePorId = new Map(pacientes.map((p) => [p.id, p.persona?.nombre_visible ?? null]));
+
+  res.json({
+    accesos: (renglones ?? []).map((r) => ({
+      id: r.id,
+      momento: r.momento,
+      persona: r.usuario_id ? (nombres.get(r.usuario_id) ?? null) : null,
+      paciente: pacientePorId.get(r.paciente_id) ?? null,
+      categorias: r.categorias ?? [],
+      lugar: lugarDelOrigen(r.origen),
+    })),
+  });
 });

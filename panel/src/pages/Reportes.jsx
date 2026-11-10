@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -17,6 +16,7 @@ import {
 import '../styles/molde-paginas.css';
 import './tarjetas.css';
 import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
+import { informacionDeSalud } from '../lib/informacionDeSalud';
 
 // Tope de filas por consulta. Con el rango de fechas por defecto (una semana) no se alcanza
 // nunca; existe para que un rango muy ancho no traiga miles de filas de golpe.
@@ -44,7 +44,7 @@ export function Reportes() {
     setAbierto(null);
 
     const [{ data: reportesData, error: errorReportes }, { data: rangosData }] = await Promise.all([
-      supabase
+      informacionDeSalud
         .from('reportes')
         // El reporte dice de qué Paciente habla, así que se pide directo. Antes había que
         // traer la lista entera del turno y mostrar todos los nombres juntos en la misma fila.
@@ -55,7 +55,7 @@ export function Reportes() {
         .lte('guardias.fecha', f.hasta)
         .order('created_at', { ascending: false })
         .limit(TOPE_FILAS),
-      supabase
+      informacionDeSalud
         .from('rangos_referencia_vitales')
         .select('signo, paciente_id, valor_min, valor_max, unidad')
         .eq('prestadora_id', prestadoraId),

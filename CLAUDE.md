@@ -430,6 +430,14 @@ del repositorio usa `SUPABASE_SERVICE_ROLE_KEY`**, porque incumple `..\..\CLAUDE
 «Aislamiento entre Organizaciones», y en Supabase está dada de baja: la clave secreta se borró y
 las heredadas están apagadas. Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es sacarla.
 
+**La información de salud no se lee directo de ninguna tabla.** Las diez de
+`interno.tablas_de_salud()` llevan la política restrictiva
+`la_informacion_de_salud_pasa_por_el_registro`, y la única salida es
+`backend/src/db/informacionDeSalud.js`, que anota cada lectura en `consultas_a_hce`. El Panel las
+pide a `/api/panel/informacion-de-salud/<tabla>` con `panel/src/lib/informacionDeSalud.js`, nunca
+con `supabase.from`. El registro se lee por Cliente en
+`/api/panel/auditoria/accesos-a-la-informacion-de-salud/<cliente>`, sólo la administración.
+
 ### Cumplimiento normativo
 
 **Y el sistema tiene que poder demostrar lo que hace, no sólo hacerlo.** Careonys trata datos de

@@ -35,14 +35,14 @@ export function AccesosALaInformacionDeSalud({ clienteId }) {
 
   const fecha = (momento) => new Date(momento).toLocaleString(locale);
   const informacion = (categorias) => categorias
-    .map((c) => textos.categorias[c] ?? textos.categorias.otra)
+    .map((c) => t.clientes.accesos_salud.categorias[c] ?? textos.categorias.otra)
     .join(', ');
   const fila = (a) => [
     fecha(a.momento),
     a.persona ?? textos.sistema,
     a.paciente ?? '—',
     informacion(a.categorias),
-    textos.lugares[a.lugar] ?? textos.lugares.sistema,
+    t.clientes.accesos_salud.lugares[a.lugar] ?? textos.lugares.sistema,
   ];
 
   function bajar() {

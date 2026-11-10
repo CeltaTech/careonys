@@ -46,6 +46,15 @@ export const FICHA_DOMICILIO = `${LA_FICHA}(nombre_visible, calle, numero, piso,
 export const FICHA_COMPLETA = `${LA_FICHA}(nombre_visible, fecha_nacimiento, calle, numero, piso, unidad, lugar_id, lat, lng, lugar:lugares(nombre))`;
 
 /**
+ * La información de salud del Paciente —patologías y nivel de complejidad— con las partes que se
+ * nombren. Vive en su propia tabla, con la regla de la historia clínica: a quien no la alcanza, la
+ * base no se la manda, y el Paciente llega sin esos campos.
+ */
+export function saludCon(partes) {
+  return `salud:informacion_de_salud_del_paciente(${partes.join(', ')})`;
+}
+
+/**
  * El Paciente con sus datos de persona puestos encima.
  *
  * `textos` son las palabras «piso» y «unidad» en el idioma de quien mira; sin ellas se escriben en

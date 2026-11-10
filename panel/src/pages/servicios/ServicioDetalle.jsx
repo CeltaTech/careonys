@@ -53,10 +53,11 @@ export function ServicioDetalle() {
   const asignaCoordinador = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
   const esAdmin = asignaCoordinador;
-  // Lo comercial del Servicio lo ve y lo corrige quien edita los datos del Cliente; hacer firmar al
-  // Responsable de pagos pide su propio permiso.
-  const puedeEditarPagos = esAdmin || puede('editar_datos_cliente');
+  // Lo comercial del Servicio lo corrige quien tiene ese permiso; lo que firma el Responsable de
+  // pagos tiene el suyo. Con cualquiera de los dos se ve la solapa. La base aplica el mismo corte.
+  const puedeEditarPagos = esAdmin || puede('editar_condiciones_comerciales_servicio');
   const puedeRegistrarConsentimiento = esAdmin || puede('registrar_consentimiento_pagador');
+  const veLosPagos = puedeEditarPagos || puedeRegistrarConsentimiento;
   const gestionaServicios = esAdmin || puede('gestionar_servicios');
   const modificaAsistentes = esAdmin || puede('modificar_asistentes_del_servicio');
   const [viendoEquipo, setViendoEquipo] = useState(false);
@@ -87,7 +88,7 @@ export function ServicioDetalle() {
     const { data: s, error: fallaServicio } = await supabase
       .from('servicios')
       // De qué Cliente es sale de `cliente_id`; sus datos de contacto los trae `contactosDeClientes`.
-      .select('id, prestadora_id, etiqueta, estado, created_at, cliente_id, coordinador_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento, contratante_persona_id')
+      .select('id, prestadora_id, etiqueta, estado, created_at, cliente_id, coordinador_id')
       .eq('id', id)
       .single();
 
@@ -288,7 +289,7 @@ export function ServicioDetalle() {
     ['guardias', d.tab_guardias],
     ['seguimiento', d.tab_seguimiento],
     ['incidencias', d.tab_incidencias],
-    ...(puedeEditarPagos ? [['pagos', d.tab_pagos]] : []),
+    ...(veLosPagos ? [['pagos', d.tab_pagos]] : []),
   ];
 
   const vacio = (texto) => <p className="estado-vacio">{texto}</p>;
@@ -564,7 +565,7 @@ export function ServicioDetalle() {
               </table>
             </div>
           ))}
-        {tab === 'pagos' && puedeEditarPagos && (
+        {tab === 'pagos' && veLosPagos && (
           <PagosDelServicio
             servicio={servicio}
             puedeEditar={puedeEditarPagos}

@@ -64,7 +64,7 @@ export async function cuerpoVigente({ db, prestadoraId, idioma = IDIOMA_DEL_DOCU
 export async function servicioConSuPagador({ db, servicioId, prestadoraId }) {
   const { data: servicio } = await db
     .from('servicios')
-    .select('id, prestadora_id, cliente_id, pagador_persona_id, pagador_tipo')
+    .select('id, prestadora_id, cliente_id')
     .eq('prestadora_id', prestadoraId)
     .eq('id', servicioId)
     .maybeSingle();
@@ -72,7 +72,21 @@ export async function servicioConSuPagador({ db, servicioId, prestadoraId }) {
   if (!servicio || servicio.prestadora_id !== prestadoraId) {
     throw new ErrorConMotivo('no_encontrado', 'Servicio no encontrado');
   }
-  return servicio;
+
+  // Quién paga vive con lo comercial del Servicio, que la base abre sólo a quien tiene el permiso.
+  const { data: condiciones, error } = await db
+    .from('condiciones_comerciales_servicio')
+    .select('pagador_persona_id, pagador_tipo')
+    .eq('prestadora_id', prestadoraId)
+    .eq('servicio_id', servicioId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+
+  return {
+    ...servicio,
+    pagador_persona_id: condiciones?.pagador_persona_id ?? null,
+    pagador_tipo: condiciones?.pagador_tipo ?? null,
+  };
 }
 
 // Los Servicios de un Cliente, para lo que cambia en todos a la vez: el Apoderado.

@@ -137,7 +137,7 @@ async function nombresDeClientes(db, ids) {
 const DATOS_PARA_FACTURAR =
   'id, nombre_visible, nombre, apellido, documento_tipo, documento_numero, documento_pais, calle, numero, piso, unidad, codigo_postal, email';
 
-async function aQuienSeLeFactura(db, facturaIds) {
+async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
   const resultado = new Map();
   const ids = [...new Set(facturaIds)];
   if (ids.length === 0) return resultado;
@@ -151,9 +151,17 @@ async function aQuienSeLeFactura(db, facturaIds) {
   const servicioIds = [...new Set((facturas || []).map((f) => f.servicio_id).filter(Boolean))];
   const clienteIds = [...new Set((facturas || []).map((f) => f.cliente_id).filter(Boolean))];
 
-  const [{ data: servicios, error: e2 }, { data: clientes, error: e3 }] = await Promise.all([
+  // Quién contrata y quién paga cada Servicio, con el trabajo de la Prestadora: la base se lo abre
+  // sólo a quien tiene el permiso de lo comercial, y mandar a facturar lo hace también quien
+  // coordina. Sólo las facturas que la base ya le dejó ver a quien pide.
+  const [{ data: condiciones, error: e2 }, { data: clientes, error: e3 }] = await Promise.all([
     servicioIds.length
-      ? db.from('servicios').select('id, pagador_persona_id, contratante_persona_id').in('id', servicioIds)
+      ? enLaPrestadora(prestadoraId, 'a quién se le factura cada Servicio', (dbTrabajo) =>
+          dbTrabajo
+            .from('condiciones_comerciales_servicio')
+            .select('servicio_id, pagador_persona_id, contratante_persona_id')
+            .in('servicio_id', servicioIds),
+        )
       : Promise.resolve({ data: [], error: null }),
     clienteIds.length
       ? db.from('clientes').select('id, numero_cliente, contratante_persona_id').in('id', clienteIds)
@@ -162,7 +170,7 @@ async function aQuienSeLeFactura(db, facturaIds) {
   if (e2) throw new Error(e2.message);
   if (e3) throw new Error(e3.message);
 
-  const servicioPorId = new Map((servicios || []).map((s) => [s.id, s]));
+  const servicioPorId = new Map((condiciones || []).map((s) => [s.servicio_id, s]));
   const clientePorId = new Map((clientes || []).map((c) => [c.id, c]));
 
   const personaDe = new Map();
@@ -172,10 +180,14 @@ async function aQuienSeLeFactura(db, facturaIds) {
     personaDe.set(f.id, s?.pagador_persona_id || s?.contratante_persona_id || c?.contratante_persona_id || null);
   }
 
+  // La Ficha del Responsable de pagos tampoco la alcanza quien coordina sin el permiso, así que
+  // sale por el mismo camino.
   const personaIds = [...new Set([...personaDe.values()].filter(Boolean))];
   let fichas = new Map();
   if (personaIds.length) {
-    const { data: personas, error: e4 } = await db.from('personas').select(DATOS_PARA_FACTURAR).in('id', personaIds);
+    const { data: personas, error: e4 } = await enLaPrestadora(prestadoraId, 'datos para facturar', (dbTrabajo) =>
+      dbTrabajo.from('personas').select(DATOS_PARA_FACTURAR).in('id', personaIds),
+    );
     if (e4) throw new Error(e4.message);
     fichas = new Map((personas || []).map((p) => [p.id, p]));
   }
@@ -551,11 +563,30 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   const clientesVisibles = new Set((clientes || []).map((c) => c.id));
 
   // Una factura por Servicio y por período. Cada Servicio trae su Prestadora, que es la que se
-  // escribe en su factura, y su plazo de pago. La deuda sigue siendo del Cliente.
+  // escribe en su factura. La deuda sigue siendo del Cliente.
   const { data: servicios, error: errorServicios } = await db
     .from('servicios')
-    .select('id, prestadora_id, cliente_id, dias_hasta_el_vencimiento');
+    .select('id, prestadora_id, cliente_id');
   if (errorServicios) return responderError(res, errorServicios);
+
+  // El plazo de pago de cada Servicio es parte de lo comercial, que la base le abre sólo a quien
+  // tiene ese permiso; generar las facturas lo hace también quien coordina.
+  const plazoDelServicio = new Map();
+  const servicioIds = (servicios || []).map((s) => s.id);
+  if (servicioIds.length > 0) {
+    try {
+      const respuesta = await enLaPrestadora(prestadoraId, 'lectura del plazo de pago de cada Servicio', (dbTrabajo) =>
+        dbTrabajo
+          .from('condiciones_comerciales_servicio')
+          .select('servicio_id, dias_hasta_el_vencimiento')
+          .in('servicio_id', servicioIds),
+      );
+      if (respuesta.error) return responderError(res, respuesta.error);
+      for (const c of respuesta.data || []) plazoDelServicio.set(c.servicio_id, c.dias_hasta_el_vencimiento);
+    } catch (e) {
+      return responderError(res, e);
+    }
+  }
 
   let prestaciones = [];
 
@@ -604,7 +635,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
     const vencimiento = vencimientoEscrito
       ? vencimientoDeLaTanda
-      : vencimientoDe(hoy, plazoDePagoDe(plazoDeLaPrestadora, servicio.dias_hasta_el_vencimiento));
+      : vencimientoDe(hoy, plazoDePagoDe(plazoDeLaPrestadora, plazoDelServicio.get(servicio.id) ?? null));
 
     if (!vencimiento) {
       sinVencimiento += 1;
@@ -779,7 +810,7 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
   let destinatarios;
   try {
     nombres = await nombresDeClientes(db, (data || []).map((s) => s.cliente_id));
-    destinatarios = await aQuienSeLeFactura(db, (data || []).map((s) => s.factura_id));
+    destinatarios = await aQuienSeLeFactura(db, req.usuarioPanel.prestadoraId, (data || []).map((s) => s.factura_id));
   } catch (e) {
     return responderError(res, e);
   }

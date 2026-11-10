@@ -490,10 +490,20 @@ INSERT INTO public.informacion_de_salud_del_paciente (prestadora_id, paciente_id
 -- Ficha, y `pagador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente
 -- por sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al
 -- Directorio: paga Ramiro Pérez, que es una Ficha más y no un nombre tecleado.
-INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, estado, coordinador_id, pagador_tipo, pagador_persona_id) VALUES
-  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente', '20000000-0000-4000-8000-000000000003', NULL, NULL),
-  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente', '20000000-0000-4000-8000-000000000003', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
-  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente', '20000000-0000-4000-8000-000000000003', 'otro', 'c0000000-0000-4000-8000-000000000001');
+-- Lo comercial vive aparte, en `condiciones_comerciales_servicio`: el Servicio nace con su fila
+-- (la crea un disparador, con el Contratante del Cliente) y acá sólo se le dice quién paga.
+INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, estado, coordinador_id) VALUES
+  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente', '20000000-0000-4000-8000-000000000003'),
+  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente', '20000000-0000-4000-8000-000000000003'),
+  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente', '20000000-0000-4000-8000-000000000003');
+
+UPDATE public.condiciones_comerciales_servicio c
+   SET pagador_tipo = v.pagador_tipo, pagador_persona_id = v.pagador_persona_id::uuid
+  FROM (VALUES
+    ('60000000-0000-4000-8000-000000000002', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
+    ('60000000-0000-4000-8000-000000000003', 'otro',        'c0000000-0000-4000-8000-000000000001')
+  ) AS v(servicio_id, pagador_tipo, pagador_persona_id)
+ WHERE c.servicio_id = v.servicio_id::uuid;
 
 -- La Lista de Precios es el catálogo: lo que la Prestadora ofrece y a cuánto.
 -- No es lo vendido. Lo vendido son las prestaciones de más abajo, que guardan el

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { traducirValor } from '../../i18n/valores';
 import { supabase } from '../../lib/supabaseClient';
@@ -21,21 +21,49 @@ import '../../styles/molde-paginas.css';
 
    Es del Servicio y no del Cliente: un mismo Cliente puede tener dos Servicios con distinto
    Responsable de pagos. La deuda sigue siendo del Cliente. Las personas se eligen del Directorio
-   de Personas y no se teclean. */
+   de Personas y no se teclean.
+
+   Vive en su propia tabla, que la base le abre sólo a quien tiene el permiso de lo comercial o el
+   de lo que firma el Responsable de pagos. */
+function formDe(condiciones) {
+  const dias = condiciones?.dias_hasta_el_vencimiento;
+  return {
+    dias_hasta_el_vencimiento: dias === null || dias === undefined ? '' : String(dias),
+    pagador_tipo: condiciones?.pagador_tipo || '',
+    pagador_persona_id: condiciones?.pagador_persona_id || null,
+    contratante_persona_id: condiciones?.contratante_persona_id || null,
+  };
+}
+
 export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmin, onGuardado }) {
   const { t } = useLocale();
-  const [form, setForm] = useState(() => ({
-    dias_hasta_el_vencimiento:
-      servicio.dias_hasta_el_vencimiento === null || servicio.dias_hasta_el_vencimiento === undefined
-        ? ''
-        : String(servicio.dias_hasta_el_vencimiento),
-    pagador_tipo: servicio.pagador_tipo || '',
-    pagador_persona_id: servicio.pagador_persona_id || null,
-    contratante_persona_id: servicio.contratante_persona_id || null,
-  }));
+  const [form, setForm] = useState(() => formDe(null));
+  const [estado, setEstado] = useState('cargando');
+  const [errorDeCarga, setErrorDeCarga] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [guardado, setGuardado] = useState(false);
+
+  const cargar = useCallback(async () => {
+    setEstado('cargando');
+    setErrorDeCarga(null);
+    const { data, error: falla } = await supabase
+      .from('condiciones_comerciales_servicio')
+      .select('contratante_persona_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento')
+      .eq('servicio_id', servicio.id)
+      .maybeSingle();
+    if (falla) {
+      setErrorDeCarga(mensajeDeError(falla, t));
+      setEstado('error');
+      return;
+    }
+    setForm(formDe(data));
+    setEstado('listo');
+  }, [servicio.id, t]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
   function setCampo(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -52,14 +80,14 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
     setGuardando(true);
     setError(null);
     const { error: falla } = await supabase
-      .from('servicios')
+      .from('condiciones_comerciales_servicio')
       .update({
         dias_hasta_el_vencimiento: plazo.valor,
         pagador_tipo: form.pagador_tipo || null,
         pagador_persona_id: form.pagador_persona_id || null,
         contratante_persona_id: form.contratante_persona_id || null,
       })
-      .eq('id', servicio.id);
+      .eq('servicio_id', servicio.id);
     setGuardando(false);
     if (falla) {
       setError(mensajeDeError(falla, t));
@@ -68,6 +96,9 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
     setGuardado(true);
     onGuardado?.();
   }
+
+  if (estado === 'cargando') return <p className="molde-vacio">{t.comun.cargando}</p>;
+  if (estado === 'error') return <Alert variant="error">{errorDeCarga}</Alert>;
 
   return (
     <>

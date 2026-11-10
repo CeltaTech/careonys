@@ -453,7 +453,7 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
       const db = clienteDelPedido(req);
       const { data: cliente } = await db
         .from('clientes')
-        .select('id, prestadora_id, contratante_persona_id')
+        .select('id, prestadora_id')
         .eq('id', clienteId)
         .maybeSingle();
       if (!cliente) throw new ErrorConMotivo('faltan_datos');
@@ -463,7 +463,6 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
       const servicioId = await enLaPrestadora(cliente.prestadora_id, 'alta de Servicio', (dbPrestadora) => crearServicioDelCliente(dbPrestadora, {
         prestadoraId: cliente.prestadora_id,
         clienteId: cliente.id,
-        contratantePersonaId: cliente.contratante_persona_id,
         etiqueta,
         coordinadorId,
       }));
@@ -547,7 +546,7 @@ panelCuentasRouter.post('/servicio/:servicioId/reactivar', requiereRolPanel, exi
   }
 });
 
-panelCuentasRouter.get('/servicio/:servicioId/pagador', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.get('/servicio/:servicioId/pagador', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
   const servicio = await servicioDelPedido(req);
   if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
 
@@ -693,7 +692,7 @@ panelCuentasRouter.post(
 
 // Volver a ver el documento firmado. Nunca dirección pública: un enlace temporal que dura un minuto,
 // igual que el resto de los archivos del producto.
-panelCuentasRouter.get('/servicio/:servicioId/pagador/consentimiento/:consentimientoId/documento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.get('/servicio/:servicioId/pagador/consentimiento/:consentimientoId/documento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
   const db = clienteDelPedido(req);
   const servicio = await servicioDelPedido(req);
   if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
@@ -763,7 +762,7 @@ panelCuentasRouter.post(
   },
 );
 
-panelCuentasRouter.get('/servicio/:servicioId/pagador/documento/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.get('/servicio/:servicioId/pagador/documento/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
   const db = clienteDelPedido(req);
   const servicio = await servicioDelPedido(req);
   if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });

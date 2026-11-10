@@ -36,7 +36,10 @@ function baseCon({ consentimientos, emails }) {
         order: () => consulta,
         maybeSingle: async () => {
           if (tabla === 'servicios') {
-            return { data: { id: SERVICIO, prestadora_id: PRESTADORA, cliente_id: CLIENTE, pagador_persona_id: QUIEN_FIRMA_AHORA, pagador_tipo: null }, error: null };
+            return { data: { id: SERVICIO, prestadora_id: PRESTADORA, cliente_id: CLIENTE }, error: null };
+          }
+          if (tabla === 'condiciones_comerciales_servicio') {
+            return { data: { pagador_persona_id: QUIEN_FIRMA_AHORA, pagador_tipo: null }, error: null };
           }
           if (tabla === 'personas') {
             return { data: { id: filtros.id, nombre_visible: 'Persona inventada', email: emails[filtros.id] ?? null }, error: null };

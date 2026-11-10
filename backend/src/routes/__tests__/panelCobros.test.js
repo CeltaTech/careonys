@@ -213,8 +213,8 @@ function consultasDeLaRuta() {
  * Cada consulta de la ruta fue con la credencial de quien pide, y ninguna lleva escrito el filtro
  * de la Prestadora de la sesión: qué filas ve lo decide la base.
  */
-function todoConLaCredencialDeQuienPide(minimo) {
-  const consultas = consultasDeLaRuta();
+function todoConLaCredencialDeQuienPide(minimo, { salvo = [] } = {}) {
+  const consultas = consultasDeLaRuta().filter((l) => !salvo.some((clave) => l.clave === clave));
   assert.ok(consultas.length >= minimo, 'la ruta tiene que haber consultado la base');
   for (const consulta of consultas) {
     assert.equal(consulta.credencial, credencialEnviada, `${consulta.clave} no fue con la credencial de quien pide`);
@@ -1102,7 +1102,10 @@ function baseConUnCliente({
     },
   ]);
   respuestas.set('GET /rest/v1/servicios', () => [
-    { id: SERVICIO, prestadora_id: PRESTADORA, cliente_id: CLIENTE, dias_hasta_el_vencimiento: plazoDelCliente },
+    { id: SERVICIO, prestadora_id: PRESTADORA, cliente_id: CLIENTE },
+  ]);
+  respuestas.set('GET /rest/v1/condiciones_comerciales_servicio', () => [
+    { servicio_id: SERVICIO, dias_hasta_el_vencimiento: plazoDelCliente },
   ]);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
   respuestas.set('GET /rest/v1/facturas_cliente', () => yaFacturadas);
@@ -1236,8 +1239,17 @@ describe('generar las facturas de un período', () => {
 
     await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
 
-    todoConLaCredencialDeQuienPide(4);
+    // El plazo de cada Servicio es lo comercial, que quien coordina no lee: va con el trabajo de
+    // esa sola Prestadora, y sólo por los Servicios que quien pide ya pudo ver.
+    const LO_COMERCIAL = 'GET /rest/v1/condiciones_comerciales_servicio';
+    todoConLaCredencialDeQuienPide(4, { salvo: [LO_COMERCIAL] });
     clientesConLaCredencialDeQuienPide();
+    const plazo = llamadas.find((l) => l.clave === LO_COMERCIAL);
+    assert.notEqual(plazo.credencial, credencialEnviada);
+    const contenido = JSON.parse(Buffer.from(plazo.credencial.split('.')[1], 'base64url').toString());
+    assert.equal(contenido.role, 'trabajo_sin_persona');
+    assert.equal(contenido.prestadora_id, PRESTADORA);
+    assert.ok(plazo.url.includes(SERVICIO));
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
     assert.equal(factura.cuerpo.prestadora_id, PRESTADORA);
     const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');

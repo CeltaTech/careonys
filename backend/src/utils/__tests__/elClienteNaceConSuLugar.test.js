@@ -441,7 +441,9 @@ describe('el Servicio que trae la planilla', () => {
     respuestas.set('POST /rest/v1/servicios', () => [{ id: SERVICIO }]);
   });
 
-  it('con el nombre del Servicio, nace el Servicio de ese Cliente, con quien contrata', async () => {
+  // Quien contrata no se escribe acá: lo comercial vive en su propia tabla, y la base le copia al
+  // Servicio nuevo el Contratante de su Cliente.
+  it('con el nombre del Servicio, nace el Servicio de ese Cliente', async () => {
     fila.servicio = '  Cuidado diurno ';
 
     const alta = await darDeAlta();
@@ -450,7 +452,6 @@ describe('el Servicio que trae la planilla', () => {
       prestadora_id: PRESTADORA,
       etiqueta: 'Cuidado diurno',
       cliente_id: NUEVO_CLIENTE,
-      contratante_persona_id: NUEVA_PERSONA,
     });
     assert.equal(alta.servicioId, SERVICIO);
   });

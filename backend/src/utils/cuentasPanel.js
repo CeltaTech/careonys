@@ -745,7 +745,7 @@ export async function crearClienteImportado({
     // uno después, desde Servicios.
     const servicioId = String(servicio ?? '').trim()
       ? await crearServicioDelCliente(db, {
-        prestadoraId, clienteId, contratantePersonaId: persona.id, etiqueta: servicio,
+        prestadoraId, clienteId, etiqueta: servicio,
       })
       : null;
 
@@ -767,9 +767,10 @@ export async function crearClienteImportado({
 // cuando el Servicio nace junto con el Cliente. La base exige que el Cliente sea de la misma
 // Prestadora, y a una persona con sesión, además, el permiso `gestionar_servicios`.
 //
-// Si lo crea un Coordinador, el Servicio nace coordinado por él.
+// Si lo crea un Coordinador, el Servicio nace coordinado por él. Lo comercial —con el Contratante
+// del Cliente ya anotado— lo crea la base junto con el Servicio.
 export async function crearServicioDelCliente(db, {
-  prestadoraId, clienteId, contratantePersonaId, etiqueta, coordinadorId,
+  prestadoraId, clienteId, etiqueta, coordinadorId,
 }) {
   const nombre = String(etiqueta ?? '').trim();
   if (!prestadoraId || !clienteId || !nombre) throw new ErrorConMotivo('faltan_datos');
@@ -779,7 +780,6 @@ export async function crearServicioDelCliente(db, {
       prestadora_id: prestadoraId,
       etiqueta: nombre,
       cliente_id: clienteId,
-      contratante_persona_id: contratantePersonaId ?? null,
       ...(coordinadorId ? { coordinador_id: coordinadorId, coordinador_asignado_por: coordinadorId } : {}),
     })
     .select('id')
@@ -852,7 +852,7 @@ export async function crearClienteConServicio(db, {
     if (errorPaciente) throw new Error(errorPaciente.message);
 
     const servicioId = await crearServicioDelCliente(db, {
-      prestadoraId, clienteId, contratantePersonaId, etiqueta, coordinadorId,
+      prestadoraId, clienteId, etiqueta, coordinadorId,
     });
     return { clienteId, servicioId, numeroCliente: clienteNuevo.numero_cliente };
   } catch (error) {

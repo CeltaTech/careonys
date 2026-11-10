@@ -288,12 +288,6 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **9.** **Lo que queda del paso de la credencial de la persona.** Ninguna ruta usa ya la llave
 maestra; lo que sigue no se pudo cerrar ahí.
 
-**Qué ve cada rol sale de qué necesita para cumplir su función.** La Ficha del Cliente ya está
-cortada así, y los documentos del Legajo del Asistente también: «Ver los documentos de los
-Asistentes» abre el archivo y «Cargar documentos de los Asistentes» lo sube en revisión, con el
-mismo corte en la pantalla, el backend y la base. Falta el domicilio y el vínculo del Legajo: hoy la
-base le deja leer al coordinador la fila entera del Asistente, y sólo la pantalla los esconde.
-
 **El registro de accesos va en este paso.** Es un registro separado del de actividad,
 porque anotan cosas distintas y tienen plazos distintos. **Seis campos por evento:** la Prestadora,
 la persona que accedió, el paciente, las categorías de dato alcanzadas, el momento y el origen. Los

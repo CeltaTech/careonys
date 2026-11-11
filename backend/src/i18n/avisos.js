@@ -790,6 +790,17 @@ const ARMADORES = {
       ].join('\n'),
     };
   },
+
+  // Le llega a CeltaTech cuando la base desactivó una cuenta automática por entrar demasiadas
+  // veces. Ninguna Prestadora lo recibe ni lo reescribe.
+  alarma_de_cuenta_automatica: (t, d) => ({
+    asunto: t('alarma_de_cuenta_automatica.asunto'),
+    texto: t('alarma_de_cuenta_automatica.cuerpo', {
+      cuenta: d.cuenta,
+      entradas: d.entradas,
+      minutos: d.minutos,
+    }),
+  }),
 };
 
 /** Las claves del catálogo, para que una prueba pueda recorrerlas sin que nadie las escriba dos veces. */

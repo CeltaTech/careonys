@@ -63,6 +63,7 @@ import { avisarLosPlazosDeUbicacionVencidos } from './utils/plazoDeLaUbicacion.j
 import { copiarLosArchivosAlRespaldo } from './utils/copiaDeLosArchivos.js';
 import { borrarLoVencidoDelRegistroDeAccesos } from './utils/borradoDelRegistroDeAccesos.js';
 import { avisarElBorradoDelRegistroDeAccesos } from './utils/avisoDeBorradoDelRegistroDeAccesos.js';
+import { avisarLasAlarmasDeLasCuentasAutomaticas } from './utils/alarmaDeLasCuentasAutomaticas.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
@@ -353,6 +354,23 @@ programar(avisarElBorradoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: tru
   };
   copiar();
   setInterval(copiar, UN_DIA_MS);
+}
+
+// La alarma de las cuentas automáticas. No pasa por `programar` porque no es de ninguna
+// Prestadora: la lee la cuenta automática sin Prestadora (utils/alarmaDeLasCuentasAutomaticas.js).
+// Cada minuto, porque la cuenta ya quedó desactivada y CeltaTech tiene que enterarse enseguida.
+// Tampoco se encima.
+{
+  let corriendo = false;
+  const avisar = () => {
+    if (corriendo) return;
+    corriendo = true;
+    avisarLasAlarmasDeLasCuentasAutomaticas()
+      .catch((err) => console.error('avisarLasAlarmasDeLasCuentasAutomaticas:', err?.message ?? err))
+      .finally(() => { corriendo = false; });
+  };
+  avisar();
+  setInterval(avisar, UN_MINUTO_MS);
 }
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no

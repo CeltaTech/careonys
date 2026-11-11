@@ -17,7 +17,9 @@ import { filasDeFabrica } from '../../__tests__/laFotoDeLaBase.js';
 // `('<clave>', '<json>'::jsonb)` —con `admite_texto_propio` y `activo` detrás, si los dicen— y
 // borran en la forma `DELETE FROM public.mensajes_del_sistema WHERE prestadora_id IS NULL AND
 // clave = '<clave>'`. Se leen en orden, igual que las corre la base.
-const MIGRACIONES_POSTERIORES = [];
+const MIGRACIONES_POSTERIORES = [
+  '20270326000000_alarma_de_las_cuentas_automaticas.sql',
+];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;
 // La otra forma de sembrar: `(NULL, '<clave>', '<json>')`, con la Prestadora delante y sin el tipo.

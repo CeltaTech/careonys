@@ -360,14 +360,12 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
    el pase lo arma la base (`backend/src/db/connection.js`). **Además, desde el 25 de noviembre de
    2026:** borrar de las claves de firma de Supabase las dos que firmaba el backend
    (`8257f604-…` y `53b86d1f-…`). Ya están revocadas; Supabase no deja borrarlas antes.
-7. **Una alarma sobre las cuentas automáticas.** Suena ante muchas entradas nuevas con contraseña
-   en poco tiempo y ante contraseñas equivocadas repetidas. No mira desde dónde se entra: la
-   dirección fija de Railway es del plan pago y la comparten otros clientes de Railway, así que no
-   distingue al backend de un extraño. **Avisa y corta:** manda un correo a
-   `cuentas@celtatech.com`, la dirección de todo lo que el sistema le comunica a CeltaTech, y
-   desactiva la cuenta automática afectada hasta que se le cambie la contraseña. La Prestadora no
-   se entera. La dirección vive en la configuración del backend, donde ninguna Prestadora la puede
-   cambiar.
+7. **Las contraseñas equivocadas de las cuentas automáticas no se vigilan.** La alarma de las
+   entradas ya funciona (`interno.armar_el_pase`): más de 10 entradas con contraseña en una hora
+   desactivan la cuenta y le mandan un correo a `CORREO_DE_LAS_ALARMAS` del backend. Las
+   equivocadas, Supabase sólo las informa en el plan Teams. Espera ese cambio de plan. Para
+   reactivar una cuenta cortada: contraseña nueva, `banned_until` vacío y la contraseña nueva en
+   Railway y en la caja fuerte. Si la cortada es `lista@`, el correo no sale hasta reactivarla.
 
 **Lo que decide usted:** quién guarda la clave que descifra el respaldo de cada Prestadora, y qué
 se hace con los secretos de terceros, que el sistema tiene que poder usar solo y por eso no pueden
@@ -376,8 +374,7 @@ quedar fuera de su alcance.
 **Comprobación:** las claves de una Prestadora no descifran nada de otra; ningún secreto del
 repositorio, de GitHub ni del backend alcanza a más de una Prestadora —el backend las guarda todas,
 porque trabaja para todas, pero cada una abre sólo la suya—; un pase pedido con la cuenta
-de una Prestadora no lee nada de otra; y una entrada con la contraseña equivocada repetida dispara
-el correo y deja la cuenta desactivada.
+de una Prestadora no lee nada de otra.
 
 **16.** **La documentación que queda falsa.** Hay renglones de documentación y comentarios de
 código que describen el estado de hoy y quedarán falsos. **Se corrigen en el paso donde dejan de

@@ -361,9 +361,15 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
 6. **El backend deja de fabricar pases.** Cada Prestadora tiene una cuenta automática propia, con
    una contraseña larga hecha al azar al darla de alta, que se puede cambiar sin tocar las de las
    demás. El backend entra con ella como una persona y **el pase lo arma Supabase**: una función de
-   la base decide qué dice, y para esa cuenta dice sólo su Prestadora. Las contraseñas van a la caja
-   fuerte de Careonys. Al terminar se borra `CLAVE_DEL_TRABAJO_SIN_PERSONA` del backend y de las
-   claves de firma de Supabase. Se descartaron la caja externa que firma, porque no impide pedirle
+   la base decide qué dice, y para esa cuenta dice sólo su Prestadora. **Hecho en la base real:** la
+   tabla, la función que arma el pase y las 7 cuentas de las 2 Prestadoras —trabajo, copia e
+   importación de cada una, más la que pide la lista—; borrar una Prestadora se lleva sus cuentas
+   (`20270325000000_borrar_la_cuenta_automatica.sql`). Las contraseñas están en la variable
+   `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` del backend en Railway y en la caja fuerte de Careonys.
+   Cada una entra y, mientras la función no esté encendida en la base real, no ve nada. **Falta:**
+   encender la función en la base real, que `backend/src/db/connection.js` entre con las cuentas en
+   vez de firmar, y recién ahí borrar `CLAVE_DEL_TRABAJO_SIN_PERSONA` del backend y de las claves de
+   firma de Supabase. Una Prestadora nueva necesita sus tres cuentas al darse de alta. Se descartaron la caja externa que firma, porque no impide pedirle
    un pase que abra todo, y que la plataforma reconozca al backend sin contraseña, porque Railway no
    lo ofrece. La importación de planillas tiene además su propia cuenta en cada Prestadora, porque
    es el único trabajo que ve lo importado que todavía no se confirmó. Probado en la base local
@@ -383,7 +389,8 @@ se hace con los secretos de terceros, que el sistema tiene que poder usar solo y
 quedar fuera de su alcance.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra; ningún secreto del
-repositorio, de GitHub ni del backend alcanza a más de una Prestadora; un pase pedido con la cuenta
+repositorio, de GitHub ni del backend alcanza a más de una Prestadora —el backend las guarda todas,
+porque trabaja para todas, pero cada una abre sólo la suya—; un pase pedido con la cuenta
 de una Prestadora no lee nada de otra; y una entrada con la contraseña equivocada repetida dispara
 el correo y deja la cuenta desactivada.
 

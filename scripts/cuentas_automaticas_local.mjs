@@ -28,7 +28,9 @@ const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ENTORNO_DEL_BACKEND = join(RAIZ, 'backend', '.env');
 const VARIABLE = 'CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS';
 const DOMINIO = 'cuentas-automaticas.invalid';
-const CONTENEDOR = 'supabase_db_careonys';
+// El contenedor de la base local lleva el nombre del proyecto de `supabase/config.toml`.
+const PROYECTO = readFileSync(join(RAIZ, 'supabase', 'config.toml'), 'utf8').match(/^project_id\s*=\s*"([^"]+)"/m)[1];
+const CONTENEDOR = `supabase_db_${PROYECTO}`;
 
 // La consulta entra por la entrada estándar, nunca como argumento.
 const base = (texto) => execFileSync('docker', ['exec', '-i', CONTENEDOR, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-qAt'], {

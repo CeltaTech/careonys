@@ -41,7 +41,7 @@ nunca uno más corto—, CAMBIAR, AJUSTAR, DEJAR y REVISAR.
 ubica, se describe y se aplica exactamente un texto aprobado. Donde hace falta un texto y no hay uno
 aprobado, queda escrito que falta definirlo. Nunca se inventa.
 
-**El relevamiento son seis, y el punto 15 avisa que no alcanza:** «hay que evaluar
+**El relevamiento son cinco, y el punto 15 avisa que no alcanza:** «hay que evaluar
 absolutamente todos». Lo que todavía no se relevó está anotado al pie.
 
 ---
@@ -337,7 +337,7 @@ hay que analizar en detalle primero los procedimientos y la lógica de los mismo
 no cuando eventualmente surja la necesidad»*. No se toca y no se opina sobre él acá.
 
 **Lo que el punto 15 manda evaluar y todavía no se relevó.** Su título dice «Aplicación algunos de
-los casos, hay que evaluar absolutamente todos», así que los seis de acá no cierran la
+los casos, hay que evaluar absolutamente todos», así que los cinco de acá no cierran la
 revisión. Falta relevar, con la misma ficha de ocho apartados:
 
 1. Los textos al pie de los casilleros, cuando un dato está mal cargado.

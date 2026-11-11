@@ -826,8 +826,9 @@ contraseña para las tres, esa puerta daba también a las otras dos y esto no se
 todavía no sirve para restablecer la contraseña hasta que alguien de la oficina lo habilite, y el Panel
 muestra una lista de cuentas esperando esa habilitación. Esa lista además está mal: muestra a todo
 el que tiene un número que nadie confirmó, aunque lo haya cargado el primer día. Con la regla de
-arriba, la lista, la confirmación por la oficina y el renglón del tablero salen. En la base no hay
-ningún número confirmado por la oficina, así que no hay nada guardado que decidir. La página
+arriba, la lista, la confirmación por la oficina y el renglón del tablero salen. En la base hay tres
+números confirmados por la oficina, los tres de datos inventados de la Prestadora de prueba, así
+que no hay nada guardado que decidir. La página
 Habilitar cambio de contraseña queda para la tercera vía, la de quien llama porque no puede entrar.
 
 **37.** Lo mismo, en las dos aplicaciones de teléfono. Hoy un Asistente y un Cliente ya pueden
@@ -895,7 +896,7 @@ paquetes de contactos son de CeltaTech. Nació de leer «la decisión comercial 
 como «lo vende CeltaTech», que es otra cosa: la decide cada Prestadora. Ese repositorio está en
 sólo lectura, así que el renglón se saca cuando se lo toque.
 
-**43. Usted** — Prioridad de acceso al Padrón ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Match.md:225`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a ese Cliente se le avise primero cuando algún Asistente del Padrón vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy el Cliente no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que el Cliente cierre el Servicio, o hay que construir antes el vínculo?
+**43. Usted** — Prioridad de acceso al Padrón ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Match.md:208`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a ese Cliente se le avise primero cuando algún Asistente del Padrón vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy el Cliente no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que el Cliente cierre el Servicio, o hay que construir antes el vínculo?
 
 **44.** Construirla según lo contestado.
 
@@ -929,13 +930,6 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
 **51.** La marca del equipo del Panel usa un solo casillero del navegador para todas las
 Prestadoras: la última pisa a la anterior. El backend la valida contra la Prestadora, así que no
 sale ningún dato; es un dato de una Organización viajando adentro del pedido de otra.
-
-**140.** La lista de quiénes atienden se guarda por Paciente, y los Asistentes son del Servicio.
-En un Servicio que cuida a un matrimonio quedan dos listas donde tiene que haber una. Se pasa al
-Servicio: la tabla de las correcciones, la regla que arma la lista —en el Panel y en su copia del
-backend— y la pantalla que la muestra, que se abre desde el Servicio. Hoy no hay ninguna
-corrección guardada, así que no hay datos que mudar. Se cierra cuando la lista es una por
-Servicio y el permiso se llama «Modificar los Asistentes de un Servicio».
 
 ---
 
@@ -1050,8 +1044,8 @@ trabajo:
 **Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
 la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.
 
-**54. Usted** — Los seis carteles que esperan su texto, cuyo detalle está en
-`docs/CARTELES_DEL_PANEL.md`. Las fichas 2, 6 y 9 ya tienen el texto o el molde escrito en el
+**54. Usted** — Los cinco carteles que esperan su texto, cuyo detalle está en
+`docs/CARTELES_DEL_PANEL.md`. Las fichas 2, 9 y 12 ya tienen el texto o el molde escrito en el
 `.docx` y lo único que falta es confirmarlo.
 
 **55. Usted** — La pregunta que usted dejó escrita en el `.docx` junto a la ficha 26: si alguna
@@ -1080,13 +1074,13 @@ país.
 **61.** Aplicar todo lo contestado.
 
 **62.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
-todo el Panel y de las dos aplicaciones, sin excepción;
-quitar los textos que no se alcanzan desde ninguna pantalla; escribir la regla de que cuando un
-texto sale sale el cartel entero, donde vive la regla del casillero.
+todo el Panel y de las dos aplicaciones, sin excepción, y
+quitar los textos que no se alcanzan desde ninguna pantalla.
 
-**Y «invitación» sale de las pantallas que activan una cuenta** —«Reenviar invitación», «pida que
-reenvíen la invitación»—, donde el glosario ya la prohíbe. Termina cuando buscar esa palabra en el
-código y en la base da cero.
+**Y «invitación» termina de salir de lo guardado.** De los textos visibles ya salió; quedan las
+claves `invitacion_al_enlace` de la activación y del restablecimiento de la contraseña, en la base
+y en `backend/src/i18n/avisos.js:587` y `:610`, el rótulo de `backend/src/utils/activacionCuenta.js:118`
+y algunos comentarios. Termina cuando buscar esa palabra en el código y en la base da cero.
 
 **63.** Relevar lo que el pie de `docs/CARTELES_DEL_PANEL.md` anota como todavía sin relevar. **Y todo el texto visible, contra
 las cuatro fuentes** que fija `..\..\CLAUDE.md` §8: términos sin aprobar, giros locales,
@@ -1094,9 +1088,9 @@ construcciones dubitativas como «Conviene…» e impersonalidades innecesarias.
 aprobar, uno por uno.
 
 **64.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
-con el nombre comercial que informa CeltaTech como dato. Hoy la nombra en tres lugares —el
-recuadro de Servicios por modalidad de Estado actual, el Resumen del mes y el motivo por el que un
-Asistente no puede tomar una guardia—, con «Prestación directa» y «Match» escritos en los textos
+con el nombre comercial que informa CeltaTech como dato. Hoy la nombra en dos lugares —el
+recuadro de Servicios por modalidad de Estado actual y el motivo por el que un Asistente no puede
+tomar una guardia—, con «Prestación directa» y «Match» escritos en los textos
 del Panel, y lo hace aunque tenga una sola.
 
 ---

@@ -31,8 +31,12 @@ jobs:
         with:
           version: 2.107.0
 
-      # Sólo la base: las migraciones y la siembra corren al levantarla.
+      # Sólo la base: las migraciones y la siembra corren al levantarla. No hay servicio de acceso,
+      # así que no hace falta ningún archivo de firma: se le dice a la herramienta que no lo busque.
+      # La prueba no entra con ninguna credencial firmada; le da a la base los datos de sesión.
       - name: Levantar la base local
+        env:
+          SUPABASE_AUTH_SIGNING_KEYS_PATH: ''
         run: supabase db start
 
       - name: Probar el aislamiento en la base

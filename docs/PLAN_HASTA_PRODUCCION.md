@@ -366,9 +366,10 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
    importación de cada una, más la que pide la lista—; borrar una Prestadora se lleva sus cuentas
    (`20270325000000_borrar_la_cuenta_automatica.sql`). Las contraseñas están en la variable
    `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` del backend en Railway y en la caja fuerte de Careonys.
-   Cada una entra y, mientras la función no esté encendida en la base real, no ve nada. **Falta:**
-   encender la función en la base real, que `backend/src/db/connection.js` entre con las cuentas en
-   vez de firmar, y recién ahí borrar `CLAVE_DEL_TRABAJO_SIN_PERSONA` del backend y de las claves de
+   La función está encendida en la base real: cada cuenta recibe su rol y su Prestadora, la de
+   trabajo ve sólo los Asistentes de la suya, la copia no lee tablas, y el pase de una persona sale
+   sin cambios. **Falta:** que `backend/src/db/connection.js` entre con las cuentas en vez de
+   firmar, y recién ahí borrar `CLAVE_DEL_TRABAJO_SIN_PERSONA` del backend y de las claves de
    firma de Supabase. Una Prestadora nueva necesita sus tres cuentas al darse de alta. Se descartaron la caja externa que firma, porque no impide pedirle
    un pase que abra todo, y que la plataforma reconozca al backend sin contraseña, porque Railway no
    lo ofrece. La importación de planillas tiene además su propia cuenta en cada Prestadora, porque

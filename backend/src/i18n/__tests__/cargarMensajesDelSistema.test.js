@@ -12,7 +12,6 @@
 import { strict as assert } from 'node:assert';
 import { after, describe, it } from 'node:test';
 import { createServer } from 'node:http';
-import crypto from 'node:crypto';
 
 const PRESTADORA_A = '11111111-1111-1111-1111-111111111111';
 const PRESTADORA_B = '22222222-2222-2222-2222-222222222222';
@@ -60,8 +59,6 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
-const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
-process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA = JSON.stringify({ ...privateKey.export({ format: 'jwk' }), kid: 'prueba' });
 
 const { cargarMensajesDelSistema } = await import('../cargarMensajesDelSistema.js');
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora, TRABAJO_DE_LA_IMPORTACION } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import {
   crearAsistenteDirecto, crearClienteImportado,
@@ -35,7 +35,7 @@ export const panelImportacionRouter = Router();
 //
 // El nombre es el que la base compara: cambiarlo acá sin cambiarlo allá deja la importación sin
 // ver lo que escribe.
-export const TRABAJO_DE_LA_IMPORTACION = 'importación de planillas';
+export { TRABAJO_DE_LA_IMPORTACION };
 
 // Capa 1 (formato conocido): toda extensión que `xlsx` sabe leer (spreadsheets comunes +
 // texto delimitado) más `.sql` (dump estándar, ver intentarParsearSQL). Cualquier otra

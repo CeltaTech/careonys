@@ -1,5 +1,4 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import {
   regionDeLaCredencial,
@@ -16,9 +15,18 @@ import { origenDelPedido } from '../utils/registroDeConsultas.js';
    - La de la persona que pide: la misma con la que entró al Panel o a su aplicación. La base ve
      quién es y le contesta sólo lo de su Prestadora. Es la que usa una ruta, a través de
      `clienteDelPedido(req)`.
-   - La del trabajo sin persona, que el backend genera para una sola Prestadora y que la base
-     limita a lo que ese trabajo usa.
+   - La del trabajo sin persona, de una sola Prestadora, que la base limita a lo que ese trabajo
+     usa.
    La llave maestra, que alcanza todas las Prestadoras, no la usa el backend.
+
+   CÓMO ENTRA EL TRABAJO SIN PERSONA. Con una cuenta automática por Prestadora, como entra una
+   persona: correo y contraseña. El backend no firma nada. El pase lo arma Supabase con
+   `interno.armar_el_pase`, que lee de `interno.cuentas_automaticas` el rol y la Prestadora de la
+   cuenta. Así no existe en el backend nada con lo que fabricar un pase que abra otra Prestadora:
+   cada contraseña abre una sola. Cada Prestadora tiene tres —la del trabajo, la de la copia de
+   respaldo y la de la importación de planillas, que es la única que ve lo importado sin confirmar—
+   y hay una más, sin Prestadora, que sólo pide la lista. Las contraseñas llegan en
+   `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS`: un objeto de correo a contraseña.
 
    QUIÉN ELIGE LA DEL TRABAJO. Nadie, adentro del código que consulta. Lo que corre adentro de
    `enLaPrestadora` recibe, sin enterarse, la conexión con la credencial de esa Prestadora a través
@@ -26,60 +34,96 @@ import { origenDelPedido } from '../utils/registroDeConsultas.js';
    llama: mandar un correo, un mensaje de WhatsApp, leer el idioma. Lo que corre afuera no tiene
    conexión: `supabase` se corta, nunca cae a otra credencial.
 
-   LA CREDENCIAL DEL TRABAJO ES CORTA. Vive diez minutos y se genera otra antes de que venza, en cada
-   pedido que la necesita: un trabajo largo nunca queda con una vencida.
+   EL PASE SE RENUEVA ANTES DE VENCER. Se guarda uno por cuenta y, un minuto antes de que venza, se
+   renueva; si la renovación falla, se vuelve a entrar con la contraseña. Un trabajo largo nunca
+   queda con uno vencido.
 
    NINGUNA CONEXIÓN SUPONE QUE HAY UNA SOLA BASE. Toda conexión nueva —la de la persona y la del
    trabajo— se arma con la región de la Prestadora (`db/regiones.js`). Hoy hay una sola,
    y el día que haya más, el único lugar que cambia es ése. */
 
 
-const DURACION_S = 10 * 60;
 const MARGEN_S = 60;
 
-let clave = null;
-let kid = null;
-function laClave() {
-  if (!clave) {
-    const texto = process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA;
-    if (!texto) throw new Error('Falta CLAVE_DEL_TRABAJO_SIN_PERSONA: el trabajo sin persona no puede entrar a la base');
-    const jwk = JSON.parse(texto);
-    clave = crypto.createPrivateKey({ key: jwk, format: 'jwk' });
-    kid = jwk.kid;
-  }
-  return clave;
-}
+/** El único trabajo que tiene cuenta propia en cada Prestadora. */
+export const TRABAJO_DE_LA_IMPORTACION = 'importación de planillas';
 
-const enBase64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+const DOMINIO_DE_LAS_CUENTAS = 'cuentas-automaticas.invalid';
 
 /**
- * Genera la credencial de un trabajo. Sin Prestadora, la base sólo le deja pedir la lista. La copia
- * de respaldo lleva su propio rol, que sólo lee los archivos guardados.
+ * El correo de la cuenta que corresponde. Sin Prestadora, la que sólo pide la lista. Un rol que no
+ * se conoce no tiene cuenta: se corta, no se cae a otra.
  */
-export function generarCredencial({ prestadoraId = null, trabajo, rol = 'trabajo_sin_persona' }) {
-  const llave = laClave();
-  const ahora = Math.floor(Date.now() / 1000);
-  const cabecera = enBase64({ alg: 'ES256', typ: 'JWT', kid });
-  const cuerpo = enBase64({
-    role: rol,
-    iat: ahora,
-    exp: ahora + DURACION_S,
-    trabajo,
-    ...(prestadoraId ? { prestadora_id: prestadoraId } : {}),
-  });
-  const firma = crypto.sign('sha256', Buffer.from(`${cabecera}.${cuerpo}`), { key: llave, dsaEncoding: 'ieee-p1363' });
-  return { credencial: `${cabecera}.${cuerpo}.${firma.toString('base64url')}`, vence: ahora + DURACION_S };
+export function cuentaDelTrabajo({ prestadoraId = null, trabajo, rol = 'trabajo_sin_persona' }) {
+  if (!prestadoraId) return `lista@${DOMINIO_DE_LAS_CUENTAS}`;
+  if (rol === 'copia_de_respaldo') return `copia-${prestadoraId}@${DOMINIO_DE_LAS_CUENTAS}`;
+  if (rol !== 'trabajo_sin_persona') throw new Error(`El rol ${rol} no tiene cuenta automática`);
+  if (trabajo === TRABAJO_DE_LA_IMPORTACION) return `importacion-${prestadoraId}@${DOMINIO_DE_LAS_CUENTAS}`;
+  return `trabajo-${prestadoraId}@${DOMINIO_DE_LAS_CUENTAS}`;
+}
+
+let contrasenas = null;
+function contrasenaDe(correo) {
+  if (!contrasenas) {
+    const texto = process.env.CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS;
+    if (!texto) throw new Error('Falta CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS: el trabajo sin persona no puede entrar a la base');
+    contrasenas = JSON.parse(texto);
+  }
+  const contrasena = contrasenas[correo];
+  if (!contrasena) throw new Error(`No hay contraseña para la cuenta automática ${correo.split('@')[0]}`);
+  return contrasena;
+}
+
+/** Quien entra con las cuentas, uno por región. No guarda nada: los pases los guarda `pases`. */
+const entradas = new Map();
+function entradaDe(region) {
+  if (!entradas.has(region)) {
+    entradas.set(region, createClient(region.url, region.clavePublica, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    }));
+  }
+  return entradas.get(region);
+}
+
+/** El pase vigente de cada cuenta, y el pedido en curso si se está renovando. */
+const pases = new Map();
+
+async function entrar(region, correo, anterior) {
+  const auth = entradaDe(region).auth;
+  if (anterior?.renovacion) {
+    const { data, error } = await auth.refreshSession({ refresh_token: anterior.renovacion });
+    if (!error && data?.session) return data.session;
+  }
+  const { data, error } = await auth.signInWithPassword({ email: correo, password: contrasenaDe(correo) });
+  if (error || !data?.session) {
+    throw new Error(`La cuenta automática ${correo.split('@')[0]} no pudo entrar: ${error?.message ?? 'sin pase'}`);
+  }
+  return data.session;
+}
+
+async function paseDe(region, correo) {
+  const clave = `${region.url}|${correo}`;
+  const guardado = pases.get(clave);
+  if (guardado?.pase && guardado.vence - MARGEN_S > Date.now() / 1000) return guardado.pase;
+  if (guardado?.pendiente) return guardado.pendiente;
+
+  const pendiente = entrar(region, correo, guardado)
+    .then((sesion) => {
+      pases.set(clave, { pase: sesion.access_token, vence: sesion.expires_at, renovacion: sesion.refresh_token });
+      return sesion.access_token;
+    })
+    .catch((err) => {
+      pases.delete(clave);
+      throw err;
+    });
+  pases.set(clave, { ...guardado, pendiente });
+  return pendiente;
 }
 
 function conexionDelTrabajo({ prestadoraId, trabajo, rol, region = regionDeLaPrestadora(prestadoraId) }) {
-  let vigente = null;
+  const correo = cuentaDelTrabajo({ prestadoraId, trabajo, rol });
   return createClient(region.url, region.clavePublica, {
-    accessToken: async () => {
-      if (!vigente || vigente.vence - MARGEN_S < Date.now() / 1000) {
-        vigente = generarCredencial({ prestadoraId, trabajo, rol });
-      }
-      return vigente.credencial;
-    },
+    accessToken: async () => paseDe(region, correo),
   });
 }
 

@@ -30,7 +30,6 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
-import crypto from 'node:crypto';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
@@ -82,8 +81,6 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
 // Una clave inventada para generar la credencial del trabajo sin persona, con la que se piden el
 // alta y la baja de la cuenta. Nace acá y se descarta al terminar.
-const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
-process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA = JSON.stringify({ ...privateKey.export({ format: 'jwk' }), kid: 'prueba' });
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se lee en
 // el momento del import.

@@ -23,7 +23,8 @@ const TRABAJO = 'Ingreso';
 // con su email, que la pantalla manda tal cual sin pasar por acá.
 const ROLES_CON_NOMBRE_DE_USUARIO = ['coordinador', 'asistente', 'cliente'];
 
-const CLAVE_DE_LA_DIRECCION_DE_NADIE = process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA
+// Fija entre reinicios, para que la misma dirección de nadie salga siempre igual.
+const CLAVE_DE_LA_DIRECCION_DE_NADIE = process.env.CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS
   || crypto.randomBytes(32).toString('hex');
 
 /** Una dirección con la forma de las de acceso, que no es de ninguna cuenta. */

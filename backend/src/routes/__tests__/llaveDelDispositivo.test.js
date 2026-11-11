@@ -105,15 +105,6 @@ function credencialDe(autorizacion) {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_ANON_KEY = 'llave-publica-de-mentira';
-// La clave con la que el backend firma la credencial del trabajo sin persona. Se genera acá, para
-// esta prueba y nada más: la base falsa no la comprueba, sólo lee qué dice la credencial.
-{
-  const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
-  process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA = JSON.stringify({
-    ...privateKey.export({ format: 'jwk' }),
-    kid: 'clave-de-prueba',
-  });
-}
 process.env.PWA_ASISTENTES_URL = 'https://asistentes.ejemplo.com';
 process.env.PWA_CLIENTES_URL = 'https://clientes.ejemplo.com';
 

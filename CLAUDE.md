@@ -425,7 +425,10 @@ sesión con `interno.usuario_de_la_sesion()`, que devuelve lo mismo.
 **Ninguna prueba del backend ve esto**: las pruebas del backend contestan con una base de mentira. Lo
 prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una persona y
 además le pregunta a la base si algún disparador quedó pidiendo un permiso que no tiene. Se corre
-con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
+con la base local levantada, junto con `scripts/probar_aislamiento.mjs`. Y
+`scripts/probar_aislamiento_en_la_base.mjs` lee cada tabla con cada cuenta sembrada sin ningún
+filtro de Prestadora, para que se vea que protege la base y no el código; ésa corre además en
+cada push que toca `supabase/`.
 
 **El aislamiento lo hace cumplir la base.** Cada ruta de persona trabaja con la credencial de
 quien pide, que toma con `clienteDelPedido(req)`; lo que esa persona no puede hacer por sí misma

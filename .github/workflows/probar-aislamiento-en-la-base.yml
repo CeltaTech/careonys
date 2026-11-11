@@ -1,0 +1,39 @@
+name: Probar el aislamiento en la base
+
+# Levanta una base local desde cero —las migraciones en orden y la siembra de las dos Prestadoras
+# de prueba— y lee cada tabla con cada cuenta sembrada sin ningún filtro de Prestadora. Una sola
+# fila ajena hace fallar la prueba, y también falla si la prueba no puede fallar: ver el encabezado
+# de `scripts/probar_aislamiento_en_la_base.mjs`. No usa ningún secreto del repositorio.
+
+on:
+  push:
+    paths:
+      - 'supabase/**'
+      - 'scripts/probar_aislamiento_en_la_base.mjs'
+      - '.github/workflows/probar-aislamiento-en-la-base.yml'
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - 'scripts/probar_aislamiento_en_la_base.mjs'
+  workflow_dispatch:
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.107.0
+
+      # Sólo la base: las migraciones y la siembra corren al levantarla.
+      - name: Levantar la base local
+        run: supabase db start
+
+      - name: Probar el aislamiento en la base
+        run: node scripts/probar_aislamiento_en_la_base.mjs

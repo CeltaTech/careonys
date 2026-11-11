@@ -19,10 +19,10 @@
 //      cada una y comprueba que ninguna consulta devuelva una fila ajena.
 //
 //   2. EL CAMINO DEL BACKEND. Las dos aplicaciones de celular no consultan la
-//      base: le piden todo al backend, y el backend entra a la base con la llave
-//      de servicio, que se saltea las políticas por diseño. Ahí no hay base
-//      que proteja nada: la separación está escrita a mano, condición por
-//      condición, en cada consulta. La prueba intenta a propósito alcanzar
+//      base: le piden todo al backend, y el backend entra a la base con la
+//      credencial de quien pide, o con la del trabajo sin persona de a una
+//      Prestadora por vez. Las políticas rigen igual que en el Panel, y además
+//      cada consulta nombra la Prestadora. La prueba intenta a propósito alcanzar
 //      datos ajenos por ese camino —pedirle el identificador de una guardia
 //      de la otra Prestadora, fichar entrada en ella, modificarle una zona— y
 //      espera que todo rebote.

@@ -129,12 +129,15 @@ a una Prestadora, con la credencial de la copia de respaldo, que sólo lista y b
 esa Prestadora. No está en Railway ni en los secretos de GitHub, y en Supabase la clave secreta
 está borrada y las claves heredadas, apagadas.
 
-**Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` queda en un
-solo archivo, `backend/src/routes/panelPersonasTelefonos.js`; el resto de las consultas escribe el
-filtro a mano. Cuántas
-consultas no nombran la Prestadora **no está medido de nuevo**: los números de una revisión
-anterior ya no se pueden sostener. Si falta un filtro, la base contesta igual: no tiene con qué
-darse cuenta.
+**El filtro escrito a mano sigue, pero ya no es lo que separa.** `acotarAPrestadora` queda en un
+solo archivo, `backend/src/routes/panelPersonasTelefonos.js`, y el resto de las consultas nombra la
+Prestadora a mano. Si falta uno, la base no devuelve nada ajeno: lo comprueba
+`scripts/probar_aislamiento_en_la_base.mjs`, que lee cada tabla con cada cuenta sembrada de las
+dos Prestadoras de prueba sin ningún filtro, y corre en cada push que toca `supabase/`.
+
+**Ninguna tabla nace sin protección.** `scripts/verificar_proteccion_por_fila.mjs` corre en cada
+push y falla si una tabla del esquema declarado no tiene la protección por fila encendida o no
+tiene política, o si un depósito de archivos no tiene política.
 
 **Los 13 depósitos de archivos tienen política.** La autorización de monitoreo, los documentos
 del Asistente, los documentos del Pagador y el documento firmado de las personas autorizadas ya se sirven
@@ -317,15 +320,6 @@ Prestadoras el cifrado en reposo no vale nada**, porque en ese camino el dato ya
 Por eso no reemplaza a ninguno de los pasos anteriores.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra.
-
-**15.** **Para que no vuelva.** Dos automatismos que cortan la publicación, además del que ya
-corre en cada push y no deja volver a la llave maestra:
-
-- **Ninguna tabla nace sin protección.** Una tabla en el esquema declarado sin protección por fila y
-  sin al menos una política corta la publicación. Lo mismo un depósito de archivos sin política.
-- **La prueba que puede fallar.** La prueba de aislamiento corre con el filtro del código quitado a
-  propósito en una consulta. Si aprueba igual, es la base la que protege. Con esto, una prueba de
-  aislamiento verde vuelve a significar algo.
 
 **16.** **La documentación que queda falsa.** Hay renglones de documentación y comentarios de
 código que describen el estado de hoy y quedarán falsos. **Se corrigen en el paso donde dejan de

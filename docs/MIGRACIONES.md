@@ -118,6 +118,29 @@ Y toda migración que crea una tabla, en el mismo archivo:
 
 Una tabla sin RLS no se sube. No hay caso en el que "después la agrego".
 
+**Y no depende de acordarse: lo comprueban dos automatismos en cada push.**
+
+- `scripts/verificar_proteccion_por_fila.mjs` lee el esquema declarado y falla si una tabla de
+  `public` no tiene la protección por fila encendida o no tiene ninguna política, o si un depósito
+  de archivos no aparece en ninguna política. Corre sin base y sin dependencias, así que se corre
+  también antes de `supabase db push --linked`:
+
+  ```bash
+  node scripts/verificar_proteccion_por_fila.mjs
+  ```
+
+- `scripts/probar_aislamiento_en_la_base.mjs` levanta la base desde cero con la siembra y lee
+  cada tabla con cada cuenta sembrada de las dos Prestadoras de prueba, **sin ningún filtro de
+  Prestadora**. Una sola fila ajena la hace fallar. Falla también si no puede fallar: si alguna
+  Prestadora no tiene filas, si una cuenta de administración no ve nada propio, o si al apagarle
+  a propósito la protección a una tabla no encuentra la filtración. Con la base local levantada:
+
+  ```bash
+  node scripts/probar_aislamiento_en_la_base.mjs
+  ```
+
+Los dos tienen su automatismo en `.github/workflows/`.
+
 ## 5. Qué permisos abre cada migración
 
 **Todo lo nuevo nace cerrado.** Los permisos por defecto de la base no le dan nada a

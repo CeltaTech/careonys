@@ -1,0 +1,23 @@
+name: Verificar la protección por fila
+
+# Ninguna tabla nace sin protección. Una tabla del esquema declarado sin la protección por fila
+# encendida o sin al menos una política hace fallar esta comprobación, y lo mismo un depósito de
+# archivos que ninguna política nombra. El script no tiene dependencias, así que no hay npm install.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verificar la protección por fila
+        run: node scripts/verificar_proteccion_por_fila.mjs

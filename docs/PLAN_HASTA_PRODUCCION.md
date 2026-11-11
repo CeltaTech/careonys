@@ -154,7 +154,8 @@ planilla para entregársela. `auditoria_de_accesos` es otra cosa: lo que hace el
 CeltaTech con un permiso de acceso.
 
 **El registro clínico ya no se pisa.** Cada alta, corrección o baja de `indicaciones_medicacion`,
-`rangos_referencia_vitales` y `domicilios_temporales_paciente` deja una copia en
+`rangos_referencia_vitales`, `domicilios_temporales_paciente` e
+`informacion_de_salud_del_paciente` deja una copia en
 `versiones_registro_clinico`, con autor, momento y nota aclaratoria, y ese historial no lo edita ni
 lo borra nadie. Todas esas escrituras van con la credencial de la persona, así que el autor queda.
 
@@ -293,9 +294,9 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **Comprobación:** por cada país donde haya una Prestadora dada de alta, su documento en
 `docs/legal/<país>.md` nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
 
-**9.** **El registro de accesos para Países Bajos.** La norma holandesa NEN 7513 es de pago y no
-se leyó. Antes de vender en Países Bajos hay que comprarla y comparar campo por campo. **Espera a
-que haya un cliente en Países Bajos.**
+**9.** **El registro de accesos para Países Bajos.** La norma holandesa NEN 7513:2018 se leyó
+completa y se comparó con el registro: lo que falta, con su sección, está en
+`docs/legal/paises_bajos.md`. **Espera a que haya un cliente en Países Bajos.**
 
 **Comprobación:** cada campo que pide la norma está en `consultas_a_hce`, o se agregó.
 
@@ -316,8 +317,8 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra.
 
-**14.** **Un solo archivo dice el estado.** Hoy son 125 migraciones: la primera ya es una foto de la
-base entera y las otras 124 se apilan encima. Se funden en una maestra única y se enciende el
+**14.** **Un solo archivo dice el estado.** Hoy son 196 migraciones: la primera ya es una foto de la
+base entera y las otras 195 se apilan encima. Se funden en una maestra única y se enciende el
 esquema declarado —`supabase/config.toml:64` ya tiene el renglón, vacío—. La maestra
 vuelve a fundirse con cada migración nueva, así que siempre contiene todo el sistema.
 
@@ -1366,8 +1367,10 @@ texto que va a salir.
 
 **Usted — para analizar, no para resolver ahora.** Un registro de cambios general: qué dato
 cambió, de qué valor a qué valor, quién y cuándo, para cualquier tabla que lo necesite. Hoy no
-existe: cada cambio que se registra tiene su tabla propia (`auditoria_*`, el historial del registro
-clínico). El primero que lo va a necesitar es el cambio de la fecha prevista de vuelta de una
+existe: cada cambio que se registra tiene su lista propia, y hoy son ocho —las seis `auditoria_*`,
+el historial del registro clínico y el registro de actividad—. El registro de actividad anota qué
+campo cambió, pero no de qué valor a qué valor. Si se construye, se decide si absorbe el historial
+del registro clínico o si quedan dos listas para lo mismo. El primero que lo va a necesitar es el cambio de la fecha prevista de vuelta de una
 ausencia; si el general se decide antes de construirlo, ese cambio se anota ahí.
 
 **111.** **El alta de una Prestadora entra por una puerta firmada, como la de Match**
@@ -1486,6 +1489,12 @@ normal —accesos fuera de horario, a pacientes sin relación de cuidado con qui
 inusual— y se lo presenta a quien revisa. Quien revisa firma que revisó, y esa firma es la
 evidencia.
 
+La norma holandesa NEN 7513 pide además dos cosas que sirven en cualquier país: un resumen por
+persona del personal —cuántas historias distintas vio o exportó en un período, cuántos accesos de
+emergencia— y un informe diario de lo que se sale de lo normal. Y que **mirar el registro de
+accesos también quede anotado**, sin forma de apagarlo: hoy consultarlo, desde la Auditoría o desde
+la Ficha del Cliente, no deja fila.
+
 El acceso a un paciente sin relación de cuidado es la regla sueca —Patientdatalagen 4 kap. 2 §— y
 es la más fina del conjunto: no alcanza con pertenecer a la Prestadora. Chile la escribió como
 requisito de arquitectura, y por eso su parte está en los cimientos y no acá.
@@ -1508,7 +1517,7 @@ entregables sólo por orden judicial.
 como texto libre; quién carga las reglas, que hoy sólo entran por migración; si la fecha de
 fallecimiento va en los datos de la persona, que el Paciente ya cita; si su cambio se audita; cómo se
 borra lo vencido del historial del registro clínico, que hoy no lo puede borrar nadie; y qué otras
-tablas son clínicas y se versionan, además de las dos que ya lo hacen.
+tablas son clínicas y se versionan, además de las cuatro que ya lo hacen.
 
 Lo que la tabla tiene que poder expresar, porque hay un país que obliga a cada forma:
 
@@ -1558,6 +1567,9 @@ la historia clínica deba conservarse no hace inborrables las preferencias de co
 perfiles opcionales, las notas no clínicas ni las copias analíticas. Acá se contesta qué pasa con
 los datos de un Servicio cerrado hace años.
 
+**Y ante una queja, el registro de ese paciente se congela** (NEN 7513, 8.5): se guarda aparte, el
+vencimiento no lo alcanza, y se conserva hasta diez años.
+
 **Comprobación:** con dos Prestadoras de países distintos y las mismas fechas cargadas, el motor
 decide distinto en cada una y lo explica citando la regla que aplicó.
 
@@ -1569,6 +1581,10 @@ Plazo de respuesta por jurisdicción: Costa Rica cinco días hábiles, Panamá d
 cinco para modificar, Argentina cuarenta y ocho horas para la copia de la historia clínica. Sale de
 la configuración del país, con aviso a quien tiene que contestar antes de que venza. Y quién hereda
 el derecho al fallecer cambia por país: en Costa Rica pasa a sucesores o herederos.
+
+La exportación incluye el historial del registro clínico, no sólo el estado de hoy. Y la persona
+puede ver **quién entró a su información de salud** por su cuenta (EHDS art. 9; NEN 7513, 5.2 y
+9.1): hoy depende de que la Prestadora le entregue la planilla desde la Ficha.
 
 **Comprobación:** un pedido de acceso cargado en una Prestadora de Costa Rica vence a los cinco días
 hábiles y avisa antes; el mismo pedido en Panamá vence a los diez.
@@ -1603,11 +1619,12 @@ alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva 
 - **Segundo factor obligatorio.** El Panel no lo tiene: la entrada con token salió de Careonys y
   quedó guardada en el estante de CeltaTech (`Codigos-utiles`), lista para volver. Ninguna norma
   vigente de Estados Unidos lo exige —el 164.312(d) es un estándar desnudo—, pero ningún comprador
-  grande compra sin él.
+  grande compra sin él. La NEN 7513 (8.1) sí lo exige para ver el registro de accesos.
 - **Ninguna cuenta compartida.** El 164.312(a)(2)(i) exige identificación única por persona y está
   marcado «Required»: una cuenta compartida es incumplimiento liso y llano.
 - **Acceso de emergencia.** El 164.312(a)(2)(ii) también es «Required» y hoy no existe: una vía
   definida para llegar al dato cuando la normal no está, registrada y revisada como cualquier otra.
+  La NEN 7513 (6.2.2) pide además que quede anotada como hecho aparte, no como una lectura más.
 - **Cierre por inactividad para todos**, no sólo para el permiso de acceso de CeltaTech. El Panel
   ya lo tiene; las dos aplicaciones no.
 - **El acceso del personal propio.** C5 OPS-30.01B cubre la separación cliente-de-cliente **y**
@@ -1728,7 +1745,6 @@ Cada renglón es un ahorro, y está verificado.
 - **El référentiel HDS francés no se pudo leer.** Es donde estaría la exigencia francesa de
   compartimentación entre clientes. Se pide al organismo certificador cuando se abra esa
   conversación.
-- **La norma holandesa NEN 7513:2018 es de pago.** Su lista de campos y su plazo son desconocidos.
 - **El plazo de conservación de Ecuador** no se pudo confirmar en fuente oficial.
 - **El precio del complemento de Supabase para datos de salud estadounidenses** no está publicado.
 - **Los importes de sanción ajustados del año en curso** no se consultaron.

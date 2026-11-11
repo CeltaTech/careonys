@@ -365,11 +365,14 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
    fuerte de Careonys. Al terminar se borra `CLAVE_DEL_TRABAJO_SIN_PERSONA` del backend y de las
    claves de firma de Supabase. Se descartaron la caja externa que firma, porque no impide pedirle
    un pase que abra todo, y que la plataforma reconozca al backend sin contraseña, porque Railway no
-   lo ofrece. **Antes de nada se prueba en la base local** que esa función pueda poner en el pase
-   los dos accesos propios de hoy: el del trabajo sin persona y el de la copia de respaldo.
-7. **Una alarma sobre las cuentas automáticas.** Suena ante una entrada desde un lugar que no es el
-   backend —si Railway le da una dirección fija—, ante muchas entradas nuevas con contraseña en poco
-   tiempo y ante contraseñas equivocadas repetidas. **Avisa y corta:** manda un correo a
+   lo ofrece. La importación de planillas tiene además su propia cuenta en cada Prestadora, porque
+   es el único trabajo que ve lo importado que todavía no se confirmó. Probado en la base local
+   (`supabase/migrations/20270324000000_cuentas_automaticas.sql`): cada cuenta ve sólo su
+   Prestadora, la de la copia no lee ninguna tabla y sólo la de la importación ve lo pendiente.
+7. **Una alarma sobre las cuentas automáticas.** Suena ante muchas entradas nuevas con contraseña
+   en poco tiempo y ante contraseñas equivocadas repetidas. No mira desde dónde se entra: la
+   dirección fija de Railway es del plan pago y la comparten otros clientes de Railway, así que no
+   distingue al backend de un extraño. **Avisa y corta:** manda un correo a
    `cuentas@celtatech.com`, la dirección de todo lo que el sistema le comunica a CeltaTech, y
    desactiva la cuenta automática afectada hasta que se le cambie la contraseña. La Prestadora no
    se entera. La dirección vive en la configuración del backend, donde ninguna Prestadora la puede

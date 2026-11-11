@@ -334,12 +334,6 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
   guardan con el depósito de secretos de Supabase, que usa **una sola clave para todo el
   proyecto**. Hoy no hay ninguno guardado.
 - **El cifrado del disco** lo pone Supabase, con una clave suya. No se puede comprobar desde la base.
-- **La clave con la que el backend fabrica sus pases es otra llave maestra.**
-  `backend/src/db/connection.js:42-72` firma los pases del trabajo sin persona con
-  `CLAVE_DEL_TRABAJO_SIN_PERSONA`, y la usan unos cien archivos del backend, muchos en pedidos
-  comunes y no sólo en tareas nocturnas. Supabase acepta cualquier pase firmado con esa clave, así
-  que con ella también se puede fabricar uno que abre todas las Prestadoras, sus archivos y la
-  administración de las cuentas. Esta última, la base no la puede cerrar.
 - **La copia de los archivos** ya va de a una Prestadora (`backend/src/utils/copiaDeLosArchivos.js`),
   pero sube a los dos depósitos **sin cifrar**.
 
@@ -358,24 +352,14 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
 4. **Se borra el secreto `BACKUP_DB_*` de GitHub** y se cambia la contraseña de esa cuenta.
 5. **La copia de los archivos se cifra igual que la de los datos**, con la clave pública de cada
    Prestadora.
-6. **El backend deja de fabricar pases.** Cada Prestadora tiene una cuenta automática propia, con
-   una contraseña larga hecha al azar al darla de alta, que se puede cambiar sin tocar las de las
-   demás. El backend entra con ella como una persona y **el pase lo arma Supabase**: una función de
-   la base decide qué dice, y para esa cuenta dice sólo su Prestadora. **Hecho en la base real:** la
-   tabla, la función que arma el pase y las 7 cuentas de las 2 Prestadoras —trabajo, copia e
-   importación de cada una, más la que pide la lista—; borrar una Prestadora se lleva sus cuentas
-   (`20270325000000_borrar_la_cuenta_automatica.sql`). Las contraseñas están en la variable
-   `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` del backend en Railway y en la caja fuerte de Careonys.
-   La función está encendida en la base real: cada cuenta recibe su rol y su Prestadora, la de
-   trabajo ve sólo los Asistentes de la suya, la copia no lee tablas, y el pase de una persona sale
-   sin cambios. **Falta:** que `backend/src/db/connection.js` entre con las cuentas en vez de
-   firmar, y recién ahí borrar `CLAVE_DEL_TRABAJO_SIN_PERSONA` del backend y de las claves de
-   firma de Supabase. Una Prestadora nueva necesita sus tres cuentas al darse de alta. Se descartaron la caja externa que firma, porque no impide pedirle
-   un pase que abra todo, y que la plataforma reconozca al backend sin contraseña, porque Railway no
-   lo ofrece. La importación de planillas tiene además su propia cuenta en cada Prestadora, porque
-   es el único trabajo que ve lo importado que todavía no se confirmó. Probado en la base local
-   (`supabase/migrations/20270324000000_cuentas_automaticas.sql`): cada cuenta ve sólo su
-   Prestadora, la de la copia no lee ninguna tabla y sólo la de la importación ve lo pendiente.
+6. **Una Prestadora nueva necesita sus tres cuentas automáticas al darse de alta** —la del
+   trabajo, la de la copia y la de la importación—, con su contraseña en
+   `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` de Railway y en la caja fuerte de Careonys. Hoy las
+   tienen las 2 Prestadoras de la base real, y en la base local las crea
+   `scripts/cuentas_automaticas_local.mjs`. El backend ya no firma pases: entra con esas cuentas y
+   el pase lo arma la base (`backend/src/db/connection.js`). **Además, desde el 25 de noviembre de
+   2026:** borrar de las claves de firma de Supabase las dos que firmaba el backend
+   (`8257f604-…` y `53b86d1f-…`). Ya están revocadas; Supabase no deja borrarlas antes.
 7. **Una alarma sobre las cuentas automáticas.** Suena ante muchas entradas nuevas con contraseña
    en poco tiempo y ante contraseñas equivocadas repetidas. No mira desde dónde se entra: la
    dirección fija de Railway es del plan pago y la comparten otros clientes de Railway, así que no

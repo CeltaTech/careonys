@@ -191,15 +191,16 @@ ver qué tiene apartado:
 netsh interface ipv4 show excludedportrange protocol=tcp
 ```
 
-**La primera vez en cada máquina, la base local necesita su clave de firma.** Sin ella el backend
-no puede entrar con la credencial de las tareas, y no corre ninguna. La genera:
+**Con la base levantada, la base local necesita las cuentas automáticas.** Sin ellas el backend
+no puede entrar a ninguna Prestadora sin una persona, y no corre ninguna tarea. Las crea:
 
 ```bash
-node scripts/clave_de_firma_local.mjs
+node scripts/cuentas_automaticas_local.mjs
 ```
 
-Deja la misma clave en `supabase/signing_keys.json` y en `backend/.env`, los dos ignorados por el
-repositorio, y no la muestra. Después hay que bajar y volver a levantar la base.
+Deja las contraseñas en `backend/.env`, que el repositorio ignora, y no las muestra. Se vuelve a
+correr después de cada `supabase db reset` o de sembrar una Prestadora nueva: sólo crea las que
+faltan.
 
 **Contra producción.** Desde la misma carpeta:
 

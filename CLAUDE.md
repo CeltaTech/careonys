@@ -433,7 +433,9 @@ cada push que toca `supabase/`.
 **El aislamiento lo hace cumplir la base.** Cada ruta de persona trabaja con la credencial de
 quien pide, que toma con `clienteDelPedido(req)`; lo que esa persona no puede hacer por sí misma
 —y las tareas automatizadas— va con la credencial del trabajo sin persona, de a una Prestadora por
-vez, con `enLaPrestadora`. Las dos las genera `backend/src/db/connection.js`, y fuera de
+vez, con `enLaPrestadora`. Las dos salen de `backend/src/db/connection.js`; la del trabajo sin persona no
+la firma el backend: entra con la cuenta automática de esa Prestadora y el pase lo arma la base
+con `interno.armar_el_pase`, así que cada contraseña abre una sola Prestadora. Fuera de
 `enLaPrestadora` no hay conexión. La copia nocturna de los archivos también va de a una Prestadora
 (`paraCadaPrestadora` con el rol `copia_de_respaldo`), y sólo lista y baja los archivos de la
 carpeta de esa Prestadora. **Ningún archivo

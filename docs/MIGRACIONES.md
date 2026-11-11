@@ -12,15 +12,21 @@ Vigente desde el **2026-07-28**. Es el paso 2 de la Etapa 0 de
 La migración inicial es una **foto fiel al esquema real de producción**. Hoy la foto vigente es:
 
 ```
-supabase/migrations/20261016000000_foto_de_la_base.sql
+supabase/migrations/20270323000000_foto_de_la_base.sql
 ```
 
-Detrás de ella vienen, en orden, los cambios que se aplicaron después: el 2026-10-27 la carpeta
-tiene 125 archivos, la foto incluida. Ese mismo día la base en vivo tiene 207 tablas en `public`,
-con 1959 columnas; 609 políticas de seguridad sobre esas tablas y 37 sobre los depósitos de
-archivos; 229 funciones propias, 83 en `public` y 146 en `interno`; 185 disparadores y 600
-índices en `public`; y 12 depósitos de archivos. La foto trae además las filas de los catálogos
-que el producto trae de fábrica. No es lo que alguien quiso hacer: es lo que había.
+Reemplaza a las 196 migraciones que se habían apilado hasta ella. Al sacarla, la base en vivo
+tenía 221 tablas en `public`, con 2094 columnas; 696 políticas de seguridad sobre esas tablas y 53
+sobre los depósitos de archivos; 306 funciones propias, 110 en `public` y 196 en `interno`; 210
+disparadores y 644 índices en `public`; y 13 depósitos de archivos. La foto trae además las filas
+de los 31 catálogos que el producto trae de fábrica y las de los 13 depósitos. No es lo que
+alguien quiso hacer: es lo que había.
+
+**Cómo se comprobó.** Se reconstruyó la base local desde cero con la foto sola y se la comparó,
+objeto por objeto —tablas, columnas, políticas, funciones, disparadores, índices, permisos—,
+contra la base en vivo, y fila por fila en los catálogos. Las únicas diferencias son piezas que
+la plataforma pone de un lado y no del otro: los disparadores internos del depósito de archivos y
+la extensión `pg_net`.
 
 ### Cuándo se saca una foto nueva
 
@@ -29,13 +35,18 @@ documenta. **No se borran de a uno**: la carpeta entera es la receta para armar 
 cero y, si falta un paso, la receta no se puede seguir. Se saca una foto del resultado
 (`supabase migration squash`), esa foto queda como único archivo y los viejos se borran juntos.
 
-Tres cosas que hay que saber antes de hacerlo:
+Cuatro cosas que hay que saber antes de hacerlo:
 
 - **La foto trae el esquema, no las filas.** `supabase migration squash` vuelca la estructura y
   nada más: toda alta de datos que hubiera en las migraciones viejas se pierde en silencio. Las
-  filas del catálogo de la plataforma —módulos, acciones de permisos, advertencias legales,
-  textos de consentimiento, tipos de Asistente, el depósito de logos— hay que volver a escribirlas
-  a mano al final del archivo, leyéndolas de la base real, y comprobar después que volvieron.
+  filas del catálogo de la plataforma —acciones de permisos, advertencias legales, textos de
+  consentimiento, tipos de Asistente, los depósitos de archivos— hay que volver a escribirlas al
+  final del archivo, leyéndolas de la base real, y comprobar después que volvieron.
+- **La foto no trae los roles propios ni retira lo que regala la plataforma.** Los roles
+  `trabajo_sin_persona` y `copia_de_respaldo` no viven en ningún esquema, así que se crean al
+  principio del archivo. Y la plataforma les da todo, sobre cada tabla nueva de `public`, a `anon`,
+  `authenticated` y `service_role`: se les retira antes de crear las tablas, porque la foto
+  después escribe los permisos de cada una y no saca los que sobran.
 - **El archivo conserva el número de la última migración de la tanda.** Supabase reconoce una
   migración por los 14 dígitos y nada más, así que el texto del nombre se puede cambiar sin
   romper nada, pero el número no.
@@ -46,10 +57,33 @@ Tres cosas que hay que saber antes de hacerlo:
 
 ## 2. Dónde vive el esquema
 
-**La única fuente del esquema son `supabase/migrations/` y la base real.** Fuera de esa carpeta
-no se guarda ningún archivo `.sql` de esquema: todo cambio, sin excepción, va ahí, y se ejecuta
-en orden de nombre. (La única excepción es `supabase/seed.sql`, que no crea ni modifica
-estructura: solo carga filas de prueba en la base local.)
+**Cómo es la base hoy lo dice un solo archivo: `supabase/schemas/careonys.sql`, el esquema
+declarado.** Es la foto sin las filas de fábrica. `supabase/config.toml` lo nombra en
+`schema_paths`, y así la herramienta de Supabase lo reconoce.
+
+**Un cambio de estructura se escribe primero ahí**, y la migración sale sola de comparar ese
+archivo con la base local:
+
+```bash
+supabase db diff --local -f el_paciente_guarda_su_grupo_sanguineo
+```
+
+Eso deja el archivo nuevo en `supabase/migrations/`, que se revisa, se le escribe la cabecera
+(§4) y se aplica como cualquier otra. Las filas de fábrica no se declaran: van en una migración
+escrita a mano.
+
+**Los dos tienen que decir lo mismo.** Con la base local reconstruida desde las migraciones,
+
+```bash
+supabase db diff --local
+```
+
+tiene que contestar `No schema changes found`. Si contesta otra cosa, uno de los dos se despegó.
+Y cuando se saca una foto nueva (§1), el esquema declarado se vuelve a sacar de ella.
+
+Fuera de esas dos carpetas no se guarda ningún archivo `.sql` de esquema. (La única excepción es
+`supabase/seed.sql`, que no crea ni modifica estructura: solo carga filas de prueba en la base
+local.)
 
 Las reglas que valen para toda migración —una aplicada no se edita, corre entera o no corre, el
 orden de los archivos es el de aplicación, y el permiso de tabla no es la RLS— están en

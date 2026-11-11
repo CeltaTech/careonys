@@ -624,3 +624,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el Responsable de pagos, lo que firma, el plazo de pago y el Contratante vivían en la Ficha del cliente; no había alta manual de Servicio ni de Cliente, y la cartera previa entraba sólo por la importación.
 - **Qué dice ahora:** todo eso vive en el Servicio, con una factura por Servicio y por período. El Administrador, y quien tenga el permiso de crear y dar de baja Servicios, crea un Servicio con «Nuevo servicio» —que crea el Cliente en el mismo paso si no existe— y lo da de baja desde la solapa Servicios.
 - **Motivo:** lo aprobó el Desarrollador, que fijó que lo comercial del Cliente va en el Servicio.
+
+## El estado de la base se lee en un solo archivo
+
+- **Qué decía antes:** el esquema vivía sólo en `supabase/migrations/`, una foto inicial con los cambios apilados encima, y fuera de esa carpeta no se guardaba ningún `.sql` de esquema.
+- **Qué dice ahora:** las migraciones se fundieron en una foto única y el esquema declarado, `supabase/schemas/careonys.sql`, dice cómo es la base hoy; un cambio de estructura se escribe ahí primero y la migración sale de `supabase db diff`.
+- **Motivo:** el plan hasta producción lo pide en los cimientos, para que el estado se lea en un archivo y ninguna migración vieja se confunda con él.

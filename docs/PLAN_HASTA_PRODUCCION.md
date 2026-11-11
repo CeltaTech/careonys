@@ -318,16 +318,6 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra.
 
-**14.** **Un solo archivo dice el estado.** Hoy son 196 migraciones: la primera ya es una foto de la
-base entera y las otras 195 se apilan encima. Se funden en una maestra única y se enciende el
-esquema declarado —`supabase/config.toml:64` ya tiene el renglón, vacío—. La maestra
-vuelve a fundirse con cada migración nueva, así que siempre contiene todo el sistema.
-
-Va al final de los cimientos porque cada semana que pasa son más migraciones para fundir.
-
-**Comprobación:** se reconstruye la base desde cero con la maestra y se compara el esquema contra la
-base de hoy. Si no son idénticos, la fundición está mal.
-
 **15.** **Para que no vuelva.** Dos automatismos que cortan la publicación, además del que ya
 corre en cada push y no deja volver a la llave maestra:
 

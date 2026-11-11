@@ -8,8 +8,8 @@
 // aplicaciones. Pero la base exige la suya en `interno.usuario_elegido_bien_escrito`, escrita en
 // SQL, que no puede importar nada. Las dos tienen que decir lo mismo, y esto falla si se despegan.
 //
-// De la base se lee la última migración que define la función, que es la que quedó vigente: acá
-// no hay base a la que preguntarle, y la construcción no puede esperar a una.
+// De la base se lee el esquema declarado, `supabase/schemas/`, que dice cómo es hoy: acá no hay
+// base a la que preguntarle, y la construcción no puede esperar a una.
 // ---------------------------------------------------------------------------
 
 import { readFileSync, readdirSync } from 'node:fs';
@@ -17,7 +17,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
-const MIGRACIONES = join(RAIZ, 'supabase', 'migrations');
+const ESQUEMA = join(RAIZ, 'supabase', 'schemas');
 
 const { USUARIO_MINIMO, USUARIO_MAXIMO, usuarioBienEscrito } = await import(
   new URL('../backend/src/config/reglaDeUsuario.js', import.meta.url)
@@ -25,16 +25,16 @@ const { USUARIO_MINIMO, USUARIO_MAXIMO, usuarioBienEscrito } = await import(
 
 const fallas = [];
 
-// 1. La última definición de la función en la base.
-const DEFINICION = /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+interno\.usuario_elegido_bien_escrito\s*\([\s\S]*?\$(\w*)\$([\s\S]*?)\$\1\$/gi;
+// 1. La definición de la función en el esquema declarado.
+const DEFINICION = /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+"?interno"?\."?usuario_elegido_bien_escrito"?\s*\([\s\S]*?\$(\w*)\$([\s\S]*?)\$\1\$/gi;
 let vigente = null;
-for (const archivo of readdirSync(MIGRACIONES).filter((a) => a.endsWith('.sql')).sort()) {
-  const texto = readFileSync(join(MIGRACIONES, archivo), 'utf8');
+for (const archivo of readdirSync(ESQUEMA).filter((a) => a.endsWith('.sql')).sort()) {
+  const texto = readFileSync(join(ESQUEMA, archivo), 'utf8');
   for (const m of texto.matchAll(DEFINICION)) vigente = { archivo, cuerpo: m[2] };
 }
 
 if (!vigente) {
-  fallas.push('Ninguna migración define interno.usuario_elegido_bien_escrito.');
+  fallas.push('El esquema declarado no define interno.usuario_elegido_bien_escrito.');
 } else {
   const patron = vigente.cuerpo.match(/~\s*'([^']+)'/);
   if (!patron) {

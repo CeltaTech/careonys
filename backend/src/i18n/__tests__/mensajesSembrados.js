@@ -17,24 +17,7 @@ import { filasDeFabrica } from '../../__tests__/laFotoDeLaBase.js';
 // `('<clave>', '<json>'::jsonb)` —con `admite_texto_propio` y `activo` detrás, si los dicen— y
 // borran en la forma `DELETE FROM public.mensajes_del_sistema WHERE prestadora_id IS NULL AND
 // clave = '<clave>'`. Se leen en orden, igual que las corre la base.
-const MIGRACIONES_POSTERIORES = [
-  '20261107000000_codigo_de_prestadora_en_la_activacion.sql',
-  '20261118000000_los_turnos_se_asignan.sql',
-  '20261121000000_avisos_de_la_asignacion.sql',
-  '20261226000000_avisos_del_turno_fijo_y_del_reemplazo.sql',
-  '20270101000000_frases_aprobadas_de_la_entrevista_y_la_guardia_sin_cerrar.sql',
-  '20270102000000_el_acceso_a_la_entrevista_se_habilita.sql',
-  '20270109000000_el_acceso_es_por_nombre_de_usuario.sql',
-  '20270114000000_el_numero_concuerda_con_la_cantidad.sql',
-  '20270125000000_el_aviso_del_plazo_de_la_ubicacion.sql',
-  '20270126000000_los_documentos_del_asistente.sql',
-  '20270127000100_el_relevo_de_emergencia_es_una_emergencia_de_la_guardia.sql',
-  '20270228000000_el_apoderado_es_por_cliente.sql',
-  '20270302000000_el_documento_se_firma_con_un_enlace.sql',
-  '20270304000000_la_firma_por_enlace.sql',
-  '20270313000000_la_baja_y_la_reactivacion_del_servicio.sql',
-  '20270323000000_el_borrado_del_registro_de_accesos_se_avisa_por_correo.sql',
-];
+const MIGRACIONES_POSTERIORES = [];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;
 // La otra forma de sembrar: `(NULL, '<clave>', '<json>')`, con la Prestadora delante y sin el tipo.

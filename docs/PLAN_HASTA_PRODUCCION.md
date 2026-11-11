@@ -334,6 +334,14 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
   guardan con el depósito de secretos de Supabase, que usa **una sola clave para todo el
   proyecto**. Hoy no hay ninguno guardado.
 - **El cifrado del disco** lo pone Supabase, con una clave suya. No se puede comprobar desde la base.
+- **La clave con la que el backend fabrica sus pases es otra llave maestra.**
+  `backend/src/db/connection.js:42-72` firma los pases del trabajo sin persona con
+  `CLAVE_DEL_TRABAJO_SIN_PERSONA`, y la usan unos cien archivos del backend, muchos en pedidos
+  comunes y no sólo en tareas nocturnas. Supabase acepta cualquier pase firmado con esa clave, así
+  que con ella también se puede fabricar uno que abre todas las Prestadoras, sus archivos y la
+  administración de las cuentas. Esta última, la base no la puede cerrar.
+- **La copia de los archivos** ya va de a una Prestadora (`backend/src/utils/copiaDeLosArchivos.js`),
+  pero sube a los dos depósitos **sin cifrar**.
 
 **Lo que se propone:**
 
@@ -348,13 +356,33 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
 3. **Las cuentas de entrada** viven en una tabla de Supabase que no es de ninguna Prestadora. Se
    respaldan aparte, cada una dentro del archivo de su Prestadora.
 4. **Se borra el secreto `BACKUP_DB_*` de GitHub** y se cambia la contraseña de esa cuenta.
+5. **La copia de los archivos se cifra igual que la de los datos**, con la clave pública de cada
+   Prestadora.
+6. **El backend deja de fabricar pases.** Cada Prestadora tiene una cuenta automática propia, con
+   una contraseña larga hecha al azar al darla de alta, que se puede cambiar sin tocar las de las
+   demás. El backend entra con ella como una persona y **el pase lo arma Supabase**: una función de
+   la base decide qué dice, y para esa cuenta dice sólo su Prestadora. Las contraseñas van a la caja
+   fuerte de Careonys. Al terminar se borra `CLAVE_DEL_TRABAJO_SIN_PERSONA` del backend y de las
+   claves de firma de Supabase. Se descartaron la caja externa que firma, porque no impide pedirle
+   un pase que abra todo, y que la plataforma reconozca al backend sin contraseña, porque Railway no
+   lo ofrece. **Antes de nada se prueba en la base local** que esa función pueda poner en el pase
+   los dos accesos propios de hoy: el del trabajo sin persona y el de la copia de respaldo.
+7. **Una alarma sobre las cuentas automáticas.** Suena ante una entrada desde un lugar que no es el
+   backend —si Railway le da una dirección fija—, ante muchas entradas nuevas con contraseña en poco
+   tiempo y ante contraseñas equivocadas repetidas. **Avisa y corta:** manda un correo a
+   `cuentas@celtatech.com`, la dirección de todo lo que el sistema le comunica a CeltaTech, y
+   desactiva la cuenta automática afectada hasta que se le cambie la contraseña. La Prestadora no
+   se entera. La dirección vive en la configuración del backend, donde ninguna Prestadora la puede
+   cambiar.
 
 **Lo que decide usted:** quién guarda la clave que descifra el respaldo de cada Prestadora, y qué
 se hace con los secretos de terceros, que el sistema tiene que poder usar solo y por eso no pueden
 quedar fuera de su alcance.
 
-**Comprobación:** las claves de una Prestadora no descifran nada de otra, y ningún secreto del
-repositorio ni de GitHub alcanza a más de una Prestadora.
+**Comprobación:** las claves de una Prestadora no descifran nada de otra; ningún secreto del
+repositorio, de GitHub ni del backend alcanza a más de una Prestadora; un pase pedido con la cuenta
+de una Prestadora no lee nada de otra; y una entrada con la contraseña equivocada repetida dispara
+el correo y deja la cuenta desactivada.
 
 **16.** **La documentación que queda falsa.** Hay renglones de documentación y comentarios de
 código que describen el estado de hoy y quedarán falsos. **Se corrigen en el paso donde dejan de

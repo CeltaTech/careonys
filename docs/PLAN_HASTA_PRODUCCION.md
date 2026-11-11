@@ -61,8 +61,8 @@ en las pantallas, y de ahí sale el depósito público, que es la única excepci
 guardan privados».
 
 - `docs/MARCA.md:27` — **[ya construido]** el modelo de marca del producto: compartida con la Prestadora y no marca blanca.
-- `docs/claude_history.md:127` — **[ya construido]** que el depósito de logos sea público para leer. **Se contesta junto con el paso de más abajo que pregunta si la regla admite esa excepción o si el depósito se cierra:** ahí se decide qué pasa, acá sólo si la decisión fue suya.
-- `docs/PRD_01_Sitio_Web.md:195` — que la página de cada Prestadora la arme CeltaTech y no sea función de Careonys. **Se contesta antes que el paso que autoriza construir el sitio**, más abajo: si esto no es suyo, ese documento cambia antes de que se construya nada.
+- `docs/claude_history.md:164` — **[ya construido]** que el depósito de logos sea público para leer. **Se contesta junto con el paso de más abajo que pregunta si la regla admite esa excepción o si el depósito se cierra:** ahí se decide qué pasa, acá sólo si la decisión fue suya.
+- `docs/PRD_01_Sitio_Web.md:187-191` — que la página de cada Prestadora la arme CeltaTech y no sea función de Careonys. **Se contesta antes que el paso que autoriza construir el sitio**, más abajo: si esto no es suyo, ese documento cambia antes de que se construya nada.
 
 ### 5. Documentos enteros atribuidos de una sola vez
 
@@ -77,18 +77,18 @@ revisar es el documento entero, no un renglón.
 Las tres deciden con qué criterio se elige, no qué se construye. Por eso van juntas: o valen las
 tres o no vale ninguna.
 
-- `docs/claude_history.md:371` — que lo propio del producto no quede atado a la plataforma de base de datos. Construido sólo en parte: la lógica de negocio vive en disparadores de Postgres y los secretos en Supabase Vault.
-- `docs/claude_history.md:382` — que la arquitectura se elija pensando en que dure, no en lo más rápido de hacer.
-- `docs/claude_history.md:337` — que la empresa tenga que poder operar con poca gente.
+- `docs/claude_history.md:410` — que lo propio del producto no quede atado a la plataforma de base de datos. Construido sólo en parte: la lógica de negocio vive en disparadores de Postgres y los secretos en Supabase Vault.
+- `docs/claude_history.md:419` — que la arquitectura se elija pensando en que dure, no en lo más rápido de hacer.
+- `docs/claude_history.md:376` — que la empresa tenga que poder operar con poca gente.
 - `docs/claude_history.md:432` — que el nivel visual del producto tenga que superar al de la competencia.
 
 ### 7. Sueltas, que no se agrupan con ninguna otra
 
 Éstas sí se contestan de a una, en cualquier orden.
 
-- `docs/claude_history.md:282` — **[ya construido]** que una guardia pueda tener más de un Paciente. Sigue en pie con la escala que ahora tiene el glosario: vale para la guardia y también para cada turno adentro de ella, y no traba nada de lo que sigue.
-- `docs/claude_history.md:212` y `:213` — **[ya construido]** que se descarte la pantalla de obra social con reglas escritas en el código, y que el informe de obra social sea sólo del Panel.
-- `docs/claude_history.md:404` — **[ya construido]** que el tipo de cambio quede afuera de la regla de la moneda.
+- `docs/claude_history.md:344-348` — **[ya construido]** que una guardia pueda tener más de un Paciente. Sigue en pie con la escala que ahora tiene el glosario: vale para la guardia y también para cada turno adentro de ella, y no traba nada de lo que sigue.
+- `docs/claude_history.md:249` y `:250` — **[ya construido]** que se descarte la pantalla de obra social con reglas escritas en el código, y que el informe de obra social sea sólo del Panel.
+- `docs/claude_history.md:441` — **[ya construido]** que el tipo de cambio quede afuera de la regla de la moneda.
 
 **3.** La segunda etapa: los otros dos grupos de la misma revisión. Veinticuatro renglones que sí
 traen una cita suya —hay que comprobar que la cita sostenga lo que cuelga de ella— y trece donde
@@ -129,13 +129,14 @@ a una Prestadora, con la credencial de la copia de respaldo, que sólo lista y b
 esa Prestadora. No está en Railway ni en los secretos de GitHub, y en Supabase la clave secreta
 está borrada y las claves heredadas, apagadas.
 
-**Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` se llama
-unas 25 veces desde 10 archivos; el resto de las consultas escribe el filtro a mano. Cuántas
+**Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` queda en un
+solo archivo, `backend/src/routes/panelPersonasTelefonos.js`; el resto de las consultas escribe el
+filtro a mano. Cuántas
 consultas no nombran la Prestadora **no está medido de nuevo**: los números de una revisión
 anterior ya no se pueden sostener. Si falta un filtro, la base contesta igual: no tiene con qué
 darse cuenta.
 
-**Los 12 depósitos de archivos tienen política.** La autorización de monitoreo, los documentos
+**Los 13 depósitos de archivos tienen política.** La autorización de monitoreo, los documentos
 del Asistente, los documentos del Pagador y el documento firmado de las personas autorizadas ya se sirven
 con el acceso de quien pide, y ahí dice que no el depósito.
 
@@ -181,7 +182,7 @@ de protección de datos. `escalas_legales` también es sólo `AR`.
 demás países es transferencia internacional hacia Brasil.
 
 **Lo que sí está bien.** Los secretos de pasarelas se guardan en Supabase Vault, no en claro; hoy
-no hay ninguno cargado. Once de los doce depósitos son privados y se sirven con enlace temporal. El consentimiento se registra
+no hay ninguno cargado. Doce de los trece depósitos son privados —el único público es el de la marca de las Prestadoras— y se sirven con enlace temporal. El consentimiento se registra
 con texto versionado, con quién consintió, por qué medio, desde cuándo y hasta cuándo.
 
 ### Qué queda cuando esto termina
@@ -327,10 +328,9 @@ Va al final de los cimientos porque cada semana que pasa son más migraciones pa
 **Comprobación:** se reconstruye la base desde cero con la maestra y se compara el esquema contra la
 base de hoy. Si no son idénticos, la fundición está mal.
 
-**15.** **Para que no vuelva.** Tres automatismos que cortan la publicación:
+**15.** **Para que no vuelva.** Dos automatismos que cortan la publicación, además del que ya
+corre en cada push y no deja volver a la llave maestra:
 
-- **La llave maestra no vuelve.** El control que la buscaba queda con la lista vacía: si
-  `SUPABASE_SERVICE_ROLE_KEY` aparece en cualquier archivo del repositorio, el push no sale.
 - **Ninguna tabla nace sin protección.** Una tabla en el esquema declarado sin protección por fila y
   sin al menos una política corta la publicación. Lo mismo un depósito de archivos sin política.
 - **La prueba que puede fallar.** La prueba de aislamiento corre con el filtro del código quitado a
@@ -405,8 +405,8 @@ contraseña**. El mismo email puede estar en dos Prestadoras y son dos cuentas: 
 siempre no lo obliga a nadie a tener una sola cuenta. Adentro de una Prestadora ese email no se
 repite.
 
-**El modelo ya está y la base lo impone.** Se entra con el nombre de usuario, que es único en todo
-el sistema, así que la cuenta ya dice de qué Prestadora es y nadie la nombra al entrar. **Lo que falta es la prueba
+**El modelo ya está y la base lo impone.** Se entra con el nombre de usuario, que no se repite entre
+las cuentas activas, así que la cuenta ya dice de qué Prestadora es y nadie la nombra al entrar. **Lo que falta es la prueba
 de aislamiento de abajo**, con la misma persona en dos Prestadoras.
 
 **Y al entrar no se insinúa nada.** Un nombre de usuario que no existe se trata igual que una
@@ -447,8 +447,8 @@ sola Prestadora, sin versión y sin dónde queden guardados.
 sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la
 intermediación. Son cinco: Calificaciones, Clientes, Formas de cobro —con su detalle y los
 plazos del cobro—, Auditoría legal y Funciones con riesgo legal. Hoy el menú le muestra Clientes y
-Formas de cobro también a quien no es de la administración (`panel/src/components/layout/Layout.jsx:232`,
-`:242`); las rutas sí están protegidas. Clientes y Formas de cobro las ve además sólo la
+Formas de cobro también a quien no es de la administración (`panel/src/components/layout/Layout.jsx:233`,
+`:243`); las rutas sí están protegidas. Clientes y Formas de cobro las ve además sólo la
 administración. En el Legajo del Asistente, la pestaña de evaluaciones sigue la misma regla.
 
 ---
@@ -490,9 +490,9 @@ títulos:
   Quien tiene el Servicio asignado arma el equipo: si esa salida se elige, tiene que decir que ese
   rol nunca queda como responsable de un Servicio.
 - **La ventana de crear un turno ya exige elegir el Servicio**
-  (`panel/src/pages/guardias/NuevaGuardiaModal.jsx:170`), pero todavía pide la lista completa de
-  Pacientes de la empresa, sin recorte de ninguna clase. Cuando el turno cuelgue del Servicio esa ventana cambia de raíz, **y es la misma
-  ventana que toca la sección de carteles**, más abajo. Una sola pasada.
+  (`panel/src/pages/guardias/NuevaGuardiaModal.jsx:170`), pero todavía pide todos los Pacientes que
+  la base le deja ver a quien la abre, sin recortarlos al Servicio elegido. Cuando el turno cuelgue
+  del Servicio esa ventana cambia de raíz.
 
 **23. Usted** — Aprobar ese plan, que todavía no está aprobado. Hasta que lo esté no se escribe
 código de producción de ninguno de sus ocho pasos.
@@ -531,27 +531,9 @@ Lo que falta: **el cambio de Pagador** con el Servicio en curso, que hoy sólo m
 y **más de un Pagador**, que la regla del producto admite y la base no, porque guarda uno solo por
 Servicio.
 
-**La prueba del enlace por correo para leer y firmar el documento del Pagador está a medias**
-(estado comprobado en la base el 2026-11-08). Se trabaja de a un punto por vez; el primero es el
-envío del enlace, y los otros tres esperan el «sí» del Desarrollador, uno por uno.
-
-- **Lo preparado:** la persona `bfc3f718-d4d3-41b2-826c-9eeec5734de2` (persona jurídica
-  inventada, Responsable de pagos del Cliente número 2 de la Prestadora Demo, sin Apoderado) tiene
-  el Email de prueba que indicó el Desarrollador. Él mira esa casilla; el envío sale por Resend.
-- **Lo que todavía no se hizo:** no se mandó ningún documento: `consentimientos_pagador` y
-  `enlaces_consentimiento_pagador` tienen cero filas.
-- **Por qué se frenó:** Resend avisó que la cuenta pasó su cupo de 100 correos diarios. La causa
-  eran 15 guardias de prueba de la Prestadora Demo, del 2026-07-19, que habían quedado empezadas y
-  sin cerrar: el aviso de guardia sin cerrar se mandaba sin tope y, al rechazarlo Resend, se volvía a
-  intentar en cada vuelta de cinco minutos. **Ya está resuelto:** el 2026-11-05 a las 15:02 UTC las
-  15 se cerraron como lo hace el Panel —terminadas, origen Panel, con el Administrador de la
-  Demo como quien cierra y el motivo escrito—. Hoy no queda ninguna guardia empezada sin cerrar, y
-  desde ese momento `envios_de_correo` no tiene ningún intento nuevo.
-- **Próximo paso exacto:** el Desarrollador entra al Panel con la cuenta del Administrador de la
-  Demo, abre la Ficha del cliente número 2 y genera y manda el documento del Responsable de pagos;
-  se comprueba en la base que nacieron el consentimiento y el enlace, que `envios_de_correo` anotó el
-  envío como aceptado, y el Desarrollador confirma que llegó a su casilla y que el enlace abre el
-  documento. Se cierra cuando el correo llegó y el enlace abrió el documento correcto.
+**La prueba del enlace por correo para leer y firmar el documento del Pagador** tiene hecho el
+primer punto, el envío del enlace: en la base hay un consentimiento cerrado con el enlace, y su
+envío figura aceptado. Los otros tres puntos esperan el «sí» del Desarrollador, uno por uno.
 
 **27.** Construir los ocho pasos de ese plan, en el orden que tiene escrito.
 
@@ -570,24 +552,21 @@ los Pacientes que ve. Del Directorio de Personas lee las que tienen un rol en su
 Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
 `scripts/probar_altas_con_sesion.mjs`. Falta:
 
-- **De cada Asistente, la distancia al domicilio y no el domicilio.** Los Asistentes, las matrículas
-  y las calificaciones siguen por zona, a propósito: un Asistente trabaja para varios Servicios.
-  Hoy el Panel ya le muestra a la Coordinadora el Padrón y el Legajo desde la vista
-  `asistentes_coordinador`, que no lleva domicilio, calle, piso, código postal ni coordenadas.
-  Quedan dos huecos: la base le deja leer esas seis columnas de `asistentes` a cualquier sesión
-  de la Prestadora, y el mapa de Postulaciones (`panel/src/hooks/usePadronEnElMapa.js`) las lee
-  para todos y dibuja a cada Asistente en su casa. El backend no lee el domicilio de ningún
-  Asistente. El arreglo en la base es quitarle a `authenticated` la lectura de esas seis columnas
-  y dar el domicilio por una función que sólo se lo contesta al Administrador y al propio
-  Asistente, y la distancia por otra que la calcula adentro. Eso obliga a cambiar las lecturas
-  con `*` del Panel sobre `asistentes` y cambia lo que el mapa le muestra a la Coordinadora
-  —sin la casa de cada uno—: es cambio grande y toca la interfaz, así que espera la aprobación
-  del Desarrollador.
+- **De cada Asistente, la distancia al domicilio y no el domicilio.** El domicilio ya vive aparte,
+  en `domicilio_asistente`, y la base se lo deja leer sólo al propio Asistente y a quien tenga el
+  permiso `ver_domicilio_asistente`, reservado de fábrica a la administración; el mapa de
+  Postulaciones ya no recibe las coordenadas de quien no lo tiene. Falta la distancia: no hay
+  ninguna función que la calcule adentro de la base, y `panel/src/lib/candidatos.js` la mide con el
+  domicilio, así que la Coordinadora sin ese permiso se queda sin distancia. Y el Padrón y las
+  calificaciones no van por zona: la Coordinadora lee todo el Padrón de su Prestadora
+  (`coordinador_lee_el_padron_de_asistentes`) y todo el personal lee las calificaciones
+  (`prestadora_ve_calificaciones`).
 - **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y
   se habilitan con un permiso. Hoy la facturación del Cliente, sus cobros y correcciones pasan
   por una sola función, `interno.gestiona_la_facturacion()`, que deja entrar a todo el personal;
-  la lista de precios y los consentimientos y documentos del Pagador dejan leer al Administrador
-  y a la Coordinadora con la condición copiada en cada política. El arreglo es que esa función
+  la lista de precios deja leer al Administrador y a la Coordinadora con la condición copiada en
+  su política. Los consentimientos y documentos del Pagador ya pasan por el permiso
+  `registrar_consentimiento_pagador`, reservado de fábrica a la administración. El arreglo es que esa función
   sea Administrador o quien tenga el permiso, y que las otras tablas la usen. Espera que el
   Desarrollador apruebe el nombre del permiso: la propuesta es `ver_facturacion_cliente`,
   reservado de fábrica a la administración, con el mismo molde que `ver_estado_de_cuenta_cliente`.
@@ -708,7 +687,8 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
 - **El orden de llamado** es una lista de grupos —personal de emergencia, franquero, los demás del
   Padrón, familiar— que ordena la Prestadora. Adentro de cada grupo, el sistema ordena a las
   personas por su Ponderación en el momento de la alarma.
-- **Las alarmas:** las de hoy por WhatsApp, mensaje de texto y correo, más el aviso al teléfono del
+- **Las alarmas:** las de hoy por WhatsApp y correo —el mensaje de texto tiene el lugar hecho y
+  no sale, porque no tiene proveedor—, más el aviso al teléfono del
   Coordinador y un sonido que persiste en el Panel, con insistencia que se acelera.
 - **Configuración obligatoria antes de operar, sin valores de fábrica:** el Coordinador de
   respaldo, el orden de llamado, de a uno o todos juntos, y los tiempos. El sistema muestra una
@@ -769,6 +749,12 @@ no avisa, las cuatro alertas tempranas que cada Prestadora enciende o apaga, la 
 que deja de figurar ausente —espera la palabra con que se muestra, que aprueba el Desarrollador—,
 y las dos opciones de penalizar al titular y compensar al relevo.
 
+**Lo que ya está:** el backend de la pantalla donde el Asistente contesta, sin pantalla que lo
+llame (`backend/src/routes/appAsistentes.js:1411-1534`), y la convocatoria automática con una sola
+forma —todos juntos— y un solo arranque —al vencer los plazos del Coordinador y de su respaldo—,
+apagada de fábrica (`backend/src/utils/faseAutomaticaRelevo.js:12-28`). Faltan de a uno y el
+arranque siempre.
+
 **Comprobación:** una Prestadora sin esa configuración confirmada no puede asignar un turno; con
 ella, un relevo que no llega hace sonar el Panel y llega al teléfono del Coordinador. De a uno, el
 segundo consultado recibe el pedido sólo después de que el primero dijo que no o se le venció el
@@ -785,6 +771,11 @@ Prestadora intente apagarlo.
 **34.** **La presencia y la Salida con el Paciente.** La aplicación abierta todo el turno, la
 ubicación periódica guardada como dentro o fuera y borrada al cerrar, la advertencia al apagarla, y
 la salida con motivo, aviso al Cliente y alarma si se pasa.
+
+**Lo que ya está es la configuración:** viaje y turno o sólo viaje, los minutos entre controles y
+los días para aceptar (`panel/src/pages/configuracion/LasAplicaciones.jsx:44-181`). Lo que la hace
+funcionar no: hoy la aplicación sigue la ubicación sólo durante el viaje
+(`pwa-asistentes/src/lib/ubicacionDelTelefono.js:65-80`).
 
 **Comprobación:** al cerrar el turno no queda ninguna coordenada guardada de la ubicación
 periódica.
@@ -1156,12 +1147,12 @@ qué base?»**, más abajo.
 Los tres arreglos, para que estén escritos:
 
 1. **No existe el formulario público de postulación**, ni pantalla ni ruta del backend que reciba una postulación, y en la base no hay ninguna. Cuando se haga, pide lo mismo que el alta de un Legajo: tipo y número de documento, DNI donde el documento lo contiene, y género, todos obligatorios.
-2. **Faltan las listas.** Género ya es un catálogo con tres opciones. Nacionalidad y los cinco subgrupos de experiencia clínica no existen como lista, y la situación fiscal tiene una sola opción. **La pantalla donde se cargan ya está construida** —`panel/src/pages/configuracion/LasListasDeOpciones.jsx`—, así que lo que queda es crear y sembrar las que faltan.
-3. **Al incorporar un aspirante se pierden quince datos.** Lo que cargó en la postulación no llega entero al Legajo del Asistente.
+2. **Faltan las listas.** Género ya es un catálogo con tres opciones, y hay cuatro listas de fábrica: disponibilidad, situación fiscal —con una sola opción— y los medios de pago, al Asistente y del Cliente. Nacionalidad y los cinco subgrupos de experiencia clínica no existen como lista: hoy se guardan como texto libre. **La pantalla donde se cargan ya está construida** —`panel/src/pages/configuracion/LasListasDeOpciones.jsx`—, así que lo que queda es crear y sembrar las que faltan.
+3. **Al incorporar un aspirante se pierden veinticuatro datos.** Lo que cargó en la postulación no llega entero al Legajo del Asistente: pasan el nombre, el teléfono, el email, el documento, el género y las referencias laborales, y se quedan afuera, entre otros, las especialidades, la disponibilidad, el domicilio, la situación fiscal, los estudios y el honorario pretendido (`backend/src/routes/panelCuentas.js:174-240`). Las zonas no pasan a propósito.
 
 **65. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
 
-**66.** El formulario: la pantalla y la entrada pública del backend que recibe la postulación y entrega las listas de opciones. La base ya tiene dónde guardarla. Se dibuja desde la declaración, no a mano. Esperaba el paso anterior.
+**66.** El formulario: la pantalla y la entrada pública del backend que recibe la postulación y entrega las listas de opciones. La base ya tiene dónde guardarla, y la entrada del backend está en el estante, en `Codigos-utiles\postulacion-desde-un-sitio-publico`, con las listas, la edad mínima y el aviso por correo. Se dibuja desde la declaración, no a mano. Esperaba el paso anterior.
 
 **67. Usted** — ¿Se le bloquea la asignación de guardias a quien no está inscripto en monotributo, o se avisa y decide la Prestadora? La regla del producto dice avisar, no bloquear, así que el PRD y la regla no coinciden. **Lo que se asigna es un turno de guardia**, y asignarlo supone el Servicio armado, más arriba en esta lista.
 
@@ -1184,12 +1175,12 @@ Los tres arreglos, para que estén escritos:
 **74. Usted** — La alerta por salida del domicilio, dos decisiones que no puedo tomar yo. Hoy la cuenta se hace con una velocidad media única y distancia en línea recta (`backend/src/utils/llegadaEstimada.js:39-45`), se dispara recién cuando alguien marcó la salida, y mide llegada tarde, no que el Asistente siga en su casa.
 
 - **El tiempo de viaje real sale de un servicio de mapas ajeno.** Cuál se contrata, con qué cuenta y qué se le manda en cada consulta —las coordenadas de la casa de una persona salen del producto— es decisión suya, y la credencial la pone usted.
-- **Dónde vive el Asistente ya se guarda**, con su dirección escrita y sus coordenadas, y anotado como dato sensible que no sale hacia el Cliente. Las coordenadas quedan vacías mientras nadie ubique la dirección en un mapa, y completarlas depende del servicio de mapas del punto anterior. Esto **no es una decisión suya**: está tomada y construida.
-- **Y exige mirar el teléfono antes de que la guardia empiece.** Hoy el GPS se lee cuando la persona aprieta un botón. Leerlo sola, mientras todavía no empezó a trabajar, es seguir a alguien fuera de su horario: hay que decidir si se hace, con qué advertencia y con qué permiso.
+- **Dónde vive el Asistente ya se guarda**, con su dirección escrita y sus coordenadas, y anotado como dato sensible que no sale hacia el Cliente. Las coordenadas las saca el backend solo, al dar el alta y al cambiar la dirección (`backend/src/utils/cuentasPanel.js:403`, `backend/src/routes/panelCoordenadas.js:37`); el servicio de mapas del punto anterior hace falta sólo para el tiempo de viaje. Esto **no es una decisión suya**: está tomada y construida.
+- **Y exige mirar el teléfono antes de que la guardia empiece.** Hoy el GPS se sigue sólo durante el viaje, desde «Salgo ahora» hasta que escanea la entrada, y con consentimiento vigente (`pwa-asistentes/src/pages/GuardiaActiva.jsx:324-335`). Leerlo antes, mientras todavía no empezó a trabajar, es seguir a alguien fuera de su horario: hay que decidir si se hace, con qué advertencia y con qué permiso.
 
 **75.** Con eso contestado, construirlo — incluida la lista de medios de transporte, que hoy es texto libre escrito en cada salida y por eso no hay contra qué traducirlo a una velocidad.
 
-**76. Usted** — El botón de contacto de «Asistente Asignado»: ¿a quién llama? El PRD lo dejó abierto —«WhatsApp o chat interno» (`docs/PRD_04_05_App_Servicio.md:224`)— y las dos salidas tienen consecuencias. Darle al Cliente el teléfono del Asistente es entregar el dato personal de quien trabaja, y es exactamente lo que Match cobra por abrir: ahí el contacto va tapado hasta que alguien paga. La otra salida es que el botón lleve a la Prestadora, que es con quien el Cliente tiene el trato en prestación directa, usando el contacto que ella misma configura. Hay una tercera: el hilo interno, que hoy existe sólo para Match y con el tapado puesto.
+**76. Usted** — El botón de contacto de «Asistente Asignado»: ¿a quién llama? El PRD lo dejó abierto —«WhatsApp o chat interno» (`docs/PRD_04_05_App_Servicio.md:221-222`)— y las dos salidas tienen consecuencias. Darle al Cliente el teléfono del Asistente es entregar el dato personal de quien trabaja, y es exactamente lo que Match cobra por abrir: ahí el contacto va tapado hasta que alguien paga. La otra salida es que el botón lleve a la Prestadora, que es con quien el Cliente tiene el trato en prestación directa, usando el contacto que ella misma configura. Hay una tercera: el hilo interno, que hoy existe sólo para Match y con el tapado puesto.
 
 De las especialidades de esta pantalla no queda nada por hacer: el texto libre ya no existe en la base. Las Especialidades son un catálogo de cada tipo de Asistente, y lo que se muestra es el tipo, con sus Tareas de lo que corresponde y lo que no.
 
@@ -1238,11 +1229,11 @@ muestra en ningún lado.
 
 ## Datos personales
 
-**91. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay advertencia.
+**91. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` ya tiene la sección «Protección de datos e historia clínica» (`docs/legal/argentina.md:165`), con la ley, la conservación y la transferencia a São Paulo; lo que falta es el texto de la advertencia que se le muestra a la persona. Sin documento no hay advertencia.
 
 **92.** La advertencia. Qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca, no se contesta acá: es el paso 122, más abajo en esta misma lista.
 
-**93. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 27 archivos de `docs/legal/` no aparece ni una vez «ubicación» ni «GPS», y la ley 25.326 aparece sólo en `docs/legal/argentina.md`, sin nada sobre la ubicación. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
+**93. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 27 archivos de `docs/legal/` no aparece ni una vez «ubicación» ni «GPS», y la ley 25.326 aparece sólo en `docs/legal/argentina.md`, sin nada sobre la ubicación. El registro del consentimiento está construido. De los textos sembrados, los borradores son de relleno, y hay además una frase corta vigente para la modalidad autónoma, en los tres idiomas, que tampoco pasó por un profesional. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
 
 **94.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
 
@@ -1272,7 +1263,7 @@ prueba del escaneo del Asistente.
 Y queda además **una contraseña de prueba en texto plano dentro de la configuración de permisos de
 una copia de trabajo**, que no es un archivo del repositorio y por eso el barrido no la alcanzó.
 
-**98. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 207 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
+**98. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 221 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
 
 **99. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 
@@ -1327,8 +1318,8 @@ que usaba, sin que el producto lo lea ni lo escriba: la tabla `ceses`, la tabla 
 el depósito `documentos-cese`, las filas de `escalas_legales` del cese y del riesgo de
 dependencia, las columnas `categoria_cct` y `sueldo_basico` de `remuneraciones_asistente`,
 `causal_baja`, `score_riesgo_reclasificacion` e `indicadores_riesgo` de
-`datos_reservados_asistente`, `aplica_a` de `conceptos_liquidacion`, el valor `dependencia` en las
-restricciones de `textos_consentimiento.modalidad` y `conceptos_liquidacion.aplica_a`, y los textos de
+`datos_reservados_asistente`, el valor `dependencia` en la restricción de
+`textos_consentimiento.modalidad`, y los textos de
 consentimiento de esa modalidad. Esperan al módulo de sueldos y jornales, o a la decisión de
 borrarlos con una migración.
 
@@ -1356,8 +1347,9 @@ anotara**, así que la pregunta es más chica de lo que parece:
 
 - **Las listas de opciones ya viven en la base**, con la traducción adentro de cada opción.
 - **Los mensajes que manda el producto también**, en `mensajes_del_sistema`, con su columna de
-  traducciones y la del producto. Admite una fila propia por Prestadora, y hoy no hay ninguna.
-- **Lo que sigue en un archivo es el texto de las pantallas del Panel** —`panel/src/i18n/translations.js`—, que ningún archivo de `panel/src/` reemplazó todavía por la tabla.
+  traducciones. Admite una fila propia por Prestadora, y hoy no hay ninguna. El Panel ya lee de ahí
+  el pie de firmas (`panel/src/hooks/useFrasesDelSistema.js:27`).
+- **Lo que sigue en un archivo es el resto del texto de las pantallas del Panel** —`panel/src/i18n/translations.js`—.
 
 Así que lo único que esto decide es ese último resto. **Y se contesta después de la sección de los
 carteles**, más arriba: es justamente ese archivo el que se barre ahí, y no tiene sentido mudar
@@ -1367,11 +1359,11 @@ texto que va a salir.
 
 **Usted — para analizar, no para resolver ahora.** Un registro de cambios general: qué dato
 cambió, de qué valor a qué valor, quién y cuándo, para cualquier tabla que lo necesite. Hoy no
-existe: cada cambio que se registra tiene su lista propia, y hoy son ocho —las seis `auditoria_*`,
-el historial del registro clínico y el registro de actividad—. El registro de actividad anota qué
-campo cambió, pero no de qué valor a qué valor. Si se construye, se decide si absorbe el historial
-del registro clínico o si quedan dos listas para lo mismo. El primero que lo va a necesitar es el cambio de la fecha prevista de vuelta de una
-ausencia; si el general se decide antes de construirlo, ese cambio se anota ahí.
+existe: cada cambio que se registra tiene su lista propia, y hoy son nueve —las seis `auditoria_*`,
+el historial del registro clínico, el registro de actividad y los cambios de la fecha prevista de
+vuelta de una ausencia—. El registro de actividad anota qué campo cambió, y de qué valor a qué valor
+sólo en algunas acciones. Si se construye, se decide si absorbe el historial
+del registro clínico y el de las ausencias, o si quedan varias listas para lo mismo.
 
 **111.** **El alta de una Prestadora entra por una puerta firmada, como la de Match**
 (`Careonys-Marketplace/supabase/functions/alta-y-baja/index.ts`), y hoy Careonys no tiene
@@ -1415,7 +1407,8 @@ con la misma referencia devuelve la misma Prestadora. Con lo que llega, el alta:
 - **Crea la Prestadora** con sus datos y la moneda de su país.
 - **Guarda el código de la Prestadora que manda CeltaTech**, que la nombra en el usuario de su
   coordinación, en los formularios públicos y en los enlaces de activación. Careonys no lo elige
-  ni lo cambia; si ya existe, el índice único de la base lo rechaza y el alta no se hace.
+  ni lo cambia. Hoy la Prestadora no tiene dónde guardarlo: la columna y su índice único se crean en
+  este paso, y con un código repetido el alta no se hace.
 - **Le fija la casilla de envío a partir de ese código** —`utils/casillaDeEnvio.js`— y le abre el
   reenvío de las respuestas a la casilla que ella declaró —`utils/reenvioDeRespuestas.js`—.
 - **Crea la cuenta del Administrador** con los datos que manda CeltaTech
@@ -1438,24 +1431,20 @@ texto opaco. Lo que cada Prestadora tenga hoy en uso se conserva.
 
 **115. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí.
 
-**Se contesta después del acto de armar el Servicio**, más arriba en esta lista, por dos motivos. El
-primero es que **la premisa con la que estaba escrita esta pregunta no es cierta**: decía que hoy el
-Coordinador se asigna por guardia, y no se asigna en ninguna parte — la columna del coordinador en la
-guardia no la escribe ninguna línea del Panel ni del backend, sólo la siembra `supabase/seed.sql`. El
-segundo es que ese acto cambia el modelo: **una sola persona coordina todo el Servicio, se la asigna
-al acordarlo, y sin ella el Servicio no se habilita.** Con eso construido, la pregunta es si hace
-falta alguien más además de esa persona, que es otra pregunta.
+**Ya se puede contestar.** El acto de armar el Servicio está construido: **una sola persona
+coordina todo el Servicio**, la asigna la administración y sin ella no hay guardias
+(`sin_coordinador_no_hay_guardias`, `el_coordinador_lo_asigna_la_administracion`). La pregunta es si
+hace falta alguien más además de esa persona.
 
 **116. Usted** — Cursos para Clientes: ¿va o no va?
 
-**117. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros once son privados. ¿La regla admite la excepción, o se cierra el depósito?
+**117. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros doce son privados. ¿La regla admite la excepción, o se cierra el depósito?
 
-**118. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
-remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
-así que tecleadas quedan escritas distinto en cada Legajo: no se puede saber cuántos Asistentes hay
-en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
-error de tipeo sale impreso en el documento de cese. El campo viene de la aplicación vieja y nunca
-se discutió. **Qué hay que analizar:** si pasa a ser una lista que la Prestadora carga —porque las
+**118. Usted** — La categoría de convenio del Asistente, de la que depende su remuneración básica.
+Hoy no se carga en ningún lado: la columna quedó en la base y ningún archivo la lee ni la escribe,
+porque el cese salió al estante. Cuando vuelva, si se teclea a mano queda escrita distinto en cada
+Legajo: no se puede saber cuántos Asistentes hay en cada categoría, ni aplicarle un cambio de escala
+a todos los de una de una sola vez. **Qué hay que analizar:** si pasa a ser una lista que la Prestadora carga —porque las
 categorías de otro país son otras y no pueden venir escritas en el código—, y qué se hace con las
 liquidaciones que ya salieron. **El mecanismo para que sea una lista ya está construido**, con las
 listas de opciones por Prestadora y su pantalla de carga; lo que falta decidir es si corresponde y
@@ -1652,7 +1641,7 @@ falta acá es que deje constancia, que se repita sola y que quede atada a la fre
 **Comprobación:** una restauración completa a un entorno aparte, con constancia de fecha y de qué
 se verificó.
 
-**127.** **La configuración por país, cargada.** La estructura existe y está vacía de esta materia.
+**127.** **La configuración por país, cargada.** La estructura existe y tiene un solo país cargado.
 Se carga, por jurisdicción: plazos de conservación con su hecho de inicio, plazo de brecha con su
 destinatario y desde cuándo corre, plazo de respuesta a los derechos, mecanismo de transferencia
 internacional, contacto del delegado u oficial de protección de datos donde sea obligatorio, y el
@@ -1661,10 +1650,10 @@ texto de consentimiento que cubra específicamente la transferencia internaciona
 Vale la regla de la empresa: **el producto avisa, no bloquea**, y el aviso sale del documento legal
 de ese país. Si el país no tiene documento, no hay aviso, y sin documento no se vende ahí.
 
-**Y los documentos legales de `docs/legal/` hay que ampliarlos, empezando por Argentina.** Los 21
-archivos existen, pero el de Argentina —el único desarrollado— cubre riesgo laboral. La materia de
-protección de datos de salud, conservación del expediente y notificación de brechas no está escrita
-en ninguno.
+**Y los documentos legales de `docs/legal/` hay que ampliarlos, empezando por Argentina.** Los 27
+archivos existen. Argentina ya tiene su sección de protección de datos e historia clínica
+(`docs/legal/argentina.md:165`), y Costa Rica, Panamá y Ecuador dicen la conservación y la brecha;
+en los demás esa materia no está escrita.
 
 **Comprobación:** ningún plazo de estos aparece escrito en el código.
 

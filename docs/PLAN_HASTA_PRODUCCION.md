@@ -415,46 +415,6 @@ la sección de Reclutamiento está esperando justamente esto.
   sólo para eso. Lo que viaja se escribe de este lado con la palabra que manda el glosario, y así
   esas notas quedan atrás.
 
-**21.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y un Cliente
-contrata con varias.** Cada una de esas es **una cuenta distinta, con su propio nombre de usuario y su propia
-contraseña**. El mismo email puede estar en dos Prestadoras y son dos cuentas: usar el email de
-siempre no lo obliga a nadie a tener una sola cuenta. Adentro de una Prestadora ese email no se
-repite.
-
-**El modelo ya está y la base lo impone.** Se entra con el nombre de usuario, que no se repite entre
-las cuentas activas, así que la cuenta ya dice de qué Prestadora es y nadie la nombra al entrar. La prueba de aislamiento de abajo
-también está: la siembra le da a Ana Álvarez una cuenta en cada Prestadora, con guardias en las
-dos, y `scripts/probar_aislamiento_en_la_base.mjs` falla si nadie tiene cuenta en las dos o si
-alguna de esas cuentas no ve lo suyo.
-
-**Y al entrar no se insinúa nada.** Un nombre de usuario que no existe se trata igual que una
-contraseña equivocada: el mismo mensaje. Y pedir la recuperación de la contraseña contesta lo mismo
-exista el nombre o no. Las dos tardan lo mismo exista la cuenta o no: la entrada le hace a la base
-una sola pregunta (`backend/src/routes/ingreso.js`) y la recuperación contesta antes de buscar la
-cuenta (`backend/src/routes/recuperarClave.js`). Al cerrar la sesión, las dos aplicaciones olvidan
-siempre la marca de la Prestadora, también con la entrada por huella guardada
-(`pwa-clientes/src/context/AuthContext.jsx`).
-
-**Nunca en dos a la vez.** Para hacer o ver algo en la segunda Prestadora hay que salir de la
-primera y entrar a la otra. No existe ninguna pantalla que muestre las dos juntas, ni una lista con
-una columna que diga de cuál es cada cosa. Estando en una, la otra no existe: ni sus turnos, ni sus
-pacientes, ni sus mensajes, ni sus documentos. Al cambiar se descarta todo lo que estaba cargado.
-
-**Y no hay excepción posible.** Con una sesión abierta en una Prestadora no se entra en otra hasta
-cerrar esa. Ninguna situación la habilita. Lo único que se mueve entre Organizaciones es el permiso
-de acceso, que ya tiene su propia forma y tampoco alcanza dos a la vez.
-
-**El aislamiento acá tiene que ser más duro que en el resto del producto, y por eso se prueba
-aparte.** Hasta hoy una cuenta pertenece a una sola Prestadora, así que una fuga se nota; desde
-este paso la misma persona tiene sesión legítima en dos, y cualquier consulta que resuelva la
-Prestadora por otra vía que no sea la sesión comprobada devuelve datos de la otra sin que nada
-falle a la vista. Entonces: **ninguna consulta resuelve la Prestadora por lo que venga en el
-pedido**, ni por la ficha, ni por parecido de correo; **la separación la impone la base**, y los
-filtros de las rutas del backend son la segunda red, no la primera. Y la prueba se hace con una
-persona dada de alta en dos Prestadoras, **con datos cargados en las dos**: entrando en una ve todo
-lo suyo de esa y nada de la otra, en las dos direcciones. Una consulta que devuelve vacío no prueba
-nada.
-
 **Lo que se miró y no viaja, para que no se vuelva a discutir:** las quince pantallas del sitio
 público y la maqueta; los consentimientos, donde Careonys está muy por delante —texto versionado
 por jurisdicción e idioma, con copia exacta de lo que la persona leyó, y con rechazo y retiro—; el

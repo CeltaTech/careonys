@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import { direccionDeAcceso } from '../config/direccionDeAcceso.js';
 import { usuarioComparable } from '../config/reglaDeUsuario.js';
-import { cuentaDelUsuario } from '../utils/nombreDeUsuario.js';
+import { cuentaQueNombra } from '../utils/nombreDeUsuario.js';
 
 export const ingresoRouter = Router();
 
@@ -17,11 +17,15 @@ export const ingresoRouter = Router();
 // de la cuenta cuando se la encontró, y una que no es de nadie cuando no. La de nadie sale siempre
 // igual para el mismo nombre, y no se puede calcular desde afuera, así que desde afuera no se
 // distingue una respuesta de la otra y esta puerta no sirve para averiguar quién tiene cuenta.
+//
+// Y TARDA LO MISMO: se le hace a la base una sola pregunta, exista la cuenta o no
+// (`cuentaQueNombra`). Una segunda pregunta sólo cuando la cuenta existe haría que la demora la
+// delatara.
+//
+// Las cuentas que entran con nombre de usuario son las de coordinación, Asistentes y Clientes, y
+// esa lista la aplica la base al contestar. La del Administrador y la del equipo técnico entran con
+// su email, que la pantalla manda tal cual sin pasar por acá.
 const TRABAJO = 'Ingreso';
-
-// Las cuentas que entran con nombre de usuario. La del Administrador y la del equipo técnico entran
-// con su email, que la pantalla manda tal cual sin pasar por acá.
-const ROLES_CON_NOMBRE_DE_USUARIO = ['coordinador', 'asistente', 'cliente'];
 
 // Fija entre reinicios, para que la misma dirección de nadie salga siempre igual.
 const CLAVE_DE_LA_DIRECCION_DE_NADIE = process.env.CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS
@@ -41,10 +45,8 @@ ingresoRouter.post('/correo-de-acceso', async (req, res) => {
   if (!usuario) return res.status(400).json({ error: 'faltan_datos' });
 
   try {
-    const cuenta = await cuentaDelUsuario(usuario, TRABAJO);
-    const correo = cuenta && ROLES_CON_NOMBRE_DE_USUARIO.includes(cuenta.rol)
-      ? direccionDeAcceso(cuenta.id)
-      : direccionDeNadie(usuario);
+    const cuenta = await cuentaQueNombra(usuario, TRABAJO);
+    const correo = cuenta ? direccionDeAcceso(cuenta.id) : direccionDeNadie(usuario);
     res.json({ correo });
   } catch (err) {
     console.error('Ingreso:', err.message);

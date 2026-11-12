@@ -32,22 +32,22 @@ export async function sufijoDeLaPrestadora(prestadoraId) {
 }
 
 /**
- * La cuenta que nombra lo escrito, o nulo.
+ * De qué cuenta es lo escrito, con una sola pregunta a la base, o nulo.
  *
  * EL NOMBRE DE USUARIO ES ÚNICO EN TODO EL SISTEMA, sin distinguir mayúsculas, así que lo escrito
  * entero alcanza para saber de quién es: no se corta en ningún «_». Vale para la coordinación
  * —cuyo nombre lleva el código de su Prestadora al final— y para Asistentes y Clientes, que lo
  * eligen al activar la cuenta.
  *
- * Primero se pregunta, sin Prestadora, de qué cuenta es (`cuenta_del_usuario`); esa credencial
- * sólo sirve para esa pregunta. Con la respuesta se entra a esa Prestadora y a ninguna otra, y ahí
- * se lee la cuenta.
+ * Se pregunta sin Prestadora (`cuenta_del_usuario`); esa credencial sólo sirve para esa pregunta.
+ * La base contesta únicamente las cuentas activas de coordinación, Asistentes y Clientes, que son
+ * las que entran con nombre de usuario: cualquier otra contesta lo mismo que un nombre sin cuenta.
  *
- * Devuelve nulo en todos los casos en que no hay cuenta, y quien la llama los trata igual.
+ * Es lo único que necesita la entrada, y por eso tarda lo mismo exista la cuenta o no.
  *
- * @returns {Promise<{ id: string, nombre: string, rol: string, email: string|null, prestadora_id: string } | null>}
+ * @returns {Promise<{ id: string, prestadora_id: string } | null>}
  */
-export async function cuentaDelUsuario(texto, trabajo) {
+export async function cuentaQueNombra(texto, trabajo) {
   const escrito = parteComparable(texto);
   if (!escrito) return null;
 
@@ -56,6 +56,21 @@ export async function cuentaDelUsuario(texto, trabajo) {
   if (error) throw new Error(error.message);
   const encontrada = Array.isArray(filas) ? filas[0] : filas;
   if (!encontrada?.id || !encontrada?.prestadora_id) return null;
+  return { id: encontrada.id, prestadora_id: encontrada.prestadora_id };
+}
+
+/**
+ * La cuenta que nombra lo escrito, con sus datos, o nulo.
+ *
+ * Con la respuesta de `cuentaQueNombra` se entra a esa Prestadora y a ninguna otra, y ahí se lee
+ * la cuenta. Devuelve nulo en todos los casos en que no hay cuenta, y quien la llama los trata
+ * igual.
+ *
+ * @returns {Promise<{ id: string, nombre: string, rol: string, email: string|null, prestadora_id: string } | null>}
+ */
+export async function cuentaDelUsuario(texto, trabajo) {
+  const encontrada = await cuentaQueNombra(texto, trabajo);
+  if (!encontrada) return null;
 
   const { data: cuenta, error: errorCuenta } = await enLaPrestadora(encontrada.prestadora_id, trabajo, (db) => db
     .from('usuarios')

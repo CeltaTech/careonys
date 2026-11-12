@@ -6,7 +6,8 @@
  * QUÉ SE PRUEBA. La pantalla de ingreso manda el nombre de usuario y recibe la dirección con la que
  * el servicio de acceso conoce a esa cuenta (`direccionDeAcceso`). El nombre se
  * busca entero y en minúsculas, sin preguntar de qué Prestadora es. Y la respuesta tiene la misma
- * forma exista la cuenta o no: si cambiara, esta puerta serviría para averiguar quién tiene cuenta.
+ * forma y le hace a la base las mismas preguntas exista la cuenta o no: si cambiara, esta puerta
+ * serviría para averiguar quién tiene cuenta.
  *
  * Se levanta el router de verdad contra una base de mentira. Datos inventados.
  */
@@ -43,10 +44,9 @@ const baseFalsa = createServer((req, res) => {
     llamadas.push({ clave, url, cuerpo: crudo, credencial });
     let filas = [];
     if (clave === 'POST /rest/v1/rpc/cuenta_del_usuario') {
-      filas = JSON.parse(crudo).p_usuario === USUARIO ? [{ id: CUENTA, prestadora_id: PRESTADORA }] : [];
-    }
-    if (clave === 'GET /rest/v1/usuarios' && credencial?.prestadora_id === PRESTADORA) {
-      filas = [{ id: CUENTA, nombre: 'Nombre inventado', rol: rolDeLaCuenta, email: 'inventado@ejemplo.test', prestadora_id: PRESTADORA }];
+      // Como la de verdad: sólo contesta las cuentas que entran con nombre de usuario.
+      const entraConNombre = ['coordinador', 'asistente', 'cliente'].includes(rolDeLaCuenta);
+      filas = entraConNombre && JSON.parse(crudo).p_usuario === USUARIO ? [{ id: CUENTA, prestadora_id: PRESTADORA }] : [];
     }
     const unoSolo = (req.headers.accept || '').includes('vnd.pgrst.object+json');
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -107,10 +107,16 @@ describe('entrar con el nombre de usuario', () => {
     assert.deepEqual(JSON.parse(pregunta.cuerpo), { p_usuario: USUARIO });
     assert.equal(pregunta.credencial?.role, 'trabajo_sin_persona');
     assert.equal(pregunta.credencial.prestadora_id, undefined, 'la pregunta fue adentro de una Prestadora');
-    // La cuenta se lee después adentro de su Prestadora, y de ninguna otra.
-    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios');
-    assert.equal(lectura.credencial?.prestadora_id, PRESTADORA);
   });
+
+  // Una pregunta de más sólo cuando la cuenta existe haría que la demora la delatara.
+  for (const [caso, usuario] of [['con cuenta', USUARIO], ['sin cuenta', 'nadie']]) {
+    it(`un nombre ${caso} le hace a la base una sola pregunta`, async () => {
+      await pedirDireccion(usuario);
+      const aLaBase = llamadas.filter((l) => l.clave.includes('/rest/v1/'));
+      assert.deepEqual(aLaBase.map((l) => l.clave), ['POST /rest/v1/rpc/cuenta_del_usuario']);
+    });
+  }
 
   it('un nombre sin cuenta recibe una dirección con la misma forma, que no es de nadie', async () => {
     const { estado, cuerpo } = await pedirDireccion('nadie');
@@ -122,6 +128,7 @@ describe('entrar con el nombre de usuario', () => {
     assert.notEqual((await pedirDireccion('otro.nadie')).cuerpo.correo, cuerpo.correo);
   });
 
+  // La base no la contesta, y la entrada no le agrega nada: recibe la dirección de nadie.
   for (const rol of ['admin_prestadora', 'superadmin']) {
     it(`la cuenta de rol ${rol} no entra por nombre de usuario`, async () => {
       rolDeLaCuenta = rol;

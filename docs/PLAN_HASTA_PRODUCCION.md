@@ -387,16 +387,6 @@ Prestadora.
 
 ---
 
-## La maestra de migraciones se vuelve a fundir
-
-**20.** Se vuelve a fundir la maestra de migraciones, para que ninguna migración guarde una palabra
-que el glosario retiró.
-
-**Comprobación:** buscar en las migraciones cada palabra que el glosario retiró da cero, salvo
-cuando nombra al pariente.
-
----
-
 ## La mudanza desde Match
 
 **Va primero, y por eso está acá arriba.** Casi todo lo que sigue se encarece si se construye

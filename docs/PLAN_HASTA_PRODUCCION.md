@@ -354,14 +354,6 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
    reactivar una cuenta cortada: contraseña nueva, `banned_until` vacío y la contraseña nueva en
    Railway y en la caja fuerte. Si la cortada es `lista@`, el correo no sale hasta reactivarla.
 
-3. **Usted — lo que quedó del respaldo viejo.** Los volcados de la base entera
-   (`careonys_backup_*.sql.gz`, en la raíz de los dos depósitos) y la copia de los archivos de antes
-   están **sin cifrar**. Ningún borrado automático los alcanza: el del respaldo nuevo mira sólo
-   `datos/`. La copia de los archivos se vuelve a subir cifrada encima, pero Backblaze B2 guarda por
-   defecto las versiones anteriores de cada archivo, así que ahí las viejas siguen enteras. Decidir
-   si se borran, los volcados de los dos depósitos y las versiones anteriores de B2. Y la cuenta de la base que usaba el volcado ya no la usa nadie: decidir si se le cambia la
-   contraseña o se la da de baja.
-
 **Lo que decide usted:** qué se hace con los secretos de terceros, que el sistema tiene que poder
 usar solo y por eso no pueden quedar fuera de su alcance.
 

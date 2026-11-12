@@ -87,6 +87,10 @@ export const api = {
   // en quién se escribe, y lo que vuelve es lo que quedó guardado, no lo que se mandó.
   cambiarDisponibilidad: (disponible) =>
     pedido('/perfil/disponibilidad', { method: 'PATCH', body: JSON.stringify({ disponible }) }),
+  // En qué horarios suele estar disponible: las claves de las opciones que marcó. Lo que vuelve es
+  // lo que quedó guardado.
+  cambiarHorariosDisponibles: (disponibilidad) =>
+    pedido('/perfil/horarios-disponibles', { method: 'PATCH', body: JSON.stringify({ disponibilidad }) }),
   // Lo que la Prestadora publicó para los Asistentes. Sólo lo publicado: lo decide la base.
   contenidos: () => pedido('/contenidos'),
   enlaceDeArchivoDeContenido: (id) => pedido(`/contenidos/archivos/${encodeURIComponent(id)}/enlace`),

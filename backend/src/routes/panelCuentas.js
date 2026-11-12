@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { disponibilidadDeLaPostulacion } from '../utils/disponibilidadDelAsistente.js';
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
@@ -196,6 +197,9 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
         telefono: postulacion.telefono,
         email: postulacion.email,
         tipo_asistente_id: tipoAsistenteId,
+        // En qué horarios suele estar disponible sí se copia: la postulación lo guardó con las
+        // claves de la misma lista de opciones, así que es lo que la persona eligió, tal cual.
+        disponibilidad: disponibilidadDeLaPostulacion(postulacion.disponibilidad),
         // Dónde acepta trabajar no se copia de la postulación. Ahí la persona escribió sus zonas a
         // mano, y lo escrito a mano no es ninguno de los lugares de la Prestadora: casarlos por
         // parecido crearía una coincidencia que nadie decidió. Se eligen en su Legajo, de la lista.

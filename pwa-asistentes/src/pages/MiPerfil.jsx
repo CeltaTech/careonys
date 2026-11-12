@@ -7,11 +7,12 @@ import { mensajeDeError } from '../lib/errores';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { traducirValor } from '../i18n/valores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
+import { textoDeLaOpcion } from '../lib/listasDeOpciones';
 import Consentimientos from '../components/Consentimientos';
 import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
 
 export default function MiPerfil() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { logout } = useAuth();
   const [perfil, setPerfil] = useState(null);
   const [error, setError] = useState('');
@@ -20,14 +21,21 @@ export default function MiPerfil() {
   const [notifError, setNotifError] = useState('');
   const [dispCargando, setDispCargando] = useState(false);
   const [dispError, setDispError] = useState('');
+  const [opcionesHorarios, setOpcionesHorarios] = useState([]);
+  const [horarios, setHorarios] = useState([]);
+  const [horariosGuardando, setHorariosGuardando] = useState(false);
+  const [horariosError, setHorariosError] = useState('');
   const [hayContenidos, setHayContenidos] = useState(false);
 
   useEffect(() => {
     let activo = true;
     api
       .perfil()
-      .then(({ perfil: data }) => {
-        if (activo) setPerfil(data);
+      .then(({ perfil: data, opciones_disponibilidad: opciones }) => {
+        if (!activo) return;
+        setPerfil(data);
+        setOpcionesHorarios(opciones ?? []);
+        setHorarios(Array.isArray(data?.disponibilidad) ? data.disponibilidad : []);
       })
       .catch(() => {
         if (activo) setError(t.comun.error_generico);
@@ -66,6 +74,32 @@ export default function MiPerfil() {
       setDispError(mensajeDeError(e, t, 'cambiar disponibilidad'));
     } finally {
       setDispCargando(false);
+    }
+  }
+
+  // En qué horarios suele estar disponible. La cambia él cuando quiere; quien coordina la ve al
+  // asignar guardias. Como con el interruptor, lo que queda marcado es lo que contestó el backend.
+  const horariosGuardados = Array.isArray(perfil?.disponibilidad) ? perfil.disponibilidad : [];
+  const horariosCambiaron =
+    horarios.length !== horariosGuardados.length || horarios.some((c) => !horariosGuardados.includes(c));
+
+  function alternarHorario(clave) {
+    setHorariosError('');
+    setHorarios((previos) => (previos.includes(clave) ? previos.filter((c) => c !== clave) : [...previos, clave]));
+  }
+
+  async function guardarHorarios() {
+    setHorariosError('');
+    setHorariosGuardando(true);
+    try {
+      const { disponibilidad } = await api.cambiarHorariosDisponibles(horarios);
+      const guardados = Array.isArray(disponibilidad) ? disponibilidad : [];
+      setPerfil((previo) => ({ ...previo, disponibilidad: guardados }));
+      setHorarios(guardados);
+    } catch (e) {
+      setHorariosError(mensajeDeError(e, t, 'cambiar horarios disponibles'));
+    } finally {
+      setHorariosGuardando(false);
     }
   }
 
@@ -149,7 +183,7 @@ export default function MiPerfil() {
           Prestadora, y con su propio título, para que se vea que son dos cosas distintas: una la
           decide ella y la otra la decide él. */}
       <section className="pwa-card">
-        <h2>{t.perfil.disponibilidad_titulo}</h2>
+        <h2 id="titulo-disponibilidad">{t.perfil.disponibilidad_titulo}</h2>
         <div className="mini">
           {perfil.disponible !== false
             ? t.perfil.disponibilidad_disponible
@@ -163,6 +197,27 @@ export default function MiPerfil() {
             : t.perfil.disponibilidad_ponerse_disponible}
         </button>
         {dispError && <div className="alert alert-error pwa-card-pie" role="alert">{dispError}</div>}
+        {opcionesHorarios.length > 0 && (
+          <div className="pwa-card-bloque" role="group" aria-labelledby="titulo-disponibilidad">
+            {opcionesHorarios.map((opcion) => (
+              <label key={opcion.clave} className="opcion-varias">
+                <input
+                  type="checkbox"
+                  checked={horarios.includes(opcion.clave)}
+                  onChange={() => alternarHorario(opcion.clave)}
+                  disabled={horariosGuardando}
+                />
+                {textoDeLaOpcion(opcion.i18n, locale)}
+              </label>
+            ))}
+            {horariosCambiaron && (
+              <button type="button" className="btn btn-full pwa-card-pie" disabled={horariosGuardando} onClick={guardarHorarios}>
+                {horariosGuardando ? t.comun.guardando : t.comun.guardar}
+              </button>
+            )}
+            {horariosError && <div className="alert alert-error pwa-card-pie" role="alert">{horariosError}</div>}
+          </div>
+        )}
         {/* Lo que dijeron de su trabajo, y lo que él tiene para contestar (pendiente #85). Va acá
             y no en la barra de abajo porque no es trabajo del día: se mira cada tanto. */}
         <Link to="/calificaciones" className="btn btn-full pwa-card-pie">

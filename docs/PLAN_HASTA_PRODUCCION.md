@@ -460,9 +460,7 @@ público y la maqueta; los consentimientos, donde Careonys está muy por delante
 por jurisdicción e idioma, con copia exacta de lo que la persona leyó, y con rechazo y retiro—; el
 tope de alarma, que acá tiene topes por Prestadora, cuatro escalones de gravedad y escalada de la
 que nadie atiende; las verificaciones; los reportes de turno; y el seguimiento de ubicación, donde
-lo de acá es mejor salvo el motivo de la falla, que ya está resuelto. **Se retira** la disponibilidad horaria del Asistente —la columna `disponibilidad`, no
-`disponible_para_ofertas`—: no la lee ningún programa ni
-ninguna pantalla, de ninguno de los dos lados. Y los textos legales de allá no sirven: son de una
+lo de acá es mejor salvo el motivo de la falla, que ya está resuelto. Y los textos legales de allá no sirven: son de una
 sola Prestadora, sin versión y sin dónde queden guardados.
 
 **22. Usted** — Decidir qué secciones de Match quedan en el Panel. Match no tiene panel aparte:

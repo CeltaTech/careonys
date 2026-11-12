@@ -6258,7 +6258,8 @@ CREATE TABLE IF NOT EXISTS "public"."asistentes" (
     "documento_pais" "text",
     "genero" "text",
     CONSTRAINT "asistentes_canales_valido" CHECK ((("canales" <@ ARRAY['directa'::"text", 'intermediacion'::"text"]) AND ("array_length"("canales", 1) > 0))),
-    CONSTRAINT "asistentes_estado_check" CHECK (("estado" = ANY (ARRAY['activo'::"text", 'inactivo'::"text", 'cesado'::"text"])))
+    CONSTRAINT "asistentes_estado_check" CHECK (("estado" = ANY (ARRAY['activo'::"text", 'inactivo'::"text", 'cesado'::"text"]))),
+    CONSTRAINT "la_disponibilidad_es_una_lista_de_opciones" CHECK ((("disponibilidad" IS NULL) OR (("jsonb_typeof"("disponibilidad") = 'array'::"text") AND (NOT "jsonb_path_exists"("disponibilidad", '$[*]?(@.type() != "string")'::"jsonpath")))))
 );
 
 
@@ -6274,6 +6275,10 @@ COMMENT ON COLUMN "public"."asistentes"."tipo_asistente_id" IS 'Que ES este Asis
 
 
 COMMENT ON COLUMN "public"."asistentes"."disponible" IS 'Lo decide el Asistente desde su aplicacion, no la Prestadora. En false, el aviso automatico de relevo no le escribe y en la lista de candidatos queda con su motivo. No cambia ningun turno ya asignado. Distinto de asistentes.estado, que es la decision administrativa de la Prestadora.';
+
+
+
+COMMENT ON COLUMN "public"."asistentes"."disponibilidad" IS 'En qué horarios suele estar disponible: las claves de las opciones elegidas de la lista de opciones disponibilidad. Nula o vacía, no está cargada.';
 
 
 
@@ -27423,6 +27428,14 @@ GRANT INSERT("tipo_asistente_id") ON TABLE "public"."asistentes" TO "trabajo_sin
 
 
 GRANT UPDATE("disponible") ON TABLE "public"."asistentes" TO "trabajo_sin_persona";
+
+
+
+GRANT INSERT("disponibilidad") ON TABLE "public"."asistentes" TO "trabajo_sin_persona";
+
+
+
+GRANT UPDATE("disponibilidad") ON TABLE "public"."asistentes" TO "trabajo_sin_persona";
 
 
 

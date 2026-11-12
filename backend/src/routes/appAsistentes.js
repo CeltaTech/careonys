@@ -35,6 +35,7 @@ import { lugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { nombresDeLugares } from '../utils/catalogoDeLugares.js';
 import { ofreceIntermediacion } from '../utils/intermediacionDeLaPrestadora.js';
 import { MODALIDAD } from '../utils/modalidades.js';
+import { opcionesDeDisponibilidad, disponibilidadElegida } from '../utils/disponibilidadDelAsistente.js';
 import {
   LADO,
   abrirVideollamada,
@@ -239,7 +240,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
   const { data: perfil, error } = await db
     .from('asistentes')
-    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, relacion_laboral_asistente(relaciones_laborales(nombre)), canales, disponible, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
+    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, relacion_laboral_asistente(relaciones_laborales(nombre)), canales, disponible, disponibilidad_cambiada_en, disponibilidad, tipos_asistente(id, clave, nombre, prestadora_id)')
     .eq('id', req.usuarioAsistente.asistenteId)
     .single();
   if (error || !perfil) {
@@ -298,8 +299,13 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // haber internet para pedirlo.
   const emergencias = { telefono: await telefonoParaEmergencias(req.usuarioAsistente.prestadoraId) };
 
+  // Las opciones entre las que elige en qué horarios suele estar disponible: las del producto y
+  // las que agregó su Prestadora. Viajan con el perfil porque se muestran en la misma pantalla.
+  const opcionesDisponibilidad = await opcionesDeDisponibilidad(db, req.usuarioAsistente.prestadoraId);
+
   res.json({
     perfil: { ...perfil, zonas },
+    opciones_disponibilidad: opcionesDisponibilidad,
     certificado: certificado || null,
     dias_aviso_vencimiento_documentos: prestadora?.dias_aviso_vencimiento_documentos ?? null,
     marca,
@@ -588,6 +594,39 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
     disponible: guardada[0].disponible,
     disponibilidad_cambiada_en: guardada[0].disponibilidad_cambiada_en,
   });
+});
+
+// En qué horarios suele estar disponible. La cambia él cuando quiere: no es algo fijo en el tiempo.
+// Es un dato que ve quien coordina al asignar guardias; el sistema no decide nada con él.
+//
+// Lo elegido se comprueba contra la lista que la base le deja ver con su propia sesión —las
+// opciones del producto y las de su Prestadora—, y se guarda con el trabajo de la Prestadora por
+// el mismo motivo que el interruptor: el Asistente no tiene permiso para corregir su Legajo. La
+// fila la fija la sesión ya verificada, nunca el pedido.
+appAsistentesRouter.patch('/perfil/horarios-disponibles', requiereRolAsistente, async (req, res) => {
+  let guardada;
+  try {
+    const opciones = await opcionesDeDisponibilidad(clienteDelPedido(req), req.usuarioAsistente.prestadoraId);
+    const elegida = disponibilidadElegida(req.body?.disponibilidad, opciones);
+    if (!elegida.valida) {
+      return res.status(400).json({ error: 'Alguna opción no es de la lista', motivo: 'disponibilidad_invalida' });
+    }
+    guardada = await enLaPrestadora(req.usuarioAsistente.prestadoraId, 'cambiar los horarios disponibles', async (db) => {
+      const { data, error } = await db
+        .from('asistentes')
+        .update({ disponibilidad: elegida.guardar })
+        .eq('id', req.usuarioAsistente.asistenteId)
+        .select('disponibilidad');
+      if (error) throw error;
+      return data;
+    });
+  } catch (e) {
+    return responderError(res, e);
+  }
+  if (!guardada?.length) {
+    return res.status(404).json({ error: 'Perfil no encontrado', motivo: 'perfil_no_encontrado' });
+  }
+  res.json({ disponibilidad: guardada[0].disponibilidad });
 });
 
 // ============================================================================

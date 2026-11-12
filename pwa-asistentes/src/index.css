@@ -178,6 +178,19 @@ p {
   border-top: 1px solid var(--linea-suave);
 }
 
+/* Una opción de las que se pueden marcar varias. */
+.opcion-varias {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.opcion-varias input {
+  accent-color: var(--verde);
+}
+
 /* Una opción de las de elegir una sola. */
 .opcion-unica {
   display: flex;

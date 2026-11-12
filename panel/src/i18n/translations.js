@@ -1496,6 +1496,7 @@ export const T = {
       unidad_semana: 'Por semana',
       valor_hora_extra: 'Valor de la hora extra',
       horas_semanales: 'Máximo de horas por semana que acepta trabajar',
+      disponibilidad: 'Disponibilidad',
       nuevo: {
         titulo: 'Nuevo Asistente',
         crear: 'Crear Asistente',
@@ -4507,6 +4508,7 @@ export const T = {
       unidad_semana: 'By the week',
       valor_hora_extra: 'Overtime hourly rate',
       horas_semanales: 'Maximum hours per week willing to work',
+      disponibilidad: 'Availability',
       nuevo: {
         titulo: 'New Assistant',
         crear: 'Create assistant',
@@ -7501,6 +7503,7 @@ export const T = {
       unidad_semana: 'Por semana',
       valor_hora_extra: 'Valor da hora extra',
       horas_semanales: 'Máximo de horas por semana que aceita trabalhar',
+      disponibilidad: 'Disponibilidade',
       nuevo: {
         titulo: 'Novo Assistente',
         crear: 'Criar assistente',

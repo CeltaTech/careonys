@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useNombreConDisponibilidad } from '../../hooks/useNombreConDisponibilidad';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { useMotivosDeResolucion } from '../../hooks/useMotivosDeResolucion';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -47,6 +48,7 @@ const ESTADO_CANCELADA = 'cancelada';
 
 export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAplicar, onLimpiar }) {
   const { t } = useLocale();
+  const nombreConHorarios = useNombreConDisponibilidad();
   const confirmarDestructivo = useConfirmarDestructivo();
   const prestadoraId = usePrestadoraActual();
 
@@ -231,7 +233,7 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
             >
               <option value="">{t.guardias.nueva_guardia.elegir}</option>
               {asistentesAsignables.map((a) => (
-                <option key={a.id} value={a.id}>{a.nombre}</option>
+                <option key={a.id} value={a.id}>{nombreConHorarios(a)}</option>
               ))}
             </FormField>
           )}

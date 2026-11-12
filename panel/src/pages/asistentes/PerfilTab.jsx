@@ -20,6 +20,7 @@ import {
 } from '../../lib/frecuenciaDePago';
 import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
+import { useListaDeOpciones } from '../../hooks/useListaDeOpciones';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
@@ -81,6 +82,9 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
   const { porClase } = useTiposDeDocumento(prestadoraId);
   const { generos } = useGeneros(prestadoraId);
   const { paises } = usePaises();
+  /* En qué horarios suele estar disponible: las opciones de la misma lista que usa la postulación.
+     La carga el Asistente desde su aplicación y quien coordina la ve al asignar guardias. */
+  const disponibilidadPosible = useListaDeOpciones('disponibilidad');
 
   /* Las formas de recibir trabajo que se pueden marcar en el Legajo del Asistente. El techo lo pone la
      Prestadora con las modalidades que tenga activas. Se suma a la lista la que el Asistente
@@ -115,6 +119,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     horas_semanales: asistente.horas_semanales || '',
     relacion_laboral_id: asistente.relacion_laboral_id || '',
     modalidades: modalidadesDelAsistente(asistente),
+    disponibilidad: Array.isArray(asistente.disponibilidad) ? asistente.disponibilidad : [],
     // Cada cuánto cobra esta persona. Vacío es lo normal y quiere decir «lo que diga la
     // Prestadora»: acá se guarda solamente lo que se arregló distinto con ella. Los campos
     // arrancan en el valor de fábrica para que, al encender el arreglo propio, no haya que
@@ -308,6 +313,16 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     setGuardado(false);
   }
 
+  function alternarDisponibilidad(clave) {
+    setForm((f) => ({
+      ...f,
+      disponibilidad: f.disponibilidad.includes(clave)
+        ? f.disponibilidad.filter((c) => c !== clave)
+        : [...f.disponibilidad, clave],
+    }));
+    setGuardado(false);
+  }
+
   function alternarModalidad(modalidad) {
     setForm((f) => ({
       ...f,
@@ -348,6 +363,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
       email: form.email.trim() || null,
       tipo_asistente_id: form.tipo_asistente_id || null,
       estado: form.estado,
+      disponibilidad: form.disponibilidad.length ? form.disponibilidad : null,
       ...(esAdmin && {
         horas_semanales: form.horas_semanales || null,
         // La columna se llama `canales` de antes y no se renombra (regla 13). La palabra del
@@ -638,6 +654,27 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
           </EstadoLista>
         </section>
       )}
+
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.disponibilidad}</h2>
+        </div>
+        <EstadoLista estado={disponibilidadPosible.estado} error={disponibilidadPosible.error} recargar={disponibilidadPosible.recargar}>
+          <div className="molde-formgrid">
+            {disponibilidadPosible.opciones.map((opcion) => (
+              <FormField
+                key={opcion.clave}
+                label={opcion.texto}
+                name={`disponibilidad_${opcion.clave}`}
+                type="checkbox"
+                checked={form.disponibilidad.includes(opcion.clave)}
+                onChange={() => alternarDisponibilidad(opcion.clave)}
+                disabled={guardando || !puedeEditarIdentidad}
+              />
+            ))}
+          </div>
+        </EstadoLista>
+      </section>
 
       <section className="panel-tarjeta">
         <div className="panel-tarjeta-titulo">

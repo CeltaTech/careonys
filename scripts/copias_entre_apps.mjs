@@ -25,6 +25,11 @@ export const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 export const GRUPOS = [
   {
+    que: 'cómo se leen y se ordenan las listas de opciones',
+    original: 'panel/src/lib/listasDeOpciones.js',
+    copias: ['pwa-asistentes/src/lib/listasDeOpciones.js'],
+  },
+  {
     que: 'la identidad del producto',
     original: 'backend/src/config/identidadProducto.js',
     copias: [

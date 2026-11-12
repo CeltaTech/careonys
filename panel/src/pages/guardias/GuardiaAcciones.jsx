@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useNombreConDisponibilidad } from '../../hooks/useNombreConDisponibilidad';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { obtenerUbicacion } from '../../lib/ubicacion';
@@ -32,6 +33,7 @@ const SIN_ASIGNAR = 'sin-asignar';
 export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
   const { t, locale } = useLocale();
+  const nombreConHorarios = useNombreConDisponibilidad();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -574,7 +576,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
                 <option value={SIN_ASIGNAR}>{t.guardias.listado.sin_asignar}</option>
               )}
               {asistentesAsignables.map((a) => (
-                <option key={a.id} value={a.id}>{a.nombre}</option>
+                <option key={a.id} value={a.id}>{nombreConHorarios(a)}</option>
               ))}
             </FormField>
             {cubrePorEmergencia ? (

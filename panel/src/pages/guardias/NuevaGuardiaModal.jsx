@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useNombreConDisponibilidad } from '../../hooks/useNombreConDisponibilidad';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -25,6 +26,7 @@ const DIAS_GENERACION_SIN_VIGENCIA_HASTA_DE_RESGUARDO = 90;
 export function NuevaGuardiaModal({ onClose, onCreada }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
+  const nombreConHorarios = useNombreConDisponibilidad();
   const prestadoraId = usePrestadoraActual();
   const [esSerie, setEsSerie] = useState(false);
   const [asistentes, setAsistentes] = useState([]);
@@ -79,7 +81,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         // `estaEnElPadron`, y no escrito a mano acá: si mañana la Prestadora suma otra forma de
         // seguir en el Padrón, esta puerta no puede quedarse con la regla vieja
         // (regla 12 de CLAUDE.md §7).
-        supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).order('nombre'),
+        supabase.from('asistentes').select('id, nombre, disponibilidad').eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).order('nombre'),
         // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al
         // lado del nombre es lo que hace evidente que ese turno los cubre a los dos.
         // `cliente_id` viene porque es lo que decide qué Servicios se le pueden ofrecer al
@@ -365,7 +367,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
           >
             <option value="">{t.guardias.nueva_guardia.sin_asistente}</option>
             {asistentes.map((a) => (
-              <option key={a.id} value={a.id}>{a.nombre}</option>
+              <option key={a.id} value={a.id}>{nombreConHorarios(a)}</option>
             ))}
           </FormField>
           {/* Una lista de marcar y no un desplegable: el desplegable deja elegir uno solo, y

@@ -147,7 +147,7 @@ export function Guardias() {
       // nombre, no un guión— y también para llenar el desplegable de reasignación, que sí tiene
       // que dejar afuera a quien ya no trabaja acá. Por eso el estado viaja: el filtro lo aplica
       // la puerta que reparte trabajo (`estaEnElPadron` en GuardiaAcciones.jsx), no la consulta.
-      supabase.from('asistentes').select('id, nombre, estado, cuenta_desactivada'),
+      supabase.from('asistentes').select('id, nombre, estado, cuenta_desactivada, disponibilidad'),
       supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
       supabase.from('servicios').select('id, etiqueta'),
     ]);

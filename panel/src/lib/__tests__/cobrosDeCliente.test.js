@@ -50,18 +50,18 @@ describe('con qué se admite que pagó el Cliente', () => {
 
 describe('el catálogo guardado dice lo mismo que siembra la base', () => {
   /* La foto de la base es la migración que arma la base entera. Las filas de fábrica van ahí como un
-     arreglo JSON entre `jsonb_populate_recordset(NULL::public.<tabla>, $fila$[` y `]$fila$`. */
+     arreglo JSON entre `jsonb_populate_recordset(NULL::"public"."<tabla>", $datos$[` y `]$datos$`. */
   const foto = readFileSync(
     fileURLToPath(
-      new URL('../../../../supabase/migrations/20261016000000_foto_de_la_base.sql', import.meta.url),
+      new URL('../../../../supabase/migrations/20270323000000_foto_de_la_base.sql', import.meta.url),
     ),
     'utf8',
   );
   const filasDeFabrica = (tabla) => {
-    const inicio = `jsonb_populate_recordset(NULL::public.${tabla}, $fila$[`;
+    const inicio = `jsonb_populate_recordset(NULL::"public"."${tabla}", $datos$[`;
     const desde = foto.indexOf(inicio);
     if (desde === -1) return [];
-    return JSON.parse(foto.slice(desde + inicio.length - 1, foto.indexOf(']$fila$', desde) + 1));
+    return JSON.parse(foto.slice(desde + inicio.length - 1, foto.indexOf(']$datos$', desde) + 1));
   };
   const listas = filasDeFabrica('listas_de_opciones');
   const opciones = filasDeFabrica('opciones_de_lista');
@@ -129,10 +129,10 @@ describe('el catálogo guardado dice lo mismo que siembra la base', () => {
      Asistente con tarjeta, que es justo lo que esta separación impide. */
   it('cada disparador mira la lista de su lado del dinero', () => {
     expect(foto).toMatch(
-      /ON public\.cobros_cliente FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('medio', 'medios_de_pago_del_cliente'\);/,
+      /ON "public"\."cobros_cliente" FOR EACH ROW EXECUTE FUNCTION "interno"\."el_medio_de_pago_sale_del_catalogo"\('medio', 'medios_de_pago_del_cliente'\);/,
     );
     expect(foto).toMatch(
-      /ON public\.liquidaciones_asistente FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('forma_pago', 'medios_de_pago_al_asistente'\);/,
+      /ON "public"\."liquidaciones_asistente" FOR EACH ROW EXECUTE FUNCTION "interno"\."el_medio_de_pago_sale_del_catalogo"\('forma_pago', 'medios_de_pago_al_asistente'\);/,
     );
   });
 });

@@ -13,6 +13,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { gunzipSync } from 'node:zlib';
 import { Decrypter, generateIdentity, identityToRecipient } from 'age-encryption';
+import { IDENTIDAD } from '../../config/identidadProducto.js';
 
 const UNA = '11111111-1111-4111-8111-111111111111';
 const OTRA = '22222222-2222-4222-8222-222222222222';
@@ -132,7 +133,7 @@ describe('el respaldo de los datos', () => {
   });
 
   it('si los dos destinos ya tienen el de hoy, esa Prestadora no se vuelve a leer', async () => {
-    const deHoy = `datos/${UNA}/careonys_datos_2026-11-11T01-00-00-000Z.json.gz.age`;
+    const deHoy = `datos/${UNA}/${IDENTIDAD.codigo}_datos_2026-11-11T01-00-00-000Z.json.gz.age`;
     const uno = destino([deHoy]);
     const otro = destino([deHoy]);
     const total = await respaldarLosDatos({ destinos: [uno, otro], avisar: () => {}, claves, ahora: AHORA });
@@ -143,9 +144,9 @@ describe('el respaldo de los datos', () => {
   });
 
   it('borra lo vencido de la carpeta de cada Prestadora y deja lo reciente', async () => {
-    const vencido = `datos/${UNA}/careonys_datos_2026-08-02T03-00-00-000Z.json.gz.age`;
-    const mensual = `datos/${UNA}/careonys_datos_2026-08-01T03-00-00-000Z.json.gz.age`;
-    const reciente = `datos/${UNA}/careonys_datos_2026-11-01T03-00-00-000Z.json.gz.age`;
+    const vencido = `datos/${UNA}/${IDENTIDAD.codigo}_datos_2026-08-02T03-00-00-000Z.json.gz.age`;
+    const mensual = `datos/${UNA}/${IDENTIDAD.codigo}_datos_2026-08-01T03-00-00-000Z.json.gz.age`;
+    const reciente = `datos/${UNA}/${IDENTIDAD.codigo}_datos_2026-11-01T03-00-00-000Z.json.gz.age`;
     const uno = destino([vencido, mensual, reciente]);
     const lineas = [];
     await respaldarLosDatos({ destinos: [uno], avisar: (t) => lineas.push(t), claves, ahora: AHORA });

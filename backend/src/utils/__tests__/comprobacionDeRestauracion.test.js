@@ -6,6 +6,7 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 import { elegirElUltimoRespaldo, revisarElRespaldo } from '../comprobacionDeRestauracion.js';
+import { IDENTIDAD } from '../../config/identidadProducto.js';
 
 const UNA = '11111111-1111-4111-8111-111111111111';
 const OTRA = '22222222-2222-4222-8222-222222222222';
@@ -14,13 +15,13 @@ const carpeta = `datos/${UNA}/`;
 describe('elegirElUltimoRespaldo', () => {
   it('elige el más nuevo y deja afuera lo que no es un respaldo de los datos', () => {
     const elegido = elegirElUltimoRespaldo([
-      `${carpeta}careonys_datos_2026-11-09T03-00-00-000Z.json.gz.age`,
-      `${carpeta}careonys_datos_2026-11-10T03-00-00-000Z.json.gz.age`,
-      `${carpeta}careonys_datos_2026-11-10T03-00-00-000Z.json.gz`,
-      'careonys_backup_2026-12-01T03-00-00-000Z.sql.gz',
+      `${carpeta}${IDENTIDAD.codigo}_datos_2026-11-09T03-00-00-000Z.json.gz.age`,
+      `${carpeta}${IDENTIDAD.codigo}_datos_2026-11-10T03-00-00-000Z.json.gz.age`,
+      `${carpeta}${IDENTIDAD.codigo}_datos_2026-11-10T03-00-00-000Z.json.gz`,
+      `${IDENTIDAD.codigo}_backup_2026-12-01T03-00-00-000Z.sql.gz`,
       `archivos/certificados/${UNA}/ruta.pdf`,
     ]);
-    assert.equal(elegido, `${carpeta}careonys_datos_2026-11-10T03-00-00-000Z.json.gz.age`);
+    assert.equal(elegido, `${carpeta}${IDENTIDAD.codigo}_datos_2026-11-10T03-00-00-000Z.json.gz.age`);
   });
 
   it('sin ningún respaldo, lo dice', () => {
@@ -29,7 +30,7 @@ describe('elegirElUltimoRespaldo', () => {
 });
 
 describe('revisarElRespaldo', () => {
-  const contenido = (tablas, prestadora = UNA) => ({ producto: 'careonys', prestadora, tablas });
+  const contenido = (tablas, prestadora = UNA) => ({ producto: IDENTIDAD.codigo, prestadora, tablas });
 
   it('bien, con filas y todas de esta Prestadora', () => {
     const r = revisarElRespaldo(contenido({ prestadoras: [{ id: UNA }], clientes: [{ id: 'a', prestadora_id: UNA }] }), UNA);

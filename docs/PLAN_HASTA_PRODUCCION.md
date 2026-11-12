@@ -344,9 +344,10 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
    `CLAVES_PUBLICAS_DE_LOS_RESPALDOS` de Railway y la privada a la caja fuerte y al gestor de
    contraseñas de Google. Sin la pública, el respaldo de esa Prestadora falla esa noche y lo dice
    en el registro. El backend ya no firma pases: entra con esas cuentas y
-   el pase lo arma la base (`backend/src/db/connection.js`). **Además, desde el 25 de noviembre de
-   2026:** borrar de las claves de firma de Supabase las dos que firmaba el backend
-   (`8257f604-…` y `53b86d1f-…`). Ya están revocadas; Supabase no deja borrarlas antes.
+   el pase lo arma la base (`backend/src/db/connection.js`). **Además:** borrar de las claves de firma de
+   Supabase las dos que firmaba el backend, `53b86d1f-…` desde el 25 de noviembre de 2026 y
+   `8257f604-…` desde el 11 de diciembre de 2026. Ya están revocadas, y Supabase rechaza el
+   borrado antes de esas fechas.
 2. **Las contraseñas equivocadas de las cuentas automáticas no se vigilan.** La alarma de las
    entradas ya funciona (`interno.armar_el_pase`): más de 10 entradas con contraseña en una hora
    desactivan la cuenta y le mandan un correo a `CORREO_DE_LAS_ALARMAS` del backend. Las

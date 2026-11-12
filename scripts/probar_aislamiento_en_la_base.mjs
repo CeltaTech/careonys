@@ -157,9 +157,11 @@ const { avisos } = correr(
 
 const fallas = [];
 const propiasPorIdentidad = new Map();
+const propiasPorTabla = new Map();
 for (const [etiqueta, tabla, propias, ajenas] of avisos) {
   if (Number(ajenas) > 0) fallas.push(`FILTRACIÓN: ${etiqueta} lee ${ajenas} fila(s) ajenas de public.${tabla}.`);
   if (propias !== 'sin permiso') {
+    propiasPorTabla.set(`${etiqueta}|${tabla}`, Number(propias));
     propiasPorIdentidad.set(etiqueta, (propiasPorIdentidad.get(etiqueta) ?? 0) + (Number(propias) > 0 ? 1 : 0));
   }
 }
@@ -177,6 +179,30 @@ for (const p of ids) {
 for (const i of identidades.filter((x) => x.esAdministracion)) {
   if (!(propiasPorIdentidad.get(i.etiqueta) > 0)) {
     fallas.push(`${i.etiqueta} no ve ninguna fila propia: una base que lo niega todo también pasaría la prueba.`);
+  }
+}
+
+// 2 bis. La misma persona en las dos Prestadoras: una cuenta en cada una, con el mismo email. Cada
+// cuenta ve sus propias guardias y ninguna fila de la otra, en las dos direcciones. Lo ajeno ya lo
+// revisó la lectura de arriba; acá se exige que la persona exista y que cada cuenta vea lo suyo,
+// porque una cuenta que no ve nada también pasaría.
+const enLasDos = correr(`
+  SELECT lower(a.email), a.id, b.id FROM usuarios a
+    JOIN usuarios b ON lower(b.email) = lower(a.email) AND b.prestadora_id <> a.prestadora_id
+   WHERE a.desactivada_en IS NULL AND b.desactivada_en IS NULL
+     AND a.prestadora_id = ${literal(ids[0])} AND b.prestadora_id = ${literal(ids[1])}
+   ORDER BY 1;`).filas;
+if (enLasDos.length === 0) {
+  fallas.push('Ninguna persona tiene cuenta en las dos Prestadoras: el aislamiento con sesión legítima en las dos no está probado.');
+}
+for (const [, ...deLaPersona] of enLasDos) {
+  for (const id of deLaPersona) {
+    const i = identidades.find((x) => x.sesion.sub === id);
+    if (!i) {
+      fallas.push(`La cuenta ${id} tiene el mismo email en las dos Prestadoras y la prueba no la leyó.`);
+    } else if (!(propiasPorTabla.get(`${i.etiqueta}|guardias`) > 0)) {
+      fallas.push(`${i.etiqueta} no ve ninguna guardia propia: con la misma persona en las dos Prestadoras, cada cuenta tiene que ver lo suyo.`);
+    }
   }
 }
 
@@ -311,6 +337,7 @@ ROLLBACK;`);
 console.log(`La copia de respaldo se niega a ${otrosPases.length} pases que no son el suyo.`);
 
 console.log(`${identidades.length} identidades × ${tablas.length} tablas leídas sin filtro de Prestadora.`);
+console.log(`${enLasDos.length} persona(s) con cuenta en las dos Prestadoras.`);
 for (const i of identidades) console.log(`  ${i.etiqueta}: ve filas propias en ${propiasPorIdentidad.get(i.etiqueta) ?? 0} tablas.`);
 
 if (fallas.length > 0) {

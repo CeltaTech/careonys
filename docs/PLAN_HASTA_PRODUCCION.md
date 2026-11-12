@@ -422,8 +422,19 @@ siempre no lo obliga a nadie a tener una sola cuenta. Adentro de una Prestadora 
 repite.
 
 **El modelo ya está y la base lo impone.** Se entra con el nombre de usuario, que no se repite entre
-las cuentas activas, así que la cuenta ya dice de qué Prestadora es y nadie la nombra al entrar. **Lo que falta es la prueba
-de aislamiento de abajo**, con la misma persona en dos Prestadoras.
+las cuentas activas, así que la cuenta ya dice de qué Prestadora es y nadie la nombra al entrar. La prueba de aislamiento de abajo
+también está: la siembra le da a Ana Álvarez una cuenta en cada Prestadora, con guardias en las
+dos, y `scripts/probar_aislamiento_en_la_base.mjs` falla si nadie tiene cuenta en las dos o si
+alguna de esas cuentas no ve lo suyo.
+
+**Lo que falta son dos cosas, las dos ya ubicadas.** La recuperación de la contraseña tarda más
+cuando el nombre de usuario existe, porque recién ahí emite el enlace y lo manda
+(`backend/src/utils/recuperacionDeClave.js:62-80`), y esa demora delata la cuenta. Y al salir no
+se descarta todo lo cargado: con la entrada por huella guardada las aplicaciones no borran la marca
+de la Prestadora (`pwa-asistentes/src/context/AuthContext.jsx:123-136`, igual en `pwa-clientes`),
+la cola de lo cargado sin conexión queda hasta la próxima sincronización
+(`pwa-asistentes/src/lib/colaOffline.js`), y el Panel sólo cierra la sesión
+(`panel/src/context/AuthContext.jsx:119-121`) y deja lo suyo guardado en el navegador.
 
 **Y al entrar no se insinúa nada.** Un nombre de usuario que no existe se trata igual que una
 contraseña equivocada: el mismo mensaje. Y pedir la recuperación de la contraseña contesta lo mismo

@@ -282,9 +282,9 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 --    esos datos estaban acá cualquiera que podía ver el Legajo podía leerlos.
 -- ----------------------------------------------------------------------------
 
--- El Legajo tiene número propio y `usuario_id` dice de qué cuenta cuelga. Acá los dos coinciden
--- porque cada una de estas personas está en una sola Prestadora; en cuanto una esté en dos, la
--- cuenta sigue siendo una y los Legajos son dos.
+-- El Legajo tiene número propio y `usuario_id` dice de qué cuenta cuelga. Acá los dos coinciden.
+-- Quien trabaja en dos Prestadoras tiene una cuenta en cada una, cada cuenta con su Legajo: Ana
+-- Álvarez tiene además la suya en Cuidar del Sur, en el punto 7.
 -- La relación laboral es una lista que arma cada Prestadora; la de Sandbox tiene una sola.
 INSERT INTO public.relaciones_laborales (id, prestadora_id, nombre, orden) VALUES
   ('3f100000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Monotributo', 1);
@@ -1097,15 +1097,20 @@ SELECT z.id, 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-22
 FROM public.zonas_cobertura z
 WHERE z.codigo = 'la_plata' AND z.prestadora_id = '22222222-2222-4222-8222-222222222222';
 
--- Las cuatro cuentas de la segunda Prestadora, con la misma mecánica de tres
+-- Las cinco cuentas de la segunda Prestadora, con la misma mecánica de tres
 -- tablas que explica el punto 2. Nacen sin contraseña, igual que el resto, y la
 -- reciben con el mismo programa.
+--
+-- La quinta es Ana Álvarez, que ya trabaja en Sandbox: la misma persona, con el mismo email y el
+-- mismo teléfono, y otra cuenta con otro nombre de usuario. Está para probar el aislamiento con
+-- alguien que tiene sesión legítima en las dos Prestadoras.
 WITH escritas (id, email, nombre, rol, telefono, nombre_de_usuario) AS (
   VALUES
     ('50000000-0000-4000-8000-000000000001'::uuid, 'admin@sur.local'::text,   'Alicia Administradora Sur'::text, 'admin_prestadora'::text, '+54 221 400-0001'::text, NULL::text),
     ('50000000-0000-4000-8000-000000000002',       'coordinadora@sur.local',  'Cecilia Coordinadora Sur',        'coordinador',            '+54 221 400-0002', 'cecilia_cuidardelsur'),
     ('50000000-0000-4000-8000-000000000003',       'asistente.sur@sur.local', 'Elena Escobar',                   'asistente',              '+54 221 400-0003', 'elena'),
-    ('50000000-0000-4000-8000-000000000004',       'cliente.rios@sur.local',  'Cliente Ríos',                    'cliente',                '+54 221 400-0004', 'rios')
+    ('50000000-0000-4000-8000-000000000004',       'cliente.rios@sur.local',  'Cliente Ríos',                    'cliente',                '+54 221 400-0004', 'rios'),
+    ('50000000-0000-4000-8000-000000000005',       'ana.asistente@sandbox.local', 'Ana Álvarez',                 'asistente',              '+54 11 4001-0001', 'ana.sur')
 ),
 personas AS (
   SELECT
@@ -1152,13 +1157,17 @@ FROM personas p;
 INSERT INTO public.asistentes (id, usuario_id, nombre, prestadora_id, dni, documento_tipo, documento_numero, genero)
 VALUES ('50000000-0000-4000-8000-000000000003', '50000000-0000-4000-8000-000000000003',
         'Elena Escobar', '22222222-2222-4222-8222-222222222222',
-        '20000005', 'cuil', '27200000051', 'femenino');
+        '20000005', 'cuil', '27200000051', 'femenino'),
+       ('50000000-0000-4000-8000-000000000005', '50000000-0000-4000-8000-000000000005',
+        'Ana Álvarez', '22222222-2222-4222-8222-222222222222',
+        '20000001', 'cuil', '27200000019', 'femenino');
 
 -- Con lugar cargado de los dos lados, porque el alcance de quien coordina se resuelve cruzándolos:
 -- sin ninguno cargado la respuesta sería «no alcanza» por falta de dato, y una prueba de
 -- aislamiento que pasa porque los dos lados están vacíos no prueba nada.
 INSERT INTO public.asistente_lugares (asistente_id, lugar_id, prestadora_id) VALUES
-  ('50000000-0000-4000-8000-000000000003', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
+  ('50000000-0000-4000-8000-000000000003', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222'),
+  ('50000000-0000-4000-8000-000000000005', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
 
 INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
   ('50000000-0000-4000-8000-000000000002', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
@@ -1204,7 +1213,11 @@ INSERT INTO public.guardias (id, prestadora_id, servicio_id, asistente_id, pacie
 VALUES ('80000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
         '70000000-0000-4000-8000-000000000001',
         '50000000-0000-4000-8000-000000000003',
-        '60000000-0000-4000-8000-000000000001', current_date + 1, '08:00', '16:00', 'presencial');
+        '60000000-0000-4000-8000-000000000001', current_date + 1, '08:00', '16:00', 'presencial'),
+       ('80000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
+        '70000000-0000-4000-8000-000000000001',
+        '50000000-0000-4000-8000-000000000005',
+        '60000000-0000-4000-8000-000000000001', current_date + 2, '08:00', '16:00', 'presencial');
 
 -- La fila de `guardia_pacientes` no se siembra: la escribe sola la base al
 -- insertar la Guardia.
@@ -1436,7 +1449,7 @@ BEGIN
   RAISE NOTICE '  Sandbox, Panel  -> superadmin@sandbox.local / admin@sandbox.local / carla_localhost';
   RAISE NOTICE '  Sandbox, Asistentes -> ana.alvarez, bruno, clara, delia';
   RAISE NOTICE '  Sandbox, Clientes   -> gomez, lopez, morales, marcela';
-  RAISE NOTICE '  Cuidar del Sur  -> admin@sur.local / cecilia_cuidardelsur / elena / rios';
+  RAISE NOTICE '  Cuidar del Sur  -> admin@sur.local / cecilia_cuidardelsur / elena / ana.sur / rios';
   RAISE NOTICE 'Los correos que manda el backend quedan en http://127.0.0.1:54424';
   RAISE NOTICE 'Para comprobar que ninguna ve datos de la otra: node scripts/probar_aislamiento.mjs';
   RAISE NOTICE 'Para comprobar que se puede dar de alta desde el Panel: node scripts/probar_altas_con_sesion.mjs';

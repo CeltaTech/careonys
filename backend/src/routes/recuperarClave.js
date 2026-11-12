@@ -16,24 +16,22 @@ export const recuperarClaveRouter = Router();
 // nombre es único en todo el sistema y dice de quién es la cuenta (`utils/nombreDeUsuario.js`). El
 // enlace llega al email declarado de esa cuenta.
 //
-// PEDIR CONTESTA SIEMPRE LO MISMO, exista el nombre o no. Si la respuesta cambiara, esta puerta
-// sería una forma de averiguar quién tiene cuenta preguntando de a un nombre por vez, y sin sesión
-// la puede abrir cualquiera.
+// PEDIR CONTESTA SIEMPRE LO MISMO Y EN EL MISMO TIEMPO, exista el nombre o no. Si la respuesta
+// cambiara, esta puerta sería una forma de averiguar quién tiene cuenta preguntando de a un nombre
+// por vez, y sin sesión la puede abrir cualquiera. Por eso se contesta antes de buscar la cuenta:
+// emitir el enlace y mandar el correo sólo pasa cuando la cuenta existe, y esperarlo haría que la
+// demora la delatara. Por lo mismo, una falla de ahí en adelante queda en el registro del servidor
+// y no llega a quien pidió.
 //
 // El tope de pedidos por hora vive en `utils/topeDePedidosDeClave.js`, y pedir de nuevo no abre una
 // puerta más: el enlace anterior se da por usado al emitir el siguiente.
-recuperarClaveRouter.post('/pedir', async (req, res) => {
+recuperarClaveRouter.post('/pedir', (req, res) => {
   const { usuario } = req.body ?? {};
+  if (!usuario || typeof usuario !== 'string') return responderError(res, new ErrorConMotivo('faltan_datos'));
 
-  try {
-    if (!usuario || typeof usuario !== 'string') throw new ErrorConMotivo('faltan_datos');
-    await pedirRecuperacionPorNombreDeUsuario(usuario);
-    res.json({ ok: true });
-  } catch (err) {
-    if (err instanceof ErrorConMotivo) return responderError(res, err);
-    console.error('Error al pedir recuperación de clave:', err.message);
-    res.status(500).json({ error: 'error_interno' });
-  }
+  res.json({ ok: true });
+  pedirRecuperacionPorNombreDeUsuario(usuario)
+    .catch((err) => console.error('Error al pedir recuperación de clave:', err.message));
 });
 
 // El segundo paso: el código al teléfono, si esa cuenta lo tiene verificado y su Prestadora tiene

@@ -27,6 +27,9 @@ const USUARIO = 'inventado';
 const USUARIO_TOMADO = 'tomado';
 
 let llamadas = [];
+// Las preguntas que la base todavía no contestó, para probar que la respuesta no las espera.
+let retenidas = [];
+const USUARIO_RETENIDO = 'retenido';
 
 function leerCredencial(autorizacion) {
   try {
@@ -74,6 +77,14 @@ const baseFalsa = createServer((req, res) => {
     if (clave === 'POST /rest/v1/rpc/cuenta_del_usuario') {
       // Sólo el trabajo sin Prestadora pregunta de quién es un nombre, y sólo el nombre entero.
       const pedido = JSON.parse(crudo);
+      if (pedido.p_usuario === USUARIO_RETENIDO) {
+        // Contesta recién cuando la prueba la suelta, y contesta con una falla.
+        retenidas.push(() => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ message: 'falla inventada' }));
+        });
+        return;
+      }
       const sinPrestadora = credencial?.role === 'trabajo_sin_persona' && !credencial.prestadora_id;
       filas = sinPrestadora && pedido.p_usuario === USUARIO ? [{ id: CUENTA, prestadora_id: PRESTADORA }] : [];
     }
@@ -126,6 +137,17 @@ async function pedir(ruta, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
+// Pedir la recuperación contesta antes de hacer el trabajo, así que lo que la base recibe llega
+// después de la respuesta: se espera hasta que llegue, o se da por no llegado.
+async function esperarLlamada(clave, tope = 2000) {
+  const hasta = Date.now() + tope;
+  while (Date.now() < hasta) {
+    if (llamadas.some((l) => l.clave === clave)) return true;
+    await new Promise((listo) => setTimeout(listo, 10));
+  }
+  return false;
+}
+
 function conElTrabajoDeLaPrestadora(clave) {
   const encontradas = llamadas.filter((l) => l.clave === clave);
   assert.ok(encontradas.length > 0, `no se pidió ${clave}`);
@@ -168,6 +190,7 @@ describe('recuperar la clave', () => {
   it('con el nombre de usuario, el enlace nuevo se emite con el trabajo de la Prestadora de esa cuenta', async () => {
     const { estado } = await pedir('/recuperar-clave/pedir', { usuario: ` ${USUARIO.toUpperCase()}` });
     assert.equal(estado, 200);
+    assert.ok(await esperarLlamada('POST /rest/v1/tokens_recuperacion_clave'), 'no se emitió el enlace');
     const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/cuenta_del_usuario');
     assert.deepEqual(JSON.parse(pregunta.cuerpo), { p_usuario: USUARIO });
     const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios');
@@ -181,8 +204,28 @@ describe('recuperar la clave', () => {
     const { estado, cuerpo } = await pedir('/recuperar-clave/pedir', { usuario: 'nadie' });
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { ok: true });
-    assert.ok(llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/cuenta_del_usuario'), 'no se preguntó por el nombre');
+    assert.ok(await esperarLlamada('POST /rest/v1/rpc/cuenta_del_usuario'), 'no se preguntó por el nombre');
+    assert.equal(await esperarLlamada('POST /rest/v1/tokens_recuperacion_clave', 200), false);
     assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/tokens_recuperacion_clave'), false);
+  });
+
+  it('la respuesta no espera a la base, y una falla de la base no cambia la respuesta', async () => {
+    // La base no contesta hasta que se la suelta: si la ruta la esperara, esta respuesta no llegaría.
+    try {
+      const { estado, cuerpo } = await pedir('/recuperar-clave/pedir', { usuario: USUARIO_RETENIDO });
+      assert.equal(estado, 200);
+      assert.deepEqual(cuerpo, { ok: true });
+      assert.ok(await esperarLlamada('POST /rest/v1/rpc/cuenta_del_usuario'), 'no se preguntó por el nombre');
+      assert.equal(retenidas.length, 1, 'la base ya había contestado');
+    } finally {
+      retenidas.splice(0).forEach((soltar) => soltar());
+    }
+  });
+
+  it('un nombre que falta vuelve con su motivo', async () => {
+    const { estado, cuerpo } = await pedir('/recuperar-clave/pedir', {});
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.error, 'faltan_datos');
   });
 
   it('el segundo paso lee el enlace y la cuenta con el trabajo de la Prestadora', async () => {

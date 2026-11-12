@@ -41,7 +41,7 @@ Cada uno con el archivo que lo usa, para no tener que buscarlo.
 
 | Secreto | Para qué sirve | Si falta | Última rotación |
 |---|---|---|---|
-| `CLAVE_DEL_TRABAJO_SIN_PERSONA` | La llave privada con la que el backend firma el acceso de lo que trabaja sin la sesión de una persona —una tarea programada, la dirección que llama otro software—, que entra a la base de a una Prestadora por vez. Con la misma firma entra la copia nocturna de los archivos, con un acceso que sólo lista y baja archivos. `backend/src/db/connection.js`. La misma clave arma además, al ingresar, la dirección que se devuelve para un usuario que no existe, para que no se distinga de uno que sí (`backend/src/routes/ingreso.js`) | Falla todo trabajo sin persona en el momento de entrar a la base, y la copia de los archivos | Sin registro |
+| `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` | Las contraseñas de las cuentas con las que entra a la base lo que trabaja sin la sesión de una persona —una tarea programada, la dirección que llama otro software, el respaldo nocturno—, una cuenta por Prestadora y por trabajo. `backend/src/db/connection.js`. El mismo texto arma además, al ingresar, la dirección que se devuelve para un usuario que no existe, para que no se distinga de uno que sí (`backend/src/routes/ingreso.js`) | Falla todo trabajo sin persona en el momento de entrar a la base, y el respaldo nocturno | Sin registro |
 | `SECRETO_DE_LOS_CODIGOS` | Calcula el identificador de verificación de cada código de un solo uso, para que la base no guarde el código. Tiene que tener 32 caracteres o más. `backend/src/utils/codigoDeUnSoloUso.js` | El backend no arranca (`backend/src/server.js`) | Sin registro |
 | `ANTHROPIC_API_KEY` | Todo lo que hace la IA: leer un aviso de ausencia, redactar plantillas de WhatsApp, interpretar una importación, resumir | Cada función de IA devuelve «sin respuesta» y el resto del producto sigue andando | Sin registro |
 | `RESEND_API_KEY` | El acceso al despachante por el que sale todo el correo del producto. Va junto con `REMITENTE_AVISOS`, que no es secreta y dice desde qué dirección sale. `backend/src/utils/email.js` | No se manda ningún correo, en silencio | Sin registro |
@@ -49,17 +49,15 @@ Cada uno con el archivo que lo usa, para no tener que buscarlo.
 | `SMTP_USER` y `SMTP_PASSWORD` | La casilla de correo de la máquina de desarrollo. Es el camino que se usa mientras no haya acceso al despachante; en Railway no entrega nada, porque los puertos de correo están bloqueados. `backend/src/utils/email.js` | En desarrollo no se manda ningún correo, en silencio | Sin registro |
 | `VAPID_PRIVATE_KEY` | Firma los mensajes al celular. Va de a pares con `VAPID_PUBLIC_KEY`, que no es secreta y se compila adentro de las pantallas. `backend/src/utils/push.js` | No llega ningún mensaje al celular | Sin registro |
 | `QR_COBRO_SECRET` | Firma el código que se escanea para cobrar en efectivo, para que no se pueda fabricar uno. `backend/src/utils/qrCobroEfectivo.js` | El backend arranca igual y falla recién al generar un código de cobro | Sin registro |
-| `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` | Copiar cada certificado médico que se sube al depósito de Cloudflare R2, como espejo (`backend/src/routes/panelAusencias.js`), y la copia nocturna de todos los archivos (`backend/src/utils/copiaDeLosArchivos.js`). Van junto con `R2_ENDPOINT` y `R2_BUCKET` | La copia falla, queda en el registro del servidor, y lo demás sigue andando | Sin registro |
-| `B2_KEY_ID` y `B2_APPLICATION_KEY` | La misma copia nocturna de los archivos, al espejo de Backblaze. Van junto con `B2_ENDPOINT` y `B2_BUCKET`. `backend/src/utils/copiaDeLosArchivos.js` | La copia de los archivos falla esa noche y queda en el registro del servidor | Sin registro |
+| `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` | Copiar cada certificado médico que se sube al depósito de Cloudflare R2, como espejo (`backend/src/routes/panelAusencias.js`), y el respaldo nocturno de los datos y de los archivos (`backend/src/utils/respaldoDeLosDatos.js`, `backend/src/utils/copiaDeLosArchivos.js`). Van junto con `R2_ENDPOINT` y `R2_BUCKET` | El respaldo falla, queda en el registro del servidor, y lo demás sigue andando | Sin registro |
+| `B2_KEY_ID` y `B2_APPLICATION_KEY` | El mismo respaldo nocturno, al espejo de Backblaze. Van junto con `B2_ENDPOINT` y `B2_BUCKET`. Railway los recibe de los secretos del repositorio en cada publicación del backend (`deploy-backend.yml`) | El respaldo falla esa noche y queda en el registro del servidor | Sin registro |
 | `COBRANZA_EFECTIVO_SECRETO_FIRMA_WEBHOOK`, `DEBIN_SECRETO_FIRMA_WEBHOOK`, `MODO_SECRETO_FIRMA_WEBHOOK` | Comprobar que el cobro informado viene de la pasarela y no de cualquiera que conozca la dirección. **Son el respaldo del ambiente:** el secreto que manda es el de esa Prestadora, guardado en la caja fuerte de la base (§4) | El cobro informado se rechaza, que es lo correcto: mejor no cobrar que dar por cobrado lo que no se cobró | Sin registro |
 
 ---
 
 ## 3. Los secretos de los automatismos (secretos del repositorio en GitHub)
 
-Estos no los usa el producto: los usan los automatismos de `.github/workflows/`. De los ocho, cuatro
-—`verificar-identidad`, `verificar-llave-maestra`, `verificar-regla-de-clave` y
-`verificar-regla-de-usuario`— no usan ninguno. **Ninguno está
+Estos no los usa el producto: los usan los automatismos de `.github/workflows/`. **Ninguno está
 en la máquina del Desarrollador**, y eso es a propósito — si un automatismo es la única forma de
 publicar, el token de publicar no tiene por qué andar dando vueltas en una computadora.
 
@@ -67,9 +65,8 @@ publicar, el token de publicar no tiene por qué andar dando vueltas en una comp
 |---|---|---|
 | `RAILWAY_TOKEN` | Subir el backend a Railway en cada push que toca `backend/` | `deploy-backend.yml` |
 | `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` | Publicar el Panel, las dos aplicaciones y la página raíz. El token está acotado a Pages y DNS | `publicar-pantallas.yml` |
-| `BACKUP_DB_HOST`, `BACKUP_DB_PORT`, `BACKUP_DB_NAME`, `BACKUP_DB_USER`, `BACKUP_DB_PASSWORD` | La conexión directa a la base para el volcado diario, y para leer los catálogos al comprobar el texto visible | `backup-diario.yml`, `verificar-textos.yml` |
-| `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Subir el volcado al depósito principal | `backup-diario.yml` |
-| `B2_ENDPOINT`, `B2_BUCKET`, `B2_KEY_ID`, `B2_APPLICATION_KEY` | Subir el mismo volcado al espejo de Backblaze | `backup-diario.yml` |
+| `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Subir la copia del código al depósito principal | `backup-diario.yml` |
+| `B2_ENDPOINT`, `B2_BUCKET`, `B2_KEY_ID`, `B2_APPLICATION_KEY` | Subir la misma copia del código al espejo de Backblaze, y pasarle a Railway los mismos valores para el respaldo nocturno | `backup-diario.yml`, `deploy-backend.yml` |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`, `VITE_SITE_URL`, `VITE_VAPID_PUBLIC_KEY` | Los valores que se compilan adentro de cada pantalla. **No son secretos** —quedan a la vista de cualquiera que abra la aplicación— y están acá únicamente porque los archivos `.env.production` no se versionan | `publicar-pantallas.yml` |
 
 **La clave anónima de Supabase no es una contraseña.** Es pública por diseño: lo que decide qué
@@ -107,7 +104,8 @@ Sirve el día que pasa, que es el día en que nadie tiene tiempo de leer código
 - **Se filtró un token de publicación** (Railway o Cloudflare) → se rota en su panel y se reemplaza
   el secreto del repositorio. No se cae nada; lo que no anda hasta reemplazarlo es publicar.
 - **Se filtraron las llaves del respaldo** (R2 o B2) → se rotan en su panel y se reemplazan los
-  secretos del repositorio. **Y se revisa qué se pudo bajar**: ahí adentro está la base entera.
+  secretos del repositorio. Lo que se pudo bajar de los datos y los archivos está cifrado con la
+  clave de cada Prestadora y no se lee sin ella; la copia del código, no.
 - **Se filtró la clave de la API de IA** → se rota en el panel de Anthropic. Cada función de IA
   queda sin respuesta hasta reemplazarla; ninguna otra cosa se rompe.
 - **Se filtró un secreto de una Prestadora** → lo vuelve a cargar ella desde Configuración. Si la
@@ -137,7 +135,10 @@ para que nadie las confunda con las de arriba, ni al revés.
   `DEBIN_PSP_API_BASE`, `COBRANZA_EFECTIVO_API_BASE`, `CLOUDFLARE_API_BASE`, `R2_ENDPOINT`,
   `R2_BUCKET`, `SMTP_HOST`, `SMTP_PORT`.
 - **Identificadores públicos:** `SUPABASE_ANON_KEY` (la clave anónima, ver §3), `CLOUDFLARE_ACCOUNT_ID`,
-  `CLOUDFLARE_ZONE_ID`, `REMITENTE_AVISOS`, `VAPID_PUBLIC_KEY`.
+  `CLOUDFLARE_ZONE_ID`, `REMITENTE_AVISOS`, `VAPID_PUBLIC_KEY`, `CORREO_DE_LAS_ALARMAS`.
+- **Las claves públicas de los respaldos:** `CLAVES_PUBLICAS_DE_LOS_RESPALDOS`, con las que se
+  cifra el respaldo de cada Prestadora. Sirven para cifrar y no para abrir: la privada no la tiene
+  el sistema.
 - **Direcciones propias:** `PANEL_URL`, `PWA_CLIENTES_URL`, `PWA_ASISTENTES_URL`, `PORT`.
 - **Decisiones de funcionamiento:** `MODELO_IA` (el nombre del modelo, que vive en un solo lugar y
   se puede pisar por entorno), `TOPE_PEDIDOS_POR_MINUTO`, `TOPE_PEDIDOS_DE_CLAVE_POR_HORA`,
@@ -146,7 +147,6 @@ para que nadie las confunda con las de arriba, ni al revés.
   `DIAS_DE_VALIDEZ_DEL_ENLACE_DE_ACTIVACION`, `DIAS_HASTA_EL_RECORDATORIO_DE_ACTIVACION`,
   `VAPID_SUBJECT`, `NODE_ENV`.
 - **Retención de respaldos:** `RESPALDOS_DIAS_DIARIOS` y `RESPALDOS_MESES_MENSUALES`, que lee
-  `backend/src/utils/retencionDeRespaldos.js`. Hoy no lo llama nada: el respaldo diario todavía no
-  borra los viejos (paso 137 de `docs/PLAN_HASTA_PRODUCCION.md`).
-- **Sólo para correr cosas en la máquina propia:** `CONTENEDOR_BASE`, `URL_BACKEND`, `DB_HOST`.
+  `backend/src/utils/retencionDeRespaldos.js` cuando el respaldo de los datos borra los viejos.
+- **Sólo para correr cosas en la máquina propia:** `CONTENEDOR_BASE`, `URL_BACKEND`.
 - **Sólo para las pruebas:** `ANTHROPIC_BASE_URL`, para no salir a la API de verdad.

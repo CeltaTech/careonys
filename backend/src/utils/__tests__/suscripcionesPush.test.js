@@ -108,8 +108,7 @@ describe('la suscripción a las notificaciones', () => {
     assert.deepEqual(await guardar(), { error: null });
     const rastro = llamadas.find((l) => l.ruta === '/rest/v1/auditoria_cambio_dueno_push');
     assert.ok(rastro, 'quedó el rastro');
-    assert.equal(rastro.cuerpo.prestadora_anterior, PRESTADORA);
-    assert.equal(rastro.cuerpo.prestadora_nueva, PRESTADORA);
+    assert.equal(rastro.cuerpo.prestadora_id, PRESTADORA);
     assert.equal(rastro.cuerpo.usuario_anterior, OTRO);
     assert.equal(rastro.cuerpo.usuario_nuevo, ASISTENTE);
     todasConElTrabajoDe(PRESTADORA);

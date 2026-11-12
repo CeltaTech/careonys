@@ -436,9 +436,10 @@ quien pide, que toma con `clienteDelPedido(req)`; lo que esa persona no puede ha
 vez, con `enLaPrestadora`. Las dos salen de `backend/src/db/connection.js`; la del trabajo sin persona no
 la firma el backend: entra con la cuenta automática de esa Prestadora y el pase lo arma la base
 con `interno.armar_el_pase`, así que cada contraseña abre una sola Prestadora. Fuera de
-`enLaPrestadora` no hay conexión. La copia nocturna de los archivos también va de a una Prestadora
-(`paraCadaPrestadora` con el rol `copia_de_respaldo`), y sólo lista y baja los archivos de la
-carpeta de esa Prestadora. **Ningún archivo
+`enLaPrestadora` no hay conexión. El respaldo nocturno de los datos y la copia de los archivos
+también van de a una Prestadora (`paraCadaPrestadora` con el rol `copia_de_respaldo`): cada uno lee
+sólo lo de esa Prestadora y sale cifrado con su clave pública, de `CLAVES_PUBLICAS_DE_LOS_RESPALDOS`.
+La privada no la tiene el sistema. **Ningún archivo
 del repositorio usa `SUPABASE_SERVICE_ROLE_KEY`**, porque incumple `..\..\CLAUDE.md`, sección
 «Aislamiento entre Organizaciones», y en Supabase está dada de baja: la clave secreta se borró y
 las heredadas están apagadas. Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es sacarla.

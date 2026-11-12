@@ -566,6 +566,7 @@ export async function invitarPersonaAutorizada({
   const { data: yaEsta } = await db
     .from('personas_autorizadas')
     .select('usuario_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .eq('persona_id', persona.id)
     .maybeSingle();
@@ -579,7 +580,7 @@ export async function invitarPersonaAutorizada({
 
     const { error: errorMiembro } = await db
       .from('personas_autorizadas')
-      .insert({ usuario_id: miembroId, cliente_id: clienteId, persona_id: persona.id, email, creado_por: invitadoPor });
+      .insert({ usuario_id: miembroId, cliente_id: clienteId, prestadora_id: prestadoraId, persona_id: persona.id, email, creado_por: invitadoPor });
     if (errorMiembro) throw new Error(errorMiembro.message);
 
     return { miembroId };
@@ -607,6 +608,7 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
   const { data: miembro, error: errorMiembro } = await db
     .from('personas_autorizadas')
     .select('cliente_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .single();
   // Si ya no figura entre las personas autorizadas de este Cliente, no queda nada que quitar: se
@@ -614,8 +616,8 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
   // Cliente cae acá también, y tampoco se la toca.
   if (errorMiembro || !miembro || miembro.cliente_id !== clienteId) return false;
 
-  await db.from('permisos_personas_autorizadas').delete().eq('usuario_id', usuarioId);
-  await db.from('personas_autorizadas').delete().eq('usuario_id', usuarioId);
+  await db.from('permisos_personas_autorizadas').delete().eq('prestadora_id', prestadoraId).eq('usuario_id', usuarioId);
+  await db.from('personas_autorizadas').delete().eq('prestadora_id', prestadoraId).eq('usuario_id', usuarioId);
   await desactivarCuenta(usuarioId, { prestadoraId, motivo });
   return true;
 }

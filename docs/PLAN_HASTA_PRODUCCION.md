@@ -319,57 +319,51 @@ nunca de notificar a la autoridad. **Frente a una falla de la aplicación o a un
 Prestadoras el cifrado en reposo no vale nada**, porque en ese camino el dato ya estaba descifrado.
 Por eso no reemplaza a ninguno de los pasos anteriores.
 
-**Lo que hay hoy**, comprobado en la base en vivo y en el código:
+**Lo que hay hoy**, comprobado en el código:
 
-- **El respaldo diario es una llave maestra.** `.github/workflows/backup-diario.yml` corre
-  `pg_dump` con la cuenta de los secretos `BACKUP_DB_*`. Las tablas tienen protección por fila y el
-  volcado sale bien todos los días, así que esa cuenta es una de las cuatro que se saltean la
-  protección: `postgres`, `supabase_admin`, `supabase_etl_admin` o `supabase_read_only_user`. No
-  hay otra cuenta con entrada que pueda hacerlo. Y el archivo que resulta tiene a todas las
-  Prestadoras juntas y se sube **sin cifrar** a los dos depósitos: `backend/scripts/backup_a_buckets.mjs`
-  no cifra nada.
+- **El respaldo de los datos va de a una Prestadora** (`backend/src/utils/respaldoDeLosDatos.js`),
+  con el rol `copia_de_respaldo`: un archivo por Prestadora, con sus cuentas de entrada adentro, y
+  cifrado con la clave pública de esa Prestadora. **La copia de los archivos se cifra igual**
+  (`backend/src/utils/copiaDeLosArchivos.js`). El respaldo de GitHub sube sólo el código.
+- **Un respaldo se abre con `backend/scripts/abrir_respaldo.mjs`** y la clave privada de su
+  Prestadora; revisa que no traiga ninguna fila de otra.
 - **Ningún dato se cifra en la aplicación.** El único cifrado del código es el del acceso guardado
   en el teléfono.
 - **Los secretos de terceros de cada Prestadora** —WhatsApp, pasarela de cobro, facturación— se
   guardan con el depósito de secretos de Supabase, que usa **una sola clave para todo el
   proyecto**. Hoy no hay ninguno guardado.
 - **El cifrado del disco** lo pone Supabase, con una clave suya. No se puede comprobar desde la base.
-- **La copia de los archivos** ya va de a una Prestadora (`backend/src/utils/copiaDeLosArchivos.js`),
-  pero sube a los dos depósitos **sin cifrar**.
 
-**Lo que se propone:**
+**Lo que falta:**
 
-1. **El respaldo de los datos, de a una Prestadora por vez**, con el mismo camino que ya usa la
-   copia de los archivos: el rol `copia_de_respaldo`, sin entrada propia y limitado por la
-   protección por fila a la Prestadora de cada vuelta. La estructura no se vuelca: ya está en el
-   repositorio, que también se respalda. **Un archivo por Prestadora.**
-2. **Cada archivo se cifra con la clave pública de su Prestadora.** El respaldo sólo tiene las
-   públicas, que cifran pero no descifran: si alguien se roba lo que corre todos los días, no puede
-   leer nada. La clave que descifra es una por Prestadora y no vive en ningún lugar al que llegue
-   el sistema.
-3. **Las cuentas de entrada** viven en una tabla de Supabase que no es de ninguna Prestadora. Se
-   respaldan aparte, cada una dentro del archivo de su Prestadora.
-4. **Se borra el secreto `BACKUP_DB_*` de GitHub** y se cambia la contraseña de esa cuenta.
-5. **La copia de los archivos se cifra igual que la de los datos**, con la clave pública de cada
-   Prestadora.
-6. **Una Prestadora nueva necesita sus tres cuentas automáticas al darse de alta** —la del
+1. **Una Prestadora nueva necesita sus tres cuentas automáticas y su clave de respaldo al darse de alta** —la del
    trabajo, la de la copia y la de la importación—, con su contraseña en
    `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` de Railway y en la caja fuerte de Careonys. Hoy las
    tienen las 2 Prestadoras de la base real, y en la base local las crea
-   `scripts/cuentas_automaticas_local.mjs`. El backend ya no firma pases: entra con esas cuentas y
+   `scripts/cuentas_automaticas_local.mjs`. La clave de respaldo es un par: la pública va a
+   `CLAVES_PUBLICAS_DE_LOS_RESPALDOS` de Railway y la privada a la caja fuerte y al gestor de
+   contraseñas de Google. Sin la pública, el respaldo de esa Prestadora falla esa noche y lo dice
+   en el registro. El backend ya no firma pases: entra con esas cuentas y
    el pase lo arma la base (`backend/src/db/connection.js`). **Además, desde el 25 de noviembre de
    2026:** borrar de las claves de firma de Supabase las dos que firmaba el backend
    (`8257f604-…` y `53b86d1f-…`). Ya están revocadas; Supabase no deja borrarlas antes.
-7. **Las contraseñas equivocadas de las cuentas automáticas no se vigilan.** La alarma de las
+2. **Las contraseñas equivocadas de las cuentas automáticas no se vigilan.** La alarma de las
    entradas ya funciona (`interno.armar_el_pase`): más de 10 entradas con contraseña en una hora
    desactivan la cuenta y le mandan un correo a `CORREO_DE_LAS_ALARMAS` del backend. Las
    equivocadas, Supabase sólo las informa en el plan Teams. Espera ese cambio de plan. Para
    reactivar una cuenta cortada: contraseña nueva, `banned_until` vacío y la contraseña nueva en
    Railway y en la caja fuerte. Si la cortada es `lista@`, el correo no sale hasta reactivarla.
 
-**Lo que decide usted:** quién guarda la clave que descifra el respaldo de cada Prestadora, y qué
-se hace con los secretos de terceros, que el sistema tiene que poder usar solo y por eso no pueden
-quedar fuera de su alcance.
+3. **Usted — lo que quedó del respaldo viejo.** Los volcados de la base entera
+   (`careonys_backup_*.sql.gz`, en la raíz de los dos depósitos) y la copia de los archivos de antes
+   están **sin cifrar**. Ningún borrado automático los alcanza: el del respaldo nuevo mira sólo
+   `datos/`. La copia de los archivos se vuelve a subir cifrada encima, pero Backblaze B2 guarda por
+   defecto las versiones anteriores de cada archivo, así que ahí las viejas siguen enteras. Decidir
+   si se borran, los volcados de los dos depósitos y las versiones anteriores de B2. Y la cuenta de la base que usaba el volcado ya no la usa nadie: decidir si se le cambia la
+   contraseña o se la da de baja.
+
+**Lo que decide usted:** qué se hace con los secretos de terceros, que el sistema tiene que poder
+usar solo y por eso no pueden quedar fuera de su alcance.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra; ningún secreto del
 repositorio, de GitHub ni del backend alcanza a más de una Prestadora —el backend las guarda todas,
@@ -1296,7 +1290,7 @@ prueba del escaneo del Asistente.
 Y queda además **una contraseña de prueba en texto plano dentro de la configuración de permisos de
 una copia de trabajo**, que no es un archivo del repositorio y por eso el barrido no la alcanzó.
 
-**98. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 221 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
+**98. Usted** — Abrir el último respaldo de cada Prestadora: desde `backend/`, con las variables `R2_*` del respaldo cargadas en el entorno, `node scripts/abrir_respaldo.mjs --prestadora <id> --clave <archivo con la clave privada>`. Baja el respaldo más nuevo de esa Prestadora, lo abre, muestra cuántas filas trae cada tabla y revisa que no haya ninguna de otra Prestadora. Le toca a usted porque la clave privada vive en la caja fuerte; el programa la lee del archivo y no la muestra. Se hace después de la primera noche con `CLAVES_PUBLICAS_DE_LOS_RESPALDOS` cargada en Railway, con las dos Prestadoras. **Si contesta `no_probado`, no salió mal: quiere decir que el respaldo estaba en orden y no traía ninguna fila**, y entonces hay que repetirlo con datos de prueba cargados.
 
 **99. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 

@@ -164,7 +164,7 @@ export function sinPrestadora(trabajo, region = regionDeLaPrestadora(null)) {
  * la quiera usar sin pasar por `supabase`.
  *
  * `rol` cambia el rol de la credencial de cada Prestadora. Lo usa la copia de respaldo, que sólo
- * lee los archivos de la Prestadora: no toca ninguna tabla, no escribe y no borra.
+ * lee los archivos y las filas de la Prestadora: no escribe y no borra.
  */
 export async function paraCadaPrestadora(trabajo, hacer, { rol } = {}) {
   for (const region of lasRegiones()) {

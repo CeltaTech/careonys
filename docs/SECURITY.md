@@ -41,10 +41,9 @@ para mantener esa salida siempre abierta:
 - **RLS se escribe en SQL estándar de Postgres**, sin depender de helpers propietarios de
   Supabase más allá de `auth.uid()` (que tiene equivalente directo en cualquier Postgres
   con su propio esquema de usuarios).
-- **Backup propio, independiente del backup nativo de Supabase**: un `pg_dump` periódico
-  de la base (automatizable con un cron simple en el propio backend o una GitHub Action)
-  guardado fuera de Supabase, en almacenamiento de objetos (bucket — Google Cloud Storage,
-  AWS S3, Backblaze B2 o similar). Esto protege contra el peor caso (cuenta bloqueada, error
+- **Backup propio, independiente del backup nativo de Supabase**: los datos de cada
+  Prestadora, guardados fuera de Supabase, en almacenamiento de objetos (bucket — Google Cloud
+  Storage, AWS S3, Backblaze B2 o similar). Esto protege contra el peor caso (cuenta bloqueada, error
   de facturación, borrado accidental del proyecto) sin depender de que el proveedor mismo
   resuelva su propia falla. **Git/GitHub queda descartado como destino, no en evaluación**:
   guarda historial permanente que no se puede purgar sin reescribir
@@ -56,23 +55,29 @@ para mantener esa salida siempre abierta:
 Ninguna de estas reglas frena el desarrollo actual — son restricciones de diseño, no
 trabajo extra significativo.
 
-**El backup propio existe.** Todos los días a las 03:00 de Buenos Aires
-(`.github/workflows/backup-diario.yml`) `backend/scripts/backup_a_buckets.mjs` sube el volcado
-de la base a Cloudflare R2, que es el principal, y a Backblaze B2, que es el espejo. Los archivos
-de los depósitos los copia el backend, una vez por día y al arrancar, a los mismos dos destinos,
-bajo `archivos/<depósito>/<ruta>` (`backend/src/utils/copiaDeLosArchivos.js`). Trabaja de a una
-Prestadora, con la credencial de la copia de respaldo, que sólo puede listar y bajar los archivos
-de la carpeta de esa Prestadora: no lee ninguna tabla, no escribe y no borra. Sube sólo lo que falta o cambió, y la lista de depósitos se la pregunta a
-la base, para que uno nuevo no quede afuera por olvido (`backend/src/utils/copiaDeDepositos.js`).
+**El backup propio existe, y va de a una Prestadora.** Todas las noches el backend respalda los
+datos de cada Prestadora en un archivo propio, con sus cuentas de entrada adentro
+(`backend/src/utils/respaldoDeLosDatos.js`), y copia los archivos de sus depósitos bajo
+`archivos/<depósito>/<ruta>` (`backend/src/utils/copiaDeLosArchivos.js`). Los dos suben a
+Cloudflare R2, que es el principal, y a Backblaze B2, que es el espejo. Trabajan con la credencial
+de la copia de respaldo, que sólo lee lo de esa Prestadora: no escribe y no borra. La lista de
+tablas y la de depósitos se las pregunta a la base, para que una nueva no quede afuera por olvido.
+La estructura no se respalda acá: está en el repositorio, que sube a los mismos dos destinos todos
+los días a las 03:00 de Buenos Aires (`.github/workflows/backup-diario.yml`).
 
-**La prueba de restauración la hace `backend/scripts/probar_restauracion.mjs`.** Baja el último
-respaldo, lo restaura en una base efímera, compara las tablas y las filas contra producción y los
-archivos contra el almacenamiento, y borra el contenedor y la descarga al terminar. Lo corre el
-Desarrollador, porque pide las llaves del bucket y de la base. Contesta `bien`, `roto` o
-`no_probado`: este último es que todo coincidió pero no había una sola fila ni un solo archivo que
-comparar, así que hay que rehacerla con datos cargados. Qué decide cada uno está en
-`backend/src/utils/comprobacionDeRestauracion.js`. Que deje constancia y se repita sola es el paso
-126 de `docs/PLAN_HASTA_PRODUCCION.md`, «Respaldos que se probaron».
+**Todo sale cifrado con la clave pública de su Prestadora** (`backend/src/utils/cifradoDeLosRespaldos.js`),
+que está en `CLAVES_PUBLICAS_DE_LOS_RESPALDOS` del backend. La pública cifra y no descifra: quien
+se lleve el backend o los depósitos no lee nada. La privada, una por Prestadora, vive en la caja
+fuerte y en el gestor de contraseñas del Desarrollador, y en ningún lugar al que llegue el sistema.
+Una Prestadora sin clave pública no se respalda esa noche, y el registro lo dice.
+
+**Un respaldo se abre con `backend/scripts/abrir_respaldo.mjs`** y la clave privada de su
+Prestadora. Baja el más nuevo, lo abre y contesta `bien`, `roto` o `no_probado`: `roto` si es de
+otra Prestadora o trae alguna fila de otra, y `no_probado` si estaba en orden pero no traía una sola
+fila. Muestra cantidades, nunca una fila. Qué decide cada uno está en
+`backend/src/utils/comprobacionDeRestauracion.js`. Lo corre el Desarrollador, porque pide la clave
+privada. Que deje constancia y se repita sola es el paso 126 de `docs/PLAN_HASTA_PRODUCCION.md`,
+«Respaldos que se probaron».
 
 ## RBAC — roles del sistema
 

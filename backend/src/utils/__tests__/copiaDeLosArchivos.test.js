@@ -17,6 +17,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { Decrypter, generateIdentity, identityToRecipient } from 'age-encryption';
 
 const DEPOSITO = 'documentos';
 const UNA = '11111111-1111-4111-8111-111111111111';
@@ -76,6 +77,16 @@ process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
 
 const { copiarLosArchivosAlRespaldo } = await import('../copiaDeLosArchivos.js');
 
+// Una clave de mentira por Prestadora, nacida acá.
+const privadas = { [UNA]: await generateIdentity(), [OTRA]: await generateIdentity() };
+const claves = { [UNA]: await identityToRecipient(privadas[UNA]), [OTRA]: await identityToRecipient(privadas[OTRA]) };
+
+async function abrir(prestadora, cuerpo) {
+  const d = new Decrypter();
+  d.addIdentity(privadas[prestadora]);
+  return d.decrypt(new Uint8Array(cuerpo), 'text');
+}
+
 after(() => almacenamiento.close());
 
 beforeEach(() => {
@@ -88,7 +99,7 @@ function destino() {
   return {
     guardado,
     async yaEstaIgual() { return false; },
-    async subir(clave, cuerpo) { guardado.set(clave, cuerpo.toString()); },
+    async subir(clave, cuerpo) { guardado.set(clave, cuerpo); },
   };
 }
 
@@ -97,13 +108,19 @@ describe('la copia nocturna de los archivos', () => {
     const uno = destino();
     const otro = destino();
 
-    const cuenta = await copiarLosArchivosAlRespaldo({ destinos: [uno, otro], avisar: () => {} });
+    const cuenta = await copiarLosArchivosAlRespaldo({ destinos: [uno, otro], avisar: () => {}, claves });
 
     assert.equal(cuenta.prestadoras, 2);
     assert.equal(cuenta.copiados, 2);
     for (const prestadora of [UNA, OTRA]) {
-      assert.equal(uno.guardado.get(`archivos/${DEPOSITO}/${prestadora}/archivo.pdf`), `de ${prestadora}`);
-      assert.equal(otro.guardado.get(`archivos/${DEPOSITO}/${prestadora}/archivo.pdf`), `de ${prestadora}`);
+      for (const d of [uno, otro]) {
+        const cuerpo = d.guardado.get(`archivos/${DEPOSITO}/${prestadora}/archivo.pdf`);
+        assert.equal(cuerpo.includes(Buffer.from(`de ${prestadora}`)), false, 'subió sin cifrar');
+        assert.equal(await abrir(prestadora, cuerpo), `de ${prestadora}`);
+      }
+      // La clave de una no abre lo de la otra.
+      const ajena = prestadora === UNA ? OTRA : UNA;
+      await assert.rejects(abrir(ajena, uno.guardado.get(`archivos/${DEPOSITO}/${prestadora}/archivo.pdf`)));
     }
 
     const alAlmacenamiento = pedidos.filter((p) => p.ruta.startsWith('/storage/'));
@@ -123,11 +140,21 @@ describe('la copia nocturna de los archivos', () => {
     const uno = destino();
 
     await assert.rejects(
-      copiarLosArchivosAlRespaldo({ destinos: [uno], avisar: (t) => lineas.push(t) }),
+      copiarLosArchivosAlRespaldo({ destinos: [uno], avisar: (t) => lineas.push(t), claves }),
       /1 archivos no se pudieron copiar/,
     );
-    assert.equal(uno.guardado.get(`archivos/${DEPOSITO}/${OTRA}/archivo.pdf`), `de ${OTRA}`);
+    assert.equal(await abrir(OTRA, uno.guardado.get(`archivos/${DEPOSITO}/${OTRA}/archivo.pdf`)), `de ${OTRA}`);
     assert.ok(lineas.some((l) => l.includes('1 fallados')));
     assert.equal(lineas.some((l) => l.includes('11111111')), false);
+  });
+
+  it('una Prestadora sin clave no se copia, y la otra sí', async () => {
+    const uno = destino();
+    await assert.rejects(
+      copiarLosArchivosAlRespaldo({ destinos: [uno], avisar: () => {}, claves: { [OTRA]: claves[OTRA] } }),
+      /1 Prestadoras no se pudieron copiar/,
+    );
+    assert.equal(uno.guardado.has(`archivos/${DEPOSITO}/${UNA}/archivo.pdf`), false);
+    assert.equal(await abrir(OTRA, uno.guardado.get(`archivos/${DEPOSITO}/${OTRA}/archivo.pdf`)), `de ${OTRA}`);
   });
 });

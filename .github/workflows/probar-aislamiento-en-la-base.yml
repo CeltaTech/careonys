@@ -10,11 +10,13 @@ on:
     paths:
       - 'supabase/**'
       - 'scripts/probar_aislamiento_en_la_base.mjs'
+      - 'scripts/verificar_texto_visible.mjs'
       - '.github/workflows/probar-aislamiento-en-la-base.yml'
   pull_request:
     paths:
       - 'supabase/**'
       - 'scripts/probar_aislamiento_en_la_base.mjs'
+      - 'scripts/verificar_texto_visible.mjs'
   workflow_dispatch:
 
 jobs:
@@ -38,3 +40,10 @@ jobs:
 
       - name: Probar el aislamiento en la base
         run: node scripts/probar_aislamiento_en_la_base.mjs
+
+      # Los textos que escribió la plataforma en la base —advertencias legales, consentimientos,
+      # catálogos generales— no están en ningún archivo de pantalla. Se revisan acá, sobre la
+      # base recién levantada, porque es la única que no pide entrar a la de verdad.
+      - name: Buscar textos de la base que tutean
+        if: always()
+        run: node scripts/verificar_texto_visible.mjs

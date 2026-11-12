@@ -12,6 +12,11 @@
 // es la consulta tal como quedaría si alguien se olvidara de escribirlo en el código. Cuenta las filas
 // propias y las ajenas. Una sola fila ajena es una filtración.
 //
+// Después pide la copia de respaldo entera de cada Prestadora con el pase de `copia_de_respaldo`:
+// tiene que traer todas las tablas, las cuentas de entrada de su gente y ninguna fila de la otra.
+// Con el filtro de la copia quitado a propósito, la prueba tiene que encontrar la filtración; y con
+// cualquier otro pase, la copia tiene que negarse.
+//
 // CÓMO ENTRA. Adentro de la base local, con el mismo rol y los mismos datos de sesión que la base
 // recibe de una credencial verdadera: `authenticated` con el identificador de la cuenta, o
 // `trabajo_sin_persona` con la Prestadora. No usa contraseñas ni claves, y todo corre adentro de una
@@ -194,6 +199,116 @@ ROLLBACK;`);
     console.log(`Control: con la protección de public.${control} apagada, la prueba encuentra la filtración.`);
   }
 }
+
+// 4. La copia de respaldo. Sus dos funciones saltean la protección por fila, así que el filtro lo
+// ponen ellas: con el pase de una Prestadora, ninguna fila de la otra; con cualquier otro pase,
+// nada. Se pide cada tabla entera, de a tramos, como la pide el backend.
+const RESPALDO_TRAMO = 5000;
+function bloqueDeRespaldo(prestadora) {
+  return `
+SET LOCAL ROLE copia_de_respaldo;
+SELECT set_config('request.jwt.claims', ${literal(JSON.stringify({ role: 'copia_de_respaldo', prestadora_id: prestadora }))}, true);
+DO $respaldo$
+DECLARE
+  v_tabla text;
+  v_tramo jsonb;
+  v_desde integer;
+  v_propias bigint;
+  v_ajenas bigint;
+  v_cuentas text;
+BEGIN
+  FOR v_tabla IN SELECT public.tablas_del_respaldo() LOOP
+    v_desde := 0; v_propias := 0; v_ajenas := 0; v_cuentas := '';
+    LOOP
+      v_tramo := public.filas_del_respaldo(v_tabla, v_desde, ${RESPALDO_TRAMO});
+      EXIT WHEN jsonb_array_length(v_tramo) = 0;
+      IF v_tabla LIKE 'auth.%' THEN
+        -- Las cuentas de entrada no tienen columna de Prestadora: se anotan y se revisan afuera.
+        SELECT v_cuentas || coalesce(string_agg(coalesce(f->>'user_id', f->>'id'), ','), '') || ','
+          INTO v_cuentas FROM jsonb_array_elements(v_tramo) f;
+        v_propias := v_propias + jsonb_array_length(v_tramo);
+      ELSE
+        SELECT v_propias + count(*) FILTER (WHERE coalesce(f->>'prestadora_id', f->>'id') = ${literal(prestadora)}),
+               v_ajenas  + count(*) FILTER (WHERE coalesce(f->>'prestadora_id', f->>'id') IS DISTINCT FROM ${literal(prestadora)})
+          INTO v_propias, v_ajenas FROM jsonb_array_elements(v_tramo) f;
+      END IF;
+      v_desde := v_desde + ${RESPALDO_TRAMO};
+    END LOOP;
+    RAISE NOTICE '%|%|%|%', v_tabla, v_propias, v_ajenas, v_cuentas;
+  END LOOP;
+END
+$respaldo$;
+RESET ROLE;`;
+}
+
+const cuentasDe = new Map(ids.map((p) => [p, new Set(cuentas.filter((c) => c.prestadora === p).map((c) => c.id))]));
+const todasLasCuentasDe = new Map(ids.map((p) => [p, new Set(
+  correr(`SELECT id FROM usuarios WHERE prestadora_id = ${literal(p)};`).filas.map(([id]) => id),
+)]));
+for (const p of ids) {
+  const { avisos: delRespaldo } = correr(`BEGIN;\n${bloqueDeRespaldo(p)}\nROLLBACK;`);
+  const nombre = nombreDe.get(p);
+  const vistas = new Set(delRespaldo.map(([t]) => t));
+  for (const t of tablas) {
+    if (!vistas.has(`public.${t}`)) fallas.push(`Respaldo de ${nombre}: public.${t} tiene columna de Prestadora y la copia no la incluye.`);
+  }
+  let propiasTotales = 0;
+  for (const [tabla, propias, ajenas, listaDeCuentas] of delRespaldo) {
+    propiasTotales += Number(propias);
+    if (Number(ajenas) > 0) fallas.push(`FILTRACIÓN: el respaldo de ${nombre} trae ${ajenas} fila(s) de otra Prestadora de ${tabla}.`);
+    const ajenasDeAuth = (listaDeCuentas ?? '').split(',').filter(Boolean).filter((id) => !todasLasCuentasDe.get(p).has(id));
+    if (ajenasDeAuth.length > 0) fallas.push(`FILTRACIÓN: el respaldo de ${nombre} trae ${ajenasDeAuth.length} fila(s) de ${tabla} de cuentas que no son suyas.`);
+  }
+  const cuentasEnElRespaldo = new Set(delRespaldo.filter(([t]) => t === 'auth.users').flatMap(([, , , l]) => (l ?? '').split(',').filter(Boolean)));
+  const faltan = [...cuentasDe.get(p)].filter((id) => !cuentasEnElRespaldo.has(id));
+  if (faltan.length > 0) fallas.push(`Respaldo de ${nombre}: faltan ${faltan.length} cuenta(s) de entrada de su gente.`);
+  if (propiasTotales === 0) fallas.push(`Respaldo de ${nombre}: no trajo ninguna fila, y una copia vacía también pasaría la prueba.`);
+  console.log(`Respaldo de ${nombre}: ${vistas.size} tablas, ${propiasTotales} filas propias.`);
+}
+
+// La prueba de la prueba: con el filtro de la copia quitado a propósito, la filtración aparece.
+{
+  const definicion = correr(`SELECT pg_get_functiondef('public.filas_del_respaldo(text, integer, integer)'::regprocedure);`)
+    .filas.map((f) => f.join('|')).join('\n');
+  const sinFiltro = definicion.replace(`ELSE 't.prestadora_id = $1'`, `ELSE 'true'`);
+  if (sinFiltro === definicion) {
+    fallas.push('No encontré el filtro de public.filas_del_respaldo para probar que la prueba detecta una copia sin él.');
+  } else {
+    const { avisos: sinElFiltro } = correr(`BEGIN;\n${sinFiltro};\n${bloqueDeRespaldo(ids[0])}\nROLLBACK;`);
+    if (!sinElFiltro.some(([, , ajenas]) => Number(ajenas) > 0)) {
+      fallas.push('Con el filtro de la copia de respaldo quitado a propósito, la prueba no encontró la filtración: no prueba nada.');
+    } else {
+      console.log('Control: con el filtro de la copia de respaldo quitado, la prueba encuentra la filtración.');
+    }
+  }
+}
+
+// Con cualquier otro pase, las funciones de la copia no contestan.
+const otrosPases = [
+  { rol: 'authenticated', sesion: { sub: cuentas[0]?.id, role: 'authenticated' } },
+  { rol: 'trabajo_sin_persona', sesion: { role: 'trabajo_sin_persona', prestadora_id: ids[0] } },
+  { rol: 'anon', sesion: { role: 'anon' } },
+  { rol: 'copia_de_respaldo', sesion: { role: 'copia_de_respaldo' } },
+];
+for (const { rol, sesion } of otrosPases) {
+  const { avisos: deOtro } = correr(`BEGIN;
+SET LOCAL ROLE ${rol};
+SELECT set_config('request.jwt.claims', ${literal(JSON.stringify(sesion))}, true);
+DO $otro$
+BEGIN
+  BEGIN
+    PERFORM public.filas_del_respaldo('public.prestadoras', 0, 1);
+    RAISE NOTICE 'contestó';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'negado';
+  END;
+END
+$otro$;
+ROLLBACK;`);
+  const como = `${rol}${sesion.prestadora_id ? ' con Prestadora' : rol === 'copia_de_respaldo' ? ' sin Prestadora' : ''}`;
+  if (deOtro[0]?.[0] !== 'negado') fallas.push(`La copia de respaldo le contesta a ${como}: tiene que negarse.`);
+}
+console.log(`La copia de respaldo se niega a ${otrosPases.length} pases que no son el suyo.`);
 
 console.log(`${identidades.length} identidades × ${tablas.length} tablas leídas sin filtro de Prestadora.`);
 for (const i of identidades) console.log(`  ${i.etiqueta}: ve filas propias en ${propiasPorIdentidad.get(i.etiqueta) ?? 0} tablas.`);

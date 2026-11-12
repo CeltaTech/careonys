@@ -11,7 +11,7 @@ import { visibilidadDelPedido } from './visibilidadPrestadora.js';
 // maestra, y ahí las políticas de la base no frenan nada.
 //
 // El titular no se consulta: ve todo, siempre, y esa decisión no se configura.
-export async function accesosDeLaPersona({ db, usuarioId, clienteId, esTitular, visibilidad }) {
+export async function accesosDeLaPersona({ db, usuarioId, clienteId, prestadoraId, esTitular, visibilidad }) {
   if (esTitular) {
     return accesosEfectivos({ esTitular: true, visibilidad });
   }
@@ -23,6 +23,7 @@ export async function accesosDeLaPersona({ db, usuarioId, clienteId, esTitular, 
   const { data, error } = await db
     .from('permisos_personas_autorizadas')
     .select('clave, permitido')
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .eq('usuario_id', usuarioId);
 
@@ -47,6 +48,7 @@ export async function accesosDelPedido(req) {
       db: clienteDelPedido(req),
       usuarioId: req.usuarioCliente?.id,
       clienteId: req.usuarioCliente?.clienteId,
+      prestadoraId: req.usuarioCliente?.prestadoraId,
       esTitular: req.usuarioCliente?.esTitular === true,
       visibilidad,
     });

@@ -19,6 +19,12 @@ describe('respaldosQueSeBorran', () => {
     assert.deepEqual(fechaDelRespaldo(nombre('backup', f), CODIGO), { clase: 'backup', fecha: f });
   });
 
+  it('también reconoce el respaldo de los datos de una Prestadora, cifrado', () => {
+    const f = new Date('2026-10-26T03:57:15.961Z');
+    const datos = `${CODIGO}_datos_${f.toISOString().replace(/[:.]/g, '-')}.json.gz.age`;
+    assert.deepEqual(fechaDelRespaldo(datos, CODIGO), { clase: 'datos', fecha: f });
+  });
+
   it('guarda los diarios de los últimos 30 días', () => {
     const nombres = Array.from({ length: 30 }, (_, i) => nombre('backup', haceDias(i)));
     assert.deepEqual(respaldosQueSeBorran(nombres, CODIGO, AHORA), []);

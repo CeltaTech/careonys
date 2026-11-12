@@ -48,10 +48,11 @@ const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
 // Quiénes son las personas autorizadas de este Cliente. El nombre y el DNI salen de sus datos
 // de persona, que es donde se guardan una sola vez. El titular no tiene fila acá: ve todo siempre, y
 // ninguna autorización le puede quitar nada, ni siquiera una suya.
-async function personasAutorizadasDelCliente(clienteId) {
+async function personasAutorizadasDelCliente(clienteId, prestadoraId) {
   const { data, error } = await supabase
     .from('personas_autorizadas')
     .select('usuario_id, persona_id, email, created_at, personas(nombre, apellido, dni)')
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
@@ -75,6 +76,7 @@ async function ultimoPedidoPorPersona(clienteId, prestadoraId) {
   const { data: filas, error } = await supabase
     .from('permisos_personas_autorizadas')
     .select('usuario_id, clave, permitido')
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId);
   if (error) throw new Error(error.message);
 
@@ -88,13 +90,14 @@ async function ultimoPedidoPorPersona(clienteId, prestadoraId) {
 
 // Lo que la autorización firmada pide pasa a regir: reemplaza entero lo anterior. Una persona que
 // se retiró mientras la autorización esperaba firma no recibe nada.
-async function aplicarLosAccesosPedidos({ clienteId, instruccionId, accesosPedidos }) {
-  const presentes = new Set((await personasAutorizadasDelCliente(clienteId)).map((persona) => persona.usuarioId));
+async function aplicarLosAccesosPedidos({ clienteId, prestadoraId, instruccionId, accesosPedidos }) {
+  const presentes = new Set((await personasAutorizadasDelCliente(clienteId, prestadoraId)).map((persona) => persona.usuarioId));
   const ahora = new Date().toISOString();
 
   const filas = Object.entries(accesosPedidos ?? {})
     .filter(([usuarioId]) => presentes.has(usuarioId))
     .flatMap(([usuarioId, accesos]) => Object.entries(accesos).map(([clave, permitido]) => ({
+      prestadora_id: prestadoraId,
       cliente_id: clienteId,
       usuario_id: usuarioId,
       clave,
@@ -106,6 +109,7 @@ async function aplicarLosAccesosPedidos({ clienteId, instruccionId, accesosPedid
   const { error: errorBorrar } = await supabase
     .from('permisos_personas_autorizadas')
     .delete()
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId);
   if (errorBorrar) throw new Error(errorBorrar.message);
 
@@ -148,7 +152,7 @@ async function armarInstruccion({ clienteId, prestadoraId, cargadaPor, accesosPe
   }
 
   // Sin ninguna persona también se arma: es la autorización que retira a la última.
-  const personas = await personasAutorizadasDelCliente(clienteId);
+  const personas = await personasAutorizadasDelCliente(clienteId, prestadoraId);
   const anterior = await ultimoPedidoPorPersona(clienteId, prestadoraId);
 
   const visibilidad = await visibilidadDeLaPrestadora(supabase, prestadoraId);
@@ -387,6 +391,7 @@ async function cerrarConCodigo({ instruccionId, clienteId, prestadoraId, codigo,
 
   await aplicarLosAccesosPedidos({
     clienteId: instruccion.cliente_id,
+    prestadoraId,
     instruccionId,
     accesosPedidos: instruccion.accesos_pedidos,
   });
@@ -426,6 +431,7 @@ async function cerrarLaInstruccionConDocumentoFirmado({ instruccionId, prestador
 
   await aplicarLosAccesosPedidos({
     clienteId: instruccion.cliente_id,
+    prestadoraId,
     instruccionId,
     accesosPedidos: instruccion.accesos_pedidos,
   });
@@ -435,12 +441,13 @@ async function cerrarLaInstruccionConDocumentoFirmado({ instruccionId, prestador
 // del Panel. Se devuelve siempre el catálogo entero, tenga o no fila guardada cada clave.
 async function accesosDeCadaPersona({ clienteId, prestadoraId }) {
   if (!prestadoraId) return [];
-  const personas = await personasAutorizadasDelCliente(clienteId);
+  const personas = await personasAutorizadasDelCliente(clienteId, prestadoraId);
   if (personas.length === 0) return [];
 
   const { data: filas } = await supabase
     .from('permisos_personas_autorizadas')
     .select('usuario_id, clave, permitido')
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId);
 
   const visibilidad = await visibilidadDeLaPrestadora(supabase, prestadoraId);

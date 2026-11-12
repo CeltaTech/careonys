@@ -1,14 +1,12 @@
 name: Backup diario a buckets (R2 + B2)
 
-# Corre pg_dump contra Supabase y sube el resultado comprimido a los dos buckets de backup
-# (Cloudflare R2 como principal, Backblaze B2 como espejo) — ver docs/PLAN_HASTA_PRODUCCION.md y
-# docs/SECURITY.md, sección de backup propio independiente del nativo de Supabase.
+# Sube el código entero, con toda su historia, a los dos depósitos de respaldo (Cloudflare R2
+# como principal, Backblaze B2 como espejo). Estaba sólo en GitHub: una copia, en una cuenta, en
+# manos de un tercero.
 #
-# Y después el código entero, con toda su historia. Estaba sólo en GitHub: una copia, en una
-# cuenta, en manos de un tercero.
-#
-# Los archivos de los depósitos no se copian acá: los copia el backend cada noche, con una
-# credencial que sólo los lee (backend/src/utils/copiaDeLosArchivos.js).
+# Los datos y los archivos de las Prestadoras no se respaldan acá: los respalda el backend cada
+# noche, de a una Prestadora y cifrados con la clave de cada una
+# (backend/src/utils/respaldoDeLosDatos.js y backend/src/utils/copiaDeLosArchivos.js).
 on:
   schedule:
     - cron: '0 6 * * *' # 03:00 America/Argentina/Buenos_Aires (UTC-3)
@@ -24,16 +22,6 @@ jobs:
           # completo, y con una copia recortada el paquete sale igual y no sirve para restaurar.
           fetch-depth: 0
 
-      - name: Instalar cliente de Postgres 17 (pg_dump)
-        # El servidor de Supabase corre Postgres 17.6 — pg_dump exige que su versión sea
-        # >= la del servidor. El repo apt por defecto de Ubuntu solo trae la 16, así que se
-        # agrega el repo oficial de PostgreSQL (apt.postgresql.org) para instalar la 17.
-        run: |
-          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -48,11 +36,6 @@ jobs:
       - name: Ejecutar backup
         working-directory: backend
         env:
-          DB_HOST: ${{ secrets.BACKUP_DB_HOST }}
-          DB_PORT: ${{ secrets.BACKUP_DB_PORT }}
-          DB_NAME: ${{ secrets.BACKUP_DB_NAME }}
-          DB_USER: ${{ secrets.BACKUP_DB_USER }}
-          DB_PASSWORD: ${{ secrets.BACKUP_DB_PASSWORD }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

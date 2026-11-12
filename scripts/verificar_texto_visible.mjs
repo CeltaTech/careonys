@@ -360,20 +360,14 @@ const TEXTOS_DE_LA_PLATAFORMA = [
   { tabla: 'tipos_documento_asistente', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
 ];
 
-/* Cómo se llega a la base. Con las variables puestas —así corre en la publicación,
-   con las mismas claves que ya usa el respaldo diario— se entra derecho. Sin ellas
-   —así corre en la máquina de quien programa— se entra por el contenedor local, que
-   tiene usuario y contraseña fijos y conocidos, no son un secreto. */
+/* Cómo se llega a la base: siempre por el contenedor local, que tiene usuario y contraseña
+   fijos y conocidos, no son un secreto. En la publicación es la base que
+   `probar-aislamiento-en-la-base.yml` levanta desde cero con las migraciones, que es el único
+   lugar de donde sale el catálogo de la plataforma. Antes se entraba a la base de verdad con la
+   cuenta del respaldo, que leía todas las Prestadoras: era una llave maestra, y se retiró
+   (`celtatech/CLAUDE.md`, sección «Aislamiento entre Organizaciones»). */
 function consultarBase(consulta) {
   const opciones = { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 };
-  if (process.env.DB_HOST) {
-    const { DB_HOST, DB_PORT = '5432', DB_NAME = 'postgres', DB_USER = 'postgres', DB_PASSWORD } = process.env;
-    return execFileSync(
-      'psql',
-      [`postgresql://${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}`, '-At', '-v', 'ON_ERROR_STOP=1', '-c', consulta],
-      { ...opciones, env: { ...process.env, PGPASSWORD: DB_PASSWORD, PGCONNECT_TIMEOUT: '15' } },
-    );
-  }
   /* El contenedor local se llama `supabase_db_<proyecto>`, y ese `<proyecto>` sale de
      `supabase/config.toml`, que es quien se lo puso. Se lee de ahí y no se escribe a mano:
      es un solo lugar donde está la verdad (regla 12 del §7 de CLAUDE.md) y, además, ese
@@ -434,9 +428,13 @@ function informar(titulo, hallazgos, formatear, explicacion) {
   return true;
 }
 
+/* `--sin-base` lo usa `verificar-textos.yml`, que corre en cada push y no levanta ninguna base:
+   los textos de la base los revisa `probar-aislamiento-en-la-base.yml`, que corre cada vez que
+   cambia `supabase/`, que es lo único que puede cambiarlos. */
+const sinBase = process.argv.includes('--sin-base');
 const aMano = revisarTextoAMano();
 const trato = revisarTrato();
-const base = revisarTextosDeLaBase();
+const base = sinBase ? null : revisarTextosDeLaBase();
 
 const falla1 = informar(
   'Texto escrito a mano en una pantalla',
@@ -457,12 +455,14 @@ const falla2 = informar(
    enteraría. En la máquina de quien programa solamente avisa, porque ahí el
    contenedor local puede estar apagado por cualquier motivo. */
 let falla3 = false;
-if (!base.revisada) {
+if (sinBase) {
+  console.log('\n### Textos guardados en la base: los revisa la prueba de aislamiento en la base');
+} else if (!base.revisada) {
   const enLaPublicacion = !!process.env.CI;
   console.log(`\n### Textos guardados en la base: no se pudo consultar\n${base.motivo}`);
   console.log(
     enLaPublicacion
-      ? '\nSin base no hay control. Hace falta revisar las claves de conexión del automatismo.'
+      ? '\nSin base no hay control. Hace falta revisar que el automatismo haya levantado la base local.'
       : '\nAviso: los textos guardados en la base quedaron sin revisar. Para revisarlos hace\nfalta la base local encendida (`npx supabase start`). El automatismo de la\npublicación sí los revisa siempre.',
   );
   falla3 = enLaPublicacion;

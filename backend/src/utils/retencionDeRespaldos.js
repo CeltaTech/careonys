@@ -3,14 +3,14 @@
 
    Los diarios de los últimos DIAS_DIARIOS días, y de lo anterior uno por mes —el más viejo de cada
    mes— durante MESES_MENSUALES meses. Lo demás se borra. Vale por separado para el volcado de la
-   base y para el paquete del código: cada uno tiene su propia fila de diarios y de mensuales.
+   base, para el paquete del código y para el respaldo de los datos de cada Prestadora: cada uno tiene su propia fila de diarios y de mensuales.
 
    POR QUÉ EL MÁS VIEJO DE CADA MES. Es el único que no cambia con el paso de los días: el de un mes
    que ya pasó sigue siendo el más viejo mañana. Si se eligiera el más nuevo, cada noche se borraría
    el mensual de ayer para guardar el de hoy.
 
    SÓLO SE TOCA LO QUE TIENE NOMBRE DE RESPALDO. Un archivo que no tiene la forma
-   `<código>_backup_<fecha>` o `<código>_codigo_<fecha>` no se borra nunca, aunque esté en el mismo
+   `<código>_backup_<fecha>`, `<código>_codigo_<fecha>` o `<código>_datos_<fecha>` no se borra nunca, aunque esté en el mismo
    depósito: lo que se copia de los depósitos de archivos vive al lado y no tiene fecha. */
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -20,7 +20,7 @@ export const MESES_MENSUALES = Number(process.env.RESPALDOS_MESES_MENSUALES || 1
 
 /** La clase y la fecha de un respaldo por su nombre, o null si el nombre no es de un respaldo. */
 export function fechaDelRespaldo(nombre, codigo) {
-  const m = new RegExp(`^${codigo}_(backup|codigo)_(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2})-(\\d{2})-(\\d{2})-(\\d{3})Z\\.`).exec(nombre);
+  const m = new RegExp(`^${codigo}_(backup|codigo|datos)_(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2})-(\\d{2})-(\\d{2})-(\\d{3})Z\\.`).exec(nombre);
   if (!m) return null;
   const [, clase, a, mes, d, h, mi, s, ms] = m;
   return { clase, fecha: new Date(Date.UTC(+a, +mes - 1, +d, +h, +mi, +s, +ms)) };

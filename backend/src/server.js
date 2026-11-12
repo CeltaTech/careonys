@@ -61,6 +61,7 @@ import { recordarLosEnlacesDeActivacion } from './utils/activacionCuenta.js';
 import { avisarLosCambiosDeEmail } from './utils/avisosDeEmailCambiado.js';
 import { avisarLosPlazosDeUbicacionVencidos } from './utils/plazoDeLaUbicacion.js';
 import { copiarLosArchivosAlRespaldo } from './utils/copiaDeLosArchivos.js';
+import { respaldarLosDatos } from './utils/respaldoDeLosDatos.js';
 import { borrarLoVencidoDelRegistroDeAccesos } from './utils/borradoDelRegistroDeAccesos.js';
 import { avisarElBorradoDelRegistroDeAccesos } from './utils/avisoDeBorradoDelRegistroDeAccesos.js';
 import { avisarLasAlarmasDeLasCuentasAutomaticas } from './utils/alarmaDeLasCuentasAutomaticas.js';
@@ -339,16 +340,20 @@ programar(borrarLoVencidoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: tru
 // aviso toca hoy lo decide la base; el que no salió hoy sale mañana.
 programar(avisarElBorradoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: true });
 
-// La copia de los archivos a los depósitos de respaldo. No pasa por `programar` porque no trabaja
-// de a una Prestadora: copia todo, con la credencial de la copia de respaldo, que sólo lee los
-// archivos (utils/copiaDeLosArchivos.js). Una vez por día; copia sólo lo que falta, así que
-// volver a correrla al arrancar el backend no repite lo que ya está arriba. Tampoco se encima.
+// El respaldo de los datos y la copia de los archivos, cifrados, a los dos depósitos de respaldo.
+// No pasan por `programar` porque usan otra cuenta: la de la copia de respaldo de cada
+// Prestadora, que sólo lee sus filas y sus archivos (utils/respaldoDeLosDatos.js y
+// utils/copiaDeLosArchivos.js). Una vez por día; los datos dejan uno por día y los archivos copian
+// sólo lo que falta, así que volver a correrlos al arrancar el backend no repite lo que ya está
+// arriba. Tampoco se enciman.
 {
   let copiando = false;
   const copiar = () => {
     if (copiando) return;
     copiando = true;
-    copiarLosArchivosAlRespaldo()
+    respaldarLosDatos()
+      .catch((err) => console.error('respaldarLosDatos:', err?.message ?? err))
+      .then(() => copiarLosArchivosAlRespaldo())
       .catch((err) => console.error('copiarLosArchivosAlRespaldo:', err?.message ?? err))
       .finally(() => { copiando = false; });
   };

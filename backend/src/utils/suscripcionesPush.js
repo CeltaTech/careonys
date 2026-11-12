@@ -66,11 +66,7 @@ export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, end
     if (duenoAnterior && duenoAnterior !== usuarioId) {
       const { error: errorRastro } = await db.from('auditoria_cambio_dueno_push').insert({
         suscripcion_id: guardada.id,
-        // Las dos son la misma: un cambio de dueño ocurre siempre adentro de una Prestadora. Las dos
-        // columnas quedan porque son las que tiene la tabla, y una anotación vieja puede traer dos
-        // distintas, de cuando el aparato se anotaba una sola vez en total.
-        prestadora_anterior: prestadoraId,
-        prestadora_nueva: prestadoraId,
+        prestadora_id: prestadoraId,
         usuario_anterior: duenoAnterior,
         usuario_nuevo: usuarioId,
         rol_anterior: anterior.asistente_id ? 'asistente' : 'cliente',

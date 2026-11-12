@@ -432,8 +432,8 @@ INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_
 --
 -- Estar anotado dice quién entra, no qué ve. Qué ve cada persona sale de
 -- `permisos_personas_autorizadas`, más abajo.
-INSERT INTO public.personas_autorizadas (usuario_id, cliente_id, persona_id, email) VALUES
-  ('40000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000007', 'marcela.gomez@sandbox.local');
+INSERT INTO public.personas_autorizadas (prestadora_id, usuario_id, cliente_id, persona_id, email) VALUES
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000007', 'marcela.gomez@sandbox.local');
 
 -- Lo que la titular del Cliente Gómez pidió por escrito para Marcela: que acompañe el cuidado
 -- y no vea el dinero ni el recorrido del Asistente en el mapa. Es el caso más común de la vida
@@ -442,17 +442,17 @@ INSERT INTO public.personas_autorizadas (usuario_id, cliente_id, persona_id, ema
 -- Las once claves se escriben todas, incluso las que quedan en el valor de fábrica: la función
 -- de la base niega cuando no encuentra fila, así que una clave ausente sería un acceso negado
 -- que nadie negó.
-INSERT INTO public.permisos_personas_autorizadas (cliente_id, usuario_id, clave, permitido) VALUES
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_reportes',              true),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_ficha_del_paciente',    true),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_medicacion',            true),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_guardias',              true),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_ubicacion_en_vivo',     false),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_alertas',               true),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_internaciones',         true),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_dinero',                false),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_califica_al_asistente', false),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_pide_medicacion',       false);
+INSERT INTO public.permisos_personas_autorizadas (prestadora_id, cliente_id, usuario_id, clave, permitido) VALUES
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_reportes',              true),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_ficha_del_paciente',    true),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_medicacion',            true),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_guardias',              true),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_ubicacion_en_vivo',     false),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_alertas',               true),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_internaciones',         true),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_dinero',                false),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_califica_al_asistente', false),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_pide_medicacion',       false);
 
 -- Quiénes son los Pacientes: sus datos, con su nombre, su documento, cuándo nació y dónde
 -- vive. En el Paciente queda sólo lo de recibir el cuidado.

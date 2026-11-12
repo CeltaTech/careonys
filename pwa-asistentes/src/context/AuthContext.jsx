@@ -120,6 +120,9 @@ export function AuthProvider({ children }) {
   // teléfono y se vuelve a abrir con la huella (`lib/accesoGuardado.js`). Supabase no tiene una
   // forma pública de soltar la sesión sin revocarla, así que se usa la interna; si una versión
   // nueva la saca, se cierra como siempre.
+  //
+  // La marca de la Prestadora se olvida siempre: con la sesión cerrada, el teléfono no dice de qué
+  // Prestadora es la cuenta, se haya guardado el acceso o no. Al volver a entrar se pide de nuevo.
   async function logout() {
     const { data } = await supabase.auth.getSession();
     let guardada = false;
@@ -128,10 +131,10 @@ export function AuthProvider({ children }) {
     }
     if (guardada) {
       await supabase.auth._removeSession();
-      return;
+    } else {
+      descartarSesionGuardada();
+      await supabase.auth.signOut();
     }
-    descartarSesionGuardada();
-    await supabase.auth.signOut();
     await olvidarMarca();
   }
 

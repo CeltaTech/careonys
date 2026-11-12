@@ -427,18 +427,13 @@ también está: la siembra le da a Ana Álvarez una cuenta en cada Prestadora, c
 dos, y `scripts/probar_aislamiento_en_la_base.mjs` falla si nadie tiene cuenta en las dos o si
 alguna de esas cuentas no ve lo suyo.
 
-**Lo que falta son dos cosas, las dos ya ubicadas.** La recuperación de la contraseña tarda más
-cuando el nombre de usuario existe, porque recién ahí emite el enlace y lo manda
-(`backend/src/utils/recuperacionDeClave.js:62-80`), y esa demora delata la cuenta. Y al salir no
-se descarta todo lo cargado: con la entrada por huella guardada las aplicaciones no borran la marca
-de la Prestadora (`pwa-asistentes/src/context/AuthContext.jsx:123-136`, igual en `pwa-clientes`),
-la cola de lo cargado sin conexión queda hasta la próxima sincronización
-(`pwa-asistentes/src/lib/colaOffline.js`), y el Panel sólo cierra la sesión
-(`panel/src/context/AuthContext.jsx:119-121`) y deja lo suyo guardado en el navegador.
-
 **Y al entrar no se insinúa nada.** Un nombre de usuario que no existe se trata igual que una
 contraseña equivocada: el mismo mensaje. Y pedir la recuperación de la contraseña contesta lo mismo
-exista el nombre o no.
+exista el nombre o no. Las dos tardan lo mismo exista la cuenta o no: la entrada le hace a la base
+una sola pregunta (`backend/src/routes/ingreso.js`) y la recuperación contesta antes de buscar la
+cuenta (`backend/src/routes/recuperarClave.js`). Al cerrar la sesión, las dos aplicaciones olvidan
+siempre la marca de la Prestadora, también con la entrada por huella guardada
+(`pwa-clientes/src/context/AuthContext.jsx`).
 
 **Nunca en dos a la vez.** Para hacer o ver algo en la segunda Prestadora hay que salir de la
 primera y entrar a la otra. No existe ninguna pantalla que muestre las dos juntas, ni una lista con

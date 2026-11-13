@@ -32,6 +32,7 @@ import { mensajeDeError } from '../lib/errores';
 import { RenglonesDeEmergencias } from '../components/emergencias/RenglonesDeEmergencias';
 import { useEmergenciasSinAtender } from '../context/EmergenciasSinAtenderContext';
 import './EstadoActual.css';
+import { AlarmaDeAjustesPorIndice } from '../components/AlarmaDeAjustesPorIndice';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 import { informacionDeSalud } from '../lib/informacionDeSalud';
 
@@ -484,6 +485,7 @@ export function EstadoActual() {
   return (
     <div>
       <Cabecera titulo={tx.titulo} />
+      <AlarmaDeAjustesPorIndice />
 
       <div className="panel-grilla panel-kpis">
         <Kpi

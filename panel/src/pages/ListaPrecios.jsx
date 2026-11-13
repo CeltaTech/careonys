@@ -11,6 +11,10 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { formatearImporte } from '../lib/dinero';
 import { ListaPrecioDetalle } from './ListaPrecioDetalle';
 import { ImportarListaDePrecios } from '../components/ImportarListaDePrecios';
+import { PromocionDeLista } from './PromocionDeLista';
+import { admitePromocion, conSusPromociones, esPromocion, promocionRige } from '../lib/promocionDeLista';
+import { fechaVisible } from '../lib/fechaVisible';
+import { hoyISO } from '../lib/horarios';
 import '../styles/molde-paginas.css';
 
 export function ListaPrecios() {
@@ -20,13 +24,16 @@ export function ListaPrecios() {
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '' });
   const [seleccionado, setSeleccionado] = useState(null);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
+  const [conPromocion, setConPromocion] = useState(null);
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
 
   const filasFiltradas = useMemo(() => {
     // Un precio reemplazado queda guardado con su fecha de fin y no se muestra entre los vigentes.
-    const hoy = new Date().toISOString().slice(0, 10);
-    return filas.filter((p) => {
+    // Una promoción vencida tampoco: el precio de siempre volvió a regir solo. Cada promoción va
+    // debajo de su precio de siempre.
+    const hoy = hoyISO();
+    return conSusPromociones(filas).filter((p) => {
       if (p.vigente_hasta && p.vigente_hasta < hoy) return false;
       if (!f.busqueda) return true;
       const b = f.busqueda.toLowerCase();
@@ -70,6 +77,7 @@ export function ListaPrecios() {
                 <th>{t.lista_precios.col_modalidad}</th>
                 <th>{t.lista_precios.col_precio}</th>
                 <th>{t.lista_precios.col_vigente_desde}</th>
+                <th>{t.lista_precios.col_vigente_hasta}</th>
                 <th>{t.lista_precios.col_activo}</th>
                 <th></th>
               </tr>
@@ -78,13 +86,20 @@ export function ListaPrecios() {
               {filasFiltradas.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <b>{p.tipo_servicio}</b>
+                    {esPromocion(p) ? (
+                      <span className={claseBadge(promocionRige(p, hoyISO()) ? 'vigente' : 'programada')}>
+                        {t.lista_precios.promocion}
+                      </span>
+                    ) : (
+                      <b>{p.tipo_servicio}</b>
+                    )}
                   </td>
                   <td>{p.modalidad}</td>
                   {/* Cada fila trae su propia moneda (`lista_precios.moneda`, que completa sola
                       la base): el precio se muestra con ella y no con la que se suponga. */}
                   <td>{formatearImporte(p.precio, p.moneda, locale)}</td>
-                  <td>{new Date(p.vigente_desde).toLocaleDateString(locale)}</td>
+                  <td>{fechaVisible(p.vigente_desde, locale)}</td>
+                  <td>{fechaVisible(p.vigente_hasta, locale)}</td>
                   <td>
                     <span className={claseBadge(p.activo ? 'activo' : 'inactivo')}>
                       {p.activo ? t.lista_precios.activo_si : t.lista_precios.activo_no}
@@ -92,8 +107,16 @@ export function ListaPrecios() {
                   </td>
                   <td>
                     <button type="button" className="panel-enlace" onClick={() => setSeleccionado(p)}>
-                      {esAdmin ? t.comun.editar : t.comun.ver_detalle}
+                      {esAdmin && !esPromocion(p) ? t.comun.editar : t.comun.ver_detalle}
                     </button>
+                    {esAdmin && admitePromocion(p) && (
+                      <>
+                        {' '}
+                        <button type="button" className="panel-enlace" onClick={() => setConPromocion(p)}>
+                          {t.lista_precios.cargar_promocion}
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -113,6 +136,16 @@ export function ListaPrecios() {
           onActualizada={() => {
             setSeleccionado(null);
             setCreandoNuevo(false);
+            recargar();
+          }}
+        />
+      )}
+      {conPromocion && (
+        <PromocionDeLista
+          precio={conPromocion}
+          onClose={() => setConPromocion(null)}
+          onCargada={() => {
+            setConPromocion(null);
             recargar();
           }}
         />

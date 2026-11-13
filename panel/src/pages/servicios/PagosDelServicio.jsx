@@ -15,11 +15,17 @@ import {
   plazoQueSePuedeGuardar,
 } from '../../lib/facturacionDeClientes';
 import {
+  BORDES,
+  CLAVES_SI_NO,
   FRECUENCIAS_DE_COBRO_POSIBLES,
   MEDICIONES_POSIBLES,
+  condicionesDe,
   condicionDelServicioQueSePuedeGuardar,
 } from '../../lib/condicionesDelCliente';
+import { CONDICIONES_DE_CADA_MEDICION } from '../../lib/calcularLiquidacion';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { ActualizacionDelServicio } from '../../components/ActualizacionDelServicio';
+import { DescuentosDelServicio } from './DescuentosDelServicio';
 import '../../styles/molde-paginas.css';
 
 /* Lo comercial de un Servicio: quién contrata, quién paga, en qué plazo, y si quien paga firmó.
@@ -30,23 +36,69 @@ import '../../styles/molde-paginas.css';
    de Personas y no se teclean.
 
    Vive en su propia tabla, que la base le abre sólo a quien tiene el permiso de lo comercial o el
-   de lo que firma el Responsable de pagos. */
-function formDe(condiciones) {
-  const dias = condiciones?.dias_hasta_el_vencimiento;
+   de lo que firma el Responsable de pagos.
+
+   LAS CONDICIONES DE COBRO. Cada casillero muestra el valor que rige para este Servicio: el suyo,
+   o el de la configuración de facturación de la Prestadora, o el de fábrica, en ese orden, según
+   `condicionesDe`. Elegir el mismo valor que rige desde arriba guarda vacío, así el Servicio sigue
+   a la Prestadora si ella lo cambia después.
+
+   La configuración de la Prestadora sólo se la abre la base a la administración. Para el resto no
+   se sabe qué rige desde arriba, así que lo que se muestra puede no ser lo de la Prestadora: por
+   eso un casillero que no se tocó se guarda tal como estaba, y uno que se tocó se guarda con el
+   valor elegido, sin compararlo contra lo que no se pudo leer. */
+const SELECT_DE_LO_COMERCIAL = [
+  'contratante_persona_id',
+  'pagador_tipo',
+  'pagador_persona_id',
+  'dias_hasta_el_vencimiento',
+  'frecuencia_de_cobro',
+  'medicion',
+  'cobra_cancelada_por_el_cliente',
+  'descuenta_lo_no_prestado',
+  'cobra_guardias_adicionales',
+  'cobra_horas_adicionales',
+  'recargo_del_adicional',
+].join(', ');
+
+// Las condiciones de cobro que se deciden desde acá. El índice y su aplicación los decide
+// `ActualizacionDelServicio`.
+const CONDICIONES_DEL_SERVICIO = Object.freeze([
+  'frecuencia_de_cobro',
+  'medicion',
+  ...CLAVES_SI_NO,
+  'recargo_del_adicional',
+]);
+
+function condicionesVisiblesDe(fila, regla) {
+  const rigen = condicionesDe(regla, fila);
+  const visibles = {};
+  for (const clave of CONDICIONES_DEL_SERVICIO) visibles[clave] = rigen[clave];
+  visibles.recargo_del_adicional = String(rigen.recargo_del_adicional ?? '');
+  return visibles;
+}
+
+function formDe(fila, regla) {
+  const dias = fila?.dias_hasta_el_vencimiento;
   return {
     dias_hasta_el_vencimiento: dias === null || dias === undefined ? '' : String(dias),
-    pagador_tipo: condiciones?.pagador_tipo || '',
-    pagador_persona_id: condiciones?.pagador_persona_id || null,
-    contratante_persona_id: condiciones?.contratante_persona_id || null,
-    // Vacío: rige la de la configuración de facturación de la Prestadora.
-    frecuencia_de_cobro: condiciones?.frecuencia_de_cobro || '',
-    medicion: condiciones?.medicion || '',
+    pagador_tipo: fila?.pagador_tipo || '',
+    pagador_persona_id: fila?.pagador_persona_id || null,
+    contratante_persona_id: fila?.contratante_persona_id || null,
+    ...condicionesVisiblesDe(fila, regla),
   };
 }
 
 export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmin, onGuardado }) {
   const { t } = useLocale();
-  const [form, setForm] = useState(() => formDe(null));
+  const tc = t.configuracion.condiciones_cliente;
+  const prestadoraId = usePrestadoraActual();
+  const [form, setForm] = useState(() => formDe(null, null));
+  const [fila, setFila] = useState(null);
+  const [regla, setRegla] = useState(null);
+  const [reglaConocida, setReglaConocida] = useState(false);
+  const [tocadas, setTocadas] = useState(() => new Set());
+  const [recargoMal, setRecargoMal] = useState(false);
   const [estado, setEstado] = useState('cargando');
   const [errorDeCarga, setErrorDeCarga] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -56,19 +108,37 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
   const cargar = useCallback(async () => {
     setEstado('cargando');
     setErrorDeCarga(null);
-    const { data, error: falla } = await supabase
-      .from('condiciones_comerciales_servicio')
-      .select('contratante_persona_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento, frecuencia_de_cobro, medicion')
-      .eq('servicio_id', servicio.id)
-      .maybeSingle();
-    if (falla) {
-      setErrorDeCarga(mensajeDeError(falla, t));
+    const leeLaRegla = !!esAdmin && !!prestadoraId;
+    const [comercial, configuracion] = await Promise.all([
+      supabase
+        .from('condiciones_comerciales_servicio')
+        .select(SELECT_DE_LO_COMERCIAL)
+        .eq('servicio_id', servicio.id)
+        .maybeSingle(),
+      // Sólo la administración la puede leer. Si no se pudo, se sigue sin ella.
+      leeLaRegla
+        ? supabase
+          .from('configuracion_facturacion_clientes')
+          .select('regla')
+          .eq('prestadora_id', prestadoraId)
+          .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+    if (comercial.error) {
+      setErrorDeCarga(mensajeDeError(comercial.error, t));
       setEstado('error');
       return;
     }
-    setForm(formDe(data));
+    const conocida = leeLaRegla && !configuracion.error;
+    const deLaPrestadora = conocida ? configuracion.data?.regla ?? null : null;
+    setFila(comercial.data);
+    setRegla(deLaPrestadora);
+    setReglaConocida(conocida);
+    setTocadas(new Set());
+    setRecargoMal(false);
+    setForm(formDe(comercial.data, deLaPrestadora));
     setEstado('listo');
-  }, [servicio.id, t]);
+  }, [servicio.id, t, esAdmin, prestadoraId]);
 
   useEffect(() => {
     cargar();
@@ -76,7 +146,25 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
 
   function setCampo(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
+    if (CONDICIONES_DEL_SERVICIO.includes(campo)) setTocadas((antes) => new Set(antes).add(campo));
+    if (campo === 'recargo_del_adicional') setRecargoMal(false);
     setGuardado(false);
+  }
+
+  // La condición que no se tocó queda como estaba; la que se tocó pasa por la misma revisión que
+  // usa el backend.
+  function condicionesParaGuardar() {
+    const valores = {};
+    for (const clave of CONDICIONES_DEL_SERVICIO) {
+      if (!tocadas.has(clave)) {
+        valores[clave] = fila?.[clave] ?? null;
+        continue;
+      }
+      const revisada = condicionDelServicioQueSePuedeGuardar(clave, form[clave], reglaConocida ? regla : undefined);
+      if (!revisada.ok) return { ok: false, clave };
+      valores[clave] = revisada.valor;
+    }
+    return { ok: true, valores };
   }
 
   async function guardar() {
@@ -86,10 +174,11 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
       setError(t.clientes.plazo_fuera_de_borde);
       return;
     }
-    const frecuencia = condicionDelServicioQueSePuedeGuardar('frecuencia_de_cobro', form.frecuencia_de_cobro);
-    const medicion = condicionDelServicioQueSePuedeGuardar('medicion', form.medicion);
-    if (!frecuencia.ok || !medicion.ok) {
-      setError(t.configuracion.condiciones_cliente.valor_no_valido);
+    const condiciones = condicionesParaGuardar();
+    if (!condiciones.ok) {
+      // Las demás son listas cerradas o casillas: lo único que se puede cargar mal es el recargo.
+      setRecargoMal(true);
+      document.getElementsByName('recargo_del_adicional')[0]?.focus();
       return;
     }
     setGuardando(true);
@@ -101,8 +190,7 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
         pagador_tipo: form.pagador_tipo || null,
         pagador_persona_id: form.pagador_persona_id || null,
         contratante_persona_id: form.contratante_persona_id || null,
-        frecuencia_de_cobro: frecuencia.valor,
-        medicion: medicion.valor,
+        ...condiciones.valores,
       })
       .eq('servicio_id', servicio.id);
     setGuardando(false);
@@ -111,6 +199,11 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
       return;
     }
     setGuardado(true);
+    // Lo guardado pasa a ser lo que está, y lo que se ve vuelve a salir de ahí.
+    const nuevaFila = { ...fila, ...condiciones.valores };
+    setFila(nuevaFila);
+    setTocadas(new Set());
+    setForm((f) => ({ ...f, ...condicionesVisiblesDe(nuevaFila, regla) }));
     onGuardado?.();
   }
 
@@ -164,35 +257,62 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
           />
         </div>
         <FormField
-          label={t.configuracion.condiciones_cliente.frecuencia_de_cobro}
+          label={tc.frecuencia_de_cobro}
           name="frecuencia_de_cobro"
           type="select"
           value={form.frecuencia_de_cobro}
           onChange={(e) => setCampo('frecuencia_de_cobro', e.target.value)}
           disabled={!puedeEditar}
         >
-          <option value="">{t.configuracion.condiciones_cliente.la_de_la_configuracion}</option>
           {FRECUENCIAS_DE_COBRO_POSIBLES.map((valor) => (
             <option key={valor} value={valor}>
-              {t.configuracion.condiciones_cliente.valores.frecuencia_de_cobro[valor]}
+              {tc.valores.frecuencia_de_cobro[valor]}
             </option>
           ))}
         </FormField>
         <FormField
-          label={t.configuracion.condiciones_cliente.medicion}
+          label={tc.medicion}
           name="medicion"
           type="select"
           value={form.medicion}
           onChange={(e) => setCampo('medicion', e.target.value)}
           disabled={!puedeEditar}
         >
-          <option value="">{t.configuracion.condiciones_cliente.la_de_la_configuracion}</option>
           {MEDICIONES_POSIBLES.map((valor) => (
             <option key={valor} value={valor}>
-              {t.configuracion.condiciones_cliente.valores.medicion[valor]}
+              {tc.valores.medicion[valor]}
             </option>
           ))}
         </FormField>
+        {/* Sólo las condiciones que cambian algo con la medición elegida. */}
+        {(CONDICIONES_DE_CADA_MEDICION[form.medicion] ?? []).map((clave) =>
+          clave === 'recargo_del_adicional' ? (
+            <FormField
+              key={clave}
+              label={tc.recargo_del_adicional}
+              name={clave}
+              type="number"
+              min={BORDES.recargo_del_adicional.minimo}
+              max={BORDES.recargo_del_adicional.maximo}
+              step="1"
+              value={form.recargo_del_adicional}
+              error={recargoMal ? tc.recargo_fuera_de_borde : undefined}
+              onChange={(e) => setCampo(clave, e.target.value)}
+              disabled={!puedeEditar}
+            />
+          ) : (
+            <div className="molde-ancho" key={clave}>
+              <FormField
+                label={tc[clave]}
+                name={clave}
+                type="checkbox"
+                checked={form[clave] === true}
+                onChange={(e) => setCampo(clave, e.target.checked)}
+                disabled={!puedeEditar}
+              />
+            </div>
+          )
+        )}
       </div>
       {puedeEditar && (
         <div className="molde-acciones">
@@ -203,6 +323,8 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
       )}
       {/* Cómo se actualiza el precio de este Servicio. Lo construye otro trabajo, en su propio archivo. */}
       <ActualizacionDelServicio servicioId={servicio.id} />
+      {/* Los descuentos de este Cliente en su Servicio: cada uno se ve aparte en la liquidación. */}
+      <DescuentosDelServicio servicio={servicio} puedeEditar={puedeEditar} />
       {/* Si el Responsable de pagos firmó y qué documentos faltan. Avisa, no bloquea. */}
       <EstadoDelPagador
         servicioId={servicio.id}

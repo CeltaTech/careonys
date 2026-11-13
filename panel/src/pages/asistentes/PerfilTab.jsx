@@ -12,10 +12,10 @@ import {
 } from '../../lib/modalidades';
 import { COLUMNA_DEL_VALOR, UNIDADES_POSIBLES, unidadDeMedicionDe } from '../../lib/formaDePago';
 import {
-  FRECUENCIAS,
   FRECUENCIAS_POSIBLES,
   FRECUENCIA_DE_PAGO,
   FRECUENCIA_QUE_SE_PUEDE_TOCAR,
+  usaDiaDeCorte,
   soloLoQueCorreDeLaFrecuencia,
 } from '../../lib/frecuenciaDePago';
 import { nombreTipo } from '../../lib/tiposAsistente';
@@ -756,12 +756,12 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
                 >
                   {FRECUENCIAS_POSIBLES.map((cual) => (
                     <option key={cual} value={cual}>
-                      {t.configuracion.frecuencia_pago_cada_cuanto_opciones[cual]}
+                      {t.configuracion.condiciones_cliente.valores.frecuencia_de_cobro[cual]}
                     </option>
                   ))}
                 </FormField>
 
-                {form.frecuencia.cada_cuanto === FRECUENCIAS.SEMANA && (
+                {usaDiaDeCorte(form.frecuencia.cada_cuanto) && (
                   <FormField
                     label={t.asistentes.frecuencia_pago_dia_de_corte}
                     name="frecuencia_dia_de_corte"

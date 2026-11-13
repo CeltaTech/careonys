@@ -5,37 +5,95 @@
  *
  * Qué daría con el sistema roto: si una capa vacía pisara a la de arriba, un Servicio sin nada
  * propio quedaría sin frecuencia; si un valor fuera de la lista se aceptara, una fila mal cargada
- * dejaría una factura sin forma de calcularse. Las dos cosas fallan acá.
+ * dejaría una factura sin forma de calcularse; si un «no» del Servicio se tomara como vacío, no
+ * se podría apagar lo que la Prestadora encendió. Las tres cosas fallan acá.
  */
 import { describe, expect, it } from 'vitest';
 import {
-  FORMAS_DE_ACTUALIZACION,
+  AJUSTES_POR_INDICE,
+  CLAVES_ENTERAS,
+  CLAVES_SI_NO,
   FORMAS_DE_PRECIO,
   FRECUENCIAS_DE_COBRO_AL_CLIENTE,
   MEDICIONES,
+  SIN_INDICE,
   VALORES_DE_FABRICA_DEL_CLIENTE,
   condicionDe,
   condicionDelServicioQueSePuedeGuardar,
   condicionesDe,
   condicionesQueSePuedenGuardar,
+  esValorDeLaCondicion,
+  leerValorDeLaCondicion,
 } from '../condicionesDelCliente';
+
+const FABRICA = {
+  forma_de_precio: 'directo',
+  frecuencia_de_cobro: 'mes',
+  medicion: 'pactado_mas_excedente',
+  cobra_cancelada_por_el_cliente: true,
+  descuenta_lo_no_prestado: true,
+  cobra_guardias_adicionales: true,
+  cobra_horas_adicionales: true,
+  recargo_del_adicional: 0,
+  indice_de_actualizacion: null,
+  meses_entre_actualizaciones: 1,
+  ajuste_por_indice: 'revision_previa',
+};
 
 describe('los nombres guardados', () => {
   it('son los del contrato y no cambian', () => {
     expect(Object.values(FORMAS_DE_PRECIO)).toEqual(['lista', 'directo']);
     expect(Object.values(FRECUENCIAS_DE_COBRO_AL_CLIENTE)).toEqual(['dia', 'semana', 'quincena', 'mes']);
     expect(Object.values(MEDICIONES)).toEqual(['pactado_mas_excedente', 'hora', 'dia_de_guardia']);
-    expect(Object.values(FORMAS_DE_ACTUALIZACION)).toEqual(['manual', 'importacion', 'indice']);
+    expect(Object.values(AJUSTES_POR_INDICE)).toEqual(['automatico', 'revision_previa']);
+    expect(SIN_INDICE).toBe('ninguno');
   });
 
   it('los de fábrica son los del contrato', () => {
-    expect(VALORES_DE_FABRICA_DEL_CLIENTE).toEqual({
-      forma_de_precio: 'directo',
-      frecuencia_de_cobro: 'mes',
-      medicion: 'pactado_mas_excedente',
-      forma_de_actualizacion: 'manual',
-      indice_de_actualizacion: null,
-    });
+    expect(VALORES_DE_FABRICA_DEL_CLIENTE).toEqual(FABRICA);
+  });
+
+  it('separa las claves sí o no y las enteras', () => {
+    expect(CLAVES_SI_NO).toEqual([
+      'cobra_cancelada_por_el_cliente',
+      'descuenta_lo_no_prestado',
+      'cobra_guardias_adicionales',
+      'cobra_horas_adicionales',
+    ]);
+    expect(CLAVES_ENTERAS).toEqual(['recargo_del_adicional', 'meses_entre_actualizaciones']);
+  });
+});
+
+describe('esValorDeLaCondicion', () => {
+  it('sí o no acepta sólo booleanos', () => {
+    expect(esValorDeLaCondicion('descuenta_lo_no_prestado', false)).toBe(true);
+    expect(esValorDeLaCondicion('descuenta_lo_no_prestado', 'false')).toBe(false);
+    expect(esValorDeLaCondicion('descuenta_lo_no_prestado', 0)).toBe(false);
+  });
+
+  it('los enteros respetan sus bordes', () => {
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 1)).toBe(true);
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 24)).toBe(true);
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 0)).toBe(false);
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 25)).toBe(false);
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 1.5)).toBe(false);
+    expect(esValorDeLaCondicion('recargo_del_adicional', 0)).toBe(true);
+    expect(esValorDeLaCondicion('recargo_del_adicional', 501)).toBe(false);
+    expect(esValorDeLaCondicion('recargo_del_adicional', -1)).toBe(false);
+  });
+
+  it('una clave que no existe no acepta nada', () => {
+    expect(esValorDeLaCondicion('forma_de_actualizacion', 'manual')).toBe(false);
+  });
+});
+
+describe('leerValorDeLaCondicion', () => {
+  it('pasa el texto de un casillero a su clase de valor', () => {
+    expect(leerValorDeLaCondicion('cobra_horas_adicionales', 'false')).toBe(false);
+    expect(leerValorDeLaCondicion('cobra_horas_adicionales', 'true')).toBe(true);
+    expect(leerValorDeLaCondicion('meses_entre_actualizaciones', '6')).toBe(6);
+    expect(leerValorDeLaCondicion('medicion', 'hora')).toBe('hora');
+    expect(leerValorDeLaCondicion('medicion', '')).toBeNull();
   });
 });
 
@@ -50,34 +108,37 @@ describe('condicionDe', () => {
     expect(condicionDe('frecuencia_de_cobro', { frecuencia_de_cobro: 'semana' }, { frecuencia_de_cobro: 'dia' })).toBe('dia');
   });
 
+  it('un «no» del Servicio apaga lo que la Prestadora encendió', () => {
+    expect(condicionDe('descuenta_lo_no_prestado', { descuenta_lo_no_prestado: true }, { descuenta_lo_no_prestado: false })).toBe(false);
+  });
+
   it('un vacío del Servicio deja la de la Prestadora', () => {
     expect(condicionDe('medicion', { medicion: 'hora' }, { medicion: null })).toBe('hora');
     expect(condicionDe('medicion', { medicion: 'hora' }, { medicion: '' })).toBe('hora');
+    expect(condicionDe('cobra_horas_adicionales', { cobra_horas_adicionales: false }, { cobra_horas_adicionales: null })).toBe(false);
   });
 
-  it('un valor fuera de la lista se ignora', () => {
+  it('un valor que no sirve se ignora', () => {
     expect(condicionDe('medicion', { medicion: 'por_kilo' }, null)).toBe('pactado_mas_excedente');
     expect(condicionDe('frecuencia_de_cobro', null, { frecuencia_de_cobro: 'anio' })).toBe('mes');
+    expect(condicionDe('meses_entre_actualizaciones', { meses_entre_actualizaciones: 99 }, null)).toBe(1);
   });
 
   it('una clave que no existe no devuelve nada', () => {
     expect(condicionDe('descuento', { descuento: 'todo' }, null)).toBeUndefined();
   });
 
-  it('el índice sólo rige con la forma índice', () => {
-    expect(condicionDe('indice_de_actualizacion', { indice_de_actualizacion: 'ipc_ficticio' }, null)).toBeNull();
-    expect(
-      condicionDe('indice_de_actualizacion', { forma_de_actualizacion: 'indice', indice_de_actualizacion: 'ipc_ficticio' }, null)
-    ).toBe('ipc_ficticio');
+  it('el índice de la Prestadora rige, y el Servicio lo puede anular', () => {
+    expect(condicionDe('indice_de_actualizacion', { indice_de_actualizacion: 'ipc_ficticio' }, null)).toBe('ipc_ficticio');
+    expect(condicionDe('indice_de_actualizacion', { indice_de_actualizacion: 'ipc_ficticio' }, { indice_de_actualizacion: 'ninguno' })).toBeNull();
+    expect(condicionDe('indice_de_actualizacion', null, { indice_de_actualizacion: 'otro_ficticio' })).toBe('otro_ficticio');
   });
 
-  it('condicionesDe arma las cinco', () => {
+  it('condicionesDe arma todas', () => {
     expect(condicionesDe({ medicion: 'hora' }, { frecuencia_de_cobro: 'quincena' })).toEqual({
-      forma_de_precio: 'directo',
+      ...FABRICA,
       frecuencia_de_cobro: 'quincena',
       medicion: 'hora',
-      forma_de_actualizacion: 'manual',
-      indice_de_actualizacion: null,
     });
   });
 });
@@ -90,22 +151,22 @@ describe('condicionesQueSePuedenGuardar', () => {
     });
   });
 
-  it('rechaza un valor fuera de la lista y dice cuál', () => {
+  it('lee el texto de los casilleros', () => {
+    expect(
+      condicionesQueSePuedenGuardar({ descuenta_lo_no_prestado: 'false', meses_entre_actualizaciones: '3', ajuste_por_indice: 'automatico' })
+    ).toEqual({ ok: true, valor: { descuenta_lo_no_prestado: false, meses_entre_actualizaciones: 3, ajuste_por_indice: 'automatico' } });
+  });
+
+  it('rechaza un valor que no sirve y dice cuál', () => {
     expect(condicionesQueSePuedenGuardar({ frecuencia_de_cobro: 'bimestre' })).toEqual({ ok: false, clave: 'frecuencia_de_cobro' });
+    expect(condicionesQueSePuedenGuardar({ recargo_del_adicional: '900' })).toEqual({ ok: false, clave: 'recargo_del_adicional' });
   });
 
-  it('la forma índice pide el índice', () => {
-    expect(condicionesQueSePuedenGuardar({ forma_de_actualizacion: 'indice' })).toEqual({ ok: false, clave: 'indice_de_actualizacion' });
-    expect(condicionesQueSePuedenGuardar({ forma_de_actualizacion: 'indice', indice_de_actualizacion: 'ipc_ficticio' })).toEqual({
+  it('«sin índice» es lo de fábrica y no se guarda', () => {
+    expect(condicionesQueSePuedenGuardar({ indice_de_actualizacion: 'ninguno' })).toEqual({ ok: true, valor: {} });
+    expect(condicionesQueSePuedenGuardar({ indice_de_actualizacion: 'ipc_ficticio' })).toEqual({
       ok: true,
-      valor: { forma_de_actualizacion: 'indice', indice_de_actualizacion: 'ipc_ficticio' },
-    });
-  });
-
-  it('sin la forma índice el índice no se guarda', () => {
-    expect(condicionesQueSePuedenGuardar({ forma_de_actualizacion: 'manual', indice_de_actualizacion: 'ipc_ficticio' })).toEqual({
-      ok: true,
-      valor: {},
+      valor: { indice_de_actualizacion: 'ipc_ficticio' },
     });
   });
 });
@@ -114,8 +175,20 @@ describe('condicionDelServicioQueSePuedeGuardar', () => {
   it('vacío se guarda como null', () => {
     expect(condicionDelServicioQueSePuedeGuardar('medicion', '')).toEqual({ ok: true, valor: null });
   });
-  it('un valor de la lista se guarda tal cual, y uno de afuera no', () => {
+
+  it('un valor que sirve se guarda, y uno que no, no', () => {
     expect(condicionDelServicioQueSePuedeGuardar('medicion', 'hora')).toEqual({ ok: true, valor: 'hora' });
     expect(condicionDelServicioQueSePuedeGuardar('medicion', 'minuto').ok).toBe(false);
+  });
+
+  it('elegir lo que ya rige desde arriba no es propio del Servicio', () => {
+    expect(condicionDelServicioQueSePuedeGuardar('medicion', 'hora', { medicion: 'hora' })).toEqual({ ok: true, valor: null });
+    expect(condicionDelServicioQueSePuedeGuardar('medicion', 'pactado_mas_excedente', {})).toEqual({ ok: true, valor: null });
+    expect(condicionDelServicioQueSePuedeGuardar('cobra_horas_adicionales', 'false', {})).toEqual({ ok: true, valor: false });
+    expect(condicionDelServicioQueSePuedeGuardar('indice_de_actualizacion', 'ninguno', {})).toEqual({ ok: true, valor: null });
+    expect(condicionDelServicioQueSePuedeGuardar('indice_de_actualizacion', 'ninguno', { indice_de_actualizacion: 'ipc_ficticio' })).toEqual({
+      ok: true,
+      valor: 'ninguno',
+    });
   });
 });

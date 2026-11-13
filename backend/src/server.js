@@ -66,6 +66,7 @@ import { copiarLosArchivosAlRespaldo } from './utils/copiaDeLosArchivos.js';
 import { respaldarLosDatos } from './utils/respaldoDeLosDatos.js';
 import { borrarLoVencidoDelRegistroDeAccesos } from './utils/borradoDelRegistroDeAccesos.js';
 import { avisarElBorradoDelRegistroDeAccesos } from './utils/avisoDeBorradoDelRegistroDeAccesos.js';
+import { ajustarLosPreciosPorIndice } from './utils/ajustePorIndice.js';
 import { avisarLasAlarmasDeLasCuentasAutomaticas } from './utils/alarmaDeLasCuentasAutomaticas.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
@@ -342,6 +343,10 @@ programar(borrarLoVencidoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: tru
 // Los dos correos que avisan ese borrado antes de que ocurra: el preaviso y la notificación. Qué
 // aviso toca hoy lo decide la base; el que no salió hoy sale mañana.
 programar(avisarElBorradoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: true });
+
+// El ajuste periódico de los precios de cada Servicio por el índice que rige: lo aplica, o deja la
+// propuesta para que la revise la administración, según lo que eligió cada Prestadora.
+programar(ajustarLosPreciosPorIndice, UN_DIA_MS, { conLaPrestadora: true });
 
 // El respaldo de los datos y la copia de los archivos, cifrados, a los dos depósitos de respaldo.
 // No pasan por `programar` porque usan otra cuenta: la de la copia de respaldo de cada

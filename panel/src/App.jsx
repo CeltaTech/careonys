@@ -47,6 +47,7 @@ import { PagosAsistentes } from './pages/PagosAsistentes';
 import { Documentacion } from './pages/Documentacion';
 import { Continuidad } from './pages/Continuidad';
 import { ListaPrecios } from './pages/ListaPrecios';
+import { AjustesPorIndice } from './pages/AjustesPorIndice';
 import { UsuariosPanel } from './pages/UsuariosPanel';
 import { RespuestasPreparadas } from './pages/RespuestasPreparadas';
 import { Configuracion } from './pages/Configuracion';
@@ -180,6 +181,7 @@ function App() {
                     <Route path="documentacion" element={<Documentacion />} />
                     <Route path="continuidad" element={<Continuidad />} />
                     <Route path="lista-precios" element={<ListaPrecios />} />
+                    <Route path="ajustes-por-indice" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><AjustesPorIndice /></ProtectedRoute>} />
                     <Route path="importacion" element={<Importacion />} />
                     <Route path="informes-obra-social" element={<InformesObraSocial />} />
                     <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />

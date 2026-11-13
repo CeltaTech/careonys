@@ -1111,6 +1111,7 @@ function baseConUnCliente({
   guardias = [],
   plazoDeLaPrestadora = null,
   plazoDelCliente = null,
+  descuentos = [],
 } = {}) {
   respuestas.set('GET /rest/v1/configuracion_facturacion_clientes', () =>
     plazoDeLaPrestadora === null ? [] : [{ regla: { dias_hasta_el_vencimiento: plazoDeLaPrestadora } }]
@@ -1128,6 +1129,7 @@ function baseConUnCliente({
   respuestas.set('GET /rest/v1/condiciones_comerciales_servicio', () => [
     { servicio_id: SERVICIO, dias_hasta_el_vencimiento: plazoDelCliente },
   ]);
+  respuestas.set('GET /rest/v1/descuentos_del_servicio', () => descuentos);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
   // Las guardias terminadas del período: con la medición de fábrica —lo pactado más el
   // excedente— y sin cantidad pactada, no cambian lo que se cobra.
@@ -1164,11 +1166,53 @@ function contadores(nombrados) {
     guardiasAmbiguas: 0,
     sinPrecio: 0,
     monedasMezcladas: 0,
+    descuentosSinAplicar: 0,
     ...nombrados,
   };
 }
 
 describe('generar las facturas de un período', () => {
+  it('el descuento del Servicio va en un renglón propio, en negativo, y resta del total', async () => {
+    baseConUnCliente({
+      prestaciones: [unaPrestacion()],
+      descuentos: [
+        {
+          id: 'd1', servicio_id: SERVICIO, clase: 'porcentaje', valor: '10', moneda: null,
+          vigente_desde: '2026-08-01', cantidad_de_periodos: 1, vigente_hasta: null,
+          cargado_en: '2026-07-20T00:00:00Z', terminado_en: null,
+        },
+      ],
+    });
+
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.deepEqual(cuerpo, contadores({ generadas: 1 }));
+
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
+    assert.equal(Number(factura.cuerpo.monto_total), 9000);
+    const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items').cuerpo;
+    const descuento = renglones.find((r) => r.concepto === 'descuento');
+    assert.equal(descuento.monto, -1000);
+    assert.equal(descuento.descuento_id, 'd1');
+  });
+
+  it('un descuento en otra moneda no se aplica y se cuenta aparte', async () => {
+    baseConUnCliente({
+      prestaciones: [unaPrestacion()],
+      descuentos: [
+        {
+          id: 'd2', servicio_id: SERVICIO, clase: 'monto', valor: '50', moneda: 'USD',
+          vigente_desde: '2026-08-01', cantidad_de_periodos: null, vigente_hasta: '2026-12-31',
+          cargado_en: '2026-07-20T00:00:00Z', terminado_en: null,
+        },
+      ],
+    });
+
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.deepEqual(cuerpo, contadores({ generadas: 1, descuentosSinAplicar: 1 }));
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
+    assert.equal(Number(factura.cuerpo.monto_total), 10000);
+  });
+
   it('sin período no se genera nada', async () => {
     const { estado } = await pedir('POST', '/facturas/generar', { fecha_vencimiento: '2026-08-31' });
     assert.equal(estado, 400);
@@ -1283,15 +1327,20 @@ describe('generar las facturas de un período', () => {
 
     // El plazo de cada Servicio es lo comercial, que quien coordina no lee: va con el trabajo de
     // esa sola Prestadora, y sólo por los Servicios que quien pide ya pudo ver.
+    // Los descuentos del Servicio también son lo comercial, y van igual.
     const LO_COMERCIAL = 'GET /rest/v1/condiciones_comerciales_servicio';
-    todoConLaCredencialDeQuienPide(5, { salvo: [LO_COMERCIAL] });
+    const LOS_DESCUENTOS = 'GET /rest/v1/descuentos_del_servicio';
+    todoConLaCredencialDeQuienPide(5, { salvo: [LO_COMERCIAL, LOS_DESCUENTOS] });
     clientesConLaCredencialDeQuienPide();
-    const plazo = llamadas.find((l) => l.clave === LO_COMERCIAL);
-    assert.notEqual(plazo.credencial, credencialEnviada);
-    const contenido = JSON.parse(Buffer.from(plazo.credencial.split('.')[1], 'base64url').toString());
-    assert.equal(contenido.role, 'trabajo_sin_persona');
-    assert.equal(contenido.prestadora_id, PRESTADORA);
-    assert.ok(plazo.url.includes(SERVICIO));
+    for (const clave of [LO_COMERCIAL, LOS_DESCUENTOS]) {
+      const lectura = llamadas.find((l) => l.clave === clave);
+      assert.ok(lectura, `${clave} tiene que haberse consultado`);
+      assert.notEqual(lectura.credencial, credencialEnviada);
+      const contenido = JSON.parse(Buffer.from(lectura.credencial.split('.')[1], 'base64url').toString());
+      assert.equal(contenido.role, 'trabajo_sin_persona');
+      assert.equal(contenido.prestadora_id, PRESTADORA);
+      assert.ok(lectura.url.includes(SERVICIO));
+    }
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
     assert.equal(factura.cuerpo.prestadora_id, PRESTADORA);
     const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');
@@ -1366,6 +1415,34 @@ describe('generar las facturas de un período', () => {
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
     assert.deepEqual(cuerpo, contadores({ monedasMezcladas: 1 }));
     assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_cliente'), false);
+  });
+
+  it('las condiciones del Servicio deciden qué se descuenta, y cada renglón dice qué es', async () => {
+    baseConUnCliente({
+      prestaciones: [unaPrestacion({ configuracion: { cantidad_guardias: 4 } })],
+      guardias: [
+        { id: 'g1', fecha: '2026-08-03', servicio_id: SERVICIO, estado: 'completada', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, guardia_pacientes: [{ paciente_id: PACIENTE }] },
+        { id: 'g2', fecha: '2026-08-10', servicio_id: SERVICIO, estado: 'completada', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, guardia_pacientes: [{ paciente_id: PACIENTE }] },
+        { id: 'g3', fecha: '2026-08-17', servicio_id: SERVICIO, estado: 'ausente', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, guardia_pacientes: [{ paciente_id: PACIENTE }] },
+        { id: 'g4', fecha: '2026-08-24', servicio_id: SERVICIO, estado: 'cancelada', cancelacion_origen: 'cliente', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, guardia_pacientes: [{ paciente_id: PACIENTE }] },
+      ],
+    });
+    respuestas.set('GET /rest/v1/condiciones_comerciales_servicio', () => [
+      { servicio_id: SERVICIO, dias_hasta_el_vencimiento: null, cobra_cancelada_por_el_cliente: false },
+    ]);
+
+    await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+
+    const lasGuardias = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
+    assert.ok(decodeURIComponent(lasGuardias.url).includes('estado=in.(completada,ausente,cancelada)'));
+    const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');
+    assert.deepEqual(renglones.cuerpo.map((r) => [r.concepto, r.monto]), [
+      ['pactado', 10000],
+      ['no_prestado', -2500],
+      ['cancelado_por_el_cliente', -2500],
+    ]);
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
+    assert.equal(factura.cuerpo.monto_total, 5000);
   });
 
   it('quien no es del Panel no genera facturas', async () => {

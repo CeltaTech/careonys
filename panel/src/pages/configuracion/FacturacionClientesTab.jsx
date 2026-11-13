@@ -12,14 +12,17 @@ import {
   plazoQueSePuedeGuardar,
 } from '../../lib/facturacionDeClientes';
 import {
-  FORMAS_DE_ACTUALIZACION,
-  FORMAS_DE_ACTUALIZACION_POSIBLES,
+  AJUSTES_POR_INDICE_POSIBLES,
+  BORDES,
+  CLAVES_DE_LAS_CONDICIONES,
   FORMAS_DE_PRECIO_POSIBLES,
   FRECUENCIAS_DE_COBRO_POSIBLES,
   MEDICIONES_POSIBLES,
+  SIN_INDICE,
   VALORES_DE_FABRICA_DEL_CLIENTE,
   condicionesQueSePuedenGuardar,
 } from '../../lib/condicionesDelCliente';
+import { CONDICIONES_DE_CADA_MEDICION } from '../../lib/calcularLiquidacion';
 import '../../styles/molde-paginas.css';
 
 /* A qué plazo pagan los Clientes lo que se les factura.
@@ -59,6 +62,8 @@ export function FacturacionClientesTab() {
   const [condiciones, setCondiciones] = useState(VALORES_DE_FABRICA_DEL_CLIENTE);
   const [indices, setIndices] = useState([]);
   const [errorIndices, setErrorIndices] = useState(null);
+  // La condición mal cargada, que se señala recién al apretar guardar.
+  const [condicionMal, setCondicionMal] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -71,13 +76,10 @@ export function FacturacionClientesTab() {
       setCobranzaConectada(!!configuracion.aviso_de_restriccion_conectado);
       setFacturacionConectada(!!configuracion.aviso_de_facturacion_conectado);
       setPrestadoraId(configuracion.prestadora_id ?? null);
-      setCondiciones({
-        forma_de_precio: configuracion.forma_de_precio,
-        frecuencia_de_cobro: configuracion.frecuencia_de_cobro,
-        medicion: configuracion.medicion,
-        forma_de_actualizacion: configuracion.forma_de_actualizacion,
-        indice_de_actualizacion: configuracion.indice_de_actualizacion,
-      });
+      setCondiciones(
+        Object.fromEntries(CLAVES_DE_LAS_CONDICIONES.map((clave) => [clave, configuracion[clave] ?? null]))
+      );
+      setCondicionMal(null);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -105,18 +107,31 @@ export function FacturacionClientesTab() {
     };
   }, [t]);
 
-  const cambiarCondicion = (clave) => (e) => {
-    const valor = e.target.value === '' ? null : e.target.value;
+  const ponerCondicion = (clave, valor) => {
     setCondiciones((antes) => ({ ...antes, [clave]: valor }));
+    if (clave === condicionMal) setCondicionMal(null);
     setGuardado(false);
   };
-  const condicionesRevisadas = condicionesQueSePuedenGuardar(condiciones);
+  const cambiarCondicion = (clave) => (e) => ponerCondicion(clave, e.target.value === '' ? null : e.target.value);
+  const cambiarSiNo = (clave) => (e) => ponerCondicion(clave, e.target.checked);
+
+  // Sin índice no hay nada que aplicar: los meses y la forma de aplicarlo no se muestran.
+  const conIndice = (condiciones.indice_de_actualizacion ?? SIN_INDICE) !== SIN_INDICE;
+  const medicionQueRige = condiciones.medicion ?? VALORES_DE_FABRICA_DEL_CLIENTE.medicion;
+  const errorDe = (clave, texto) => (condicionMal === clave ? texto : undefined);
 
   // La misma comprobación que hace el backend antes de escribir, leída del archivo compartido: así
   // el botón no ofrece guardar algo que después se rechaza.
   const revisado = plazoQueSePuedeGuardar(dias === '' ? '' : Number(dias));
 
   async function guardar() {
+    const condicionesRevisadas = condicionesQueSePuedenGuardar(condiciones);
+    if (!condicionesRevisadas.ok) {
+      // Las demás son listas cerradas o casillas: lo que se puede cargar mal son los números.
+      setCondicionMal(condicionesRevisadas.clave);
+      document.getElementsByName(condicionesRevisadas.clave)[0]?.focus();
+      return;
+    }
     setGuardando(true);
     setError(null);
     setGuardado(false);
@@ -266,40 +281,79 @@ export function FacturacionClientesTab() {
               </option>
             ))}
           </FormField>
+          {/* Sólo las condiciones que cambian algo con la medición elegida. */}
+          {(CONDICIONES_DE_CADA_MEDICION[medicionQueRige] ?? []).map((clave) =>
+            clave === 'recargo_del_adicional' ? (
+              <FormField
+                key={clave}
+                label={t.configuracion.condiciones_cliente.recargo_del_adicional}
+                name={clave}
+                type="number"
+                min={BORDES.recargo_del_adicional.minimo}
+                max={BORDES.recargo_del_adicional.maximo}
+                step="1"
+                value={condiciones.recargo_del_adicional ?? ''}
+                error={errorDe(clave, t.configuracion.condiciones_cliente.recargo_fuera_de_borde)}
+                onChange={cambiarCondicion(clave)}
+              />
+            ) : (
+              <div className="molde-ancho" key={clave}>
+                <FormField
+                  label={t.configuracion.condiciones_cliente[clave]}
+                  name={clave}
+                  type="checkbox"
+                  checked={(condiciones[clave] ?? VALORES_DE_FABRICA_DEL_CLIENTE[clave]) === true}
+                  onChange={cambiarSiNo(clave)}
+                />
+              </div>
+            )
+          )}
           <FormField
-            label={t.configuracion.condiciones_cliente.forma_de_actualizacion}
-            name="forma_de_actualizacion"
+            label={t.configuracion.condiciones_cliente.indice_de_actualizacion}
+            name="indice_de_actualizacion"
             type="select"
-            value={condiciones.forma_de_actualizacion ?? ''}
-            onChange={cambiarCondicion('forma_de_actualizacion')}
+            value={condiciones.indice_de_actualizacion ?? SIN_INDICE}
+            error={errorIndices ?? undefined}
+            onChange={cambiarCondicion('indice_de_actualizacion')}
           >
-            {FORMAS_DE_ACTUALIZACION_POSIBLES.map((valor) => (
-              <option key={valor} value={valor}>
-                {t.configuracion.condiciones_cliente.valores.forma_de_actualizacion[valor]}
+            <option value={SIN_INDICE}>{t.actualizacion_de_precios.sin_indice}</option>
+            {indices.map((indice) => (
+              <option key={indice.codigo} value={indice.codigo}>
+                {indice.nombre}
               </option>
             ))}
           </FormField>
-          {condiciones.forma_de_actualizacion === FORMAS_DE_ACTUALIZACION.INDICE && (
-            <FormField
-              label={t.configuracion.condiciones_cliente.indice_de_actualizacion}
-              name="indice_de_actualizacion"
-              type="select"
-              required
-              value={condiciones.indice_de_actualizacion ?? ''}
-              error={errorIndices ?? undefined}
-              onChange={cambiarCondicion('indice_de_actualizacion')}
-            >
-              <option value="" />
-              {indices.map((indice) => (
-                <option key={indice.codigo} value={indice.codigo}>
-                  {indice.nombre}
-                </option>
-              ))}
-            </FormField>
+          {conIndice && (
+            <>
+              <FormField
+                label={t.configuracion.condiciones_cliente.meses_entre_actualizaciones}
+                name="meses_entre_actualizaciones"
+                type="number"
+                min={BORDES.meses_entre_actualizaciones.minimo}
+                max={BORDES.meses_entre_actualizaciones.maximo}
+                step="1"
+                value={condiciones.meses_entre_actualizaciones ?? ''}
+                error={errorDe('meses_entre_actualizaciones', t.configuracion.condiciones_cliente.meses_fuera_de_borde)}
+                onChange={cambiarCondicion('meses_entre_actualizaciones')}
+              />
+              <FormField
+                label={t.configuracion.condiciones_cliente.ajuste_por_indice}
+                name="ajuste_por_indice"
+                type="select"
+                value={condiciones.ajuste_por_indice ?? VALORES_DE_FABRICA_DEL_CLIENTE.ajuste_por_indice}
+                onChange={cambiarCondicion('ajuste_por_indice')}
+              >
+                {AJUSTES_POR_INDICE_POSIBLES.map((valor) => (
+                  <option key={valor} value={valor}>
+                    {t.configuracion.condiciones_cliente.valores.ajuste_por_indice[valor]}
+                  </option>
+                ))}
+              </FormField>
+            </>
           )}
           </div>
           <div className="molde-acciones">
-            <Button onClick={guardar} disabled={guardando || !revisado.ok || !condicionesRevisadas.ok}>
+            <Button onClick={guardar} disabled={guardando || !revisado.ok}>
               {guardando ? t.comun.guardando : t.comun.guardar}
             </Button>
           </div>

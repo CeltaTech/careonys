@@ -18,6 +18,7 @@
 
 import { calcularLiquidacionDelCliente } from './calcularLiquidacion.js';
 import { periodosDeCobroQueTocan } from './frecuenciaDePago.js';
+import { descuentosDelPeriodo, ordenDelPeriodo, renglonesDeFactura } from './descuentosDelPeriodo.js';
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -113,16 +114,18 @@ export function seSuperponen(a, b) {
  * se puede armar.
  *
  * @returns {{
- *   renglones: Array<{paciente_id, servicio_id, descripcion, monto, cantidad, unidad, precio_unitario}>,
+ *   renglones: Array<{paciente_id, servicio_id, descripcion, monto, cantidad, unidad, precio_unitario,
+ *     concepto, recargo_del_adicional}>,
  *   total: number, moneda: string|null, monedasMezcladas: boolean,
  *   guardiasSinAsignar: number, guardiasAmbiguas: number, sinPrecio: number, sinCantidadPactada: number,
  *   medicionDesconocida: boolean,
  * }}
  */
-export function armarLaFacturaDelPeriodo({ periodo, medicion, prestaciones, guardias, nombresDePacientes }) {
+export function armarLaFacturaDelPeriodo({ periodo, medicion, condiciones, prestaciones, guardias, nombresDePacientes }) {
   const liquidacion = calcularLiquidacionDelCliente({
     periodo,
     medicion,
+    condiciones,
     prestaciones: prestaciones ?? [],
     guardias: guardias ?? [],
     nombresDePacientes: nombresDePacientes ?? new Map(),
@@ -137,6 +140,10 @@ export function armarLaFacturaDelPeriodo({ periodo, medicion, prestaciones, guar
       cantidad: r.cantidad,
       unidad: r.unidad,
       precio_unitario: r.precio_unitario,
+      // De dónde sale el renglón, y el recargo que se le aplicó si es adicional: así el renglón
+      // descontado o adicional se explica solo, aunque las condiciones cambien después.
+      concepto: r.concepto,
+      recargo_del_adicional: r.recargo_del_adicional ?? null,
     })),
     total: liquidacion.total,
     // Una factura tiene una sola moneda. Si en el mismo Servicio hay dos, no se arma: elegir una
@@ -148,5 +155,38 @@ export function armarLaFacturaDelPeriodo({ periodo, medicion, prestaciones, guar
     sinPrecio: liquidacion.sinPrecio.length,
     sinCantidadPactada: liquidacion.sinCantidadPactada.length,
     medicionDesconocida: liquidacion.medicionDesconocida,
+  };
+}
+
+/* El texto guardado del renglón de un descuento. Es dato, no texto visible: dice la clase y el
+   valor con la misma forma que los otros renglones (`valor_hora_extra 10.00 × 2.00 h`), y quien lo
+   muestra lo reconoce por `concepto = 'descuento'`. */
+function descripcionDelDescuento(renglon) {
+  if (renglon.clase === 'porcentaje') return `descuento ${renglon.valor} %`;
+  return `descuento ${renglon.moneda ?? ''} ${Number(renglon.valor).toFixed(2)}`.replace('  ', ' ');
+}
+
+/**
+ * La factura con los descuentos del Servicio que tocan el período: cada uno es un renglón propio
+ * en negativo, y el total queda restado. El período se cuenta desde el comienzo de cada descuento
+ * con la frecuencia de cobro del Servicio.
+ *
+ * @returns {{ renglones: Array, total: number, noAplicados: Array<{descuento_id, motivo}> }}
+ */
+export function conLosDescuentos({ factura, descuentos, periodo, frecuencia, servicioId }) {
+  if (!descuentos || descuentos.length === 0) {
+    return { renglones: factura.renglones, total: factura.total, noAplicados: [] };
+  }
+  const resultado = descuentosDelPeriodo({
+    descuentos,
+    periodo,
+    subtotal: factura.total,
+    moneda: factura.moneda,
+    ordenDe: (d) => ordenDelPeriodo(d, periodo, (desde, hasta) => periodosDeCobroQueTocan(desde, hasta, frecuencia)),
+  });
+  return {
+    renglones: [...factura.renglones, ...renglonesDeFactura(resultado, servicioId, descripcionDelDescuento)],
+    total: resultado.total,
+    noAplicados: resultado.no_aplicados,
   };
 }

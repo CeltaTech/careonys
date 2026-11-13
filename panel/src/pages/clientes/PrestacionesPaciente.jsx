@@ -104,7 +104,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setError(null);
 
     const [listaResp, prestacionesResp, cierresResp, serviciosResp, reglaResp] = await Promise.all([
-      supabase.from('lista_precios').select('*').eq('activo', true).order('tipo_servicio'),
+      // El precio que rige hoy, uno por tipo: la promoción vigente si la hay, y si no el de siempre.
+      supabase.rpc('precios_de_lista_que_rigen', { p_fecha: hoyISO() }).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
       supabase.from('cierres_servicio_paciente').select('id, servicio_id').eq('paciente_id', paciente.id),
       // Los Servicios vigentes que alcanza esta sesión. La protección por fila ya los acota a la
@@ -239,8 +240,12 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setServicioId(anterior.servicio_id);
     setForma(formaAnterior);
     if (formaAnterior === 'lista') {
-      const sigueEnLaLista = listaPrecios.some((r) => String(r.id) === String(anterior.precio_lista_id));
-      setPrecioListaId(sigueEnLaLista ? String(anterior.precio_lista_id) : '');
+      // El renglón de antes si sigue rigiendo, o la promoción que hoy rige en su lugar.
+      const previo = String(anterior.precio_lista_id);
+      const queRige = listaPrecios.find(
+        (r) => String(r.id) === previo || String(r.promocion_de) === previo
+      );
+      setPrecioListaId(queRige ? String(queRige.id) : '');
       setSentidoDelAjuste(anterior.sentido_del_ajuste || '');
       setTipoDescuento(anterior.tipo_descuento || '');
       setValorDescuento(anterior.valor_descuento ?? '');

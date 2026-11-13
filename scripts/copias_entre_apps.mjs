@@ -163,6 +163,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/condicionesDelCliente.js'],
   },
   {
+    que: 'qué descuentos del Servicio se aplican en un período de facturación y cuánto resta cada uno',
+    original: 'panel/src/lib/descuentosDelPeriodo.js',
+    copias: ['backend/src/utils/descuentosDelPeriodo.js'],
+  },
+  {
     que: 'el precio de una Prestación y qué eslabón de un cambio de precio se cobra',
     original: 'panel/src/lib/precioDeLaPrestacion.js',
     copias: ['backend/src/utils/precioDeLaPrestacion.js'],

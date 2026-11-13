@@ -6,39 +6,37 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 import { FormField } from './ui/FormField';
+import { AJUSTES_POR_INDICE_POSIBLES, SIN_INDICE } from '../lib/condicionesDelCliente';
 import {
-  FORMAS_DE_ACTUALIZACION,
-  condicionDe,
-  condicionDelServicioQueSePuedeGuardar,
-} from '../lib/condicionesDelCliente';
+  MESES_MAXIMO,
+  MESES_MINIMO,
+  ajusteQueRige,
+  ajusteQueSePuedeGuardar,
+  casillerosDelAjuste,
+} from '../lib/ajustePorIndice';
 
-/* Cómo se actualiza el precio de un Servicio.
+/* El ajuste periódico por índice del precio de un Servicio.
    ==========================================================================
 
-   Dos decisiones: la forma (a mano, por importación o por índice) y, si es por índice, cuál. Cada
-   una vacía quiere decir «rige la de la configuración de facturación de la Prestadora», y la
-   opción vacía dice cuál es esa, para que se vea qué rige sin ir a buscarlo.
+   Tres casilleros: qué índice, cada cuántos meses y si el precio nuevo se aplica solo o queda
+   propuesto para que la administración lo revise. Cada uno abre mostrando lo que rige —fábrica,
+   la Prestadora o el Servicio—, y lo que al guardar coincide con lo de arriba se guarda null,
+   para que un cambio de la Prestadora le llegue a este Servicio (`lib/ajustePorIndice.js`).
+   Sin índice que rija, los meses y el ajuste no se muestran.
 
-   Qué rige lo decide `condicionDe`, la misma regla que usa la base al aplicar un índice
-   (`actualizar_precios_por_indice`). Los índices salen del catálogo de la base.
-
-   La configuración de la Prestadora sólo se la abre la base a la administración: para el resto
-   llega vacía y la opción vacía muestra el valor de fábrica. Por eso un error al leerla no frena. */
-const FORMAS = Object.values(FORMAS_DE_ACTUALIZACION);
-
+   La configuración de la Prestadora sólo se la abre la base a la administración. Si no se la pudo
+   leer, la regla queda sin conocer: se muestra fábrica y se guarda lo elegido tal cual. */
 export function ActualizacionDelServicio({ servicioId, puedeEditar = true }) {
   const { t } = useLocale();
-  const ta = t.actualizacion_de_precios;
   const prestadoraId = usePrestadoraActual();
   const [estado, setEstado] = useState('cargando');
   const [errorDeCarga, setErrorDeCarga] = useState(null);
-  const [regla, setRegla] = useState(null);
+  const [regla, setRegla] = useState(undefined);
   const [indices, setIndices] = useState([]);
-  const [forma, setForma] = useState('');
-  const [indice, setIndice] = useState('');
+  const [casilleros, setCasilleros] = useState(() => casillerosDelAjuste(null, null));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
-  const [faltaElIndice, setFaltaElIndice] = useState(false);
+  const [claveMal, setClaveMal] = useState(null);
   const [guardado, setGuardado] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -47,17 +45,17 @@ export function ActualizacionDelServicio({ servicioId, puedeEditar = true }) {
     const [condiciones, configuracion, catalogo] = await Promise.all([
       supabase
         .from('condiciones_comerciales_servicio')
-        .select('forma_de_actualizacion, indice_de_actualizacion')
+        .select('indice_de_actualizacion, meses_entre_actualizaciones, ajuste_por_indice')
         .eq('servicio_id', servicioId)
         .maybeSingle(),
       prestadoraId
         ? supabase.from('configuracion_facturacion_clientes').select('regla').eq('prestadora_id', prestadoraId).maybeSingle()
-        : Promise.resolve({ data: null }),
+        : Promise.resolve({ data: null, error: true }),
       supabase.from('indices_de_actualizacion').select('codigo, nombre').order('nombre'),
     ]);
     const falla = condiciones.error || catalogo.error;
     if (falla) {
-      setErrorDeCarga(mensajeDeError(falla, t, 'actualización del Servicio'));
+      setErrorDeCarga(mensajeDeError(falla, t, 'ajuste por índice del Servicio'));
       setEstado('error');
       return;
     }
@@ -65,10 +63,11 @@ export function ActualizacionDelServicio({ servicioId, puedeEditar = true }) {
       setEstado('vacio');
       return;
     }
-    setRegla(configuracion.error ? null : configuracion.data?.regla ?? null);
+    // Sin fila, la Prestadora no decidió nada y rige fábrica: la regla se conoce y está vacía.
+    const reglaLeida = configuracion.error ? undefined : configuracion.data?.regla ?? null;
+    setRegla(reglaLeida);
     setIndices(catalogo.data ?? []);
-    setForma(condiciones.data.forma_de_actualizacion || '');
-    setIndice(condiciones.data.indice_de_actualizacion || '');
+    setCasilleros(casillerosDelAjuste(reglaLeida, condiciones.data));
     setEstado('listo');
   }, [servicioId, prestadoraId, t]);
 
@@ -76,56 +75,83 @@ export function ActualizacionDelServicio({ servicioId, puedeEditar = true }) {
     cargar();
   }, [cargar]);
 
-  const nombreDelIndice = (codigo) => indices.find((i) => i.codigo === codigo)?.nombre ?? codigo;
-  const delServicio = { forma_de_actualizacion: forma || null, indice_de_actualizacion: indice || null };
-  const formaQueRige = condicionDe('forma_de_actualizacion', regla, delServicio);
-  const formaDeLaPrestadora = condicionDe('forma_de_actualizacion', regla, null);
-  // El índice que hereda: el de la Prestadora, si ella actualiza por índice.
-  const indiceDeLaPrestadora = regla?.indice_de_actualizacion || null;
-  const indiceQueRige = condicionDe('indice_de_actualizacion', regla, delServicio);
-
-  function elegirForma(valor) {
-    setForma(valor);
+  function cambiar(clave, valor) {
+    setCasilleros((antes) => ({ ...antes, [clave]: valor }));
     setGuardado(false);
-    setFaltaElIndice(false);
+    if (claveMal === clave) setClaveMal(null);
   }
 
   async function guardar() {
-    const formaElegida = condicionDelServicioQueSePuedeGuardar('forma_de_actualizacion', forma);
-    // El índice sólo se guarda si lo que rige es por índice: la base no acepta un índice suelto.
-    const conIndice = formaQueRige === FORMAS_DE_ACTUALIZACION.INDICE;
-    const indiceElegido = conIndice
-      ? condicionDelServicioQueSePuedeGuardar('indice_de_actualizacion', indice)
-      : { ok: true, valor: null };
-    if (!formaElegida.ok || !indiceElegido.ok) {
-      setError(t.errores.dato_invalido);
+    const revisado = ajusteQueSePuedeGuardar(regla, casilleros);
+    if (!revisado.ok) {
+      setClaveMal(revisado.clave);
       return;
     }
-    if (conIndice && !indiceQueRige) {
-      setFaltaElIndice(true);
-      return;
-    }
-
     setGuardando(true);
     setError(null);
     setGuardado(false);
     const { data, error: falla } = await supabase
       .from('condiciones_comerciales_servicio')
-      .update({ forma_de_actualizacion: formaElegida.valor, indice_de_actualizacion: indiceElegido.valor })
+      .update(revisado.valores)
       .eq('servicio_id', servicioId)
       .select('servicio_id');
     setGuardando(false);
     if (falla) {
-      setError(mensajeDeError(falla, t, 'actualización del Servicio'));
+      setError(mensajeDeError(falla, t, 'ajuste por índice del Servicio'));
       return;
     }
     if (!data || data.length === 0) {
       setError(t.errores.sin_permiso);
       return;
     }
-    if (!conIndice) setIndice('');
     setGuardado(true);
   }
+
+  return (
+    <AjusteDelServicio
+      t={t}
+      estado={estado}
+      errorDeCarga={errorDeCarga}
+      recargar={cargar}
+      indices={indices}
+      casilleros={casilleros}
+      conIndice={ajusteQueRige(regla, casilleros).indice_de_actualizacion !== null}
+      cambiar={cambiar}
+      guardar={guardar}
+      puedeEditar={puedeEditar}
+      guardando={guardando}
+      error={error}
+      claveMal={claveMal}
+      guardado={guardado}
+    />
+  );
+}
+
+// Lo que se dibuja, sin cargar ni guardar nada. Separado para poder probarlo con los textos nuevos.
+export function AjusteDelServicio({
+  t,
+  estado,
+  errorDeCarga,
+  recargar,
+  indices,
+  casilleros,
+  conIndice,
+  cambiar,
+  guardar,
+  puedeEditar,
+  guardando,
+  error,
+  claveMal,
+  guardado,
+}) {
+  const ta = t.actualizacion_de_precios;
+  const tc = t.configuracion.condiciones_cliente;
+  const apagado = !puedeEditar || guardando;
+  // Los meses tienen bordes; en las listas, lo único que puede faltar es elegir.
+  const malCargado = (clave) => {
+    if (claveMal !== clave) return undefined;
+    return clave === 'meses_entre_actualizaciones' ? tc.meses_fuera_de_borde : t.formularios.falta_un_dato_obligatorio;
+  };
 
   return (
     <section className="molde-ancho">
@@ -134,7 +160,7 @@ export function ActualizacionDelServicio({ servicioId, puedeEditar = true }) {
       {estado === 'error' && (
         <Alert variant="error">
           {errorDeCarga}{' '}
-          <Button variant="secondary" onClick={cargar}>{t.comun.reintentar}</Button>
+          <Button variant="secondary" onClick={recargar}>{t.comun.reintentar}</Button>
         </Alert>
       )}
       {estado === 'vacio' && <p className="molde-vacio">{ta.servicio_sin_condiciones}</p>}
@@ -144,42 +170,48 @@ export function ActualizacionDelServicio({ servicioId, puedeEditar = true }) {
           {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
           <div className="molde-formgrid">
             <FormField
-              label={ta.forma}
-              name="forma_de_actualizacion"
+              label={tc.indice_de_actualizacion}
+              name="indice_de_actualizacion"
               type="select"
-              value={forma}
-              onChange={(e) => elegirForma(e.target.value)}
-              disabled={!puedeEditar || guardando}
+              value={casilleros.indice_de_actualizacion}
+              onChange={(e) => cambiar('indice_de_actualizacion', e.target.value)}
+              disabled={apagado}
+              error={malCargado('indice_de_actualizacion')}
             >
-              <option value="">{`${ta.la_de_la_configuracion} (${ta.formas[formaDeLaPrestadora]})`}</option>
-              {FORMAS.map((valor) => (
-                <option key={valor} value={valor}>{ta.formas[valor]}</option>
+              <option value={SIN_INDICE}>{ta.sin_indice}</option>
+              {indices.map((i) => (
+                <option key={i.codigo} value={i.codigo}>{i.nombre}</option>
               ))}
             </FormField>
-            {formaQueRige === FORMAS_DE_ACTUALIZACION.INDICE && (
-              <FormField
-                label={ta.indice}
-                name="indice_de_actualizacion"
-                type="select"
-                value={indice}
-                onChange={(e) => {
-                  setIndice(e.target.value);
-                  setGuardado(false);
-                  setFaltaElIndice(false);
-                }}
-                disabled={!puedeEditar || guardando}
-                required={!indiceDeLaPrestadora}
-                error={faltaElIndice ? t.formularios.falta_un_dato_obligatorio : undefined}
-              >
-                <option value="">
-                  {indiceDeLaPrestadora
-                    ? `${ta.la_de_la_configuracion} (${nombreDelIndice(indiceDeLaPrestadora)})`
-                    : ta.elegir_indice}
-                </option>
-                {indices.map((i) => (
-                  <option key={i.codigo} value={i.codigo}>{i.nombre}</option>
-                ))}
-              </FormField>
+            {conIndice && (
+              <>
+                <FormField
+                  label={tc.meses_entre_actualizaciones}
+                  name="meses_entre_actualizaciones"
+                  type="number"
+                  inputMode="numeric"
+                  min={MESES_MINIMO}
+                  max={MESES_MAXIMO}
+                  step={1}
+                  value={casilleros.meses_entre_actualizaciones}
+                  onChange={(e) => cambiar('meses_entre_actualizaciones', e.target.value)}
+                  disabled={apagado}
+                  error={malCargado('meses_entre_actualizaciones')}
+                />
+                <FormField
+                  label={tc.ajuste_por_indice}
+                  name="ajuste_por_indice"
+                  type="select"
+                  value={casilleros.ajuste_por_indice}
+                  onChange={(e) => cambiar('ajuste_por_indice', e.target.value)}
+                  disabled={apagado}
+                  error={malCargado('ajuste_por_indice')}
+                >
+                  {AJUSTES_POR_INDICE_POSIBLES.map((valor) => (
+                    <option key={valor} value={valor}>{tc.valores.ajuste_por_indice[valor]}</option>
+                  ))}
+                </FormField>
+              </>
             )}
           </div>
           {puedeEditar && (

@@ -214,3 +214,42 @@ describe('la factura del período', () => {
     assert.deepEqual(f.renglones, []);
   });
 });
+
+describe('lo que se descuenta y lo que se cobra de más, según las condiciones', () => {
+  // Cuatro guardias pactadas a 10.000 el período: cada una vale 2.500.
+  const pactadas = () => [prestacion({ configuracion: { cantidad_guardias: 4 } })];
+  const guardia = (fecha, cambios = {}) => ({
+    id: `g-${fecha}`, fecha, servicio_id: SERVICIO, horas: 8, horas_extra: 0, pacientes: [PACIENTE], ...cambios,
+  });
+
+  it('cada renglón dice qué es, y lo no prestado va aparte, en negativo y en la moneda de la factura', () => {
+    const f = armarLaFacturaDelPeriodo({
+      periodo: AGOSTO,
+      condiciones: { medicion: 'pactado_mas_excedente' },
+      prestaciones: pactadas(),
+      guardias: [guardia('2026-08-03'), guardia('2026-08-10'), guardia('2026-08-17'), guardia('2026-08-24', { estado: 'ausente' })],
+      nombresDePacientes: NOMBRES,
+    });
+    assert.deepEqual(f.renglones.map((r) => [r.concepto, r.unidad, r.monto]), [
+      ['pactado', 'periodo', 10000],
+      ['no_prestado', 'guardia', -2500],
+    ]);
+    assert.equal(f.moneda, 'ARS');
+    assert.equal(f.renglones[0].recargo_del_adicional, null);
+    assert.equal(f.total, 7500);
+  });
+
+  it('el adicional lleva el recargo que rige, y queda escrito en su renglón', () => {
+    const f = armarLaFacturaDelPeriodo({
+      periodo: AGOSTO,
+      condiciones: { medicion: 'pactado_mas_excedente', recargo_del_adicional: 20 },
+      prestaciones: pactadas(),
+      guardias: ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31'].map((d) => guardia(d)),
+      nombresDePacientes: NOMBRES,
+    });
+    const adicional = f.renglones.find((r) => r.concepto === 'adicional');
+    assert.equal(adicional.monto, 3000);
+    assert.equal(adicional.recargo_del_adicional, 20);
+    assert.equal(f.total, 13000);
+  });
+});

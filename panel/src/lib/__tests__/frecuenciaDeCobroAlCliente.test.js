@@ -44,8 +44,8 @@ describe('periodoDeCobroQueContiene', () => {
     expect(periodoDeCobroQueContiene('2027-02-10', 'trimestre')).toEqual({ desde: '2027-02-01', hasta: '2027-02-28' });
   });
 
-  it('el día no entra en la lista que ven los Asistentes', () => {
-    expect(FRECUENCIAS_POSIBLES).toEqual(['semana', 'quincena', 'mes']);
+  it('el día está en la misma lista que ven los Asistentes', () => {
+    expect(FRECUENCIAS_POSIBLES).toEqual(['dia', 'semana', 'quincena', 'mes']);
   });
 });
 

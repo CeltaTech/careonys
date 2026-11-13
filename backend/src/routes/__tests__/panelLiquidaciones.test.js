@@ -660,21 +660,22 @@ describe('generar el mes', () => {
     }
   });
 
-  it('quien cobra cada quince días recibe las dos mitades del mes', async () => {
+  it('quien cobra cada quince días recibe períodos de catorce días que cierran el viernes', async () => {
     prepararLaBase({
       configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'quincena' } }],
       guardias: [guardiaDe('g-1', '2026-08-10'), guardiaDe('g-2', '2026-08-20')],
     });
 
     const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
-    assert.equal(cuerpo.generadas, 2);
+    assert.equal(cuerpo.generadas, 3);
 
     const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
     assert.deepEqual(
       escrituras.map((e) => [e.cuerpo.periodo_desde, e.cuerpo.periodo_hasta]),
       [
-        ['2026-08-01', '2026-08-15'],
-        ['2026-08-16', '2026-08-31'],
+        ['2026-07-25', '2026-08-07'],
+        ['2026-08-08', '2026-08-21'],
+        ['2026-08-22', '2026-09-04'],
       ]
     );
   });

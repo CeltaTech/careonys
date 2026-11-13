@@ -30,13 +30,14 @@ import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado
 import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
 import {
   armarLaFacturaDelPeriodo,
+  conLosDescuentos,
   etiquetaDelPeriodo,
   periodosDelTramo,
   seSuperponen,
   tramoNombrado,
   tramoPedido,
 } from '../utils/facturaDelPeriodo.js';
-import { condicionDe } from '../utils/condicionesDelCliente.js';
+import { condicionDe, condicionesDe } from '../utils/condicionesDelCliente.js';
 import { horasEntre } from '../utils/horasDeGuardia.js';
 import { DATOS_PARA_FACTURAR } from '../utils/datosParaFacturar.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
@@ -591,11 +592,37 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
       const respuesta = await enLaPrestadora(prestadoraId, 'lectura de las condiciones de cobro de cada Servicio', (dbTrabajo) =>
         dbTrabajo
           .from('condiciones_comerciales_servicio')
-          .select('servicio_id, dias_hasta_el_vencimiento, frecuencia_de_cobro, medicion')
+          .select(
+            'servicio_id, dias_hasta_el_vencimiento, frecuencia_de_cobro, medicion, cobra_cancelada_por_el_cliente, '
+              + 'descuenta_lo_no_prestado, cobra_guardias_adicionales, cobra_horas_adicionales, recargo_del_adicional',
+          )
           .in('servicio_id', servicioIds),
       );
       if (respuesta.error) return responderError(res, respuesta.error);
       for (const c of respuesta.data || []) comercialDelServicio.set(c.servicio_id, c);
+    } catch (e) {
+      return responderError(res, e);
+    }
+  }
+
+  // Los descuentos de cada Servicio. Son parte de lo comercial, igual que las condiciones: se
+  // leen con el trabajo de la Prestadora, porque generar las facturas lo hace también quien
+  // coordina. Los terminados también vienen: un período que cerró antes de la terminación
+  // todavía lo lleva.
+  const descuentosDelServicio = new Map();
+  if (servicioIds.length > 0) {
+    try {
+      const respuesta = await enLaPrestadora(prestadoraId, 'lectura de los descuentos de cada Servicio', (dbTrabajo) =>
+        dbTrabajo
+          .from('descuentos_del_servicio')
+          .select('id, servicio_id, clase, valor, moneda, vigente_desde, cantidad_de_periodos, vigente_hasta, cargado_en, terminado_en')
+          .in('servicio_id', servicioIds),
+      );
+      if (respuesta.error) return responderError(res, respuesta.error);
+      for (const d of respuesta.data || []) {
+        if (!descuentosDelServicio.has(d.servicio_id)) descuentosDelServicio.set(d.servicio_id, []);
+        descuentosDelServicio.get(d.servicio_id).push(d);
+      }
     } catch (e) {
       return responderError(res, e);
     }
@@ -626,15 +653,18 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
     prestaciones = data || [];
   }
 
-  // El trabajo: las guardias completadas de esos Servicios en esas fechas, con sus Pacientes. Las
-  // horas se cuentan con la misma regla que usa la Liquidación del Asistente.
+  // El trabajo: las guardias de esos Servicios en esas fechas, con sus Pacientes. Entran las
+  // completadas, que se cobran, y las ausentes y las canceladas, que según las condiciones se
+  // descuentan o se cobran; la cancelación dice quién la pidió. La pausada por internación no
+  // entra, igual que antes. Las horas se cuentan con la misma regla que usa la Liquidación del
+  // Asistente.
   let guardias = [];
   const serviciosConPeriodos = [...periodosDelServicio.keys()];
   if (serviciosConPeriodos.length > 0) {
     const { data, error } = await db
       .from('guardias')
-      .select('id, fecha, servicio_id, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, guardia_pacientes(paciente_id)')
-      .eq('estado', 'completada')
+      .select('id, fecha, servicio_id, estado, cancelacion_origen, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, guardia_pacientes(paciente_id)')
+      .in('estado', ['completada', 'ausente', 'cancelada'])
       .in('servicio_id', serviciosConPeriodos)
       .gte('fecha', primerDia)
       .lte('fecha', ultimoDia);
@@ -643,6 +673,8 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
       id: g.id,
       fecha: String(g.fecha).slice(0, 10),
       servicio_id: g.servicio_id,
+      estado: g.estado,
+      cancelacion_origen: g.cancelacion_origen ?? null,
       horas: horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin),
       horas_extra: Number(g.horas_extra) || 0,
       pacientes: (g.guardia_pacientes || []).map((gp) => gp.paciente_id),
@@ -684,17 +716,21 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   let guardiasAmbiguas = 0;
   let sinPrecio = 0;
   let monedasMezcladas = 0;
+  let descuentosSinAplicar = 0;
 
   for (const servicio of serviciosVisibles) {
     const comercial = comercialDelServicio.get(servicio.id);
-    const medicion = condicionDe('medicion', reglaDeLaPrestadora, comercial);
+    // Todas las condiciones que rigen para este Servicio: la medición y qué se descuenta o se
+    // cobra de más.
+    const condiciones = condicionesDe(reglaDeLaPrestadora, comercial);
 
     for (const periodo of periodosDelServicio.get(servicio.id) || []) {
       if (yaFacturado(servicio.id, periodo)) continue;
 
       const factura = armarLaFacturaDelPeriodo({
         periodo,
-        medicion,
+        medicion: condiciones.medicion,
+        condiciones,
         prestaciones: porServicio.get(servicio.id) || [],
         guardias: guardiasPorServicio.get(servicio.id) || [],
         nombresDePacientes,
@@ -702,9 +738,8 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
       guardiasSinAsignar += factura.guardiasSinAsignar;
       guardiasAmbiguas += factura.guardiasAmbiguas;
       sinPrecio += factura.sinPrecio;
-      const renglones = factura.renglones;
 
-      if (renglones.length === 0) {
+      if (factura.renglones.length === 0) {
         sinPrestaciones += 1;
         continue;
       }
@@ -724,12 +759,17 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         continue;
       }
 
-      if (renglones.length === 0) {
-        sinPrestaciones += 1;
-        continue;
-      }
-
-      const montoTotal = aDosDecimales(factura.total);
+      // Los descuentos se restan al final, sobre lo que suma la factura, cada uno en su renglón.
+      const conDescuentos = conLosDescuentos({
+        factura,
+        descuentos: descuentosDelServicio.get(servicio.id),
+        periodo,
+        frecuencia: condiciones.frecuencia_de_cobro,
+        servicioId: servicio.id,
+      });
+      descuentosSinAplicar += conDescuentos.noAplicados.length;
+      const renglones = conDescuentos.renglones;
+      const montoTotal = aDosDecimales(conDescuentos.total);
 
       const { data: creada, error: errorFactura } = await db
         .from('facturas_cliente')
@@ -775,6 +815,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
     guardiasAmbiguas,
     sinPrecio,
     monedasMezcladas,
+    descuentosSinAplicar,
   });
 });
 

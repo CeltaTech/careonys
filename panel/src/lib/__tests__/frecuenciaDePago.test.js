@@ -10,17 +10,21 @@
  * período. Eso es lo que nadie puede verificar a ojo.
  *
  * Qué daría con el sistema roto: un `+ 1` de más en el corte semanal deja un día afuera y la
- * cobertura falla; partir la quincena por días corridos en vez de por el número del día
- * desfasa los períodos y también falla.
+ * cobertura falla; armar la quincena con un par de semanas que no coincida según desde qué
+ * fecha se pregunte deja días en dos períodos y también falla.
  */
 import { describe, expect, it } from 'vitest';
+import { FRECUENCIAS_DE_COBRO_POSIBLES } from '../condicionesDelCliente';
 import {
   DIAS_DE_LA_SEMANA,
+  DIA_DE_CORTE_DEL_CLIENTE,
   FRECUENCIAS,
+  FRECUENCIAS_POSIBLES,
   FRECUENCIA_DE_PAGO,
   diaDeLaSemanaDe,
   fechaDePagoDe,
   frecuenciaDePagoDe,
+  periodoDeCobroQueContiene,
   periodoQueContiene,
   periodoSiguienteA,
   periodosQueTocan,
@@ -56,21 +60,54 @@ describe('el período por mes', () => {
 });
 
 describe('el período por quincena', () => {
-  it('el día 15 cierra la primera', () => {
-    expect(periodoQueContiene('2026-09-15', POR_QUINCENA)).toEqual({ desde: '2026-09-01', hasta: '2026-09-15' });
+  it('son dos semanas juntas, catorce días, que terminan en el día de corte', () => {
+    // El 2026-09-18 es viernes, el corte de fábrica del Asistente.
+    expect(periodoQueContiene('2026-09-18', POR_QUINCENA)).toEqual({ desde: '2026-09-05', hasta: '2026-09-18' });
+    expect(periodoQueContiene('2026-09-05', POR_QUINCENA)).toEqual({ desde: '2026-09-05', hasta: '2026-09-18' });
   });
 
-  it('el día 16 abre la segunda, que termina con el mes', () => {
-    expect(periodoQueContiene('2026-09-16', POR_QUINCENA)).toEqual({ desde: '2026-09-16', hasta: '2026-09-30' });
+  it('el día siguiente al corte abre la quincena siguiente', () => {
+    expect(periodoQueContiene('2026-09-19', POR_QUINCENA)).toEqual({ desde: '2026-09-19', hasta: '2026-10-02' });
   });
 
-  it('las dos mitades caen siempre en el mismo lugar, mes tras mes', () => {
-    // Si se partiera cada quince días corridos, esto se iría desfasando y en diciembre las
-    // quincenas no coincidirían con ningún día redondo del calendario.
-    for (const mes of ['2026-01', '2026-02', '2026-07', '2026-12']) {
-      expect(periodoQueContiene(`${mes}-15`, POR_QUINCENA).hasta).toBe(`${mes}-15`);
-      expect(periodoQueContiene(`${mes}-16`, POR_QUINCENA).desde).toBe(`${mes}-16`);
+  it('todas duran catorce días, también en febrero', () => {
+    // Partida por el número del día, la de febrero duraría trece y la de agosto dieciséis.
+    for (const fecha of ['2026-02-16', '2026-02-28', '2026-08-31', '2026-12-31']) {
+      const { desde, hasta } = periodoQueContiene(fecha, POR_QUINCENA);
+      expect((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86400000 + 1).toBe(14);
     }
+  });
+
+  it('respeta el día de corte que se elija', () => {
+    const conDomingo = { cada_cuanto: FRECUENCIAS.QUINCENA, dia_de_corte: DIAS_DE_LA_SEMANA.DOMINGO };
+    expect(diaDeLaSemanaDe(periodoQueContiene('2026-09-18', conDomingo).hasta)).toBe(DIAS_DE_LA_SEMANA.DOMINGO);
+  });
+});
+
+describe('el período por día', () => {
+  it('es ese mismo día', () => {
+    expect(periodoQueContiene('2026-09-18', { cada_cuanto: FRECUENCIAS.DIA })).toEqual({ desde: '2026-09-18', hasta: '2026-09-18' });
+  });
+
+  it('se puede guardar como frecuencia del Asistente', () => {
+    expect(revisarFrecuenciaDePago({ cada_cuanto: FRECUENCIAS.DIA }).ok).toBe(true);
+    expect(frecuenciaDePagoDe(null, { cada_cuanto: FRECUENCIAS.DIA }).cada_cuanto).toBe(FRECUENCIAS.DIA);
+  });
+});
+
+describe('una sola lista para el Asistente y el Cliente', () => {
+  it('las mismas cuatro frecuencias, en el mismo orden', () => {
+    expect(FRECUENCIAS_POSIBLES).toEqual(['dia', 'semana', 'quincena', 'mes']);
+    expect(FRECUENCIAS_POSIBLES).toEqual([...FRECUENCIAS_DE_COBRO_POSIBLES]);
+  });
+
+  it('la misma cuenta: cambia sólo el día de corte de fábrica', () => {
+    // Asistente: viernes. Cliente: domingo.
+    expect(FRECUENCIA_DE_PAGO.dia_de_corte).toBe(DIAS_DE_LA_SEMANA.VIERNES);
+    expect(DIA_DE_CORTE_DEL_CLIENTE).toBe(DIAS_DE_LA_SEMANA.DOMINGO);
+    const delCliente = periodoDeCobroQueContiene('2026-09-18', FRECUENCIAS.QUINCENA);
+    expect(delCliente).toEqual(periodoQueContiene('2026-09-18', { cada_cuanto: FRECUENCIAS.QUINCENA, dia_de_corte: DIAS_DE_LA_SEMANA.DOMINGO }));
+    expect(diaDeLaSemanaDe(delCliente.hasta)).toBe(DIAS_DE_LA_SEMANA.DOMINGO);
   });
 });
 
@@ -161,10 +198,11 @@ describe('recorrer los períodos', () => {
     expect(dos.hasta).toBe('2026-09-25');
   });
 
-  it('un mes cualquiera tiene dos quincenas', () => {
+  it('las quincenas que tocan un mes se encadenan sin huecos, aunque crucen sus bordes', () => {
     expect(periodosQueTocan('2026-09-01', '2026-09-30', POR_QUINCENA)).toEqual([
-      { desde: '2026-09-01', hasta: '2026-09-15' },
-      { desde: '2026-09-16', hasta: '2026-09-30' },
+      { desde: '2026-08-22', hasta: '2026-09-04' },
+      { desde: '2026-09-05', hasta: '2026-09-18' },
+      { desde: '2026-09-19', hasta: '2026-10-02' },
     ]);
   });
 
@@ -187,7 +225,7 @@ describe('que ningún día quede sin período ni en dos', () => {
     return vistos;
   };
 
-  for (const [nombre, frecuencia] of [['por mes', POR_MES], ['por quincena', POR_QUINCENA], ['por semana', POR_SEMANA]]) {
+  for (const [nombre, frecuencia] of [['por mes', POR_MES], ['por quincena', POR_QUINCENA], ['por semana', POR_SEMANA], ['por día', { cada_cuanto: FRECUENCIAS.DIA }]]) {
     it(`${nombre}: los 365 días de 2026 caen en un período, y en uno solo`, () => {
       const vistos = recorrerElAnio(frecuencia);
       expect(vistos.size).toBe(365);

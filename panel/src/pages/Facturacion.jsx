@@ -119,6 +119,7 @@ const APARTE_DE_LA_GENERACION = [
   ['guardiasAmbiguas', 'guardias_ambiguas'],
   ['sinPrecio', 'sin_precio'],
   ['monedasMezcladas', 'monedas_mezcladas'],
+  ['descuentosSinAplicar', 'descuentos_sin_aplicar'],
 ];
 
 /** De dónde salieron los cobros de un saldo, en palabras. */

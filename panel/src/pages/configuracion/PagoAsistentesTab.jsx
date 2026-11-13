@@ -7,9 +7,9 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import {
-  FRECUENCIAS,
   FRECUENCIAS_POSIBLES,
   FRECUENCIA_QUE_SE_PUEDE_TOCAR,
+  usaDiaDeCorte,
 } from '../../lib/frecuenciaDePago';
 import '../../styles/molde-paginas.css';
 
@@ -134,14 +134,14 @@ export function PagoAsistentesTab() {
             >
               {FRECUENCIAS_POSIBLES.map((cual) => (
                 <option key={cual} value={cual}>
-                  {t.configuracion.frecuencia_pago_cada_cuanto_opciones[cual]}
+                  {t.configuracion.condiciones_cliente.valores.frecuencia_de_cobro[cual]}
                 </option>
               ))}
             </FormField>
 
-            {/* El día de corte sólo significa algo cuando se cierra por semana: mostrarlo
-                siempre haría creer que el mes también depende de él. */}
-            {frecuencia.cada_cuanto === FRECUENCIAS.SEMANA && (
+            {/* El día de corte sólo significa algo cuando se cierra por semana o por quincena:
+                mostrarlo siempre haría creer que el día y el mes también dependen de él. */}
+            {usaDiaDeCorte(frecuencia.cada_cuanto) && (
               <FormField
                 label={t.configuracion.frecuencia_pago_dia_de_corte}
                 name="frecuencia_dia_de_corte"

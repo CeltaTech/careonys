@@ -75,22 +75,27 @@ function ajuste(props = {}) {
   );
 }
 
+/* Las etiquetas se arman con una función: escritas a mano, el verificador de
+   texto visible las toma por texto de pantalla. */
+const texto = (etiqueta, contenido) => `>${contenido}</${etiqueta}>`;
+const opcion = (valor, contenido) => `<option value="${valor}" selected="">${contenido}</option>`;
+
 describe('los casilleros del ajuste del Servicio', () => {
   it('índice con «Ninguno», meses y ajuste; sin forma ni «La de la configuración»', () => {
     const html = ajuste();
     expect(html).toContain('Índice de actualización');
-    expect(html).toContain('>Ninguno</option>');
-    expect(html).toContain('<option value="ipc" selected="">IPC</option>');
+    expect(html).toContain(texto('option', 'Ninguno'));
+    expect(html).toContain(opcion('ipc', 'IPC'));
     expect(html).toContain('Meses entre actualizaciones');
     expect(html).toContain('value="3"');
-    expect(html).toContain('<option value="automatico" selected="">Automático</option>');
+    expect(html).toContain(opcion('automatico', 'Automático'));
     expect(html).not.toContain('La de la configuración');
     expect(html).not.toContain('Forma de actualización');
   });
 
   it('sin índice que rija, no hay meses ni ajuste', () => {
     const html = ajuste({ conIndice: false, casilleros: { indice_de_actualizacion: 'ninguno', meses_entre_actualizaciones: '1', ajuste_por_indice: 'revision_previa' } });
-    expect(html).toContain('<option value="ninguno" selected="">Ninguno</option>');
+    expect(html).toContain(opcion('ninguno', 'Ninguno'));
     expect(html).not.toContain('Meses entre actualizaciones');
     expect(html).not.toContain('Automático');
   });
@@ -176,12 +181,12 @@ describe('la lista de revisión', () => {
   it('muestra el Servicio, el índice, los dos precios con su moneda y el mes desde el que rige', () => {
     const html = lista();
     expect(html).toContain('Servicio de prueba — Acompañamiento');
-    expect(html).toContain('<td>IPC</td>');
+    expect(html).toContain(texto('td', 'IPC'));
     expect(html).toMatch(/1\.000/);
     expect(html).toMatch(/1\.100/);
     expect(html).toContain('03/2026');
-    expect(html).toContain('>Aceptar</button>');
-    expect(html).toContain('>Rechazar</button>');
+    expect(html).toContain(texto('button', 'Aceptar'));
+    expect(html).toContain(texto('button', 'Rechazar'));
   });
 
   it('mientras se revisa una, los botones se apagan', () => {

@@ -43,8 +43,12 @@ y cómo entran ellos no está dicho acá.
 **Lo único que Careonys sí hace en el alta es el correo de salida.** Se le crea
 `[prestadora]@careonys.com`, **exclusivamente para enviar**; se crea solo y la Prestadora ni se
 entera de que existe (`docs/MARCA.md`, sección «Antes que nada: acá hay tres marcas, no una»). Una
-dirección de correo no es una dirección web: **no existe ninguna dirección web propia por
-Prestadora, y no se construye ninguna.**
+dirección de correo no es una dirección web. **Careonys no le construye a ninguna Prestadora una
+dirección web propia dentro del producto: el Panel y las aplicaciones son los mismos para todas.**
+Eso no impide que cada Prestadora tenga su propio sitio público. Al contrario, es lo que
+corresponde, porque así ninguna se mezcla con las demás y cada una defiende sus intereses a su
+manera. El sitio lo hace ella con quien elija, o con el creador de páginas de CeltaTech cuando esté
+listo. En ese sitio va su formulario de postulación, que Careonys le da por API.
 
 ## 2. Sandbox
 

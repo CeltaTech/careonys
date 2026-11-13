@@ -379,8 +379,7 @@ La columna `ofrecida` es parte del control de acceso, no una preferencia de pant
 que la Prestadora dejó de ofrecer desaparece de la vista del Cliente, y los accesos que ya se
 adhirieron a ella siguen apuntando a su fila. Las demás tablas de la modalidad conservan el mismo
 reparto de siempre —`cliente_ve_su_acceso_intermediacion` / `prestadora_ve_accesos_intermediacion`,
-`cliente_ve_los_cobros_de_su_acceso` / `prestadora_ve_cobros_intermediacion` /
-`panel_registra_cobro_efectivo_manual`, y las tres de `qr_cobro_efectivo`—, renombradas al pasar
+`cliente_ve_los_cobros_de_su_acceso` / `prestadora_ve_cobros_intermediacion`—, renombradas al pasar
 de suscripción a acceso. Ningún Cliente ve el acceso ni el cobro de otro, y ninguna Prestadora
 ve nada de otra Prestadora.
 

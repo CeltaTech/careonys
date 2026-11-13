@@ -6,7 +6,6 @@ import {
   TOPE_DEL_LOTE,
   aDosDecimales,
   loQueEstaMalEnElCobro,
-  primerDiaDelPeriodo,
 } from '../utils/cobrosDeCliente.js';
 import {
   LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE,
@@ -29,7 +28,17 @@ import {
 import { laCobranzaLaLlevaOtroSoftware } from '../utils/seguimientoDeLaCobranza.js';
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
-import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
+import {
+  armarLaFacturaDelPeriodo,
+  etiquetaDelPeriodo,
+  periodosDelTramo,
+  seSuperponen,
+  tramoNombrado,
+  tramoPedido,
+} from '../utils/facturaDelPeriodo.js';
+import { condicionDe } from '../utils/condicionesDelCliente.js';
+import { horasEntre } from '../utils/horasDeGuardia.js';
+import { DATOS_PARA_FACTURAR } from '../utils/datosParaFacturar.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { requierePermiso } from '../utils/permisos.js';
 
@@ -134,9 +143,6 @@ async function nombresDeClientes(db, ids) {
  * Cliente—. Los datos de la persona se leen en este momento y no se copian: lo que el
  * facturador recibe es lo que esos datos dicen hoy.
  */
-const DATOS_PARA_FACTURAR =
-  'id, nombre_visible, nombre, apellido, documento_tipo, documento_numero, documento_pais, calle, numero, piso, unidad, codigo_postal, email';
-
 async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
   const resultado = new Map();
   const ids = [...new Set(facturaIds)];
@@ -411,12 +417,15 @@ panelCobrosRouter.patch('/avisos-baja-con-deuda/:id/visto', requiereRolPanel, ve
 // ---------------------------------------------------------------------------------------
 
 /**
- * Los saldos de un período: lo facturado, lo cobrado, lo que falta, de dónde salió el dato y
- * de cuándo es.
+ * Los saldos de un tramo de fechas: lo facturado, lo cobrado, lo que falta, de dónde salió el
+ * dato y de cuándo es. Entran las facturas cuyo período empieza en el tramo, que son las mismas
+ * que genera ese tramo. El tramo llega como `desde` y `hasta`, o como el mes de antes, `periodo`.
  */
 panelCobrosRouter.get('/saldos', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
-  const periodo = primerDiaDelPeriodo(req.query.periodo);
-  if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
+  const tramo = tramoPedido(req.query);
+  if (!tramo) {
+    return res.status(400).json({ error: 'Falta el período. Indique un mes, o las fechas desde y hasta, e intente nuevamente.' });
+  }
 
   try {
     if (await laCobranzaLaLlevaOtroSoftware(req.usuarioPanel.prestadoraId)) return noSeCalculaAca(res);
@@ -428,7 +437,8 @@ panelCobrosRouter.get('/saldos', requiereRolPanel, veElEstadoDeCuenta, async (re
   const { data, error } = await db
     .from('saldos_cliente')
     .select('*')
-    .eq('periodo', periodo)
+    .gte('periodo', tramo.desde)
+    .lte('periodo', tramo.hasta)
     .order('fecha_emision', { ascending: false });
   if (error) return responderError(res, error);
 
@@ -501,15 +511,13 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
 // ---------------------------------------------------------------------------------------
 
 /**
- * Generar las facturas de un período, una por Servicio que todavía no tenga la suya.
+ * Generar las facturas de un tramo de fechas: una por Servicio y por cada período de su
+ * frecuencia de cobro que empiece en el tramo, ya terminado, y que todavía no tenga la suya.
  *
- * ESTO SE HACÍA EN EL NAVEGADOR, y la cuenta salía mal: cobraba prestaciones cuya vigencia ya
- * había terminado o todavía no había empezado. Qué lleva cada factura es un cálculo económico y
- * ahora vive en `utils/facturaDelPeriodo.js`, del mismo lado que las facturas.
- *
- * SE COBRA EL PRECIO ACORDADO, ENTERO, por cualquier prestación que corra aunque sea un día del
- * período, y cada prestación por separado. Partirlo en proporción a los días obligaría a decidir sobre cuántos se parte, y eso lo
- * acuerda cada Prestadora con cada Cliente.
+ * EL TRAMO llega como `{ desde, hasta }`, o como el mes de antes, `periodo: 'AAAA-MM'`. El período
+ * de cada factura sale de la frecuencia del Servicio, y lo que se cobra, de su medición y del
+ * trabajo anotado en las guardias completadas: la cuenta vive en `utils/facturaDelPeriodo.js` y
+ * `utils/calcularLiquidacion.js`, del mismo lado que las facturas.
  *
  * UNA FACTURA SIN RENGLONES NO QUEDA. Si los renglones no entran, se borra la factura recién
  * creada: una factura con monto y sin detalle no se puede reclamar ni explicar, y como no tiene
@@ -517,8 +525,10 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
  */
 panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
-  const periodo = primerDiaDelPeriodo(req.body?.periodo);
-  if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
+  const tramo = tramoPedido(req.body);
+  if (!tramo) {
+    return res.status(400).json({ error: 'Falta el período. Indique un mes, o las fechas desde y hasta, e intente nuevamente.' });
+  }
 
   // La fecha puede venir escrita para toda la tanda —es lo que se hacía hasta ahora—, y en ese
   // caso pisa cualquier plazo acordado. Si no viene, cada factura vence según el plazo de ese
@@ -533,7 +543,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   // sólo a la administración, y generar las facturas también lo hace quien coordina.
   let configuracion;
   try {
-    const respuesta = await enLaPrestadora(prestadoraId, 'lectura del plazo de vencimiento', (dbTrabajo) =>
+    const respuesta = await enLaPrestadora(prestadoraId, 'lectura de las condiciones de cobro', (dbTrabajo) =>
       dbTrabajo
         .from('configuracion_facturacion_clientes')
         .select('regla')
@@ -545,7 +555,8 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   } catch (e) {
     return responderError(res, e);
   }
-  const plazoDeLaPrestadora = configuracion?.regla?.dias_hasta_el_vencimiento ?? null;
+  const reglaDeLaPrestadora = configuracion?.regla ?? null;
+  const plazoDeLaPrestadora = reglaDeLaPrestadora?.dias_hasta_el_vencimiento ?? null;
 
   const hoy = new Date().toISOString().slice(0, 10);
 
@@ -568,44 +579,91 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
     .from('servicios')
     .select('id, prestadora_id, cliente_id');
   if (errorServicios) return responderError(res, errorServicios);
+  const serviciosVisibles = (servicios || []).filter((s) => clientesVisibles.has(s.cliente_id));
 
-  // El plazo de pago de cada Servicio es parte de lo comercial, que la base le abre sólo a quien
-  // tiene ese permiso; generar las facturas lo hace también quien coordina.
-  const plazoDelServicio = new Map();
+  // El plazo de pago, la frecuencia de cobro y la medición de cada Servicio son parte de lo
+  // comercial, que la base le abre sólo a quien tiene ese permiso; generar las facturas lo hace
+  // también quien coordina.
+  const comercialDelServicio = new Map();
   const servicioIds = (servicios || []).map((s) => s.id);
   if (servicioIds.length > 0) {
     try {
-      const respuesta = await enLaPrestadora(prestadoraId, 'lectura del plazo de pago de cada Servicio', (dbTrabajo) =>
+      const respuesta = await enLaPrestadora(prestadoraId, 'lectura de las condiciones de cobro de cada Servicio', (dbTrabajo) =>
         dbTrabajo
           .from('condiciones_comerciales_servicio')
-          .select('servicio_id, dias_hasta_el_vencimiento')
+          .select('servicio_id, dias_hasta_el_vencimiento, frecuencia_de_cobro, medicion')
           .in('servicio_id', servicioIds),
       );
       if (respuesta.error) return responderError(res, respuesta.error);
-      for (const c of respuesta.data || []) plazoDelServicio.set(c.servicio_id, c.dias_hasta_el_vencimiento);
+      for (const c of respuesta.data || []) comercialDelServicio.set(c.servicio_id, c);
     } catch (e) {
       return responderError(res, e);
     }
   }
 
-  let prestaciones = [];
+  // Los períodos de cada Servicio, con su propia frecuencia. Los que todavía no terminaron se
+  // cuentan y no se facturan.
+  let sinTerminar = 0;
+  const periodosDelServicio = new Map();
+  for (const servicio of serviciosVisibles) {
+    const frecuencia = condicionDe('frecuencia_de_cobro', reglaDeLaPrestadora, comercialDelServicio.get(servicio.id));
+    const { terminados, sinTerminar: abiertos } = periodosDelTramo({ tramo, frecuencia, hoy });
+    sinTerminar += abiertos.length;
+    if (terminados.length > 0) periodosDelServicio.set(servicio.id, terminados);
+  }
+  const todosLosPeriodos = [...periodosDelServicio.values()].flat();
+  const primerDia = todosLosPeriodos.reduce((min, p) => (p.desde < min ? p.desde : min), tramo.desde);
+  const ultimoDia = todosLosPeriodos.reduce((max, p) => (p.hasta > max ? p.hasta : max), tramo.hasta);
 
+  let prestaciones = [];
   if (pacienteIds.length > 0) {
     const { data, error } = await db
       .from('prestaciones')
-      .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, vigente_desde, vigente_hasta')
+      .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda, vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id')
       .eq('estado', 'vigente')
       .in('paciente_id', pacienteIds);
     if (error) return responderError(res, error);
     prestaciones = data || [];
   }
 
+  // El trabajo: las guardias completadas de esos Servicios en esas fechas, con sus Pacientes. Las
+  // horas se cuentan con la misma regla que usa la Liquidación del Asistente.
+  let guardias = [];
+  const serviciosConPeriodos = [...periodosDelServicio.keys()];
+  if (serviciosConPeriodos.length > 0) {
+    const { data, error } = await db
+      .from('guardias')
+      .select('id, fecha, servicio_id, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, guardia_pacientes(paciente_id)')
+      .eq('estado', 'completada')
+      .in('servicio_id', serviciosConPeriodos)
+      .gte('fecha', primerDia)
+      .lte('fecha', ultimoDia);
+    if (error) return responderError(res, error);
+    guardias = (data || []).map((g) => ({
+      id: g.id,
+      fecha: String(g.fecha).slice(0, 10),
+      servicio_id: g.servicio_id,
+      horas: horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin),
+      horas_extra: Number(g.horas_extra) || 0,
+      pacientes: (g.guardia_pacientes || []).map((gp) => gp.paciente_id),
+    }));
+  }
+
+  // Lo ya facturado que toca estas fechas: un período que se superpone con una factura del mismo
+  // Servicio no se vuelve a facturar. La base lo rechazaría igual; mirarlo antes evita cortar la
+  // tanda a la mitad.
   const { data: existentes, error: errorExistentes } = await db
     .from('facturas_cliente')
-    .select('servicio_id')
-    .eq('periodo', periodo);
+    .select('servicio_id, periodo, periodo_hasta')
+    .lte('periodo', ultimoDia)
+    .gte('periodo_hasta', primerDia);
   if (errorExistentes) return responderError(res, errorExistentes);
-  const yaFacturados = new Set((existentes || []).map((f) => f.servicio_id));
+  const yaFacturado = (servicioId, periodo) =>
+    (existentes || []).some(
+      (f) =>
+        f.servicio_id === servicioId &&
+        seSuperponen({ desde: String(f.periodo).slice(0, 10), hasta: String(f.periodo_hasta).slice(0, 10) }, periodo),
+    );
 
   const porServicio = new Map();
   for (const p of prestaciones) {
@@ -613,73 +671,111 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
     if (!porServicio.has(p.servicio_id)) porServicio.set(p.servicio_id, []);
     porServicio.get(p.servicio_id).push(p);
   }
+  const guardiasPorServicio = new Map();
+  for (const g of guardias) {
+    if (!guardiasPorServicio.has(g.servicio_id)) guardiasPorServicio.set(g.servicio_id, []);
+    guardiasPorServicio.get(g.servicio_id).push(g);
+  }
 
   let generadas = 0;
   let sinPrestaciones = 0;
   let sinVencimiento = 0;
+  let guardiasSinAsignar = 0;
+  let guardiasAmbiguas = 0;
+  let sinPrecio = 0;
+  let monedasMezcladas = 0;
 
-  for (const servicio of servicios || []) {
-    if (!clientesVisibles.has(servicio.cliente_id)) continue;
-    if (yaFacturados.has(servicio.id)) continue;
+  for (const servicio of serviciosVisibles) {
+    const comercial = comercialDelServicio.get(servicio.id);
+    const medicion = condicionDe('medicion', reglaDeLaPrestadora, comercial);
 
-    const renglones = armarLosRenglonesDeLaFactura({
-      periodo,
-      nombresDePacientes,
-      prestaciones: porServicio.get(servicio.id) || [],
-    });
+    for (const periodo of periodosDelServicio.get(servicio.id) || []) {
+      if (yaFacturado(servicio.id, periodo)) continue;
 
-    if (renglones.length === 0) {
-      sinPrestaciones += 1;
-      continue;
-    }
-
-    const vencimiento = vencimientoEscrito
-      ? vencimientoDeLaTanda
-      : vencimientoDe(hoy, plazoDePagoDe(plazoDeLaPrestadora, plazoDelServicio.get(servicio.id) ?? null));
-
-    if (!vencimiento) {
-      sinVencimiento += 1;
-      continue;
-    }
-
-    if (renglones.length === 0) {
-      sinPrestaciones += 1;
-      continue;
-    }
-
-    const montoTotal = aDosDecimales(renglones.reduce((acc, r) => acc + r.monto, 0));
-
-    const { data: factura, error: errorFactura } = await db
-      .from('facturas_cliente')
-      .insert({
-        prestadora_id: servicio.prestadora_id,
-        cliente_id: servicio.cliente_id,
-        servicio_id: servicio.id,
+      const factura = armarLaFacturaDelPeriodo({
         periodo,
-        monto_total: montoTotal,
-        // La emisión se escribe en vez de dejarla en el valor por defecto de la base: el plazo
-        // de pago se cuenta desde este mismo día, y si uno lo pone la base y el otro el backend,
-        // un cambio de día entre los dos daría un vencimiento corrido.
-        fecha_emision: hoy,
-        fecha_vencimiento: vencimiento,
-      })
-      .select('id, prestadora_id')
-      .single();
-    if (errorFactura) return responderError(res, errorFactura, 400);
+        medicion,
+        prestaciones: porServicio.get(servicio.id) || [],
+        guardias: guardiasPorServicio.get(servicio.id) || [],
+        nombresDePacientes,
+      });
+      guardiasSinAsignar += factura.guardiasSinAsignar;
+      guardiasAmbiguas += factura.guardiasAmbiguas;
+      sinPrecio += factura.sinPrecio;
+      const renglones = factura.renglones;
 
-    const { error: errorRenglones } = await db
-      .from('facturas_cliente_items')
-      .insert(renglones.map((r) => ({ ...r, prestadora_id: factura.prestadora_id, factura_id: factura.id })));
+      if (renglones.length === 0) {
+        sinPrestaciones += 1;
+        continue;
+      }
 
-    if (errorRenglones) {
-      await db.from('facturas_cliente').delete().eq('id', factura.id);
-      return responderError(res, errorRenglones, 400);
+      // Una factura tiene una sola moneda: con dos en el mismo Servicio no se arma.
+      if (factura.monedasMezcladas) {
+        monedasMezcladas += 1;
+        continue;
+      }
+
+      const vencimiento = vencimientoEscrito
+        ? vencimientoDeLaTanda
+        : vencimientoDe(hoy, plazoDePagoDe(plazoDeLaPrestadora, comercial?.dias_hasta_el_vencimiento ?? null));
+
+      if (!vencimiento) {
+        sinVencimiento += 1;
+        continue;
+      }
+
+      if (renglones.length === 0) {
+        sinPrestaciones += 1;
+        continue;
+      }
+
+      const montoTotal = aDosDecimales(factura.total);
+
+      const { data: creada, error: errorFactura } = await db
+        .from('facturas_cliente')
+        .insert({
+          prestadora_id: servicio.prestadora_id,
+          cliente_id: servicio.cliente_id,
+          servicio_id: servicio.id,
+          periodo: periodo.desde,
+          periodo_hasta: periodo.hasta,
+          monto_total: montoTotal,
+          // La moneda es la de las prestaciones que se cobran. Si no la traen, la completa la base
+          // con la de la Prestadora.
+          ...(factura.moneda ? { moneda: factura.moneda } : {}),
+          // La emisión se escribe en vez de dejarla en el valor por defecto de la base: el plazo
+          // de pago se cuenta desde este mismo día, y si uno lo pone la base y el otro el backend,
+          // un cambio de día entre los dos daría un vencimiento corrido.
+          fecha_emision: hoy,
+          fecha_vencimiento: vencimiento,
+        })
+        .select('id, prestadora_id')
+        .single();
+      if (errorFactura) return responderError(res, errorFactura, 400);
+
+      const { error: errorRenglones } = await db
+        .from('facturas_cliente_items')
+        .insert(renglones.map((r) => ({ ...r, prestadora_id: creada.prestadora_id, factura_id: creada.id })));
+
+      if (errorRenglones) {
+        await db.from('facturas_cliente').delete().eq('id', creada.id);
+        return responderError(res, errorRenglones, 400);
+      }
+
+      generadas += 1;
     }
-
-    generadas += 1;
   }
 
-  res.json({ generadas, sinPrestaciones, sinVencimiento });
+  res.json({
+    generadas,
+    sinPrestaciones,
+    sinVencimiento,
+    sinTerminar,
+    guardiasSinAsignar,
+    guardiasAmbiguas,
+    sinPrecio,
+    monedasMezcladas,
+  });
 });
 
 // ---------------------------------------------------------------------------------------
@@ -794,14 +890,17 @@ panelCobrosRouter.post(
  * volver a mandar lo emitido llevaría a emitirlo dos veces.
  */
 panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
-  const periodo = primerDiaDelPeriodo(req.query.periodo);
-  if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
+  const tramo = tramoPedido(req.query);
+  if (!tramo) {
+    return res.status(400).json({ error: 'Falta el período. Indique un mes, o las fechas desde y hasta, e intente nuevamente.' });
+  }
 
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('saldos_cliente')
     .select('*')
-    .eq('periodo', periodo)
+    .gte('periodo', tramo.desde)
+    .lte('periodo', tramo.hasta)
     .is('facturado_at', null)
     .order('fecha_emision', { ascending: true });
   if (error) return responderError(res, error);
@@ -820,7 +919,8 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
     numero_cliente: destinatarios.get(s.factura_id)?.numero_cliente ?? '',
     cliente: nombres.get(s.cliente_id) ?? '',
     ...aQuienFacturarle(destinatarios.get(s.factura_id)?.ficha ?? null),
-    periodo: String(s.periodo).slice(0, 7),
+    // Un mes calendario sale como siempre, `AAAA-MM`; otro período, con sus dos fechas.
+    periodo: etiquetaDelPeriodo(s.periodo, s.periodo_hasta),
     moneda: s.moneda,
     monto_a_facturar: s.monto_total,
     fecha_vencimiento: s.fecha_vencimiento ?? '',
@@ -1080,6 +1180,12 @@ panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, veElEstadoDeCuent
  * Se admiten dos formas de nombrarla, porque un sistema de afuera no siempre conoce el
  * identificador nuestro: o `factura_id` directo, o el Cliente más el período. La base contesta
  * sólo las facturas que quien pide puede ver.
+ *
+ * EL PERÍODO puede ser un mes `AAAA-MM`, como hasta ahora, un día `AAAA-MM-DD` o `desde/hasta`. Se
+ * buscan las facturas del Cliente cuyo período se superpone con ése, y si viene `servicio_id`,
+ * sólo las de ese Servicio. Como un Cliente puede tener varios Servicios y varios períodos en un
+ * mismo mes, sólo se acepta si queda exactamente una: elegir entre dos sería adivinar a cuál se
+ * le está pagando.
  */
 async function ubicarFactura(db, cobro) {
   if (cobro.factura_id) {
@@ -1087,19 +1193,29 @@ async function ubicarFactura(db, cobro) {
     return { factura, motivo: factura ? null : 'No hay ninguna factura con ese identificador' };
   }
 
-  const periodo = primerDiaDelPeriodo(cobro.periodo);
-  if (!cobro.cliente_id || !periodo) {
+  const tramo = tramoNombrado(cobro.periodo);
+  if (!cobro.cliente_id || !tramo) {
     return { factura: null, motivo: 'Falta decir qué factura se está pagando: o el identificador, o el Cliente y el período' };
   }
 
-  const { data, error } = await db
+  let consulta = db
     .from('facturas_cliente')
-    .select('id, prestadora_id, cliente_id, periodo, monto_total, moneda, estado, fecha_emision, fecha_vencimiento')
+    .select('id, prestadora_id, cliente_id, servicio_id, periodo, periodo_hasta, monto_total, moneda, estado, fecha_emision, fecha_vencimiento')
     .eq('cliente_id', cobro.cliente_id)
-    .eq('periodo', periodo)
-    .maybeSingle();
+    .lte('periodo', tramo.hasta)
+    .gte('periodo_hasta', tramo.desde);
+  if (cobro.servicio_id) consulta = consulta.eq('servicio_id', cobro.servicio_id);
+  const { data, error } = await consulta.limit(2);
   if (error) throw new Error(error.message);
-  return { factura: data ?? null, motivo: data ? null : 'Ese Cliente no tiene factura en ese período' };
+  const encontradas = data || [];
+  if (encontradas.length === 0) return { factura: null, motivo: 'Ese Cliente no tiene factura en ese período' };
+  if (encontradas.length > 1) {
+    return {
+      factura: null,
+      motivo: 'Ese Cliente tiene más de una factura en ese período: indique el identificador de la factura o el Servicio',
+    };
+  }
+  return { factura: encontradas[0], motivo: null };
 }
 
 /**

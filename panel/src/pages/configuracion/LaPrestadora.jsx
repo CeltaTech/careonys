@@ -14,6 +14,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { FacturacionClientesTab } from './FacturacionClientesTab';
+import { IndicesDeActualizacion } from './IndicesDeActualizacion';
 import { ConsentimientoPagadorTab } from './ConsentimientoPagadorTab';
 import { ConsentimientoMedicacionTab } from './ConsentimientoMedicacionTab';
 import { TabLugares } from './LosLugares';
@@ -33,14 +34,13 @@ export function ConfiguracionPrestadora() {
       <TabZonas />
       <TabLugares />
       <FacturacionClientesTab />
+      <IndicesDeActualizacion />
       <ConsentimientoPagadorTab />
       <ConsentimientoMedicacionTab />
       {tieneModalidad('intermediacion') && <TabPasarela />}
     </div>
   );
 }
-
-const PROVEEDORES_SIN_CREDENCIAL = ['efectivo_manual'];
 
 function TabEmpresa() {
   const { t } = useLocale();
@@ -309,12 +309,11 @@ function TabPasarela() {
     setAccionEnCurso(proveedor);
     setError(null);
     try {
-      const requiereCredencial = !PROVEEDORES_SIN_CREDENCIAL.includes(proveedor);
       await llamarApiIntermediacion(`/pasarela/${proveedor}`, {
         method: 'PATCH',
         body: JSON.stringify({
           activo: true,
-          credencial: requiereCredencial ? credencial || undefined : undefined,
+          credencial: credencial || undefined,
           secretoFirma: secretoFirma.trim() || undefined,
         }),
       });
@@ -380,7 +379,6 @@ function TabPasarela() {
           </thead>
           <tbody>
             {pasarelas.map((fila) => {
-              const requiereCredencial = !PROVEEDORES_SIN_CREDENCIAL.includes(fila.proveedor);
               const abierta = proveedorAbierto === fila.proveedor;
               const secretoAbiertoAca = secretoAbierto === fila.proveedor;
               return (
@@ -410,14 +408,10 @@ function TabPasarela() {
                       ) : (
                         <Button
                           onClick={() => {
-                            if (!requiereCredencial) {
-                              activar(fila.proveedor);
-                            } else {
-                              setProveedorAbierto(abierta ? null : fila.proveedor);
-                              setSecretoAbierto(null);
-                              setCredencial('');
-                              setSecretoFirma('');
-                            }
+                            setProveedorAbierto(abierta ? null : fila.proveedor);
+                            setSecretoAbierto(null);
+                            setCredencial('');
+                            setSecretoFirma('');
                           }}
                           disabled={accionEnCurso === fila.proveedor}
                         >
@@ -444,7 +438,7 @@ function TabPasarela() {
                       )}
                     </td>
                   </tr>
-                  {abierta && requiereCredencial && !fila.activo && (
+                  {abierta && !fila.activo && (
                     <tr>
                       <td colSpan={3}>
                         <div className="molde-formgrid">

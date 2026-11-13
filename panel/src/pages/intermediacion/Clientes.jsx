@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -9,30 +8,27 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { llamarApiIntermediacion as llamarApi } from '../../lib/apiIntermediacion';
 import { claseBadge } from '../../lib/tonos';
+import { formatearImporte } from '../../lib/dinero';
+import { hoyISO } from '../../lib/horarios';
+import { armarArchivo } from '../../lib/intercambioDeFacturacion';
+import { bajarArchivo } from '../../lib/exportarCsv';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
-const LECTOR_ID = 'lector-qr-cobro-efectivo';
-
-function fechaHoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function IntermediacionClientes() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [accesos, setAccesos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [expandida, setExpandida] = useState(null);
   const [cobrosPorAcceso, setCobrosPorAcceso] = useState({});
-  const [formEfectivo, setFormEfectivo] = useState(null);
-  const [guardandoEfectivo, setGuardandoEfectivo] = useState(false);
-  const [escaneando, setEscaneando] = useState(false);
-  const [mensajeCanje, setMensajeCanje] = useState(null);
+  const [cargandoCobros, setCargandoCobros] = useState(null);
+  const [mensajeExito, setMensajeExito] = useState(null);
   const [rielesConectados, setRielesConectados] = useState([]);
   const [rielElegido, setRielElegido] = useState({});
   const [dandoAlta, setDandoAlta] = useState(null);
-  const lectorRef = useRef(null);
+  const [mes, setMes] = useState(hoyISO().slice(0, 7));
+  const [exportando, setExportando] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -64,45 +60,23 @@ export function IntermediacionClientes() {
       return;
     }
     setExpandida(accesoId);
-    setFormEfectivo(null);
-    if (!cobrosPorAcceso[accesoId]) {
-      const { cobros } = await llamarApi(`/accesos/${accesoId}/cobros`);
-      setCobrosPorAcceso((c) => ({ ...c, [accesoId]: cobros }));
-    }
-  }
-
-  async function recargarCobros(accesoId) {
-    const { cobros } = await llamarApi(`/accesos/${accesoId}/cobros`);
-    setCobrosPorAcceso((c) => ({ ...c, [accesoId]: cobros }));
-  }
-
-  async function guardarEfectivo() {
-    setGuardandoEfectivo(true);
+    if (cobrosPorAcceso[accesoId]) return;
+    setCargandoCobros(accesoId);
     setError(null);
     try {
-      await llamarApi('/cobros/efectivo-manual', {
-        method: 'POST',
-        body: JSON.stringify({
-          acceso_id: formEfectivo.accesoId,
-          monto: formEfectivo.monto,
-          periodo: formEfectivo.periodo,
-          fecha_cobro: formEfectivo.fechaCobro,
-        }),
-      });
-      await recargarCobros(formEfectivo.accesoId);
-      setFormEfectivo(null);
-      recargar();
+      const { cobros } = await llamarApi(`/accesos/${accesoId}/cobros`);
+      setCobrosPorAcceso((c) => ({ ...c, [accesoId]: cobros }));
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
-      setGuardandoEfectivo(false);
+      setCargandoCobros(null);
     }
   }
 
   async function darDeAlta(accesoId) {
     setDandoAlta(accesoId);
     setError(null);
-    setMensajeCanje(null);
+    setMensajeExito(null);
     try {
       // El riel sólo se manda cuando hay más de uno conectado; con uno solo lo resuelve el backend.
       const elegido = rielesConectados.length > 1 ? rielElegido[accesoId] : null;
@@ -110,7 +84,7 @@ export function IntermediacionClientes() {
         method: 'POST',
         body: JSON.stringify(elegido ? { proveedor: elegido } : {}),
       });
-      setMensajeCanje(t.intermediacion.alta_pasarela_exitosa);
+      setMensajeExito(t.intermediacion.alta_pasarela_exitosa);
       await recargar();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -119,85 +93,53 @@ export function IntermediacionClientes() {
     }
   }
 
-  useEffect(() => {
-    if (!escaneando) return undefined;
-    let cancelado = false;
-    const lector = new Html5Qrcode(LECTOR_ID);
-    lectorRef.current = lector;
-
-    async function detener() {
-      try {
-        await lector.stop();
-        lector.clear();
-      } catch {
-        // la cámara ya pudo haberse detenido
+  /* Baja lo que hay para facturar del mes, con el mismo formato de archivo que la prestación
+     directa: el software de facturación lee uno solo. */
+  async function exportarParaFacturar() {
+    setExportando(true);
+    setError(null);
+    setMensajeExito(null);
+    try {
+      const filas = await llamarApi(`/accesos/para-facturar?periodo=${mes}`);
+      if (filas.length === 0) {
+        setMensajeExito(t.intermediacion.exportar_para_facturar_vacio);
+        return;
       }
+      bajarArchivo(
+        `match-para-facturar-${mes}.csv`,
+        new Blob([armarArchivo(filas)], { type: 'text/csv;charset=utf-8' })
+      );
+      setMensajeExito(
+        filas.length === 1
+          ? t.intermediacion.exportar_para_facturar_listo_uno
+          : t.intermediacion.exportar_para_facturar_listo.replace('{cantidad}', filas.length)
+      );
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setExportando(false);
     }
-
-    lector
-      .start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: 250 },
-        async (token) => {
-          if (cancelado) return;
-          cancelado = true;
-          await detener();
-          setEscaneando(false);
-          try {
-            const { monto } = await llamarApi('/qr-cobro/canjear', {
-              method: 'POST',
-              body: JSON.stringify({ token }),
-            });
-            setMensajeCanje(t.intermediacion.canjear_qr_exitoso.replace('{monto}', monto));
-            setExpandida(null);
-            recargar();
-          } catch (err) {
-            setError(mensajeDeError(err, t));
-          }
-        },
-        () => {}
-      )
-      .catch(() => {
-        setError(t.comun.error_generico);
-        setEscaneando(false);
-      });
-
-    return () => {
-      cancelado = true;
-      detener();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [escaneando]);
+  }
 
   return (
     <div>
-      <Cabecera titulo={t.intermediacion.clientes_titulo}>
-        {!escaneando && (
-          <Button
-            onClick={() => {
-              setMensajeCanje(null);
-              setError(null);
-              setEscaneando(true);
-            }}
-          >
-            {t.intermediacion.canjear_qr_iniciar}
-          </Button>
-        )}
-      </Cabecera>
+      <Cabecera titulo={t.intermediacion.clientes_titulo} />
 
-      {mensajeCanje && <Alert variant="success">{mensajeCanje}</Alert>}
+      {mensajeExito && <Alert variant="success">{mensajeExito}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
 
       <div className="molde-pila">
-        {escaneando && (
-          <section className="panel-tarjeta">
-            <div className="panel-tarjeta-titulo">
-              <h2>{t.intermediacion.canjear_qr_titulo}</h2>
-              <Button variant="secondary" onClick={() => setEscaneando(false)}>{t.comun.cancelar}</Button>
-            </div>
-            <div id={LECTOR_ID} style={{ width: '100%', maxWidth: 320, borderRadius: '12px', overflow: 'hidden' }} />
-          </section>
-        )}
+        <section className="panel-tarjeta">
+          <div className="panel-filtros">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {t.intermediacion.cobros_col_periodo}
+              <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} />
+            </label>
+            <Button variant="secondary" onClick={exportarParaFacturar} disabled={exportando || !mes}>
+              {t.intermediacion.exportar_para_facturar}
+            </Button>
+          </div>
+        </section>
 
         <section className="panel-tarjeta tarjeta-desplazable">
           <div className="panel-tarjeta-titulo">
@@ -213,6 +155,8 @@ export function IntermediacionClientes() {
                   <th>{t.intermediacion.col_asistente}</th>
                   <th>{t.intermediacion.col_estado}</th>
                   <th>{t.intermediacion.col_monto}</th>
+                  <th>{t.intermediacion.col_estado_cobro}</th>
+                  <th>{t.intermediacion.col_ultimo_cobro}</th>
                   <th>{t.intermediacion.col_proximo_cobro}</th>
                   <th>{t.intermediacion.col_cobro}</th>
                   <th></th>
@@ -229,7 +173,25 @@ export function IntermediacionClientes() {
                     <td>
                       <span className={claseBadge(s.estado)}>{t.intermediacion[`estado_${s.estado}`] || s.estado}</span>
                     </td>
-                    <td>{s.importe}</td>
+                    <td>{formatearImporte(s.importe, s.moneda, locale)}</td>
+                    <td>
+                      {s.estado_cobro ? (
+                        <span className={claseBadge(s.estado_cobro)}>
+                          {t.intermediacion[`cobro_${s.estado_cobro}`] || s.estado_cobro}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>
+                      {s.ultimo_cobro
+                        ? `${s.ultimo_cobro.fecha_cobro || String(s.ultimo_cobro.periodo).slice(0, 7)} · ${formatearImporte(
+                            s.ultimo_cobro.monto,
+                            s.ultimo_cobro.moneda,
+                            locale
+                          )}`
+                        : '—'}
+                    </td>
                     <td>{s.proximo_cobro || '—'}</td>
                     <td>
                       {s.alta_en_pasarela
@@ -258,77 +220,38 @@ export function IntermediacionClientes() {
                     <h2>{t.intermediacion.cobros_titulo}</h2>
                     <span className="panel-mini">{s.cliente_nombre || '—'}</span>
                   </div>
-                  <table className="panel-tabla">
-                    <thead>
-                      <tr>
-                        <th>{t.intermediacion.cobros_col_periodo}</th>
-                        <th>{t.intermediacion.cobros_col_medio}</th>
-                        <th>{t.intermediacion.cobros_col_monto}</th>
-                        <th>{t.intermediacion.cobros_col_estado}</th>
-                        <th>{t.intermediacion.cobros_col_fecha}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(cobrosPorAcceso[s.id] || []).map((c) => (
-                        <tr key={c.id}>
-                          <td>{c.periodo}</td>
-                          <td>{t.intermediacion[`medio_${c.medio}`] || c.medio}</td>
-                          <td>{c.monto}</td>
-                          <td>
-                            <span className={claseBadge(c.estado_cobro)}>
-                              {t.intermediacion[`cobro_${c.estado_cobro}`] || c.estado_cobro}
-                            </span>
-                          </td>
-                          <td>{c.fecha_cobro || '—'}</td>
+                  <EstadoLista
+                    estado={cargandoCobros === s.id ? 'cargando' : 'listo'}
+                    error={null}
+                    vacio={cargandoCobros !== s.id && (cobrosPorAcceso[s.id] || []).length === 0}
+                  >
+                    <table className="panel-tabla">
+                      <thead>
+                        <tr>
+                          <th>{t.intermediacion.cobros_col_periodo}</th>
+                          <th>{t.intermediacion.cobros_col_medio}</th>
+                          <th>{t.intermediacion.cobros_col_monto}</th>
+                          <th>{t.intermediacion.cobros_col_estado}</th>
+                          <th>{t.intermediacion.cobros_col_fecha}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {formEfectivo?.accesoId === s.id ? (
-                    <>
-                      <div className="molde-formgrid">
-                        <FormField
-                          label={t.intermediacion.registrar_cobro_efectivo_monto}
-                          name="monto"
-                          type="number"
-                          value={formEfectivo.monto}
-                          onChange={(e) => setFormEfectivo((f) => ({ ...f, monto: e.target.value }))}
-                        />
-                        <FormField
-                          label={t.intermediacion.registrar_cobro_efectivo_periodo}
-                          name="periodo"
-                          type="month"
-                          value={formEfectivo.periodo}
-                          onChange={(e) => setFormEfectivo((f) => ({ ...f, periodo: e.target.value }))}
-                        />
-                        <FormField
-                          label={t.intermediacion.registrar_cobro_efectivo_fecha}
-                          name="fecha_cobro"
-                          type="date"
-                          value={formEfectivo.fechaCobro}
-                          onChange={(e) => setFormEfectivo((f) => ({ ...f, fechaCobro: e.target.value }))}
-                        />
-                      </div>
-                      <div className="molde-acciones">
-                        <Button variant="secondary" onClick={() => setFormEfectivo(null)} disabled={guardandoEfectivo}>
-                          {t.comun.cancelar}
-                        </Button>
-                        <Button onClick={guardarEfectivo} disabled={guardandoEfectivo}>
-                          {guardandoEfectivo ? t.comun.guardando : t.intermediacion.registrar_cobro_efectivo_guardar}
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="molde-acciones">
-                      <Button
-                        variant="secondary"
-                        onClick={() => setFormEfectivo({ accesoId: s.id, monto: '', periodo: '', fechaCobro: fechaHoyISO() })}
-                      >
-                        {t.intermediacion.registrar_cobro_efectivo}
-                      </Button>
-                    </div>
-                  )}
+                      </thead>
+                      <tbody>
+                        {(cobrosPorAcceso[s.id] || []).map((c) => (
+                          <tr key={c.id}>
+                            <td>{c.periodo}</td>
+                            <td>{t.intermediacion[`medio_${c.medio}`] || c.medio}</td>
+                            <td>{formatearImporte(c.monto, c.moneda, locale)}</td>
+                            <td>
+                              <span className={claseBadge(c.estado_cobro)}>
+                                {t.intermediacion[`cobro_${c.estado_cobro}`] || c.estado_cobro}
+                              </span>
+                            </td>
+                            <td>{c.fecha_cobro || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </EstadoLista>
                 </section>
 
                 <section className="panel-tarjeta">

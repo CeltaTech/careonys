@@ -10,9 +10,14 @@
 // (`backend/src/utils/calcularLiquidacion.js`, ver `scripts/copias_entre_apps.mjs`). Es la
 // misma forma que ya tiene `escalasLegales.js`, que decide qué escala rige a una fecha.
 //
-// LO ÚNICO QUE IMPORTA ES A SU HERMANO COPIADO. `formaDePago.js` también vive en las dos
-// carpetas y con el mismo nombre, así que la ruta relativa vale igual de los dos lados. Fuera
-// de eso no entra nada: lo que se copia al backend no puede traerse medio Panel atrás.
+// LO ÚNICO QUE IMPORTA ES A SUS HERMANOS COPIADOS. `formaDePago.js` y `condicionesDelCliente.js`
+// también viven en las dos carpetas y con el mismo nombre, así que la ruta relativa vale igual de
+// los dos lados. Fuera de eso no entra nada: lo que se copia al backend no puede traerse medio
+// Panel atrás.
+//
+// TAMBIÉN LA DEL CLIENTE. Al final está `calcularLiquidacionDelCliente`, que es la otra punta del
+// mismo trabajo: cuánto se le cobra a un Cliente por un Servicio en un período. Usa las mismas
+// unidades y los mismos redondeos, y por eso vive acá y no copiada en otro lado.
 //
 // LO QUE NO ES: un comprobante fiscal. El producto no emite facturas ni notas y no está
 // previsto que lo haga. Esto es la cuenta interna de qué se le paga a quién.
@@ -25,6 +30,7 @@
 
 import {
   COLUMNA_DEL_VALOR,
+  UNIDADES,
   diasCubiertos,
   reglaDePagoDe,
   unidadDeMedicionDe,
@@ -32,6 +38,7 @@ import {
   valorDeLaHoraExtra,
   valorDeLaUnidad,
 } from './formaDePago.js';
+import { MEDICIONES } from './condicionesDelCliente.js';
 
 const ES_UN_DIA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -241,4 +248,261 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
     items,
     sinEscala,
   };
+}
+
+/* ==========================================================================
+   Lo que se le cobra a un Cliente por un Servicio en un período.
+   ==========================================================================
+
+   Llega todo leído: las prestaciones del Servicio, las guardias completadas del período con sus
+   horas ya contadas, y la medición que rige (la resuelve `condicionesDelCliente.js`). Sale un
+   renglón por cada cosa que se cobra, con cuántas unidades, de qué, a qué precio y en qué moneda.
+
+   CADA GUARDIA SE COBRA CON LA PRESTACIÓN VIGENTE EL DÍA DE LA GUARDIA. Si el precio cambió a mitad
+   de período, la guardia de antes del cambio se cobra al precio de antes: es la escala vigente a la
+   fecha del hecho. La guardia va a la prestación de su mismo Servicio y del mismo Paciente.
+     - Si ninguna prestación estaba vigente ese día, la guardia queda sin cobrar y se cuenta en
+       `guardiasSinAsignar`.
+     - Si había más de una, no se elige ninguna: queda sin cobrar y se cuenta en
+       `guardiasAmbiguas`. Elegir una sería inventar a qué precio se pactó.
+
+   UNA GUARDIA QUE CUBRE A VARIOS PACIENTES reparte sus horas entre ellos, igual que en
+   `utils/horasDeGuardia.js`: la misma hora no se cobra dos veces. Como guardia y como día cuenta
+   una vez para cada uno, porque cada uno tiene su prestación pactada.
+
+   LAS TRES MEDICIONES
+     - pactado_mas_excedente: el precio de la prestación entero, una vez por período en que la
+       prestación esté vigente aunque sea un día. Si la prestación dice cuántas guardias se
+       pactaron (`configuracion.cantidad_guardias`), cada guardia por encima se cobra a
+       precio / cantidad, y cada hora extra anotada a ese valor de la guardia / las horas de esa
+       guardia. Sin cantidad pactada no se cobra excedente y se avisa en `sinCantidadPactada`.
+
+   UN CAMBIO DE PRECIO A MITAD DE PERÍODO. El precio nuevo es otra prestación que dice a cuál
+   reemplaza (`prestacion_anterior_id`), y las dos forman una cadena. En la medición por hora y por
+   día de guardia no cambia nada: cada hecho ya se cobra con la prestación vigente su día. En la
+   pactada, la cadena se cobra una sola vez por período, y cada eslabón pone la parte de su precio
+   que corresponde a sus días: precio × días del eslabón / días que la cadena cubre en el período.
+   Una prestación sin cambios cubre todos sus días y se cobra entera, igual que antes. Lo pactado
+   se reparte de la misma forma (cantidad × la misma fracción, sumado y redondeado), y las
+   guardias por encima son las últimas, por fecha: cada una se cobra con el valor de la guardia
+   del eslabón vigente su día.
+     - hora: cada hora trabajada, más las horas extra, al precio de la prestación.
+     - dia_de_guardia: cada día calendario en que hubo guardia, al precio de la prestación. Una
+       guardia de 48 horas cubre dos días.
+
+   NO INVENTA MONEDA. Cada renglón lleva la de su prestación. Si en el mismo Servicio hay
+   prestaciones en dos monedas, `monedas` trae las dos y quien arma la factura decide no armarla:
+   una factura tiene una sola moneda. */
+
+export const UNIDADES_DEL_COBRO = Object.freeze({
+  PERIODO: 'periodo',
+  GUARDIA: UNIDADES.GUARDIA,
+  HORA: UNIDADES.HORA,
+  HORA_EXTRA: 'hora_extra',
+  DIA_DE_GUARDIA: 'dia_de_guardia',
+});
+
+const HORAS_DE_UN_DIA = 24;
+
+function estaVigente(prestacion, fecha) {
+  if (!prestacion.vigente_desde || prestacion.vigente_desde > fecha) return false;
+  return !prestacion.vigente_hasta || prestacion.vigente_hasta >= fecha;
+}
+
+function correEnElTramo(prestacion, desde, hasta) {
+  if (!prestacion.vigente_desde || prestacion.vigente_desde > hasta) return false;
+  return !prestacion.vigente_hasta || prestacion.vigente_hasta >= desde;
+}
+
+// Los días de una prestación dentro del tramo, con los dos bordes incluidos.
+function diasEnElTramo(prestacion, desde, hasta) {
+  const inicio = prestacion.vigente_desde > desde ? prestacion.vigente_desde : desde;
+  const fin = prestacion.vigente_hasta && prestacion.vigente_hasta < hasta ? prestacion.vigente_hasta : hasta;
+  if (fin < inicio) return 0;
+  const ms = Date.parse(`${fin}T00:00:00Z`) - Date.parse(`${inicio}T00:00:00Z`);
+  return Math.round(ms / 86400000) + 1;
+}
+
+// La primera prestación de la cadena de reemplazos a la que pertenece ésta.
+function raizDeLaCadena(prestacion, porId) {
+  let actual = prestacion;
+  const vistas = new Set();
+  while (actual.prestacion_anterior_id != null && porId.has(actual.prestacion_anterior_id) && !vistas.has(actual.id)) {
+    vistas.add(actual.id);
+    actual = porId.get(actual.prestacion_anterior_id);
+  }
+  return actual.id;
+}
+
+function numeroPositivo(valor) {
+  const n = Number(valor);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function diaSiguiente(fecha, dias) {
+  const [a, m, d] = fecha.split('-').map(Number);
+  return new Date(Date.UTC(a, m - 1, d + dias)).toISOString().slice(0, 10);
+}
+
+/**
+ * - periodo: { desde, hasta } o 'AAAA-MM'.
+ * - medicion: una de MEDICIONES. Una desconocida no cobra nada y lo dice en `medicionDesconocida`.
+ * - prestaciones: [{ id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda,
+ *   vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id }].
+ * - guardias: [{ id, fecha, servicio_id, horas, horas_extra, pacientes: [paciente_id] }], sólo las
+ *   completadas.
+ * - nombresDePacientes: Map de paciente_id a nombre, para la descripción.
+ */
+export function calcularLiquidacionDelCliente({ periodo, medicion, prestaciones = [], guardias = [], nombresDePacientes = new Map() }) {
+  const resultado = {
+    renglones: [],
+    total: 0,
+    monedas: [],
+    guardiasSinAsignar: 0,
+    guardiasAmbiguas: 0,
+    sinCantidadPactada: [],
+    sinPrecio: [],
+    medicionDesconocida: false,
+  };
+  if (!esPeriodoValido(periodo)) return resultado;
+  const { desde, hasta } = bordesDelPeriodo(periodo);
+  if (!Object.values(MEDICIONES).includes(medicion)) {
+    resultado.medicionDesconocida = true;
+    return resultado;
+  }
+
+  const delTramo = prestaciones.filter((p) => correEnElTramo(p, desde, hasta));
+
+  // Qué guardias le tocan a cada prestación, y con cuántas horas.
+  const trabajo = new Map(delTramo.map((p) => [p.id, []]));
+  for (const g of guardias) {
+    if (!g?.fecha || g.fecha < desde || g.fecha > hasta) continue;
+    const pacientes = [...new Set((g.pacientes || []).filter(Boolean))];
+    if (pacientes.length === 0) {
+      resultado.guardiasSinAsignar += 1;
+      continue;
+    }
+    const horasDeLaGuardia = Math.max(Number(g.horas) || 0, 0);
+    const horasExtraDeLaGuardia = Math.max(Number(g.horas_extra) || 0, 0);
+    for (const pacienteId of pacientes) {
+      const candidatas = delTramo.filter(
+        (p) => p.servicio_id === g.servicio_id && p.paciente_id === pacienteId && estaVigente(p, g.fecha)
+      );
+      if (candidatas.length === 0) {
+        resultado.guardiasSinAsignar += 1;
+        continue;
+      }
+      if (candidatas.length > 1) {
+        resultado.guardiasAmbiguas += 1;
+        continue;
+      }
+      trabajo.get(candidatas[0].id).push({
+        fecha: g.fecha,
+        horasDeLaGuardia,
+        horas: horasDeLaGuardia / pacientes.length,
+        horasExtra: horasExtraDeLaGuardia / pacientes.length,
+      });
+    }
+  }
+
+  // Las cadenas de reemplazos: qué fracción del período pone cada eslabón, y para la medición
+  // pactada, cuáles guardias quedan por encima de lo pactado en toda la cadena.
+  const porId = new Map(prestaciones.map((p) => [p.id, p]));
+  const cadenas = new Map();
+  for (const p of delTramo) {
+    const raiz = raizDeLaCadena(p, porId);
+    if (!cadenas.has(raiz)) cadenas.set(raiz, []);
+    cadenas.get(raiz).push(p);
+  }
+  const fraccionDe = new Map();
+  const excedenteDe = new Map();
+  const cadenaSinCantidad = new Set();
+  for (const eslabones of cadenas.values()) {
+    const dias = eslabones.map((p) => diasEnElTramo(p, desde, hasta));
+    const totalDeDias = dias.reduce((a, b) => a + b, 0);
+    eslabones.forEach((p, i) => fraccionDe.set(p.id, totalDeDias > 0 ? dias[i] / totalDeDias : 1));
+
+    if (medicion !== MEDICIONES.PACTADO_MAS_EXCEDENTE) continue;
+    const cantidades = eslabones.map((p) => numeroPositivo(p.configuracion?.cantidad_guardias));
+    if (cantidades.some((c) => !c)) {
+      for (const p of eslabones) cadenaSinCantidad.add(p.id);
+      continue;
+    }
+    const pactadas = Math.round(eslabones.reduce((suma, p, i) => suma + cantidades[i] * fraccionDe.get(p.id), 0));
+    const todas = eslabones
+      .flatMap((p) => (trabajo.get(p.id) || []).map((s) => ({ prestacionId: p.id, fecha: s.fecha })))
+      .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
+    for (const p of eslabones) excedenteDe.set(p.id, 0);
+    for (const g of todas.slice(pactadas)) excedenteDe.set(g.prestacionId, excedenteDe.get(g.prestacionId) + 1);
+  }
+
+  const monedas = new Set();
+  for (const p of delTramo) {
+    const precio = p.precio_final === null || p.precio_final === undefined ? NaN : Number(p.precio_final);
+    if (!Number.isFinite(precio) || precio < 0) {
+      resultado.sinPrecio.push(p.id);
+      continue;
+    }
+    const nombre = nombresDePacientes.get(p.paciente_id);
+    const descripcion = nombre ? `${p.tipo_servicio} — ${nombre}` : String(p.tipo_servicio ?? '');
+    const base = {
+      prestacion_id: p.id,
+      paciente_id: p.paciente_id,
+      servicio_id: p.servicio_id,
+      moneda: p.moneda,
+      descripcion,
+    };
+    const suyas = trabajo.get(p.id) || [];
+    const renglonesDeEsta = [];
+    const agregar = (unidad, cantidad, precioUnitario, monto = cantidad * precioUnitario) => {
+      if (!(cantidad > 0)) return;
+      renglonesDeEsta.push({
+        ...base,
+        unidad,
+        cantidad: redondear(cantidad),
+        precio_unitario: redondear(precioUnitario),
+        monto: redondear(monto),
+      });
+    };
+
+    if (medicion === MEDICIONES.PACTADO_MAS_EXCEDENTE) {
+      // Una fracción del período: la parte de los días que cubre este eslabón de su cadena.
+      const fraccion = fraccionDe.get(p.id) ?? 1;
+      agregar(UNIDADES_DEL_COBRO.PERIODO, fraccion, precio, precio * fraccion);
+      const pactadas = numeroPositivo(p.configuracion?.cantidad_guardias);
+      if (!pactadas || cadenaSinCantidad.has(p.id)) {
+        if (suyas.length > 0) resultado.sinCantidadPactada.push(p.id);
+      } else {
+        const valorDeLaGuardia = precio / pactadas;
+        agregar(UNIDADES_DEL_COBRO.GUARDIA, excedenteDe.get(p.id) ?? 0, valorDeLaGuardia);
+        // Cada hora extra vale lo que vale una hora de su propia guardia.
+        let horasExtra = 0;
+        let montoExtra = 0;
+        for (const s of suyas) {
+          if (s.horasExtra > 0 && s.horasDeLaGuardia > 0) {
+            horasExtra += s.horasExtra;
+            montoExtra += s.horasExtra * (valorDeLaGuardia / s.horasDeLaGuardia);
+          }
+        }
+        if (horasExtra > 0) agregar(UNIDADES_DEL_COBRO.HORA_EXTRA, horasExtra, montoExtra / horasExtra, montoExtra);
+      }
+    } else if (medicion === MEDICIONES.HORA) {
+      const horas = suyas.reduce((suma, s) => suma + s.horas + s.horasExtra, 0);
+      agregar(UNIDADES_DEL_COBRO.HORA, horas, precio);
+    } else {
+      const dias = new Set();
+      for (const s of suyas) {
+        const cubre = Math.max(Math.ceil(s.horasDeLaGuardia / HORAS_DE_UN_DIA), 1);
+        for (let i = 0; i < cubre; i += 1) dias.add(diaSiguiente(s.fecha, i));
+      }
+      agregar(UNIDADES_DEL_COBRO.DIA_DE_GUARDIA, dias.size, precio);
+    }
+
+    if (renglonesDeEsta.length > 0) monedas.add(p.moneda);
+    resultado.renglones.push(...renglonesDeEsta);
+  }
+
+  resultado.monedas = [...monedas];
+  resultado.total = redondear(resultado.renglones.reduce((suma, r) => suma + r.monto, 0));
+  return resultado;
 }

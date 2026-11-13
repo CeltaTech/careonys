@@ -44,7 +44,6 @@ import * as stripe from './stripe.js';
 import * as modo from './modo.js';
 import * as debin from './debin.js';
 import * as cobranzaEfectivo from './cobranzaEfectivo.js';
-import * as efectivoManual from './efectivoManual.js';
 
 const ADAPTADORES = {
   mercadopago,
@@ -52,7 +51,6 @@ const ADAPTADORES = {
   modo,
   debin,
   cobranza_efectivo: cobranzaEfectivo,
-  efectivo_manual: efectivoManual,
 };
 
 export function proveedoresDisponibles() {
@@ -80,8 +78,7 @@ export function confirmaConsultando(proveedor) {
  *  la diferencia manda todo lo demás: los que cobran solos (`mercadopago`, `stripe`, `debin`)
  *  quedan andando con el alta del acceso y avisan por cada período que cobran; los que no
  *  (`modo`, `cobranza_efectivo`) no dejan nada recurrente, y si nadie les pide el QR o el cupón de
- *  este mes, el Cliente no tiene con qué pagar. `efectivo_manual` no es ninguno de los dos: ahí
- *  no hay proveedor, la carga la hace una persona desde el Panel.
+ *  este mes, el Cliente no tiene con qué pagar.
  *
  *  Lo contesta el adaptador y no una lista escrita en el trabajo diario, que es lo mismo que ya
  *  hacen `requiereSecretoFirma` y `confirmaConsultando`: el día que entre un riel nuevo, alcanza

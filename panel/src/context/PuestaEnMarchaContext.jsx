@@ -10,7 +10,7 @@ import { cargaDeGenteBloqueada, pasosDeLaSegundaEtapa, pasosVisibles } from '../
    ==========================================================================
 
    QUÉ CONTESTA. Qué le falta cargar a esta Prestadora, en dos etapas (`lib/puestaEnMarcha.js`):
-   la configuración inicial —datos, zonas y precios— y después la gente. Lo consumen la guía de
+   la configuración inicial —datos y zonas— y después la gente. Lo consumen la guía de
    primeros pasos (`components/estado-actual/GuiaPrimerosPasos.jsx`, en Configuración > Puesta en
    marcha) y los botones que cargan Asistentes o Clientes, que van apagados mientras la
    configuración inicial no esté completa.

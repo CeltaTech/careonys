@@ -152,18 +152,13 @@ async function cancelarEnElRiel(db, acceso) {
     return { ok: false, motivo: MOTIVO_BAJA.PROVEEDOR_DESCONOCIDO };
   }
 
-  // La credencial sale de la caja fuerte y no sobrevive a esta función. `efectivo_manual` no tiene
-  // ninguna, y no la necesita.
-  let credencial = null;
-  if (acceso.proveedor !== 'efectivo_manual') {
-    const { data, error } = await db.rpc('leer_credencial_pasarela_pago', {
-      p_prestadora_id: acceso.prestadora_id,
-      p_proveedor: acceso.proveedor,
-    });
-    if (error || !data) {
-      return { ok: false, motivo: MOTIVO_BAJA.SIN_CREDENCIAL, detalle: error?.message };
-    }
-    credencial = data;
+  // La credencial sale de la caja fuerte y no sobrevive a esta función.
+  const { data: credencial, error: errorDeCredencial } = await db.rpc('leer_credencial_pasarela_pago', {
+    p_prestadora_id: acceso.prestadora_id,
+    p_proveedor: acceso.proveedor,
+  });
+  if (errorDeCredencial || !credencial) {
+    return { ok: false, motivo: MOTIVO_BAJA.SIN_CREDENCIAL, detalle: errorDeCredencial?.message };
   }
 
   try {

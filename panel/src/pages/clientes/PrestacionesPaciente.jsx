@@ -12,16 +12,37 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { hoyISO } from '../../lib/horarios';
 import { situacion } from '../../lib/vigenciaPrestacion';
 import { servicioSirveParaCliente } from '../../lib/serviciosDelPaciente';
+import { FORMAS_DE_PRECIO_POSIBLES, condicionDe } from '../../lib/condicionesDelCliente';
+import {
+  SENTIDOS_DEL_AJUSTE_POSIBLES,
+  TIPOS_DE_AJUSTE_POSIBLES,
+  calcularPrecioFinal,
+  columnasDelPrecio,
+  faltantesDelPrecio,
+  cambioDePrecioValido,
+  idsReemplazados,
+} from '../../lib/precioDeLaPrestacion';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
-function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
-  const base = Number(precioLista) || 0;
-  const valor = Number(valorDescuento) || 0;
-  if (tipoDescuento === 'porcentaje') return Math.max(0, base - (base * valor) / 100);
-  if (tipoDescuento === 'monto_fijo') return Math.max(0, base - valor);
-  return base;
-}
+// Las situaciones en las que una Prestación todavía puede cambiar de precio desde una fecha.
+const SE_PUEDE_CAMBIAR_EL_PRECIO = ['corriendo', 'por_empezar'];
+
+// Un importe escrito que no sirve: negativo o que no es número. Vacío es «falta», no «mal».
+const importeMalEscrito = (valor) => valor !== '' && !(Number(valor) >= 0);
+
+// El orden de los casilleros en el formulario, para saltar al primero que falte.
+const ORDEN_DE_LOS_CASILLEROS = [
+  'servicio_id',
+  'forma_de_precio',
+  'precio_lista_id',
+  'tipo_servicio',
+  'precio_escrito',
+  'tipo_de_ajuste',
+  'valor_del_ajuste',
+  'vigente_desde',
+  'vigente_hasta',
+];
 
 export function PrestacionesPaciente({ paciente, onClose }) {
   const modal = useModalAccesible(onClose);
@@ -39,9 +60,20 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [serviciosDelCliente, setServiciosDelCliente] = useState([]);
   const [cierres, setCierres] = useState([]);
 
+  // La forma de precio que ofrece de entrada el formulario: la que eligió la Prestadora, o la de
+  // fábrica. Quien carga puede usar la otra en cada Prestación.
+  const [reglaDeLaPrestadora, setReglaDeLaPrestadora] = useState(null);
+  const formaDeEntrada = condicionDe('forma_de_precio', reglaDeLaPrestadora, null);
+
   const [mostrandoForm, setMostrandoForm] = useState(false);
+  // La Prestación cuyo precio se cambia, o null si se carga una nueva.
+  const [reemplazaA, setReemplazaA] = useState(null);
   const [servicioId, setServicioId] = useState('');
+  const [forma, setForma] = useState('');
   const [precioListaId, setPrecioListaId] = useState('');
+  const [sentidoDelAjuste, setSentidoDelAjuste] = useState('');
+  const [tipoServicioEscrito, setTipoServicioEscrito] = useState('');
+  const [precioEscrito, setPrecioEscrito] = useState('');
   const [dias, setDias] = useState('');
   const [horario, setHorario] = useState('');
   const [cantidadGuardias, setCantidadGuardias] = useState('');
@@ -58,6 +90,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [vigenteHasta, setVigenteHasta] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
+  // Los avisos al pie de cada casillero aparecen recién al apretar Guardar.
+  const [intentoGuardar, setIntentoGuardar] = useState(false);
 
   const [marcandoRevisado, setMarcandoRevisado] = useState(null);
   const [errorRevision, setErrorRevision] = useState(null);
@@ -69,7 +103,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setEstado('cargando');
     setError(null);
 
-    const [listaResp, prestacionesResp, cierresResp, serviciosResp] = await Promise.all([
+    const [listaResp, prestacionesResp, cierresResp, serviciosResp, reglaResp] = await Promise.all([
       supabase.from('lista_precios').select('*').eq('activo', true).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
       supabase.from('cierres_servicio_paciente').select('id, servicio_id').eq('paciente_id', paciente.id),
@@ -81,6 +115,14 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         .select('id, etiqueta, cliente_id')
         .eq('estado', 'vigente')
         .order('etiqueta'),
+      // Los valores de fábrica de la Prestadora. La protección por fila sólo se los abre a la
+      // administración: para la coordinación llega vacío y rige el de fábrica del producto. Por
+      // eso un error acá no frena la pantalla: sólo cambia qué forma viene elegida de entrada.
+      supabase
+        .from('configuracion_facturacion_clientes')
+        .select('regla')
+        .eq('prestadora_id', prestadoraId)
+        .maybeSingle(),
     ]);
 
     const falla =
@@ -95,6 +137,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setPrestaciones(prestacionesResp.data ?? []);
     setCierres(cierresResp.data ?? []);
     setServiciosDelCliente(serviciosResp.data ?? []);
+    setReglaDeLaPrestadora(reglaResp.error ? null : reglaResp.data?.regla ?? null);
 
     const idsCierre = (cierresResp.data ?? []).map((c) => c.id);
     if (idsCierre.length > 0) {
@@ -108,7 +151,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     }
 
     setEstado('listo');
-  }, [paciente.id, t]);
+  }, [paciente.id, prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -119,10 +162,48 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     [listaPrecios, precioListaId]
   );
 
-  const precioFinalCalculado = useMemo(
-    () => calcularPrecioFinal(precioSeleccionado?.precio, tipoDescuento, valorDescuento),
-    [precioSeleccionado, tipoDescuento, valorDescuento]
-  );
+  // Lo cargado, en la forma que piden las funciones del precio.
+  const datosDelPrecio = {
+    forma,
+    renglon: precioSeleccionado,
+    sentido: sentidoDelAjuste,
+    tipo: tipoDescuento,
+    valor: valorDescuento,
+    tipoServicio: tipoServicioEscrito,
+    precioEscrito,
+  };
+
+  const precioFinalCalculado = calcularPrecioFinal({
+    forma,
+    precioLista: precioSeleccionado?.precio,
+    sentido: sentidoDelAjuste,
+    tipo: tipoDescuento,
+    valor: valorDescuento,
+    precioEscrito,
+  });
+
+  const reemplazadas = useMemo(() => idsReemplazados(prestaciones), [prestaciones]);
+
+  const sePuedeCambiarElPrecio = (p) =>
+    SE_PUEDE_CAMBIAR_EL_PRECIO.includes(situacion(p)) && !reemplazadas.has(p.id) && Boolean(p.servicio_id);
+
+  // El aviso de cada casillero, por nombre. Se calcula siempre y se muestra sólo después de
+  // apretar Guardar: así desaparece en cuanto el dato se completa.
+  const avisos = {};
+  if (!servicioId) avisos.servicio_id = t.formularios.falta_un_dato_obligatorio;
+  for (const campo of faltantesDelPrecio(datosDelPrecio)) {
+    const escrito = campo === 'precio_escrito' ? precioEscrito : campo === 'valor_del_ajuste' ? valorDescuento : '';
+    avisos[campo] = importeMalEscrito(escrito) ? t.prestaciones.precio_invalido : t.formularios.falta_un_dato_obligatorio;
+  }
+  if (!vigenteDesde) avisos.vigente_desde = t.formularios.falta_un_dato_obligatorio;
+  else if (reemplazaA && !cambioDePrecioValido(reemplazaA, vigenteDesde, reemplazadas)) {
+    avisos.vigente_desde = t.prestaciones.cambio_fuera_de_vigencia;
+  }
+  // La base rechaza un período dado vuelta, pero el mensaje que devolvería habla de una
+  // restricción y de una columna. Acá se avisa antes y con palabras de quien está cargando.
+  if (vigenteHasta && vigenteDesde && vigenteHasta < vigenteDesde) avisos.vigente_hasta = t.prestaciones.vigencia_al_reves;
+
+  const avisoDe = (campo) => (intentoGuardar ? avisos[campo] : undefined);
 
   // Un mismo Cliente puede tener varios Servicios abiertos a la vez. Se ofrecen los que la base
   // acepta para este Paciente, menos los que ya se cerraron para él: ésos no se ofrecen ni para
@@ -136,12 +217,61 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
   // Cuando hay uno solo no se hace elegir; cuando hay varios, la elección es de quien carga.
   useEffect(() => {
+    if (reemplazaA) return;
     const unico = serviciosAbiertos.length === 1 ? serviciosAbiertos[0].id : '';
     setServicioId((actual) => (serviciosAbiertos.some((s) => s.id === actual) ? actual : unico));
-  }, [serviciosAbiertos]);
+  }, [serviciosAbiertos, reemplazaA]);
+
+  function abrirNueva() {
+    limpiarForm();
+    setForma(formaDeEntrada);
+    setMostrandoForm(true);
+  }
+
+  // Cambiar el precio desde una fecha: el formulario viene con lo pactado en la anterior, y lo
+  // que se guarda es otra Prestación que la reemplaza. La anterior no se pisa: la base la cierra
+  // el día antes del arranque de la nueva.
+  function abrirCambioDePrecio(anterior) {
+    limpiarForm();
+    const c = anterior.configuracion ?? {};
+    const formaAnterior = anterior.forma_de_precio || (anterior.precio_lista_id ? 'lista' : 'directo');
+    setReemplazaA(anterior);
+    setServicioId(anterior.servicio_id);
+    setForma(formaAnterior);
+    if (formaAnterior === 'lista') {
+      const sigueEnLaLista = listaPrecios.some((r) => String(r.id) === String(anterior.precio_lista_id));
+      setPrecioListaId(sigueEnLaLista ? String(anterior.precio_lista_id) : '');
+      setSentidoDelAjuste(anterior.sentido_del_ajuste || '');
+      setTipoDescuento(anterior.tipo_descuento || '');
+      setValorDescuento(anterior.valor_descuento ?? '');
+    } else {
+      setTipoServicioEscrito(anterior.tipo_servicio || '');
+    }
+    setDias(c.dias ?? '');
+    setHorario(c.horario ?? '');
+    setCantidadGuardias(c.cantidad_guardias ?? '');
+    setFeriados(Boolean(c.feriados));
+    setViajes(Boolean(c.viajes));
+    setHospitalizacion(Boolean(c.hospitalizacion));
+    setNota(anterior.nota ?? '');
+    const hoy = hoyISO();
+    setVigenteDesde(hoy > anterior.vigente_desde ? hoy : '');
+    setVigenteHasta(anterior.vigente_hasta ?? '');
+    setMostrandoForm(true);
+  }
+
+  function cerrarForm() {
+    setMostrandoForm(false);
+    limpiarForm();
+  }
 
   function limpiarForm() {
+    setReemplazaA(null);
+    setForma('');
     setPrecioListaId('');
+    setSentidoDelAjuste('');
+    setTipoServicioEscrito('');
+    setPrecioEscrito('');
     setDias('');
     setHorario('');
     setCantidadGuardias('');
@@ -154,25 +284,19 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setVigenteDesde(hoyISO());
     setVigenteHasta('');
     setErrorForm(null);
+    setIntentoGuardar(false);
   }
 
   async function handleGuardarPrestacion() {
-    if (!servicioId) {
-      setErrorForm(t.prestaciones.seleccionar_servicio);
+    setIntentoGuardar(true);
+    const primero = ORDEN_DE_LOS_CASILLEROS.find((campo) => avisos[campo]);
+    if (primero) {
+      document.getElementById(`field-${primero}`)?.focus();
       return;
     }
 
-    if (!precioSeleccionado) {
-      setErrorForm(t.prestaciones.seleccionar_precio_lista);
-      return;
-    }
-
-    // La base rechaza un período dado vuelta, pero el mensaje que devolvería habla de una
-    // restricción y de una columna. Acá se avisa antes y con palabras de quien está cargando.
-    if (vigenteHasta && vigenteHasta < vigenteDesde) {
-      setErrorForm(t.prestaciones.vigencia_al_reves);
-      return;
-    }
+    const columnas = columnasDelPrecio(datosDelPrecio);
+    if (!columnas) return;
 
     setGuardando(true);
     setErrorForm(null);
@@ -183,7 +307,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       // el calendario son del Servicio, y el Paciente sigue siendo quien lo recibe.
       servicio_id: servicioId,
       paciente_id: paciente.id,
-      tipo_servicio: `${precioSeleccionado.tipo_servicio} — ${precioSeleccionado.modalidad}`,
+      ...columnas,
       configuracion: {
         dias,
         horario,
@@ -192,26 +316,23 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         viajes,
         hospitalizacion,
       },
-      precio_lista_id: precioSeleccionado.id,
-      precio_lista_snapshot: precioSeleccionado.precio,
-      tipo_descuento: tipoDescuento || null,
-      valor_descuento: tipoDescuento ? Number(valorDescuento) : null,
-      precio_final: precioFinalCalculado,
       nota,
       estado: 'vigente',
       vigente_desde: vigenteDesde,
       vigente_hasta: vigenteHasta || null,
+      // Si es un cambio de precio, a cuál reemplaza. La base cierra esa el día antes, en la misma
+      // operación: si no se puede, no se guarda ninguna de las dos.
+      prestacion_anterior_id: reemplazaA?.id ?? null,
     });
 
     if (errorInsert) {
-      setErrorForm(t.comun.error_generico);
+      setErrorForm(mensajeDeError(errorInsert, t));
       setGuardando(false);
       return;
     }
 
     setGuardando(false);
-    setMostrandoForm(false);
-    limpiarForm();
+    cerrarForm();
     recargar();
   }
 
@@ -252,7 +373,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                 <h2>{t.prestaciones.vigentes_titulo}</h2>
                 <div className="molde-acciones">
                   {!mostrandoForm && (
-                    <Button variant="secondary" onClick={() => setMostrandoForm(true)}>{t.prestaciones.nueva_prestacion}</Button>
+                    <Button variant="secondary" onClick={abrirNueva}>{t.prestaciones.nueva_prestacion}</Button>
                   )}
                 </div>
               </div>
@@ -293,11 +414,18 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                           )}
                         </td>
                         <td>
-                          {p.requiere_revision && (
-                            <Button variant="secondary" onClick={() => handleMarcarRevisado(p.id)} disabled={marcandoRevisado === p.id}>
-                              {t.prestaciones.marcar_revisado}
-                            </Button>
-                          )}
+                          <div className="molde-acciones">
+                            {p.requiere_revision && (
+                              <Button variant="secondary" onClick={() => handleMarcarRevisado(p.id)} disabled={marcandoRevisado === p.id}>
+                                {t.prestaciones.marcar_revisado}
+                              </Button>
+                            )}
+                            {!mostrandoForm && sePuedeCambiarElPrecio(p) && (
+                              <Button variant="secondary" onClick={() => abrirCambioDePrecio(p)}>
+                                {t.prestaciones.cambiar_precio}
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -309,10 +437,10 @@ export function PrestacionesPaciente({ paciente, onClose }) {
             {mostrandoForm && (
               <section className="panel-tarjeta">
                 <div className="panel-tarjeta-titulo">
-                  <h2>{t.prestaciones.nueva_prestacion}</h2>
+                  <h2>{reemplazaA ? t.prestaciones.cambio_de_precio_titulo : t.prestaciones.nueva_prestacion}</h2>
                 </div>
                 {errorForm && <Alert variant="error">{errorForm}</Alert>}
-                {serviciosAbiertos.length === 0 && <Alert variant="info">{t.prestaciones.sin_servicio_abierto}</Alert>}
+                {!reemplazaA && serviciosAbiertos.length === 0 && <Alert variant="info">{t.prestaciones.sin_servicio_abierto}</Alert>}
 
                 <div className="molde-formgrid">
                   <FormField
@@ -321,10 +449,15 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     type="select"
                     value={servicioId}
                     onChange={(e) => setServicioId(e.target.value)}
+                    disabled={Boolean(reemplazaA)}
+                    error={avisoDe('servicio_id')}
                     required
                   >
                     <option value="">—</option>
-                    {serviciosAbiertos.map((s) => (
+                    {(reemplazaA
+                      ? serviciosDelCliente.filter((s) => s.id === reemplazaA.servicio_id)
+                      : serviciosAbiertos
+                    ).map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.etiqueta}
                       </option>
@@ -332,20 +465,112 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   </FormField>
 
                   <FormField
-                    label={t.prestaciones.col_tipo_servicio}
-                    name="precio_lista_id"
+                    label={t.prestaciones.forma_de_precio}
+                    name="forma_de_precio"
                     type="select"
-                    value={precioListaId}
-                    onChange={(e) => setPrecioListaId(e.target.value)}
+                    value={forma}
+                    onChange={(e) => setForma(e.target.value)}
+                    error={avisoDe('forma_de_precio')}
                     required
                   >
-                    <option value="">—</option>
-                    {listaPrecios.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.tipo_servicio} — {p.modalidad} ({p.precio})
+                    {FORMAS_DE_PRECIO_POSIBLES.map((f) => (
+                      <option key={f} value={f}>
+                        {t.prestaciones[`forma_de_precio_${f}`]}
                       </option>
                     ))}
                   </FormField>
+
+                  {forma === 'lista' && (
+                    <>
+                      <FormField
+                        label={t.prestaciones.col_tipo_servicio}
+                        name="precio_lista_id"
+                        type="select"
+                        value={precioListaId}
+                        onChange={(e) => setPrecioListaId(e.target.value)}
+                        error={avisoDe('precio_lista_id')}
+                        required
+                      >
+                        <option value="">—</option>
+                        {listaPrecios.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.tipo_servicio} — {p.modalidad} ({p.precio})
+                          </option>
+                        ))}
+                      </FormField>
+
+                      <FormField
+                        label={t.prestaciones.ajuste}
+                        name="sentido_del_ajuste"
+                        type="select"
+                        value={sentidoDelAjuste}
+                        onChange={(e) => setSentidoDelAjuste(e.target.value)}
+                      >
+                        <option value="">{t.prestaciones.sin_ajuste}</option>
+                        {SENTIDOS_DEL_AJUSTE_POSIBLES.map((sentido) => (
+                          <option key={sentido} value={sentido}>
+                            {t.prestaciones[`ajuste_${sentido}`]}
+                          </option>
+                        ))}
+                      </FormField>
+
+                      {sentidoDelAjuste && (
+                        <>
+                          <FormField
+                            label={t.prestaciones.tipo_de_ajuste}
+                            name="tipo_de_ajuste"
+                            type="select"
+                            value={tipoDescuento}
+                            onChange={(e) => setTipoDescuento(e.target.value)}
+                            error={avisoDe('tipo_de_ajuste')}
+                            required
+                          >
+                            <option value="">—</option>
+                            {TIPOS_DE_AJUSTE_POSIBLES.map((tipo) => (
+                              <option key={tipo} value={tipo}>
+                                {t.prestaciones[`descuento_${tipo}`]}
+                              </option>
+                            ))}
+                          </FormField>
+                          <FormField
+                            label={t.prestaciones.valor_del_ajuste}
+                            name="valor_del_ajuste"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={valorDescuento}
+                            onChange={(e) => setValorDescuento(e.target.value)}
+                            error={avisoDe('valor_del_ajuste')}
+                            required
+                          />
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {forma === 'directo' && (
+                    <>
+                      <FormField
+                        label={t.prestaciones.col_tipo_servicio}
+                        name="tipo_servicio"
+                        value={tipoServicioEscrito}
+                        onChange={(e) => setTipoServicioEscrito(e.target.value)}
+                        error={avisoDe('tipo_servicio')}
+                        required
+                      />
+                      <FormField
+                        label={t.prestaciones.precio_escrito}
+                        name="precio_escrito"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={precioEscrito}
+                        onChange={(e) => setPrecioEscrito(e.target.value)}
+                        error={avisoDe('precio_escrito')}
+                        required
+                      />
+                    </>
+                  )}
 
                   <FormField label={t.prestaciones.dias} name="dias" value={dias} onChange={(e) => setDias(e.target.value)} />
                   <FormField label={t.prestaciones.horario} name="horario" value={horario} onChange={(e) => setHorario(e.target.value)} />
@@ -363,34 +588,12 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   </div>
 
                   <FormField
-                    label={t.prestaciones.tipo_descuento}
-                    name="tipo_descuento"
-                    type="select"
-                    value={tipoDescuento}
-                    onChange={(e) => setTipoDescuento(e.target.value)}
-                  >
-                    <option value="">{t.prestaciones.sin_descuento}</option>
-                    <option value="porcentaje">{t.prestaciones.descuento_porcentaje}</option>
-                    <option value="monto_fijo">{t.prestaciones.descuento_monto_fijo}</option>
-                  </FormField>
-
-                  {tipoDescuento && (
-                    <FormField
-                      label={t.prestaciones.valor_descuento}
-                      name="valor_descuento"
-                      type="number"
-                      step="0.01"
-                      value={valorDescuento}
-                      onChange={(e) => setValorDescuento(e.target.value)}
-                    />
-                  )}
-
-                  <FormField
                     label={t.prestaciones.vigente_desde}
                     name="vigente_desde"
                     type="date"
                     value={vigenteDesde}
                     onChange={(e) => setVigenteDesde(e.target.value)}
+                    error={avisoDe('vigente_desde')}
                     required
                   />
                   <FormField
@@ -399,13 +602,14 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     type="date"
                     value={vigenteHasta}
                     onChange={(e) => setVigenteHasta(e.target.value)}
+                    error={avisoDe('vigente_hasta')}
                   />
 
                   <div className="molde-ancho">
                     <FormField label={t.comun.nota_interna} name="nota" type="textarea" value={nota} onChange={(e) => setNota(e.target.value)} />
                   </div>
 
-                  {precioSeleccionado && (
+                  {precioFinalCalculado !== null && (
                     <div className="tarjeta-dato molde-ancho">
                       <div className="panel-mini">{t.prestaciones.precio_final_calculado}</div>
                       <b>{precioFinalCalculado}</b>
@@ -414,17 +618,10 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                 </div>
 
                 <div className="molde-acciones">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setMostrandoForm(false);
-                      limpiarForm();
-                    }}
-                    disabled={guardando}
-                  >
+                  <Button variant="secondary" onClick={cerrarForm} disabled={guardando}>
                     {t.comun.cancelar}
                   </Button>
-                  <Button onClick={handleGuardarPrestacion} disabled={guardando || !servicioId}>
+                  <Button onClick={handleGuardarPrestacion} disabled={guardando}>
                     {guardando ? t.comun.guardando : t.comun.guardar}
                   </Button>
                 </div>

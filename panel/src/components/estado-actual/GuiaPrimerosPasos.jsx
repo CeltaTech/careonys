@@ -14,7 +14,7 @@ import '../../styles/molde-paginas.css';
 
    QUÉ HACE ESTE ARCHIVO Y QUÉ NO. Pinta, y nada más. Qué falta lo contesta
    `context/PuestaEnMarchaContext.jsx`: primero los tres pasos de la configuración inicial
-   —datos, zonas y precios—, y recién con esos completos, los de la gente. La misma respuesta
+   —datos y zonas—, y recién con esos completos, los de la gente. La misma respuesta
    apaga los botones que cargan Asistentes o Clientes.
 
    Y LEE PLANILLAS. Lo que la Prestadora ya tiene escrito no se vuelve a tipear: la lectura de

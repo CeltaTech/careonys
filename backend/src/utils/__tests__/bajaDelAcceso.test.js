@@ -202,16 +202,6 @@ describe('la baja que sale bien', () => {
     assert.ok(guardado().cuerpo.cancelada_en);
   });
 
-  it('el que se cobra en mano no le pide ninguna credencial a la caja fuerte', async () => {
-    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
-      accesoVivo({ proveedor: 'efectivo_manual', referencia_externa: 'anotado-a-mano' })
-    );
-    const resultado = await darDeBaja();
-    assert.equal(resultado.ok, true);
-    assert.equal(llamadas.some((l) => l.clave.includes('leer_credencial_pasarela_pago')), false);
-    assert.ok(guardado().cuerpo.cancelada_en);
-  });
-
   it('la que ya estaba dada de baja se contesta guardada y no vuelve a salir hacia afuera', async () => {
     respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
       accesoVivo({ cancelada_en: '2026-09-01T12:00:00.000Z' })

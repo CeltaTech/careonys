@@ -6,6 +6,7 @@ import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { prestadoraVisible, prestadoraVisibleOContestar } from '../utils/prestadoraVisible.js';
+import { CLAVES_DE_LAS_CONDICIONES, condicionesDe, condicionesQueSePuedenGuardar } from '../utils/condicionesDelCliente.js';
 import { personasDelPanel, responsableDelReclutamiento } from '../utils/responsableDelReclutamiento.js';
 import {
   ACCION_BORRADO_DE_DATOS,
@@ -1296,6 +1297,10 @@ panelConfiguracionRouter.get('/facturacion-clientes', async (req, res) => {
   res.json({
     configuracion: {
       dias_hasta_el_vencimiento: data?.regla?.dias_hasta_el_vencimiento ?? null,
+      // Las condiciones de fábrica con las que se le cobra a cada Cliente: forma de precio,
+      // frecuencia, medición y actualización. Lo que la regla no dice sale con el valor de fábrica,
+      // así la pantalla muestra siempre lo que rige.
+      ...condicionesDe(data?.regla, null),
       sigue_la_cobranza: sigueLaCobranza(data?.regla),
       entrega_la_factura: entregaLaFactura(data?.regla),
       // Del secreto sale de acá si está cargado o no, nunca su contenido, y tampoco la referencia
@@ -1326,6 +1331,17 @@ panelConfiguracionRouter.put('/facturacion-clientes', async (req, res) => {
     return res.status(400).json({ error: 'La entrega de la factura se enciende o se apaga' });
   }
 
+  // Las condiciones con las que se le cobra a cada Cliente. Se guarda sólo lo que difiere de
+  // fábrica, por lo mismo que el seguimiento de la cobranza: lo que repite el valor de fábrica hace
+  // creer que alguien lo decidió.
+  const entradaDeCondiciones = Object.fromEntries(
+    CLAVES_DE_LAS_CONDICIONES.filter((clave) => req.body?.[clave] !== undefined).map((clave) => [clave, req.body[clave]])
+  );
+  const condiciones = condicionesQueSePuedenGuardar(entradaDeCondiciones);
+  if (!condiciones.ok) {
+    return res.status(400).json({ error: 'Una de las condiciones de cobro no es válida. Revise los valores e intente nuevamente.' });
+  }
+
   // Vacío se guarda como objeto vacío y no como un cero: cero es «paga el mismo día» y vacío es
   // «no se acordó nada». Son dos cosas distintas y la pantalla se comporta distinto con cada una.
   const regla = revision.valor === null ? {} : { dias_hasta_el_vencimiento: revision.valor };
@@ -1337,6 +1353,8 @@ panelConfiguracionRouter.put('/facturacion-clientes', async (req, res) => {
   // Lo mismo con la entrega de la factura, que es otra decisión: hay Prestadoras que reparten las
   // facturas por su cuenta y siguen llevando el saldo acá.
   if (req.body?.entrega_la_factura === false) regla.entrega_la_factura = false;
+
+  Object.assign(regla, condiciones.valor);
 
   const db = clienteDelPedido(req);
   const prestadoraId = await prestadoraVisibleOContestar(db, res);
@@ -1351,6 +1369,17 @@ panelConfiguracionRouter.put('/facturacion-clientes', async (req, res) => {
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });
+});
+
+// Los índices públicos con los que se puede actualizar un precio. Es un catálogo de la base, igual
+// para todas las Prestadoras: la pantalla no escribe ninguna lista propia.
+panelConfiguracionRouter.get('/facturacion-clientes/indices', async (req, res) => {
+  const { data, error } = await clienteDelPedido(req)
+    .from('indices_de_actualizacion')
+    .select('codigo, nombre, fuente')
+    .order('nombre');
+  if (error) return responderError(res, error);
+  res.json({ indices: data || [] });
 });
 
 // El secreto con el que el otro software de créditos y cobranzas firma lo que entrega.

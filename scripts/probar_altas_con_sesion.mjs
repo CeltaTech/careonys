@@ -51,18 +51,13 @@
 //
 // QUÉ QUEDA AFUERA DEL CAMINO REAL, y por qué no queda sin probar
 //
-// Dos disparadores no se pueden alcanzar con una sesión de Panel, porque las
-// filas que los despiertan no las escribe el Panel:
+// Un disparador no se puede alcanzar con una sesión de Panel, porque las filas
+// que lo despiertan no las escribe el Panel: `fn_modalidades_de_asistente_nuevo`,
+// que corre sólo al insertar un Asistente, y un Asistente lo da de alta el
+// backend: su identificador es el de la persona, que tiene que existir antes.
 //
-//   · `fn_completar_moneda_desde_cliente`, de `qr_cobro_efectivo`, que escribe
-//     un Cliente y no el Panel, y cuya política exige además una suscripción
-//     del Match y el permiso de dinero adentro de las personas autorizadas.
-//   · `fn_modalidades_de_asistente_nuevo`, que corre sólo al insertar un
-//     Asistente, y un Asistente lo da de alta el backend: su identificador es el
-//     de la persona, que tiene que existir antes.
-//
-// Los dos llaman a la misma función que otro disparador que sí se prueba acá,
-// y la segunda comprobación los alcanza igual. De `asistentes` se prueba lo que
+// Llama a la misma función que otro disparador que sí se prueba acá,
+// y la segunda comprobación lo alcanza igual. De `asistentes` se prueba lo que
 // el Panel hace de verdad, que es modificarle las modalidades a uno que ya
 // existe (`panel/src/pages/asistentes/PerfilTab.jsx`).
 //

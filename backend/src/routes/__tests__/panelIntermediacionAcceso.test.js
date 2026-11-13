@@ -142,7 +142,6 @@ const TABLAS_DE_PLATA = [
   'accesos_intermediacion',
   'cobros_intermediacion',
   'formas_de_cobro_intermediacion',
-  'qr_cobro_efectivo',
   'rpc/guardar_credencial_pasarela_pago',
   'rpc/guardar_secreto_firma_pasarela_pago',
   'rpc/leer_credencial_pasarela_pago',
@@ -163,8 +162,8 @@ const RUTAS_DE_PLATA = [
   ['PATCH', '/pasarela/mercadopago', { activo: true }],
   ['GET', '/accesos', undefined],
   ['GET', `/accesos/${ACCESO}/cobros`, undefined],
-  ['POST', '/cobros/efectivo-manual', { acceso_id: ACCESO, monto: 1000, periodo: '2026-09', fecha_cobro: '2026-09-04' }],
-  ['POST', '/qr-cobro/canjear', { token: 'token-de-mentira' }],
+  // Lo que sale hacia el software de facturación lleva importes y datos de quien paga.
+  ['GET', '/accesos/para-facturar?periodo=2026-09', undefined],
   // Dar de alta un acceso en la pasarela es lo que lo deja cobrando de verdad: saca la
   // credencial de la caja fuerte y crea el cobro recurrente del lado del proveedor.
   ['POST', `/accesos/${ACCESO}/alta-en-pasarela`, {}],
@@ -228,12 +227,18 @@ describe('lo que sí es del Coordinador', () => {
 });
 
 describe('la administración sí pasa el candado', () => {
-  it('a la carga de efectivo en mano', async () => {
-    // Se manda sin cuerpo a propósito: lo que se prueba es que la respuesta ya no es la del
-    // candado (403) sino la de la ruta contestando que le faltan datos.
-    const { estado, cuerpo } = await pedir('POST', '/cobros/efectivo-manual', {});
+  it('a la lista de accesos', async () => {
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => []);
+    const { estado, cuerpo } = await pedir('GET', '/accesos');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.accesos, []);
+  });
+
+  it('a lo que hay para facturar, y sin período contesta que falta', async () => {
+    // Sin período: la respuesta ya no es la del candado (403) sino la de la ruta.
+    const { estado, cuerpo } = await pedir('GET', '/accesos/para-facturar');
     assert.equal(estado, 400);
-    assert.match(cuerpo.error, /Faltan/);
+    assert.match(cuerpo.error, /período/);
   });
 
   it('a la auditoría de advertencias legales', async () => {
@@ -269,6 +274,7 @@ describe('la lista de accesos trae los nombres con el trabajo de la Prestadora',
     ]);
     respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, persona: { nombre_visible: 'Paciente inventado' } }]);
     respuestas.set('GET /rest/v1/asistentes', () => [{ id: ASISTENTE, nombre: 'Asistente inventada' }]);
+    respuestas.set('GET /rest/v1/cobros_intermediacion', () => []);
 
     const { estado, cuerpo } = await pedir('GET', '/accesos');
     assert.equal(estado, 200);
@@ -282,6 +288,83 @@ describe('la lista de accesos trae los nombres con el trabajo de la Prestadora',
       assert.notEqual(lectura.credencial, 'Bearer clave-de-mentira', `${tabla} se leyó con la llave maestra`);
       assert.ok(lectura.credencial, `${tabla} se leyó sin credencial`);
     }
+  });
+
+  it('trae la moneda y lo que informó el software de cobranzas', async () => {
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
+      { id: ACCESO, cliente_id: null, paciente_id: null, asistente_id: null, estado: 'vigente', importe: 12000, moneda: 'ARS', proximo_cobro: '2026-10-05' },
+    ]);
+    respuestas.set('GET /rest/v1/cobros_intermediacion', () => [
+      { acceso_id: ACCESO, estado_cobro: 'exitoso', fecha_cobro: '2026-09-05', monto: 12000, moneda: 'ARS', periodo: '2026-09-01', created_at: '2026-09-05T10:00:00Z' },
+      { acceso_id: ACCESO, estado_cobro: 'fallido', fecha_cobro: null, monto: 12000, moneda: 'ARS', periodo: '2026-10-01', created_at: '2026-10-05T10:00:00Z' },
+    ]);
+
+    const { estado, cuerpo } = await pedir('GET', '/accesos');
+    assert.equal(estado, 200);
+    const [acceso] = cuerpo.accesos;
+    assert.equal(acceso.moneda, 'ARS');
+    assert.equal(acceso.estado_cobro, 'fallido', 'el estado es el del aviso más reciente');
+    assert.deepEqual(acceso.ultimo_cobro, { fecha_cobro: '2026-09-05', monto: 12000, moneda: 'ARS', periodo: '2026-09-01' });
+
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_intermediacion');
+    assert.ok(lectura, 'no se leyeron los cobros');
+    assert.notEqual(lectura.credencial, credencialEnviada, 'los cobros se leyeron con la credencial de la persona');
+  });
+
+  it('un acceso sin ningún aviso sale sin estado de cobro', async () => {
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
+      { id: ACCESO, cliente_id: null, paciente_id: null, asistente_id: null, estado: 'vigente', importe: 12000, moneda: 'ARS' },
+    ]);
+    respuestas.set('GET /rest/v1/cobros_intermediacion', () => []);
+    const { cuerpo } = await pedir('GET', '/accesos');
+    assert.equal(cuerpo.accesos[0].estado_cobro, null);
+    assert.equal(cuerpo.accesos[0].ultimo_cobro, null);
+  });
+});
+
+describe('lo que sale hacia el software de facturación', () => {
+  const CLIENTE = '88888888-8888-8888-8888-888888888888';
+  const PERSONA = '99999999-9999-9999-9999-999999999999';
+
+  it('una fila por acceso que se cobra en el período, con las columnas de la prestación directa', async () => {
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
+      { id: ACCESO, cliente_id: CLIENTE, importe: 12000.456, moneda: 'ARS', proximo_cobro: '2026-09-05', gratis_hasta: null },
+      // En su período sin cargo: no sale.
+      { id: FORMA, cliente_id: CLIENTE, importe: 9000, moneda: 'ARS', proximo_cobro: '2026-09-10', gratis_hasta: '2026-09-30' },
+      // Sin importe: no sale.
+      { id: SESION_SOPORTE, cliente_id: CLIENTE, importe: 0, moneda: 'ARS', proximo_cobro: '2026-09-12', gratis_hasta: null },
+    ]);
+    respuestas.set('GET /rest/v1/clientes', () => [
+      { id: CLIENTE, numero_cliente: 'C-0042', contratante_persona_id: PERSONA, usuarios: { nombre: 'Cliente inventado' } },
+    ]);
+    respuestas.set('GET /rest/v1/personas', () => [
+      { id: PERSONA, nombre_visible: 'Persona inventada', documento_tipo: 'DNI', documento_numero: '00000000', documento_pais: 'AR', calle: 'Calle Falsa', numero: '123', codigo_postal: '0000', email: 'inventada@example.com' },
+    ]);
+
+    const { estado, cuerpo } = await pedir('GET', '/accesos/para-facturar?periodo=2026-09');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.length, 1);
+    const [fila] = cuerpo;
+    assert.equal(fila.factura_id, '');
+    assert.equal(fila.numero_cliente, 'C-0042');
+    assert.equal(fila.cliente, 'Cliente inventado');
+    assert.equal(fila.facturar_a_nombre, 'Persona inventada');
+    assert.equal(fila.facturar_a_domicilio, 'Calle Falsa 123');
+    assert.equal(fila.periodo, '2026-09');
+    assert.equal(fila.moneda, 'ARS');
+    assert.equal(fila.monto_a_facturar, 12000.46);
+    assert.equal(fila.fecha_vencimiento, '2026-09-05');
+
+    // Pide sólo los vigentes cuyo próximo cobro cae en el mes.
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
+    assert.match(lectura.busqueda, /estado=eq\.vigente/);
+    assert.match(lectura.busqueda, /proximo_cobro=gte\.2026-09-01/);
+    assert.match(lectura.busqueda, /proximo_cobro=lt\.2026-10-01/);
+  });
+
+  it('un período mal escrito se rechaza', async () => {
+    const { estado } = await pedir('GET', '/accesos/para-facturar?periodo=2026-13');
+    assert.equal(estado, 400);
   });
 });
 

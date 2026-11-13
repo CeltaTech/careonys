@@ -38,6 +38,10 @@ const ESTADO_POR_MOTIVO = {
   // configuración inicial (`utils/configuracionInicial.js`). Es 409 porque el pedido está bien
   // armado y choca con el estado de la Prestadora, y se arregla completando la configuración.
   configuracion_inicial_incompleta: 409,
+  // El cambio de precio de la lista: la fecha nueva no puede ser anterior a la del precio que
+  // reemplaza, y un precio ya reemplazado no se vuelve a reemplazar.
+  fecha_anterior: 400,
+  ya_reemplazado: 409,
   faltan_datos: 400,
   password_debil: 400,
   token_invalido: 400,

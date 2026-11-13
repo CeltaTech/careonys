@@ -11,6 +11,15 @@ import {
   PLAZO_MAXIMO_EN_DIAS,
   plazoQueSePuedeGuardar,
 } from '../../lib/facturacionDeClientes';
+import {
+  FORMAS_DE_ACTUALIZACION,
+  FORMAS_DE_ACTUALIZACION_POSIBLES,
+  FORMAS_DE_PRECIO_POSIBLES,
+  FRECUENCIAS_DE_COBRO_POSIBLES,
+  MEDICIONES_POSIBLES,
+  VALORES_DE_FABRICA_DEL_CLIENTE,
+  condicionesQueSePuedenGuardar,
+} from '../../lib/condicionesDelCliente';
 import '../../styles/molde-paginas.css';
 
 /* A qué plazo pagan los Clientes lo que se les factura.
@@ -45,6 +54,11 @@ export function FacturacionClientesTab() {
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  // Las condiciones de fábrica con las que se le cobra a cada Cliente. Cada Servicio puede tener
+  // las suyas desde su Ficha; las que no tenga salen de acá.
+  const [condiciones, setCondiciones] = useState(VALORES_DE_FABRICA_DEL_CLIENTE);
+  const [indices, setIndices] = useState([]);
+  const [errorIndices, setErrorIndices] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -57,6 +71,13 @@ export function FacturacionClientesTab() {
       setCobranzaConectada(!!configuracion.aviso_de_restriccion_conectado);
       setFacturacionConectada(!!configuracion.aviso_de_facturacion_conectado);
       setPrestadoraId(configuracion.prestadora_id ?? null);
+      setCondiciones({
+        forma_de_precio: configuracion.forma_de_precio,
+        frecuencia_de_cobro: configuracion.frecuencia_de_cobro,
+        medicion: configuracion.medicion,
+        forma_de_actualizacion: configuracion.forma_de_actualizacion,
+        indice_de_actualizacion: configuracion.indice_de_actualizacion,
+      });
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -67,6 +88,29 @@ export function FacturacionClientesTab() {
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  // Los índices salen del catálogo de la base. Si no se pueden leer, el resto de la configuración
+  // sigue funcionando: sólo la opción del índice queda sin lista.
+  useEffect(() => {
+    let vigente = true;
+    llamarApi('/facturacion-clientes/indices')
+      .then(({ indices: lista }) => {
+        if (vigente) setIndices(lista || []);
+      })
+      .catch((err) => {
+        if (vigente) setErrorIndices(mensajeDeError(err, t));
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [t]);
+
+  const cambiarCondicion = (clave) => (e) => {
+    const valor = e.target.value === '' ? null : e.target.value;
+    setCondiciones((antes) => ({ ...antes, [clave]: valor }));
+    setGuardado(false);
+  };
+  const condicionesRevisadas = condicionesQueSePuedenGuardar(condiciones);
 
   // La misma comprobación que hace el backend antes de escribir, leída del archivo compartido: así
   // el botón no ofrece guardar algo que después se rechaza.
@@ -83,6 +127,7 @@ export function FacturacionClientesTab() {
           dias_hasta_el_vencimiento: dias === '' ? '' : Number(dias),
           sigue_la_cobranza: sigue,
           entrega_la_factura: entrega,
+          ...condiciones,
         }),
       });
       setGuardado(true);
@@ -182,9 +227,79 @@ export function FacturacionClientesTab() {
               }}
             />
           </div>
+          <FormField
+            label={t.configuracion.condiciones_cliente.forma_de_precio}
+            name="forma_de_precio"
+            type="select"
+            value={condiciones.forma_de_precio ?? ''}
+            onChange={cambiarCondicion('forma_de_precio')}
+          >
+            {FORMAS_DE_PRECIO_POSIBLES.map((valor) => (
+              <option key={valor} value={valor}>
+                {t.configuracion.condiciones_cliente.valores.forma_de_precio[valor]}
+              </option>
+            ))}
+          </FormField>
+          <FormField
+            label={t.configuracion.condiciones_cliente.frecuencia_de_cobro}
+            name="frecuencia_de_cobro"
+            type="select"
+            value={condiciones.frecuencia_de_cobro ?? ''}
+            onChange={cambiarCondicion('frecuencia_de_cobro')}
+          >
+            {FRECUENCIAS_DE_COBRO_POSIBLES.map((valor) => (
+              <option key={valor} value={valor}>
+                {t.configuracion.condiciones_cliente.valores.frecuencia_de_cobro[valor]}
+              </option>
+            ))}
+          </FormField>
+          <FormField
+            label={t.configuracion.condiciones_cliente.medicion}
+            name="medicion"
+            type="select"
+            value={condiciones.medicion ?? ''}
+            onChange={cambiarCondicion('medicion')}
+          >
+            {MEDICIONES_POSIBLES.map((valor) => (
+              <option key={valor} value={valor}>
+                {t.configuracion.condiciones_cliente.valores.medicion[valor]}
+              </option>
+            ))}
+          </FormField>
+          <FormField
+            label={t.configuracion.condiciones_cliente.forma_de_actualizacion}
+            name="forma_de_actualizacion"
+            type="select"
+            value={condiciones.forma_de_actualizacion ?? ''}
+            onChange={cambiarCondicion('forma_de_actualizacion')}
+          >
+            {FORMAS_DE_ACTUALIZACION_POSIBLES.map((valor) => (
+              <option key={valor} value={valor}>
+                {t.configuracion.condiciones_cliente.valores.forma_de_actualizacion[valor]}
+              </option>
+            ))}
+          </FormField>
+          {condiciones.forma_de_actualizacion === FORMAS_DE_ACTUALIZACION.INDICE && (
+            <FormField
+              label={t.configuracion.condiciones_cliente.indice_de_actualizacion}
+              name="indice_de_actualizacion"
+              type="select"
+              required
+              value={condiciones.indice_de_actualizacion ?? ''}
+              error={errorIndices ?? undefined}
+              onChange={cambiarCondicion('indice_de_actualizacion')}
+            >
+              <option value="" />
+              {indices.map((indice) => (
+                <option key={indice.codigo} value={indice.codigo}>
+                  {indice.nombre}
+                </option>
+              ))}
+            </FormField>
+          )}
           </div>
           <div className="molde-acciones">
-            <Button onClick={guardar} disabled={guardando || !revisado.ok}>
+            <Button onClick={guardar} disabled={guardando || !revisado.ok || !condicionesRevisadas.ok}>
               {guardando ? t.comun.guardando : t.comun.guardar}
             </Button>
           </div>

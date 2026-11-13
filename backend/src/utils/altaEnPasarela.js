@@ -145,18 +145,14 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
   }
 
   // La credencial sale de la caja fuerte y no se guarda en ninguna variable que sobreviva a esta
-  // función. `efectivo_manual` no tiene ninguna, y no la necesita.
-  let credencial = null;
-  if (riel.proveedor !== 'efectivo_manual') {
-    const { data, error } = await enLaPrestadora(prestadoraId, TRABAJO, (trabajo) =>
-      trabajo.rpc('leer_credencial_pasarela_pago', {
-        p_prestadora_id: prestadoraId,
-        p_proveedor: riel.proveedor,
-      }));
-    if (error || !data) {
-      return { ok: false, motivo: MOTIVO_ALTA.SIN_CREDENCIAL, detalle: error?.message };
-    }
-    credencial = data;
+  // función.
+  const { data: credencial, error: errorDeCredencial } = await enLaPrestadora(prestadoraId, TRABAJO, (trabajo) =>
+    trabajo.rpc('leer_credencial_pasarela_pago', {
+      p_prestadora_id: prestadoraId,
+      p_proveedor: riel.proveedor,
+    }));
+  if (errorDeCredencial || !credencial) {
+    return { ok: false, motivo: MOTIVO_ALTA.SIN_CREDENCIAL, detalle: errorDeCredencial?.message };
   }
 
   const emailPagador = await correoDelCliente(acceso.cliente_id, prestadoraId);

@@ -1439,6 +1439,19 @@ VALUES ('11111111-1111-4111-8111-111111111111', 'cliente_ubicacion_en_vivo', tru
 -- que sí existen (§8 de `CLAUDE.md`).
 NOTIFY pgrst, 'reload schema';
 
+-- Valores del índice de actualización, inventados: uno público, como los que trae la carga diaria,
+-- y uno anotado a mano por cada Prestadora, para que la prueba de aislamiento tenga algo ajeno que
+-- podría verse en esta tabla.
+INSERT INTO public.valores_de_indice (indice_id, periodo, valor, origen, prestadora_id, cargado_por)
+SELECT i.id, v.periodo, v.valor, v.origen, v.prestadora_id, NULL
+  FROM public.indices_de_actualizacion i
+ CROSS JOIN (VALUES
+   (date '2026-08-01', 9000.5::numeric, 'automatico', NULL::uuid),
+   (date '2026-09-01', 9100.25::numeric, 'manual', '11111111-1111-4111-8111-111111111111'::uuid),
+   (date '2026-09-01', 9105.75::numeric, 'manual', '22222222-2222-4222-8222-222222222222'::uuid)
+ ) AS v (periodo, valor, origen, prestadora_id)
+ WHERE i.codigo = 'ipc_indec_nacional';
+
 DO $$
 BEGIN
   RAISE NOTICE '';

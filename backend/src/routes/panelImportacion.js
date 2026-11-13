@@ -21,6 +21,9 @@ import { responderError } from '../utils/errorConMotivo.js';
 import { exigirConfiguracionInicial } from '../utils/configuracionInicial.js';
 import { FICHA_DOMICILIO, conSusFichas } from '../utils/fichaDelPaciente.js';
 import { informeDeFilasNoCargadas } from '../utils/informeDeFilasNoCargadas.js';
+import {
+  CAMPOS_DE_LA_LISTA_DE_PRECIOS, errorDeLaBase, esLoteDePersonas, fechaDelDia, mapeoPropuestoDeLaLista, renglonesDeLaLista,
+} from '../utils/actualizacionDePrecios.js';
 
 export const panelImportacionRouter = Router();
 
@@ -468,6 +471,11 @@ panelImportacionRouter.post(
       if (lote.estado_conformidad !== 'pendiente') {
         return res.status(409).json({ error: 'Este lote ya fue revisado' });
       }
+      // Una lista de precios no se conforma ni se rechaza: entra entera, con el precio viejo
+      // guardado con su fecha de fin, y nace confirmada.
+      if (!esLoteDePersonas(lote)) {
+        return res.status(409).json({ error: 'Este lote ya fue revisado' });
+      }
 
       const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
       const { data: filas, error: errorFilas } = await db
@@ -531,6 +539,11 @@ panelImportacionRouter.post(
       if (lote.estado_conformidad !== 'pendiente') {
         return res.status(409).json({ error: 'Este lote ya fue revisado' });
       }
+      // Una lista de precios no se conforma ni se rechaza: entra entera, con el precio viejo
+      // guardado con su fecha de fin, y nace confirmada.
+      if (!esLoteDePersonas(lote)) {
+        return res.status(409).json({ error: 'Este lote ya fue revisado' });
+      }
 
       const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
       const { data: filas, error: errorFilas } = await db
@@ -560,6 +573,115 @@ panelImportacionRouter.post(
         .eq('prestadora_id', prestadoraId);
 
       res.json({ ok: true, filasRevertidas: revertidas });
+    });
+  }
+);
+
+/* La importación de una lista de precios.
+   ==========================================================================
+
+   Sigue el mismo camino que la de Asistentes y Clientes —se sube la planilla, se revisa qué
+   columna es cuál, se confirma—, con dos diferencias:
+
+   · No se le pregunta a la IA: la planilla tiene tres columnas (tipo de servicio, modalidad y
+     precio) y se reconocen por el nombre del encabezado. Lo que no se reconoce lo elige la persona.
+   · No queda pendiente de conformidad. El precio viejo no se pisa: el nuevo se guarda con su fecha
+     de comienzo y el viejo queda con su fecha de fin. Lo hace la base en una sola operación
+     (`importar_lista_de_precios`), con la sesión de quien pide y sólo para la administración de
+     la Prestadora. Lo que la base no carga sin duda —un renglón repetido en la lista, un precio que
+     no se entiende, una fecha anterior a la del precio vigente— vuelve con su fila y su motivo.
+
+   El lote se anota en `importaciones_prestadora` como los demás, ya confirmado. */
+panelImportacionRouter.post(
+  '/precios/analizar',
+  requiereRolPanel,
+  requierePermiso('importar_datos_masivos'),
+  upload.single('archivo'),
+  manejarErrorMulter,
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Falta el archivo' });
+    }
+    let lectura;
+    try {
+      lectura = parsearArchivo(req.file.buffer, req.file.originalname);
+    } catch (error) {
+      console.error('Importación de lista de precios, lectura:', error?.message ?? error);
+      return res.status(400).json({ error: 'dato_invalido', motivo: 'archivo_ilegible' });
+    }
+    res.json({
+      headers: lectura.headers,
+      filas: lectura.filas,
+      mapeoPropuesto: mapeoPropuestoDeLaLista(lectura.headers),
+      camposDisponibles: CAMPOS_DE_LA_LISTA_DE_PRECIOS,
+      camposObligatorios: CAMPOS_DE_LA_LISTA_DE_PRECIOS,
+      archivoNombre: req.file.originalname,
+    });
+  }
+);
+
+panelImportacionRouter.post(
+  '/precios/confirmar',
+  requiereRolPanel,
+  requierePermiso('importar_datos_masivos'),
+  async (req, res) => {
+    const { filas, mapeo, archivoNombre, desde } = req.body ?? {};
+    const pDesde = fechaDelDia(desde);
+    if (!Array.isArray(filas) || filas.length === 0 || !mapeo || !pDesde) {
+      return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
+    }
+
+    let renglones;
+    try {
+      renglones = renglonesDeLaLista(filas, mapeo);
+    } catch (error) {
+      return responderError(res, error, 400);
+    }
+
+    const { data: resultado, error } = await clienteDelPedido(req)
+      .rpc('importar_lista_de_precios', { p_renglones: renglones, p_desde: pDesde });
+    if (error) {
+      const { error: conMotivo, estado } = errorDeLaBase(error);
+      return responderError(res, conMotivo, estado);
+    }
+
+    const dudosos = Array.isArray(resultado?.dudosos) ? resultado.dudosos : [];
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+    let loteId = null;
+    try {
+      loteId = await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, async (db) => {
+        const { data: lote, error: errorLote } = await db
+          .from('importaciones_prestadora')
+          .insert({
+            prestadora_id: prestadoraId,
+            usuario_id: req.usuarioPanel.id,
+            tipo: 'lista_precios',
+            archivo_nombre: archivoNombre || null,
+            filas_totales: renglones.length,
+            filas_creadas: (resultado?.agregados ?? 0) + (resultado?.cambiados ?? 0),
+            filas_error: dudosos.length,
+            errores: dudosos,
+            estado_conformidad: 'confirmada',
+            revisada_en: new Date().toISOString(),
+            revisada_por: req.usuarioPanel.id,
+          })
+          .select('id')
+          .single();
+        if (errorLote) throw errorLote;
+        return lote.id;
+      });
+    } catch (errorLote) {
+      // Los precios ya entraron: lo que falló es la anotación del lote, y eso no se le cobra a
+      // quien importó. Queda en el registro del servidor.
+      console.error('Importación de lista de precios, anotación del lote:', errorLote?.message ?? errorLote);
+    }
+
+    res.json({
+      loteId,
+      agregados: resultado?.agregados ?? 0,
+      cambiados: resultado?.cambiados ?? 0,
+      sinCambio: resultado?.sin_cambio ?? 0,
+      dudosos,
     });
   }
 );

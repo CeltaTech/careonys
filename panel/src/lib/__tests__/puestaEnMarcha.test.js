@@ -5,26 +5,26 @@ import { cargaDeGenteBloqueada, pasosDeLaSegundaEtapa, pasosVisibles, RUTA_DE_CA
    como la contesta el backend (`GET /api/panel/cuentas/configuracion-inicial`). Datos inventados. */
 
 const configuracion = (hechos) => {
-  const pasos = ['datos', 'zonas', 'precios'].map((clave) => ({ clave, hecho: hechos.includes(clave) }));
+  const pasos = ['datos', 'zonas'].map((clave) => ({ clave, hecho: hechos.includes(clave) }));
   return { pasos, completa: pasos.every((p) => p.hecho) };
 };
 
 const SEGUNDA = pasosDeLaSegundaEtapa({ gente: [], clientes: [], hayCoordinador: false });
 
 describe('la guía de primeros pasos', () => {
-  it('con la configuración inicial incompleta muestra tres pasos: datos, zonas y precios', () => {
+  it('con la configuración inicial incompleta muestra dos pasos: datos y zonas', () => {
     const pasos = pasosVisibles(configuracion(['datos']), SEGUNDA);
-    expect(pasos.map((p) => p.clave)).toEqual(['datos', 'zonas', 'precios']);
+    expect(pasos.map((p) => p.clave)).toEqual(['datos', 'zonas']);
   });
 
   it('ya no tiene el paso de la modalidad', () => {
-    const pasos = pasosVisibles(configuracion(['datos', 'zonas', 'precios']), SEGUNDA);
+    const pasos = pasosVisibles(configuracion(['datos', 'zonas']), SEGUNDA);
     expect(pasos.map((p) => p.clave)).not.toContain('modalidad');
     expect(Object.keys(RUTA_DE_CADA_PASO)).not.toContain('modalidad');
   });
 
-  it('la etapa 2 no aparece mientras falte cualquiera de los tres', () => {
-    for (const hechos of [[], ['datos'], ['datos', 'zonas'], ['zonas', 'precios'], ['datos', 'precios']]) {
+  it('la etapa 2 no aparece mientras falte cualquiera de los dos', () => {
+    for (const hechos of [[], ['datos'], ['zonas']]) {
       const claves = pasosVisibles(configuracion(hechos), SEGUNDA).map((p) => p.clave);
       expect(claves).not.toContain('gente');
       expect(claves).not.toContain('cliente');
@@ -32,8 +32,8 @@ describe('la guía de primeros pasos', () => {
   });
 
   it('con la configuración inicial completa aparece la etapa 2, después de la primera', () => {
-    const pasos = pasosVisibles(configuracion(['datos', 'zonas', 'precios']), SEGUNDA);
-    expect(pasos.map((p) => p.clave)).toEqual(['datos', 'zonas', 'precios', 'gente', 'tipos', 'cliente', 'equipo']);
+    const pasos = pasosVisibles(configuracion(['datos', 'zonas']), SEGUNDA);
+    expect(pasos.map((p) => p.clave)).toEqual(['datos', 'zonas', 'gente', 'tipos', 'cliente', 'equipo']);
     expect(pasos.every((p) => typeof p.ruta === 'string')).toBe(true);
   });
 
@@ -58,11 +58,11 @@ describe('la guía de primeros pasos', () => {
 describe('los botones que cargan Asistentes o Clientes', () => {
   it('van apagados mientras falte algo de la configuración inicial', () => {
     expect(cargaDeGenteBloqueada(configuracion([]))).toBe(true);
-    expect(cargaDeGenteBloqueada(configuracion(['datos', 'zonas']))).toBe(true);
+    expect(cargaDeGenteBloqueada(configuracion(['datos']))).toBe(true);
   });
 
   it('se encienden con la configuración inicial completa', () => {
-    expect(cargaDeGenteBloqueada(configuracion(['datos', 'zonas', 'precios']))).toBe(false);
+    expect(cargaDeGenteBloqueada(configuracion(['datos', 'zonas']))).toBe(false);
   });
 
   it('fallan cerrado: sin respuesta, o con una respuesta que no dice exactamente completa, van apagados', () => {

@@ -1,7 +1,7 @@
 /* Las dos etapas de la puesta en marcha de una Prestadora nueva, sin pantalla y sin base.
    ==========================================================================
 
-   ETAPA 1, CONFIGURACIÓN INICIAL: datos, zonas y precios. Qué está hecho no se decide acá: lo
+   ETAPA 1, CONFIGURACIÓN INICIAL: datos y zonas. La lista de precios es optativa y no es paso. Qué está hecho no se decide acá: lo
    contesta el backend (`GET /api/panel/cuentas/configuracion-inicial`), que es el mismo criterio
    con el que rechaza el alta de Asistentes y de Clientes mientras falte algo. El Panel no lo
    copia, así que la guía y el candado no pueden discrepar.
@@ -15,7 +15,6 @@
 export const RUTA_DE_CADA_PASO = {
   datos: '/configuracion/prestadora',
   zonas: '/configuracion/prestadora',
-  precios: '/lista-precios',
   gente: '/asistentes',
   tipos: '/asistentes',
   cliente: '/clientes',

@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
 import { formatearImporte } from '../lib/dinero';
 import { ListaPrecioDetalle } from './ListaPrecioDetalle';
+import { ImportarListaDePrecios } from '../components/ImportarListaDePrecios';
 import '../styles/molde-paginas.css';
 
 export function ListaPrecios() {
@@ -23,7 +24,10 @@ export function ListaPrecios() {
   const esAdmin = esAdminOSuperior(usuario?.rol);
 
   const filasFiltradas = useMemo(() => {
+    // Un precio reemplazado queda guardado con su fecha de fin y no se muestra entre los vigentes.
+    const hoy = new Date().toISOString().slice(0, 10);
     return filas.filter((p) => {
+      if (p.vigente_hasta && p.vigente_hasta < hoy) return false;
       if (!f.busqueda) return true;
       const b = f.busqueda.toLowerCase();
       return p.tipo_servicio?.toLowerCase().includes(b) || p.modalidad?.toLowerCase().includes(b);
@@ -35,6 +39,7 @@ export function ListaPrecios() {
       <Cabecera titulo={t.lista_precios.titulo}>
         {esAdmin && <Button onClick={() => setCreandoNuevo(true)}>{t.lista_precios.nuevo}</Button>}
       </Cabecera>
+      {esAdmin && <ImportarListaDePrecios onImportada={recargar} />}
       <section className="panel-tarjeta">
         <div className="panel-tarjeta-titulo">
           <h2>{t.lista_precios.titulo}</h2>

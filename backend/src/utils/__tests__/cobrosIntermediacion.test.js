@@ -568,7 +568,6 @@ describe('el trabajo diario que arma los cobros del período', () => {
         accesoPorCobrar({ proveedor: 'stripe' }),
         accesoPorCobrar({ id: OTRO_ACCESO, proveedor: 'mercadopago' }),
         accesoPorCobrar({ id: '66666666-6666-6666-6666-666666666666', proveedor: 'debin' }),
-        accesoPorCobrar({ id: '77777777-7777-7777-7777-777777777777', proveedor: 'efectivo_manual' }),
       ],
     });
     await armarCobrosDelPeriodo();

@@ -14,7 +14,6 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { proveedoresDisponibles, obtenerAdaptador, requiereSecretoFirma } from '../pasarelas/index.js';
-import { tokenQrCobroValido } from '../utils/qrCobroEfectivo.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirModalidad } from '../middleware/exigirModalidad.js';
@@ -22,9 +21,13 @@ import { advertenciaVigente, advertenciasVigentes, registrarAdvertencia } from '
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { prestadoraVisible } from '../utils/prestadoraVisible.js';
 import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
-import { registrarCobroExitoso } from '../utils/cobrosIntermediacion.js';
 import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
 import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
+import { primerDiaDelPeriodo } from '../utils/cobrosDeCliente.js';
+import { aDosDecimales } from '../utils/facturacionDeClientes.js';
+import { aQuienFacturarle } from '../utils/intercambioDeFacturacion.js';
+import { estadoDeCobroDeCadaAcceso } from '../utils/estadoDeCobroDelAcceso.js';
+import { DATOS_PARA_FACTURAR } from '../utils/datosParaFacturar.js';
 
 export const panelIntermediacionRouter = Router();
 
@@ -45,9 +48,8 @@ panelIntermediacionRouter.use(exigirModalidad('intermediacion'));
 // La plata del Match es de la administración de la Prestadora, no del Coordinador
 // (Desarrollador, 2026-09-04: «absolutamente no puede ni debe»). Alcanza a las dos mitades:
 // conectar y desconectar pasarelas de pago —que es cargar credenciales de cobro—, y todo lo
-// que sea un cobro: la lista de accesos con sus importes, el historial de cobros, la
-// carga de efectivo en mano y el canje del QR. Lo que sí queda para el Coordinador es lo que
-// no es plata: las calificaciones y la auditoría de advertencias legales.
+// que sea un cobro: la lista de accesos con sus importes y el historial de cobros. Lo que sí
+// queda para el Coordinador es lo que no es plata: las calificaciones y la auditoría de advertencias legales.
 //
 // Hasta el 2026-09-04 este archivo tenía una función llamada `requiereAdminOSuperior` que
 // dejaba pasar al Coordinador; las otras dos del backend, con el mismo nombre, no. Ahora el
@@ -183,8 +185,7 @@ panelIntermediacionRouter.patch('/pasarela/:proveedor', soloAdministracion, solo
 
   // Las dos funciones que guardan en la caja fuerte van con el trabajo de la Prestadora:
   // `authenticated` no tiene permiso para ejecutarlas, y rechazan otra Prestadora que la del trabajo.
-  const requiereCredencial = proveedor !== 'efectivo_manual';
-  if (requiereCredencial && credencial) {
+  if (credencial) {
     const { error: errorCredencial } = await enLaPrestadora(prestadoraId, 'guardar la credencial de cobro', (dbDelTrabajo) =>
       dbDelTrabajo.rpc('guardar_credencial_pasarela_pago', {
         p_prestadora_id: prestadoraId,
@@ -214,7 +215,7 @@ panelIntermediacionRouter.patch('/pasarela/:proveedor', soloAdministracion, solo
     {
       prestadora_id: prestadoraId,
       proveedor,
-      estado_conexion: requiereCredencial ? 'conectada' : 'conectada',
+      estado_conexion: 'conectada',
       activada_por: req.usuarioPanel.id,
       conectada_en: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -544,10 +545,26 @@ panelIntermediacionRouter.get('/accesos', soloAdministracion, async (req, res) =
   const { data, error } = await enLaPrestadora(prestadoraId, 'los accesos de Match', (dbDelTrabajo) =>
     dbDelTrabajo
       .from('accesos_intermediacion')
-      .select('id, cliente_id, paciente_id, asistente_id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en, created_at, proveedor, url_accion, alta_en_pasarela')
+      .select('id, cliente_id, paciente_id, asistente_id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, created_at, proveedor, url_accion, alta_en_pasarela')
       .order('created_at', { ascending: false })
   );
   if (error) return responderError(res, error);
+
+  // Lo que informó el software de cobranzas de cada acceso: el producto no anota cobros por su
+  // cuenta, muestra lo que le avisaron. Con el mismo trabajo de la Prestadora que los accesos.
+  const accesoIds = data.map((s) => s.id);
+  let cobros = [];
+  if (accesoIds.length) {
+    const { data: filas, error: errorDeCobros } = await enLaPrestadora(prestadoraId, 'los cobros informados de Match', (dbDelTrabajo) =>
+      dbDelTrabajo
+        .from('cobros_intermediacion')
+        .select('acceso_id, estado_cobro, fecha_cobro, monto, moneda, periodo, created_at')
+        .in('acceso_id', accesoIds)
+    );
+    if (errorDeCobros) return responderError(res, errorDeCobros);
+    cobros = filas || [];
+  }
+  const cobroDe = estadoDeCobroDeCadaAcceso(cobros);
 
   const clienteIds = [...new Set(data.map((s) => s.cliente_id).filter(Boolean))];
   const pacienteIds = [...new Set(data.map((s) => s.paciente_id).filter(Boolean))];
@@ -578,10 +595,84 @@ panelIntermediacionRouter.get('/accesos', soloAdministracion, async (req, res) =
     cliente_nombre: nombreCliente.get(s.cliente_id) || null,
     paciente_nombre: nombrePaciente.get(s.paciente_id) || null,
     asistente_nombre: s.asistente_id ? nombreAsistente.get(s.asistente_id) || null : null,
+    estado_cobro: cobroDe.get(s.id)?.estado_cobro ?? null,
+    ultimo_cobro: cobroDe.get(s.id)?.ultimo_cobro ?? null,
   }));
 
   res.json({ accesos });
 });
+
+/**
+ * Lo que hay para facturar de un período en Match: una fila por acceso que se cobra ese mes.
+ *
+ * Sale con las mismas columnas que lo de la prestación directa (`utils/intercambioDeFacturacion.js`),
+ * para que el software de facturación lea un solo formato. La Liquidación de un acceso es su
+ * importe, en su moneda, el día de su próximo cobro; se le factura al Contratante del Cliente.
+ *
+ * Un acceso cancelado, sin importe o todavía en su período sin cargo no sale: no hay nada que
+ * facturar.
+ */
+panelIntermediacionRouter.get('/accesos/para-facturar', soloAdministracion, async (req, res) => {
+  const periodo = primerDiaDelPeriodo(req.query.periodo);
+  if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
+  const [anio, mes] = periodo.split('-').map(Number);
+  const hasta = new Date(Date.UTC(anio, mes, 1)).toISOString().slice(0, 10);
+
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const { data: accesos, error } = await enLaPrestadora(prestadoraId, 'lo que hay para facturar en Match', (dbDelTrabajo) =>
+    dbDelTrabajo
+      .from('accesos_intermediacion')
+      .select('id, cliente_id, importe, moneda, proximo_cobro, gratis_hasta')
+      .eq('estado', 'vigente')
+      .gte('proximo_cobro', periodo)
+      .lt('proximo_cobro', hasta)
+      .order('proximo_cobro', { ascending: true })
+  );
+  if (error) return responderError(res, error);
+
+  const aFacturar = (accesos || []).filter(
+    (a) => Number(a.importe) > 0 && !(a.gratis_hasta && a.gratis_hasta >= a.proximo_cobro)
+  );
+
+  const clienteIds = [...new Set(aFacturar.map((a) => a.cliente_id).filter(Boolean))];
+  let clientes = new Map();
+  let fichas = new Map();
+  if (clienteIds.length) {
+    const { data: filas, error: errorDeClientes } = await enLaPrestadora(prestadoraId, 'a quién se le factura en Match', (dbDelTrabajo) =>
+      dbDelTrabajo.from('clientes').select('id, numero_cliente, contratante_persona_id').in('id', clienteIds)
+    );
+    if (errorDeClientes) return responderError(res, errorDeClientes);
+    clientes = new Map((filas || []).map((c) => [c.id, c]));
+
+    const personaIds = [...new Set((filas || []).map((c) => c.contratante_persona_id).filter(Boolean))];
+    if (personaIds.length) {
+      const { data: personas, error: errorDePersonas } = await enLaPrestadora(prestadoraId, 'datos para facturar en Match', (dbDelTrabajo) =>
+        dbDelTrabajo.from('personas').select(DATOS_PARA_FACTURAR).in('id', personaIds)
+      );
+      if (errorDePersonas) return responderError(res, errorDePersonas);
+      fichas = new Map((personas || []).map((p) => [p.id, p]));
+    }
+  }
+  const cuentasCliente = await cuentasDeLasFilas('clientes', clienteIds, 'nombre', prestadoraId);
+
+  res.json(aFacturar.map((a) => {
+    const cliente = clientes.get(a.cliente_id);
+    const ficha = fichas.get(cliente?.contratante_persona_id) ?? null;
+    const destinatario = aQuienFacturarle(ficha);
+    return {
+      // Un acceso de Match no tiene factura propia: la columna sale vacía.
+      factura_id: '',
+      numero_cliente: cliente?.numero_cliente ?? '',
+      cliente: cuentasCliente.get(a.cliente_id)?.nombre ?? '',
+      ...destinatario,
+      periodo: periodo.slice(0, 7),
+      moneda: a.moneda,
+      monto_a_facturar: aDosDecimales(a.importe),
+      fecha_vencimiento: a.proximo_cobro ?? '',
+    };
+  }));
+});
+
 
 panelIntermediacionRouter.get('/accesos/:id/cobros', soloAdministracion, async (req, res) => {
   // Con el trabajo de la Prestadora: la política de lectura de `cobros_intermediacion` no alcanza
@@ -589,139 +680,12 @@ panelIntermediacionRouter.get('/accesos/:id/cobros', soloAdministracion, async (
   const { data, error } = await enLaPrestadora(req.usuarioPanel.prestadoraId, 'los cobros de un acceso', (dbDelTrabajo) =>
     dbDelTrabajo
       .from('cobros_intermediacion')
-      .select('id, medio, monto, periodo, estado_cobro, referencia_externa, fecha_cobro, registrado_por, created_at')
+      .select('id, medio, monto, moneda, periodo, estado_cobro, referencia_externa, fecha_cobro, registrado_por, created_at')
       .eq('acceso_id', req.params.id)
       .order('periodo', { ascending: false })
   );
   if (error) return responderError(res, error);
   res.json({ cobros: data });
-});
-
-// Carga manual de efectivo en mano — mitigante central del riesgo de suspensión indebida
-// por cobro no reflejado a tiempo en el sistema (docs/PLAN_HASTA_PRODUCCION.md). fecha_cobro es la
-// fecha real del hecho, nunca la de carga (CLAUDE.md §3).
-panelIntermediacionRouter.post('/cobros/efectivo-manual', soloAdministracion, async (req, res) => {
-  const { acceso_id: accesoId, monto, periodo, fecha_cobro: fechaCobro } = req.body || {};
-  if (!accesoId || !monto || !periodo || !fechaCobro) {
-    return res.status(400).json({ error: 'Faltan acceso_id, monto, periodo o fecha_cobro' });
-  }
-
-  // Con el trabajo de la Prestadora: la política de alta de `cobros_intermediacion` excluye a
-  // Superadmin, y la de lectura de `accesos_intermediacion` tampoco lo alcanza.
-  let resultado;
-  try {
-    resultado = await enLaPrestadora(req.usuarioPanel.prestadoraId, 'cargar un cobro en efectivo', async (dbDelTrabajo) => {
-      const { data: acceso, error: errorAcceso } = await dbDelTrabajo
-        .from('accesos_intermediacion')
-        .select('id, prestadora_id')
-        .eq('id', accesoId)
-        .maybeSingle();
-      if (errorAcceso) throw errorAcceso;
-      if (!acceso) return { encontrado: false };
-
-      const { error: errorAlta } = await dbDelTrabajo.from('cobros_intermediacion').insert({
-        acceso_id: accesoId,
-        prestadora_id: acceso.prestadora_id,
-        medio: 'efectivo_manual',
-        monto,
-        periodo,
-        estado_cobro: 'exitoso',
-        fecha_cobro: fechaCobro,
-        registrado_por: req.usuarioPanel.id,
-      });
-      if (errorAlta) throw errorAlta;
-      return { encontrado: true };
-    });
-  } catch (error) {
-    return responderError(res, error);
-  }
-  if (!resultado.encontrado) {
-    return res.status(404).json({ error: 'Acceso no encontrado' });
-  }
-
-  // Y el acceso pasa al período siguiente. Sin esto el período quedaba pagado y el acceso seguía
-  // esperando el mismo para siempre, así que el que viene no llegaba nunca.
-  const movimiento = await registrarCobroExitoso({
-    prestadoraId: req.usuarioPanel.prestadoraId,
-    accesoId,
-    periodo,
-  });
-
-  res.json({ ok: true, proximo_cobro: movimiento.proximo_cobro ?? null });
-});
-
-// Canje del QR de cobro en efectivo escaneado por el cobrador — validación de firma/
-// vencimiento/uso único acá, nunca como UPDATE directo desde la PWA (CLAUDE.md §6).
-panelIntermediacionRouter.post('/qr-cobro/canjear', soloAdministracion, async (req, res) => {
-  const { token } = req.body || {};
-  if (!token || !tokenQrCobroValido(token)) {
-    return res.status(400).json({ error: 'QR inválido o vencido' });
-  }
-
-  // Con el trabajo de la Prestadora: `qr_cobro_efectivo` no tiene política de modificación para el
-  // Panel, y el alta en `cobros_intermediacion` excluye a Superadmin. El trabajo sólo ve los QR de
-  // los accesos de esta Prestadora, así que el de otra no se encuentra.
-  let canje;
-  try {
-    canje = await enLaPrestadora(req.usuarioPanel.prestadoraId, 'canjear un QR de cobro', async (dbDelTrabajo) => {
-      const { data: qr, error: errorLectura } = await dbDelTrabajo
-        .from('qr_cobro_efectivo')
-        .select('id, acceso_id, monto, periodo, expira_en, usado_en')
-        .eq('token', token)
-        .maybeSingle();
-      if (errorLectura) throw errorLectura;
-      if (!qr) return { estado: 404, error: 'QR no encontrado' };
-      if (qr.usado_en) return { estado: 409, error: 'Este QR ya fue usado' };
-      if (new Date(qr.expira_en) < new Date()) {
-        return { estado: 410, error: 'Este QR venció, hace falta pedirle al Cliente que genere uno nuevo' };
-      }
-
-      const { data: acceso, error: errorAcceso } = await dbDelTrabajo
-        .from('accesos_intermediacion')
-        .select('id, prestadora_id')
-        .eq('id', qr.acceso_id)
-        .maybeSingle();
-      if (errorAcceso) throw errorAcceso;
-      if (!acceso) return { estado: 404, error: 'El acceso de este QR no pertenece a esta Prestadora' };
-
-      const { data: cobro, error: errorCobro } = await dbDelTrabajo
-        .from('cobros_intermediacion')
-        .insert({
-          acceso_id: qr.acceso_id,
-          prestadora_id: acceso.prestadora_id,
-          medio: 'efectivo_manual',
-          monto: qr.monto,
-          periodo: qr.periodo,
-          estado_cobro: 'exitoso',
-          fecha_cobro: new Date().toISOString().slice(0, 10),
-          registrado_por: req.usuarioPanel.id,
-        })
-        .select('id')
-        .single();
-      if (errorCobro) throw errorCobro;
-
-      const { error: errorQr } = await dbDelTrabajo
-        .from('qr_cobro_efectivo')
-        .update({ usado_en: new Date().toISOString(), usado_por: req.usuarioPanel.id, cobro_id: cobro.id })
-        .eq('id', qr.id);
-      if (errorQr) throw errorQr;
-
-      return { qr };
-    });
-  } catch (error) {
-    return responderError(res, error);
-  }
-  if (canje.error) return res.status(canje.estado).json({ error: canje.error });
-  const { qr } = canje;
-
-  // Igual que el efectivo en mano: cobrado el período, el acceso pasa al siguiente.
-  const movimiento = await registrarCobroExitoso({
-    prestadoraId: req.usuarioPanel.prestadoraId,
-    accesoId: qr.acceso_id,
-    periodo: qr.periodo,
-  });
-
-  res.json({ ok: true, monto: qr.monto, proximo_cobro: movimiento.proximo_cobro ?? null });
 });
 
 // ============================================================================

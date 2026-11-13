@@ -8,7 +8,12 @@ import { Alert } from '../components/ui/Alert';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useMonedaActual } from '../hooks/useMonedaActual';
+import { mensajeDeError } from '../lib/errores';
 import '../styles/molde-paginas.css';
+
+function hoy() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
@@ -26,13 +31,29 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
   const [tipoServicio, setTipoServicio] = useState(precio?.tipo_servicio || '');
   const [modalidad, setModalidad] = useState(precio?.modalidad || '');
   const [valorPrecio, setValorPrecio] = useState(precio?.precio ?? '');
-  const [vigenteDesde, setVigenteDesde] = useState(precio?.vigente_desde || new Date().toISOString().slice(0, 10));
+  const [vigenteDesde, setVigenteDesde] = useState(precio?.vigente_desde || hoy());
   const [activo, setActivo] = useState(precio?.activo ?? true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
+  // Un renglón que ya fue reemplazado por otro precio es historia: se mira, no se cambia.
+  const cerrado = !esNuevo && Boolean(precio.vigente_hasta);
+  const bloqueado = soloLectura || cerrado;
+  const cambiaElPrecio = !esNuevo && valorPrecio !== '' && Number(valorPrecio) !== Number(precio.precio);
+
+  // El precio de un renglón ya cargado no se pisa: el nuevo se escribe aparte, con la fecha desde
+  // la que rige, y el viejo queda cerrado el día anterior (`reemplazar_precio_de_lista`). Por eso
+  // la fecha sólo se elige cuando cambia el precio, y arranca en hoy.
+  function cambiarPrecio(valor) {
+    setValorPrecio(valor);
+    if (!esNuevo && Number(valor) !== Number(precio.precio) && vigenteDesde === precio.vigente_desde) {
+      setVigenteDesde(hoy());
+    }
+    if (!esNuevo && Number(valor) === Number(precio.precio)) setVigenteDesde(precio.vigente_desde);
+  }
+
   async function handleGuardar() {
-    if (!esNuevo && Number(valorPrecio) !== Number(precio.precio)) {
+    if (cambiaElPrecio) {
       const confirmado = await confirmarDestructivo(t.lista_precios.confirmar_cambio_precio);
       if (!confirmado) return;
     }
@@ -40,20 +61,37 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
     setGuardando(true);
     setError(null);
 
-    const datos = {
-      tipo_servicio: tipoServicio,
-      modalidad,
-      precio: Number(valorPrecio),
-      vigente_desde: vigenteDesde,
-      activo,
-    };
-
-    const { error: errorGuardado } = esNuevo
-      ? await supabase.from('lista_precios').insert({ ...datos, prestadora_id: prestadoraId })
-      : await supabase.from('lista_precios').update(datos).eq('id', precio.id);
-
-    if (errorGuardado) {
-      setError(t.comun.error_generico);
+    try {
+      if (esNuevo) {
+        const { error: errorAlta } = await supabase.from('lista_precios').insert({
+          tipo_servicio: tipoServicio,
+          modalidad,
+          precio: Number(valorPrecio),
+          vigente_desde: vigenteDesde,
+          activo,
+          prestadora_id: prestadoraId,
+        });
+        if (errorAlta) throw errorAlta;
+      } else {
+        let renglonId = precio.id;
+        if (cambiaElPrecio) {
+          const { data, error: errorPrecio } = await supabase.rpc('reemplazar_precio_de_lista', {
+            p_precio_id: precio.id,
+            p_precio: Number(valorPrecio),
+            p_desde: vigenteDesde,
+          });
+          if (errorPrecio) throw errorPrecio;
+          renglonId = data ?? precio.id;
+        }
+        // Lo demás se corrige sobre el renglón que rige. El precio y su fecha no viajan acá.
+        const { error: errorDatos } = await supabase
+          .from('lista_precios')
+          .update({ tipo_servicio: tipoServicio, modalidad, activo })
+          .eq('id', renglonId);
+        if (errorDatos) throw errorDatos;
+      }
+    } catch (errorGuardado) {
+      setError(mensajeDeError(errorGuardado, t, 'lista de precios'));
       setGuardando(false);
       return;
     }
@@ -75,7 +113,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
             name="tipo_servicio"
             value={tipoServicio}
             onChange={(e) => setTipoServicio(e.target.value)}
-            disabled={soloLectura}
+            disabled={bloqueado}
             required
           />
 
@@ -84,7 +122,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
             name="modalidad"
             value={modalidad}
             onChange={(e) => setModalidad(e.target.value)}
-            disabled={soloLectura}
+            disabled={bloqueado}
             required
           />
 
@@ -94,8 +132,8 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
             type="number"
             step="0.01"
             value={valorPrecio}
-            onChange={(e) => setValorPrecio(e.target.value)}
-            disabled={soloLectura}
+            onChange={(e) => cambiarPrecio(e.target.value)}
+            disabled={bloqueado}
             required
           />
 
@@ -105,7 +143,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
             type="date"
             value={vigenteDesde}
             onChange={(e) => setVigenteDesde(e.target.value)}
-            disabled={soloLectura}
+            disabled={bloqueado || (!esNuevo && !cambiaElPrecio)}
             required
           />
 
@@ -115,15 +153,15 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
             type="checkbox"
             checked={activo}
             onChange={(e) => setActivo(e.target.checked)}
-            disabled={soloLectura}
+            disabled={bloqueado}
           />
         </div>
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>
-            {soloLectura ? t.comun.cerrar : t.comun.cancelar}
+            {bloqueado ? t.comun.cerrar : t.comun.cancelar}
           </Button>
-          {!soloLectura && (
+          {!bloqueado && (
             <Button onClick={handleGuardar} disabled={guardando}>
               {guardando ? t.comun.guardando : t.comun.guardar}
             </Button>

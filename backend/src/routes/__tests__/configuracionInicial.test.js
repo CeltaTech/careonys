@@ -8,15 +8,16 @@
  *
  * - las tres rutas que crean gente (alta desde una postulación, alta a mano y la importación de
  *   Asistentes o de Clientes) contestan con el motivo `configuracion_inicial_incompleta` y no
- *   escriben nada cuando falta alguno de los tres pasos;
- * - con los tres pasos hechos, el candado deja pasar y la ruta sigue con lo suyo;
+ *   escriben nada cuando falta alguno de los dos pasos;
+ * - con los dos pasos hechos, el candado deja pasar y la ruta sigue con lo suyo, aunque la lista
+ *   de precios esté vacía: la lista es una orientación y no entra en la configuración inicial;
  * - el Panel recibe el mismo criterio por `GET /configuracion-inicial`, también un Coordinador;
  * - si la base no contesta, el candado no deja pasar.
  *
  * La base de mentira imita la protección por fila en lo que hace falta para que la prueba pueda
  * fallar: los datos de contacto y las zonas los contesta sólo a la credencial del trabajo de esta
- * Prestadora, y la lista de precios sólo a la credencial de quien pide. Si el criterio preguntara
- * con otra credencial, vería todo vacío y las pruebas de «completa» darían al revés.
+ * Prestadora. Si el criterio preguntara con otra credencial, vería todo vacío y las pruebas de
+ * «completa» darían al revés.
  *
  * Los datos son inventados.
  */
@@ -143,9 +144,9 @@ const RUTAS_DE_ALTA = [
 ];
 
 describe('el criterio de la configuración inicial', () => {
-  it('son tres pasos, en este orden: datos, zonas y precios', () => {
-    const pasos = pasosDeLaConfiguracionInicial({ empresa: null, hayZonas: false, hayPrecios: false });
-    assert.deepEqual(pasos.map((p) => p.clave), ['datos', 'zonas', 'precios']);
+  it('son dos pasos, en este orden: datos y zonas. La lista de precios no entra', () => {
+    const pasos = pasosDeLaConfiguracionInicial({ empresa: null, hayZonas: false });
+    assert.deepEqual(pasos.map((p) => p.clave), ['datos', 'zonas']);
     assert.ok(pasos.every((p) => p.hecho === false));
   });
 
@@ -157,7 +158,7 @@ describe('el criterio de la configuración inicial', () => {
   });
 
   it('una respuesta que no es exactamente sí no cuenta como hecho', () => {
-    const pasos = pasosDeLaConfiguracionInicial({ empresa: {}, hayZonas: undefined, hayPrecios: 1 });
+    const pasos = pasosDeLaConfiguracionInicial({ empresa: {}, hayZonas: 1 });
     assert.ok(pasos.every((p) => p.hecho === false));
   });
 });
@@ -167,10 +168,7 @@ describe('el Panel pregunta cuánto falta', () => {
     const { estado, cuerpo } = await pedir('GET', '/cuentas/configuracion-inicial');
     assert.equal(estado, 200);
     assert.equal(cuerpo.completa, true);
-    assert.deepEqual(cuerpo.pasos.map((p) => p.clave), ['datos', 'zonas', 'precios']);
-    const precios = llamadas.find((l) => l.clave === 'GET /rest/v1/lista_precios');
-    assert.ok(precios.url.includes(`prestadora_id=eq.${PRESTADORA}`));
-    assert.ok(precios.url.includes('activo=eq.true'));
+    assert.deepEqual(cuerpo.pasos.map((p) => p.clave), ['datos', 'zonas']);
     const zonas = llamadas.find((l) => l.clave === 'GET /rest/v1/zonas_cobertura');
     assert.ok(zonas.url.includes('activa=eq.true'));
   });
@@ -182,18 +180,26 @@ describe('el Panel pregunta cuánto falta', () => {
     assert.deepEqual(cuerpo.pasos.filter((p) => !p.hecho).map((p) => p.clave), ['zonas']);
   });
 
-  it('un Coordinador recibe la misma respuesta que la Administración', async () => {
-    rolDelUsuario = 'coordinador';
+  it('sin ningún precio en la lista contesta completa, y ni la consulta', async () => {
     cargado.precios = [];
     const { estado, cuerpo } = await pedir('GET', '/cuentas/configuracion-inicial');
     assert.equal(estado, 200);
-    assert.deepEqual(cuerpo.pasos.filter((p) => !p.hecho).map((p) => p.clave), ['precios']);
+    assert.equal(cuerpo.completa, true);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/lista_precios'), false);
+  });
+
+  it('un Coordinador recibe la misma respuesta que la Administración', async () => {
+    rolDelUsuario = 'coordinador';
+    cargado.zonas = [];
+    const { estado, cuerpo } = await pedir('GET', '/cuentas/configuracion-inicial');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.pasos.filter((p) => !p.hecho).map((p) => p.clave), ['zonas']);
   });
 });
 
 describe('sin la configuración inicial completa no se carga gente', () => {
   for (const [que, ruta, cuerpo] of RUTAS_DE_ALTA) {
-    for (const falta of ['empresa', 'zonas', 'precios']) {
+    for (const falta of ['empresa', 'zonas']) {
       it(`${que}: se rechaza si falta ${falta}`, async () => {
         cargado[falta] = falta === 'empresa' ? null : [];
         const respuesta = await pedir('POST', ruta, cuerpo);
@@ -205,7 +211,8 @@ describe('sin la configuración inicial completa no se carga gente', () => {
       });
     }
 
-    it(`${que}: con todo cargado el candado deja pasar`, async () => {
+    it(`${que}: con todo cargado el candado deja pasar, aunque la lista de precios esté vacía`, async () => {
+      cargado.precios = [];
       const respuesta = await pedir('POST', ruta, cuerpo);
       assert.notEqual(respuesta.cuerpo.motivo, 'configuracion_inicial_incompleta');
       // La ruta siguió con lo suyo y rechazó el cuerpo vacío por datos faltantes.
@@ -222,7 +229,7 @@ describe('sin la configuración inicial completa no se carga gente', () => {
   });
 
   it('si la base no contesta no deja pasar, y no dice que falta configurar', async () => {
-    respuestas.set('GET /rest/v1/lista_precios', { __estado: 500 });
+    respuestas.set('GET /rest/v1/zonas_cobertura', { __estado: 500 });
     const respuesta = await pedir('POST', '/cuentas/asistente-directo', {});
     assert.equal(respuesta.estado, 500);
     assert.notEqual(respuesta.cuerpo.motivo, 'configuracion_inicial_incompleta');

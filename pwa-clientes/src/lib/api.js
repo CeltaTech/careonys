@@ -42,8 +42,6 @@ export const api = {
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
   accesoIntermediacion: (pacienteId) => pedido(`/acceso/${pacienteId}`),
-  generarQrCobro: (datos) => pedido('/qr-cobro', { method: 'POST', body: JSON.stringify(datos) }),
-  estadoQrCobro: (id) => pedido(`/qr-cobro/${id}`),
   // La baja en un clic. Apaga la renovación y no corta nada de lo que ya está pagado: hasta
   // cuándo alcanza vuelve en la respuesta, para poder decirlo sin volver a preguntar.
   darDeBajaAcceso: (accesoId) => pedido(`/acceso/${accesoId}/baja`, { method: 'POST' }),

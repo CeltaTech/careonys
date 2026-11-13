@@ -4,7 +4,6 @@ import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { rangosParaLosReportes } from '../utils/vitalesReferencia.js';
 import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
-import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { contactoDeLaPrestadora } from '../utils/contactoDeLaPrestadora.js';
 import { visibilidadDelPedido, visibilidadDeLaPrestadora, exigeVisible } from '../utils/visibilidadPrestadora.js';
@@ -1185,55 +1184,6 @@ appClientesRouter.post('/acceso/:accesoId/baja', requiereRolCliente, exigeVisibl
   }
 
   res.json({ baja: resultado.baja, ya_estaba: Boolean(resultado.yaEstaba) });
-});
-
-appClientesRouter.post('/qr-cobro', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
-  if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
-  const { acceso_id: accesoId } = req.body || {};
-  if (!accesoId) {
-    return res.status(400).json({ error: 'Falta acceso_id' });
-  }
-
-  const db = clienteDelPedido(req);
-  const { data: acceso } = await db
-    .from('accesos_intermediacion')
-    .select('id, cliente_id, importe, proximo_cobro')
-    .eq('id', accesoId)
-    .eq('cliente_id', req.usuarioCliente.clienteId)
-    .maybeSingle();
-  if (!acceso) {
-    return res.status(404).json({ error: 'Acceso no encontrado' });
-  }
-
-  const { token, expiraEn } = generarTokenQrCobro();
-  const { data, error } = await db
-    .from('qr_cobro_efectivo')
-    .insert({
-      acceso_id: acceso.id,
-      cliente_id: req.usuarioCliente.clienteId,
-      periodo: acceso.proximo_cobro || new Date().toISOString().slice(0, 10),
-      monto: acceso.importe,
-      token,
-      expira_en: expiraEn.toISOString(),
-    })
-    .select('id, token, expira_en, usado_en')
-    .single();
-  if (error) return responderError(res, error);
-
-  res.json({ qr: data });
-});
-
-appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
-  if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
-  const { data, error } = await clienteDelPedido(req)
-    .from('qr_cobro_efectivo')
-    .select('id, expira_en, usado_en, cobro_id')
-    .eq('id', req.params.id)
-    .eq('cliente_id', req.usuarioCliente.clienteId)
-    .maybeSingle();
-  if (error) return responderError(res, error);
-  if (!data) return res.status(404).json({ error: 'QR no encontrado' });
-  res.json({ qr: data });
 });
 
 // ============================================================================

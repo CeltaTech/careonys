@@ -228,9 +228,12 @@ export function Layout() {
       texto: t.nav.sec_clientes,
       enlaces: [
         { a: '/personas', texto: t.nav.personas, ver: esAdmin || puede('ver_personas') },
-        { a: '/clientes', texto: t.nav.clientes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        // Una sola sección de Clientes para las dos modalidades: el Cliente es uno solo en la base,
+        // y la pantalla muestra lo que cada uno tiene de cada modalidad (pages/Clientes.jsx).
+        { a: '/clientes', texto: t.nav.clientes, ver: hayPadron },
         { a: '/cargas-pendientes', texto: t.nav.cargas_pendientes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
-        { a: '/intermediacion/clientes', texto: t.nav.intermediacion_clientes, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION && esAdmin },
+        // La plata de Match es de la administración: el mismo candado que la ruta (App.jsx).
+        { a: '/intermediacion/clientes', texto: t.nav.intermediacion_clientes, ver: verMatch && esAdmin, modalidad: MODALIDAD.INTERMEDIACION },
       ],
     },
     {
@@ -240,7 +243,7 @@ export function Layout() {
       enlaces: [
         { a: '/facturacion', texto: t.nav.facturacion, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/lista-precios', texto: t.nav.lista_precios, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
-        { a: '/intermediacion/formas-de-cobro', texto: t.nav.intermediacion_formas_de_cobro, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION && esAdmin },
+        { a: '/intermediacion/formas-de-cobro', texto: t.nav.intermediacion_formas_de_cobro, ver: verMatch && esAdmin, modalidad: MODALIDAD.INTERMEDIACION },
       ],
     },
     {

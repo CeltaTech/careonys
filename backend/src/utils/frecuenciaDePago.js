@@ -217,3 +217,64 @@ export function fechaDePagoDe(periodo, frecuencia) {
   const regla = frecuenciaDePagoDe(frecuencia);
   return enTexto(correrDias(periodo.hasta, regla.dias_hasta_el_pago));
 }
+
+/* ==========================================================================
+   Los períodos con los que se le cobra al Cliente.
+
+   Son otros que los del Asistente, y por eso van aparte: el Cliente puede pagar por día, y su
+   quincena son dos semanas juntas, no la mitad del mes. La lista FRECUENCIAS de arriba es la que
+   ven los Asistentes y no cambia; el día existe sólo acá.
+
+   Las claves son las de `condicionesDelCliente.js` ('dia', 'semana', 'quincena', 'mes'). Se
+   escriben acá sin importarlo para que este archivo siga sin depender de ningún otro.
+   ========================================================================== */
+
+export const FRECUENCIA_DIARIA = 'dia';
+
+// Qué día cierra la semana del Cliente cuando no se dijo otro: el domingo, la semana de lunes a
+// domingo.
+export const DIA_DE_CORTE_DEL_CLIENTE = DIAS_DE_LA_SEMANA.DOMINGO;
+
+const diasDesdeElOrigen = (fecha) => Math.round(enMedianoche(fecha).getTime() / MILISEGUNDOS_DE_UN_DIA);
+
+/**
+ * El período de cobro al Cliente que contiene esta fecha.
+ *
+ * - dia: ese mismo día.
+ * - semana: los siete días que terminan en el día de corte.
+ * - quincena: dos de esas semanas juntas. Qué semanas van juntas sale de contar las semanas
+ *   desde un origen fijo, así que el par es siempre el mismo sin importar desde qué fecha se
+ *   pregunte.
+ * - mes: el mes calendario.
+ *
+ * Una frecuencia desconocida se trata como el mes, que es la de fábrica.
+ */
+export function periodoDeCobroQueContiene(fecha, cadaCuanto, diaDeCorte = DIA_DE_CORTE_DEL_CLIENTE) {
+  const dia = enTexto(enMedianoche(fecha));
+  if (cadaCuanto === FRECUENCIA_DIARIA) return { desde: dia, hasta: dia };
+
+  const corte = Number.isInteger(diaDeCorte) && diaDeCorte >= 1 && diaDeCorte <= 7 ? diaDeCorte : DIA_DE_CORTE_DEL_CLIENTE;
+
+  if (cadaCuanto === FRECUENCIAS.SEMANA || cadaCuanto === FRECUENCIAS.QUINCENA) {
+    const semana = periodoQueContiene(dia, { cada_cuanto: FRECUENCIAS.SEMANA, dia_de_corte: corte });
+    if (cadaCuanto === FRECUENCIAS.SEMANA) return semana;
+    const numero = Math.floor(diasDesdeElOrigen(semana.hasta) / 7);
+    if (numero % 2 === 0) return { desde: semana.desde, hasta: enTexto(correrDias(semana.hasta, 7)) };
+    return { desde: enTexto(correrDias(semana.desde, -7)), hasta: semana.hasta };
+  }
+
+  return { desde: primerDiaDelMesDe(dia), hasta: ultimoDiaDelMesDe(dia) };
+}
+
+/** Los períodos de cobro al Cliente que tocan el tramo pedido, en orden. Mismo tope que arriba. */
+export function periodosDeCobroQueTocan(desde, hasta, cadaCuanto, diaDeCorte = DIA_DE_CORTE_DEL_CLIENTE, topeDeVueltas = 1000) {
+  if (!desde || !hasta || String(hasta) < String(desde)) return [];
+  const periodos = [];
+  let actual = periodoDeCobroQueContiene(desde, cadaCuanto, diaDeCorte);
+  for (let vuelta = 0; vuelta < topeDeVueltas; vuelta += 1) {
+    periodos.push(actual);
+    if (actual.hasta >= String(hasta)) return periodos;
+    actual = periodoDeCobroQueContiene(enTexto(correrDias(actual.hasta, 1)), cadaCuanto, diaDeCorte);
+  }
+  return periodos;
+}

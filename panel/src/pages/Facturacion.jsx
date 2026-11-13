@@ -8,6 +8,7 @@ import { llamarApiCobros } from '../lib/apiCobros';
 import { claseBadge } from '../lib/tonos';
 import { formatearImporte } from '../lib/dinero';
 import { hoyISO } from '../lib/horarios';
+import { primerDiaDelMesDe, ultimoDiaDelMesDe } from '../lib/frecuenciaDePago';
 import { loQueEstaMalEnElCobro } from '../lib/cobrosDeCliente';
 import {
   SENTIDOS_POSIBLES,
@@ -92,9 +93,33 @@ import './tarjetas.css';
    LO QUE NO HACE. No decide nada: que un Cliente deba plata no corta ningún Servicio. La
    pantalla avisa; lo demás lo resuelve una persona. */
 
-function mesActual() {
-  return hoyISO().slice(0, 7);
+/* El tramo con el que abre la pantalla: el mes en curso, del primero al último día. Con cobro
+   mensual es lo mismo que elegía el casillero del mes; con otra frecuencia, en el tramo entran los
+   períodos que empiezan entre esas dos fechas. */
+function tramoDelMesActual() {
+  const hoy = hoyISO();
+  return { desde: primerDiaDelMesDe(hoy), hasta: ultimoDiaDelMesDe(hoy) };
 }
+
+/** Si las dos fechas están y en orden. Con un tramo al revés no se pide nada. */
+function esTramoValido({ desde, hasta }) {
+  return Boolean(desde && hasta && desde <= hasta);
+}
+
+/** El tramo como lo pide el backend, en la dirección. */
+function tramoEnLaDireccion({ desde, hasta }) {
+  return `desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
+}
+
+/* Lo que la generación dejó aparte, además de lo que ya decía la frase de siempre. Sale sólo lo que
+   pasó: un contador en cero no se nombra. */
+const APARTE_DE_LA_GENERACION = [
+  ['sinTerminar', 'sin_terminar'],
+  ['guardiasSinAsignar', 'guardias_sin_asignar'],
+  ['guardiasAmbiguas', 'guardias_ambiguas'],
+  ['sinPrecio', 'sin_precio'],
+  ['monedasMezcladas', 'monedas_mezcladas'],
+];
 
 /** De dónde salieron los cobros de un saldo, en palabras. */
 function textoDeOrigenes(origenes, t) {
@@ -138,7 +163,7 @@ export function Facturacion() {
   const { puede, cargado: permisosCargados } = usePermisos();
   const veElEstadoDeCuenta = puede('ver_estado_de_cuenta_cliente');
 
-  const [mes, setMes] = useState(mesActual());
+  const [tramo, setTramo] = useState(tramoDelMesActual);
   const [vencimiento, setVencimiento] = useState('');
   const [saldos, setSaldos] = useState([]);
   // Si la Prestadora configuró que de la cobranza se ocupa otro software, esta pantalla no muestra
@@ -176,14 +201,16 @@ export function Facturacion() {
         setRestricciones(avisadas);
         setEstadosDeCuenta(veElEstadoDeCuenta ? await llamarApiCobros('/estados-de-cuenta') : []);
       } else {
-        setSaldos(veElEstadoDeCuenta ? await llamarApiCobros(`/saldos?periodo=${mes}`) : []);
+        setSaldos(
+          veElEstadoDeCuenta && esTramoValido(tramo) ? await llamarApiCobros(`/saldos?${tramoEnLaDireccion(tramo)}`) : []
+        );
       }
       setEstado('listo');
     } catch (e) {
       setError(mensajeDeError(e, t, 'saldos de clientes'));
       setEstado('error');
     }
-  }, [mes, t, veElEstadoDeCuenta]);
+  }, [tramo, t, veElEstadoDeCuenta]);
 
   // Se espera a saber qué tiene habilitado quien está mirando. Sin eso, la primera carga pediría
   // lo que todavía no sabe si puede ver.
@@ -205,16 +232,22 @@ export function Facturacion() {
     setError(null);
 
     try {
-      const { generadas, sinPrestaciones, sinVencimiento } = await llamarApiCobros('/facturas/generar', {
+      const pedido = { desde: tramo.desde, hasta: tramo.hasta };
+      if (vencimiento) pedido.fecha_vencimiento = vencimiento;
+      const resultado = await llamarApiCobros('/facturas/generar', {
         method: 'POST',
-        body: JSON.stringify(vencimiento ? { periodo: mes, fecha_vencimiento: vencimiento } : { periodo: mes }),
+        body: JSON.stringify(pedido),
       });
-      setMensajeGeneracion(
+      const frases = [
         t.facturacion.resultado_generacion
-          .replace('{generadas}', generadas)
-          .replace('{sinPrestaciones}', sinPrestaciones)
-          .replace('{sinVencimiento}', sinVencimiento)
-      );
+          .replace('{generadas}', resultado.generadas)
+          .replace('{sinPrestaciones}', resultado.sinPrestaciones)
+          .replace('{sinVencimiento}', resultado.sinVencimiento),
+        ...APARTE_DE_LA_GENERACION.filter(([campo]) => Number(resultado[campo]) > 0).map(([campo, clave]) =>
+          t.facturacion.resultado_generacion_aparte[clave].replace('{cantidad}', resultado[campo])
+        ),
+      ];
+      setMensajeGeneracion(frases.join(' '));
       recargar();
     } catch (e) {
       setError(mensajeDeError(e, t, 'generación de facturas'));
@@ -232,12 +265,12 @@ export function Facturacion() {
     setError(null);
 
     try {
-      const filas = await llamarApiCobros(`/para-facturar?periodo=${mes}`);
+      const filas = await llamarApiCobros(`/para-facturar?${tramoEnLaDireccion(tramo)}`);
       if (filas.length === 0) {
         setMensajeIntercambio(t.facturacion.exportar_vacio);
         return;
       }
-      bajarComoArchivo(`para-facturar-${mes}.csv`, armarArchivo(filas));
+      bajarComoArchivo(`para-facturar-${tramo.desde}_${tramo.hasta}.csv`, armarArchivo(filas));
       setMensajeIntercambio(filas.length === 1 ? t.facturacion.exportar_listo_uno : t.facturacion.exportar_listo.replace('{cantidad}', filas.length));
     } catch (e) {
       setError(mensajeDeError(e, t, 'archivo para facturar'));
@@ -300,7 +333,7 @@ export function Facturacion() {
     <div className="panel-grilla">
       <Cabecera titulo={t.facturacion.titulo}>
         {sigue && (
-          <Button onClick={handleGenerar} disabled={generando}>
+          <Button onClick={handleGenerar} disabled={generando || !esTramoValido(tramo)}>
             {generando ? t.facturacion.generando : t.facturacion.generar}
           </Button>
         )}
@@ -394,14 +427,26 @@ export function Facturacion() {
       <section className="panel-tarjeta">
       <div className="panel-filtros">
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          {t.facturacion.col_periodo}
-          <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} />
+          {t.facturacion.periodo_desde}
+          <input
+            type="date"
+            value={tramo.desde}
+            onChange={(e) => setTramo((anterior) => ({ ...anterior, desde: e.target.value }))}
+          />
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          {t.facturacion.periodo_hasta}
+          <input
+            type="date"
+            value={tramo.hasta}
+            onChange={(e) => setTramo((anterior) => ({ ...anterior, hasta: e.target.value }))}
+          />
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.facturacion.col_vencimiento}
           <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} />
         </label>
-        <Button variant="secondary" onClick={handleBajarParaFacturar} disabled={intercambiando}>
+        <Button variant="secondary" onClick={handleBajarParaFacturar} disabled={intercambiando || !esTramoValido(tramo)}>
           {t.facturacion.exportar}
         </Button>
         <Button

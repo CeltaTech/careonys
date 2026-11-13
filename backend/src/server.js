@@ -4,8 +4,8 @@ import express from 'express';
 import cors from 'cors';
 // Parchea Express para reenviar al middleware de errores cualquier excepción/rechazo
 // dentro de un handler async — sin este import (Express 4 no lo hace solo), una excepción
-// no capturada en cualquiera de las rutas tumba el proceso entero (pendiente #91, causa
-// raíz del crash de QR_COBRO_SECRET, pendiente #90). Debe importarse antes de definir rutas.
+// no capturada en cualquiera de las rutas tumba el proceso entero (pendiente #91). Debe
+// importarse antes de definir rutas.
 import 'express-async-errors';
 import { panelNotificacionesRouter } from './routes/panelNotificaciones.js';
 import { panelCuentasRouter } from './routes/panelCuentas.js';
@@ -22,6 +22,8 @@ import { panelPersonasTelefonosRouter } from './routes/panelPersonasTelefonos.js
 import { panelConfiguracionRouter } from './routes/panelConfiguracion.js';
 import { panelContenidosRouter } from './routes/panelContenidos.js';
 import { panelImportacionRouter } from './routes/panelImportacion.js';
+import { panelActualizacionRouter } from './routes/panelActualizacion.js';
+import { cargarLosIndicesPublicos } from './utils/cargaDeLosIndices.js';
 import { panelInformesObraSocialRouter } from './routes/panelInformesObraSocial.js';
 import { panelLiquidacionesRouter } from './routes/panelLiquidaciones.js';
 import { panelCobrosRouter } from './routes/panelCobros.js';
@@ -160,6 +162,7 @@ app.use('/api/panel/documentos-asistente', panelDocumentosAsistenteRouter);
 app.use('/api/panel/personas/telefonos', panelPersonasTelefonosRouter);
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
 app.use('/api/panel/importacion', panelImportacionRouter);
+app.use('/api/panel/actualizacion', panelActualizacionRouter);
 app.use('/api/panel/informes-obra-social', panelInformesObraSocialRouter);
 app.use('/api/panel/liquidaciones', panelLiquidacionesRouter);
 app.use('/api/panel/cobros', panelCobrosRouter);
@@ -359,6 +362,22 @@ programar(avisarElBorradoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: tru
   };
   copiar();
   setInterval(copiar, UN_DIA_MS);
+}
+
+// La carga de los índices públicos de actualización de precios (el IPC del INDEC). No pasa por
+// `programar` porque un índice público no es de ninguna Prestadora: lo anota la cuenta automática
+// sin Prestadora (utils/cargaDeLosIndices.js). Una vez por día, y no se encima.
+{
+  let cargando = false;
+  const cargarIndices = () => {
+    if (cargando) return;
+    cargando = true;
+    cargarLosIndicesPublicos()
+      .catch((err) => console.error('cargarLosIndicesPublicos:', err?.message ?? err))
+      .finally(() => { cargando = false; });
+  };
+  cargarIndices();
+  setInterval(cargarIndices, UN_DIA_MS);
 }
 
 // La alarma de las cuentas automáticas. No pasa por `programar` porque no es de ninguna

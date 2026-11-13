@@ -1,29 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import QRCode from 'qrcode';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
 import { mensajeDeError } from '../lib/errores';
 import { formatearImporte } from '../lib/dinero';
 
-function minutosRestantes(fecha) {
-  return Math.max(0, Math.ceil((new Date(fecha).getTime() - Date.now()) / 60000));
-}
-
 export default function AccesoIntermediacion() {
   const { id } = useParams();
   const { t, locale } = useLocale();
   const [acceso, setAcceso] = useState(undefined);
   const [error, setError] = useState('');
-  const [generando, setGenerando] = useState(false);
-  const [qr, setQr] = useState(null);
-  const [qrDataUrl, setQrDataUrl] = useState(null);
-  const [cobrado, setCobrado] = useState(false);
   const [dandoDeBaja, setDandoDeBaja] = useState(false);
   const [baja, setBaja] = useState(null);
   const [errorBaja, setErrorBaja] = useState('');
-  const pollRef = useRef(null);
 
   const cargar = useCallback(() => {
     api
@@ -36,41 +26,6 @@ export default function AccesoIntermediacion() {
     setAcceso(undefined);
     cargar();
   }, [cargar]);
-
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
-
-  async function generarQr() {
-    setGenerando(true);
-    setError('');
-    setCobrado(false);
-    try {
-      const { qr: nuevoQr } = await api.generarQrCobro({ acceso_id: acceso.id });
-      setQr(nuevoQr);
-      setQrDataUrl(await QRCode.toDataURL(nuevoQr.token, { width: 260, margin: 1 }));
-      if (pollRef.current) clearInterval(pollRef.current);
-      pollRef.current = setInterval(async () => {
-        try {
-          const { qr: estadoQr } = await api.estadoQrCobro(nuevoQr.id);
-          if (estadoQr.cobro_id) {
-            setCobrado(true);
-            clearInterval(pollRef.current);
-          } else if (new Date(estadoQr.expira_en).getTime() < Date.now()) {
-            clearInterval(pollRef.current);
-          }
-        } catch {
-          // el próximo ciclo de sondeo reintenta
-        }
-      }, 4000);
-    } catch (e) {
-      setError(mensajeDeError(e, t, 'generar el QR de cobro'));
-    } finally {
-      setGenerando(false);
-    }
-  }
 
   // La baja en un clic: un botón y nada más. No lleva una pantalla de confirmación a propósito —
   // el §3.2 del PRD pide que cancelar sea tan fácil como darse de alta—, y lo que hay que saber
@@ -91,8 +46,6 @@ export default function AccesoIntermediacion() {
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (acceso === undefined) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
-
-  const qrVencido = qr && !cobrado && new Date(qr.expira_en).getTime() < Date.now();
 
   return (
     <>
@@ -119,30 +72,6 @@ export default function AccesoIntermediacion() {
               </div>
             )}
           </section>
-
-          {acceso.estado === 'vigente' && (
-            <section className="pwa-card">
-              <h2>{t.acceso.generar_qr_titulo}</h2>
-
-              {cobrado && <div className="alert alert-success" role="status">{t.acceso.qr_cobrado}</div>}
-
-              {!cobrado && qr && !qrVencido && qrDataUrl && (
-                <div className="centrado">
-                  <img src={qrDataUrl} alt={t.acceso.generar_qr_titulo} />
-                  <p className="mapa-actualizado">{minutosRestantes(qr.expira_en) === 1 ? t.acceso.qr_vence_en_uno : t.acceso.qr_vence_en.replace('{minutos}', minutosRestantes(qr.expira_en))}</p>
-                  <p className="mapa-actualizado">{t.acceso.qr_esperando_cobro}</p>
-                </div>
-              )}
-
-              {qrVencido && <div className="alert alert-error" role="alert">{t.acceso.qr_vencido}</div>}
-
-              {(!qr || qrVencido || cobrado) && (
-                <button type="button" className="btn btn-primary btn-full btn-abajo" onClick={generarQr} disabled={generando}>
-                  {generando ? t.acceso.generando_qr : (qr ? t.acceso.qr_generar_otro : t.acceso.generar_qr_boton)}
-                </button>
-              )}
-            </section>
-          )}
 
           {/* La baja sólo aparece donde hay una renovación que apagar. Una forma que se cobra una
               sola vez no se da de baja: no hay nada que cancelar. */}

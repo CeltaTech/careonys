@@ -420,18 +420,6 @@ describe('con qué riel se cobra', () => {
     const resultado = await darDeAlta();
     assert.equal(resultado.motivo, MOTIVO_ALTA.SIN_PASARELA_CONECTADA);
   });
-
-  it('el efectivo en mano no le pide ninguna credencial a la caja fuerte', async () => {
-    // No hay proveedor de por medio: la credencial no existe, y pedirla haría fallar el alta del
-    // único riel que no necesita ninguna.
-    respuestas.set('GET /rest/v1/prestadora_pasarela_pago', () => [{ proveedor: 'efectivo_manual' }]);
-    const resultado = await darDeAlta();
-
-    assert.equal(resultado.ok, true);
-    assert.equal(resultado.alta.proveedor, 'efectivo_manual');
-    const lecturas = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/leer_credencial_pasarela_pago');
-    assert.deepEqual(lecturas, []);
-  });
 });
 
 describe('lo que falta antes de poder cobrar', () => {

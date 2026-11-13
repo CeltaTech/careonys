@@ -14,6 +14,12 @@ import {
   PLAZO_MAXIMO_EN_DIAS,
   plazoQueSePuedeGuardar,
 } from '../../lib/facturacionDeClientes';
+import {
+  FRECUENCIAS_DE_COBRO_POSIBLES,
+  MEDICIONES_POSIBLES,
+  condicionDelServicioQueSePuedeGuardar,
+} from '../../lib/condicionesDelCliente';
+import { ActualizacionDelServicio } from '../../components/ActualizacionDelServicio';
 import '../../styles/molde-paginas.css';
 
 /* Lo comercial de un Servicio: quién contrata, quién paga, en qué plazo, y si quien paga firmó.
@@ -32,6 +38,9 @@ function formDe(condiciones) {
     pagador_tipo: condiciones?.pagador_tipo || '',
     pagador_persona_id: condiciones?.pagador_persona_id || null,
     contratante_persona_id: condiciones?.contratante_persona_id || null,
+    // Vacío: rige la de la configuración de facturación de la Prestadora.
+    frecuencia_de_cobro: condiciones?.frecuencia_de_cobro || '',
+    medicion: condiciones?.medicion || '',
   };
 }
 
@@ -49,7 +58,7 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
     setErrorDeCarga(null);
     const { data, error: falla } = await supabase
       .from('condiciones_comerciales_servicio')
-      .select('contratante_persona_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento')
+      .select('contratante_persona_id, pagador_tipo, pagador_persona_id, dias_hasta_el_vencimiento, frecuencia_de_cobro, medicion')
       .eq('servicio_id', servicio.id)
       .maybeSingle();
     if (falla) {
@@ -77,6 +86,12 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
       setError(t.clientes.plazo_fuera_de_borde);
       return;
     }
+    const frecuencia = condicionDelServicioQueSePuedeGuardar('frecuencia_de_cobro', form.frecuencia_de_cobro);
+    const medicion = condicionDelServicioQueSePuedeGuardar('medicion', form.medicion);
+    if (!frecuencia.ok || !medicion.ok) {
+      setError(t.configuracion.condiciones_cliente.valor_no_valido);
+      return;
+    }
     setGuardando(true);
     setError(null);
     const { error: falla } = await supabase
@@ -86,6 +101,8 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
         pagador_tipo: form.pagador_tipo || null,
         pagador_persona_id: form.pagador_persona_id || null,
         contratante_persona_id: form.contratante_persona_id || null,
+        frecuencia_de_cobro: frecuencia.valor,
+        medicion: medicion.valor,
       })
       .eq('servicio_id', servicio.id);
     setGuardando(false);
@@ -146,6 +163,36 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
             deshabilitado={!puedeEditar}
           />
         </div>
+        <FormField
+          label={t.configuracion.condiciones_cliente.frecuencia_de_cobro}
+          name="frecuencia_de_cobro"
+          type="select"
+          value={form.frecuencia_de_cobro}
+          onChange={(e) => setCampo('frecuencia_de_cobro', e.target.value)}
+          disabled={!puedeEditar}
+        >
+          <option value="">{t.configuracion.condiciones_cliente.la_de_la_configuracion}</option>
+          {FRECUENCIAS_DE_COBRO_POSIBLES.map((valor) => (
+            <option key={valor} value={valor}>
+              {t.configuracion.condiciones_cliente.valores.frecuencia_de_cobro[valor]}
+            </option>
+          ))}
+        </FormField>
+        <FormField
+          label={t.configuracion.condiciones_cliente.medicion}
+          name="medicion"
+          type="select"
+          value={form.medicion}
+          onChange={(e) => setCampo('medicion', e.target.value)}
+          disabled={!puedeEditar}
+        >
+          <option value="">{t.configuracion.condiciones_cliente.la_de_la_configuracion}</option>
+          {MEDICIONES_POSIBLES.map((valor) => (
+            <option key={valor} value={valor}>
+              {t.configuracion.condiciones_cliente.valores.medicion[valor]}
+            </option>
+          ))}
+        </FormField>
       </div>
       {puedeEditar && (
         <div className="molde-acciones">
@@ -154,6 +201,8 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
           </Button>
         </div>
       )}
+      {/* Cómo se actualiza el precio de este Servicio. Lo construye otro trabajo, en su propio archivo. */}
+      <ActualizacionDelServicio servicioId={servicio.id} />
       {/* Si el Responsable de pagos firmó y qué documentos faltan. Avisa, no bloquea. */}
       <EstadoDelPagador
         servicioId={servicio.id}

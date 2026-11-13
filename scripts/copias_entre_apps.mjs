@@ -158,7 +158,17 @@ export const GRUPOS = [
     copias: ['backend/src/utils/intercambioDeFacturacion.js'],
   },
   {
-    que: 'cuánto se le paga a un Asistente por un mes',
+    que: 'con qué condiciones se le cobra a cada Cliente: forma de precio, frecuencia, medición y actualización',
+    original: 'panel/src/lib/condicionesDelCliente.js',
+    copias: ['backend/src/utils/condicionesDelCliente.js'],
+  },
+  {
+    que: 'el precio de una Prestación y qué eslabón de un cambio de precio se cobra',
+    original: 'panel/src/lib/precioDeLaPrestacion.js',
+    copias: ['backend/src/utils/precioDeLaPrestacion.js'],
+  },
+  {
+    que: 'cuánto se le paga a un Asistente por un período y cuánto se le cobra a un Cliente',
     original: 'panel/src/lib/calcularLiquidacion.js',
     copias: ['backend/src/utils/calcularLiquidacion.js'],
   },

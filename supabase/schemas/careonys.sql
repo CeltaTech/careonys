@@ -307,6 +307,34 @@ $$;
 ALTER FUNCTION "interno"."anotar_descuento_del_servicio"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "interno"."anotar_precio_de_item_adicional"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+  v_usuario uuid := interno.usuario_de_la_sesion();
+BEGIN
+  IF v_usuario IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  INSERT INTO public.registro_actividad
+    (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, campos_cambiados, detalle)
+  VALUES
+    (NEW.prestadora_id, v_usuario, 'cambio_de_precio_de_item_adicional', TG_TABLE_NAME, NEW.id,
+     ARRAY['precio_unitario', 'monto'],
+     jsonb_build_object('factura_id', NEW.factura_id,
+                        'precio_anterior', OLD.precio_unitario,
+                        'precio_nuevo', NEW.precio_unitario,
+                        'moneda', NEW.moneda));
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."anotar_precio_de_item_adicional"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public'
@@ -5710,6 +5738,8 @@ BEGIN
            'id', p.id, 'servicio_id', p.servicio_id, 'tipo_servicio', p.tipo_servicio,
            'precio_final', p.precio_final, 'precio_lista_snapshot', p.precio_lista_snapshot,
            'precio_lista_id', p.precio_lista_id, 'requiere_revision', p.requiere_revision,
+           'precio_guardia_adicional', p.precio_guardia_adicional,
+           'precio_hora_adicional', p.precio_hora_adicional,
            'moneda', p.moneda, 'indice', x.indice)), '[]'::jsonb)
     INTO v_pendientes
     FROM public.prestaciones p
@@ -5775,6 +5805,10 @@ BEGIN
         'precio_final', precio_nuevo,
         'precio_lista_snapshot', CASE WHEN v_elemento ->> 'precio_lista_snapshot' IS NULL THEN NULL
                                       ELSE round((v_elemento ->> 'precio_lista_snapshot')::numeric * v_factor, 2) END,
+        'precio_guardia_adicional', CASE WHEN v_elemento ->> 'precio_guardia_adicional' IS NULL THEN NULL
+                                         ELSE round((v_elemento ->> 'precio_guardia_adicional')::numeric * v_factor, 2) END,
+        'precio_hora_adicional', CASE WHEN v_elemento ->> 'precio_hora_adicional' IS NULL THEN NULL
+                                      ELSE round((v_elemento ->> 'precio_hora_adicional')::numeric * v_factor, 2) END,
         'precio_lista_id', coalesce(v_reemplazo, NULLIF(v_elemento ->> 'precio_lista_id', '')::bigint),
         'vigente_desde', p_desde,
         'vigente_hasta', NULL,
@@ -5898,6 +5932,7 @@ BEGIN
 
   FOR v IN
     SELECT p.id, p.servicio_id, p.vigente_desde, p.precio_final, p.precio_lista_snapshot, p.moneda,
+           p.precio_guardia_adicional, p.precio_hora_adicional,
            x.indice, x.meses, x.ajuste
       FROM public.prestaciones p
       LEFT JOIN public.condiciones_comerciales_servicio c ON c.servicio_id = p.servicio_id
@@ -5942,6 +5977,10 @@ BEGIN
         'precio_final', v_precio,
         'precio_lista_snapshot', CASE WHEN v.precio_lista_snapshot IS NULL THEN NULL
                                       ELSE round(v.precio_lista_snapshot * v_factor, 2) END,
+        'precio_guardia_adicional', CASE WHEN v.precio_guardia_adicional IS NULL THEN NULL
+                                         ELSE round(v.precio_guardia_adicional * v_factor, 2) END,
+        'precio_hora_adicional', CASE WHEN v.precio_hora_adicional IS NULL THEN NULL
+                                      ELSE round(v.precio_hora_adicional * v_factor, 2) END,
         'vigente_desde', v_rige,
         'vigente_hasta', NULL,
         'requiere_revision', false,
@@ -7368,6 +7407,93 @@ $$;
 
 
 ALTER FUNCTION "public"."fijar_descuento_del_servicio"("p_servicio" "uuid", "p_porcentaje" numeric) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."fijar_precio_de_item_adicional"("p_item" "uuid", "p_precio" numeric, "p_descuentos" "jsonb") RETURNS "void"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+  v_precio numeric := round(p_precio, 2);
+  v_item record;
+  v_factura uuid;
+  v_descuento record;
+  v_valor jsonb;
+  v_total numeric;
+BEGIN
+  IF v_prest IS NULL OR interno.usuario_de_la_sesion() IS NULL
+     OR NOT interno.tiene_permiso('editar_condiciones_comerciales_servicio') THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_item IS NULL OR v_precio IS NULL OR v_precio < 0
+     OR p_descuentos IS NULL OR jsonb_typeof(p_descuentos) <> 'object' THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT i.id, i.factura_id, i.cantidad, i.precio_unitario INTO v_item
+    FROM public.facturas_cliente_items i
+   WHERE i.id = p_item AND i.prestadora_id = v_prest AND i.concepto = 'adicional'
+   FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
+  END IF;
+  IF v_item.cantidad IS NULL THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- La factura se cambia mientras no se emitió ni tiene comprobante.
+  SELECT f.id INTO v_factura
+    FROM public.facturas_cliente f
+   WHERE f.id = v_item.factura_id AND f.prestadora_id = v_prest
+     AND f.facturado_at IS NULL AND f.monto_facturado IS NULL AND f.comprobante_subido_at IS NULL
+   FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF v_precio IS NOT DISTINCT FROM v_item.precio_unitario THEN
+    RETURN;
+  END IF;
+
+  -- Cada descuento de la factura llega recalculado, y sólo esos.
+  IF (SELECT count(*) FROM jsonb_object_keys(p_descuentos)) <> (
+    SELECT count(*) FROM public.facturas_cliente_items i
+     WHERE i.factura_id = v_factura AND i.concepto = 'descuento'
+  ) THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE public.facturas_cliente_items
+     SET precio_unitario = v_precio,
+         monto = round(v_item.cantidad * v_precio, 2)
+   WHERE id = v_item.id;
+
+  FOR v_descuento IN
+    SELECT i.id, i.descuento_id FROM public.facturas_cliente_items i
+     WHERE i.factura_id = v_factura AND i.concepto = 'descuento'
+  LOOP
+    v_valor := p_descuentos -> (v_descuento.descuento_id::text);
+    IF v_valor IS NULL OR jsonb_typeof(v_valor) <> 'number' OR (v_valor #>> '{}')::numeric < 0 THEN
+      RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+    END IF;
+    UPDATE public.facturas_cliente_items
+       SET monto = -round((v_valor #>> '{}')::numeric, 2)
+     WHERE id = v_descuento.id;
+  END LOOP;
+
+  SELECT coalesce(sum(i.monto), 0) INTO v_total
+    FROM public.facturas_cliente_items i WHERE i.factura_id = v_factura;
+  IF v_total < 0 THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE public.facturas_cliente SET monto_total = v_total WHERE id = v_factura;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."fijar_precio_de_item_adicional"("p_item" "uuid", "p_precio" numeric, "p_descuentos" "jsonb") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"() RETURNS "trigger"
@@ -9479,6 +9605,10 @@ BEGIN
     'precio_final', v_precio,
     'precio_lista_snapshot', CASE WHEN p.precio_lista_snapshot IS NULL THEN NULL
                                   ELSE round(p.precio_lista_snapshot * v_precio / pr.precio_actual, 2) END,
+    'precio_guardia_adicional', CASE WHEN p.precio_guardia_adicional IS NULL THEN NULL
+                                     ELSE round(p.precio_guardia_adicional * v_precio / pr.precio_actual, 2) END,
+    'precio_hora_adicional', CASE WHEN p.precio_hora_adicional IS NULL THEN NULL
+                                  ELSE round(p.precio_hora_adicional * v_precio / pr.precio_actual, 2) END,
     'vigente_desde', pr.rige_desde,
     'vigente_hasta', NULL,
     'requiere_revision', false,
@@ -11451,7 +11581,6 @@ CREATE TABLE IF NOT EXISTS "public"."condiciones_comerciales_servicio" (
     "descuenta_lo_no_prestado" boolean,
     "cobra_guardias_adicionales" boolean,
     "cobra_horas_adicionales" boolean,
-    "recargo_del_adicional" integer,
     "meses_entre_actualizaciones" integer,
     "ajuste_por_indice" "text",
     CONSTRAINT "condiciones_comerciales_frecuencia_conocida" CHECK ((("frecuencia_de_cobro" IS NULL) OR ("frecuencia_de_cobro" = ANY (ARRAY['dia'::"text", 'semana'::"text", 'quincena'::"text", 'mes'::"text"])))),
@@ -11459,8 +11588,7 @@ CREATE TABLE IF NOT EXISTS "public"."condiciones_comerciales_servicio" (
     CONSTRAINT "condiciones_comerciales_pagador_conocido" CHECK ((("pagador_tipo" IS NULL) OR ("pagador_tipo" = ANY (ARRAY['cliente'::"text", 'obra_social'::"text", 'otro'::"text"])))),
     CONSTRAINT "condiciones_comerciales_plazo_razonable" CHECK ((("dias_hasta_el_vencimiento" IS NULL) OR (("dias_hasta_el_vencimiento" >= 0) AND ("dias_hasta_el_vencimiento" <= 365)))),
     CONSTRAINT "condiciones_comerciales_servi_meses_entre_actualizaciones_check" CHECK (("meses_entre_actualizaciones" = ANY (ARRAY[1, 3, 6]))),
-    CONSTRAINT "condiciones_comerciales_servicio_ajuste_por_indice_check" CHECK (("ajuste_por_indice" = ANY (ARRAY['automatico'::"text", 'revision_previa'::"text"]))),
-    CONSTRAINT "condiciones_comerciales_servicio_recargo_del_adicional_check" CHECK ((("recargo_del_adicional" >= 0) AND ("recargo_del_adicional" <= 500)))
+    CONSTRAINT "condiciones_comerciales_servicio_ajuste_por_indice_check" CHECK (("ajuste_por_indice" = ANY (ARRAY['automatico'::"text", 'revision_previa'::"text"])))
 );
 
 
@@ -13250,10 +13378,8 @@ CREATE TABLE IF NOT EXISTS "public"."facturas_cliente_items" (
     "precio_unitario" numeric(12,2),
     "descuento_id" "uuid",
     "concepto" "text",
-    "recargo_del_adicional" integer,
     CONSTRAINT "facturas_cliente_items_cantidad_no_negativa" CHECK ((("cantidad" IS NULL) OR ("cantidad" >= (0)::numeric))),
     CONSTRAINT "facturas_cliente_items_concepto_conocido" CHECK ((("concepto" IS NULL) OR ("concepto" = ANY (ARRAY['pactado'::"text", 'medido'::"text", 'adicional'::"text", 'no_prestado'::"text", 'cancelado_por_el_cliente'::"text", 'descuento'::"text"])))),
-    CONSTRAINT "facturas_cliente_items_recargo_en_borde" CHECK ((("recargo_del_adicional" IS NULL) OR (("recargo_del_adicional" >= 0) AND ("recargo_del_adicional" <= 500)))),
     CONSTRAINT "facturas_cliente_items_unidad_conocida" CHECK ((("unidad" IS NULL) OR ("unidad" = ANY (ARRAY['periodo'::"text", 'guardia'::"text", 'hora'::"text", 'hora_extra'::"text", 'dia_de_guardia'::"text"]))))
 );
 
@@ -14845,6 +14971,9 @@ CREATE TABLE IF NOT EXISTS "public"."prestaciones" (
     "forma_de_precio" "text" DEFAULT 'directo'::"text" NOT NULL,
     "sentido_del_ajuste" "text",
     "prestacion_anterior_id" bigint,
+    "precio_guardia_adicional" numeric(12,2),
+    "precio_hora_adicional" numeric(12,2),
+    CONSTRAINT "prestaciones_adicionales_no_negativos" CHECK (((("precio_guardia_adicional" IS NULL) OR ("precio_guardia_adicional" >= (0)::numeric)) AND (("precio_hora_adicional" IS NULL) OR ("precio_hora_adicional" >= (0)::numeric)))),
     CONSTRAINT "prestaciones_ajuste_completo" CHECK (((("tipo_descuento" IS NULL) AND ("valor_descuento" IS NULL) AND ("sentido_del_ajuste" IS NULL)) OR (("tipo_descuento" IS NOT NULL) AND ("valor_descuento" IS NOT NULL) AND ("sentido_del_ajuste" IS NOT NULL)))),
     CONSTRAINT "prestaciones_ajuste_no_negativo" CHECK ((("valor_descuento" IS NULL) OR ("valor_descuento" >= (0)::numeric))),
     CONSTRAINT "prestaciones_estado_check" CHECK (("estado" = ANY (ARRAY['vigente'::"text", 'de_baja'::"text"]))),
@@ -14886,6 +15015,14 @@ COMMENT ON COLUMN "public"."prestaciones"."sentido_del_ajuste" IS 'Si el ajuste 
 
 
 COMMENT ON COLUMN "public"."prestaciones"."prestacion_anterior_id" IS 'La Prestación cuyo precio ésta reemplaza desde su vigente_desde. Al guardarla, la base cierra la anterior el día antes.';
+
+
+
+COMMENT ON COLUMN "public"."prestaciones"."precio_guardia_adicional" IS 'Precio pactado de cada guardia adicional, en la moneda de la prestación. Vacío: la factura la valúa en proporción al precio pactado. Cambia con el precio cuando se ajusta.';
+
+
+
+COMMENT ON COLUMN "public"."prestaciones"."precio_hora_adicional" IS 'Precio pactado de cada hora adicional, en la moneda de la prestación. Vacío: la factura la valúa en proporción al precio pactado. Cambia con el precio cuando se ajusta.';
 
 
 
@@ -19090,6 +19227,10 @@ CREATE OR REPLACE TRIGGER "anotar_cambio_de_fecha" BEFORE UPDATE OF "fecha_fin" 
 
 
 CREATE OR REPLACE TRIGGER "anotar_descuento_del_servicio" AFTER INSERT OR UPDATE ON "public"."descuentos_del_servicio" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_descuento_del_servicio"();
+
+
+
+CREATE OR REPLACE TRIGGER "anotar_precio_de_item_adicional" AFTER UPDATE OF "precio_unitario" ON "public"."facturas_cliente_items" FOR EACH ROW WHEN ((("new"."concepto" = 'adicional'::"text") AND ("old"."precio_unitario" IS DISTINCT FROM "new"."precio_unitario"))) EXECUTE FUNCTION "interno"."anotar_precio_de_item_adicional"();
 
 
 
@@ -27234,6 +27375,11 @@ GRANT ALL ON FUNCTION "interno"."anotar_descuento_del_servicio"() TO "service_ro
 
 
 
+REVOKE ALL ON FUNCTION "interno"."anotar_precio_de_item_adicional"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."anotar_precio_de_item_adicional"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() TO "service_role";
 GRANT ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() TO "authenticated";
@@ -28823,6 +28969,12 @@ GRANT ALL ON FUNCTION "public"."fijar_descuento_del_servicio"("p_servicio" "uuid
 
 
 
+REVOKE ALL ON FUNCTION "public"."fijar_precio_de_item_adicional"("p_item" "uuid", "p_precio" numeric, "p_descuentos" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."fijar_precio_de_item_adicional"("p_item" "uuid", "p_precio" numeric, "p_descuentos" "jsonb") TO "service_role";
+GRANT ALL ON FUNCTION "public"."fijar_precio_de_item_adicional"("p_item" "uuid", "p_precio" numeric, "p_descuentos" "jsonb") TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "public"."fn_auditoria_de_acceso_mutacion"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."fn_auditoria_de_acceso_mutacion"() TO "service_role";
 
@@ -29976,7 +30128,6 @@ GRANT UPDATE("cobra_horas_adicionales") ON TABLE "public"."condiciones_comercial
 
 
 
-GRANT UPDATE("recargo_del_adicional") ON TABLE "public"."condiciones_comerciales_servicio" TO "authenticated";
 
 
 
@@ -30855,7 +31006,6 @@ GRANT SELECT("concepto"),INSERT("concepto"),UPDATE("concepto") ON TABLE "public"
 
 
 
-GRANT SELECT("recargo_del_adicional"),INSERT("recargo_del_adicional"),UPDATE("recargo_del_adicional") ON TABLE "public"."facturas_cliente_items" TO "authenticated";
 
 
 

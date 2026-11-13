@@ -551,10 +551,107 @@ export function Facturacion() {
 /* Los cobros anulados se muestran igual que los vigentes, tachados en su estado pero presentes.
    Anular no es borrar: una plata que desaparece sin rastro es indistinguible de una que nunca
    existió, y con plata de un tercero eso es justo lo que no puede pasar. */
+/* Los ítems de la factura: primero los del servicio, después el subtotal, cada descuento como un
+   ítem propio en negativo, y el total. Sin impuestos: los pone el software de facturación. Sólo el
+   precio unitario de los ítems adicionales se puede cambiar, y sólo mientras la factura no se
+   emitió. */
+function ItemsDeLaFactura({ items, moneda, editable, preciosEscritos, avisosDePrecio, onEscribir, onGuardar, procesando }) {
+  const { t, locale } = useLocale();
+  if (items.length === 0) return null;
+
+  const delServicio = items.filter((i) => i.concepto !== 'descuento');
+  const descuentos = items.filter((i) => i.concepto === 'descuento');
+  const subtotal = delServicio.reduce((suma, i) => suma + Number(i.monto), 0);
+  const total = items.reduce((suma, i) => suma + Number(i.monto), 0);
+  const importe = (valor) => formatearImporte(valor, moneda, locale);
+  const cantidad = (valor) =>
+    valor === null || valor === undefined ? '—' : Number(valor).toLocaleString(locale, { maximumFractionDigits: 2 });
+
+  const textoDelItem = (i) => {
+    const concepto = i.concepto ? t.facturacion[`item_concepto_${i.concepto}`] : null;
+    return concepto ? `${concepto} — ${i.descripcion}` : i.descripcion;
+  };
+  const textoDelDescuento = (i) => {
+    if (!i.descuento) return t.facturacion.item_descuento;
+    const valor =
+      i.descuento.clase === 'porcentaje'
+        ? `${Number(i.descuento.valor).toLocaleString(locale, { maximumFractionDigits: 2 })} %`
+        : formatearImporte(i.descuento.valor, i.descuento.moneda ?? moneda, locale);
+    return `${t.facturacion.item_descuento} (${valor})`;
+  };
+
+  return (
+    <table className="panel-tabla">
+      <thead>
+        <tr>
+          <th>{t.facturacion.items_col_descripcion}</th>
+          <th>{t.facturacion.items_col_cantidad}</th>
+          <th>{t.facturacion.items_col_precio_unitario}</th>
+          <th>{t.facturacion.items_col_total}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {delServicio.map((i) => (
+          <tr key={i.id}>
+            <td>{textoDelItem(i)}</td>
+            <td>{cantidad(i.cantidad)}</td>
+            <td>
+              {editable && i.concepto === 'adicional' ? (
+                <div className="form-field">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    aria-label={t.facturacion.items_col_precio_unitario}
+                    aria-invalid={avisosDePrecio[i.id] ? 'true' : undefined}
+                    aria-describedby={avisosDePrecio[i.id] ? `precio-${i.id}-error` : undefined}
+                    value={preciosEscritos[i.id] ?? (i.precio_unitario ?? '')}
+                    onChange={(e) => onEscribir(i.id, e.target.value)}
+                  />
+                  {avisosDePrecio[i.id] && (
+                    <span className="form-error" id={`precio-${i.id}-error`}>{avisosDePrecio[i.id]}</span>
+                  )}
+                  <Button
+                    variant="secondary"
+                    onClick={() => onGuardar(i)}
+                    disabled={procesando || preciosEscritos[i.id] === undefined}
+                  >
+                    {t.comun.guardar}
+                  </Button>
+                </div>
+              ) : i.precio_unitario === null ? (
+                '—'
+              ) : (
+                importe(i.precio_unitario)
+              )}
+            </td>
+            <td>{importe(i.monto)}</td>
+          </tr>
+        ))}
+        <tr>
+          <td colSpan={3}><b>{t.facturacion.items_subtotal}</b></td>
+          <td><b>{importe(subtotal)}</b></td>
+        </tr>
+        {descuentos.map((i) => (
+          <tr key={i.id}>
+            <td colSpan={3}>{textoDelDescuento(i)}</td>
+            <td>{importe(i.monto)}</td>
+          </tr>
+        ))}
+        <tr>
+          <td colSpan={3}><b>{t.facturacion.items_total}</b></td>
+          <td><b>{importe(total)}</b></td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
   const modal = useModalAccesible(onCerrar);
   const { t, locale } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
+  const { puede } = usePermisos();
 
   const [detalle, setDetalle] = useState(null);
   const [estado, setEstado] = useState('cargando');
@@ -598,11 +695,18 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
     motivo: '',
   });
 
+  // El precio unitario que se está escribiendo en cada ítem adicional, por id del ítem. Vacío,
+  // el casillero muestra el precio guardado.
+  const [preciosEscritos, setPreciosEscritos] = useState({});
+  const [avisosDePrecio, setAvisosDePrecio] = useState({});
+
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     try {
       setDetalle(await llamarApiCobros(`/facturas/${facturaId}`));
+      setPreciosEscritos({});
+      setAvisosDePrecio({});
       setEstado('listo');
     } catch (e) {
       setError(mensajeDeError(e, t, 'detalle del saldo'));
@@ -625,6 +729,30 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
     fecha_vencimiento: facturado.fecha_vencimiento || null,
   });
   const loQueFaltaEnLaCorreccion = loQueEstaMalEnLaCorreccion(correccion);
+
+  /* Cambia el precio unitario de un ítem adicional. El backend vuelve a calcular los descuentos y
+     el total, y la base guarda todo junto. */
+  async function guardarPrecioDelItem(item) {
+    const escrito = preciosEscritos[item.id];
+    const precio = Number(escrito);
+    if (escrito === undefined || String(escrito).trim() === '' || !Number.isFinite(precio) || precio < 0) {
+      setAvisosDePrecio({ ...avisosDePrecio, [item.id]: t.prestaciones.precio_invalido });
+      return;
+    }
+    setProcesando(true);
+    setError(null);
+    try {
+      await llamarApiCobros(`/facturas/${facturaId}/items/${item.id}/precio`, {
+        method: 'PUT',
+        body: JSON.stringify({ precio }),
+      });
+      await recargar();
+      await onCambio();
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'cambiar el precio de un ítem adicional'));
+    }
+    setProcesando(false);
+  }
 
   async function anotarLoFacturado() {
     setProcesando(true);
@@ -789,6 +917,24 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     : t.facturacion.nunca_cobrado}
                 </dd>
               </dl>
+
+              <ItemsDeLaFactura
+                items={detalle.items || []}
+                moneda={detalle.moneda}
+                editable={
+                  detalle.monto_facturado === null &&
+                  !detalle.comprobante_subido_at &&
+                  puede('editar_condiciones_comerciales_servicio')
+                }
+                preciosEscritos={preciosEscritos}
+                avisosDePrecio={avisosDePrecio}
+                onEscribir={(id, valor) => {
+                  setPreciosEscritos({ ...preciosEscritos, [id]: valor });
+                  if (avisosDePrecio[id]) setAvisosDePrecio({ ...avisosDePrecio, [id]: undefined });
+                }}
+                onGuardar={guardarPrecioDelItem}
+                procesando={procesando}
+              />
 
               {detalle.cobros.length === 0 ? (
                 <p className="panel-dato-vacio">{t.facturacion.sin_cobros}</p>

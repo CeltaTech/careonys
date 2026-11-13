@@ -152,38 +152,6 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | etiqueta de una casilla. |
 | **Decisión** | |
 
-### 55. Recargo por servicios adicionales
-
-| | |
-|---|---|
-| **Texto actual** | Recargo por servicios adicionales (%) |
-| **Propuesta** | igual. |
-| **¿Aparece hoy?** | sí: está publicado. |
-| **Por qué** | lo adicional se cobra al valor proporcional más este porcentaje. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Configuración → Facturación a Clientes; y Panel → Servicios → un Servicio, solapa «Pagos». |
-| **Qué estaba haciendo** | marcó cobrar guardias u horas adicionales. |
-| **Qué pasó** | aparece el casillero. |
-| **Qué puede hacer después** | escribir el porcentaje y guardar. |
-| **Cómo se muestra** | etiqueta de un casillero numérico. |
-| **Decisión** | |
-
-### 56. Recargo fuera de rango
-
-| | |
-|---|---|
-| **Texto actual** | Ingrese un número entre 0 y 500. |
-| **Propuesta** | igual. |
-| **¿Aparece hoy?** | sí: está publicado. |
-| **Por qué** | dice qué hacer, en una frase. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | los dos lugares de la ficha 55. |
-| **Qué estaba haciendo** | escribió un recargo y apretó Guardar. |
-| **Qué pasó** | el número está fuera de rango. |
-| **Qué puede hacer después** | corregirlo y guardar. |
-| **Cómo se muestra** | texto al pie del campo. |
-| **Decisión** | |
-
 ### 58. Fecha de cierre del pago
 
 | | |
@@ -316,7 +284,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | «Ajuste automático de precio por índice», «Aceptación de ajuste de precio por índice», «Rechazo de ajuste de precio por índice», «Alta de descuento», «Terminación de descuento». |
+| **Texto actual** | «Ajuste automático de precio por índice», «Aceptación de ajuste de precio por índice», «Rechazo de ajuste de precio por índice», «Alta de descuento», «Terminación de descuento», «Cambio de precio de ítem adicional». |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | sí: está publicado. |
 | **Por qué** | cada una tiene consecuencia económica y queda registrada. Van como sustantivo, igual que las demás. |
@@ -325,6 +293,38 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Qué estaba haciendo** | abrió la Auditoría. |
 | **Qué pasó** | ve la acción en la tabla. |
 | **Qué puede hacer después** | nada. |
+| **Cómo se muestra** | texto de la tabla. |
+| **Decisión** | |
+
+### 78. Precios de los adicionales en la Prestación
+
+| | |
+|---|---|
+| **Texto actual** | «Precio de guardia adicional» y «Precio de hora adicional». |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | sí: está publicado. |
+| **Por qué** | el precio pactado con el Cliente para la guardia y la hora adicionales. Son optativos: sin ellos, la factura cobra el adicional al precio proporcional del pactado. |
+| **Quién lo lee** | la administración de la Prestadora. |
+| **Dónde está** | Panel → Clientes → un Cliente, solapa «Pacientes» → Prestaciones, al cargar o cambiar el precio. |
+| **Qué estaba haciendo** | cargaba el precio de una Prestación. |
+| **Qué pasó** | ve los dos casilleros. |
+| **Qué puede hacer después** | escribir los precios, o dejarlos vacíos, y guardar. |
+| **Cómo se muestra** | etiqueta de un casillero numérico. |
+| **Decisión** | |
+
+### 79. Ítems de la factura
+
+| | |
+|---|---|
+| **Texto actual** | columnas «Descripción», «Cantidad», «Precio unitario», «Total»; renglones «Subtotal», «Descuento» y «Total»; conceptos «Servicio pactado», «Servicio prestado», «Servicio adicional», «Guardias no prestadas», «Cancelación del Cliente». |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | sí: está publicado. |
+| **Por qué** | el detalle de la factura como lo arma cualquier comprobante: primero el servicio, después cada descuento en negativo y al final el total, sin impuestos. |
+| **Quién lo lee** | la administración de la Prestadora. |
+| **Dónde está** | Panel → Saldos pendientes → un saldo, al abrir su detalle. |
+| **Qué estaba haciendo** | abrió el detalle de una factura. |
+| **Qué pasó** | ve los ítems. Mientras la factura no se emitió, puede cambiar el precio unitario de los ítems adicionales. |
+| **Qué puede hacer después** | escribir el precio de un ítem adicional y guardar. |
 | **Cómo se muestra** | texto de la tabla. |
 | **Decisión** | |
 

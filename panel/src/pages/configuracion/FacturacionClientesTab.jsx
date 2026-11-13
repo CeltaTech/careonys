@@ -13,7 +13,6 @@ import {
 } from '../../lib/facturacionDeClientes';
 import {
   AJUSTES_POR_INDICE_POSIBLES,
-  BORDES,
   CLAVES_DE_LAS_CONDICIONES,
   FORMAS_DE_PRECIO_POSIBLES,
   FRECUENCIAS_DE_COBRO_POSIBLES,
@@ -283,32 +282,17 @@ export function FacturacionClientesTab() {
             ))}
           </FormField>
           {/* Sólo las condiciones que cambian algo con la medición elegida. */}
-          {(CONDICIONES_DE_CADA_MEDICION[medicionQueRige] ?? []).map((clave) =>
-            clave === 'recargo_del_adicional' ? (
+          {(CONDICIONES_DE_CADA_MEDICION[medicionQueRige] ?? []).map((clave) => (
+            <div className="molde-ancho" key={clave}>
               <FormField
-                key={clave}
-                label={t.configuracion.condiciones_cliente.recargo_del_adicional}
+                label={t.configuracion.condiciones_cliente[clave]}
                 name={clave}
-                type="number"
-                min={BORDES.recargo_del_adicional.minimo}
-                max={BORDES.recargo_del_adicional.maximo}
-                step="1"
-                value={condiciones.recargo_del_adicional ?? ''}
-                error={errorDe(clave, t.configuracion.condiciones_cliente.recargo_fuera_de_borde)}
-                onChange={cambiarCondicion(clave)}
+                type="checkbox"
+                checked={(condiciones[clave] ?? VALORES_DE_FABRICA_DEL_CLIENTE[clave]) === true}
+                onChange={cambiarSiNo(clave)}
               />
-            ) : (
-              <div className="molde-ancho" key={clave}>
-                <FormField
-                  label={t.configuracion.condiciones_cliente[clave]}
-                  name={clave}
-                  type="checkbox"
-                  checked={(condiciones[clave] ?? VALORES_DE_FABRICA_DEL_CLIENTE[clave]) === true}
-                  onChange={cambiarSiNo(clave)}
-                />
-              </div>
-            )
-          )}
+            </div>
+          ))}
           <FormField
             label={t.configuracion.condiciones_cliente.indice_de_actualizacion}
             name="indice_de_actualizacion"

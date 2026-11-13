@@ -94,7 +94,7 @@ describe('por hora', () => {
     });
     expect(r.renglones).toEqual([
       expect.objectContaining({ concepto: 'medido', unidad: 'hora', cantidad: 20, precio_unitario: 10, monto: 200 }),
-      expect.objectContaining({ concepto: 'adicional', unidad: 'hora_extra', cantidad: 1.5, precio_unitario: 10, monto: 15, recargo_del_adicional: 0 }),
+      expect.objectContaining({ concepto: 'adicional', unidad: 'hora_extra', cantidad: 1.5, precio_unitario: 10, monto: 15 }),
     ]);
     expect(r.total).toBe(215);
   });
@@ -260,8 +260,8 @@ describe('el cambio de precio a mitad de período, en lo pactado', () => {
 
 /* Las condiciones de la medición. Qué daría con el sistema roto: si la ausencia no se
    descontara, el primer total daría 1000; si el descuento no se topara en lo que falta para lo
-   pactado, el de cuatro trabajadas y una ausente daría 750; si el recargo no se aplicara, el
-   adicional daría 250. */
+   pactado, el de cuatro trabajadas y una ausente daría 750; si el precio pactado del adicional no
+   se usara, el adicional daría 250. */
 describe('la medición que rige', () => {
   const pactada = (guardias, condiciones = {}) =>
     calcularLiquidacionDelCliente({
@@ -278,7 +278,7 @@ describe('la medición que rige', () => {
     const r = pactada([guardia('2026-11-02'), guardia('2026-11-09'), ausente('2026-11-16'), canceladaPor('prestadora')('2026-11-23')]);
     expect(porConcepto(r, 'pactado')).toEqual([expect.objectContaining({ unidad: 'periodo', monto: 1000 })]);
     expect(porConcepto(r, 'no_prestado')).toEqual([
-      expect.objectContaining({ unidad: 'guardia', cantidad: 2, precio_unitario: 250, monto: -500, moneda: 'ARS', recargo_del_adicional: null }),
+      expect.objectContaining({ unidad: 'guardia', cantidad: 2, precio_unitario: 250, monto: -500, moneda: 'ARS' }),
     ]);
     expect(r.total).toBe(500);
   });
@@ -313,17 +313,28 @@ describe('la medición que rige', () => {
     expect(r.total).toBe(500);
   });
 
-  it('lo adicional lleva el recargo sobre el valor proporcional, y dice cuál fue', () => {
-    const r = pactada(
-      ['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23'].map((f) => guardia(f)).concat(guardia('2026-11-27', { horas_extra: 2 })),
-      { recargo_del_adicional: 50 }
-    );
-    expect(porConcepto(r, 'adicional')).toEqual([
-      expect.objectContaining({ unidad: 'guardia', cantidad: 1, precio_unitario: 375, monto: 375, recargo_del_adicional: 50 }),
-      // La hora de una guardia de 8 vale 250 / 8 = 31,25; con el recargo, 46,875.
-      expect.objectContaining({ unidad: 'hora_extra', cantidad: 2, monto: 93.75, recargo_del_adicional: 50 }),
+  it('la guardia y la hora adicionales van al precio pactado para ellas, y sin él al proporcional', () => {
+    const guardias = ['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23']
+      .map((f) => guardia(f))
+      .concat(guardia('2026-11-27', { horas_extra: 2 }));
+    const conPrecio = calcularLiquidacionDelCliente({
+      periodo: PERIODO,
+      condiciones: { medicion: 'pactado_mas_excedente' },
+      prestaciones: [prestacion({ precio_guardia_adicional: 375, precio_hora_adicional: 40 })],
+      guardias,
+    });
+    expect(porConcepto(conPrecio, 'adicional')).toEqual([
+      expect.objectContaining({ unidad: 'guardia', cantidad: 1, precio_unitario: 375, monto: 375 }),
+      expect.objectContaining({ unidad: 'hora_extra', cantidad: 2, precio_unitario: 40, monto: 80 }),
     ]);
-    expect(r.total).toBe(1468.75);
+    expect(conPrecio.total).toBe(1455);
+    // Sin precio pactado: la guardia vale 1000 / 4 = 250 y la hora de una guardia de 8, 31,25.
+    const sinPrecio = pactada(guardias);
+    expect(porConcepto(sinPrecio, 'adicional')).toEqual([
+      expect.objectContaining({ unidad: 'guardia', cantidad: 1, precio_unitario: 250, monto: 250 }),
+      expect.objectContaining({ unidad: 'hora_extra', cantidad: 2, monto: 62.5 }),
+    ]);
+    expect(sinPrecio.total).toBe(1312.5);
   });
 
   it('sin cobrar adicionales, ni la guardia de más ni la hora extra suman', () => {

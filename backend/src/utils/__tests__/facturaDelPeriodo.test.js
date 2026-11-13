@@ -235,21 +235,34 @@ describe('lo que se descuenta y lo que se cobra de más, según las condiciones'
       ['no_prestado', 'guardia', -2500],
     ]);
     assert.equal(f.moneda, 'ARS');
-    assert.equal(f.renglones[0].recargo_del_adicional, null);
     assert.equal(f.total, 7500);
   });
 
-  it('el adicional lleva el recargo que rige, y queda escrito en su renglón', () => {
+  it('sin precio pactado, la guardia adicional vale lo proporcional, sin recargo', () => {
     const f = armarLaFacturaDelPeriodo({
       periodo: AGOSTO,
-      condiciones: { medicion: 'pactado_mas_excedente', recargo_del_adicional: 20 },
+      condiciones: { medicion: 'pactado_mas_excedente' },
       prestaciones: pactadas(),
       guardias: ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31'].map((d) => guardia(d)),
       nombresDePacientes: NOMBRES,
     });
     const adicional = f.renglones.find((r) => r.concepto === 'adicional');
-    assert.equal(adicional.monto, 3000);
-    assert.equal(adicional.recargo_del_adicional, 20);
-    assert.equal(f.total, 13000);
+    assert.equal(adicional.precio_unitario, 2500);
+    assert.equal(adicional.monto, 2500);
+    assert.equal(f.total, 12500);
+  });
+
+  it('con precio pactado, la guardia adicional vale ese precio', () => {
+    const f = armarLaFacturaDelPeriodo({
+      periodo: AGOSTO,
+      condiciones: { medicion: 'pactado_mas_excedente' },
+      prestaciones: [prestacion({ configuracion: { cantidad_guardias: 4 }, precio_guardia_adicional: '4000.00' })],
+      guardias: ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31'].map((d) => guardia(d)),
+      nombresDePacientes: NOMBRES,
+    });
+    const adicional = f.renglones.find((r) => r.concepto === 'adicional');
+    assert.equal(adicional.precio_unitario, 4000);
+    assert.equal(adicional.monto, 4000);
+    assert.equal(f.total, 14000);
   });
 });

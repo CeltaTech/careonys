@@ -223,6 +223,5 @@ export function renglonesDeFactura(resultado, servicioId, descripcionDe) {
     unidad: null,
     precio_unitario: null,
     concepto: 'descuento',
-    recargo_del_adicional: null,
   }));
 }

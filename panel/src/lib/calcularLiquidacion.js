@@ -334,6 +334,13 @@ function raizDeLaCadena(prestacion, porId) {
   return actual.id;
 }
 
+// El precio pactado de una guardia o una hora adicional: un número desde cero, o null si no hay.
+function precioDelAdicional(valor) {
+  if (valor === null || valor === undefined || valor === '') return null;
+  const numero = Number(valor);
+  return Number.isFinite(numero) && numero >= 0 ? numero : null;
+}
+
 function numeroPositivo(valor) {
   const n = Number(valor);
   return Number.isFinite(n) && n > 0 ? n : null;
@@ -362,9 +369,8 @@ export const CONDICIONES_DE_CADA_MEDICION = Object.freeze({
     'cobra_cancelada_por_el_cliente',
     'cobra_guardias_adicionales',
     'cobra_horas_adicionales',
-    'recargo_del_adicional',
   ]),
-  [MEDICIONES.HORA]: Object.freeze(['cobra_cancelada_por_el_cliente', 'cobra_horas_adicionales', 'recargo_del_adicional']),
+  [MEDICIONES.HORA]: Object.freeze(['cobra_cancelada_por_el_cliente', 'cobra_horas_adicionales']),
   [MEDICIONES.DIA_DE_GUARDIA]: Object.freeze(['cobra_cancelada_por_el_cliente']),
 });
 
@@ -393,15 +399,16 @@ const porFecha = (a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
  * - condiciones: las condiciones que rigen para el Servicio (`condicionesDe`). Sin ellas, las de
  *   fábrica. Si traen `medicion`, ésa manda sobre el parámetro suelto.
  * - prestaciones: [{ id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda,
- *   vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id }].
+ *   vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id,
+ *   precio_guardia_adicional, precio_hora_adicional }]. Los dos últimos son optativos: sin ellos,
+ *   la guardia y la hora adicionales valen la parte proporcional del precio pactado.
  * - guardias: [{ id, fecha, servicio_id, horas, horas_extra, pacientes: [paciente_id], estado,
  *   cancelacion_origen }]. Entran las completadas, las ausentes y las canceladas; una sin estado
  *   cuenta como completada.
  * - nombresDePacientes: Map de paciente_id a nombre, para la descripción.
  *
- * Cada renglón lleva `concepto` (CONCEPTOS_DEL_COBRO) y `recargo_del_adicional` (el porcentaje
- * aplicado, sólo en los adicionales; null en los demás). Lo que se descuenta lleva monto
- * negativo, con cantidad y precio unitario positivos.
+ * Cada ítem lleva `concepto` (CONCEPTOS_DEL_COBRO). El que se descuenta lleva monto negativo,
+ * con cantidad y precio unitario positivos.
  */
 export function calcularLiquidacionDelCliente({
   periodo,
@@ -436,8 +443,6 @@ export function calcularLiquidacionDelCliente({
   const descuentaPropias = condiciones.descuenta_lo_no_prestado === true;
   const cobraGuardiasAdicionales = condiciones.cobra_guardias_adicionales === true;
   const cobraHorasAdicionales = condiciones.cobra_horas_adicionales === true;
-  const recargo = condiciones.recargo_del_adicional;
-  const conRecargo = (valor) => valor * (1 + recargo / 100);
 
   const delTramo = prestaciones.filter((p) => correEnElTramo(p, desde, hasta));
 
@@ -549,7 +554,7 @@ export function calcularLiquidacionDelCliente({
     // El signo del monto lo pone `signo`: -1 en lo que se descuenta. La cantidad y el precio
     // unitario quedan siempre positivos.
     const agregar = (concepto, unidad, cantidad, precioUnitario, opciones = {}) => {
-      const { monto = cantidad * precioUnitario, signo = 1, recargoAplicado = null } = opciones;
+      const { monto = cantidad * precioUnitario, signo = 1 } = opciones;
       if (!(cantidad > 0)) return;
       renglonesDeEsta.push({
         ...base,
@@ -558,15 +563,14 @@ export function calcularLiquidacionDelCliente({
         cantidad: redondear(cantidad),
         precio_unitario: redondear(precioUnitario),
         monto: redondear(signo * monto),
-        recargo_del_adicional: recargoAplicado,
       });
     };
-    // Lo adicional: al valor proporcional, con el recargo que rija.
+    // Las guardias y las horas adicionales: al precio pactado para ellas, si lo hay; si no, a la
+    // parte proporcional del precio pactado. La Prestadora lo cambia después en cada factura.
     const adicional = (unidad, cantidad, precioUnitario, monto = cantidad * precioUnitario) =>
-      agregar(CONCEPTOS_DEL_COBRO.ADICIONAL, unidad, cantidad, conRecargo(precioUnitario), {
-        monto: conRecargo(monto),
-        recargoAplicado: recargo,
-      });
+      agregar(CONCEPTOS_DEL_COBRO.ADICIONAL, unidad, cantidad, precioUnitario, { monto });
+    const guardiaAdicional = precioDelAdicional(p.precio_guardia_adicional);
+    const horaAdicional = precioDelAdicional(p.precio_hora_adicional);
 
     if (medicion === MEDICIONES.PACTADO_MAS_EXCEDENTE) {
       // Una fracción del período: la parte de los días que cubre este eslabón de su cadena.
@@ -578,7 +582,7 @@ export function calcularLiquidacionDelCliente({
         if (tieneGuardias) resultado.sinCantidadPactada.push(p.id);
       } else {
         const valorDeLaGuardia = precio / pactadas;
-        if (cobraGuardiasAdicionales) adicional(UNIDADES_DEL_COBRO.GUARDIA, excedenteDe.get(p.id) ?? 0, valorDeLaGuardia);
+        if (cobraGuardiasAdicionales) adicional(UNIDADES_DEL_COBRO.GUARDIA, excedenteDe.get(p.id) ?? 0, guardiaAdicional ?? valorDeLaGuardia);
         // Cada hora extra vale lo que vale una hora de su propia guardia.
         let horasExtra = 0;
         let montoExtra = 0;
@@ -589,7 +593,8 @@ export function calcularLiquidacionDelCliente({
           }
         }
         if (cobraHorasAdicionales && horasExtra > 0) {
-          adicional(UNIDADES_DEL_COBRO.HORA_EXTRA, horasExtra, montoExtra / horasExtra, montoExtra);
+          if (horaAdicional !== null) adicional(UNIDADES_DEL_COBRO.HORA_EXTRA, horasExtra, horaAdicional);
+          else adicional(UNIDADES_DEL_COBRO.HORA_EXTRA, horasExtra, montoExtra / horasExtra, montoExtra);
         }
         agregar(CONCEPTOS_DEL_COBRO.NO_PRESTADO, UNIDADES_DEL_COBRO.GUARDIA, propiasDe.get(p.id) ?? 0, valorDeLaGuardia, { signo: -1 });
         agregar(CONCEPTOS_DEL_COBRO.CANCELADO_POR_EL_CLIENTE, UNIDADES_DEL_COBRO.GUARDIA, delClienteDe.get(p.id) ?? 0, valorDeLaGuardia, { signo: -1 });
@@ -598,7 +603,7 @@ export function calcularLiquidacionDelCliente({
       // Se cobra lo trabajado. Lo no prestado nunca se cobró, así que no hay nada que descontar.
       agregar(CONCEPTOS_DEL_COBRO.MEDIDO, UNIDADES_DEL_COBRO.HORA, suyas.reduce((suma, s) => suma + s.horas, 0), precio);
       if (cobraHorasAdicionales) {
-        adicional(UNIDADES_DEL_COBRO.HORA_EXTRA, suyas.reduce((suma, s) => suma + s.horasExtra, 0), precio);
+        adicional(UNIDADES_DEL_COBRO.HORA_EXTRA, suyas.reduce((suma, s) => suma + s.horasExtra, 0), horaAdicional ?? precio);
       }
       if (cobraCanceladas) {
         agregar(CONCEPTOS_DEL_COBRO.CANCELADO_POR_EL_CLIENTE, UNIDADES_DEL_COBRO.HORA, canceladasSuyas.reduce((suma, s) => suma + s.horas, 0), precio);

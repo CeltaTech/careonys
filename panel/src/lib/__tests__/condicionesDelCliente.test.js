@@ -34,7 +34,6 @@ const FABRICA = {
   descuenta_lo_no_prestado: true,
   cobra_guardias_adicionales: true,
   cobra_horas_adicionales: true,
-  recargo_del_adicional: 0,
   indice_de_actualizacion: null,
   meses_entre_actualizaciones: 1,
   ajuste_por_indice: 'revision_previa',
@@ -60,7 +59,7 @@ describe('los nombres guardados', () => {
       'cobra_guardias_adicionales',
       'cobra_horas_adicionales',
     ]);
-    expect(CLAVES_ENTERAS).toEqual(['recargo_del_adicional', 'meses_entre_actualizaciones']);
+    expect(CLAVES_ENTERAS).toEqual(['meses_entre_actualizaciones']);
   });
 });
 
@@ -79,9 +78,6 @@ describe('esValorDeLaCondicion', () => {
     expect(esValorDeLaCondicion('meses_entre_actualizaciones', 24)).toBe(false);
     expect(esValorDeLaCondicion('meses_entre_actualizaciones', 0)).toBe(false);
     expect(esValorDeLaCondicion('meses_entre_actualizaciones', 1.5)).toBe(false);
-    expect(esValorDeLaCondicion('recargo_del_adicional', 0)).toBe(true);
-    expect(esValorDeLaCondicion('recargo_del_adicional', 501)).toBe(false);
-    expect(esValorDeLaCondicion('recargo_del_adicional', -1)).toBe(false);
   });
 
   it('una clave que no existe no acepta nada', () => {
@@ -161,7 +157,7 @@ describe('condicionesQueSePuedenGuardar', () => {
 
   it('rechaza un valor que no sirve y dice cuál', () => {
     expect(condicionesQueSePuedenGuardar({ frecuencia_de_cobro: 'bimestre' })).toEqual({ ok: false, clave: 'frecuencia_de_cobro' });
-    expect(condicionesQueSePuedenGuardar({ recargo_del_adicional: '900' })).toEqual({ ok: false, clave: 'recargo_del_adicional' });
+    expect(condicionesQueSePuedenGuardar({ meses_entre_actualizaciones: '24' })).toEqual({ ok: false, clave: 'meses_entre_actualizaciones' });
   });
 
   it('«sin índice» es lo de fábrica y no se guarda', () => {

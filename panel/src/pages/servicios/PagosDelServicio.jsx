@@ -15,7 +15,6 @@ import {
   plazoQueSePuedeGuardar,
 } from '../../lib/facturacionDeClientes';
 import {
-  BORDES,
   CLAVES_SI_NO,
   FRECUENCIAS_DE_COBRO_POSIBLES,
   MEDICIONES_POSIBLES,
@@ -60,7 +59,6 @@ const SELECT_DE_LO_COMERCIAL = [
   'descuenta_lo_no_prestado',
   'cobra_guardias_adicionales',
   'cobra_horas_adicionales',
-  'recargo_del_adicional',
 ].join(', ');
 
 // Las condiciones de cobro que se deciden desde acá. El índice y su aplicación los decide
@@ -69,14 +67,12 @@ const CONDICIONES_DEL_SERVICIO = Object.freeze([
   'frecuencia_de_cobro',
   'medicion',
   ...CLAVES_SI_NO,
-  'recargo_del_adicional',
 ]);
 
 function condicionesVisiblesDe(fila, regla) {
   const rigen = condicionesDe(regla, fila);
   const visibles = {};
   for (const clave of CONDICIONES_DEL_SERVICIO) visibles[clave] = rigen[clave];
-  visibles.recargo_del_adicional = String(rigen.recargo_del_adicional ?? '');
   return visibles;
 }
 
@@ -100,7 +96,6 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
   const [regla, setRegla] = useState(null);
   const [reglaConocida, setReglaConocida] = useState(false);
   const [tocadas, setTocadas] = useState(() => new Set());
-  const [recargoMal, setRecargoMal] = useState(false);
   const [estado, setEstado] = useState('cargando');
   const [errorDeCarga, setErrorDeCarga] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -165,7 +160,6 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
   function setCampo(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
     if (CONDICIONES_DEL_SERVICIO.includes(campo)) setTocadas((antes) => new Set(antes).add(campo));
-    if (campo === 'recargo_del_adicional') setRecargoMal(false);
     setGuardado(false);
   }
 
@@ -201,9 +195,8 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
     }
     const condiciones = condicionesParaGuardar();
     if (!condiciones.ok) {
-      // Las demás son listas cerradas o casillas: lo único que se puede cargar mal es el recargo.
-      setRecargoMal(true);
-      document.getElementsByName('recargo_del_adicional')[0]?.focus();
+      // Son listas cerradas y casillas: sólo llega acá un valor que la pantalla no ofrece.
+      setError(t.formularios.falta_un_dato_obligatorio);
       return;
     }
     setGuardando(true);
@@ -325,34 +318,18 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
           ))}
         </FormField>
         {/* Sólo las condiciones que cambian algo con la medición elegida. */}
-        {(CONDICIONES_DE_CADA_MEDICION[form.medicion] ?? []).map((clave) =>
-          clave === 'recargo_del_adicional' ? (
+        {(CONDICIONES_DE_CADA_MEDICION[form.medicion] ?? []).map((clave) => (
+          <div className="molde-ancho" key={clave}>
             <FormField
-              key={clave}
-              label={tc.recargo_del_adicional}
+              label={tc[clave]}
               name={clave}
-              type="number"
-              min={BORDES.recargo_del_adicional.minimo}
-              max={BORDES.recargo_del_adicional.maximo}
-              step="1"
-              value={form.recargo_del_adicional}
-              error={recargoMal ? tc.recargo_fuera_de_borde : undefined}
-              onChange={(e) => setCampo(clave, e.target.value)}
+              type="checkbox"
+              checked={form[clave] === true}
+              onChange={(e) => setCampo(clave, e.target.checked)}
               disabled={!puedeEditar}
             />
-          ) : (
-            <div className="molde-ancho" key={clave}>
-              <FormField
-                label={tc[clave]}
-                name={clave}
-                type="checkbox"
-                checked={form[clave] === true}
-                onChange={(e) => setCampo(clave, e.target.checked)}
-                disabled={!puedeEditar}
-              />
-            </div>
-          )
-        )}
+          </div>
+        ))}
         <FormField
           label={t.descuentos_del_servicio.campo}
           name="descuento"

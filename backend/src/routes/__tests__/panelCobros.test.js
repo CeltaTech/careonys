@@ -126,6 +126,7 @@ const FACTURA_EN_LA_BASE = {
   prestadora_id: PRESTADORA,
   cliente_id: CLIENTE,
   periodo: '2026-08-01',
+  periodo_hasta: '2026-08-31',
   monto_total: '100000.00',
   moneda: 'ARS',
   estado: 'pendiente',
@@ -171,6 +172,8 @@ beforeEach(() => {
   // La factura como está guardada. Se consulta para saber si ya tiene el comprobante que baja el
   // Cliente; las pruebas que la cambian pisan esta respuesta.
   respuestas.set('GET /rest/v1/facturas_cliente', () => [FACTURA_EN_LA_BASE]);
+  // Los ítems de la factura. Las pruebas que miran los ítems pisan esta respuesta.
+  respuestas.set('GET /rest/v1/facturas_cliente_items', () => []);
   // Los medios de pago salen de la lista `medios_de_pago_del_cliente` de la base. Acá contesta
   // las seis que siembra la migración, más una propia de esta Prestadora, que es el caso que antes
   // no existía.
@@ -568,6 +571,122 @@ describe('el detalle de una factura', () => {
     assert.equal(estado, 200);
     assert.equal(cuerpo.correcciones.length, 1);
     assert.equal(cuerpo.correcciones[0].sentido, 'resta');
+  });
+
+  it('trae los ítems, y cada descuento con su clase y su valor', async () => {
+    respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(0)]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/cobros_cliente', () => []);
+    respuestas.set('GET /rest/v1/correcciones_factura_cliente', () => []);
+    respuestas.set('GET /rest/v1/facturas_cliente_items', () => ITEMS_DE_LA_FACTURA);
+    respuestas.set('GET /rest/v1/descuentos_del_servicio', () => [
+      { id: 'd-1', clase: 'porcentaje', valor: '10', moneda: null },
+    ]);
+
+    const { estado, cuerpo } = await pedir('GET', `/facturas/${FACTURA}`);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.items.length, 3);
+    assert.deepEqual(cuerpo.items[1], {
+      id: 'i-2',
+      concepto: 'adicional',
+      descripcion: 'Guardia adicional',
+      cantidad: 2,
+      unidad: 'guardia',
+      precio_unitario: 4000,
+      monto: 8000,
+      moneda: 'ARS',
+      descuento: null,
+    });
+    assert.deepEqual(cuerpo.items[2].descuento, { clase: 'porcentaje', valor: 10, moneda: null });
+    assert.equal(cuerpo.items[2].monto, -10800);
+  });
+
+  it('sin descuentos, ni siquiera se consultan', async () => {
+    respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(0)]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/cobros_cliente', () => []);
+    respuestas.set('GET /rest/v1/correcciones_factura_cliente', () => []);
+    respuestas.set('GET /rest/v1/facturas_cliente_items', () => ITEMS_DE_LA_FACTURA.slice(0, 2));
+
+    const { estado, cuerpo } = await pedir('GET', `/facturas/${FACTURA}`);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.items.length, 2);
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/descuentos_del_servicio'));
+  });
+});
+
+/** Una factura de 100.000 pactados, 2 guardias adicionales a 4.000 y un descuento del 10 %. */
+const ITEMS_DE_LA_FACTURA = [
+  { id: 'i-1', descripcion: 'Guardias pactadas', cantidad: '1', unidad: null, precio_unitario: '100000.00', monto: '100000.00', moneda: 'ARS', concepto: 'pactado', descuento_id: null },
+  { id: 'i-2', descripcion: 'Guardia adicional', cantidad: '2', unidad: 'guardia', precio_unitario: '4000.00', monto: '8000.00', moneda: 'ARS', concepto: 'adicional', descuento_id: null },
+  { id: 'i-3', descripcion: 'Descuento', cantidad: null, unidad: null, precio_unitario: null, monto: '-10800.00', moneda: 'ARS', concepto: 'descuento', descuento_id: 'd-1' },
+];
+
+describe('cambiar el precio de un ítem adicional', () => {
+  function prepararFactura() {
+    respuestas.set('GET /rest/v1/facturas_cliente_items', () => ITEMS_DE_LA_FACTURA);
+    respuestas.set('GET /rest/v1/descuentos_del_servicio', () => [
+      { id: 'd-1', clase: 'porcentaje', valor: '10', moneda: null, vigente_desde: '2026-01-01', cargado_en: '2026-01-01T00:00:00Z' },
+    ]);
+    respuestas.set('POST /rest/v1/rpc/fijar_precio_de_item_adicional', () => null);
+  }
+
+  const ruta = (item = 'i-2') => `/facturas/${FACTURA}/items/${item}/precio`;
+
+  it('recalcula el descuento sobre el subtotal nuevo y la base guarda todo junto', async () => {
+    prepararFactura();
+
+    const { estado, cuerpo } = await pedir('PUT', ruta(), { precio: 5000 });
+    assert.equal(estado, 200);
+    assert.ok(Array.isArray(cuerpo.items));
+
+    const guardado = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/fijar_precio_de_item_adicional');
+    // 100.000 + 2 × 5.000 = 110.000; el 10 % es 11.000.
+    assert.deepEqual(guardado.cuerpo, { p_item: 'i-2', p_precio: 5000, p_descuentos: { 'd-1': 11000 } });
+    assert.equal(guardado.credencial, credencialEnviada);
+  });
+
+  it('un precio que no es un número, o negativo, no llega a la base', async () => {
+    prepararFactura();
+    for (const precio of [-1, 'abc', null, '']) {
+      const { estado, cuerpo } = await pedir('PUT', ruta(), { precio });
+      assert.equal(estado, 400, `precio ${JSON.stringify(precio)}`);
+      assert.equal(cuerpo.motivo, 'dato_invalido');
+    }
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/fijar_precio_de_item_adicional'));
+  });
+
+  it('sólo los ítems adicionales cambian de precio', async () => {
+    prepararFactura();
+    const { estado } = await pedir('PUT', ruta('i-1'), { precio: 1 });
+    assert.equal(estado, 404);
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/fijar_precio_de_item_adicional'));
+  });
+
+  it('la factura de otra Prestadora no existe para esta', async () => {
+    prepararFactura();
+    respuestas.set('GET /rest/v1/facturas_cliente', () => []);
+    const { estado } = await pedir('PUT', ruta(), { precio: 5000 });
+    assert.equal(estado, 404);
+  });
+
+  it('si la base dice que la factura ya se emitió, se contesta dato mal cargado', async () => {
+    prepararFactura();
+    respuestas.set('POST /rest/v1/rpc/fijar_precio_de_item_adicional', () => ({
+      __estado: 400,
+      __cuerpo: { code: 'P0001', message: 'dato_invalido' },
+    }));
+    const { estado, cuerpo } = await pedir('PUT', ruta(), { precio: 5000 });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'dato_invalido');
+  });
+
+  it('sin el permiso de editar las condiciones comerciales, no entra', async () => {
+    prepararFactura();
+    respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => false);
+    const { estado } = await pedir('PUT', ruta(), { precio: 5000 });
+    assert.equal(estado, 403);
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/fijar_precio_de_item_adicional'));
   });
 });
 

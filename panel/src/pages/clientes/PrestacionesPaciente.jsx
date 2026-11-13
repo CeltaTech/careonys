@@ -40,6 +40,8 @@ const ORDEN_DE_LOS_CASILLEROS = [
   'precio_escrito',
   'tipo_de_ajuste',
   'valor_del_ajuste',
+  'precio_guardia_adicional',
+  'precio_hora_adicional',
   'vigente_desde',
   'vigente_hasta',
 ];
@@ -74,6 +76,10 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [sentidoDelAjuste, setSentidoDelAjuste] = useState('');
   const [tipoServicioEscrito, setTipoServicioEscrito] = useState('');
   const [precioEscrito, setPrecioEscrito] = useState('');
+  // Los precios pactados de la guardia y de la hora adicionales. Vacíos, la factura cobra el
+  // adicional al precio proporcional del pactado.
+  const [precioGuardiaAdicional, setPrecioGuardiaAdicional] = useState('');
+  const [precioHoraAdicional, setPrecioHoraAdicional] = useState('');
   const [dias, setDias] = useState('');
   const [horario, setHorario] = useState('');
   const [cantidadGuardias, setCantidadGuardias] = useState('');
@@ -196,6 +202,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     const escrito = campo === 'precio_escrito' ? precioEscrito : campo === 'valor_del_ajuste' ? valorDescuento : '';
     avisos[campo] = importeMalEscrito(escrito) ? t.prestaciones.precio_invalido : t.formularios.falta_un_dato_obligatorio;
   }
+  if (importeMalEscrito(precioGuardiaAdicional)) avisos.precio_guardia_adicional = t.prestaciones.precio_invalido;
+  if (importeMalEscrito(precioHoraAdicional)) avisos.precio_hora_adicional = t.prestaciones.precio_invalido;
   if (!vigenteDesde) avisos.vigente_desde = t.formularios.falta_un_dato_obligatorio;
   else if (reemplazaA && !cambioDePrecioValido(reemplazaA, vigenteDesde, reemplazadas)) {
     avisos.vigente_desde = t.prestaciones.cambio_fuera_de_vigencia;
@@ -259,6 +267,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setViajes(Boolean(c.viajes));
     setHospitalizacion(Boolean(c.hospitalizacion));
     setNota(anterior.nota ?? '');
+    setPrecioGuardiaAdicional(anterior.precio_guardia_adicional ?? '');
+    setPrecioHoraAdicional(anterior.precio_hora_adicional ?? '');
     const hoy = hoyISO();
     setVigenteDesde(hoy > anterior.vigente_desde ? hoy : '');
     setVigenteHasta(anterior.vigente_hasta ?? '');
@@ -277,6 +287,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setSentidoDelAjuste('');
     setTipoServicioEscrito('');
     setPrecioEscrito('');
+    setPrecioGuardiaAdicional('');
+    setPrecioHoraAdicional('');
     setDias('');
     setHorario('');
     setCantidadGuardias('');
@@ -322,6 +334,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         hospitalizacion,
       },
       nota,
+      precio_guardia_adicional: precioGuardiaAdicional === '' ? null : Number(precioGuardiaAdicional),
+      precio_hora_adicional: precioHoraAdicional === '' ? null : Number(precioHoraAdicional),
       estado: 'vigente',
       vigente_desde: vigenteDesde,
       vigente_hasta: vigenteHasta || null,
@@ -591,6 +605,27 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     <FormField label={t.prestaciones.viajes} name="viajes" type="checkbox" checked={viajes} onChange={(e) => setViajes(e.target.checked)} />
                     <FormField label={t.prestaciones.hospitalizacion} name="hospitalizacion" type="checkbox" checked={hospitalizacion} onChange={(e) => setHospitalizacion(e.target.checked)} />
                   </div>
+
+                  <FormField
+                    label={t.prestaciones.precio_guardia_adicional}
+                    name="precio_guardia_adicional"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={precioGuardiaAdicional}
+                    onChange={(e) => setPrecioGuardiaAdicional(e.target.value)}
+                    error={avisoDe('precio_guardia_adicional')}
+                  />
+                  <FormField
+                    label={t.prestaciones.precio_hora_adicional}
+                    name="precio_hora_adicional"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={precioHoraAdicional}
+                    onChange={(e) => setPrecioHoraAdicional(e.target.value)}
+                    error={avisoDe('precio_hora_adicional')}
+                  />
 
                   <FormField
                     label={t.prestaciones.vigente_desde}

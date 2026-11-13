@@ -258,7 +258,6 @@ describe('renglonesDeFactura', () => {
         unidad: null,
         precio_unitario: null,
         concepto: 'descuento',
-        recargo_del_adicional: null,
       },
     ]);
   });

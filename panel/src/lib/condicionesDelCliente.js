@@ -61,15 +61,10 @@ export const AJUSTES_POR_INDICE_POSIBLES = Object.freeze(Object.values(AJUSTES_P
 // El tiempo entre actualizaciones por índice: mensual, trimestral o semestral.
 export const MESES_ENTRE_ACTUALIZACIONES_POSIBLES = Object.freeze([1, 3, 6]);
 
-// Los bordes de los valores enteros.
-export const BORDES = Object.freeze({
-  recargo_del_adicional: Object.freeze({ minimo: 0, maximo: 500 }),
-});
-
 // Lo que rige cuando ni la Prestadora ni el Servicio dijeron nada.
-//   La medición de fábrica: se descuenta lo que no se prestó por causa de la Prestadora o del
-//   Asistente, se cobra lo que canceló el Cliente, y lo adicional se cobra al valor proporcional
-//   del precio pactado, sin recargo.
+//   La medición de fábrica: se descuentan las guardias no prestadas por causa de la Prestadora o
+//   del Asistente, se cobran las guardias canceladas por el Cliente, y se cobran las guardias y
+//   las horas adicionales.
 export const VALORES_DE_FABRICA_DEL_CLIENTE = Object.freeze({
   forma_de_precio: FORMAS_DE_PRECIO.DIRECTO,
   frecuencia_de_cobro: FRECUENCIAS_DE_COBRO_AL_CLIENTE.MES,
@@ -78,7 +73,6 @@ export const VALORES_DE_FABRICA_DEL_CLIENTE = Object.freeze({
   descuenta_lo_no_prestado: true,
   cobra_guardias_adicionales: true,
   cobra_horas_adicionales: true,
-  recargo_del_adicional: 0,
   indice_de_actualizacion: null,
   meses_entre_actualizaciones: 1,
   ajuste_por_indice: AJUSTES_POR_INDICE.REVISION_PREVIA,
@@ -93,7 +87,6 @@ const TIPOS = Object.freeze({
   descuenta_lo_no_prestado: { siNo: true },
   cobra_guardias_adicionales: { siNo: true },
   cobra_horas_adicionales: { siNo: true },
-  recargo_del_adicional: { entero: BORDES.recargo_del_adicional },
   indice_de_actualizacion: { codigo: true },
   meses_entre_actualizaciones: { entero: { valores: MESES_ENTRE_ACTUALIZACIONES_POSIBLES } },
   ajuste_por_indice: { lista: AJUSTES_POR_INDICE_POSIBLES },

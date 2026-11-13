@@ -115,7 +115,7 @@ export function seSuperponen(a, b) {
  *
  * @returns {{
  *   renglones: Array<{paciente_id, servicio_id, descripcion, monto, cantidad, unidad, precio_unitario,
- *     concepto, recargo_del_adicional}>,
+ *     concepto}>,
  *   total: number, moneda: string|null, monedasMezcladas: boolean,
  *   guardiasSinAsignar: number, guardiasAmbiguas: number, sinPrecio: number, sinCantidadPactada: number,
  *   medicionDesconocida: boolean,
@@ -140,10 +140,9 @@ export function armarLaFacturaDelPeriodo({ periodo, medicion, condiciones, prest
       cantidad: r.cantidad,
       unidad: r.unidad,
       precio_unitario: r.precio_unitario,
-      // De dónde sale el renglón, y el recargo que se le aplicó si es adicional: así el renglón
-      // descontado o adicional se explica solo, aunque las condiciones cambien después.
+      // De dónde sale el ítem: así el ítem descontado o adicional se explica solo, aunque las
+      // condiciones cambien después.
       concepto: r.concepto,
-      recargo_del_adicional: r.recargo_del_adicional ?? null,
     })),
     total: liquidacion.total,
     // Una factura tiene una sola moneda. Si en el mismo Servicio hay dos, no se arma: elegir una

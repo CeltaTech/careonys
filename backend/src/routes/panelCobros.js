@@ -38,6 +38,7 @@ import {
   tramoPedido,
 } from '../utils/facturaDelPeriodo.js';
 import { condicionDe, condicionesDe } from '../utils/condicionesDelCliente.js';
+import { descuentosDelPeriodo } from '../utils/descuentosDelPeriodo.js';
 import { horasEntre } from '../utils/horasDeGuardia.js';
 import { DATOS_PARA_FACTURAR } from '../utils/datosParaFacturar.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
@@ -491,9 +492,11 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
   // Cuándo se guardó el comprobante que baja el Cliente. Va la fecha y no la ruta del archivo: la ruta
   // no la necesita ninguna pantalla, y lo que no viaja no se filtra.
   let factura;
+  let items;
   try {
     nombres = await nombresDeClientes(db, [saldo.cliente_id]);
     factura = await facturaVisible(db, saldo.factura_id);
+    items = await itemsDeLaFactura(prestadoraId, db, saldo.factura_id);
   } catch (e) {
     return responderError(res, e);
   }
@@ -502,10 +505,152 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
     ...saldo,
     cliente_nombre: nombres.get(saldo.cliente_id) ?? null,
     comprobante_subido_at: factura?.comprobante_subido_at ?? null,
+    items,
     cobros: cobros || [],
     correcciones: correcciones || [],
   });
 });
+
+/**
+ * Los ítems de una factura, en el orden en que se guardaron. Cada ítem de descuento lleva la clase
+ * y el valor de su descuento, para que la pantalla lo nombre. Los descuentos son parte de las
+ * condiciones comerciales, que la base le abre sólo a quien puede editarlas: se leen con el
+ * trabajo de la Prestadora, igual que al generar la factura.
+ */
+async function itemsDeLaFactura(prestadoraId, db, facturaId) {
+  const { data, error } = await db
+    .from('facturas_cliente_items')
+    .select('id, descripcion, cantidad, unidad, precio_unitario, monto, moneda, concepto, descuento_id')
+    .eq('factura_id', facturaId)
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
+  if (error) throw new Error(error.message);
+  const items = data || [];
+
+  const descuentoIds = [...new Set(items.map((i) => i.descuento_id).filter(Boolean))];
+  const descuentos = new Map();
+  if (descuentoIds.length > 0) {
+    const respuesta = await enLaPrestadora(prestadoraId, 'lectura de los descuentos de una factura', (dbTrabajo) =>
+      dbTrabajo.from('descuentos_del_servicio').select('id, clase, valor, moneda').in('id', descuentoIds),
+    );
+    if (respuesta.error) throw new Error(respuesta.error.message);
+    for (const d of respuesta.data || []) descuentos.set(d.id, { clase: d.clase, valor: Number(d.valor), moneda: d.moneda });
+  }
+
+  return items.map((i) => ({
+    id: i.id,
+    concepto: i.concepto ?? null,
+    descripcion: i.descripcion,
+    cantidad: i.cantidad === null ? null : Number(i.cantidad),
+    unidad: i.unidad ?? null,
+    precio_unitario: i.precio_unitario === null ? null : Number(i.precio_unitario),
+    monto: Number(i.monto),
+    moneda: i.moneda,
+    descuento: i.descuento_id ? descuentos.get(i.descuento_id) ?? null : null,
+  }));
+}
+
+/** Los motivos con que contesta `fijar_precio_de_item_adicional`, y el código de cada uno. */
+const MOTIVOS_DEL_PRECIO_DEL_ITEM = { sin_permiso: 403, no_encontrado: 404, dato_invalido: 400 };
+
+/**
+ * Cambiar el precio unitario de un ítem adicional de una factura que todavía no se emitió.
+ *
+ * LA CUENTA SE HACE ACÁ Y LA BASE LA GUARDA ENTERA. El ítem cambia de monto, y con él el subtotal;
+ * los descuentos de la factura se vuelven a calcular sobre el subtotal nuevo con la misma función
+ * que los calculó al generarla, y la base guarda el ítem, los descuentos y el total en una sola
+ * operación. Los descuentos que se recalculan son los que la factura ya tiene: el período no cambió,
+ * así que no entra ni sale ninguno.
+ *
+ * LA BASE DECIDE SI SE PUEDE, con la sesión de quien pide: el permiso, que el ítem sea adicional y
+ * de su Prestadora, y que la factura no esté emitida ni tenga comprobante. El cambio queda en el
+ * registro de actividad con el precio anterior y el nuevo.
+ */
+panelCobrosRouter.put(
+  '/facturas/:facturaId/items/:itemId/precio',
+  requiereRolPanel,
+  requierePermiso('editar_condiciones_comerciales_servicio'),
+  async (req, res) => {
+    const precio = Number(req.body?.precio);
+    if (req.body?.precio === null || req.body?.precio === '' || !Number.isFinite(precio) || precio < 0) {
+      return res.status(400).json({ error: 'dato_invalido', motivo: 'dato_invalido' });
+    }
+    const precioRedondeado = aDosDecimales(precio);
+    const db = clienteDelPedido(req);
+
+    try {
+      const { data: factura, error: errorFactura } = await db
+        .from('facturas_cliente')
+        .select('id, periodo, periodo_hasta, moneda')
+        .eq('id', req.params.facturaId)
+        .maybeSingle();
+      if (errorFactura) throw new Error(errorFactura.message);
+      if (!factura) return res.status(404).json({ error: 'no_encontrado', motivo: 'no_encontrado' });
+
+      const { data: items, error: errorItems } = await db
+        .from('facturas_cliente_items')
+        .select('id, cantidad, monto, concepto, descuento_id')
+        .eq('factura_id', factura.id);
+      if (errorItems) throw new Error(errorItems.message);
+
+      const item = (items || []).find((i) => i.id === req.params.itemId);
+      if (!item || item.concepto !== 'adicional') {
+        return res.status(404).json({ error: 'no_encontrado', motivo: 'no_encontrado' });
+      }
+
+      // El subtotal nuevo: todos los ítems que no son descuento, con el editado a su precio nuevo.
+      const subtotal = (items || [])
+        .filter((i) => i.concepto !== 'descuento')
+        .reduce((suma, i) => suma + (i.id === item.id ? aDosDecimales(Number(i.cantidad) * precioRedondeado) : Number(i.monto)), 0);
+
+      // Los descuentos que la factura ya tiene, recalculados sobre el subtotal nuevo. Se les saca
+      // el fin para que todos toquen el período: ya se decidió al generarla que lo tocaban.
+      const descuentoIds = (items || []).filter((i) => i.concepto === 'descuento' && i.descuento_id).map((i) => i.descuento_id);
+      const importes = {};
+      if (descuentoIds.length > 0) {
+        const { data: descuentos, error: errorDescuentos } = await db
+          .from('descuentos_del_servicio')
+          .select('id, clase, valor, moneda, vigente_desde, cargado_en')
+          .in('id', descuentoIds);
+        if (errorDescuentos) throw new Error(errorDescuentos.message);
+        const periodo = { desde: String(factura.periodo).slice(0, 10), hasta: String(factura.periodo_hasta).slice(0, 10), orden: 1 };
+        const resultado = descuentosDelPeriodo({
+          descuentos: (descuentos || []).map((d) => ({
+            ...d,
+            vigente_desde: periodo.desde,
+            cantidad_de_periodos: null,
+            vigente_hasta: null,
+            terminado_en: null,
+          })),
+          periodo,
+          subtotal,
+          moneda: factura.moneda,
+        });
+        // El que se queda sin saldo queda en cero: el ítem sigue, y la factura dice que no alcanzó.
+        for (const id of descuentoIds) importes[id] = 0;
+        for (const r of resultado.renglones) importes[r.descuento_id] = r.importe;
+      }
+
+      const { error } = await db.rpc('fijar_precio_de_item_adicional', {
+        p_item: item.id,
+        p_precio: precioRedondeado,
+        p_descuentos: importes,
+      });
+      if (error) {
+        const motivo = Object.keys(MOTIVOS_DEL_PRECIO_DEL_ITEM).find((m) => error.message === m);
+        if (motivo) {
+          console.error(`[${MOTIVOS_DEL_PRECIO_DEL_ITEM[motivo]}] ${req.method} ${req.originalUrl} — ${motivo}`);
+          return res.status(MOTIVOS_DEL_PRECIO_DEL_ITEM[motivo]).json({ error: motivo, motivo });
+        }
+        throw new Error(error.message);
+      }
+
+      res.json({ items: await itemsDeLaFactura(req.usuarioPanel.prestadoraId, db, factura.id) });
+    } catch (e) {
+      return responderError(res, e);
+    }
+  },
+);
 
 // ---------------------------------------------------------------------------------------
 // Las facturas del período
@@ -594,7 +739,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
           .from('condiciones_comerciales_servicio')
           .select(
             'servicio_id, dias_hasta_el_vencimiento, frecuencia_de_cobro, medicion, cobra_cancelada_por_el_cliente, '
-              + 'descuenta_lo_no_prestado, cobra_guardias_adicionales, cobra_horas_adicionales, recargo_del_adicional',
+              + 'descuenta_lo_no_prestado, cobra_guardias_adicionales, cobra_horas_adicionales',
           )
           .in('servicio_id', servicioIds),
       );
@@ -646,7 +791,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   if (pacienteIds.length > 0) {
     const { data, error } = await db
       .from('prestaciones')
-      .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda, vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id')
+      .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda, vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id, precio_guardia_adicional, precio_hora_adicional')
       .eq('estado', 'vigente')
       .in('paciente_id', pacienteIds);
     if (error) return responderError(res, error);

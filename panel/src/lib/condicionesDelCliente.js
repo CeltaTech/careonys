@@ -58,9 +58,11 @@ export const FRECUENCIAS_DE_COBRO_POSIBLES = Object.freeze(Object.values(FRECUEN
 export const MEDICIONES_POSIBLES = Object.freeze(Object.values(MEDICIONES));
 export const AJUSTES_POR_INDICE_POSIBLES = Object.freeze(Object.values(AJUSTES_POR_INDICE));
 
+// El tiempo entre actualizaciones por índice: mensual, trimestral o semestral.
+export const MESES_ENTRE_ACTUALIZACIONES_POSIBLES = Object.freeze([1, 3, 6]);
+
 // Los bordes de los valores enteros.
 export const BORDES = Object.freeze({
-  meses_entre_actualizaciones: Object.freeze({ minimo: 1, maximo: 24 }),
   recargo_del_adicional: Object.freeze({ minimo: 0, maximo: 500 }),
 });
 
@@ -93,7 +95,7 @@ const TIPOS = Object.freeze({
   cobra_horas_adicionales: { siNo: true },
   recargo_del_adicional: { entero: BORDES.recargo_del_adicional },
   indice_de_actualizacion: { codigo: true },
-  meses_entre_actualizaciones: { entero: BORDES.meses_entre_actualizaciones },
+  meses_entre_actualizaciones: { entero: { valores: MESES_ENTRE_ACTUALIZACIONES_POSIBLES } },
   ajuste_por_indice: { lista: AJUSTES_POR_INDICE_POSIBLES },
 });
 
@@ -111,7 +113,9 @@ export function esValorDeLaCondicion(clave, valor) {
   const tipo = TIPOS[clave];
   if (tipo.siNo) return typeof valor === 'boolean';
   if (tipo.entero) {
-    return Number.isInteger(valor) && valor >= tipo.entero.minimo && valor <= tipo.entero.maximo;
+    if (!Number.isInteger(valor)) return false;
+    if (tipo.entero.valores) return tipo.entero.valores.includes(valor);
+    return valor >= tipo.entero.minimo && valor <= tipo.entero.maximo;
   }
   if (typeof valor !== 'string' || valor.trim() === '') return false;
   if (tipo.codigo) return true;

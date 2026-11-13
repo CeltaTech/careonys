@@ -9,7 +9,7 @@ import { con } from '../lib/textos';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
 
-export const RUTA_DE_LOS_AJUSTES_POR_INDICE = '/ajustes-por-indice';
+export const RUTA_DE_LOS_AJUSTES_POR_INDICE = '/revisar-precios';
 
 /* La franja que avisa que hay precios ajustados por índice esperando revisión.
    ==========================================================================

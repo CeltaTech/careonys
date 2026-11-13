@@ -1166,7 +1166,6 @@ function contadores(nombrados) {
     guardiasAmbiguas: 0,
     sinPrecio: 0,
     monedasMezcladas: 0,
-    descuentosSinAplicar: 0,
     ...nombrados,
   };
 }
@@ -1195,7 +1194,7 @@ describe('generar las facturas de un período', () => {
     assert.equal(descuento.descuento_id, 'd1');
   });
 
-  it('un descuento en otra moneda no se aplica y se cuenta aparte', async () => {
+  it('un descuento en otra moneda no se aplica', async () => {
     baseConUnCliente({
       prestaciones: [unaPrestacion()],
       descuentos: [
@@ -1208,7 +1207,7 @@ describe('generar las facturas de un período', () => {
     });
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
-    assert.deepEqual(cuerpo, contadores({ generadas: 1, descuentosSinAplicar: 1 }));
+    assert.deepEqual(cuerpo, contadores({ generadas: 1 }));
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
     assert.equal(Number(factura.cuerpo.monto_total), 10000);
   });

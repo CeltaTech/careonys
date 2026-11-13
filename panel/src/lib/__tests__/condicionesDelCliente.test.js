@@ -71,11 +71,13 @@ describe('esValorDeLaCondicion', () => {
     expect(esValorDeLaCondicion('descuenta_lo_no_prestado', 0)).toBe(false);
   });
 
-  it('los enteros respetan sus bordes', () => {
+  it('los enteros respetan sus bordes; los meses, sólo mensual, trimestral o semestral', () => {
     expect(esValorDeLaCondicion('meses_entre_actualizaciones', 1)).toBe(true);
-    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 24)).toBe(true);
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 3)).toBe(true);
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 6)).toBe(true);
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 2)).toBe(false);
+    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 24)).toBe(false);
     expect(esValorDeLaCondicion('meses_entre_actualizaciones', 0)).toBe(false);
-    expect(esValorDeLaCondicion('meses_entre_actualizaciones', 25)).toBe(false);
     expect(esValorDeLaCondicion('meses_entre_actualizaciones', 1.5)).toBe(false);
     expect(esValorDeLaCondicion('recargo_del_adicional', 0)).toBe(true);
     expect(esValorDeLaCondicion('recargo_del_adicional', 501)).toBe(false);

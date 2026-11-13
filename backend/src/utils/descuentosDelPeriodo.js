@@ -2,8 +2,8 @@
    ==========================================================================
 
    Un descuento es de un Cliente en su Servicio (`descuentos_del_servicio`): un porcentaje, o un
-   monto con su moneda, desde una fecha, por una cantidad de períodos de facturación o hasta una
-   fecha. Se ve aparte en la liquidación: cada descuento que se aplica es un renglón propio, que
+   monto con su moneda, desde una fecha, por una cantidad de períodos de facturación, hasta una
+   fecha o sin fin. Se ve aparte en la liquidación: cada descuento que se aplica es un renglón propio, que
    dice de qué descuento sale y cuánto resta, nunca un número suelto metido en el total.
 
    CUÁNDO SE APLICA EN UN PERÍODO
@@ -63,7 +63,7 @@ function aImporte(centavos) {
   return centavos / 100;
 }
 
-/** Si el descuento está bien escrito: clase conocida, valor positivo y un solo fin. */
+/** Si el descuento está bien escrito: clase conocida, valor positivo y a lo sumo un fin. */
 export function descuentoValido(descuento) {
   if (!descuento || !CLASES_DE_DESCUENTO_POSIBLES.includes(descuento.clase)) return false;
   const valor = Number(descuento.valor);
@@ -72,7 +72,8 @@ export function descuentoValido(descuento) {
   if (!fecha(descuento.vigente_desde)) return false;
   const conPeriodos = descuento.cantidad_de_periodos !== null && descuento.cantidad_de_periodos !== undefined;
   const conFecha = Boolean(fecha(descuento.vigente_hasta));
-  if (conPeriodos === conFecha) return false;
+  // Termina por una de dos, o no termina: el descuento sin fin rige hasta que se cambie.
+  if (conPeriodos && conFecha) return false;
   if (conPeriodos && !(Number.isInteger(Number(descuento.cantidad_de_periodos)) && Number(descuento.cantidad_de_periodos) >= 1)) return false;
   if (conFecha && fecha(descuento.vigente_hasta) < fecha(descuento.vigente_desde)) return false;
   return true;
@@ -110,6 +111,9 @@ export function tocaElPeriodo(descuento, periodo, orden) {
 
   const hasta = fecha(descuento.vigente_hasta);
   if (hasta) return hasta >= pDesde;
+
+  // Sin fin: alcanza a todo período desde que empieza.
+  if (descuento.cantidad_de_periodos === null || descuento.cantidad_de_periodos === undefined) return true;
 
   const n = Number(orden);
   if (orden === null || orden === undefined || !Number.isInteger(n)) return MOTIVOS_SIN_APLICAR.SIN_ORDEN;

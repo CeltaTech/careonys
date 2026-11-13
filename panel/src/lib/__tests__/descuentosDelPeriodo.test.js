@@ -221,9 +221,16 @@ describe('descuentoValido y datos mal escritos', () => {
     expect(descuentoValido(porcentaje(0))).toBe(false);
     expect(descuentoValido(porcentaje(101))).toBe(false);
     expect(descuentoValido(porcentaje(10, { vigente_hasta: '2027-05-01' }))).toBe(false);
-    expect(descuentoValido(porcentaje(10, { cantidad_de_periodos: null }))).toBe(false);
+    expect(descuentoValido(porcentaje(10, { cantidad_de_periodos: null }))).toBe(true);
     expect(descuentoValido(porcentaje(10, { cantidad_de_periodos: 1.5 }))).toBe(false);
     expect(descuentoValido(porcentaje(10, { cantidad_de_periodos: null, vigente_hasta: '2027-02-01' }))).toBe(false);
+  });
+
+  it('un descuento sin fin alcanza a todo período desde que empieza', () => {
+    const sinFin = porcentaje(10, { cantidad_de_periodos: null });
+    expect(tocaElPeriodo(sinFin, { desde: '2029-01-01', hasta: '2029-01-31' }, null)).toBe(true);
+    expect(tocaElPeriodo(sinFin, { desde: '2027-02-01', hasta: '2027-02-28' }, null)).toBe(false);
+    expect(tocaElPeriodo({ ...sinFin, terminado_en: '2027-06-10T12:00:00Z' }, { desde: '2027-06-01', hasta: '2027-06-30' }, null)).toBe(false);
   });
 
   it('un descuento mal escrito no resta y se informa', () => {

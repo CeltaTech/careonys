@@ -1,31 +1,31 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { mensajeDeError } from '../lib/errores';
 import { formatearImporte } from '../lib/dinero';
 import { mesDeLaFecha } from '../lib/ajustePorIndice';
-import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { Cabecera } from '../components/ui/Cabecera';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { EstadoLista } from '../components/layout/EstadoLista';
 
-/* Los precios ajustados por índice que esperan revisión.
+/* Revisar precios: los precios ajustados por índice que esperan revisión.
    ==========================================================================
 
-   La tarea diaria los deja propuestos cuando el Servicio se ajusta con revisión previa. Mientras
-   nadie los revisa, rige el precio anterior. Aceptar hace regir el precio nuevo desde el mes que
-   correspondía, aunque ya haya pasado; rechazar lo descarta, y el próximo ajuste se cuenta desde
-   ese mes. Las dos cosas las hace la base (`aceptar_propuesta_de_ajuste`,
-   `rechazar_propuesta_de_ajuste`) y quedan en el registro de actividad. Sólo la administración. */
+   Cada renglón trae el precio nuevo ya escrito. Quien revisa lo deja, lo corrige o vuelve a
+   escribir el actual, y aprieta Guardar. La base (`revisar_propuesta_de_ajuste`) hace regir el
+   precio desde el mes que correspondía, o deja todo como estaba si es el mismo precio actual, y
+   lo anota en el registro de actividad. Sin renglones pendientes, la página no tiene nada que
+   mostrar y vuelve a Estado actual. Sólo la administración. */
 export function AjustesPorIndice() {
   const { t, locale } = useLocale();
-  const pedirConfirmacion = useConfirmarDestructivo();
   const [estado, setEstado] = useState('cargando');
   const [errorDeCarga, setErrorDeCarga] = useState(null);
   const [propuestas, setPropuestas] = useState([]);
   const [indices, setIndices] = useState({});
-  const [revisando, setRevisando] = useState(null);
+  const [precios, setPrecios] = useState({});
+  const [guardando, setGuardando] = useState(null);
   const [error, setError] = useState(null);
 
   const cargar = useCallback(async () => {
@@ -41,11 +41,13 @@ export function AjustesPorIndice() {
     ]);
     const falla = lista.error || catalogo.error;
     if (falla) {
-      setErrorDeCarga(mensajeDeError(falla, t, 'ajustes por índice'));
+      setErrorDeCarga(mensajeDeError(falla, t, 'revisión de precios'));
       setEstado('error');
       return;
     }
-    setPropuestas(lista.data ?? []);
+    const filas = lista.data ?? [];
+    setPropuestas(filas);
+    setPrecios(Object.fromEntries(filas.map((p) => [p.id, String(p.precio_propuesto)])));
     setIndices(Object.fromEntries((catalogo.data ?? []).map((i) => [i.codigo, i.nombre])));
     setEstado('listo');
   }, [t]);
@@ -54,29 +56,28 @@ export function AjustesPorIndice() {
     cargar();
   }, [cargar]);
 
-  async function revisar(propuesta, aceptar) {
-    const ta = t.ajustes_por_indice;
-    const sigue = await pedirConfirmacion(
-      aceptar
-        ? { texto: ta.confirmar_aceptar, confirmar: ta.aceptar }
-        : { texto: ta.confirmar_rechazar, confirmar: ta.rechazar }
-    );
-    if (!sigue) return;
-    setRevisando(propuesta.id);
+  async function guardar(propuesta) {
+    const precio = Number(String(precios[propuesta.id] ?? '').replace(',', '.'));
     setError(null);
-    const { error: falla } = await supabase.rpc(
-      aceptar ? 'aceptar_propuesta_de_ajuste' : 'rechazar_propuesta_de_ajuste',
-      { p_propuesta: propuesta.id }
-    );
-    setRevisando(null);
+    if (!Number.isFinite(precio) || precio <= 0) {
+      setError(t.errores.motivos.dato_invalido);
+      return;
+    }
+    setGuardando(propuesta.id);
+    const { error: falla } = await supabase.rpc('revisar_propuesta_de_ajuste', {
+      p_propuesta: propuesta.id,
+      p_precio: precio,
+    });
+    setGuardando(null);
     if (falla) {
-      setError(mensajeDeError(falla, t, 'revisión de un ajuste por índice'));
-      // Otra persona pudo haberla revisado, o el precio cambió: se vuelve a leer la lista.
+      setError(mensajeDeError(falla, t, 'revisión de precios'));
       cargar();
       return;
     }
     setPropuestas((antes) => antes.filter((p) => p.id !== propuesta.id));
   }
+
+  if (estado === 'listo' && propuestas.length === 0 && !error) return <Navigate to="/" replace />;
 
   return (
     <ListaDeAjustesPorIndice
@@ -87,15 +88,17 @@ export function AjustesPorIndice() {
       recargar={cargar}
       propuestas={propuestas}
       indices={indices}
-      revisando={revisando}
+      precios={precios}
+      cambiarPrecio={(id, valor) => setPrecios((antes) => ({ ...antes, [id]: valor }))}
+      guardando={guardando}
       error={error}
-      revisar={revisar}
+      guardar={guardar}
     />
   );
 }
 
 // Lo que se dibuja, sin cargar ni guardar nada. Separado para poder probarlo con los textos nuevos.
-export function ListaDeAjustesPorIndice({ t, locale, estado, errorDeCarga, recargar, propuestas, indices, revisando, error, revisar }) {
+export function ListaDeAjustesPorIndice({ t, locale, estado, errorDeCarga, recargar, propuestas, indices, precios, cambiarPrecio, guardando, error, guardar }) {
   const ta = t.ajustes_por_indice;
   const tp = t.actualizacion_de_precios;
   return (
@@ -106,8 +109,7 @@ export function ListaDeAjustesPorIndice({ t, locale, estado, errorDeCarga, recar
         estado={estado}
         error={errorDeCarga}
         recargar={recargar}
-        vacio={propuestas.length === 0}
-        mensajeVacio={ta.sin_propuestas}
+        vacio={false}
       >
         <div className="tarjeta-desplazable"><table className="panel-tabla">
           <thead>
@@ -121,24 +123,27 @@ export function ListaDeAjustesPorIndice({ t, locale, estado, errorDeCarga, recar
             </tr>
           </thead>
           <tbody>
-            {propuestas.map((p) => {
-              const ocupada = revisando !== null;
-              return (
-                <tr key={p.id}>
-                  <td>{[p.servicio?.etiqueta, p.prestacion?.tipo_servicio].filter(Boolean).join(' — ') || '—'}</td>
-                  <td>{indices[p.indice] ?? p.indice}</td>
-                  <td>{formatearImporte(p.precio_actual, p.moneda, locale)}</td>
-                  <td>{formatearImporte(p.precio_propuesto, p.moneda, locale)}</td>
-                  <td>{mesDeLaFecha(p.rige_desde)}</td>
-                  <td>
-                    <div className="molde-acciones">
-                      <Button onClick={() => revisar(p, true)} disabled={ocupada}>{ta.aceptar}</Button>
-                      <Button variant="secondary" onClick={() => revisar(p, false)} disabled={ocupada}>{ta.rechazar}</Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {propuestas.map((p) => (
+              <tr key={p.id}>
+                <td>{[p.servicio?.etiqueta, p.prestacion?.tipo_servicio].filter(Boolean).join(' — ') || '—'}</td>
+                <td>{indices[p.indice] ?? p.indice}</td>
+                <td>{formatearImporte(p.precio_actual, p.moneda, locale)}</td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    aria-label={tp.precio_nuevo}
+                    value={precios?.[p.id] ?? ''}
+                    onChange={(e) => cambiarPrecio(p.id, e.target.value)}
+                  />
+                </td>
+                <td>{mesDeLaFecha(p.rige_desde)}</td>
+                <td>
+                  <Button onClick={() => guardar(p)} disabled={guardando !== null}>{t.comun.guardar}</Button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table></div>
       </EstadoLista>

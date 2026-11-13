@@ -716,7 +716,6 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   let guardiasAmbiguas = 0;
   let sinPrecio = 0;
   let monedasMezcladas = 0;
-  let descuentosSinAplicar = 0;
 
   for (const servicio of serviciosVisibles) {
     const comercial = comercialDelServicio.get(servicio.id);
@@ -767,7 +766,6 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         frecuencia: condiciones.frecuencia_de_cobro,
         servicioId: servicio.id,
       });
-      descuentosSinAplicar += conDescuentos.noAplicados.length;
       const renglones = conDescuentos.renglones;
       const montoTotal = aDosDecimales(conDescuentos.total);
 
@@ -815,7 +813,6 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
     guardiasAmbiguas,
     sinPrecio,
     monedasMezcladas,
-    descuentosSinAplicar,
   });
 });
 

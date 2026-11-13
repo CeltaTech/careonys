@@ -25,7 +25,6 @@ import {
 import { CONDICIONES_DE_CADA_MEDICION } from '../../lib/calcularLiquidacion';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { ActualizacionDelServicio } from '../../components/ActualizacionDelServicio';
-import { DescuentosDelServicio } from './DescuentosDelServicio';
 import '../../styles/molde-paginas.css';
 
 /* Lo comercial de un Servicio: quién contrata, quién paga, en qué plazo, y si quien paga firmó.
@@ -46,7 +45,10 @@ import '../../styles/molde-paginas.css';
    La configuración de la Prestadora sólo se la abre la base a la administración. Para el resto no
    se sabe qué rige desde arriba, así que lo que se muestra puede no ser lo de la Prestadora: por
    eso un casillero que no se tocó se guarda tal como estaba, y uno que se tocó se guarda con el
-   valor elegido, sin compararlo contra lo que no se pudo leer. */
+   valor elegido, sin compararlo contra lo que no se pudo leer.
+
+   EL DESCUENTO. Un solo número: el porcentaje que rige desde hoy y sin fin. Cambiarlo termina el
+   anterior y carga el nuevo (`fijar_descuento_del_servicio`); cero lo quita. */
 const SELECT_DE_LO_COMERCIAL = [
   'contratante_persona_id',
   'pagador_tipo',
@@ -104,12 +106,15 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [guardado, setGuardado] = useState(false);
+  const [descuento, setDescuento] = useState('');
+  const [descuentoGuardado, setDescuentoGuardado] = useState('');
+  const [descuentoMal, setDescuentoMal] = useState(false);
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
     setErrorDeCarga(null);
     const leeLaRegla = !!esAdmin && !!prestadoraId;
-    const [comercial, configuracion] = await Promise.all([
+    const [comercial, configuracion, descuentos] = await Promise.all([
       supabase
         .from('condiciones_comerciales_servicio')
         .select(SELECT_DE_LO_COMERCIAL)
@@ -123,9 +128,15 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
           .eq('prestadora_id', prestadoraId)
           .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      supabase
+        .from('descuentos_del_servicio')
+        .select('clase, valor, cantidad_de_periodos, vigente_hasta')
+        .eq('servicio_id', servicio.id)
+        .is('terminado_en', null),
     ]);
-    if (comercial.error) {
-      setErrorDeCarga(mensajeDeError(comercial.error, t));
+    const falla = comercial.error || descuentos.error;
+    if (falla) {
+      setErrorDeCarga(mensajeDeError(falla, t));
       setEstado('error');
       return;
     }
@@ -137,6 +148,13 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
     setTocadas(new Set());
     setRecargoMal(false);
     setForm(formDe(comercial.data, deLaPrestadora));
+    const abiertos = descuentos.data ?? [];
+    const unico = abiertos.length === 1 && abiertos[0].clase === 'porcentaje'
+      && abiertos[0].cantidad_de_periodos === null && abiertos[0].vigente_hasta === null;
+    const vigente = unico ? String(Number(abiertos[0].valor)) : '';
+    setDescuento(vigente);
+    setDescuentoGuardado(vigente);
+    setDescuentoMal(false);
     setEstado('listo');
   }, [servicio.id, t, esAdmin, prestadoraId]);
 
@@ -168,6 +186,13 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
   }
 
   async function guardar() {
+    const textoDescuento = String(descuento).trim().replace(',', '.');
+    const porcentaje = textoDescuento === '' ? 0 : Number(textoDescuento);
+    if (!Number.isFinite(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+      setDescuentoMal(true);
+      document.getElementsByName('descuento')[0]?.focus();
+      return;
+    }
     // Vacío es «no se acordó nada distinto», y rige el plazo de la Prestadora; no es cero.
     const plazo = plazoQueSePuedeGuardar(form.dias_hasta_el_vencimiento === '' ? '' : Number(form.dias_hasta_el_vencimiento));
     if (!plazo.ok) {
@@ -193,11 +218,26 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
         ...condiciones.valores,
       })
       .eq('servicio_id', servicio.id);
-    setGuardando(false);
     if (falla) {
+      setGuardando(false);
       setError(mensajeDeError(falla, t));
       return;
     }
+    if (textoDescuento !== String(descuentoGuardado).replace(',', '.')) {
+      const { error: fallaDescuento } = await supabase.rpc('fijar_descuento_del_servicio', {
+        p_servicio: servicio.id,
+        p_porcentaje: porcentaje,
+      });
+      if (fallaDescuento) {
+        setGuardando(false);
+        setError(mensajeDeError(fallaDescuento, t));
+        return;
+      }
+      const nuevo = porcentaje > 0 ? String(porcentaje) : '';
+      setDescuento(nuevo);
+      setDescuentoGuardado(nuevo);
+    }
+    setGuardando(false);
     setGuardado(true);
     // Lo guardado pasa a ser lo que está, y lo que se ve vuelve a salir de ahí.
     const nuevaFila = { ...fila, ...condiciones.valores };
@@ -313,6 +353,22 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
             </div>
           )
         )}
+        <FormField
+          label={t.descuentos_del_servicio.campo}
+          name="descuento"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          value={descuento}
+          error={descuentoMal ? t.descuentos_del_servicio.error_porcentaje : undefined}
+          onChange={(e) => {
+            setDescuento(e.target.value);
+            setDescuentoMal(false);
+            setGuardado(false);
+          }}
+          disabled={!puedeEditar}
+        />
       </div>
       {puedeEditar && (
         <div className="molde-acciones">
@@ -323,8 +379,6 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
       )}
       {/* Cómo se actualiza el precio de este Servicio. Lo construye otro trabajo, en su propio archivo. */}
       <ActualizacionDelServicio servicioId={servicio.id} />
-      {/* Los descuentos de este Cliente en su Servicio: cada uno se ve aparte en la liquidación. */}
-      <DescuentosDelServicio servicio={servicio} puedeEditar={puedeEditar} />
       {/* Si el Responsable de pagos firmó y qué documentos faltan. Avisa, no bloquea. */}
       <EstadoDelPagador
         servicioId={servicio.id}

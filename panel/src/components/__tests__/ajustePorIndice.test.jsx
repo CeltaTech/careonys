@@ -18,31 +18,21 @@ import { T } from '../../i18n/translations.js';
 const base = T['es-AR'];
 const t = {
   ...base,
-  actualizacion_de_precios: { ...base.actualizacion_de_precios, sin_indice: 'Ninguno' },
+  actualizacion_de_precios: { ...base.actualizacion_de_precios, sin_indice: 'Manual' },
   configuracion: {
     ...base.configuracion,
     condiciones_cliente: {
       ...base.configuracion.condiciones_cliente,
-      meses_entre_actualizaciones: 'Meses entre actualizaciones',
+      meses_entre_actualizaciones: 'Tiempo entre actualizaciones',
       ajuste_por_indice: 'Ajuste',
       valores: {
         ...base.configuracion.condiciones_cliente.valores,
+        meses_entre_actualizaciones: { 1: 'Mensual', 3: 'Trimestral', 6: 'Semestral' },
         ajuste_por_indice: { automatico: 'Automático', revision_previa: 'Con revisión previa' },
       },
     },
   },
-  ajustes_por_indice: {
-    titulo: 'Ajustes por índice',
-    alarma_una: 'Hay {cantidad} precio ajustado por índice para revisar.',
-    alarma_varias: 'Hay {cantidad} precios ajustados por índice para revisar.',
-    revisar: 'Revisar',
-    sin_propuestas: 'No hay precios para revisar.',
-    col_servicio: 'Servicio',
-    aceptar: 'Aceptar',
-    rechazar: 'Rechazar',
-    confirmar_aceptar: 'x',
-    confirmar_rechazar: 'x',
-  },
+
 };
 
 vi.mock('../../i18n/LocaleContext', () => ({ useLocale: () => ({ t, locale: 'es-AR' }) }));
@@ -81,13 +71,15 @@ const texto = (etiqueta, contenido) => `>${contenido}</${etiqueta}>`;
 const opcion = (valor, contenido) => `<option value="${valor}" selected="">${contenido}</option>`;
 
 describe('los casilleros del ajuste del Servicio', () => {
-  it('índice con «Ninguno», meses y ajuste; sin forma ni «La de la configuración»', () => {
+  it('índice con «Manual», meses y ajuste; sin forma ni «La de la configuración»', () => {
     const html = ajuste();
     expect(html).toContain('Índice de actualización');
-    expect(html).toContain(texto('option', 'Ninguno'));
+    expect(html).toContain(texto('option', 'Manual'));
     expect(html).toContain(opcion('ipc', 'IPC'));
-    expect(html).toContain('Meses entre actualizaciones');
-    expect(html).toContain('value="3"');
+    expect(html).toContain('Tiempo entre actualizaciones');
+    expect(html).toContain(opcion('3', 'Trimestral'));
+    expect(html).toContain(texto('option', 'Mensual'));
+    expect(html).toContain(texto('option', 'Semestral'));
     expect(html).toContain(opcion('automatico', 'Automático'));
     expect(html).not.toContain('La de la configuración');
     expect(html).not.toContain('Forma de actualización');
@@ -95,8 +87,8 @@ describe('los casilleros del ajuste del Servicio', () => {
 
   it('sin índice que rija, no hay meses ni ajuste', () => {
     const html = ajuste({ conIndice: false, casilleros: { indice_de_actualizacion: 'ninguno', meses_entre_actualizaciones: '1', ajuste_por_indice: 'revision_previa' } });
-    expect(html).toContain(opcion('ninguno', 'Ninguno'));
-    expect(html).not.toContain('Meses entre actualizaciones');
+    expect(html).toContain(opcion('ninguno', 'Manual'));
+    expect(html).not.toContain('Tiempo entre actualizaciones');
     expect(html).not.toContain('Automático');
   });
 
@@ -107,7 +99,7 @@ describe('los casilleros del ajuste del Servicio', () => {
   });
 
   it('el dato mal cargado se dice al pie de su casillero', () => {
-    expect(ajuste({ claveMal: 'meses_entre_actualizaciones' })).toContain(base.configuracion.condiciones_cliente.meses_fuera_de_borde);
+    expect(ajuste({ claveMal: 'meses_entre_actualizaciones' })).toContain(base.formularios.falta_un_dato_obligatorio);
     expect(ajuste({ claveMal: 'ajuste_por_indice' })).toContain(base.formularios.falta_un_dato_obligatorio);
   });
 
@@ -134,7 +126,7 @@ describe('la franja de la administración', () => {
   it('con propuestas pendientes avisa cuántas y lleva a revisarlas', () => {
     const html = franja({ estado: 'listo', cantidad: 3 });
     expect(html).toContain('Hay 3 precios ajustados por índice para revisar.');
-    expect(html).toContain('href="/ajustes-por-indice"');
+    expect(html).toContain('href="/revisar-precios"');
     expect(franja({ estado: 'listo', cantidad: 1 })).toContain('Hay 1 precio ajustado');
   });
 
@@ -170,32 +162,28 @@ function lista(props = {}) {
       recargar={nada}
       propuestas={[PROPUESTA]}
       indices={{ ipc: 'IPC' }}
-      revisando={null}
-      revisar={nada}
+      precios={{ p1: '1100' }}
+      cambiarPrecio={nada}
+      guardando={null}
+      guardar={nada}
       {...props}
     />
   );
 }
 
 describe('la lista de revisión', () => {
-  it('muestra el Servicio, el índice, los dos precios con su moneda y el mes desde el que rige', () => {
+  it('muestra el Servicio, el índice, el precio actual con su moneda, el nuevo para corregir y el mes', () => {
     const html = lista();
     expect(html).toContain('Servicio de prueba — Acompañamiento');
     expect(html).toContain(texto('td', 'IPC'));
     expect(html).toMatch(/1\.000/);
-    expect(html).toMatch(/1\.100/);
+    expect(html).toContain('value="1100"');
     expect(html).toContain('03/2026');
-    expect(html).toContain(texto('button', 'Aceptar'));
-    expect(html).toContain(texto('button', 'Rechazar'));
+    expect(html).toContain(texto('button', base.comun.guardar));
   });
 
-  it('mientras se revisa una, los botones se apagan', () => {
-    const html = lista({ revisando: 'p1' });
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Aceptar/);
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Rechazar/);
-  });
-
-  it('sin propuestas, lo dice', () => {
-    expect(lista({ propuestas: [] })).toContain('No hay precios para revisar.');
+  it('mientras guarda uno, los botones se apagan', () => {
+    expect(lista({ guardando: 'p1' })).toMatch(/<button[^>]*disabled=""[^>]*>/);
+    expect(lista()).not.toMatch(/<button[^>]*disabled=""[^>]*>/);
   });
 });

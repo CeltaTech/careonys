@@ -15,8 +15,6 @@ import {
   ajusteQueSePuedeGuardar,
   casillerosDelAjuste,
   mesDeLaFecha,
-  MESES_MAXIMO,
-  MESES_MINIMO,
 } from '../ajustePorIndice';
 
 const CON_INDICE = { indice_de_actualizacion: 'ipc', meses_entre_actualizaciones: 3, ajuste_por_indice: 'automatico' };
@@ -48,9 +46,9 @@ describe('casillerosDelAjuste', () => {
       meses_entre_actualizaciones: '1',
       ajuste_por_indice: 'revision_previa',
     });
-    expect(casillerosDelAjuste(CON_INDICE, { meses_entre_actualizaciones: 12 })).toEqual({
+    expect(casillerosDelAjuste(CON_INDICE, { meses_entre_actualizaciones: 6 })).toEqual({
       indice_de_actualizacion: 'ipc',
-      meses_entre_actualizaciones: '12',
+      meses_entre_actualizaciones: '6',
       ajuste_por_indice: 'automatico',
     });
   });
@@ -86,10 +84,11 @@ describe('ajusteQueSePuedeGuardar', () => {
     });
   });
 
-  it('meses fuera de los bordes se rechazan diciendo cuál', () => {
-    const elegido = { indice_de_actualizacion: 'ipc', meses_entre_actualizaciones: String(MESES_MAXIMO + 1), ajuste_por_indice: 'automatico' };
+  it('meses que no son mensual, trimestral ni semestral se rechazan diciendo cuál', () => {
+    const elegido = { indice_de_actualizacion: 'ipc', meses_entre_actualizaciones: '2', ajuste_por_indice: 'automatico' };
     expect(ajusteQueSePuedeGuardar(null, elegido)).toEqual({ ok: false, clave: 'meses_entre_actualizaciones' });
-    expect(ajusteQueSePuedeGuardar(null, { ...elegido, meses_entre_actualizaciones: String(MESES_MINIMO - 1) }).ok).toBe(false);
+    expect(ajusteQueSePuedeGuardar(null, { ...elegido, meses_entre_actualizaciones: '24' }).ok).toBe(false);
+    expect(ajusteQueSePuedeGuardar(null, { ...elegido, meses_entre_actualizaciones: '6' }).ok).toBe(true);
     expect(ajusteQueSePuedeGuardar(null, { ...elegido, meses_entre_actualizaciones: '3', ajuste_por_indice: 'otro' })).toEqual({ ok: false, clave: 'ajuste_por_indice' });
   });
 

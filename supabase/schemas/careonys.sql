@@ -1069,11 +1069,9 @@ CREATE OR REPLACE FUNCTION "interno"."condiciones_del_ajuste_por_indice"("p_regl
            THEN NULLIF(btrim(p_regla ->> 'indice_de_actualizacion'), '') END
     ), 'ninguno'),
     coalesce(
-      CASE WHEN p_meses_del_servicio BETWEEN 1 AND 24 THEN p_meses_del_servicio END,
+      CASE WHEN p_meses_del_servicio IN (1, 3, 6) THEN p_meses_del_servicio END,
       CASE WHEN jsonb_typeof(p_regla -> 'meses_entre_actualizaciones') = 'number'
-            AND (p_regla ->> 'meses_entre_actualizaciones')::numeric
-                = trunc((p_regla ->> 'meses_entre_actualizaciones')::numeric)
-            AND (p_regla ->> 'meses_entre_actualizaciones')::numeric BETWEEN 1 AND 24
+            AND (p_regla ->> 'meses_entre_actualizaciones') IN ('1', '3', '6')
            THEN (p_regla ->> 'meses_entre_actualizaciones')::integer END,
       1),
     coalesce(
@@ -5620,69 +5618,6 @@ $$;
 ALTER FUNCTION "public"."aceptar_asignacion"("p_asignacion_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."aceptar_propuesta_de_ajuste"("p_propuesta" "uuid") RETURNS bigint
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO ''
-    AS $$
-DECLARE
-  v_prest   uuid := interno.prestadora_actual();
-  v_quien   uuid := interno.usuario_de_la_sesion();
-  pr        public.propuestas_de_ajuste_por_indice;
-  p         public.prestaciones;
-  v_nueva   bigint;
-BEGIN
-  IF v_prest IS NULL OR v_quien IS NULL
-     OR NOT interno.es_la_administracion_de_la_prestadora(v_prest) THEN
-    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT * INTO pr FROM public.propuestas_de_ajuste_por_indice
-   WHERE id = p_propuesta AND prestadora_id = v_prest
-   FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
-  END IF;
-  IF pr.estado <> 'pendiente' THEN
-    RAISE EXCEPTION 'ya_revisada' USING ERRCODE = 'P0001';
-  END IF;
-
-  SELECT * INTO p FROM public.prestaciones
-   WHERE id = pr.prestacion_id AND prestadora_id = v_prest
-   FOR UPDATE;
-  IF NOT FOUND OR p.estado <> 'vigente' OR p.vigente_hasta IS NOT NULL
-     OR p.precio_final <> pr.precio_actual THEN
-    RAISE EXCEPTION 'ya_reemplazado' USING ERRCODE = 'P0001';
-  END IF;
-
-  -- Rige desde el mes que correspondía, aunque ya haya pasado.
-  v_nueva := interno.copiar_renglon('public.prestaciones', p.id, jsonb_build_object(
-    'precio_final', pr.precio_propuesto,
-    'precio_lista_snapshot', CASE WHEN p.precio_lista_snapshot IS NULL THEN NULL
-                                  ELSE round(p.precio_lista_snapshot * pr.precio_propuesto / pr.precio_actual, 2) END,
-    'vigente_desde', pr.rige_desde,
-    'vigente_hasta', NULL,
-    'requiere_revision', false,
-    'prestacion_anterior_id', p.id
-  ));
-
-  UPDATE public.propuestas_de_ajuste_por_indice
-     SET estado = 'aceptada', revisada_por = v_quien, revisada_en = now(), prestacion_nueva_id = v_nueva
-   WHERE id = pr.id;
-
-  INSERT INTO public.registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
-  VALUES (v_prest, v_quien, 'ajuste_por_indice_aceptado', 'propuestas_de_ajuste_por_indice', pr.id,
-          jsonb_build_object('prestacion_id', p.id, 'prestacion_nueva_id', v_nueva,
-                             'servicio_id', pr.servicio_id, 'indice', pr.indice,
-                             'precio_anterior', pr.precio_actual, 'precio_nuevo', pr.precio_propuesto,
-                             'moneda', pr.moneda, 'rige_desde', pr.rige_desde));
-  RETURN v_nueva;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."aceptar_propuesta_de_ajuste"("p_propuesta" "uuid") OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."activar_la_cuenta"("p_codigo" "text", "p_clave" "text", "p_usuario" "text") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -7391,6 +7326,48 @@ $$;
 
 
 ALTER FUNCTION "public"."exigir_paciente_del_turno"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."fijar_descuento_del_servicio"("p_servicio" "uuid", "p_porcentaje" numeric) RETURNS "void"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+BEGIN
+  IF v_prest IS NULL THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_servicio IS NULL OR p_porcentaje IS NULL OR p_porcentaje < 0 OR p_porcentaje > 100 THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- El mismo porcentaje que ya rige, abierto y sin fin: no hay nada que cambiar.
+  IF p_porcentaje > 0 AND EXISTS (
+    SELECT 1 FROM public.descuentos_del_servicio d
+     WHERE d.servicio_id = p_servicio AND d.prestadora_id = v_prest AND d.terminado_en IS NULL
+       AND d.clase = 'porcentaje' AND d.valor = p_porcentaje
+       AND d.cantidad_de_periodos IS NULL AND d.vigente_hasta IS NULL
+  ) AND (
+    SELECT count(*) FROM public.descuentos_del_servicio d
+     WHERE d.servicio_id = p_servicio AND d.prestadora_id = v_prest AND d.terminado_en IS NULL
+  ) = 1 THEN
+    RETURN;
+  END IF;
+
+  UPDATE public.descuentos_del_servicio
+     SET terminado_en = now()
+   WHERE servicio_id = p_servicio AND prestadora_id = v_prest AND terminado_en IS NULL;
+
+  IF p_porcentaje > 0 THEN
+    INSERT INTO public.descuentos_del_servicio (prestadora_id, servicio_id, clase, valor, vigente_desde)
+    VALUES (v_prest, p_servicio, 'porcentaje', p_porcentaje, current_date);
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."fijar_descuento_del_servicio"("p_servicio" "uuid", "p_porcentaje" numeric) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"() RETURNS "trigger"
@@ -9104,47 +9081,6 @@ $$;
 ALTER FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."rechazar_propuesta_de_ajuste"("p_propuesta" "uuid") RETURNS "void"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO ''
-    AS $$
-DECLARE
-  v_prest   uuid := interno.prestadora_actual();
-  v_quien   uuid := interno.usuario_de_la_sesion();
-  pr        public.propuestas_de_ajuste_por_indice;
-BEGIN
-  IF v_prest IS NULL OR v_quien IS NULL
-     OR NOT interno.es_la_administracion_de_la_prestadora(v_prest) THEN
-    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT * INTO pr FROM public.propuestas_de_ajuste_por_indice
-   WHERE id = p_propuesta AND prestadora_id = v_prest
-   FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
-  END IF;
-  IF pr.estado <> 'pendiente' THEN
-    RAISE EXCEPTION 'ya_revisada' USING ERRCODE = 'P0001';
-  END IF;
-
-  UPDATE public.propuestas_de_ajuste_por_indice
-     SET estado = 'rechazada', revisada_por = v_quien, revisada_en = now()
-   WHERE id = pr.id;
-
-  INSERT INTO public.registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
-  VALUES (v_prest, v_quien, 'ajuste_por_indice_rechazado', 'propuestas_de_ajuste_por_indice', pr.id,
-          jsonb_build_object('prestacion_id', pr.prestacion_id, 'servicio_id', pr.servicio_id,
-                             'indice', pr.indice, 'precio_actual', pr.precio_actual,
-                             'precio_propuesto', pr.precio_propuesto, 'moneda', pr.moneda,
-                             'rige_desde', pr.rige_desde));
-END;
-$$;
-
-
-ALTER FUNCTION "public"."rechazar_propuesta_de_ajuste"("p_propuesta" "uuid") OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."reemplazar_poder_del_apoderado"("p_cliente" "uuid", "p_funcion" "text", "p_archivo" "text", "p_usuario" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -9486,6 +9422,84 @@ ALTER FUNCTION "public"."resumen_cobros_de_factura"("p_factura_id" "uuid") OWNER
 
 COMMENT ON FUNCTION "public"."resumen_cobros_de_factura"("p_factura_id" "uuid") IS 'Lo que entró contra una factura: cuánto, cuántas veces, cuándo fue lo último y por qué orígenes. Los cobros anulados no cuentan.';
 
+
+
+CREATE OR REPLACE FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+  v_prest   uuid := interno.prestadora_actual();
+  v_quien   uuid := interno.usuario_de_la_sesion();
+  pr        public.propuestas_de_ajuste_por_indice;
+  p         public.prestaciones;
+  v_precio  numeric := round(p_precio, 2);
+  v_nueva   bigint;
+BEGIN
+  IF v_prest IS NULL OR v_quien IS NULL
+     OR NOT interno.es_la_administracion_de_la_prestadora(v_prest) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF v_precio IS NULL OR v_precio <= 0 THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT * INTO pr FROM public.propuestas_de_ajuste_por_indice
+   WHERE id = p_propuesta AND prestadora_id = v_prest
+   FOR UPDATE;
+  IF NOT FOUND OR pr.estado <> 'pendiente' THEN
+    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
+  END IF;
+
+  -- El mismo precio actual: no cambia nada.
+  IF v_precio = pr.precio_actual THEN
+    UPDATE public.propuestas_de_ajuste_por_indice
+       SET estado = 'rechazada', revisada_por = v_quien, revisada_en = now()
+     WHERE id = pr.id;
+
+    INSERT INTO public.registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
+    VALUES (v_prest, v_quien, 'ajuste_por_indice_rechazado', 'propuestas_de_ajuste_por_indice', pr.id,
+            jsonb_build_object('prestacion_id', pr.prestacion_id, 'servicio_id', pr.servicio_id,
+                               'indice', pr.indice, 'precio_actual', pr.precio_actual,
+                               'precio_propuesto', pr.precio_propuesto, 'moneda', pr.moneda,
+                               'rige_desde', pr.rige_desde));
+    RETURN;
+  END IF;
+
+  SELECT * INTO p FROM public.prestaciones
+   WHERE id = pr.prestacion_id AND prestadora_id = v_prest
+   FOR UPDATE;
+  IF NOT FOUND OR p.estado <> 'vigente' OR p.vigente_hasta IS NOT NULL
+     OR p.precio_final <> pr.precio_actual THEN
+    RAISE EXCEPTION 'ya_reemplazado' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Rige desde el mes que correspondía, aunque ya haya pasado.
+  v_nueva := interno.copiar_renglon('public.prestaciones', p.id, jsonb_build_object(
+    'precio_final', v_precio,
+    'precio_lista_snapshot', CASE WHEN p.precio_lista_snapshot IS NULL THEN NULL
+                                  ELSE round(p.precio_lista_snapshot * v_precio / pr.precio_actual, 2) END,
+    'vigente_desde', pr.rige_desde,
+    'vigente_hasta', NULL,
+    'requiere_revision', false,
+    'prestacion_anterior_id', p.id
+  ));
+
+  UPDATE public.propuestas_de_ajuste_por_indice
+     SET estado = 'aceptada', revisada_por = v_quien, revisada_en = now(), prestacion_nueva_id = v_nueva
+   WHERE id = pr.id;
+
+  INSERT INTO public.registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
+  VALUES (v_prest, v_quien, 'ajuste_por_indice_aceptado', 'propuestas_de_ajuste_por_indice', pr.id,
+          jsonb_build_object('prestacion_id', p.id, 'prestacion_nueva_id', v_nueva,
+                             'servicio_id', pr.servicio_id, 'indice', pr.indice,
+                             'precio_anterior', pr.precio_actual, 'precio_propuesto', pr.precio_propuesto,
+                             'precio_nuevo', v_precio, 'moneda', pr.moneda, 'rige_desde', pr.rige_desde));
+END;
+$$;
+
+
+ALTER FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."revisar_apoderado"("p_id" "uuid", "p_aprobar" boolean, "p_motivo" "text" DEFAULT NULL::"text") RETURNS boolean
@@ -11444,7 +11458,7 @@ CREATE TABLE IF NOT EXISTS "public"."condiciones_comerciales_servicio" (
     CONSTRAINT "condiciones_comerciales_medicion_conocida" CHECK ((("medicion" IS NULL) OR ("medicion" = ANY (ARRAY['pactado_mas_excedente'::"text", 'hora'::"text", 'dia_de_guardia'::"text"])))),
     CONSTRAINT "condiciones_comerciales_pagador_conocido" CHECK ((("pagador_tipo" IS NULL) OR ("pagador_tipo" = ANY (ARRAY['cliente'::"text", 'obra_social'::"text", 'otro'::"text"])))),
     CONSTRAINT "condiciones_comerciales_plazo_razonable" CHECK ((("dias_hasta_el_vencimiento" IS NULL) OR (("dias_hasta_el_vencimiento" >= 0) AND ("dias_hasta_el_vencimiento" <= 365)))),
-    CONSTRAINT "condiciones_comerciales_servi_meses_entre_actualizaciones_check" CHECK ((("meses_entre_actualizaciones" >= 1) AND ("meses_entre_actualizaciones" <= 24))),
+    CONSTRAINT "condiciones_comerciales_servi_meses_entre_actualizaciones_check" CHECK (("meses_entre_actualizaciones" = ANY (ARRAY[1, 3, 6]))),
     CONSTRAINT "condiciones_comerciales_servicio_ajuste_por_indice_check" CHECK (("ajuste_por_indice" = ANY (ARRAY['automatico'::"text", 'revision_previa'::"text"]))),
     CONSTRAINT "condiciones_comerciales_servicio_recargo_del_adicional_check" CHECK ((("recargo_del_adicional" >= 0) AND ("recargo_del_adicional" <= 500)))
 );
@@ -12526,7 +12540,7 @@ CREATE TABLE IF NOT EXISTS "public"."descuentos_del_servicio" (
     CONSTRAINT "descuentos_del_servicio_periodos_razonables" CHECK ((("cantidad_de_periodos" IS NULL) OR (("cantidad_de_periodos" >= 1) AND ("cantidad_de_periodos" <= 999)))),
     CONSTRAINT "descuentos_del_servicio_porcentaje_hasta_cien" CHECK ((("clase" <> 'porcentaje'::"text") OR ("valor" <= (100)::numeric))),
     CONSTRAINT "descuentos_del_servicio_terminacion_completa" CHECK ((("terminado_en" IS NULL) = ("terminado_por" IS NULL))),
-    CONSTRAINT "descuentos_del_servicio_un_solo_fin" CHECK (("num_nonnulls"("cantidad_de_periodos", "vigente_hasta") = 1)),
+    CONSTRAINT "descuentos_del_servicio_un_solo_fin" CHECK (("num_nonnulls"("cantidad_de_periodos", "vigente_hasta") <= 1)),
     CONSTRAINT "descuentos_del_servicio_valor_positivo" CHECK (("valor" > (0)::numeric))
 );
 
@@ -12534,7 +12548,7 @@ CREATE TABLE IF NOT EXISTS "public"."descuentos_del_servicio" (
 ALTER TABLE "public"."descuentos_del_servicio" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."descuentos_del_servicio" IS 'Descuentos a un Cliente en su Servicio: porcentaje o monto con su moneda, desde una fecha, por N períodos de facturación o hasta una fecha. No se borran: se terminan. Los aplica descuentosDelPeriodo.js.';
+COMMENT ON TABLE "public"."descuentos_del_servicio" IS 'Descuentos a un Cliente en su Servicio: porcentaje o monto con su moneda, desde una fecha, por N períodos de facturación, hasta una fecha o sin fin. No se borran: se terminan. Los aplica descuentosDelPeriodo.js.';
 
 
 
@@ -28487,9 +28501,6 @@ GRANT ALL ON FUNCTION "public"."aceptar_asignacion"("p_asignacion_id" "uuid") TO
 
 
 
-REVOKE ALL ON FUNCTION "public"."aceptar_propuesta_de_ajuste"("p_propuesta" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."aceptar_propuesta_de_ajuste"("p_propuesta" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "public"."aceptar_propuesta_de_ajuste"("p_propuesta" "uuid") TO "authenticated";
 
 
 
@@ -28803,6 +28814,12 @@ GRANT ALL ON FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_c
 
 REVOKE ALL ON FUNCTION "public"."exigir_paciente_del_turno"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."exigir_paciente_del_turno"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."fijar_descuento_del_servicio"("p_servicio" "uuid", "p_porcentaje" numeric) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."fijar_descuento_del_servicio"("p_servicio" "uuid", "p_porcentaje" numeric) TO "service_role";
+GRANT ALL ON FUNCTION "public"."fijar_descuento_del_servicio"("p_servicio" "uuid", "p_porcentaje" numeric) TO "authenticated";
 
 
 
@@ -29135,9 +29152,6 @@ GRANT ALL ON FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id"
 
 
 
-REVOKE ALL ON FUNCTION "public"."rechazar_propuesta_de_ajuste"("p_propuesta" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."rechazar_propuesta_de_ajuste"("p_propuesta" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "public"."rechazar_propuesta_de_ajuste"("p_propuesta" "uuid") TO "authenticated";
 
 
 
@@ -29181,6 +29195,12 @@ REVOKE ALL ON FUNCTION "public"."resumen_cobros_de_factura"("p_factura_id" "uuid
 GRANT ALL ON FUNCTION "public"."resumen_cobros_de_factura"("p_factura_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."resumen_cobros_de_factura"("p_factura_id" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "public"."resumen_cobros_de_factura"("p_factura_id" "uuid") TO "trabajo_sin_persona";
+
+
+
+REVOKE ALL ON FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) TO "service_role";
+GRANT ALL ON FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) TO "authenticated";
 
 
 

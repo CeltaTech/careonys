@@ -23,6 +23,7 @@ import {
   condicionesQueSePuedenGuardar,
 } from '../../lib/condicionesDelCliente';
 import { CONDICIONES_DE_CADA_MEDICION } from '../../lib/calcularLiquidacion';
+import { MESES_POSIBLES, textoDeMeses } from '../../lib/ajustePorIndice';
 import '../../styles/molde-paginas.css';
 
 /* A qué plazo pagan los Clientes lo que se les factura.
@@ -328,14 +329,15 @@ export function FacturacionClientesTab() {
               <FormField
                 label={t.configuracion.condiciones_cliente.meses_entre_actualizaciones}
                 name="meses_entre_actualizaciones"
-                type="number"
-                min={BORDES.meses_entre_actualizaciones.minimo}
-                max={BORDES.meses_entre_actualizaciones.maximo}
-                step="1"
-                value={condiciones.meses_entre_actualizaciones ?? ''}
-                error={errorDe('meses_entre_actualizaciones', t.configuracion.condiciones_cliente.meses_fuera_de_borde)}
+                type="select"
+                value={String(condiciones.meses_entre_actualizaciones ?? VALORES_DE_FABRICA_DEL_CLIENTE.meses_entre_actualizaciones)}
+                error={errorDe('meses_entre_actualizaciones', t.formularios.falta_un_dato_obligatorio)}
                 onChange={cambiarCondicion('meses_entre_actualizaciones')}
-              />
+              >
+                {MESES_POSIBLES.map((n) => (
+                  <option key={n} value={String(n)}>{textoDeMeses(t.configuracion.condiciones_cliente, n)}</option>
+                ))}
+              </FormField>
               <FormField
                 label={t.configuracion.condiciones_cliente.ajuste_por_indice}
                 name="ajuste_por_indice"

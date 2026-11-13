@@ -1,5 +1,5 @@
 import {
-  BORDES,
+  MESES_ENTRE_ACTUALIZACIONES_POSIBLES,
   SIN_INDICE,
   condicionDe,
   condicionDelServicioQueSePuedeGuardar,
@@ -70,8 +70,12 @@ export function ajusteQueSePuedeGuardar(regla, elegido) {
   return { ok: true, valores };
 }
 
-export const MESES_MINIMO = BORDES.meses_entre_actualizaciones.minimo;
-export const MESES_MAXIMO = BORDES.meses_entre_actualizaciones.maximo;
+// Mensual, trimestral o semestral. `tc` es `t.configuracion.condiciones_cliente`.
+export const MESES_POSIBLES = MESES_ENTRE_ACTUALIZACIONES_POSIBLES;
+
+export function textoDeMeses(tc, cantidad) {
+  return tc.valores.meses_entre_actualizaciones[cantidad];
+}
 
 // «2026-03-01» → «03/2026». La fecha de la base es un día, no un instante: se la corta como texto
 // para que la zona horaria del navegador no la corra al mes anterior.

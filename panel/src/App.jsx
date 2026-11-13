@@ -181,7 +181,7 @@ function App() {
                     <Route path="documentacion" element={<Documentacion />} />
                     <Route path="continuidad" element={<Continuidad />} />
                     <Route path="lista-precios" element={<ListaPrecios />} />
-                    <Route path="ajustes-por-indice" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><AjustesPorIndice /></ProtectedRoute>} />
+                    <Route path="revisar-precios" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><AjustesPorIndice /></ProtectedRoute>} />
                     <Route path="importacion" element={<Importacion />} />
                     <Route path="informes-obra-social" element={<InformesObraSocial />} />
                     <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />

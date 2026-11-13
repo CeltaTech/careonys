@@ -8,11 +8,11 @@ import { Button } from './ui/Button';
 import { FormField } from './ui/FormField';
 import { AJUSTES_POR_INDICE_POSIBLES, SIN_INDICE } from '../lib/condicionesDelCliente';
 import {
-  MESES_MAXIMO,
-  MESES_MINIMO,
+  MESES_POSIBLES,
   ajusteQueRige,
   ajusteQueSePuedeGuardar,
   casillerosDelAjuste,
+  textoDeMeses,
 } from '../lib/ajustePorIndice';
 
 /* El ajuste periódico por índice del precio de un Servicio.
@@ -147,11 +147,8 @@ export function AjusteDelServicio({
   const ta = t.actualizacion_de_precios;
   const tc = t.configuracion.condiciones_cliente;
   const apagado = !puedeEditar || guardando;
-  // Los meses tienen bordes; en las listas, lo único que puede faltar es elegir.
-  const malCargado = (clave) => {
-    if (claveMal !== clave) return undefined;
-    return clave === 'meses_entre_actualizaciones' ? tc.meses_fuera_de_borde : t.formularios.falta_un_dato_obligatorio;
-  };
+  // Los tres son listas: lo único que puede faltar es elegir.
+  const malCargado = (clave) => (claveMal === clave ? t.formularios.falta_un_dato_obligatorio : undefined);
 
   return (
     <section className="molde-ancho">
@@ -188,16 +185,16 @@ export function AjusteDelServicio({
                 <FormField
                   label={tc.meses_entre_actualizaciones}
                   name="meses_entre_actualizaciones"
-                  type="number"
-                  inputMode="numeric"
-                  min={MESES_MINIMO}
-                  max={MESES_MAXIMO}
-                  step={1}
+                  type="select"
                   value={casilleros.meses_entre_actualizaciones}
                   onChange={(e) => cambiar('meses_entre_actualizaciones', e.target.value)}
                   disabled={apagado}
                   error={malCargado('meses_entre_actualizaciones')}
-                />
+                >
+                  {MESES_POSIBLES.map((n) => (
+                    <option key={n} value={String(n)}>{textoDeMeses(tc, n)}</option>
+                  ))}
+                </FormField>
                 <FormField
                   label={tc.ajuste_por_indice}
                   name="ajuste_por_indice"

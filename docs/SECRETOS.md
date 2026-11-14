@@ -84,8 +84,11 @@ referencia de una caja de `vault`, y adentro de esa caja está el texto cifrado.
 | `whatsapp_token_<prestadora>` | El token con el que manda mensajes por WhatsApp | `guardar_token_whatsapp` / `leer_token_whatsapp` |
 | `whatsapp_app_secret_<prestadora>` | Con qué se comprueba la firma de lo que llega de Meta | `guardar_app_secret_whatsapp` / `leer_app_secret_whatsapp` |
 | `whatsapp_verify_token_<prestadora>` | Con qué se contesta el saludo de enganche de Meta | `guardar_verify_token_whatsapp` / `leer_verify_token_whatsapp` |
+| `software_externo_<clase>_<prestadora>` | El dato de acceso al software de facturación o al de cobranzas que la Prestadora conectó. Cambiar de software borra la caja | `guardar_conexion_con_software_externo` / `leer_credencial_de_software_externo` |
+| `aviso_de_facturacion_<prestadora>` | Con qué se comprueba la firma de lo que informa el software de facturación | `guardar_secreto_del_aviso_de_facturacion` / `leer_secreto_del_aviso_de_facturacion` |
+| `aviso_de_cobranza_<prestadora>` | Con qué se comprueba la firma de lo que informa el software de cobranzas | `guardar_secreto_del_aviso_de_cobranza` / `leer_secreto_del_aviso_de_cobranza` |
 
-**Las seis funciones son `SECURITY DEFINER` y sólo las alcanza el trabajo sin persona**, o sea el
+**Las doce funciones son `SECURITY DEFINER` y sólo las alcanza el trabajo sin persona**, o sea el
 backend, de a una Prestadora por vez.
 Ni el Superadmin ni el Admin de la propia Prestadora llegan al texto. Rotar uno de estos secretos
 no es trabajo de CeltaTech: la Prestadora lo vuelve a cargar desde Configuración, y el cambio

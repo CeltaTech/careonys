@@ -7946,42 +7946,6 @@ ALTER FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id
 COMMENT ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text", "p_credencial" "text") IS 'Anota cual es el software de esa clase para esa Prestadora y, si se le pasa una, guarda la credencial en la caja fuerte. Devuelve la referencia a la caja, nunca el texto.';
 
 
-
-CREATE OR REPLACE FUNCTION "public"."guardar_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_credencial" "text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE
-  v_secret_id UUID;
-BEGIN
-  IF p_prestadora_id IS NULL OR p_prestadora_id IS DISTINCT FROM interno.prestadora_actual() THEN
-    RAISE EXCEPTION 'La Prestadora no es la de quien llama' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT credencial_secret_id INTO v_secret_id
-  FROM credenciales_pasarela_pago
-  WHERE prestadora_id = p_prestadora_id AND proveedor = p_proveedor;
-
-  IF v_secret_id IS NULL THEN
-    v_secret_id := vault.create_secret(p_credencial, 'pasarela_' || p_proveedor || '_' || p_prestadora_id::text);
-    INSERT INTO credenciales_pasarela_pago (prestadora_id, proveedor, credencial_secret_id)
-    VALUES (p_prestadora_id, p_proveedor, v_secret_id)
-    ON CONFLICT (prestadora_id, proveedor)
-    DO UPDATE SET credencial_secret_id = EXCLUDED.credencial_secret_id, updated_at = NOW();
-  ELSE
-    PERFORM vault.update_secret(v_secret_id, p_credencial);
-    UPDATE credenciales_pasarela_pago SET updated_at = NOW()
-    WHERE prestadora_id = p_prestadora_id AND proveedor = p_proveedor;
-  END IF;
-
-  RETURN v_secret_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."guardar_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_credencial" "text") OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'vault'
@@ -8051,41 +8015,6 @@ $$;
 
 
 ALTER FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."guardar_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_secreto" "text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE
-  v_secret_id UUID;
-BEGIN
-  IF p_prestadora_id IS NULL OR p_prestadora_id IS DISTINCT FROM interno.prestadora_actual() THEN
-    RAISE EXCEPTION 'La Prestadora no es la de quien llama' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT secreto_firma_secret_id INTO v_secret_id
-  FROM credenciales_pasarela_pago
-  WHERE prestadora_id = p_prestadora_id AND proveedor = p_proveedor;
-
-  IF v_secret_id IS NULL THEN
-    v_secret_id := vault.create_secret(p_secreto, 'pasarela_firma_' || p_proveedor || '_' || p_prestadora_id::text);
-    INSERT INTO credenciales_pasarela_pago (prestadora_id, proveedor, secreto_firma_secret_id)
-    VALUES (p_prestadora_id, p_proveedor, v_secret_id)
-    ON CONFLICT (prestadora_id, proveedor)
-    DO UPDATE SET secreto_firma_secret_id = EXCLUDED.secreto_firma_secret_id, updated_at = NOW();
-  ELSE
-    PERFORM vault.update_secret(v_secret_id, p_secreto);
-    UPDATE credenciales_pasarela_pago SET updated_at = NOW()
-    WHERE prestadora_id = p_prestadora_id AND proveedor = p_proveedor;
-  END IF;
-
-  RETURN v_secret_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."guardar_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_secreto" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."guardar_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") RETURNS "uuid"
@@ -8340,25 +8269,6 @@ $$;
 ALTER FUNCTION "public"."leer_credencial_de_software_externo"("p_prestadora_id" "uuid", "p_clase" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."leer_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") RETURNS "text"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE v_secret_id UUID; v_credencial TEXT;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN RETURN NULL; END IF;
-  SELECT credencial_secret_id INTO v_secret_id
-    FROM credenciales_pasarela_pago WHERE prestadora_id = p_prestadora_id AND proveedor = p_proveedor;
-  IF v_secret_id IS NULL THEN RETURN NULL; END IF;
-  SELECT decrypted_secret INTO v_credencial FROM vault.decrypted_secrets WHERE id = v_secret_id;
-  RETURN v_credencial;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."leer_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[] DEFAULT NULL::"text"[], "p_filtros" "jsonb" DEFAULT '[]'::"jsonb", "p_orden" "jsonb" DEFAULT '[]'::"jsonb", "p_limite" integer DEFAULT NULL::integer, "p_contar" boolean DEFAULT false) RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
@@ -8440,25 +8350,6 @@ $$;
 
 
 ALTER FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."leer_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") RETURNS "text"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE v_secret_id UUID; v_secreto TEXT;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN RETURN NULL; END IF;
-  SELECT secreto_firma_secret_id INTO v_secret_id
-    FROM credenciales_pasarela_pago WHERE prestadora_id = p_prestadora_id AND proveedor = p_proveedor;
-  IF v_secret_id IS NULL THEN RETURN NULL; END IF;
-  SELECT decrypted_secret INTO v_secreto FROM vault.decrypted_secrets WHERE id = v_secret_id;
-  RETURN v_secreto;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."leer_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."leer_token_whatsapp"("p_prestadora_id" "uuid") RETURNS "text"
@@ -10457,16 +10348,10 @@ CREATE TABLE IF NOT EXISTS "public"."accesos_intermediacion" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "moneda" "public"."moneda_iso" NOT NULL,
-    "proveedor" "text",
-    "referencia_externa" "text",
-    "url_accion" "text",
-    "alta_en_pasarela" timestamp with time zone,
     "forma_de_cobro_id" "uuid",
     "vigente_hasta" "date",
     "saldo_contactos" integer,
     "gratis_hasta" "date",
-    "aviso_previo_en" timestamp with time zone,
-    "gracia_hasta" "date",
     CONSTRAINT "accesos_intermediacion_estado_check" CHECK (("estado" = ANY (ARRAY['vigente'::"text", 'vencida'::"text", 'cancelada'::"text"]))),
     CONSTRAINT "accesos_intermediacion_saldo_no_negativo" CHECK ((("saldo_contactos" IS NULL) OR ("saldo_contactos" >= 0)))
 );
@@ -10479,27 +10364,7 @@ COMMENT ON TABLE "public"."accesos_intermediacion" IS 'El acceso a los datos de 
 
 
 
-COMMENT ON COLUMN "public"."accesos_intermediacion"."proveedor" IS 'Riel de cobro con el que se dio de alta esta suscripción. Nulo si todavía no se dio de alta. La lista válida vive en backend/src/pasarelas/index.js.';
-
-
-
-COMMENT ON COLUMN "public"."accesos_intermediacion"."referencia_externa" IS 'Identificador de la suscripción del lado del proveedor. Por acá la encuentra el aviso de cobro de los rieles que cobran solos.';
-
-
-
-COMMENT ON COLUMN "public"."accesos_intermediacion"."alta_en_pasarela" IS 'Cuándo quedó dada de alta en el proveedor. Con esta fecha puesta, el alta no se vuelve a intentar.';
-
-
-
 COMMENT ON COLUMN "public"."accesos_intermediacion"."saldo_contactos" IS 'Cuántos contactos le quedan por abrir a este acceso. Vacío: este acceso no se sostiene por saldo. Lo carga el cobro del paquete y lo descuenta abrir un contacto; nadie lo escribe a mano.';
-
-
-
-COMMENT ON COLUMN "public"."accesos_intermediacion"."aviso_previo_en" IS 'Cuándo se le avisó al Cliente que el período gratuito estaba por terminar y que venía el primer cobro. Nulo mientras no se avisó. Lo escribe el motor una sola vez por acceso.';
-
-
-
-COMMENT ON COLUMN "public"."accesos_intermediacion"."gracia_hasta" IS 'El día en que se suspende el acceso si para entonces el cobro fallido no entró. Se pone cuando falla un cobro y se borra cuando entra la plata. Es la fecha de la suspensión, no el último día de gracia, igual que `vigente_hasta` es la fecha del cobro que no se va a hacer.';
 
 
 
@@ -11462,16 +11327,12 @@ CREATE TABLE IF NOT EXISTS "public"."cobros_intermediacion" (
     "registrado_por" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "moneda" "public"."moneda_iso" NOT NULL,
-    "url_accion" "text",
     "codigo_cupon" "text",
     CONSTRAINT "cobros_intermediacion_estado_cobro_check" CHECK (("estado_cobro" = ANY (ARRAY['pendiente'::"text", 'exitoso'::"text", 'fallido'::"text"])))
 );
 
 
 ALTER TABLE "public"."cobros_intermediacion" OWNER TO "postgres";
-
-
-COMMENT ON COLUMN "public"."cobros_intermediacion"."url_accion" IS 'Dirección del QR con el que el Cliente paga este período, en los rieles que la devuelven.';
 
 
 
@@ -11771,38 +11632,6 @@ COMMENT ON TABLE "public"."configuracion_calculo_candidatos" IS 'Como ordena cad
 
 
 COMMENT ON COLUMN "public"."configuracion_calculo_candidatos"."perfil" IS 'Identificador permanente de la forma armada. Se nombra por su funcion y no se renombra.';
-
-
-
-CREATE TABLE IF NOT EXISTS "public"."configuracion_cobro_intermediacion" (
-    "prestadora_id" "uuid" NOT NULL,
-    "dias_de_aviso_antes_del_cobro" integer DEFAULT 3 NOT NULL,
-    "dias_de_gracia_por_cobro_rechazado" integer DEFAULT 7 NOT NULL,
-    "dias_de_vida_del_cupon" integer DEFAULT 10 NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "configuracion_cobro_intermediacion_aviso_al_menos_un_dia" CHECK (("dias_de_aviso_antes_del_cobro" >= 1)),
-    CONSTRAINT "configuracion_cobro_intermediacion_cupon_al_menos_un_dia" CHECK (("dias_de_vida_del_cupon" >= 1)),
-    CONSTRAINT "configuracion_cobro_intermediacion_gracia_al_menos_un_dia" CHECK (("dias_de_gracia_por_cobro_rechazado" >= 1))
-);
-
-
-ALTER TABLE "public"."configuracion_cobro_intermediacion" OWNER TO "postgres";
-
-
-COMMENT ON TABLE "public"."configuracion_cobro_intermediacion" IS 'Los plazos comerciales del cobro de Match, elegidos por cada Prestadora. Una fila por Prestadora, sembrada al darla de alta.';
-
-
-
-COMMENT ON COLUMN "public"."configuracion_cobro_intermediacion"."dias_de_aviso_antes_del_cobro" IS 'Con cuántos días de anticipación se avisa el primer cobro que viene.';
-
-
-
-COMMENT ON COLUMN "public"."configuracion_cobro_intermediacion"."dias_de_gracia_por_cobro_rechazado" IS 'Cuántos días se conserva el acceso, con reintentos, cuando un cobro no entra.';
-
-
-
-COMMENT ON COLUMN "public"."configuracion_cobro_intermediacion"."dias_de_vida_del_cupon" IS 'Cuántos días vive el cupón de la red de cobranza desde que se emite.';
 
 
 
@@ -12504,23 +12333,6 @@ CREATE TABLE IF NOT EXISTS "public"."cortes_de_consultas_a_hce" (
 
 
 ALTER TABLE "public"."cortes_de_consultas_a_hce" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."credenciales_pasarela_pago" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "prestadora_id" "uuid" NOT NULL,
-    "proveedor" "text" NOT NULL,
-    "credencial_secret_id" "uuid",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "secreto_firma_secret_id" "uuid"
-);
-
-
-ALTER TABLE "public"."credenciales_pasarela_pago" OWNER TO "postgres";
-
-
-COMMENT ON COLUMN "public"."credenciales_pasarela_pago"."secreto_firma_secret_id" IS 'Referencia a vault.secrets con el secreto con el que la pasarela firma sus avisos de cobro. El texto nunca se guarda acá. Pendiente #159.';
 
 
 
@@ -15053,22 +14865,6 @@ CREATE TABLE IF NOT EXISTS "public"."prestadora_modalidades" (
 ALTER TABLE "public"."prestadora_modalidades" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."prestadora_pasarela_pago" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "prestadora_id" "uuid" NOT NULL,
-    "proveedor" "text" NOT NULL,
-    "estado_conexion" "text" DEFAULT 'pendiente'::"text" NOT NULL,
-    "activada_por" "uuid",
-    "conectada_en" timestamp with time zone,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "prestadora_pasarela_pago_estado_conexion_check" CHECK (("estado_conexion" = ANY (ARRAY['pendiente'::"text", 'conectada'::"text", 'error'::"text"])))
-);
-
-
-ALTER TABLE "public"."prestadora_pasarela_pago" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."prestadoras" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "razon_social" "text" NOT NULL,
@@ -16613,11 +16409,6 @@ ALTER TABLE ONLY "public"."configuracion_calculo_candidatos"
 
 
 
-ALTER TABLE ONLY "public"."configuracion_cobro_intermediacion"
-    ADD CONSTRAINT "configuracion_cobro_intermediacion_pkey" PRIMARY KEY ("prestadora_id");
-
-
-
 ALTER TABLE ONLY "public"."configuracion_de_hce"
     ADD CONSTRAINT "configuracion_de_hce_pkey" PRIMARY KEY ("prestadora_id");
 
@@ -16830,16 +16621,6 @@ ALTER TABLE ONLY "public"."cortes_de_consultas_a_hce"
 
 ALTER TABLE ONLY "public"."cortes_de_consultas_a_hce"
     ADD CONSTRAINT "cortes_de_consultas_a_hce_un_corte_por_numero" UNIQUE ("prestadora_id", "hasta_numero");
-
-
-
-ALTER TABLE ONLY "public"."credenciales_pasarela_pago"
-    ADD CONSTRAINT "credenciales_pasarela_pago_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."credenciales_pasarela_pago"
-    ADD CONSTRAINT "credenciales_pasarela_pago_prestadora_id_proveedor_key" UNIQUE ("prestadora_id", "proveedor");
 
 
 
@@ -17464,16 +17245,6 @@ ALTER TABLE ONLY "public"."prestadora_modalidades"
 
 ALTER TABLE ONLY "public"."prestadora_modalidades"
     ADD CONSTRAINT "prestadora_modalidades_prestadora_id_modalidad_key" UNIQUE ("prestadora_id", "modalidad");
-
-
-
-ALTER TABLE ONLY "public"."prestadora_pasarela_pago"
-    ADD CONSTRAINT "prestadora_pasarela_pago_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."prestadora_pasarela_pago"
-    ADD CONSTRAINT "prestadora_pasarela_pago_prestadora_id_proveedor_key" UNIQUE ("prestadora_id", "proveedor");
 
 
 
@@ -18169,19 +17940,11 @@ CREATE INDEX "idx_accesos_intermediacion_cliente" ON "public"."accesos_intermedi
 
 
 
-CREATE INDEX "idx_accesos_intermediacion_en_gracia" ON "public"."accesos_intermediacion" USING "btree" ("gracia_hasta") WHERE (("estado" = 'vigente'::"text") AND ("gracia_hasta" IS NOT NULL));
-
-
-
 CREATE INDEX "idx_accesos_intermediacion_por_cobrar" ON "public"."accesos_intermediacion" USING "btree" ("prestadora_id", "proximo_cobro") WHERE (("estado" = 'vigente'::"text") AND ("proximo_cobro" IS NOT NULL));
 
 
 
 CREATE INDEX "idx_accesos_intermediacion_prestadora" ON "public"."accesos_intermediacion" USING "btree" ("prestadora_id");
-
-
-
-CREATE INDEX "idx_accesos_intermediacion_referencia" ON "public"."accesos_intermediacion" USING "btree" ("prestadora_id", "referencia_externa") WHERE ("referencia_externa" IS NOT NULL);
 
 
 
@@ -18763,10 +18526,6 @@ CREATE INDEX "idx_prestaciones_vigencia" ON "public"."prestaciones" USING "btree
 
 
 CREATE INDEX "idx_prestadora_modalidades_prestadora" ON "public"."prestadora_modalidades" USING "btree" ("prestadora_id");
-
-
-
-CREATE INDEX "idx_prestadora_pasarela_pago_prestadora" ON "public"."prestadora_pasarela_pago" USING "btree" ("prestadora_id");
 
 
 
@@ -20753,11 +20512,6 @@ ALTER TABLE ONLY "public"."configuracion_calculo_candidatos"
 
 
 
-ALTER TABLE ONLY "public"."configuracion_cobro_intermediacion"
-    ADD CONSTRAINT "configuracion_cobro_intermediacion_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."configuracion_de_hce"
     ADD CONSTRAINT "configuracion_de_hce_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
@@ -21083,11 +20837,6 @@ ALTER TABLE ONLY "public"."correcciones_factura_cliente"
 
 ALTER TABLE ONLY "public"."cortes_de_consultas_a_hce"
     ADD CONSTRAINT "cortes_de_consultas_a_hce_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
-
-
-
-ALTER TABLE ONLY "public"."credenciales_pasarela_pago"
-    ADD CONSTRAINT "credenciales_pasarela_pago_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
@@ -22186,16 +21935,6 @@ ALTER TABLE ONLY "public"."prestadora_modalidades"
 
 
 
-ALTER TABLE ONLY "public"."prestadora_pasarela_pago"
-    ADD CONSTRAINT "prestadora_pasarela_pago_activada_por_fkey" FOREIGN KEY ("activada_por") REFERENCES "public"."usuarios"("id");
-
-
-
-ALTER TABLE ONLY "public"."prestadora_pasarela_pago"
-    ADD CONSTRAINT "prestadora_pasarela_pago_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
-
-
-
 ALTER TABLE ONLY "public"."propuestas_de_ajuste_por_indice"
     ADD CONSTRAINT "propuestas_de_ajuste_por_indice_prestacion_id_fkey" FOREIGN KEY ("prestacion_id") REFERENCES "public"."prestaciones"("id") ON DELETE CASCADE;
 
@@ -22893,14 +22632,6 @@ CREATE POLICY "admin_prestadora_gestiona_campos_propios" ON "public"."formulario
 
 
 
-CREATE POLICY "admin_prestadora_gestiona_cobro_intermediacion" ON "public"."configuracion_cobro_intermediacion" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
-   FROM "public"."usuarios" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text"))))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
-   FROM "public"."usuarios" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
-
-
-
 CREATE POLICY "admin_prestadora_gestiona_documentos_asistente" ON "public"."documentos_asistente" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
@@ -22974,14 +22705,6 @@ CREATE POLICY "admin_prestadora_gestiona_rangos_vitales" ON "public"."rangos_ref
 
 
 CREATE POLICY "admin_prestadora_gestiona_secciones_propias" ON "public"."formulario_secciones" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_admin_prestadora"())) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_admin_prestadora"()));
-
-
-
-CREATE POLICY "admin_prestadora_gestiona_su_pasarela" ON "public"."prestadora_pasarela_pago" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."usuarios" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."usuarios" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text"))))));
 
 
 
@@ -23726,10 +23449,6 @@ CREATE POLICY "configuracion_calculo_candidatos_la_escribe_la_administracion" ON
 CREATE POLICY "configuracion_calculo_candidatos_la_lee_su_prestadora" ON "public"."configuracion_calculo_candidatos" FOR SELECT TO "authenticated" USING ("interno"."lee_la_configuracion"("prestadora_id"));
 
 
-
-ALTER TABLE "public"."configuracion_cobro_intermediacion" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."configuracion_de_hce" ENABLE ROW LEVEL SECURITY;
 
 
@@ -24300,9 +24019,6 @@ ALTER TABLE "public"."correcciones_factura_cliente" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."cortes_de_consultas_a_hce" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."credenciales_pasarela_pago" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "cualquiera_lee_catalogo_acciones_permisos" ON "public"."catalogo_acciones_permisos" FOR SELECT TO "authenticated" USING (true);
@@ -25387,9 +25103,6 @@ CREATE POLICY "prestadora_lee_su_configuracion" ON "public"."configuracion_prest
 ALTER TABLE "public"."prestadora_modalidades" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."prestadora_pasarela_pago" ENABLE ROW LEVEL SECURITY;
-
-
 CREATE POLICY "prestadora_ve_accesos_intermediacion" ON "public"."accesos_intermediacion" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = ANY (ARRAY['admin_prestadora'::"text", 'coordinador'::"text"])))))));
@@ -25672,10 +25385,6 @@ CREATE POLICY "superadmin_lee_los_cambios_de_su_sesion_activa" ON "public"."audi
 
 
 CREATE POLICY "superadmin_lee_modalidades" ON "public"."prestadora_modalidades" FOR SELECT USING (("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())));
-
-
-
-CREATE POLICY "superadmin_lee_pasarela" ON "public"."prestadora_pasarela_pago" FOR SELECT USING (("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())));
 
 
 
@@ -26042,10 +25751,6 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracio
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracion_cobro_intermediacion" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
-
-
-
 CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracion_de_hce" FOR SELECT TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
@@ -26107,10 +25812,6 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."contactos_vi
 
 
 CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."conversaciones_whatsapp" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
-
-
-
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."credenciales_pasarela_pago" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -26523,9 +26224,6 @@ CREATE POLICY "usuario_ve_su_propia_fila" ON "public"."usuarios" FOR SELECT USIN
 
 
 ALTER TABLE "public"."usuarios" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "usuarios_prestadora_leen_su_pasarela" ON "public"."prestadora_pasarela_pago" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_personal_de_la_prestadora"()));
 
 
 
@@ -29066,12 +28764,6 @@ GRANT ALL ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_presta
 
 
 
-REVOKE ALL ON FUNCTION "public"."guardar_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_credencial" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guardar_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_credencial" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."guardar_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_credencial" "text") TO "trabajo_sin_persona";
-
-
-
 REVOKE ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") TO "service_role";
 GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") TO "trabajo_sin_persona";
@@ -29081,12 +28773,6 @@ GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_presta
 REVOKE ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") TO "service_role";
 GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."guardar_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_secreto" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guardar_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_secreto" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."guardar_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text", "p_secreto" "text") TO "trabajo_sin_persona";
 
 
 
@@ -29142,12 +28828,6 @@ GRANT ALL ON FUNCTION "public"."leer_credencial_de_software_externo"("p_prestado
 
 
 
-REVOKE ALL ON FUNCTION "public"."leer_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."leer_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."leer_credencial_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") TO "trabajo_sin_persona";
-
-
-
 REVOKE ALL ON FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[], "p_filtros" "jsonb", "p_orden" "jsonb", "p_limite" integer, "p_contar" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[], "p_filtros" "jsonb", "p_orden" "jsonb", "p_limite" integer, "p_contar" boolean) TO "service_role";
 GRANT ALL ON FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[], "p_filtros" "jsonb", "p_orden" "jsonb", "p_limite" integer, "p_contar" boolean) TO "authenticated";
@@ -29163,12 +28843,6 @@ GRANT ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_cobranza"("p_prestador
 REVOKE ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."leer_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."leer_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."leer_secreto_firma_pasarela_pago"("p_prestadora_id" "uuid", "p_proveedor" "text") TO "trabajo_sin_persona";
 
 
 
@@ -30244,12 +29918,6 @@ GRANT SELECT,INSERT,UPDATE ON TABLE "public"."configuracion_calculo_candidatos" 
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."configuracion_cobro_intermediacion" TO "authenticated";
-GRANT ALL ON TABLE "public"."configuracion_cobro_intermediacion" TO "service_role";
-GRANT SELECT ON TABLE "public"."configuracion_cobro_intermediacion" TO "trabajo_sin_persona";
-
-
-
 GRANT ALL ON TABLE "public"."configuracion_de_hce" TO "service_role";
 GRANT SELECT,INSERT,UPDATE ON TABLE "public"."configuracion_de_hce" TO "authenticated";
 GRANT SELECT ON TABLE "public"."configuracion_de_hce" TO "trabajo_sin_persona";
@@ -30619,11 +30287,6 @@ GRANT SELECT("moneda") ON TABLE "public"."correcciones_factura_cliente" TO "trab
 
 
 GRANT SELECT ON TABLE "public"."cortes_de_consultas_a_hce" TO "trabajo_sin_persona";
-
-
-
-GRANT ALL ON TABLE "public"."credenciales_pasarela_pago" TO "service_role";
-GRANT SELECT ON TABLE "public"."credenciales_pasarela_pago" TO "trabajo_sin_persona";
 
 
 
@@ -31788,11 +31451,6 @@ GRANT SELECT("modalidad") ON TABLE "public"."prestadora_modalidades" TO "trabajo
 
 
 GRANT SELECT("activa") ON TABLE "public"."prestadora_modalidades" TO "trabajo_sin_persona";
-
-
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."prestadora_pasarela_pago" TO "authenticated";
-GRANT ALL ON TABLE "public"."prestadora_pasarela_pago" TO "service_role";
 
 
 

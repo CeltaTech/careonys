@@ -59,9 +59,10 @@ Dos cosas que la decisión **descartó** explícitamente, para que nadie las rea
   solo build para todas las Prestadoras. Es el punto donde el límite técnico y el estándar de
   la industria coinciden.
 
-**La regla se cumple.** La Prestadora tiene
-dónde guardar su logo, y las dos aplicaciones muestran su marca arriba y la del producto al
-pie.
+**La regla se cumple a medias.** Las dos aplicaciones muestran la marca de la Prestadora arriba
+y la del producto al pie, pero en el Panel todavía no hay dónde subir el logo ni cambiar el nombre
+de fantasía. Los dos los carga el Administrador de la Prestadora en Configuración; la razón social
+y el número fiscal no, porque son datos del contrato y los informa CeltaTech en el alta.
 
 **Dónde viven los archivos de marca de la Prestadora.** En el depósito `marca-prestadoras`, y
 cada Prestadora tiene su carpeta, que se llama como su identificador:

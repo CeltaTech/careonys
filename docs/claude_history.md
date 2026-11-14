@@ -2,6 +2,13 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§9, «Protocolo de sesión») — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+
+## Quién carga cada dato de la Prestadora
+
+- **Antes:** no estaba dicho. La base tenía razón social, nombre de fantasía, número fiscal, país y logo, y ninguna parte del Panel dejaba cargar ni cambiar ninguno.
+- **Ahora:** los datos del contrato los informa CeltaTech en el alta; el nombre de fantasía y el logo los carga y los cambia el Administrador de la Prestadora en Configuración.
+- **Motivo:** el Desarrollador ordenó seguir la costumbre de los programas maduros que se usan por suscripción, y señaló que la razón social es una cosa y el nombre de fantasía con el que opera, al que corresponde el logo, es otra.
+
 ## Los errores del Panel del 4 y el 5 de octubre, y lo que se aprendió (2026-10-05)
 
 El 5 de octubre el Panel volvió entero a como estaba al cerrar el 1 de octubre, porque los cambios del 4 y del 5 lo habían dejado sin contenido, sin formato, sin tarjetas y sin información. Lo que quedó pendiente de esos días está en `docs/CAMBIOS_DESHECHOS_EL_5_DE_OCTUBRE.md`. Los errores se anotan acá para no repetirlos:

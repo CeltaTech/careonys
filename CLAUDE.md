@@ -30,6 +30,15 @@ tiene acceso y a que no lo tiene»*, y *«Careonys nada tiene que hacer metiendo
 llaman»*. Es la regla fundamental de la empresa —`..\..\CLAUDE.md`, sección «La regla
 fundamental: CeltaTech no sabe qué hacen los productos por dentro»— aplicada al alta.
 
+**Los datos de la Prestadora son de dos clases, como en cualquier software maduro que se usa por
+suscripción.** Los del contrato —la razón social, el número fiscal y el país— los informa CeltaTech
+en el alta, y la Prestadora no los cambia desde el producto: si cambian, cambia el contrato, y eso
+se hace con CeltaTech. Los de la marca con la que opera comercialmente —el nombre de fantasía y el
+logo, que corresponde al nombre de fantasía y no a la razón social— los carga y los cambia el
+Administrador de la Prestadora en Configuración, cuando quiera. Ejemplo inventado: la razón social
+es «Cuidados Integrales del Sur S. A.», y el nombre de fantasía y el logo son los de «Cuidar del
+Sur».
+
 **Y la cuenta con la que se entra al Panel tampoco es de Careonys.** Cada Prestadora ingresa con el
 usuario, la contraseña y los permisos que le genera CeltaTech. **Del cambio de contraseña, de su
 restablecimiento y de lo que siga por ese lado se ocupa CeltaTech**, no el producto. Textual del

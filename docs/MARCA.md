@@ -11,7 +11,7 @@
 |---|---|---|
 | **CeltaTech** | La empresa dueña del software | Nadie, dentro del producto |
 | **Careonys** | El producto | Quien trabaja **en** la Prestadora (Admin_prestadora, Coordinador) y sabe qué software usa |
-| **La Prestadora** | La empresa que presta el cuidado | El **Cliente** y el **Asistente** |
+| **La de cada Prestadora** | El nombre propio de la empresa que presta el cuidado, por ejemplo «Cuidar del Sur» | El **Cliente** y el **Asistente** |
 
 Todo este documento habla de la segunda. **No confundirla con la tercera.**
 

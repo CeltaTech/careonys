@@ -38,10 +38,10 @@ function urlAppPorRol(rol) {
 // porque quien la dio de alta es de CeltaTech y no puede ver ni elegir la contraseña de nadie.
 // Las demás cuentas de Panel —las que una Prestadora crea para su propio equipo— siguen con el
 // camino de siempre, en el que quien la crea comunica la primera clave.
-export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = null }) {
+export async function enviarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = null }) {
   // Sin Prestadora no hay enlace que sirva ni cuenta a la cual colgarlo: se corta antes de escribir.
   if (!prestadoraId) {
-    console.error('invitarActivacionCuenta: falta la Prestadora, no se envió el email de activación');
+    console.error('enviarActivacionCuenta: falta la Prestadora, no se envió el email de activación');
     return;
   }
 
@@ -50,7 +50,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
     // Sin URL configurada (ej. entorno local sin la variable seteada) no se puede armar un
     // link válido — se registra y se sigue sin romper el alta de la cuenta, en vez de fallar
     // toda la operación por un email que de todos modos no se podría entregar bien.
-    console.error(`invitarActivacionCuenta: falta la variable de entorno para el rol "${rol}", no se envió el email de activación`);
+    console.error(`enviarActivacionCuenta: falta la variable de entorno para el rol "${rol}", no se envió el email de activación`);
     return;
   }
 
@@ -63,7 +63,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   // que sirva, y un código guardado que no viaja en ningún correo no le sirve a nadie.
   const link = await enlaceConCodigo({ appUrl, pantalla: 'activar-cuenta', prestadoraId, codigo: token });
   if (!link) {
-    console.error('invitarActivacionCuenta: la Prestadora no tiene dirección, no se envió el email de activación');
+    console.error('enviarActivacionCuenta: la Prestadora no tiene dirección, no se envió el email de activación');
     return;
   }
 
@@ -115,7 +115,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
 export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
   if (!prestadoraId) throw new Error('Cuenta no encontrada');
 
-  const { data: usuario, error: errorUsuario } = await enLaPrestadora(prestadoraId, 'reenvío de la invitación', (db) => db
+  const { data: usuario, error: errorUsuario } = await enLaPrestadora(prestadoraId, 'reenvío de la activación de la cuenta', (db) => db
     .from('usuarios')
     .select('nombre, rol, prestadora_id')
     .eq('prestadora_id', prestadoraId)
@@ -123,12 +123,12 @@ export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
     .single());
   if (errorUsuario || !usuario) throw new Error('Cuenta no encontrada');
 
-  // El correo real se lee con `correoDeUnaPersona.js`. Sin él no hay a dónde mandar la invitación,
+  // El correo real se lee con `correoDeUnaPersona.js`. Sin él no hay a dónde mandar el correo de activación,
   // y decirlo así es distinto de decir que la cuenta no existe.
   const email = await correoDe({ prestadoraId: usuario.prestadora_id, usuarioId });
   if (!email) throw new Error('La cuenta no tiene correo');
 
-  await invitarActivacionCuenta({
+  await enviarActivacionCuenta({
     usuarioId,
     email,
     nombre: usuario.nombre,

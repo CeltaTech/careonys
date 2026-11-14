@@ -8,7 +8,7 @@ import { fraseDeEspera } from '../lib/fraseDeEspera';
 const API_URL = import.meta.env.VITE_API_URL;
 
 // Los tres motivos que contesta el backend son definitivos: con ese mismo enlace, reintentar no
-// sirve nunca, así que el formulario se retira en vez de invitar a un intento que va a fallar.
+// sirve nunca, así que el formulario se retira en vez de ofrecer un intento que va a fallar.
 const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
 
 // Los motivos que acá tienen frase propia. Las del catálogo las comparten otras pantallas —la

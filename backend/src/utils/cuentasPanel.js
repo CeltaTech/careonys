@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { supabase, enLaPrestadora } from '../db/connection.js';
-import { invitarActivacionCuenta } from './activacionCuenta.js';
+import { enviarActivacionCuenta } from './activacionCuenta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from './celularDeUnaSolaPersona.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
@@ -137,7 +137,7 @@ export async function crearCuentaConPerfil({
 
   if (enviarActivacion) {
     try {
-      await invitarActivacionCuenta({ usuarioId: userId, email, nombre, rol, prestadoraId });
+      await enviarActivacionCuenta({ usuarioId: userId, email, nombre, rol, prestadoraId });
     } catch (errorActivacion) {
       // La cuenta ya quedó creada correctamente — un fallo al mandar el email (ej. SMTP
       // caído en ese momento) no debe deshacer el alta. Si el enlace llegó a guardarse, lo vuelve a
@@ -531,8 +531,8 @@ export async function revertirClienteImportada(db, clienteId, prestadoraId) {
 //
 // No se le escribe ningún acceso. Anotada no ve nada: los accesos rigen recién cuando el titular
 // firma la autorización que la nombra, y armarla es lo que hace quien llama después de esto.
-export async function invitarPersonaAutorizada({
-  db, email, nombre, apellido, documento, genero, telefono, clienteId, prestadoraId, invitadoPor,
+export async function agregarPersonaAutorizada({
+  db, email, nombre, apellido, documento, genero, telefono, clienteId, prestadoraId, creadoPor,
 }) {
   if (!nombre || !apellido || !email || !clienteId) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, apellido, email, clienteId)');
@@ -580,7 +580,7 @@ export async function invitarPersonaAutorizada({
 
     const { error: errorMiembro } = await db
       .from('personas_autorizadas')
-      .insert({ usuario_id: miembroId, cliente_id: clienteId, prestadora_id: prestadoraId, persona_id: persona.id, email, creado_por: invitadoPor });
+      .insert({ usuario_id: miembroId, cliente_id: clienteId, prestadora_id: prestadoraId, persona_id: persona.id, email, creado_por: creadoPor });
     if (errorMiembro) throw new Error(errorMiembro.message);
 
     return { miembroId };
@@ -597,7 +597,7 @@ export async function invitarPersonaAutorizada({
 export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, clienteId, motivo }) {
   if (typeof motivo !== 'string' || !motivo.trim()) throw new ErrorConMotivo('faltan_datos');
 
-  // La misma comprobación que al invitar, y por un motivo más fuerte: acá se quita un acceso. Los dos
+  // La misma comprobación que al agregarla, y por un motivo más fuerte: acá se quita un acceso. Los dos
   // borrados de abajo van por número de cuenta, sin Prestadora, y corren ANTES de `desactivarCuenta`,
   // que es la que valida. Sin esto, un número de Cliente ajeno alcanza para dejar sin accesos a
   // una persona autorizada de otra Prestadora, y la validación llega tarde.

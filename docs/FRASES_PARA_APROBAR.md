@@ -1,6 +1,6 @@
 # Frases para aprobar
 
-Textos que hoy ven las personas que usan Careonys y que tienen una redacción dudosa o hablan de «invitación». Cada ficha muestra el texto actual, una propuesta y dónde aparece, para decidir uno por uno.
+Textos que hoy ven las personas que usan Careonys y que tienen una redacción dudosa. Cada ficha muestra el texto actual, una propuesta y dónde aparece, para decidir uno por uno.
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 

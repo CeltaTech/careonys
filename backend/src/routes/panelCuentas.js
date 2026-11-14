@@ -8,7 +8,7 @@ import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import {
   crearCuentaConPerfil,
   crearAsistenteDirecto,
-  invitarPersonaAutorizada,
+  agregarPersonaAutorizada,
   revocarPersonaAutorizada,
   validarTipoAsistente,
   deshacerAlta,
@@ -801,7 +801,7 @@ panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas', requiereRolP
   try {
     // Con el trabajo de la Prestadora, como el resto de las personas autorizadas.
     const { miembroId } = await enLaPrestadora(cliente.prestadora_id, 'alta de persona autorizada', (dbTrabajo) =>
-      invitarPersonaAutorizada({
+      agregarPersonaAutorizada({
         db: dbTrabajo,
         email,
         nombre,
@@ -811,7 +811,7 @@ panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas', requiereRolP
         telefono,
         clienteId: cliente.id,
         prestadoraId: cliente.prestadora_id,
-        invitadoPor: req.usuarioPanel.id,
+        creadoPor: req.usuarioPanel.id,
       }));
 
     // La autorización que la nombra, para que el titular la firme. Qué puede ver lo elige sólo
@@ -839,7 +839,7 @@ panelCuentasRouter.delete('/cliente/:clienteId/personas_autorizadas/:usuarioId',
   }
 
   try {
-    // Con el trabajo de la Prestadora, por lo mismo que al invitar. La cuenta se desactiva, no se
+    // Con el trabajo de la Prestadora, por lo mismo que al agregarla. La cuenta se desactiva, no se
     // borra, y el motivo queda guardado en ella.
     const desactivada = await enLaPrestadora(cliente.prestadora_id, 'baja de persona autorizada', (dbTrabajo) =>
       revocarPersonaAutorizada(dbTrabajo, req.params.usuarioId, {

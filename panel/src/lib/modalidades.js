@@ -28,8 +28,8 @@
 //   * dentro de ese techo, el Legajo de cada Asistente.
 //
 // DÓNDE SE HACE CUMPLIR
-// En la base, que es la única que no se puede saltear: frena la asignación, la
-// serie y la invitación. Este archivo es la misma regla del lado de la pantalla,
+// En la base, que es la única que no se puede saltear: frena la guardia, la
+// asignación y la serie. Este archivo es la misma regla del lado de la pantalla,
 // para que el motivo se vea **antes** de chocarse con la pared, y para traducir el
 // rechazo de la base a una frase que se pueda leer.
 //
@@ -129,7 +129,7 @@ export function motivoDeModalidadDelError(error) {
  * modalidad, o `null` si el error era otra cosa y la pantalla lo trata como siempre.
  *
  * Está acá y no en cada pantalla porque son varias las que pueden chocarse con la
- * misma pared —cubrir una vacante, invitar, reasignar, editar el Legajo del Asistente— y el texto
+ * misma pared —cubrir una vacante, reasignar, editar el Legajo del Asistente— y el texto
  * tiene que ser el mismo en todas (ningún patrón repetido sin punto único de verdad).
  *
  * @param error  lo que devolvió la base.

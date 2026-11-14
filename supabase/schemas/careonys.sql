@@ -623,7 +623,7 @@ $$;
 ALTER FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") IS 'Si este Asistente trabaja en esa modalidad. La usan las tres puertas: asignar una guardia, armar una serie e invitar (regla 12).';
+COMMENT ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") IS 'Si este Asistente trabaja en esa modalidad. La usan las tres puertas por las que un Asistente queda a cargo: la guardia, la asignación y la serie (regla 12).';
 
 
 
@@ -6766,6 +6766,15 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'motivo', 'acceso_no_vigente');
   END IF;
 
+  -- El Asistente tiene que ser de la misma Prestadora que el acceso. Uno de otra, o uno que no
+  -- existe, contesta igual: no se distingue cuál de los dos fue.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.asistentes
+     WHERE id = p_asistente_id AND prestadora_id = v_acceso.prestadora_id
+  ) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'no_encontrado');
+  END IF;
+
   -- Ya abierto antes: se contesta que sí y no se cobra de nuevo. El contacto de un Asistente se
   -- paga una sola vez por Cliente, y mirarlo otra vez no es un contacto nuevo.
   SELECT EXISTS (
@@ -6817,7 +6826,7 @@ $$;
 ALTER FUNCTION "public"."consumir_contacto_intermediacion"("p_acceso_id" "uuid", "p_asistente_id" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."consumir_contacto_intermediacion"("p_acceso_id" "uuid", "p_asistente_id" "uuid") IS 'Anota a qué Asistente se le abrió el contacto y, si el acceso se sostiene por saldo, le descuenta uno, en la misma transacción. Un Asistente ya abierto no vuelve a descontar. El acceso que se sostiene por fecha se anota sin descontar nada. Devuelve ok y el saldo que queda, o el motivo por el que no se pudo.';
+COMMENT ON FUNCTION "public"."consumir_contacto_intermediacion"("p_acceso_id" "uuid", "p_asistente_id" "uuid") IS 'Anota a qué Asistente se le abrió el contacto y, si el acceso se sostiene por saldo, le descuenta uno, en la misma transacción. Sólo acepta un Asistente de la misma Prestadora que el acceso. Un Asistente ya abierto no vuelve a descontar. El acceso que se sostiene por fecha se anota sin descontar nada. Devuelve ok y el saldo que queda, o el motivo por el que no se pudo.';
 
 
 
@@ -15178,7 +15187,7 @@ CREATE TABLE IF NOT EXISTS "public"."reglas_de_los_mensajes" (
 ALTER TABLE "public"."reglas_de_los_mensajes" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."reglas_de_los_mensajes" IS 'Que no puede viajar adentro de un mensaje: el telefono, el correo, el domicilio, el nombre de usuario de otra aplicacion y la invitacion a seguir la charla en otro lado. Es dato y no codigo: se agrega una regla sin publicar ninguna version. La aplica el disparador que tapa el texto antes de guardarlo.';
+COMMENT ON TABLE "public"."reglas_de_los_mensajes" IS 'Que no puede viajar adentro de un mensaje: el telefono, el correo, el domicilio, el nombre de usuario de otra aplicacion y el pedido de seguir la charla en otro lado. Es dato y no codigo: se agrega una regla sin publicar ninguna version. La aplica el disparador que tapa el texto antes de guardarlo.';
 
 
 

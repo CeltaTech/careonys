@@ -89,7 +89,7 @@ export const CIERRES_POSIBLES = Object.values(CIERRES);
  * Los dos que escribe el backend solo, porque la base ya los dice.
  *
  * No se ofrecen para elegir: que apareció una Asistente asignada, o que el turno se canceló, está
- * escrito, y ofrecerlo como opción invitaría a anotarlo sin que haya pasado.
+ * escrito, y ofrecerlo como opción llevaría a anotarlo sin que haya pasado.
  */
 export const CIERRES_QUE_ESCRIBE_EL_SISTEMA = [CIERRES.LLEGO_UN_RELEVO, CIERRES.YA_NO_HACIA_FALTA];
 

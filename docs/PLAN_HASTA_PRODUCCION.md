@@ -882,10 +882,6 @@ sólo lectura, así que el renglón se saca cuando se lo toque.
 
 **44.** Construirla según lo contestado.
 
-**45.** Abrir el contacto de un Asistente no comprueba adentro de la base que sea de la misma
-Prestadora. La función etiqueta bien la fila, pero acepta el Asistente que le pasen; hoy la barrera
-es que el backend lo valida antes. Falta que la función se defienda sola.
-
 ---
 
 ## Los huecos del Panel
@@ -1058,11 +1054,6 @@ país.
 **62.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
 todo el Panel y de las dos aplicaciones, sin excepción, y
 quitar los textos que no se alcanzan desde ninguna pantalla.
-
-**Y «invitación» termina de salir de lo guardado.** De los textos visibles ya salió; quedan las
-claves `invitacion_al_enlace` de la activación y del restablecimiento de la contraseña, en la base
-y en `backend/src/i18n/avisos.js:587` y `:610`, el rótulo de `backend/src/utils/activacionCuenta.js:118`
-y algunos comentarios. Termina cuando buscar esa palabra en el código y en la base da cero.
 
 **63.** Relevar lo que el pie de `docs/CARTELES_DEL_PANEL.md` anota como todavía sin relevar. **Y todo el texto visible, contra
 las cuatro fuentes** que fija `..\..\CLAUDE.md` §8: términos sin aprobar, giros locales,

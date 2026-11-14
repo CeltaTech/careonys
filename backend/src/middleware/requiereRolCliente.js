@@ -27,7 +27,7 @@ export async function requiereRolCliente(req, res, next) {
   }
 
   // El usuario logueado puede ser el titular de la cuenta (fila propia en `clientes`) o
-  // alguien invitado como persona autorizada (fila en `personas_autorizadas`, Fase 5) — se
+  // alguien agregado como persona autorizada (fila en `personas_autorizadas`, Fase 5) — se
   // resuelve acá una sola vez, no en cada ruta de appClientes.js.
   //
   // Y se busca por la cuenta y acotado a la Prestadora de la sesión, porque la misma persona

@@ -33,7 +33,7 @@ const CAMPO_DEL_MOTIVO = {
   genero_no_reconocido: 'genero',
 };
 
-export function InvitarPersonaAutorizadaModal({ clienteId, prestadoraId, onClose, onInvitado }) {
+export function AgregarPersonaAutorizadaModal({ clienteId, prestadoraId, onClose, onAgregada }) {
   const { t } = useLocale();
   const textos = t.clientes.personas_autorizadas;
   const { generos } = useGeneros(prestadoraId);
@@ -47,11 +47,11 @@ export function InvitarPersonaAutorizadaModal({ clienteId, prestadoraId, onClose
      atrás para que se vuelva a leer. */
   const cerrar = useCallback(() => {
     if (documento) {
-      onInvitado();
+      onAgregada();
       return;
     }
     onClose();
-  }, [documento, onInvitado, onClose]);
+  }, [documento, onAgregada, onClose]);
 
   const modal = useModalAccesible(cerrar);
 
@@ -115,21 +115,21 @@ export function InvitarPersonaAutorizadaModal({ clienteId, prestadoraId, onClose
   return (
     <div className="panel-modal-fondo" onClick={cerrar}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{textos.invitar_titulo}</h2>
+        <h2 id={modal.idTitulo}>{textos.agregar_titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 
         <form onSubmit={guardar} noValidate>
-          <FormField label={textos.invitar_nombre} name="persona-nombre" required value={datos.nombre} onChange={cambiar('nombre')} error={avisos.nombre} />
-          <FormField label={textos.invitar_apellido} name="persona-apellido" required value={datos.apellido} onChange={cambiar('apellido')} error={avisos.apellido} />
-          <FormField label={textos.invitar_cuil} name="persona-cuil" required inputMode="numeric" value={datos.cuil} onChange={cambiar('cuil')} error={avisos.cuil} />
-          <FormField label={textos.invitar_genero} name="persona-genero" type="select" required value={datos.genero} onChange={cambiar('genero')} error={avisos.genero}>
-            <option value="">{textos.invitar_elegir}</option>
+          <FormField label={textos.agregar_nombre} name="persona-nombre" required value={datos.nombre} onChange={cambiar('nombre')} error={avisos.nombre} />
+          <FormField label={textos.agregar_apellido} name="persona-apellido" required value={datos.apellido} onChange={cambiar('apellido')} error={avisos.apellido} />
+          <FormField label={textos.agregar_cuil} name="persona-cuil" required inputMode="numeric" value={datos.cuil} onChange={cambiar('cuil')} error={avisos.cuil} />
+          <FormField label={textos.agregar_genero} name="persona-genero" type="select" required value={datos.genero} onChange={cambiar('genero')} error={avisos.genero}>
+            <option value="">{textos.agregar_elegir}</option>
             {generos.map((uno) => (
               <option key={uno.codigo} value={uno.codigo}>{t.generos[uno.codigo] ?? uno.codigo}</option>
             ))}
           </FormField>
-          <FormField label={textos.invitar_email} name="persona-email" type="email" required value={datos.email} onChange={cambiar('email')} error={avisos.email} />
+          <FormField label={textos.agregar_email} name="persona-email" type="email" required value={datos.email} onChange={cambiar('email')} error={avisos.email} />
 
           <div className="panel-modal-acciones">
             <Button variant="secondary" type="button" onClick={cerrar} disabled={guardando}>

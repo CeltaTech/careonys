@@ -2,7 +2,7 @@
 // ============================================================================
 //
 // Qué es una excepción acá. Una cosa que no está bien y que alguien tiene que resolver:
-// un hueco sin cubrir, una invitación que nadie contestó, un Asistente que no llegó. El
+// un hueco sin cubrir, un documento vencido, un Asistente que no llegó. El
 // Estado actual arranca mostrando siete contadores —uno por excepción— y debajo la semana entera.
 //
 // El problema que este archivo evita. La franja tiene que hacer dos cosas con la misma idea:

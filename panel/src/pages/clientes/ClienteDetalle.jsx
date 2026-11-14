@@ -15,7 +15,7 @@ import { EditarPacienteModal } from './EditarPacienteModal';
 import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { SignosVitalesPaciente } from './SignosVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
-import { InvitarPersonaAutorizadaModal } from './InvitarPersonaAutorizadaModal';
+import { AgregarPersonaAutorizadaModal } from './AgregarPersonaAutorizadaModal';
 import { AccesosALaInformacionDeSalud } from './AccesosALaInformacionDeSalud';
 import {
   AlertasDelCliente,
@@ -84,7 +84,7 @@ export function ClienteDetalle() {
   const [estadoPersonasAutorizadas, setEstadoPersonasAutorizadas] = useState('cargando');
   const [errorPersonasAutorizadas, setErrorPersonasAutorizadas] = useState(null);
   const [instruccionPendiente, setInstruccionPendiente] = useState(null);
-  const [mostrarInvitarPersonasAutorizadas, setMostrarInvitarPersonasAutorizadas] = useState(false);
+  const [mostrarAgregarPersonaAutorizada, setMostrarAgregarPersonaAutorizada] = useState(false);
   // Guarda a quién se estaba mirando al abrir la ventana de accesos, para que esa persona
   // quede a la vista. `null` es la ventana cerrada.
   const [accesosDe, setAccesosDe] = useState(null);
@@ -322,7 +322,7 @@ export function ClienteDetalle() {
             <div className="panel-tarjeta-titulo">
               <h2>{t.clientes.personas_autorizadas.titulo}</h2>
               {puedeEditarCliente && (
-                <Button variant="secondary" onClick={() => setMostrarInvitarPersonasAutorizadas(true)}>
+                <Button variant="secondary" onClick={() => setMostrarAgregarPersonaAutorizada(true)}>
                   {t.clientes.personas_autorizadas.agregar}
                 </Button>
               )}
@@ -431,13 +431,13 @@ export function ClienteDetalle() {
         />
       )}
 
-      {mostrarInvitarPersonasAutorizadas && (
-        <InvitarPersonaAutorizadaModal
+      {mostrarAgregarPersonaAutorizada && (
+        <AgregarPersonaAutorizadaModal
           clienteId={cliente.id}
           prestadoraId={cliente.prestadora_id}
-          onClose={() => setMostrarInvitarPersonasAutorizadas(false)}
-          onInvitado={() => {
-            setMostrarInvitarPersonasAutorizadas(false);
+          onClose={() => setMostrarAgregarPersonaAutorizada(false)}
+          onAgregada={() => {
+            setMostrarAgregarPersonaAutorizada(false);
             recargarPersonasAutorizadas();
           }}
         />

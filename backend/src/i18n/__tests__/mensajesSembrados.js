@@ -16,22 +16,31 @@ import { filasDeFabrica } from '../../__tests__/laFotoDeLaBase.js';
 // Las migraciones posteriores a la foto que siembran o borran una frase. Siembran en la forma
 // `('<clave>', '<json>'::jsonb)` —con `admite_texto_propio` y `activo` detrás, si los dicen— y
 // borran en la forma `DELETE FROM public.mensajes_del_sistema WHERE prestadora_id IS NULL AND
-// clave = '<clave>'`. Se leen en orden, igual que las corre la base.
+// clave = '<clave>'` y renombran en la forma `SET clave = replace(clave, '<de>', '<a>') WHERE clave IN
+// ('<clave>', …)`. Se leen en orden, igual que las corre la base.
 const MIGRACIONES_POSTERIORES = [
   '20270326000000_alarma_de_las_cuentas_automaticas.sql',
+  '20270401000800_la_frase_antes_del_enlace.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;
 // La otra forma de sembrar: `(NULL, '<clave>', '<json>')`, con la Prestadora delante y sin el tipo.
 const SIEMBRA_CON_PRESTADORA = /\(NULL,\s*'([^']+)',\s*'(\{[^\n]*?\})'\)/g;
 const BORRADO = /DELETE FROM public\.mensajes_del_sistema\s+WHERE prestadora_id IS NULL AND clave = '([^']+)'/g;
+const RENOMBRE = /SET clave = replace\(clave, '([^']+)', '([^']+)'\)\s+WHERE clave IN \(([^)]*)\)/g;
 
-/** Lo que hace cada migración posterior, en orden: `{ clave, fila }` siembra, `{ clave }` borra. */
+/** Lo que hace cada migración posterior, en orden: `{ clave, fila }` siembra, `{ clave }` borra y
+    `{ clave, nueva }` renombra. */
 function cambiosPosteriores() {
   return MIGRACIONES_POSTERIORES.flatMap((archivo) => {
     const texto = readFileSync(new URL(`../../../../supabase/migrations/${archivo}`, import.meta.url), 'utf8');
     const cambios = [
       ...[...texto.matchAll(BORRADO)].map((m) => ({ donde: m.index, clave: m[1] })),
+      ...[...texto.matchAll(RENOMBRE)].flatMap((m) => [...m[3].matchAll(/'([^']+)'/g)].map(([, clave]) => ({
+        donde: m.index,
+        clave,
+        nueva: clave.replace(m[1], m[2]),
+      }))),
       ...[...texto.matchAll(SIEMBRA)].map(([, clave, i18n, admite, activo], i, todos) => ({
         donde: todos[i].index,
         clave,
@@ -71,7 +80,11 @@ export function filasSembradas() {
   ]) porClave.set(fila.clave, fila);
   for (const cambio of cambiosPosteriores()) {
     if (cambio.fila) porClave.set(cambio.clave, cambio.fila);
-    else porClave.delete(cambio.clave);
+    else if (cambio.nueva) {
+      const fila = porClave.get(cambio.clave);
+      porClave.delete(cambio.clave);
+      if (fila) porClave.set(cambio.nueva, { ...fila, clave: cambio.nueva });
+    } else porClave.delete(cambio.clave);
   }
   return [...porClave.values()];
 }

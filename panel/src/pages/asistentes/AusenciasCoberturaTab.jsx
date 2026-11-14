@@ -100,7 +100,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     // Qué turnos de esas ausencias ya tienen sustituto. Se trae junto con las ausencias y no al
     // apretar el botón: la tarjeta tiene que poder decir cuántas faltan antes de que nadie toque
     // nada. Si esta consulta falla, la pestaña entra en error en vez de dibujar cero cubiertas,
-    // que invitaría a asignar de nuevo lo que ya está asignado.
+    // que llevaría a asignar de nuevo lo que ya está asignado.
     const lista = dataAusencias ?? [];
     const porAusencia = {};
     const cambiosPorAusencia = {};

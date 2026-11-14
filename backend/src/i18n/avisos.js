@@ -584,7 +584,7 @@ const ARMADORES = {
       asunto: t('activacion_cuenta.asunto', { empresa: d.empresa }),
       texto: [
         saludo, '', cuerpo, '',
-        t('activacion_cuenta.invitacion_al_enlace'), d.link, '',
+        t('activacion_cuenta.antes_del_enlace'), d.link, '',
         pieDelMensaje, '', '—', marca,
       ].join('\n'),
       html: correoConBoton({
@@ -607,7 +607,7 @@ const ARMADORES = {
       asunto: t('recuperacion_clave.asunto', { empresa: d.empresa }),
       texto: [
         saludo, '', cuerpo, '',
-        t('recuperacion_clave.invitacion_al_enlace'), d.link, '',
+        t('recuperacion_clave.antes_del_enlace'), d.link, '',
         pieDelMensaje, '', '—', marca,
       ].join('\n'),
       html: correoConBoton({

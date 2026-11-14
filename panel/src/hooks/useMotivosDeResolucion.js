@@ -13,7 +13,7 @@ import { nombreDelMotivo } from '../lib/resoluciones';
 //
 // Y se puede pedir además los de un solo estado. Hace falta cuando una misma cosa se resuelve desde
 // dos lugares distintos: una Guardia se cancela en un lado y se cierra en otro, y ofrecer ahí los
-// motivos del otro sería invitar a elegir el equivocado. Sin ese tercer valor vienen todos, que es
+// motivos del otro sería dejar elegir el equivocado. Sin ese tercer valor vienen todos, que es
 // lo que necesita una pantalla donde la decisión y el estado se eligen juntos.
 export function useMotivosDeResolucion(prestadoraId, tabla, estadoResultante = null) {
   const { locale } = useLocale();

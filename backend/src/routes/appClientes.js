@@ -21,7 +21,7 @@ import {
   crearInstruccion,
   personasAutorizadasConSusAccesos,
 } from '../utils/instruccionesPersonasAutorizadas.js';
-import { invitarPersonaAutorizada } from '../utils/cuentasPanel.js';
+import { agregarPersonaAutorizada } from '../utils/cuentasPanel.js';
 import { mezclarAccesosConCatalogo } from '../utils/catalogoPersonasAutorizadas.js';
 import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
@@ -267,7 +267,7 @@ appClientesRouter.post('/personas-autorizadas', requiereRolCliente, soloElTitula
     // Con el trabajo de la Prestadora, porque la cuenta nueva y los datos de la persona no los puede crear el
     // titular con su sesión.
     const { miembroId } = await enLaPrestadora(prestadoraId, 'alta de persona autorizada', (dbTrabajo) =>
-      invitarPersonaAutorizada({
+      agregarPersonaAutorizada({
         db: dbTrabajo,
         email,
         nombre,
@@ -276,7 +276,7 @@ appClientesRouter.post('/personas-autorizadas', requiereRolCliente, soloElTitula
         genero,
         clienteId,
         prestadoraId,
-        invitadoPor: id,
+        creadoPor: id,
       }));
     const instruccion = await crearInstruccion({
       clienteId,

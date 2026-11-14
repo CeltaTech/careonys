@@ -60,7 +60,6 @@ Los tres se sostienen entre sí: la marca compartida obliga a que el logo de cad
 en las pantallas, y de ahí sale el depósito público, que es la única excepción a «los archivos se
 guardan privados».
 
-- `docs/MARCA.md:27` — **[ya construido]** el modelo de marca del producto: compartida con la Prestadora y no marca blanca.
 - `docs/claude_history.md:164` — **[ya construido]** que el depósito de logos sea público para leer. **Se contesta junto con el paso de más abajo que pregunta si la regla admite esa excepción o si el depósito se cierra:** ahí se decide qué pasa, acá sólo si la decisión fue suya.
 - `docs/PRD_01_Sitio_Web.md:187-191` — que la página de cada Prestadora la arme CeltaTech y no sea función de Careonys. **Se contesta antes que el paso que autoriza construir el sitio**, más abajo: si esto no es suyo, ese documento cambia antes de que se construya nada.
 

@@ -329,9 +329,10 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
   Prestadora; revisa que no traiga ninguna fila de otra.
 - **Ningún dato se cifra en la aplicación.** El único cifrado del código es el del acceso guardado
   en el teléfono.
-- **Los secretos de terceros de cada Prestadora** —WhatsApp y facturación— se
-  guardan con el depósito de secretos de Supabase, que usa **una sola clave para todo el
-  proyecto**. Hoy no hay ninguno guardado.
+- **Los secretos de terceros de cada Prestadora** —la conexión con WhatsApp y los secretos de
+  firma de los avisos de facturación y de cobranzas— se guardan con el depósito de secretos de
+  Supabase, que usa **una sola clave para todo el proyecto**. La conexión con un software de
+  facturación o de cobranzas no está construida.
 - **El cifrado del disco** lo pone Supabase, con una clave suya. No se puede comprobar desde la base.
 
 **Lo que falta:**
@@ -354,9 +355,11 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
    equivocadas, Supabase sólo las informa en el plan Teams. Espera ese cambio de plan. Para
    reactivar una cuenta cortada: contraseña nueva, `banned_until` vacío y la contraseña nueva en
    Railway y en la caja fuerte. Si la cortada es `lista@`, el correo no sale hasta reactivarla.
-
-**Lo que decide usted:** qué se hace con los secretos de terceros, que el sistema tiene que poder
-usar solo y por eso no pueden quedar fuera de su alcance.
+3. **Los secretos de terceros pasan a tener una clave por Prestadora.** La clave va a Railway, con
+   copia en la caja fuerte y en el gestor de contraseñas de Google; el backend cifra y descifra, y
+   la base guarda sólo el texto cifrado, bajo la protección por fila. Estos secretos dejan de ir al
+   depósito de secretos de Supabase. **Se construye antes de que la primera Prestadora real cargue
+   la conexión con WhatsApp o el secreto de un aviso de facturación o de cobranzas.**
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra; ningún secreto del
 repositorio, de GitHub ni del backend alcanza a más de una Prestadora —el backend las guarda todas,

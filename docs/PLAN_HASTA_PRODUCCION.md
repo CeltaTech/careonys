@@ -1051,10 +1051,6 @@ país.
 
 **61.** Aplicar todo lo contestado.
 
-**62.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
-todo el Panel y de las dos aplicaciones, sin excepción, y
-quitar los textos que no se alcanzan desde ninguna pantalla.
-
 **63.** Relevar lo que el pie de `docs/CARTELES_DEL_PANEL.md` anota como todavía sin relevar. **Y todo el texto visible, contra
 las cuatro fuentes** que fija `..\..\CLAUDE.md` §8: términos sin aprobar, giros locales,
 construcciones dubitativas como «Conviene…» e impersonalidades innecesarias. Cada cambio de redacción se le presenta para

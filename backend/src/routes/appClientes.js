@@ -28,7 +28,6 @@ import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { ARCHIVOS_DE_LA_PIEZA, conArchivosEnOrden, enlaceDelArchivo } from '../utils/archivosDeContenidos.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
-import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
 import { estadoDocumentalParaElCliente } from '../utils/estadoDocumentalParaElCliente.js';
 import { laCobranzaLaLlevaOtroSoftware, sinLoQueSeCalculaAca } from '../utils/seguimientoDeLaCobranza.js';
 import {
@@ -1120,10 +1119,7 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
 });
 
 // ============================================================================
-// El acceso al Match + cobro en efectivo por QR. El QR es la
-// alternativa a la carga manual del cobrador: el Cliente lo genera desde su propio
-// dispositivo, de un solo uso y con vencimiento corto (10 min) — el canje ocurre siempre en
-// el Panel, con el trabajo de la Prestadora, nunca como UPDATE directo desde acá.
+// El acceso al Match
 // ============================================================================
 
 appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
@@ -1165,26 +1161,6 @@ appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('c
 function sinLaFormaDeCobro({ formas_de_cobro_intermediacion: _forma, ...resto }) {
   return resto;
 }
-
-// La baja en un clic del §3.2 del `docs/PRD_07_Modalidad_Match.md`: la hace quien paga, sin
-// pedírselo a nadie. Qué apaga y qué conserva lo decide `utils/bajaDelAcceso.js`, que es el único
-// lugar por donde un acceso se da de baja; acá sólo se comprueba quién llama.
-appClientesRouter.post('/acceso/:accesoId/baja', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
-  if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
-  const resultado = await darDeBajaElAcceso({
-    accesoId: req.params.accesoId,
-    prestadoraId: req.usuarioCliente.prestadoraId,
-    clienteId: req.usuarioCliente.clienteId,
-  });
-
-  if (!resultado.ok) {
-    // El motivo es un código y la frase vive en las traducciones; qué número de respuesta le
-    // toca a cada uno lo decide `utils/errorConMotivo.js`, que es el único lugar que lo sabe.
-    return responderError(res, new ErrorConMotivo(resultado.motivo, resultado.detalle));
-  }
-
-  res.json({ baja: resultado.baja, ya_estaba: Boolean(resultado.yaEstaba) });
-});
 
 // ============================================================================
 // Las facturas del Cliente — la ventanilla

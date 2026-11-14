@@ -16,7 +16,7 @@
  *   * darla por dada de alta cuando Meta no contestó ningún identificador;
  *   * y dejar que lo que Meta contesta —o el token de la Prestadora— salga hacia afuera.
  *
- * Se levanta la base de mentira igual que `altaEnPasarela.test.js`, y un Meta de mentira puesto en
+ * Se levanta una base de mentira, y un Meta de mentira puesto en
  * lugar de `fetch`: lo que no va a Meta se deriva al `fetch` de verdad, que es el que usa la base.
  */
 import { strict as assert } from 'node:assert';

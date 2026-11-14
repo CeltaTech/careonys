@@ -16,8 +16,10 @@
    ventanas abiertas a la vez descuentan una sola vez. Del lado de la base el descuento y la
    anotación pasan juntos, con la fila del acceso tomada.
 
-   QUIÉN LLAMA A CADA UNA. La carga del saldo la llama el cobro, que es el único lugar por donde
-   entra la plata (`cobrosIntermediacion.js`). El descuento lo va a llamar la pantalla que le abre el
+   QUIÉN LLAMA A CADA UNA. La carga del saldo la va a llamar la entrada por la que el software de
+   cobranzas avisa que un acceso de Match se pagó, que se construye con Match
+   (`docs\SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md` de CeltaTech, §4). El descuento lo va a llamar la
+   pantalla que le abre el
    contacto al Cliente —el paso «La activación al intentar ver el contacto» del plan—, que
    todavía no existe: hasta entonces el Panel puede ver el saldo y nadie lo gasta. */
 

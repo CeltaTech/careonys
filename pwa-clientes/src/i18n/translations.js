@@ -52,11 +52,7 @@ export const T = {
         dni_no_coincide: 'El DNI no coincide con el CUIL.',
         falta_el_genero: 'Falta el género.',
         genero_no_reconocido: 'Texto no reconocido.',
-        // Los dos de la baja del acceso. Ninguno es una falla: el primero pasa cuando la pantalla
-        // quedó vieja, y el segundo cuando esa forma de cobro no se renueva sola y entonces no hay
-        // nada que apagar.
         acceso_inexistente: 'Acceso no encontrado.',
-        forma_que_no_se_renueva: 'Ese acceso no se renueva solo, así que no hay nada que dar de baja.',
         // La vidriera de Match pedida en una Prestadora que no trabaja de esa manera. No
         // es una función apagada: es que esa Prestadora asigna ella a su gente, y decirlo así
         // evita que alguien le reclame que le "active" algo que no ofrece.
@@ -532,14 +528,6 @@ export const T = {
       sin_acceso: 'Todavía no hay un acceso de Match para este Paciente.',
       importe: 'Importe',
       proximo_cobro: 'Próximo cobro',
-      // La baja se hace en un clic y sin pedírsela a nadie. Lo que hay que leer antes está arriba
-      // del botón: qué se apaga y qué se conserva.
-      baja_titulo: 'Dar de baja',
-      baja_boton: 'Dar de baja',
-      dando_de_baja: 'Dando de baja…',
-      baja_hecha: 'La baja quedó registrada. No se vuelve a cobrar.',
-      baja_hasta: 'El acceso sigue disponible hasta el {fecha}.',
-      baja_cancelada_el: 'Dada de baja el {fecha}.',
     },
     // Lo que se le cobra al Cliente, período por período, y de qué está hecho cada
     // importe. Los estados y los medios se guardan como clave en la base y el nombre visible
@@ -745,7 +733,6 @@ export const T = {
         falta_el_genero: 'The gender is missing.',
         genero_no_reconocido: 'Text not recognised.',
         acceso_inexistente: 'Access not found.',
-        forma_que_no_se_renueva: 'That access does not renew on its own, so there is nothing to cancel.',
         intermediacion_no_habilitado: 'This Provider assigns its own Assistants, so there is no list to choose from.',
         sin_acceso_de_intermediacion: 'To see the contact details of this person, arrange the service with the Provider.',
         acceso_no_vigente: 'The arranged service has expired. Renew it with the Provider to see these details.',
@@ -1153,12 +1140,6 @@ export const T = {
       sin_acceso: 'There is no Match access for this Patient yet.',
       importe: 'Amount',
       proximo_cobro: 'Next charge',
-      baja_titulo: 'Cancel',
-      baja_boton: 'Cancel',
-      dando_de_baja: 'Cancelling…',
-      baja_hecha: 'The cancellation is on record. There will be no further charges.',
-      baja_hasta: 'Access remains available until {fecha}.',
-      baja_cancelada_el: 'Cancelled on {fecha}.',
     },
     // WHAT THE PROVIDER WROTE FOR WHOEVER IS CARING AT HOME. Each piece was written by someone
     // at the provider and shows as written: only the frame around it is translated.
@@ -1349,7 +1330,6 @@ export const T = {
         falta_el_genero: 'Falta o gênero.',
         genero_no_reconocido: 'Texto não reconhecido.',
         acceso_inexistente: 'Acesso não encontrado.',
-        forma_que_no_se_renueva: 'Esse acesso não se renova sozinho, portanto não há nada a cancelar.',
         intermediacion_no_habilitado: 'Esta Prestadora designa ela mesma os seus Assistentes, portanto não há uma lista para escolher.',
         sin_acceso_de_intermediacion: 'Para ver os dados de contato desta pessoa, contrate o serviço com a Prestadora.',
         acceso_no_vigente: 'O serviço contratado expirou. Renove-o com a Prestadora para ver estes dados.',
@@ -1757,12 +1737,6 @@ export const T = {
       sin_acceso: 'Ainda não há um acesso a Match para este Paciente.',
       importe: 'Valor',
       proximo_cobro: 'Próxima cobrança',
-      baja_titulo: 'Cancelar',
-      baja_boton: 'Cancelar',
-      dando_de_baja: 'Cancelando…',
-      baja_hecha: 'O cancelamento ficou registrado. Não se cobra de novo.',
-      baja_hasta: 'O acesso continua disponível até {fecha}.',
-      baja_cancelada_el: 'Cancelada em {fecha}.',
     },
     // O QUE A PRESTADORA ESCREVEU PARA QUEM CUIDA EM CASA. O texto de cada peça foi escrito por
     // alguém da Prestadora e aparece como está: aqui se traduz a moldura e nada mais.

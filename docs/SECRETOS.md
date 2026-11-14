@@ -25,7 +25,7 @@ Son cinco lugares, y ninguno se superpone con otro:
 |---|---|---|
 | **Railway** — variables del servicio del backend | Todo lo que el backend necesita para funcionar en producción | El backend, en ejecución |
 | **Secretos del repositorio en GitHub** | Lo que necesitan los automatismos: publicar, desplegar, respaldar y comprobar los textos | Los archivos de `.github/workflows/` |
-| **La caja fuerte de la base** (`vault` de Supabase) | Lo de **cada Prestadora**: su pasarela, su correo, su WhatsApp | El backend, con el trabajo sin persona de esa Prestadora, a través de funciones `SECURITY DEFINER` |
+| **La caja fuerte de la base** (`vault` de Supabase) | Lo de **cada Prestadora**: su correo, su WhatsApp | El backend, con el trabajo sin persona de esa Prestadora, a través de funciones `SECURITY DEFINER` |
 | **El panel de cada proveedor** | El valor original, que es de donde sale la copia que va a los otros lugares | Quien tenga la cuenta |
 | **La máquina del Desarrollador** — `backend/.env` y la caja fuerte local | Lo mismo que Railway, pero apuntando al ambiente de desarrollo | El backend corriendo en local |
 
@@ -50,7 +50,6 @@ Cada uno con el archivo que lo usa, para no tener que buscarlo.
 | `VAPID_PRIVATE_KEY` | Firma los mensajes al celular. Va de a pares con `VAPID_PUBLIC_KEY`, que no es secreta y se compila adentro de las pantallas. `backend/src/utils/push.js` | No llega ningún mensaje al celular | Sin registro |
 | `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` | Copiar cada certificado médico que se sube al depósito de Cloudflare R2, como espejo (`backend/src/routes/panelAusencias.js`), y el respaldo nocturno de los datos y de los archivos (`backend/src/utils/respaldoDeLosDatos.js`, `backend/src/utils/copiaDeLosArchivos.js`). Van junto con `R2_ENDPOINT` y `R2_BUCKET` | El respaldo falla, queda en el registro del servidor, y lo demás sigue andando | Sin registro |
 | `B2_KEY_ID` y `B2_APPLICATION_KEY` | El mismo respaldo nocturno, al espejo de Backblaze. Van junto con `B2_ENDPOINT` y `B2_BUCKET`. Railway los recibe de los secretos del repositorio en cada publicación del backend (`deploy-backend.yml`) | El respaldo falla esa noche y queda en el registro del servidor | Sin registro |
-| `COBRANZA_EFECTIVO_SECRETO_FIRMA_WEBHOOK`, `DEBIN_SECRETO_FIRMA_WEBHOOK`, `MODO_SECRETO_FIRMA_WEBHOOK` | Comprobar que el cobro informado viene de la pasarela y no de cualquiera que conozca la dirección. **Son el respaldo del ambiente:** el secreto que manda es el de esa Prestadora, guardado en la caja fuerte de la base (§4) | El cobro informado se rechaza, que es lo correcto: mejor no cobrar que dar por cobrado lo que no se cobró | Sin registro |
 
 ---
 
@@ -82,13 +81,11 @@ referencia de una caja de `vault`, y adentro de esa caja está el texto cifrado.
 
 | Caja | Qué guarda | Funciones que la abren |
 |---|---|---|
-| `pasarela_<proveedor>_<prestadora>` | El acceso con el que esa Prestadora cobra por esa pasarela | `guardar_credencial_pasarela_pago` / `leer_credencial_pasarela_pago` |
-| `pasarela_firma_<proveedor>_<prestadora>` | El secreto con el que esa pasarela firma lo que informa de sus cobros | `guardar_secreto_firma_pasarela_pago` / `leer_secreto_firma_pasarela_pago` |
 | `whatsapp_token_<prestadora>` | El token con el que manda mensajes por WhatsApp | `guardar_token_whatsapp` / `leer_token_whatsapp` |
 | `whatsapp_app_secret_<prestadora>` | Con qué se comprueba la firma de lo que llega de Meta | `guardar_app_secret_whatsapp` / `leer_app_secret_whatsapp` |
 | `whatsapp_verify_token_<prestadora>` | Con qué se contesta el saludo de enganche de Meta | `guardar_verify_token_whatsapp` / `leer_verify_token_whatsapp` |
 
-**Las diez funciones son `SECURITY DEFINER` y sólo las alcanza el trabajo sin persona**, o sea el
+**Las seis funciones son `SECURITY DEFINER` y sólo las alcanza el trabajo sin persona**, o sea el
 backend, de a una Prestadora por vez.
 Ni el Superadmin ni el Admin de la propia Prestadora llegan al texto. Rotar uno de estos secretos
 no es trabajo de CeltaTech: la Prestadora lo vuelve a cargar desde Configuración, y el cambio
@@ -108,7 +105,7 @@ Sirve el día que pasa, que es el día en que nadie tiene tiempo de leer código
 - **Se filtró la clave de la API de IA** → se rota en el panel de Anthropic. Cada función de IA
   queda sin respuesta hasta reemplazarla; ninguna otra cosa se rompe.
 - **Se filtró un secreto de una Prestadora** → lo vuelve a cargar ella desde Configuración. Si la
-  que avisó usa la misma pasarela que otras, se revisa en todas: un defecto que aparece en una
+  que avisó usa el mismo servicio que otras, se revisa en todas: un defecto que aparece en una
   Prestadora es del producto, no de ella (`celtatech/CLAUDE.md`, sección «Las reglas de desarrollo»).
 
 ---
@@ -129,9 +126,7 @@ no dice cuándo se cambió sirve la mitad.
 Variables de entorno del backend que son configuración, no secretos. **No se rotan.** Se listan
 para que nadie las confunda con las de arriba, ni al revés.
 
-- **Direcciones de servicios ajenos:** `SUPABASE_URL`, `GEOREF_API_BASE`, `MERCADOPAGO_API_BASE`,
-  `MERCADOPAGO_BACK_URL`, `STRIPE_API_BASE`, `MODO_API_BASE`, `DEBIN_API_BASE`,
-  `DEBIN_PSP_API_BASE`, `COBRANZA_EFECTIVO_API_BASE`, `CLOUDFLARE_API_BASE`, `R2_ENDPOINT`,
+- **Direcciones de servicios ajenos:** `SUPABASE_URL`, `GEOREF_API_BASE`, `CLOUDFLARE_API_BASE`, `R2_ENDPOINT`,
   `R2_BUCKET`, `SMTP_HOST`, `SMTP_PORT`.
 - **Identificadores públicos:** `SUPABASE_ANON_KEY` (la clave anónima, ver §3), `CLOUDFLARE_ACCOUNT_ID`,
   `CLOUDFLARE_ZONE_ID`, `REMITENTE_AVISOS`, `VAPID_PUBLIC_KEY`, `CORREO_DE_LAS_ALARMAS`.

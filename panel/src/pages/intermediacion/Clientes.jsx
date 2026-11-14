@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { Button } from '../../components/ui/Button';
-import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { EstadoLista } from '../../components/layout/EstadoLista';
@@ -24,9 +23,6 @@ export function IntermediacionClientes() {
   const [cobrosPorAcceso, setCobrosPorAcceso] = useState({});
   const [cargandoCobros, setCargandoCobros] = useState(null);
   const [mensajeExito, setMensajeExito] = useState(null);
-  const [rielesConectados, setRielesConectados] = useState([]);
-  const [rielElegido, setRielElegido] = useState({});
-  const [dandoAlta, setDandoAlta] = useState(null);
   const [mes, setMes] = useState(hoyISO().slice(0, 7));
   const [exportando, setExportando] = useState(false);
 
@@ -34,15 +30,8 @@ export function IntermediacionClientes() {
     setEstado('cargando');
     setError(null);
     try {
-      // Las pasarelas se piden junto con los accesos porque de ellas depende qué se puede hacer
-      // en esta pantalla: con ninguna conectada no hay alta posible, y con más de una hay que
-      // elegir cuál cobra. Elegir por la Prestadora sería decidir con qué cobra.
-      const [{ accesos: filas }, { pasarelas }] = await Promise.all([
-        llamarApi('/accesos'),
-        llamarApi('/pasarela'),
-      ]);
+      const { accesos: filas } = await llamarApi('/accesos');
       setAccesos(filas);
-      setRielesConectados((pasarelas || []).filter((p) => p.estado_conexion === 'conectada').map((p) => p.proveedor));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -70,26 +59,6 @@ export function IntermediacionClientes() {
       setError(mensajeDeError(err, t));
     } finally {
       setCargandoCobros(null);
-    }
-  }
-
-  async function darDeAlta(accesoId) {
-    setDandoAlta(accesoId);
-    setError(null);
-    setMensajeExito(null);
-    try {
-      // El riel sólo se manda cuando hay más de uno conectado; con uno solo lo resuelve el backend.
-      const elegido = rielesConectados.length > 1 ? rielElegido[accesoId] : null;
-      await llamarApi(`/accesos/${accesoId}/alta-en-pasarela`, {
-        method: 'POST',
-        body: JSON.stringify(elegido ? { proveedor: elegido } : {}),
-      });
-      setMensajeExito(t.intermediacion.alta_pasarela_exitosa);
-      await recargar();
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setDandoAlta(null);
     }
   }
 
@@ -158,7 +127,6 @@ export function IntermediacionClientes() {
                   <th>{t.intermediacion.col_estado_cobro}</th>
                   <th>{t.intermediacion.col_ultimo_cobro}</th>
                   <th>{t.intermediacion.col_proximo_cobro}</th>
-                  <th>{t.intermediacion.col_cobro}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -194,11 +162,6 @@ export function IntermediacionClientes() {
                     </td>
                     <td>{s.proximo_cobro || '—'}</td>
                     <td>
-                      {s.alta_en_pasarela
-                        ? t.intermediacion[`medio_${s.proveedor}`] || s.proveedor
-                        : t.intermediacion.alta_pasarela_pendiente}
-                    </td>
-                    <td>
                       <button type="button" className="panel-enlace" onClick={() => verCobros(s.id)}>
                         {t.intermediacion.ver_cobros}
                       </button>
@@ -214,8 +177,7 @@ export function IntermediacionClientes() {
           accesos
             .filter((s) => s.id === expandida)
             .map((s) => (
-              <div key={s.id} className="panel-grilla panel-columnas-2">
-                <section className="panel-tarjeta tarjeta-desplazable">
+                <section key={s.id} className="panel-tarjeta tarjeta-desplazable">
                   <div className="panel-tarjeta-titulo">
                     <h2>{t.intermediacion.cobros_titulo}</h2>
                     <span className="panel-mini">{s.cliente_nombre || '—'}</span>
@@ -253,65 +215,6 @@ export function IntermediacionClientes() {
                     </table>
                   </EstadoLista>
                 </section>
-
-                <section className="panel-tarjeta">
-                  <div className="panel-tarjeta-titulo">
-                    <h2>{t.intermediacion.alta_pasarela_titulo}</h2>
-                  </div>
-                  {s.alta_en_pasarela ? (
-                    <div className="panel-fila-alerta">
-                      <div>
-                        <b>
-                          {t.intermediacion.alta_pasarela_hecha.replace(
-                            '{proveedor}',
-                            t.intermediacion[`medio_${s.proveedor}`] || s.proveedor
-                          )}
-                        </b>
-                        {s.url_accion && (
-                          <span className="panel-mini">
-                            <a href={s.url_accion} target="_blank" rel="noreferrer">
-                              {t.intermediacion.alta_pasarela_link}
-                            </a>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ) : rielesConectados.length === 0 ? (
-                    <Alert variant="warning">{t.errores.motivos.sin_pasarela_conectada}</Alert>
-                  ) : (
-                    <>
-                      {rielesConectados.length > 1 && (
-                        <div className="molde-formgrid">
-                          <div className="molde-ancho">
-                            <FormField
-                              label={t.intermediacion.alta_pasarela_riel}
-                              name={`riel-${s.id}`}
-                              type="select"
-                              value={rielElegido[s.id] || ''}
-                              onChange={(e) => setRielElegido((r) => ({ ...r, [s.id]: e.target.value }))}
-                            >
-                              <option value="">{t.comun.seleccionar}</option>
-                              {rielesConectados.map((riel) => (
-                                <option key={riel} value={riel}>
-                                  {t.intermediacion[`medio_${riel}`] || riel}
-                                </option>
-                              ))}
-                            </FormField>
-                          </div>
-                        </div>
-                      )}
-                      <div className="molde-acciones">
-                        <Button
-                          onClick={() => darDeAlta(s.id)}
-                          disabled={dandoAlta === s.id || (rielesConectados.length > 1 && !rielElegido[s.id])}
-                        >
-                          {dandoAlta === s.id ? t.comun.guardando : t.intermediacion.alta_pasarela_boton}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </section>
-              </div>
             ))}
       </div>
     </div>

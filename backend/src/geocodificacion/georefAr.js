@@ -11,8 +11,7 @@
 // a la misma lista de un solo nivel: son lo mismo para lo que se usan, que es decir dónde. El
 // barrio que Georef no tiene lo agrega la Prestadora colgándolo de su localidad.
 //
-// La dirección base sale de una variable de entorno con valor por descarte, igual que
-// `MERCADOPAGO_API_BASE` en `pasarelas/mercadopago.js`: en producción no se configura nada y
+// La dirección base sale de una variable de entorno con valor por descarte: en producción no se configura nada y
 // se usa la oficial; en las pruebas se apunta a un servidor de mentira. El nombre de la
 // variable es el que usa el tercero (CLAUDE.md §7 regla 13, excepción acotada).
 

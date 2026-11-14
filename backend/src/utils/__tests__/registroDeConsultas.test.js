@@ -9,7 +9,7 @@
  * comprobó el middleware, sin identificadores en el origen, y que si no puede anotar, lance el
  * error en vez de dejar pasar la lectura sin registro.
  *
- * Se levanta una base de mentira, igual que `bajaDelAcceso.test.js`.
+ * Se levanta una base de mentira.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';

@@ -1,12 +1,8 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { con } from '../../lib/textos';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useModalidades } from '../../context/ModalidadesContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
-import { useAuth } from '../../context/AuthContext';
-import { esAdminDePrestadora } from '../../lib/roles';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
-import { llamarApiIntermediacion } from '../../lib/apiIntermediacion';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -22,11 +18,8 @@ import { LaMoneda } from './LaMoneda';
 import '../../styles/molde-paginas.css';
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, en qué moneda
-   trabaja, las zonas donde presta, a qué plazo le pagan los Clientes y —si
-   vende por Match— por dónde cobra. */
+   trabaja, las zonas donde presta y a qué plazo le pagan los Clientes. */
 export function ConfiguracionPrestadora() {
-  const { tieneModalidad } = useModalidades();
-
   return (
     <div className="molde-pila">
       <TabEmpresa />
@@ -37,7 +30,6 @@ export function ConfiguracionPrestadora() {
       <IndicesDeActualizacion />
       <ConsentimientoPagadorTab />
       <ConsentimientoMedicacionTab />
-      {tieneModalidad('intermediacion') && <TabPasarela />}
     </div>
   );
 }
@@ -257,247 +249,5 @@ function NuevaZona({ onClose, onCreada }) {
         </div>
       </div>
     </div>
-  );
-}
-
-/* Con qué cobra esta Prestadora.
-   ==========================================================================
-
-   La lista de qué pasarelas están conectadas la ve toda la administración, Superadmin incluido:
-   es lo que hace falta para dar soporte cuando a una Prestadora no le entran los cobros. Lo que
-   no: cargar y reemplazar la credencial y el secreto de firma. Son secretos de la Prestadora,
-   igual que el token de WhatsApp y que la contraseña del correo saliente, y Superadmin es un rol
-   técnico de CeltaTech. El permiso de acceso tampoco lo habilita.
-
-   Quien decide de verdad es el backend (`backend/src/routes/panelIntermediacion.js`, el PATCH de la
-   pasarela y el PUT del secreto de firma): escribiendo la dirección a mano se llega igual, y ahí
-   se niega. Esto de acá es para no mostrar botones que no van a poder guardar. */
-function TabPasarela() {
-  const { t } = useLocale();
-  const { usuario } = useAuth();
-  const puedeTocarLasCredenciales = esAdminDePrestadora(usuario?.rol);
-  const [pasarelas, setPasarelas] = useState([]);
-  const [estado, setEstado] = useState('cargando');
-  const [error, setError] = useState(null);
-  const [proveedorAbierto, setProveedorAbierto] = useState(null);
-  const [credencial, setCredencial] = useState('');
-  const [accionEnCurso, setAccionEnCurso] = useState(null);
-  // El secreto de firma se pide en el mismo formulario que la credencial: los dos datos salen
-  // del panel del proveedor y se copian de una sola vez. El formulario aparte de abajo es solo
-  // para cambiarlo después, en una pasarela que ya está conectada.
-  const [secretoAbierto, setSecretoAbierto] = useState(null);
-  const [secretoFirma, setSecretoFirma] = useState('');
-
-  const recargar = useCallback(async () => {
-    setEstado('cargando');
-    setError(null);
-    try {
-      const { pasarelas: filas } = await llamarApiIntermediacion('/pasarela');
-      setPasarelas(filas);
-      setEstado('listo');
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-      setEstado('error');
-    }
-  }, [t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  async function activar(proveedor) {
-    setAccionEnCurso(proveedor);
-    setError(null);
-    try {
-      await llamarApiIntermediacion(`/pasarela/${proveedor}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          activo: true,
-          credencial: credencial || undefined,
-          secretoFirma: secretoFirma.trim() || undefined,
-        }),
-      });
-      setCredencial('');
-      setSecretoFirma('');
-      setProveedorAbierto(null);
-      await recargar();
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setAccionEnCurso(null);
-    }
-  }
-
-  async function desactivar(proveedor) {
-    setAccionEnCurso(proveedor);
-    setError(null);
-    try {
-      await llamarApiIntermediacion(`/pasarela/${proveedor}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ activo: false }),
-      });
-      await recargar();
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setAccionEnCurso(null);
-    }
-  }
-
-  async function guardarSecretoFirma(proveedor) {
-    setAccionEnCurso(proveedor);
-    setError(null);
-    try {
-      await llamarApiIntermediacion(`/pasarela/${proveedor}/secreto-firma`, {
-        method: 'PUT',
-        body: JSON.stringify({ secretoFirma }),
-      });
-      setSecretoFirma('');
-      setSecretoAbierto(null);
-      await recargar();
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setAccionEnCurso(null);
-    }
-  }
-
-  return (
-    <section className="panel-tarjeta">
-      <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.pasarela_titulo}</h2>
-      </div>
-      <EstadoLista estado={estado} error={error} vacio={pasarelas.length === 0} recargar={recargar}>
-        {error && <Alert variant="error">{error}</Alert>}
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.configuracion.pasarela_col_proveedor}</th>
-              <th>{t.configuracion.pasarela_col_estado}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {pasarelas.map((fila) => {
-              const abierta = proveedorAbierto === fila.proveedor;
-              const secretoAbiertoAca = secretoAbierto === fila.proveedor;
-              return (
-                <Fragment key={fila.proveedor}>
-                  <tr>
-                    <td><b>{t.configuracion[`pasarela_${fila.proveedor}`]}</b></td>
-                    <td>
-                      <span className={`badge ${fila.activo ? 'badge-exito' : 'badge-neutro'}`}>
-                        {fila.activo ? t.configuracion.pasarela_activa : t.configuracion.pasarela_inactiva}
-                      </span>
-                      {/* Una pasarela conectada pero sin secreto de firma no cobra: los cobros
-                          que informa se rechazan por no poder comprobarse. Se dice acá, en la
-                          misma fila, y no en un error después de que el cobro no entró. */}
-                      {fila.activo && fila.requiere_secreto_firma && !fila.secreto_firma_cargado && (
-                        <div><span className="badge badge-atencion">{t.configuracion.pasarela_secreto_firma_falta}</span></div>
-                      )}
-                    </td>
-                    <td>
-                      {!puedeTocarLasCredenciales ? null : fila.activo ? (
-                        <Button
-                          variant="secondary"
-                          onClick={() => desactivar(fila.proveedor)}
-                          disabled={accionEnCurso === fila.proveedor}
-                        >
-                          {accionEnCurso === fila.proveedor ? t.configuracion.pasarela_desactivando : t.configuracion.pasarela_desactivar}
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => {
-                            setProveedorAbierto(abierta ? null : fila.proveedor);
-                            setSecretoAbierto(null);
-                            setCredencial('');
-                            setSecretoFirma('');
-                          }}
-                          disabled={accionEnCurso === fila.proveedor}
-                        >
-                          {t.configuracion.pasarela_activar}
-                        </Button>
-                      )}
-                      {/* Solo cuando la pasarela ya está conectada: si todavía no lo está, el
-                          secreto se pide en el mismo formulario que la credencial y este botón
-                          sería un segundo trámite para lo mismo. */}
-                      {puedeTocarLasCredenciales && fila.activo && fila.requiere_secreto_firma && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setSecretoAbierto(secretoAbiertoAca ? null : fila.proveedor);
-                            setProveedorAbierto(null);
-                            setSecretoFirma('');
-                          }}
-                          disabled={accionEnCurso === fila.proveedor}
-                        >
-                          {fila.secreto_firma_cargado
-                            ? t.configuracion.pasarela_secreto_firma_reemplazar
-                            : t.configuracion.pasarela_secreto_firma_cargar}
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                  {abierta && !fila.activo && (
-                    <tr>
-                      <td colSpan={3}>
-                        <div className="molde-formgrid">
-                          <FormField
-                            label={t.configuracion.pasarela_credencial_cargar}
-                            name={`credencial-${fila.proveedor}`}
-                            type="password"
-                            value={credencial}
-                            onChange={(e) => setCredencial(e.target.value)}
-                          />
-                          {/* Los dos datos salen del mismo panel del proveedor: se copian de una
-                              sola vez y la pasarela queda lista para cobrar sin volver acá. */}
-                          {fila.requiere_secreto_firma && (
-                            <FormField
-                              label={t.configuracion.pasarela_secreto_firma_cargar}
-                              name={`secreto-firma-alta-${fila.proveedor}`}
-                              type="password"
-                              value={secretoFirma}
-                              onChange={(e) => setSecretoFirma(e.target.value)}
-                            />
-                          )}
-                        </div>
-                        <div className="molde-acciones">
-                          <Button onClick={() => activar(fila.proveedor)} disabled={accionEnCurso === fila.proveedor}>
-                            {accionEnCurso === fila.proveedor ? t.comun.guardando : t.comun.guardar}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {secretoAbiertoAca && fila.activo && fila.requiere_secreto_firma && (
-                    <tr>
-                      <td colSpan={3}>
-                        <div className="molde-formgrid">
-                          <FormField
-                            label={t.configuracion.pasarela_secreto_firma_cargar}
-                            name={`secreto-firma-${fila.proveedor}`}
-                            type="password"
-                            value={secretoFirma}
-                            onChange={(e) => setSecretoFirma(e.target.value)}
-                          />
-                        </div>
-                        <div className="molde-acciones">
-                          <Button
-                            onClick={() => guardarSecretoFirma(fila.proveedor)}
-                            disabled={accionEnCurso === fila.proveedor || !secretoFirma.trim()}
-                          >
-                            {accionEnCurso === fila.proveedor ? t.comun.guardando : t.comun.guardar}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </EstadoLista>
-    </section>
   );
 }

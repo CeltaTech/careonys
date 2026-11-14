@@ -11,7 +11,6 @@ import { Alert } from '../../components/ui/Alert';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { FormaDeCobroDetalle } from './FormaDeCobroDetalle';
-import { PlazosDelCobro } from './PlazosDelCobro';
 import '../../styles/molde-paginas.css';
 
 /* Cómo cobra la Prestadora.
@@ -130,11 +129,6 @@ export function FormasDeCobro() {
             </table>
           </EstadoLista>
         </section>
-
-        {/* Los plazos viven acá porque son la otra mitad de cómo cobra la Prestadora: la forma dice
-            cuánto y cada cuánto, y esto dice con cuánta anticipación se avisa, cuánto se espera
-            cuando un cobro no entra y hasta cuándo se puede pagar un cupón. */}
-        <PlazosDelCobro soloLectura={!esAdmin} />
       </div>
 
       {(seleccionada || creandoNueva) && (

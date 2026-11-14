@@ -30,12 +30,8 @@
    desde ese momento el cobro es firme. Quien no lo intenta llega al final del período gratuito
    sin haber consumido nada y decide entonces.
 
-   Y HAY UNA ASIMETRÍA ENTRE RIELES QUE NO SE TAPA. Los rieles que cobran solos —Stripe, Mercado
-   Pago, DEBIN— ya tienen el período gratuito anotado del lado del proveedor, así que el primer
-   cobro sale el día que se pactó con él y no hoy; adelantarlo sería una operación del adaptador
-   que hoy ninguno tiene. Los que no cobran solos miran `proximo_cobro`, así que para ellos el
-   cobro queda armado en el próximo paso del trabajo diario. En los dos casos lo que cambia acá
-   es lo mismo y es lo que importa: el acceso dejó de estar en prueba.
+   Lo que cambia acá es sólo el estado del acceso: dejó de estar en prueba. El cobro lo hace el
+   software de pagos de la Prestadora, y de ese lado no se toca nada.
 
    CON EL TRABAJO DE LA PRESTADORA. Quien pregunta es un Cliente, y el Legajo del Asistente, los
    accesos y el saldo no son suyos para leer ni escribir: los lee y los escribe el trabajo de esa
@@ -255,9 +251,8 @@ async function abrirYMostrar({ prestadoraId, clienteId, asistenteId }) {
 }
 
 /** Deja el acceso fuera del período gratuito. Lo que se cobró ya se consumió, así que la prueba
- *  terminó: el primer cobro pasa a ser el de hoy. No se toca nada del lado del proveedor —el
- *  riel que cobra solo tiene el período anotado allá— y por eso tampoco se adelanta una fecha
- *  que ya pasó: `proximo_cobro` anterior a hoy se respeta como está. */
+ *  terminó: el primer cobro pasa a ser el de hoy. No se adelanta una fecha que ya pasó:
+ *  `proximo_cobro` anterior a hoy se respeta como está. */
 async function terminarElPeriodoGratuito(acceso) {
   if (!enPeriodoGratuito(acceso)) return;
 

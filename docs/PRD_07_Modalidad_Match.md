@@ -44,41 +44,61 @@ Lo que cada Cliente tiene habilitado se guarda en `accesos_intermediacion`: a qu
 qué importe —congelado el día del alta, para que un cambio de precio no le mueva lo pactado—, hasta
 qué fecha y con cuántos contactos.
 
-### 3.1 Lo que vale para cualquier forma
+### 3.1 Quién cobra
+
+**El cobro lo hace el software de cobranzas de la Prestadora, no Careonys.** En Match el Cliente
+paga por adelantado, en el momento en que quiere ver el contacto de un Asistente; en prestación
+directa paga después del servicio, contra factura. El mismo software atiende las dos, con los
+mismos medios de pago de la Prestadora. Careonys no factura, no cobra, no gestiona la mora y no
+decide restricciones.
+
+**El botón de compra abre la ventana de pago de ese software** adentro de la página de Match, con
+la imagen de la Prestadora. El software resuelve todos los medios de pago y, apenas el pago queda
+aprobado, le avisa a Careonys con un aviso firmado. Careonys abre el contacto por esa orden y por
+ninguna otra: no consulta el estado del pago ni toma por bueno lo que diga la ventana del
+navegador. Qué tiene que cumplir ese software está en
+`celtatech/docs/SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md`, sección «La compra de un acceso de Match».
+
+**Cada aviso nombra un acceso** y dice uno de cuatro estados: pagó el período, está en período de
+gracia, quedó suspendido o se dio de baja. Careonys lo anota en `cobros_intermediacion` y mueve el
+acceso según lo que dice; no calcula nada por su cuenta. La entrada que recibe ese aviso y el botón
+de compra se construyen con Match: hoy Match está cerrado para los Clientes.
+
+### 3.2 Lo que vale para cualquier forma
 
 - La búsqueda, los perfiles, el chat interno y la videollamada son libres. Lo que se cobra es el
   acceso a los datos de contacto directo: teléfono, dirección, correo.
 - Confirmación explícita en pantalla antes de cualquier cobro. Nunca un cobro como efecto
   colateral de otro botón.
-- Medio de pago cargado desde el alta, para poder cobrar en el momento en que corresponda.
 - El acceso termina por una fecha o un saldo guardados, nunca por una cuenta hecha al vuelo.
 
-### 3.2 Lo que vale para toda forma que se renueve sola
+### 3.3 Lo que vale para toda forma que se renueve sola
 
-Resguardos obligatorios, no opcionales:
+Resguardos obligatorios, no opcionales. Los cumple el software de cobranzas, que es quien cobra, y
+la Prestadora lo elige sabiendo que tiene que cumplirlos:
 
 - Mensaje previo antes de cualquier cobro por vencimiento del período gratuito. Nunca un cobro
   silencioso.
-- Baja autoservicio en un clic, sin tener que escribirle a nadie. El patrón contrario fue parte de
-  la sanción de la FTC a Care.com en 2024, por USD 8,5 millones.
+- Baja en un solo paso, sin tener que escribirle a nadie, en la misma ventana del software de
+  cobranzas. El patrón contrario fue parte de la sanción de la FTC a Care.com en 2024, por USD 8,5
+  millones.
 - Quien cancela conserva el acceso hasta el fin del período ya pagado. No hay corte inmediato.
 - Si el cobro falla, período de gracia con reintentos antes de suspender el acceso. Ni corte en el
   acto ni reintentos indefinidos sin avisar.
 
-### 3.3 Las formas que salen de esas piezas
+### 3.4 Las formas que salen de esas piezas
 
 - **Suscripción** — importe, un período, y se renueva sola. Período gratuito e importe los pone la
   Prestadora. Sin permanencia mínima: un mínimo obligatorio es contraproducente bajo defensa del
   consumidor y además debilita el argumento de canal de contacto neutral. Si el Cliente intenta ver
-  un dato de contacto antes de que termine el período gratuito, el cobro se activa ahí, con
-  confirmación. Si no lo intenta, al terminar ese período se le pregunta si sigue o se da de baja.
-  Lleva los resguardos del §3.2.
+  un dato de contacto antes de que termine el período gratuito, el período gratuito termina ahí,
+  con confirmación. Lleva los resguardos del §3.3.
 - **Paquete de contactos** — importe, sin período, y un saldo de contactos que se descuenta de a
-  uno. No se renueva sola y no vence por calendario, así que no lleva los resguardos del §3.2.
-- **Cualquier otra combinación** es la forma propia de esa Prestadora. Los resguardos del §3.2 le
+  uno. No se renueva sola y no vence por calendario, así que no lleva los resguardos del §3.3.
+- **Cualquier otra combinación** es la forma propia de esa Prestadora. Los resguardos del §3.3 le
   corresponden por la pieza que los dispara —renovarse sola—, no por cómo la haya llamado.
 
-### 3.4 Dónde las carga
+### 3.5 Dónde las carga
 
 En **Panel > Formas de cobro de Match**, que es para esta modalidad lo que la lista de
 precios es para la prestación directa. La pantalla pregunta por las piezas, no por un tipo de
@@ -92,11 +112,13 @@ cobra una Prestadora no es asunto de un rol técnico de CeltaTech. **Y no hay ba
 que ya se contrató se apaga con `ofrecida`, de modo que los accesos que la tienen siguen
 apuntando a algo que existe.
 
-### 3.5 Cómo se mueve el saldo de un paquete
+**Lo que hay que cobrar de cada período lo toma el software de cobranzas** de
+`GET /accesos/para-facturar`: los accesos vigentes con importe, moneda y fecha del próximo cobro.
+
+### 3.6 Cómo se mueve el saldo de un paquete
 
 **Se carga cuando entra la plata.** El paquete se paga una vez, y ése es el momento en que el
-saldo existe: `registrarCobroExitoso` —el único lugar por el que pasan los tres caminos del cobro,
-lo que informa el proveedor, el efectivo en mano y el canje del QR— le suma al acceso los contactos que
+saldo existe: el aviso de pago del software de cobranzas le suma al acceso los contactos que
 traiga la forma.
 
 **Suma, no pisa.** Un paquete no vence por calendario, así que lo que quedó sin abrir de una
@@ -116,86 +138,17 @@ implementación: hacerlo desde afuera —leer el saldo, restarle uno, volver a e
 dos ventanas abiertas a la vez descuenten una sola vez. El reparto de permisos de esas dos
 funciones está en `docs/SECURITY.md`.
 
-### 3.6 Cómo se da de baja un acceso
+### 3.7 La baja, el corte y la gracia
 
-**La hace quien paga, en un clic, desde su propia aplicación.** El botón está en la pantalla del
-acceso y no lleva una pantalla de confirmación detrás: darse de baja tiene que costar lo mismo que
-darse de alta. Lo que hay que saber antes de apretarlo está escrito arriba del botón, no en un
-cartel que haya que sacarse de encima.
-
-**Lo que la baja apaga es la renovación, no el acceso.** Deja de cobrarse desde el período
-siguiente y se le avisa al proveedor para que no cobre él tampoco; lo que ya está pagado se
-conserva hasta el final de ese período, y mientras tanto el acceso sigue funcionando igual. Cortar
-al llegar esa fecha es otra cosa y pasa en otro momento.
-
-**Primero el proveedor, después la base.** Si se anotara la baja de este lado y la llamada al
-proveedor fallara, quedaría alguien dado de baja acá y cobrado allá todos los meses. Por eso una
-falla del proveedor corta sin escribir nada y la baja se puede volver a intentar.
+**Los decide el software de cobranzas, y Careonys ejecuta lo que le avisa.** La baja se hace en la
+ventana de ese software, en un solo paso; el aviso dice que el acceso no se renueva y hasta qué
+fecha sigue vigente, y el acceso funciona igual hasta esa fecha. Un cobro que no entra lo informa
+el mismo software como período de gracia, con la fecha hasta la que alcanza, y después como
+suspensión. Cuando entra la plata, el aviso de pago vuelve a dejar el acceso vigente, incluso si ya
+se lo había suspendido.
 
 **Sólo se da de baja lo que se renueva solo.** Un paquete se pagó una vez y lo que lo sostiene es
-su saldo: no hay renovación que apagar, y ofrecer una baja que no hace nada sería peor que no
-ofrecerla.
-
-### 3.7 Cuándo se apaga el acceso que se dio de baja
-
-**Al terminar el período que ya estaba pagado, no antes.** El acceso queda funcionando hasta la
-fecha del cobro que no se va a hacer, y ese día se apaga solo. Nadie tiene que apretar nada: lo
-hace un trabajo del sistema una vez por día.
-
-**Sólo se apaga lo que se dio de baja.** Un acceso al que se le pasó la fecha y nadie dio de baja
-no está terminado: está esperando que entre un cobro, y lo que le corresponde es el período de
-gracia con sus reintentos, que es otra cosa.
-
-### 3.8 Cómo se avisa antes del primer cobro
-
-**El período gratuito queda escrito el día del alta.** La Prestadora carga cuántos días sin cargo
-tiene su forma de cobro, y al darse el acceso esos días se convierten en una fecha guardada: la del
-primer cobro. El último día gratis es el anterior, igual que la fecha de la baja es la del cobro
-que no se va a hacer.
-
-**A los rieles que cobran solos se les dice esa fecha, y los demás la sostienen con la fecha del
-próximo cobro.** Un proveedor que deja el cobro andando de su lado cobra el primer período apenas
-se crea la suscripción si nadie le dice lo contrario, y ahí el período gratuito existiría sólo en
-esta base. Los rieles a los que hay que armarles el cobro de cada período no necesitan que se les
-diga nada: ese cobro se arma recién cuando llega la fecha.
-
-**Se avisa unos días antes, y a más tardar el mismo día.** Cuántos días antes lo configura cada
-Prestadora en el mismo lugar que la gracia (§3.9): tres de partida. El mensaje le llega al teléfono de quien
-paga, dice qué día empieza a cobrarse, cuánto —con su moneda— y que puede darse de baja antes; el
-enlace lleva a la pantalla del acceso, donde está el botón. Lo manda un trabajo del sistema una vez
-por día, el mismo que apaga los accesos dados de baja.
-
-**Se avisa una vez sola, y queda anotado cuándo.** La marca se guarda después de que el mensaje
-salió: si no había ningún dispositivo al que mandarlo, al día siguiente se vuelve a intentar
-mientras la ventana dure.
-
-**A quien se dio de baja durante el período gratuito no se le avisa.** No viene ningún cobro, que
-es lo que la baja consigue.
-
-**Este mensaje no se puede apagar.** No está entre los que cada Prestadora enciende según cómo
-trabaja: es el resguardo del §3.2, y un mensaje obligatorio que se pueda apagar no es obligatorio.
-
-### 3.9 Qué pasa cuando un cobro no entra
-
-**Un cobro que falla abre un período de gracia, y el acceso sigue funcionando.** Cuántos días dura
-lo configura cada Prestadora en el Panel, en «Formas de cobro de Match» → «Plazos del cobro»: siete
-de partida, y uno como mínimo. La
-fecha en que se suspende se escribe el día de la primera falla, y desde ahí el acceso queda igual
-que estaba: el Cliente sigue usándolo mientras dure.
-
-**Se avisa al abrirla, una vez.** El mensaje dice cuánto no se pudo cobrar —con su moneda—, hasta qué
-día alcanza el acceso y que después queda suspendido, y lleva a la pantalla donde se paga.
-
-**Los reintentos los pone cada riel, y la gracia no se estira con ninguno.** Los que cobran solos
-reintentan de su lado y avisan por cada intento; a los que hay que armarles el cobro de cada
-período se lo vuelve a armar todos los días mientras la gracia dure. La fecha se escribe una vez y
-no se mueve: si cada reintento la corriera, el acceso no se suspendería nunca.
-
-**Llegado ese día sin que el cobro haya entrado, el acceso se suspende.** Lo hace el mismo trabajo
-diario del backend (§3.7), y vuelve a comprobar en ese instante que el cobro siga sin entrar.
-
-**Y cuando entra la plata, la gracia se cierra y el acceso vuelve a quedar vigente**, incluso si ya
-se lo había suspendido.
+su saldo: no hay renovación que apagar.
 
 ## 4. Qué sostiene el pago después del contacto
 

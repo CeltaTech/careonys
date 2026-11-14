@@ -184,7 +184,7 @@ de protección de datos. `escalas_legales` también es sólo `AR`.
 **Los datos están en São Paulo** (`sa-east-1`). Para Brasil es tratamiento local; para todos los
 demás países es transferencia internacional hacia Brasil.
 
-**Lo que sí está bien.** Los secretos de pasarelas se guardan en Supabase Vault, no en claro; hoy
+**Lo que sí está bien.** Los secretos de terceros se guardan en Supabase Vault, no en claro; hoy
 no hay ninguno cargado. Doce de los trece depósitos son privados —el único público es el de la marca de las Prestadoras— y se sirven con enlace temporal. El consentimiento se registra
 con texto versionado, con quién consintió, por qué medio, desde cuándo y hasta cuándo.
 
@@ -329,7 +329,7 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
   Prestadora; revisa que no traiga ninguna fila de otra.
 - **Ningún dato se cifra en la aplicación.** El único cifrado del código es el del acceso guardado
   en el teléfono.
-- **Los secretos de terceros de cada Prestadora** —WhatsApp, pasarela de cobro, facturación— se
+- **Los secretos de terceros de cada Prestadora** —WhatsApp y facturación— se
   guardan con el depósito de secretos de Supabase, que usa **una sola clave para todo el
   proyecto**. Hoy no hay ninguno guardado.
 - **El cifrado del disco** lo pone Supabase, con una clave suya. No se puede comprobar desde la base.
@@ -425,8 +425,7 @@ sola Prestadora, sin versión y sin dónde queden guardados.
 
 **22. Usted** — Decidir qué secciones de Match quedan en el Panel. Match no tiene panel aparte:
 sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la
-intermediación. Son cinco: Calificaciones, Clientes, Formas de cobro —con su detalle y los
-plazos del cobro—, Auditoría legal y Funciones con riesgo legal. Hoy el menú le muestra Clientes y
+intermediación. Son cinco: Calificaciones, Clientes, Formas de cobro —con su detalle—, Auditoría legal y Funciones con riesgo legal. Hoy el menú le muestra Clientes y
 Formas de cobro también a quien no es de la administración (`panel/src/components/layout/Layout.jsx:233`,
 `:243`); las rutas sí están protegidas. Clientes y Formas de cobro las ve además sólo la
 administración. En el Legajo del Asistente, la pestaña de evaluaciones sigue la misma regla.
@@ -1262,26 +1261,16 @@ todavía no lo llevan.
 
 **102. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` no tiene ningún módulo. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan.
 
-**103.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo. **Y que Match
-cobre igual que la prestación directa**, sin que ninguna de las dos pierda nada. Hoy Match lleva
-la cuenta del Cliente por su cuenta —arma cada período, cuenta los días gratis y la gracia, y corta
-el acceso solo—, y eso es créditos y cobranzas, que no le toca a Careonys. Se separan tres
-trabajos, iguales para las dos modalidades:
-
-- **Llevar la cuenta del Cliente** —cuánto debe, si está atrasado, si hay que restringirle algo—
-  es de la Prestadora. Con software de cobranzas conectado lo lleva ese software y Careonys muestra
-  lo que recibe; sin ninguno, Careonys guarda lo que la Prestadora registra.
-- **Las plataformas de pago quedan como una forma más de pagar**, para las dos modalidades y
-  optativa. El Cliente paga desde su aplicación y el dinero va directo a la cuenta de la
-  Prestadora. En Match el acceso se abre apenas la plataforma confirma, y el saldo de contactos se
-  carga en ese momento, como hoy.
-- **El pago que confirma la plataforma se anota** con su origen y, si hay software conectado, se
-  le pasa, para que la cuenta del Cliente quede entera en un solo lugar.
-
-**Sin software conectado, el corte de Match por falta de pago lo configura la Prestadora**:
-cuántos días de gracia da y qué pasa después, y Careonys ejecuta lo que ella configuró. Con
-software conectado, el corte lo ordena ese software. Los días de gracia ya se configuran; falta
-elegir qué pasa cuando vencen, y el corte que ordena el software conectado.
+**103.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo. **Match
+cobra igual que la prestación directa: el cobro lo hace el software de cobranzas de la
+Prestadora.** El botón de compra abre la ventana de pago de ese software, que resuelve todos los
+medios de pago y le avisa a Careonys con un aviso firmado; Careonys no factura, no cobra, no
+gestiona la mora y no decide restricciones. La pasarela de pago que cobraba desde adentro ya salió
+al estante, en `Codigos-utiles\pasarela-de-pago-de-match`. Faltan dos piezas, que se construyen
+con Match porque hoy está cerrado para los Clientes: la entrada que recibe el aviso por acceso y lo
+anota en `cobros_intermediacion`, y el botón de compra en la aplicación del Cliente. Qué tiene que
+cumplir el software está en `celtatech/docs/SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md`, sección «La
+compra de un acceso de Match», y cómo queda Match, en `docs/PRD_07_Modalidad_Match.md` §3.
 
 **Y lo de la relación de dependencia sale también, a un módulo de sueldos y jornales.** El
 Asistente es monotributista o trabajador independiente: se lo contrata para una tarea, y la
@@ -1298,10 +1287,9 @@ consentimiento de esa modalidad. Esperan al módulo de sueldos y jornales, o a l
 borrarlos con una migración.
 
 **Los mensajes de cobros y facturación se redactan acá, no antes.** Salieron de la revisión de
-frases porque se van con el módulo: en el Panel, más de una pasarela de cobro conectada, pasarela
-de cobro no disponible, forma de cobro con nombre repetido, renovación sin período, falta la fecha
+frases porque se van con el módulo: en el Panel, forma de cobro con nombre repetido, renovación sin período, falta la fecha
 límite de pago de los saldos, falta el motivo para anular un cobro, falta el importe o el tipo de
-comprobante y faltan datos de la corrección; en la aplicación del Cliente, el QR de pago vencido.
+comprobante y faltan datos de la corrección.
 
 ---
 

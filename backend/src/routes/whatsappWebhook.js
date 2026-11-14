@@ -7,7 +7,8 @@
 // que cualquiera que lo conociera abría conversaciones, insertaba mensajes y hacía salir un
 // WhatsApp de verdad con la cuenta de Meta de esa Prestadora, a un número que él mismo elegía.
 //
-// La forma correcta ya estaba escrita en `webhooksPasarelas.js`, y es la que se copia acá:
+// La forma correcta ya estaba escrita en la entrada de las pasarelas de pago del Match —hoy en
+// el estante, `Codigos-utiles/pasarela-de-pago-de-match/`—, y es la que se copia acá:
 //
 //   1. **La Prestadora viaja en la dirección, no en el cuerpo.** Una dirección distinta por
 //      Prestadora, que ella misma configura en su panel de Meta. Lo que venga adentro del

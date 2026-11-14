@@ -8,7 +8,7 @@ import { clienteDelPedido } from '../db/connection.js';
    modalidad encendida (`panel/src/components/layout/Layout.jsx`), pero esconder un enlace no
    es un candado: escribiendo la dirección a mano se entraba igual, y el backend contestaba
    como si la modalidad estuviera encendida. Una Prestadora que trabaja solamente en
-   prestación directa llegaba así a las pasarelas de cobro, a los accesos y a las
+   prestación directa llegaba así a las formas de cobro, a los accesos y a las
    calificaciones del Match.
 
    QUIÉN MANDA. Éste. Lo del Panel es para no mostrar lo que no corresponde; lo que de verdad

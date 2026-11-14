@@ -11,8 +11,7 @@
  * Con el sistema roto —una consulta con otra credencial, o la credencial de otra Prestadora— la
  * primera prueba da al revés.
  *
- * Se levanta la base de mentira igual que `corteDelAcceso.test.js`. Datos inventados, como manda
- * CLAUDE.md §6.
+ * Se levanta una base de mentira. Datos inventados, como manda CLAUDE.md §6.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';

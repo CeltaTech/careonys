@@ -1,5 +1,5 @@
-// Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Match — rutas del Panel: pasarela de
-// pago por Prestadora, accesos y cobros, calificaciones con descargo, y la auditoría de
+// Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Match — rutas del Panel: formas de
+// cobro por Prestadora, accesos y cobros, calificaciones con descargo, y la auditoría de
 // advertencias legales de Match.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE. Cada manejador entra a la base con `clienteDelPedido(req)`, y
@@ -13,14 +13,12 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
-import { proveedoresDisponibles, obtenerAdaptador, requiereSecretoFirma } from '../pasarelas/index.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirModalidad } from '../middleware/exigirModalidad.js';
 import { advertenciaVigente, advertenciasVigentes, registrarAdvertencia } from '../utils/advertenciaLegal.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { prestadoraVisible } from '../utils/prestadoraVisible.js';
-import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
 import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
 import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
 import { primerDiaDelPeriodo } from '../utils/cobrosDeCliente.js';
@@ -46,9 +44,8 @@ panelIntermediacionRouter.use(exigirOrganizacionActiva);
 panelIntermediacionRouter.use(exigirModalidad('intermediacion'));
 
 // La plata del Match es de la administración de la Prestadora, no del Coordinador
-// (Desarrollador, 2026-09-04: «absolutamente no puede ni debe»). Alcanza a las dos mitades:
-// conectar y desconectar pasarelas de pago —que es cargar credenciales de cobro—, y todo lo
-// que sea un cobro: la lista de accesos con sus importes y el historial de cobros. Lo que sí
+// (Desarrollador, 2026-09-04: «absolutamente no puede ni debe»). Alcanza a todo lo que sea un
+// cobro: las formas de cobro, la lista de accesos con sus importes y el historial de cobros. Lo que sí
 // queda para el Coordinador es lo que no es plata: las calificaciones y la auditoría de advertencias legales.
 //
 // Hasta el 2026-09-04 este archivo tenía una función llamada `requiereAdminOSuperior` que
@@ -57,175 +54,13 @@ panelIntermediacionRouter.use(exigirModalidad('intermediacion'));
 // decide acá es a qué rutas se le pide.
 const soloAdministracion = exigirAdministracion('Rol sin permiso');
 
-// Y adentro de la plata hay una parte que ni siquiera es de la administración en general: las
-// credenciales con las que la Prestadora cobra. Son secretos de ella, igual que el token de
-// WhatsApp y que la contraseña del correo saliente, así que Superadmin también queda afuera de
-// cargarlas y de reemplazarlas. Superadmin es un rol técnico de CeltaTech, y CeltaTech no tiene
-// por qué poder tocar con qué credencial cobra una Prestadora. Se suma encima del candado de
-// administración en las dos rutas que las escriben; el resto del riel —ver qué pasarelas están
-// conectadas, los cobros, los accesos— no cambia (middleware/exigirAdministracion.js).
-const soloAdminDePrestadora = exigirAdminDePrestadora(
-  'Las credenciales de cobro son de la Prestadora: solo Admin puede cargarlas y cambiarlas'
-);
-
-// El mismo candado angosto, por otro motivo y con otro texto: cuánto cobra una Prestadora y cada
-// cuánto lo cobra es su política de comercialización, y CeltaTech no se mete en eso ni con
-// precios sugeridos. Quien la arma es el Admin de la Prestadora; Superadmin la ve —la necesita
+// Adentro de la plata hay una parte que ni siquiera es de la administración en general: cuánto
+// cobra una Prestadora y cada cuánto lo cobra es su política de comercialización, y CeltaTech no
+// se mete en eso ni con precios sugeridos. Quien la arma es el Admin de la Prestadora; Superadmin la ve —la necesita
 // para dar soporte— y no la escribe.
 const soloAdminArmaLaFormaDeCobro = exigirAdminDePrestadora(
   'Cómo cobra la Prestadora lo decide ella: solo Admin puede armar y cambiar sus formas de cobro'
 );
-
-// ============================================================================
-// Pasarela de pago — la Prestadora activa uno o varios de los 6 rieles, cada uno con su
-// propia credencial (guardada en Supabase Vault). El secreto
-// nunca se vuelve a mostrar una vez guardado, mismo criterio que WhatsApp.
-// ============================================================================
-
-panelIntermediacionRouter.get('/pasarela', soloAdministracion, async (req, res) => {
-  const db = clienteDelPedido(req);
-  const { data, error } = await db
-    .from('prestadora_pasarela_pago')
-    .select('proveedor, estado_conexion, conectada_en, updated_at');
-  if (error) return responderError(res, error);
-
-  // Qué secretos tiene guardados cada proveedor. Nunca el texto —eso no sale de la caja
-  // fuerte ni para el Admin que lo cargó—, solamente si está o no está: sin el secreto de
-  // firma, los cobros que informa esa pasarela se rechazan y la pantalla tiene que poder
-  // decirlo (pendiente #159).
-  // Con el trabajo de la Prestadora: `credenciales_pasarela_pago` no tiene política para
-  // `authenticated`, y lo que se lee de ella es sólo si el identificador del secreto está puesto.
-  const { data: secretos, error: errorSecretos } = await enLaPrestadora(
-    req.usuarioPanel.prestadoraId,
-    'qué secretos de pasarela están guardados',
-    (dbDelTrabajo) => dbDelTrabajo.from('credenciales_pasarela_pago').select('proveedor, secreto_firma_secret_id')
-  );
-  if (errorSecretos) return responderError(res, errorSecretos);
-
-  const activados = new Map(data.map((fila) => [fila.proveedor, fila]));
-  const conSecretoDeFirma = new Set(
-    (secretos ?? []).filter((fila) => fila.secreto_firma_secret_id).map((fila) => fila.proveedor)
-  );
-  const pasarelas = proveedoresDisponibles().map((proveedor) => ({
-    proveedor,
-    activo: activados.has(proveedor),
-    estado_conexion: activados.get(proveedor)?.estado_conexion ?? null,
-    conectada_en: activados.get(proveedor)?.conectada_en ?? null,
-    requiere_secreto_firma: requiereSecretoFirma(proveedor),
-    secreto_firma_cargado: conSecretoDeFirma.has(proveedor),
-  }));
-
-  res.json({ pasarelas });
-});
-
-// El secreto con el que la pasarela firma los cobros que informa (pendiente #159). Lo normal es
-// que llegue junto con la credencial, en el mismo paso de conexión (ver el PATCH de más
-// abajo): los dos datos se sacan del mismo panel del proveedor y en el mismo viaje, y
-// partirlo en dos trámites era pedirle a la Prestadora que volviera por lo mismo. Esta ruta
-// queda para el caso que sí es aparte: cambiar el secreto de una pasarela ya conectada,
-// porque se rota cada tanto sin tocar la credencial. Se guarda en la misma caja fuerte que
-// la credencial y no se vuelve a mostrar.
-panelIntermediacionRouter.put('/pasarela/:proveedor/secreto-firma', soloAdministracion, soloAdminDePrestadora, async (req, res) => {
-  const { proveedor } = req.params;
-  const { secretoFirma } = req.body || {};
-
-  if (!requiereSecretoFirma(proveedor)) {
-    return res.status(400).json({ error: 'Este proveedor no firma lo que informa' });
-  }
-  if (typeof secretoFirma !== 'string' || !secretoFirma.trim()) {
-    return res.status(400).json({ error: 'Hace falta el secreto de firma' });
-  }
-
-  let prestadoraId;
-  try {
-    prestadoraId = await prestadoraVisible(clienteDelPedido(req));
-  } catch (error) {
-    return responderError(res, error);
-  }
-
-  // Con el trabajo de la Prestadora: `authenticated` no tiene permiso para ejecutar la función que
-  // guarda el secreto en la caja fuerte, y la función rechaza otra Prestadora que la del trabajo.
-  const { error } = await enLaPrestadora(prestadoraId, 'guardar el secreto de firma', (dbDelTrabajo) =>
-    dbDelTrabajo.rpc('guardar_secreto_firma_pasarela_pago', {
-      p_prestadora_id: prestadoraId,
-      p_proveedor: proveedor,
-      p_secreto: secretoFirma.trim(),
-    })
-  );
-  if (error) return responderError(res, error);
-
-  res.json({ ok: true });
-});
-
-panelIntermediacionRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePrestadora, async (req, res) => {
-  const { proveedor } = req.params;
-  const { activo, credencial, secretoFirma } = req.body || {};
-
-  if (!proveedoresDisponibles().includes(proveedor)) {
-    return res.status(400).json({ error: 'Proveedor desconocido' });
-  }
-
-  const db = clienteDelPedido(req);
-
-  if (activo === false) {
-    const { error } = await db
-      .from('prestadora_pasarela_pago')
-      .delete()
-      .eq('proveedor', proveedor);
-    if (error) return responderError(res, error);
-    return res.json({ ok: true });
-  }
-
-  let prestadoraId;
-  try {
-    prestadoraId = await prestadoraVisible(db);
-  } catch (error) {
-    return responderError(res, error);
-  }
-
-  // Las dos funciones que guardan en la caja fuerte van con el trabajo de la Prestadora:
-  // `authenticated` no tiene permiso para ejecutarlas, y rechazan otra Prestadora que la del trabajo.
-  if (credencial) {
-    const { error: errorCredencial } = await enLaPrestadora(prestadoraId, 'guardar la credencial de cobro', (dbDelTrabajo) =>
-      dbDelTrabajo.rpc('guardar_credencial_pasarela_pago', {
-        p_prestadora_id: prestadoraId,
-        p_proveedor: proveedor,
-        p_credencial: credencial,
-      })
-    );
-    if (errorCredencial) return responderError(res, errorCredencial);
-  }
-
-  // El secreto de firma viaja en la misma llamada que la credencial cuando el proveedor firma
-  // lo que informa: son dos datos del mismo panel del proveedor, se copian de una sola vez. Si no
-  // vino, la pasarela igual se conecta y la pantalla avisa que le falta — hay pasarelas que se
-  // conectaron antes de que esto existiera, y no se las deja tiradas.
-  if (requiereSecretoFirma(proveedor) && typeof secretoFirma === 'string' && secretoFirma.trim()) {
-    const { error: errorSecreto } = await enLaPrestadora(prestadoraId, 'guardar el secreto de firma', (dbDelTrabajo) =>
-      dbDelTrabajo.rpc('guardar_secreto_firma_pasarela_pago', {
-        p_prestadora_id: prestadoraId,
-        p_proveedor: proveedor,
-        p_secreto: secretoFirma.trim(),
-      })
-    );
-    if (errorSecreto) return responderError(res, errorSecreto);
-  }
-
-  const { error } = await db.from('prestadora_pasarela_pago').upsert(
-    {
-      prestadora_id: prestadoraId,
-      proveedor,
-      estado_conexion: 'conectada',
-      activada_por: req.usuarioPanel.id,
-      conectada_en: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'prestadora_id,proveedor' }
-  );
-  if (error) return responderError(res, error);
-
-  res.json({ ok: true });
-});
 
 // ============================================================================
 // Las formas de cobro que arma la Prestadora
@@ -435,101 +270,6 @@ panelIntermediacionRouter.patch('/formas-de-cobro/:id', soloAdministracion, solo
 });
 
 // ============================================================================
-// Los plazos del cobro — con cuánto se avisa, cuánto dura la gracia y cuánto vive el cupón.
-// Los tres estaban escritos en el backend y son decisiones comerciales de cara al Cliente, así
-// que los elige la Prestadora. Mismo candado que la forma de cobro, por el mismo motivo.
-// ============================================================================
-
-const CAMPOS_DE_LOS_PLAZOS =
-  'dias_de_aviso_antes_del_cobro, dias_de_gracia_por_cobro_rechazado, dias_de_vida_del_cupon';
-
-/** Los tres son días enteros y ninguno baja de uno: el preaviso y la gracia son resguardos
- *  obligatorios de toda forma que se renueva sola, y cero es apagarlos. Hacia arriba no hay
- *  borde. Falla cerrado: lo que no se entiende es un rechazo, nunca un valor por omisión. */
-function plazosValidados(cuerpo) {
-  const valores = {};
-  for (const campo of [
-    'dias_de_aviso_antes_del_cobro',
-    'dias_de_gracia_por_cobro_rechazado',
-    'dias_de_vida_del_cupon',
-  ]) {
-    // El campo que no viene se omite: la fila conserva lo que la Prestadora había configurado.
-    if (cuerpo[campo] === undefined) continue;
-    const dias = enteroOInvalido(cuerpo[campo]);
-    if (Number.isNaN(dias) || dias === null || dias < 1) {
-      throw new ErrorConMotivo('plazo_invalido', `Plazo fuera de rango en ${campo}: ${cuerpo[campo]}`);
-    }
-    valores[campo] = dias;
-  }
-  return valores;
-}
-
-panelIntermediacionRouter.get('/plazos-de-cobro', soloAdministracion, async (req, res) => {
-  const db = clienteDelPedido(req);
-  const { data, error } = await db
-    .from('configuracion_cobro_intermediacion')
-    .select(CAMPOS_DE_LOS_PLAZOS)
-    .maybeSingle();
-  if (error) return responderError(res, error);
-
-  // Toda Prestadora nace con esta fila. Si igual faltara, se le pide a la misma función que usa
-  // el alta y se vuelve a leer: lo que el formulario muestra es lo que el backend va a usar.
-  if (!data) {
-    let prestadoraId;
-    try {
-      prestadoraId = await prestadoraVisible(db);
-    } catch (errorPrestadora) {
-      return responderError(res, errorPrestadora);
-    }
-
-    // Con el trabajo de la Prestadora: `authenticated` no tiene permiso para ejecutar la función
-    // del alta.
-    const { error: errorSiembra } = await enLaPrestadora(prestadoraId, 'sembrar los plazos de cobro', (dbDelTrabajo) =>
-      dbDelTrabajo.rpc('sembrar_configuracion_prestadora', { p_prestadora_id: prestadoraId })
-    );
-    if (errorSiembra) return responderError(res, errorSiembra);
-
-    const { data: recien, error: errorRelectura } = await db
-      .from('configuracion_cobro_intermediacion')
-      .select(CAMPOS_DE_LOS_PLAZOS)
-      .maybeSingle();
-    if (errorRelectura) return responderError(res, errorRelectura);
-    return res.json({ plazos: recien });
-  }
-
-  res.json({ plazos: data });
-});
-
-panelIntermediacionRouter.patch('/plazos-de-cobro', soloAdministracion, soloAdminArmaLaFormaDeCobro, async (req, res) => {
-  let valores;
-  try {
-    valores = plazosValidados(req.body || {});
-  } catch (error) {
-    return responderError(res, error, 400);
-  }
-
-  const db = clienteDelPedido(req);
-  let prestadoraId;
-  try {
-    prestadoraId = await prestadoraVisible(db);
-  } catch (error) {
-    return responderError(res, error);
-  }
-
-  // El filtro no aísla —eso lo hace la RLS—: nombra la única fila de esta Prestadora, porque
-  // un UPDATE sin ninguna condición la base de Supabase lo rechaza.
-  const { data, error } = await db
-    .from('configuracion_cobro_intermediacion')
-    .update({ ...valores, updated_at: new Date().toISOString() })
-    .eq('prestadora_id', prestadoraId)
-    .select(CAMPOS_DE_LOS_PLAZOS)
-    .single();
-  if (error) return responderError(res, error);
-
-  res.json({ plazos: data });
-});
-
-// ============================================================================
 // Accesos y cobros
 // ============================================================================
 
@@ -545,7 +285,7 @@ panelIntermediacionRouter.get('/accesos', soloAdministracion, async (req, res) =
   const { data, error } = await enLaPrestadora(prestadoraId, 'los accesos de Match', (dbDelTrabajo) =>
     dbDelTrabajo
       .from('accesos_intermediacion')
-      .select('id, cliente_id, paciente_id, asistente_id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, created_at, proveedor, url_accion, alta_en_pasarela')
+      .select('id, cliente_id, paciente_id, asistente_id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, created_at')
       .order('created_at', { ascending: false })
   );
   if (error) return responderError(res, error);
@@ -686,45 +426,6 @@ panelIntermediacionRouter.get('/accesos/:id/cobros', soloAdministracion, async (
   );
   if (error) return responderError(res, error);
   res.json({ cobros: data });
-});
-
-// ============================================================================
-// El alta del acceso en la pasarela
-// ============================================================================
-
-// Sin esto un acceso vive en esta base y no existe del lado de ningún proveedor, así que no hay
-// con qué cobrarle. Lo hace el Admin de la Prestadora desde la pantalla de accesos; mañana lo va
-// a llamar también la activación del lado del Cliente. Los pasos que hacen falta están en un
-// solo lugar (`utils/altaEnPasarela.js`) y esta ruta no repite ninguno.
-panelIntermediacionRouter.post('/accesos/:id/alta-en-pasarela', soloAdministracion, async (req, res) => {
-  const { proveedor } = req.body || {};
-
-  // Con qué riel sólo hace falta decirlo cuando la Prestadora tiene más de uno conectado; con uno
-  // solo se resuelve solo. Si viene, tiene que ser uno de los que el producto conoce.
-  if (proveedor && !proveedoresDisponibles().includes(proveedor)) {
-    return res.status(400).json({ error: 'Proveedor de pasarela desconocido' });
-  }
-
-  const resultado = await darDeAltaEnPasarela({
-    accesoId: req.params.id,
-    prestadoraId: req.usuarioPanel.prestadoraId,
-    proveedor: proveedor || null,
-    db: clienteDelPedido(req),
-  });
-
-  if (!resultado.ok) {
-    // El motivo es un código, y la frase que lee la persona sale de las traducciones del Panel en
-    // los tres idiomas. El detalle crudo no sale de acá: puede nombrar la cuenta de cobro
-    // (`celtatech\CLAUDE.md` §6).
-    const estado = resultado.motivo === MOTIVO_ALTA.ACCESO_INEXISTENTE ? 404 : 409;
-    return res.status(estado).json({
-      error: 'No se pudo dar de alta el acceso en la pasarela',
-      motivo: resultado.motivo,
-      conectados: resultado.conectados,
-    });
-  }
-
-  res.json({ ok: true, ya_estaba: Boolean(resultado.yaEstaba), alta: resultado.alta });
 });
 
 // ============================================================================

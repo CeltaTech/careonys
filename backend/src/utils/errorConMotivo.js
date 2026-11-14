@@ -76,13 +76,9 @@ const ESTADO_POR_MOTIVO = {
   dias_gratis_invalido: 400,
   contactos_incluidos_invalido: 400,
   renovacion_sin_periodo: 400,
-  // La baja en un clic de un acceso del Match. El acceso que no existe y el que es de otro
-  // Cliente contestan lo mismo: desde afuera se tienen que ver iguales. La forma que no se renueva
-  // es 409 por lo mismo que el correo ya tomado —el pedido está bien armado y choca con lo que esa
-  // forma es—, y no nombra ninguna columna. Los demás motivos de la baja no están acá a propósito:
-  // caen en 500, que es lo honesto, porque son fallas de este lado o del proveedor.
+  // El acceso de Match que no existe y el que es de otro Cliente contestan lo mismo: desde
+  // afuera se tienen que ver iguales.
   acceso_inexistente: 404,
-  forma_que_no_se_renueva: 409,
   // La vidriera del Match en la aplicación del Cliente. Es 409 y no 404 porque la
   // dirección existe y el pedido está bien armado: lo que pasa es que esta Prestadora no ofrece
   // esa modalidad de trabajo, y eso la pantalla lo puede decir con todas las letras en vez de

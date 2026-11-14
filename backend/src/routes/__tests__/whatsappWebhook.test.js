@@ -11,7 +11,7 @@
  * exactamente lo que se afirma que no pasa.
  *
  * Se levanta el backend de verdad contra una base de mentira que contesta lo que cada prueba le
- * prepara, igual que `webhooksPasarelas.test.js`.
+ * prepara.
  *
  *   npm test --prefix backend
  */

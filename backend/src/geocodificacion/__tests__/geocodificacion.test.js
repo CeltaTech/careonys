@@ -6,7 +6,7 @@
  * **nunca** se invente un punto, y que la dirección —dato sensible— no termine copiada en el
  * registro del servidor.
  *
- * Se levantan dos servidores de mentira, igual que en `routes/__tests__/webhooksPasarelas.test.js`:
+ * Se levantan dos servidores de mentira:
  * uno hace de base (contesta el país de la Prestadora) y otro hace de servicio de direcciones.
  * Las variables de entorno se dejan puestas ANTES de importar el módulo, porque tanto la
  * conexión a la base como la dirección del servicio se leen en el momento del import.

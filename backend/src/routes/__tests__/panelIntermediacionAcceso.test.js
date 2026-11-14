@@ -137,14 +137,9 @@ beforeEach(() => {
 
 /** Las tablas y funciones que sólo se tocan cuando la ruta llegó a hacer su trabajo. */
 const TABLAS_DE_PLATA = [
-  'prestadora_pasarela_pago',
-  'credenciales_pasarela_pago',
   'accesos_intermediacion',
   'cobros_intermediacion',
   'formas_de_cobro_intermediacion',
-  'rpc/guardar_credencial_pasarela_pago',
-  'rpc/guardar_secreto_firma_pasarela_pago',
-  'rpc/leer_credencial_pasarela_pago',
 ];
 
 function noTocoLaPlata() {
@@ -157,16 +152,10 @@ function noTocoLaPlata() {
 // ---------------------------------------------------------------------------------------
 
 const RUTAS_DE_PLATA = [
-  ['GET', '/pasarela', undefined],
-  ['PUT', '/pasarela/mercadopago/secreto-firma', { secretoFirma: 'lo que sea' }],
-  ['PATCH', '/pasarela/mercadopago', { activo: true }],
   ['GET', '/accesos', undefined],
   ['GET', `/accesos/${ACCESO}/cobros`, undefined],
   // Lo que sale hacia el software de facturación lleva importes y datos de quien paga.
   ['GET', '/accesos/para-facturar?periodo=2026-09', undefined],
-  // Dar de alta un acceso en la pasarela es lo que lo deja cobrando de verdad: saca la
-  // credencial de la caja fuerte y crea el cobro recurrente del lado del proveedor.
-  ['POST', `/accesos/${ACCESO}/alta-en-pasarela`, {}],
   // Cuánto se cobra y cada cuánto es plata igual que un cobro: es el importe con el que después
   // se le cobra a cada Cliente.
   ['GET', '/formas-de-cobro', undefined],
@@ -251,14 +240,6 @@ describe('la administración sí pasa el candado', () => {
     const { estado, cuerpo } = await pedir('GET', '/auditoria-legal');
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo.auditoria, []);
-  });
-
-  it('a la lista de pasarelas', async () => {
-    respuestas.set('GET /rest/v1/prestadora_pasarela_pago', () => []);
-    respuestas.set('GET /rest/v1/credenciales_pasarela_pago', () => []);
-    const { estado, cuerpo } = await pedir('GET', '/pasarela');
-    assert.equal(estado, 200);
-    assert.ok(Array.isArray(cuerpo.pasarelas));
   });
 });
 
@@ -444,38 +425,14 @@ describe('sin la modalidad Match no se entra', () => {
 });
 
 // ---------------------------------------------------------------------------------------
-// Y adentro de la plata hay una parte más angosta todavía: las credenciales con las que la
-// Prestadora cobra. Son un secreto de ella, igual que el token de WhatsApp y que la contraseña
-// del correo saliente, así que Superadmin queda afuera de cargarlas y de reemplazarlas aunque
-// tenga el permiso de acceso abierto. Las pruebas se hacen con ese permiso ABIERTO a propósito:
-// sin ella, Superadmin no está parado en ninguna Prestadora y la ruta corta antes por otro
-// motivo; el caso que importa es el de adentro del permiso de acceso.
+// Y adentro de la plata hay una parte más angosta todavía: la forma de cobro. Es la política de
+// comercialización de la Prestadora; CeltaTech no le fija precios ni se los sugiere, así que
+// Superadmin tampoco se los escribe, aunque tenga el permiso de acceso abierto. Las pruebas se
+// hacen con ese permiso ABIERTO a propósito: sin él, Superadmin no está parado en ninguna
+// Prestadora y la ruta corta antes por otro motivo; el caso que importa es el de adentro del
+// permiso de acceso.
 
-const RUTAS_DE_LAS_CREDENCIALES_DE_COBRO = [
-  ['PUT', '/pasarela/mercadopago/secreto-firma', { secretoFirma: 'lo que sea' }],
-  ['PATCH', '/pasarela/mercadopago', { activo: true }],
-];
-
-describe('Superadmin no llega a las credenciales de cobro de una Prestadora', () => {
-  for (const [metodo, ruta, cuerpo] of RUTAS_DE_LAS_CREDENCIALES_DE_COBRO) {
-    it(`${metodo} ${ruta}, aun con el permiso de acceso abierto`, async () => {
-      rolDelUsuario = 'superadmin';
-      prestadoraDelUsuario = null;
-      sesionDeSoporteAbierta = true;
-
-      const { estado, cuerpo: respuesta } = await pedir(metodo, ruta, cuerpo);
-      assert.equal(estado, 403);
-      // El mensaje explica de quién son las credenciales, y no nombra ninguna tabla ni columna
-      // de la base (CLAUDE.md §6).
-      assert.match(respuesta.error, /credenciales de cobro/i);
-      assert.doesNotMatch(respuesta.error, /prestadora_pasarela_pago|credenciales_pasarela|select|column|relation|vault/i);
-      noTocoLaPlata();
-    });
-  }
-
-  // Y lo mismo con la forma de cobro, por otro motivo: no es un secreto, es la política de
-  // comercialización de la Prestadora. CeltaTech no le fija precios ni se los sugiere, así que
-  // tampoco se los escribe.
+describe('Superadmin no arma la forma de cobro de una Prestadora', () => {
   for (const [metodo, ruta, cuerpo] of [
     ['POST', '/formas-de-cobro', { nombre: 'Mensual', importe: 12000 }],
     ['PATCH', `/formas-de-cobro/${FORMA}`, { importe: 15000 }],
@@ -503,21 +460,6 @@ describe('Superadmin no llega a las credenciales de cobro de una Prestadora', ()
     const { estado, cuerpo } = await pedir('GET', '/formas-de-cobro');
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo.formas, []);
-  });
-
-  it('pero sigue viendo qué pasarelas están conectadas, que es lo que necesita para dar soporte', async () => {
-    // El candado angosto es de las dos rutas que escriben la credencial y de ninguna más: si se
-    // hubiera cerrado el riel entero, Superadmin dejaría de poder ayudar a una Prestadora a
-    // entender por qué no le entran los cobros.
-    rolDelUsuario = 'superadmin';
-    prestadoraDelUsuario = null;
-    sesionDeSoporteAbierta = true;
-    respuestas.set('GET /rest/v1/prestadora_pasarela_pago', () => []);
-    respuestas.set('GET /rest/v1/credenciales_pasarela_pago', () => []);
-
-    const { estado, cuerpo } = await pedir('GET', '/pasarela');
-    assert.equal(estado, 200);
-    assert.ok(Array.isArray(cuerpo.pasarelas));
   });
 });
 

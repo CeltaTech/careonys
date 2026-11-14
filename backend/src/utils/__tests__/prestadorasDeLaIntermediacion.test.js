@@ -56,7 +56,7 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
-const { prestadorasDeLaIntermediacion, prestadorasConAusenciaAutomatica, prestadorasCertificadas } = await import(
+const { prestadorasConAusenciaAutomatica, prestadorasCertificadas } = await import(
   '../prestadorasDeLaIntermediacion.js'
 );
 
@@ -70,7 +70,6 @@ beforeEach(() => {
 });
 
 const LISTAS = [
-  ['las del Match', prestadorasDeLaIntermediacion, '/rest/v1/configuracion_cobro_intermediacion', 'prestadora_id'],
   ['las de la ausencia automática', prestadorasConAusenciaAutomatica, '/rest/v1/configuracion_ausencia_automatica', 'prestadora_id'],
   ['las certificadas', prestadorasCertificadas, '/rest/v1/prestadoras', 'id'],
 ];

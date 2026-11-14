@@ -55,10 +55,6 @@ import { extenderCoberturasDeAusencia } from './utils/coberturaDeAusencia.js';
 import { revisarIncidentesTurnoSinCubrir } from './utils/revisarIncidentesTurnoSinCubrir.js';
 import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
 import { revisarExtensionesDeTurno } from './utils/revisarExtensionesDeTurno.js';
-import { armarCobrosDelPeriodo } from './utils/cobrosIntermediacion.js';
-import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
-import { avisarElPrimerCobroQueViene } from './utils/avisoPrevioAlCobro.js';
-import { suspenderLosQueAgotaronLaGracia } from './utils/periodoDeGracia.js';
 import { recordarLosEnlacesDeActivacion } from './utils/activacionCuenta.js';
 import { avisarLosCambiosDeEmail } from './utils/avisosDeEmailCambiado.js';
 import { avisarLosPlazosDeUbicacionVencidos } from './utils/plazoDeLaUbicacion.js';
@@ -88,7 +84,6 @@ import { panelRespuestasPreparadasRouter } from './routes/panelRespuestasPrepara
 import { panelGuardiasRouter } from './routes/panelGuardias.js';
 import { panelComprobacionesRouter } from './routes/panelComprobaciones.js';
 import { panelAvisosEnVivoRouter } from './routes/panelAvisosEnVivo.js';
-import { webhooksPasarelasRouter } from './routes/webhooksPasarelas.js';
 import { cobranzaExternaRouter } from './routes/avisoDeCobranzaExterna.js';
 import { facturacionExternaRouter } from './routes/avisoDeFacturacionExterna.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
@@ -106,7 +101,6 @@ app.use(cors());
    ya armado y nunca vuelve a ver los bytes originales — la firma no coincidiría jamás y la
    comprobación quedaría rota en silencio. Cada router trae su propio lector de cuerpo crudo
    adentro; acá lo único que hace falta es que se monten primero. */
-app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 app.use('/api/avisos-de-cobranza', cobranzaExternaRouter);
 app.use('/api/avisos-de-facturacion', facturacionExternaRouter);
@@ -206,8 +200,6 @@ app.use('/api/panel/respuestas-preparadas', panelRespuestasPreparadasRouter);
 app.use('/api/panel/guardias', panelGuardiasRouter);
 app.use('/api/panel/comprobaciones', panelComprobacionesRouter);
 app.use('/api/panel/avisos-en-vivo', panelAvisosEnVivoRouter);
-// `/api/webhooks/pasarelas` no está en esta lista a propósito: se monta más arriba, antes del
-// lector de JSON, por el motivo que explica el comentario de allá.
 
 // Las tareas automatizadas. Cada una corre de a una Prestadora por vez, con la credencial de esa
 // sola Prestadora (db/connection.js): lo que la tarea consulta, la base se lo recorta a esa
@@ -301,28 +293,6 @@ programar(revisarLlegadasDemoradas, CINCO_MINUTOS_MS);
 // decide nada. Corre seguido porque lo que mira son minutos, y porque su pantalla necesita saber
 // que quedó de más apenas pasa la hora.
 programar(revisarExtensionesDeTurno, CINCO_MINUTOS_MS);
-
-// El cobro de cada período de los accesos del Match, en los rieles que no cobran solos. El
-// período más corto que una forma de cobro puede tener es de un día, así que corre con la misma
-// cadencia diaria que revisarVencimientos. Los rieles que sí cobran solos no entran acá: la
-// función misma los descarta preguntándole a cada adaptador, no con una lista escrita en el trabajo.
-programar(armarCobrosDelPeriodo, UN_DIA_MS);
-
-// El corte de los accesos del Match a los que se les terminó el período pagado. Quien se da
-// de baja conserva lo pagado hasta el final, y este trabajo es el que apaga el acceso cuando llega
-// esa fecha. Se mide en días, así que corre con la misma cadencia diaria que revisarVencimientos.
-programar(cortarLosAccesosDadosDeBaja, UN_DIA_MS);
-
-// El preaviso del primer cobro, cuando está por terminar el período gratuito. Es el resguardo
-// del §3.2 del PRD del Match: nunca un cobro silencioso. Se cuenta en días, así que corre con
-// la misma cadencia diaria que los dos de arriba.
-programar(avisarElPrimerCobroQueViene, UN_DIA_MS);
-
-// La suspensión de los accesos a los que se les terminó el período de gracia sin que el cobro
-// entrara. Es la otra mitad del resguardo del §3.2: un cobro que falla no suspende en el acto, abre
-// una gracia, y este trabajo es el que la cierra cuando llega la fecha. Se cuenta en días, así que
-// corre con la misma cadencia diaria que los tres de arriba.
-programar(suspenderLosQueAgotaronLaGracia, UN_DIA_MS);
 
 // El recordatorio del enlace de activación que sigue sin usarse. La espera se cuenta en días, pero
 // se mira cada hora para que el recordatorio no llegue casi un día tarde.

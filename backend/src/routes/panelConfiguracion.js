@@ -1,10 +1,12 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { prestadoraVisible, prestadoraVisibleOContestar } from '../utils/prestadoraVisible.js';
 import { CLAVES_DE_LAS_CONDICIONES, condicionesDe, condicionesQueSePuedenGuardar } from '../utils/condicionesDelCliente.js';
 import { personasDelPanel, responsableDelReclutamiento } from '../utils/responsableDelReclutamiento.js';
@@ -114,41 +116,157 @@ panelConfiguracionRouter.use(requiereRolPanel, soloAdministracion, exigirOrganiz
 // las funciones que guardan secretos o reordenan, y la lista de Coordinadores, que sale de
 // `usuarios`, van con el trabajo de la Prestadora, que alcanza sólo esa.
 
-// --- Datos de la prestadora (configuracion_prestadora, ver schema_multitenant_04.sql —
-//     reemplaza el singleton configuracion_empresa: cada prestadora tiene su propia fila) ---
+// --- Datos de la Prestadora ---
+//
+// Salen de dos tablas. Los canales de contacto viven en `configuracion_prestadora`. El nombre con
+// el que opera —el nombre de fantasía— y el logo viven en `prestadoras`, porque son la marca que
+// leen las aplicaciones, los correos y los avisos (`utils/marcaPrestadora.js`), y se guardan una
+// sola vez. La razón social, el número fiscal y el país no se cambian desde acá: son datos del
+// contrato y los informa CeltaTech en el alta (`CLAUDE.md` §1).
+//
+// El nombre viaja como `nombre` aunque la columna se llame `nombre_fantasia`: es el nombre que el
+// Panel muestra en su encabezado.
 panelConfiguracionRouter.get('/empresa', async (req, res) => {
   const db = clienteDelPedido(req);
-  const { data, error } = await db
-    .from('configuracion_prestadora')
-    .select('*')
-    .single();
-  if (error) return responderError(res, error);
-  res.json({ empresa: data });
+  const [{ data, error }, { data: prestadora, error: errorPrestadora }] = await Promise.all([
+    db.from('configuracion_prestadora').select('*').single(),
+    db.from('prestadoras').select('nombre_fantasia, logo_url').single(),
+  ]);
+  if (error || errorPrestadora) return responderError(res, error || errorPrestadora);
+  res.json({ empresa: { ...data, nombre: prestadora.nombre_fantasia, logo_url: prestadora.logo_url } });
 });
 
 panelConfiguracionRouter.patch('/empresa', async (req, res) => {
-  // `dominio` no entra acá aunque venga en el pedido: es el código de esta Prestadora, lo elige
-  // CeltaTech al darla de alta y no cambia nunca (`utils/direccionDeLaPrestadora.js`). Cambiarlo
-  // dejaría sin entrar a toda su coordinación, que lo lleva en el nombre de usuario. La base lo
-  // impide igual, con un disparador.
-  const { nombre, telefono, telefono_emergencias, whatsapp_numero, email, zona_cobertura_texto } = req.body;
-  // A diferencia de los datos que viven en `prestadoras`, esta fila puede no existir: se crea
-  // en el alta y una Prestadora dada de alta a mano puede quedarse sin ella. Sin esta
-  // comprobación, la pantalla de Configuración guarda, dice que guardó, y al recargar está todo
-  // como antes.
-  const db = clienteDelPedido(req);
-  const prestadoraId = await prestadoraVisibleOContestar(db, res);
-  if (!prestadoraId) return;
-  // El filtro nombra la fila que se cambia —la base no acepta un cambio sin ninguno—; que sea de
-  // quien pide lo decide ella.
-  const { data, error } = await db
-    .from('configuracion_prestadora')
-    .update({ nombre, telefono, telefono_emergencias, whatsapp_numero, email, zona_cobertura_texto, updated_at: new Date().toISOString() })
-    .eq('prestadora_id', prestadoraId)
-    .select('prestadora_id');
-  if (error) return responderError(res, error);
-  if (!data?.length) return res.status(404).json({ error: 'Esta Prestadora todavía no tiene configuración cargada' });
-  res.json({ ok: true });
+  try {
+    // `dominio` no entra acá aunque venga en el pedido: es el código de esta Prestadora, lo elige
+    // CeltaTech al darla de alta y no cambia nunca (`utils/direccionDeLaPrestadora.js`). Cambiarlo
+    // dejaría sin entrar a toda su coordinación, que lo lleva en el nombre de usuario. La base lo
+    // impide igual, con un disparador.
+    const { telefono, telefono_emergencias, whatsapp_numero, email, zona_cobertura_texto } = req.body;
+    const nombre = String(req.body?.nombre ?? '').trim();
+    if (!nombre) {
+      return responderError(res, new ErrorConMotivo('faltan_datos', 'datos de la Prestadora sin nombre de fantasía'));
+    }
+
+    const db = clienteDelPedido(req);
+    const { data: antes } = await db.from('prestadoras').select('id, nombre_fantasia').maybeSingle();
+    if (!antes) return responderError(res, new ErrorConMotivo('no_encontrado', 'la base no deja ver la Prestadora de quien pide'));
+
+    // A diferencia de los datos que viven en `prestadoras`, esta fila puede no existir: se crea
+    // en el alta y una Prestadora dada de alta a mano puede quedarse sin ella. Sin esta
+    // comprobación, la pantalla de Configuración guarda, dice que guardó, y al recargar está todo
+    // como antes. El filtro nombra la fila que se cambia —la base no acepta un cambio sin
+    // ninguno—; que sea de quien pide lo decide ella.
+    const { data, error } = await db
+      .from('configuracion_prestadora')
+      .update({ telefono, telefono_emergencias, whatsapp_numero, email, zona_cobertura_texto, updated_at: new Date().toISOString() })
+      .eq('prestadora_id', antes.id)
+      .select('prestadora_id');
+    if (error) throw error;
+    if (!data?.length) return res.status(404).json({ error: 'Esta Prestadora todavía no tiene configuración cargada' });
+
+    if (nombre !== antes.nombre_fantasia) {
+      // Con el trabajo de la Prestadora: la base sólo le deja cambiar `prestadoras` al Superadmin.
+      // La fila que se cambia es la que la base acaba de dejar ver con la credencial de quien pide.
+      const { error: errorNombre } = await enLaPrestadora(antes.id, 'cambio del nombre de fantasía', (dbDelTrabajo) =>
+        dbDelTrabajo.from('prestadoras').update({ nombre_fantasia: nombre }).eq('id', antes.id));
+      if (errorNombre) throw errorNombre;
+      // Es el nombre que ven todos sus Clientes y Asistentes: queda registrado quién lo cambió.
+      await registrarActividad(req.usuarioPanel, ACCION_MODIFICACION_CRITICA, {
+        tablaAfectada: 'prestadoras',
+        registroId: antes.id,
+        camposCambiados: ['nombre_fantasia'],
+      });
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// --- El logo de la Prestadora ---
+//
+// Vive en el depósito `marca-prestadoras`, en la carpeta de la Prestadora, y se lee con dirección
+// pública: lo pone ella para que se vea en todos los lugares donde el producto pone su marca
+// (`celtatech/CLAUDE.md` §6). Escribirlo sólo puede su Administración, en su carpeta: lo hace
+// cumplir el depósito, y por eso la subida va con la credencial de quien pide.
+//
+// El depósito no tiene tope de tamaño ni de tipo, así que los dos se comprueban acá. SVG no
+// entra: es un archivo que puede llevar programas adentro, y se sirve con dirección pública.
+const DEPOSITO_DE_MARCA = 'marca-prestadoras';
+const TIPOS_DE_LOGO = ['image/png', 'image/jpeg', 'image/webp'];
+const TAMANO_MAXIMO_DEL_LOGO = 2 * 1024 * 1024; // 2 MB
+
+const subidaDelLogo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: TAMANO_MAXIMO_DEL_LOGO, files: 1 },
+  fileFilter(req, file, cb) {
+    cb(null, TIPOS_DE_LOGO.includes(file.mimetype));
+  },
+}).single('logo');
+
+// Saca los archivos que haya en la carpeta: un logo nuevo puede tener otra extensión que el
+// anterior, y el anterior no puede quedar suelto.
+async function borrarLogosDeLaCarpeta(db, prestadoraId) {
+  const { data: archivos, error } = await db.storage.from(DEPOSITO_DE_MARCA).list(prestadoraId);
+  if (error) throw error;
+  const rutas = (archivos ?? []).filter((a) => a.name?.startsWith('logo.')).map((a) => `${prestadoraId}/${a.name}`);
+  if (!rutas.length) return;
+  const { error: errorAlBorrar } = await db.storage.from(DEPOSITO_DE_MARCA).remove(rutas);
+  if (errorAlBorrar) throw errorAlBorrar;
+}
+
+async function anotarLogo(req, prestadoraId, logoUrl) {
+  const { error } = await enLaPrestadora(prestadoraId, 'cambio del logo', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ logo_url: logoUrl }).eq('id', prestadoraId));
+  if (error) throw error;
+  await registrarActividad(req.usuarioPanel, ACCION_MODIFICACION_CRITICA, {
+    tablaAfectada: 'prestadoras',
+    registroId: prestadoraId,
+    camposCambiados: ['logo_url'],
+  });
+}
+
+panelConfiguracionRouter.put('/empresa/logo', (req, res) => {
+  subidaDelLogo(req, res, async (errorDeSubida) => {
+    try {
+      if (errorDeSubida || !req.file) {
+        return responderError(res, new ErrorConMotivo('logo_invalido', errorDeSubida?.message ?? 'logo sin imagen o de otro tipo'));
+      }
+      const db = clienteDelPedido(req);
+      const prestadoraId = await prestadoraVisibleOContestar(db, res);
+      if (!prestadoraId) return;
+
+      await borrarLogosDeLaCarpeta(db, prestadoraId);
+      const ruta = `${prestadoraId}/logo.${extensionDeArchivo(req.file.mimetype)}`;
+      const { error: errorAlSubir } = await db.storage
+        .from(DEPOSITO_DE_MARCA)
+        .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+      if (errorAlSubir) throw errorAlSubir;
+
+      // La dirección lleva el momento de la subida: es siempre el mismo archivo, y sin eso el
+      // navegador y el teléfono seguirían mostrando el logo anterior que ya tienen guardado.
+      const { data: publica } = db.storage.from(DEPOSITO_DE_MARCA).getPublicUrl(ruta);
+      const logoUrl = `${publica.publicUrl}?v=${Date.now()}`;
+      await anotarLogo(req, prestadoraId, logoUrl);
+      res.json({ logo_url: logoUrl });
+    } catch (error) {
+      responderError(res, error);
+    }
+  });
+});
+
+panelConfiguracionRouter.delete('/empresa/logo', async (req, res) => {
+  try {
+    const db = clienteDelPedido(req);
+    const prestadoraId = await prestadoraVisibleOContestar(db, res);
+    if (!prestadoraId) return;
+    await borrarLogosDeLaCarpeta(db, prestadoraId);
+    await anotarLogo(req, prestadoraId, null);
+    res.json({ logo_url: null });
+  } catch (error) {
+    responderError(res, error);
+  }
 });
 
 // --- La moneda en la que trabaja esta Prestadora ---

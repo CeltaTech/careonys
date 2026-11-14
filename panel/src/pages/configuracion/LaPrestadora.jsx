@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { con } from '../../lib/textos';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
+import { useEmpresa } from '../../context/EmpresaContext';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -36,7 +37,9 @@ export function ConfiguracionPrestadora() {
 
 function TabEmpresa() {
   const { t } = useLocale();
+  const { recargar: recargarEmpresa } = useEmpresa();
   const [form, setForm] = useState(null);
+  const [faltaNombre, setFaltaNombre] = useState(false);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -65,11 +68,17 @@ function TabEmpresa() {
   }
 
   async function guardar() {
+    if (!form.nombre?.trim()) {
+      setFaltaNombre(true);
+      document.getElementById('field-nombre')?.focus();
+      return;
+    }
     setGuardando(true);
     setError(null);
     try {
       await llamarApi('/empresa', { method: 'PATCH', body: JSON.stringify(form) });
       setGuardado(true);
+      recargarEmpresa();
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
@@ -88,7 +97,14 @@ function TabEmpresa() {
             {error && <Alert variant="error">{error}</Alert>}
             {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
             <div className="molde-formgrid">
-              <FormField label={t.configuracion.empresa_nombre} name="nombre" value={form.nombre || ''} onChange={(e) => set('nombre', e.target.value)} />
+              <FormField
+                label={t.configuracion.empresa_nombre}
+                name="nombre"
+                required
+                value={form.nombre || ''}
+                error={faltaNombre && !form.nombre?.trim() ? t.formularios.falta_un_dato_obligatorio : null}
+                onChange={(e) => set('nombre', e.target.value)}
+              />
               <FormField label={t.configuracion.empresa_telefono} name="telefono" value={form.telefono || ''} onChange={(e) => set('telefono', e.target.value)} />
               <FormField label={t.configuracion.empresa_telefono_emergencias} name="telefono_emergencias" type="tel" value={form.telefono_emergencias || ''} onChange={(e) => set('telefono_emergencias', e.target.value)} />
               <FormField label={t.configuracion.empresa_whatsapp} name="whatsapp_numero" value={form.whatsapp_numero || ''} onChange={(e) => set('whatsapp_numero', e.target.value)} />
@@ -99,10 +115,81 @@ function TabEmpresa() {
             <div className="molde-acciones">
               <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
             </div>
+            <ElLogo
+              logoUrl={form.logo_url}
+              nombre={form.nombre}
+              alCambiar={(logoUrl) => {
+                setForm((f) => ({ ...f, logo_url: logoUrl }));
+                recargarEmpresa();
+              }}
+            />
           </>
         )}
       </EstadoLista>
     </section>
+  );
+}
+
+/* El logo de la Prestadora: el que ven sus Clientes y sus Asistentes arriba de las dos
+   aplicaciones. Se guarda apenas se elige el archivo, sin esperar al botón de los datos, porque
+   es un archivo y no un casillero. Sin logo, las aplicaciones muestran el nombre escrito. */
+function ElLogo({ logoUrl, nombre, alCambiar }) {
+  const { t } = useLocale();
+  const elegir = useRef(null);
+  const [trabajando, setTrabajando] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function subir(archivo) {
+    if (!archivo) return;
+    setTrabajando(true);
+    setError(null);
+    try {
+      const cuerpo = new FormData();
+      cuerpo.append('logo', archivo);
+      const { logo_url } = await llamarApi('/empresa/logo', { method: 'PUT', body: cuerpo });
+      alCambiar(logo_url);
+    } catch (err) {
+      setError(mensajeDeError(err, t, 'subida del logo'));
+    } finally {
+      setTrabajando(false);
+      if (elegir.current) elegir.current.value = '';
+    }
+  }
+
+  async function quitar() {
+    setTrabajando(true);
+    setError(null);
+    try {
+      await llamarApi('/empresa/logo', { method: 'DELETE' });
+      alCambiar(null);
+    } catch (err) {
+      setError(mensajeDeError(err, t, 'quitar el logo'));
+    } finally {
+      setTrabajando(false);
+    }
+  }
+
+  return (
+    <div className="molde-logo-prestadora">
+      <span className="molde-logo-prestadora-etiqueta">{t.configuracion.empresa_logo}</span>
+      {error && <Alert variant="error">{error}</Alert>}
+      {logoUrl && <img className="molde-logo-prestadora-imagen" src={logoUrl} alt={nombre || ''} />}
+      <input
+        ref={elegir}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        hidden
+        onChange={(e) => subir(e.target.files?.[0])}
+      />
+      <div className="molde-acciones">
+        {logoUrl && (
+          <Button variant="secondary" onClick={quitar} disabled={trabajando}>{t.configuracion.empresa_logo_quitar}</Button>
+        )}
+        <Button variant="secondary" onClick={() => elegir.current?.click()} disabled={trabajando}>
+          {trabajando ? t.comun.guardando : logoUrl ? t.configuracion.empresa_logo_cambiar : t.configuracion.empresa_logo_subir}
+        </Button>
+      </div>
+    </div>
   );
 }
 

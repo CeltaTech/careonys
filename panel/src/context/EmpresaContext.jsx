@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { anotarNombreDeLaPrestadora } from '../i18n/marcaEnElTexto';
 
@@ -12,13 +12,24 @@ const EmpresaContext = createContext(null);
 // respuesta; una lectura que no se pudo hacer es otra cosa, y antes las dos
 // terminaban en el mismo nulo. Quien lo consume no podía distinguir «todavía no llegó» de
 // «falló», que es la forma de mostrar un vacío tranquilizador en lugar de un error.
+//
+// EL NOMBRE SALE DE `prestadoras`. Es el nombre de fantasía, el mismo que leen las aplicaciones y
+// los correos, y se guarda una sola vez. Esa fila la leen la Administración y la coordinación; los
+// canales de contacto, sólo la Administración, así que quien coordina recibe el nombre sin ellos.
 async function cargarConfiguracionPropia() {
-  const { data, error } = await supabase
-    .from('configuracion_prestadora')
-    .select('nombre, telefono, whatsapp_numero, email, dominio, zona_cobertura_texto')
-    .maybeSingle();
-  if (error) return { empresa: null, fallo: true };
-  return { empresa: data ?? null, fallo: false };
+  const [prestadora, configuracion] = await Promise.all([
+    supabase.from('prestadoras').select('nombre_fantasia, logo_url').maybeSingle(),
+    supabase
+      .from('configuracion_prestadora')
+      .select('telefono, whatsapp_numero, email, dominio, zona_cobertura_texto')
+      .maybeSingle(),
+  ]);
+  if (prestadora.error || configuracion.error) return { empresa: null, fallo: true };
+  if (!prestadora.data) return { empresa: null, fallo: false };
+  return {
+    empresa: { ...(configuracion.data ?? {}), nombre: prestadora.data.nombre_fantasia, logo_url: prestadora.data.logo_url },
+    fallo: false,
+  };
 }
 
 export function EmpresaProvider({ children }) {
@@ -27,12 +38,16 @@ export function EmpresaProvider({ children }) {
   // supo —incluida la pantalla de ingreso, donde saber que todavía no hay configuración propia que
   // leer es una respuesta y no una espera—.
   const [estado, setEstado] = useState('cargando');
+  // Vuelve a leer la fila sin pasar por el cargando, para que el encabezado tome el nombre o el
+  // logo que se acaban de cambiar en Configuración.
+  const [vuelta, setVuelta] = useState(0);
+  const recargar = useCallback(() => setVuelta((v) => v + 1), []);
 
   useEffect(() => {
     let activo = true;
 
     async function cargarSegunSesion(session) {
-      if (activo) setEstado('cargando');
+      if (activo && vuelta === 0) setEstado('cargando');
       let traido = { empresa: null, fallo: false };
       if (session) {
         try {
@@ -66,9 +81,9 @@ export function EmpresaProvider({ children }) {
       activo = false;
       suscripcion.subscription.unsubscribe();
     };
-  }, []);
+  }, [vuelta]);
 
-  return <EmpresaContext.Provider value={{ empresa, estado }}>{children}</EmpresaContext.Provider>;
+  return <EmpresaContext.Provider value={{ empresa, estado, recargar }}>{children}</EmpresaContext.Provider>;
 }
 
 export function useEmpresa() {

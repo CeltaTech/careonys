@@ -123,6 +123,9 @@ const ESTADO_POR_MOTIVO = {
   orden_invalido: 400,
   // Un archivo de otro tipo, más pesado que el tope, o un pedido sin archivo.
   archivo_de_contenido_invalido: 400,
+  // El logo de la Prestadora: una imagen de otro tipo, más pesada que el tope, o un pedido sin
+  // imagen.
+  logo_invalido: 400,
   // La entrevista de una postulación. Los dos primeros son 400 porque el dato vino mal cargado, y
   // el tercero es 409 porque el pedido está bien armado y choca con el estado de las cosas: ya hay
   // una agendada, y lo que corresponde es moverla y no agendar una segunda.

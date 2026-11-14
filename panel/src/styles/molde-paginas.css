@@ -151,3 +151,23 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* El logo de la Prestadora en Configuración. Lleva tope de alto y de ancho porque el archivo lo
+   carga cada Prestadora y no hay dos del mismo tamaño. */
+.molde-logo-prestadora {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 21px;
+}
+
+.molde-logo-prestadora-etiqueta {
+  font-weight: 600;
+}
+
+.molde-logo-prestadora-imagen {
+  display: block;
+  max-height: 64px;
+  max-width: 240px;
+  object-fit: contain;
+}

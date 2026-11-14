@@ -230,11 +230,13 @@ describe('Superadmin no llega a los secretos de una Prestadora', () => {
     rolDelUsuario = 'superadmin';
     prestadoraDelUsuario = null;
     sesionDeSoporteAbierta = true;
-    respuestas.set('GET /rest/v1/configuracion_prestadora', () => [{ prestadora_id: PRESTADORA, nombre: 'De mentira' }]);
+    respuestas.set('GET /rest/v1/configuracion_prestadora', () => [{ prestadora_id: PRESTADORA }]);
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ nombre_fantasia: 'De mentira', logo_url: null }]);
 
     const { estado, cuerpo } = await pedir('GET', '/empresa');
     assert.equal(estado, 200);
     assert.equal(cuerpo.empresa.prestadora_id, PRESTADORA);
+    assert.equal(cuerpo.empresa.nombre, 'De mentira');
   });
 });
 

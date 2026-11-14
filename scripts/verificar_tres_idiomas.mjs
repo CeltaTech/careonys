@@ -70,6 +70,8 @@ const IGUALES_A_PROPOSITO = new Map([
   ['Modo', 'marca de un tercero'],
   // Sigla del código de barras cuadrado: se dice QR en los tres idiomas.
   ['QR', 'sigla que es la misma en los tres idiomas'],
+  // La imagen de marca de la Prestadora: la palabra es la misma en los tres idiomas.
+  ['Logo', 'palabra que es la misma en los tres idiomas'],
   // Nombre de un producto de la casa. El glosario dice que se escribe Match y
   // no se traduce.
   ['Match', 'nombre del producto, no se traduce'],

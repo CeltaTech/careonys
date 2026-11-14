@@ -28,13 +28,13 @@ panelNotificacionesRouter.post('/postulante', requiereRolPanel, async (req, res)
   try {
     await enLaPrestadora(prestadoraId, 'aviso al postulante', async (db) => {
       const { data: configuracion } = await db
-        .from('configuracion_prestadora')
-        .select('nombre')
+        .from('prestadoras')
+        .select('nombre_fantasia')
         .maybeSingle();
       await enviarEmail({
         to: email,
         ...mensajeDelSistema('estado_postulacion', idioma, {
-          empresa: configuracion?.nombre ?? '',
+          empresa: configuracion?.nombre_fantasia ?? '',
           nombre,
           estado: nuevoEstado,
         }),

@@ -86,10 +86,9 @@ INSERT INTO public.prestadoras (
 );
 
 INSERT INTO public.configuracion_prestadora (
-  prestadora_id, nombre, telefono, whatsapp_numero, email, dominio, zona_cobertura_texto
+  prestadora_id, telefono, whatsapp_numero, email, dominio, zona_cobertura_texto
 ) VALUES (
   '11111111-1111-4111-8111-111111111111',
-  'Sandbox',
   '+54 11 4000-0000',
   '+54 9 11 4000-0000',
   'contacto@sandbox.local',
@@ -103,7 +102,6 @@ INSERT INTO public.configuracion_prestadora (
 -- valores de arranque (disparador `trg_sembrar_configuracion_prestadora`). Acá se le
 -- pisan por los datos de la Sandbox, que es lo que hace falta para probar.
 ON CONFLICT (prestadora_id) DO UPDATE SET
-  nombre               = EXCLUDED.nombre,
   telefono             = EXCLUDED.telefono,
   whatsapp_numero      = EXCLUDED.whatsapp_numero,
   email                = EXCLUDED.email,

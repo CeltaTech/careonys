@@ -9731,12 +9731,10 @@ BEGIN
     RAISE EXCEPTION 'sembrar_configuracion_prestadora: esa Prestadora no es la de quien llama';
   END IF;
 
-  -- La única que no se llena sola: `nombre` es obligatorio y no tiene valor de arranque
-  -- posible: sale del nombre de fantasía con el que se dio de alta la Prestadora.
-  INSERT INTO configuracion_prestadora (prestadora_id, nombre)
-  SELECT p.id, p.nombre_fantasia
-  FROM prestadoras p
-  WHERE p.id = p_prestadora_id
+  -- La fila de los datos de contacto, que ya no lleva el nombre: el de la Prestadora vive en
+  -- `prestadoras.nombre_fantasia`, y uno solo.
+  INSERT INTO configuracion_prestadora (prestadora_id)
+  VALUES (p_prestadora_id)
   ON CONFLICT (prestadora_id) DO NOTHING;
 
   FOR v_tabla IN
@@ -11875,7 +11873,6 @@ COMMENT ON COLUMN "public"."configuracion_pago_asistentes"."frecuencia_pago" IS 
 
 CREATE TABLE IF NOT EXISTS "public"."configuracion_prestadora" (
     "prestadora_id" "uuid" NOT NULL,
-    "nombre" "text" NOT NULL,
     "telefono" "text",
     "whatsapp_numero" "text",
     "email" "text",

@@ -24,8 +24,7 @@ Antes de dar de alta la primera Prestadora real de Uruguay, completar:
    gestión de Asistentes que enumera `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`, sección
    «Riesgo legal»: penalización de inasistencias o inconductas, rankings, puntuaciones por
    aceptación de guardia, puntuaciones por calificación de Cliente/Paciente, límite de
-   oportunidades futuras por rechazos, niveles/categorías/jerarquías por servicio, horarios
-   fijos — y cualquier otra que se agregue después.
+   oportunidades futuras por rechazos, niveles/categorías/jerarquías por servicio — y cualquier otra que se agregue después.
 3. Idealmente, revisión de un abogado laboralista local antes de considerarlo definitivo —
    ver la misma salvedad en `docs/legal/argentina.md`.
 

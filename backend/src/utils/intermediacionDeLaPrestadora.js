@@ -3,7 +3,7 @@
 // que tienen que contestarse igual siempre.
 //
 //   1. ¿Esta Prestadora ofrece la modalidad Match?
-//   2. ¿Tiene encendida una de las cinco funciones de riesgo legal?
+//   2. ¿Tiene encendida una de las tres funciones de riesgo legal?
 //
 // La primera la hace el perfil —para saber si dibujar la vidriera en el menú— y
 // la hace cada ruta de la vidriera, que es donde está el candado de verdad. Si
@@ -14,7 +14,7 @@
 // La segunda decide el orden de la lista, y no se responde con una lista escrita
 // en el código: sale de `configuracion_funciones_intermediacion`, donde **sin fila
 // guardada la función está apagada** — una Prestadora recién creada no necesita
-// que nadie le siembre cinco filas para estar en el estado en el que ya está.
+// que nadie le siembre tres filas para estar en el estado en el que ya está.
 //
 // CON QUÉ CREDENCIAL. Las dos preguntas las hace el trabajo de esa Prestadora, que ve sólo
 // las filas de la suya. No van con la credencial de quien pide porque ni el Asistente ni el
@@ -52,7 +52,7 @@ export function elClienteEntraAMatch() {
 }
 
 /**
- * Si una de las cinco funciones de riesgo está encendida.
+ * Si una de las tres funciones de riesgo está encendida.
  *
  * Falla cerrado a propósito: si la consulta no contesta, la función se da por apagada. Con una
  * función de riesgo legal, el error de leer de menos es que la lista salga mezclada; el de leer

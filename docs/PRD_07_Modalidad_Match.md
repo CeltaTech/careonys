@@ -1,6 +1,6 @@
 # Modalidad Match — diseño de negocio (Cliente ↔ Asistente)
 
-> Decisiones tomadas con el Desarrollador el 2026-07-24. Este documento fija **qué se decidió
+> Decisiones del Desarrollador. Este documento fija **qué se decidió
 > y por qué**, y cómo está construido hoy. El trabajo que sigue está en
 > `docs/PLAN_HASTA_PRODUCCION.md`.
 
@@ -20,7 +20,7 @@ vínculo?**
   plataforma solo le da la herramienta, no decide por él.
 - Si la **plataforma** agrega esas decisiones entre todos los Clientes y las usa para
   decidir el futuro laboral del Asistente en general (ej. excluirlo de aparecer para
-  cualquier Cliente, fijarle precio u horario de forma uniforme), ahí sí se parece a un
+  cualquier Cliente o fijarle horario de forma uniforme), ahí sí se parece a un
   empleador — es el mismo patrón que llevó a fallar en contra de Uber en el Reino Unido
   (Uber BV vs Aslam, 2021) y a la "Ley Rider" española.
 
@@ -182,7 +182,6 @@ ejerza ese control de forma agregada entre todos los Clientes.
 | Herramientas de horario/penalización/calificación **operadas por el Cliente sobre su propio Asistente** | Bajo | Es el Cliente ejerciendo su rol de empleador doméstico (Ley 26.844), no la plataforma. |
 | Ranking o puntaje que la **plataforma** calcula y usa para decidir si el Asistente sigue apareciendo ante *cualquier* Cliente | Alto | La plataforma decide el futuro laboral del Asistente en general — mismo hecho citado en Uber BV vs Aslam (Reino Unido, 2021). |
 | Consecuencia automática atada a la nota agregada (ej. "por debajo de X estrellas dejás de aparecer") | Alto | Convierte la opinión del consumidor en una decisión algorítmica de la plataforma sobre el Asistente. |
-| Precio u horario fijado por la plataforma para todos los Clientes por igual | Alto | Control económico/temporal centralizado, indicio clásico de subordinación. |
 | Exclusividad exigida por la plataforma | Alto | Restringe la libertad de trabajar para otros, elemento central de la autonomía real. |
 | Mediación de conflictos por la plataforma | Alto (por eso se descartó, §4) | Se parece a dirigir el vínculo. |
 
@@ -221,7 +220,8 @@ persona):
 - Incentivos de retención del §4 (prioridad de reemplazo, historial, vencimientos,
   alertas críticas, contenido educativo).
 - Ver el estado de su acceso: estado, importe y próximo cobro (§3).
-- **No incluye**: mediación de conflictos, ni campos donde la plataforma fije precio u horario.
+- **No incluye**: mediación de conflictos, ni campos donde la plataforma fije el horario. El precio
+  del trabajo del Asistente lo acuerdan el Cliente y el Asistente entre ellos, y no se conoce.
 
 **PWA Asistente:**
 - Perfil (experiencia, certificaciones, estado de verificación).
@@ -235,5 +235,7 @@ persona):
   fábrica; el documento cargado queda en revisión hasta que lo aprueba la Prestadora
   (`backend/src/routes/appAsistentesDocumentos.js:15-23`).
 - Consentimiento de geolocalización (§6), activable/revocable en cualquier momento.
-- **No incluye**: horario fijado por la plataforma, precio fijado por la plataforma,
+- Su honorario pretendido. La Prestadora nunca le pone precio a su trabajo: lo acuerda con el
+  Cliente.
+- **No incluye**: horario fijado por la plataforma, ni
   ranking global que condicione su acceso a futuras oportunidades.

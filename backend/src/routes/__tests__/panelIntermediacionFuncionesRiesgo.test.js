@@ -3,7 +3,7 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. `docs/legal/argentina.md` describe cinco funciones de la
+ * POR QUÉ EXISTE ESTA PRUEBA. `docs/legal/argentina.md` describe tres funciones de la
  * modalidad Match que en Argentina acercan el vínculo con el Asistente a una relación de
  * dependencia, y para cada una tiene escrito el texto que hay que mostrar antes de encenderla.
  * El producto no bloquea ninguna: avisa, y queda registrado que avisó (CLAUDE.md §7).
@@ -121,7 +121,7 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/prestadora_modalidades', () => [{ activa: true }]);
-  // El catálogo de las cinco funciones sale de la base, no de una lista escrita en el backend.
+  // El catálogo de las tres funciones sale de la base, no de una lista escrita en el backend.
   respuestas.set('GET /rest/v1/catalogo_funciones_intermediacion', () => [{ clave: FUNCION, orden: 1 }]);
   respuestas.set('GET /rest/v1/configuracion_funciones_intermediacion', () => []);
   respuestas.set('POST /rest/v1/configuracion_funciones_intermediacion', () => []);
@@ -222,7 +222,7 @@ describe('el aviso avisa, no bloquea', () => {
 });
 
 describe('la pantalla recibe qué está encendido y qué texto se va a mostrar', () => {
-  it('lista las cinco con su estado y su advertencia', async () => {
+  it('lista las tres con su estado y su advertencia', async () => {
     respuestas.set('GET /rest/v1/configuracion_funciones_intermediacion', () => [
       { funcion_clave: FUNCION, activa: true, advertida_en: '2026-09-10T12:00:00.000Z' },
     ]);

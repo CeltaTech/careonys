@@ -481,14 +481,15 @@ panelIntermediacionRouter.patch('/calificaciones/:id/visibilidad', async (req, r
 });
 
 // ============================================================================
-// Las cinco funciones de riesgo legal de Match
+// Las tres funciones de riesgo legal de Match
 //
-// QUÉ SON. `docs/legal/argentina.md` describe cinco funciones de la modalidad Match
+// QUÉ SON. `docs/legal/argentina.md` describe tres funciones de la modalidad Match
 // que, en Argentina, acercan el vínculo con el Asistente a una relación de dependencia:
-// el ranking calculado por la plataforma, la consecuencia automática atada a la calificación,
-// el precio u horario fijado por la plataforma, la exclusividad y la mediación de conflictos.
-// Cada una tiene su texto de advertencia escrito en ese documento, y esos cinco textos están
-// cargados en `advertencias_legales`.
+// el ranking calculado por la plataforma, la consecuencia automática atada a la calificación
+// y la exclusividad. Cada una tiene su texto de advertencia escrito en ese documento, y esos
+// tres textos están cargados en `advertencias_legales`. El precio no está: en Match la
+// Prestadora nunca le pone precio al trabajo del Asistente. La mediación de conflictos tampoco:
+// en Match no existe.
 //
 // CUÁL ES LA LISTA. Sale de la base, de `catalogo_funciones_intermediacion`, y no de una lista
 // escrita acá: los catálogos salen de la base (CLAUDE.md §8). Hasta el 2026-09-10 estaba
@@ -519,13 +520,13 @@ function fallaDelSistema(res, donde, error) {
 // Encender y apagar cada función — la advertencia avisa, no bloquea
 // ----------------------------------------------------------------------------
 //
-// AVISA, NO BLOQUEA (CLAUDE.md §7). Encender cualquiera de las cinco siempre se puede. Lo que
+// AVISA, NO BLOQUEA (CLAUDE.md §7). Encender cualquiera de las tres siempre se puede. Lo que
 // hace el backend es mostrar la advertencia escrita para la jurisdicción de esa Prestadora —si esa
 // jurisdicción tiene documento— y dejar registrado que se avisó, cuándo y a quién. Si el país
 // no tiene documento, no hay advertencia y la función se enciende igual: no se improvisa un texto
 // por parecido con otro país, y la falta de texto nunca se convierte en un impedimento.
 //
-// Y ninguna de las cinco queda apagada por decisión del sistema: nacen apagadas porque nadie
+// Y ninguna de las tres queda apagada por decisión del sistema: nacen apagadas porque nadie
 // las encendió, que no es lo mismo. Encenderlas es un clic.
 //
 // POR QUÉ EL REGISTRO SE ESCRIBE ACÁ Y NO EN LA PANTALLA: ver utils/advertenciaLegal.js.

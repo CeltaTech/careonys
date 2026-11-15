@@ -10,11 +10,11 @@ import { mensajeDeError } from '../../lib/errores';
 import { llamarApiDeMatch } from './llamarApiDeMatch';
 import '../../styles/molde-paginas.css';
 
-// Las cinco funciones de riesgo legal conocido de la modalidad Match
+// Las tres funciones de riesgo legal conocido de la modalidad Match
 // (backend/src/routes/panelIntermediacion.js). Lo que se avisó al encenderlas es un informe y vive
 // aparte, en `AuditoriaLegal.jsx`, dentro de la sección Informes.
 //
-// AVISA, NO BLOQUEA (CLAUDE.md §7). Las cinco se pueden encender siempre. Lo único que hace la
+// AVISA, NO BLOQUEA (CLAUDE.md §7). Las tres se pueden encender siempre. Lo único que hace la
 // pantalla al encender una es mostrar antes la advertencia escrita para el país de esa
 // Prestadora; si ese país no tiene documento, no se muestra nada y se enciende igual. Apagar
 // no muestra ninguna: lo que el documento legal advierte es de usar la función.

@@ -30,7 +30,6 @@ Vínculo ya es un contrato de trabajo en relación de dependencia reconocido com
 | Puntuaciones por calificación de Cliente/Paciente | Condicionar oportunidades futuras a una calificación de terceros puede interpretarse como una forma de evaluación de desempeño propia de una relación laboral (art. 23 LCT). |
 | Límite de oportunidades futuras por rechazos | Limitar a un Asistente autónomo por rechazar Guardias reduce su libertad real de decidir su participación, un elemento central para sostener que la relación es autónoma y no dependiente (art. 23 LCT). |
 | Niveles/categorías/jerarquías por servicio | Establecer niveles o categorías jerárquicas puede interpretarse como una estructura organizativa propia de relación de dependencia (art. 23 LCT). |
-| Horarios fijos | Imponer horarios fijos (en vez de que el Asistente decida su disponibilidad) es uno de los indicios más fuertes de subordinación bajo el art. 23 de la LCT. |
 
 ## Notas de aplicación
 
@@ -66,9 +65,7 @@ entre todos los Clientes:
 |---|---|
 | Ranking o puntaje calculado por la plataforma que decide si un Asistente sigue apareciendo ante cualquier Cliente | Un ranking calculado por la plataforma que condiciona si el Asistente sigue visible para cualquier Cliente puede interpretarse como la plataforma decidiendo su acceso al trabajo en general, un indicio de subordinación bajo el art. 23 de la LCT — mismo hecho que pesó en contra de Uber en el caso Aslam (Reino Unido, 2021). |
 | Consecuencia automática atada a la calificación agregada (ej. exclusión por debajo de un puntaje) | Atar una exclusión automática a la calificación agregada convierte la opinión de los Clientes en una decisión algorítmica de la plataforma sobre el Asistente, un indicio de subordinación bajo el art. 23 de la LCT. |
-| Precio u horario fijado por la plataforma para todos los Clientes por igual | Fijar precio u horario de forma centralizada, en vez de que cada Cliente lo acuerde con su Asistente, es un indicio fuerte de subordinación bajo el art. 23 de la LCT. |
 | Exclusividad exigida por la plataforma | Exigir exclusividad reduce la libertad real del Asistente de trabajar para otros, elemento central para sostener autonomía y no dependencia (art. 23 LCT). |
-| Mediación de conflictos por la plataforma | Mediar activamente en conflictos entre Cliente y Asistente puede interpretarse como dirección del vínculo, un indicio de subordinación bajo el art. 23 de la LCT. |
 
 No generan advertencia en Match (bajo riesgo): calificación por estrellas visible
 como opinión sin consecuencia automática, verificación de identidad/antecedentes, toggle de

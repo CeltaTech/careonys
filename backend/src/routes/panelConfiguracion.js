@@ -12,7 +12,6 @@ import {
   TAMANO_MAXIMO_DEL_LOGO_PARA_IMPRESION,
   TIPOS_DE_LOGO_PARA_IMPRESION,
   enlaceDelLogoParaImpresion,
-  esUnSvgSinProgramas,
 } from '../utils/logoParaImpresion.js';
 import { prestadoraVisible, prestadoraVisibleOContestar } from '../utils/prestadoraVisible.js';
 import { CLAVES_DE_LAS_CONDICIONES, condicionesDe, condicionesQueSePuedenGuardar } from '../utils/condicionesDelCliente.js';
@@ -292,8 +291,8 @@ panelConfiguracionRouter.delete('/empresa/logo', async (req, res) => {
 
 // --- El logo para impresión ---
 //
-// El que va en los documentos que se imprimen: presupuestos, facturas, correspondencia. Acepta PNG,
-// JPG o SVG, y vive en el depósito privado `logos-para-impresion`, en la carpeta de la Prestadora.
+// El que va en los documentos que se imprimen: presupuestos, facturas, correspondencia. Acepta PNG
+// o JPG, y vive en el depósito privado `logos-para-impresion`, en la carpeta de la Prestadora.
 // Qué logo lleva cada documento lo decide `utils/logoParaImpresion.js`. Escribirlo sólo puede su
 // Administración, en su carpeta: lo hace cumplir el depósito.
 const subidaDelLogoParaImpresion = multer({
@@ -330,9 +329,6 @@ panelConfiguracionRouter.put('/empresa/logo-impresion', (req, res) => {
     try {
       if (errorDeSubida || !req.file) {
         return responderError(res, new ErrorConMotivo('logo_para_impresion_invalido', errorDeSubida?.message ?? 'logo sin imagen o de otro tipo'));
-      }
-      if (req.file.mimetype === 'image/svg+xml' && !esUnSvgSinProgramas(req.file.buffer)) {
-        return responderError(res, new ErrorConMotivo('logo_para_impresion_invalido', 'SVG con programas adentro o que no es un dibujo'));
       }
       const db = clienteDelPedido(req);
       const prestadoraId = await prestadoraVisibleOContestar(db, res);

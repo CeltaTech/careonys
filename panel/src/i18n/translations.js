@@ -133,7 +133,7 @@ export const T = {
         titulo_de_contenido_repetido: 'Título en uso. Ingrese otro.',
         archivo_de_contenido_invalido: 'Formato permitido: PDF, imagen, Word o Excel (máx. 10 MB).',
         logo_invalido: 'Formato erróneo. Suba una imagen PNG, JPG o WEBP de hasta 2 MB.',
-        logo_para_impresion_invalido: 'Formato erróneo. Suba una imagen PNG, JPG o SVG de hasta 2 MB.',
+        logo_para_impresion_invalido: 'Formato erróneo. Suba una imagen PNG o JPG de hasta 2 MB.',
         enlace_invalido: 'El enlace tiene que ser una dirección web que empiece con https://, o quedar vacío.',
         orden_invalido: 'El orden tiene que ser un número entero.',
         // Los documentos del cese que quedan guardados. Ninguna frase nombra el depósito ni la
@@ -3225,7 +3225,7 @@ export const T = {
         titulo_de_contenido_repetido: 'Title in use. Enter another one.',
         archivo_de_contenido_invalido: 'Allowed formats: PDF, image, Word, or Excel (max 10 MB).',
         logo_invalido: 'Wrong format. Upload a PNG, JPG, or WEBP image of up to 2 MB.',
-        logo_para_impresion_invalido: 'Wrong format. Upload a PNG, JPG, or SVG image of up to 2 MB.',
+        logo_para_impresion_invalido: 'Wrong format. Upload a PNG or JPG image of up to 2 MB.',
         enlace_invalido: 'The link must be a web address starting with https://, or be left empty.',
         orden_invalido: 'The order must be a whole number.',
         // La entrevista de una postulación. Las lee quien agenda, nunca el postulante: a él la
@@ -6275,7 +6275,7 @@ export const T = {
         titulo_de_contenido_repetido: 'Título em uso. Informe outro.',
         archivo_de_contenido_invalido: 'Formato permitido: PDF, imagem, Word ou Excel (máx. 10 MB).',
         logo_invalido: 'Formato incorreto. Envie uma imagem PNG, JPG ou WEBP de até 2 MB.',
-        logo_para_impresion_invalido: 'Formato incorreto. Envie uma imagem PNG, JPG ou SVG de até 2 MB.',
+        logo_para_impresion_invalido: 'Formato incorreto. Envie uma imagem PNG ou JPG de até 2 MB.',
         enlace_invalido: 'O link precisa ser um endereço web que comece com https://, ou ficar vazio.',
         orden_invalido: 'A ordem precisa ser um número inteiro.',
         // La entrevista de una postulación. Las lee quien agenda, nunca el postulante: a él la

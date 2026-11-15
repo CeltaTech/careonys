@@ -11,8 +11,7 @@ import { llamadorDe } from './apiPanel';
      let y = dibujarMembrete(doc, membrete, { nombre, titulo }); // la primera línea libre
 
    Qué logo va lo decide el backend (`/api/panel/membrete/logo`): el de impresión si está cargado,
-   si no el de internet cuando es PNG o JPG, y si no ninguno. Un SVG se pasa a PNG acá, porque el
-   programa que arma el PDF no dibuja SVG. Si el logo no se puede bajar, el documento sale igual,
+   si no el de internet cuando es PNG o JPG, y si no ninguno. Si el logo no se puede bajar, el documento sale igual,
    con el nombre escrito: un logo que falta no frena una constancia. */
 
 const llamarApi = llamadorDe('/membrete');
@@ -23,10 +22,6 @@ const ANCHO_UTIL = 170;
 const ALTO_MAXIMO_DEL_LOGO = 16;
 const ANCHO_MAXIMO_DEL_LOGO = 50;
 const ARRIBA = 12;
-// Un SVG no tiene tamaño en puntos: se lo dibuja a esta cantidad de puntos de alto para que se
-// imprima nítido.
-const PUNTOS_DE_ALTO_DEL_SVG = 600;
-
 function cargarImagen(direccion) {
   return new Promise((listo, fallo) => {
     const imagen = new Image();
@@ -43,23 +38,6 @@ function leerComoDatos(blob) {
     lector.onerror = () => fallo(lector.error);
     lector.readAsDataURL(blob);
   });
-}
-
-async function svgComoPng(blob) {
-  const direccion = URL.createObjectURL(blob);
-  try {
-    const imagen = await cargarImagen(direccion);
-    const anchoOriginal = imagen.naturalWidth || 300;
-    const altoOriginal = imagen.naturalHeight || 150;
-    const escala = PUNTOS_DE_ALTO_DEL_SVG / altoOriginal;
-    const lienzo = document.createElement('canvas');
-    lienzo.width = Math.round(anchoOriginal * escala);
-    lienzo.height = PUNTOS_DE_ALTO_DEL_SVG;
-    lienzo.getContext('2d').drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
-    return { datos: lienzo.toDataURL('image/png'), formato: 'PNG', ancho: lienzo.width, alto: lienzo.height };
-  } finally {
-    URL.revokeObjectURL(direccion);
-  }
 }
 
 async function mapaDeBits(blob, formato) {
@@ -79,7 +57,6 @@ export async function prepararMembrete() {
     const respuesta = await fetch(logo.url);
     if (!respuesta.ok) throw new Error(`el logo contestó ${respuesta.status}`);
     const blob = await respuesta.blob();
-    if (logo.tipo === 'image/svg+xml') return { logo: await svgComoPng(blob) };
     return { logo: await mapaDeBits(blob, logo.tipo === 'image/jpeg' ? 'JPEG' : 'PNG') };
   } catch (error) {
     console.error('[membrete] el documento sale sin logo:', error);

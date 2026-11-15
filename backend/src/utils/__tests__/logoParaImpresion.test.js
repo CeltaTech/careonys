@@ -1,11 +1,11 @@
 /**
- * Qué logo lleva un documento, y qué SVG se acepta como logo para impresión.
+ * Qué logo lleva un documento.
  *
  *   npm test --prefix backend
  */
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
-import { esUnSvgSinProgramas, logoParaDocumentos } from '../logoParaImpresion.js';
+import { logoParaDocumentos } from '../logoParaImpresion.js';
 
 /** Una base de mentira: contesta la fila de `prestadoras` y firma enlaces temporales. */
 function baseCon(prestadora, { enlace = 'https://firmado/logo' } = {}) {
@@ -24,27 +24,11 @@ function baseCon(prestadora, { enlace = 'https://firmado/logo' } = {}) {
   };
 }
 
-describe('esUnSvgSinProgramas', () => {
-  it('acepta un dibujo', () => {
-    assert.equal(esUnSvgSinProgramas(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><circle r="4"/></svg>')), true);
-  });
-  for (const [motivo, texto] of [
-    ['un programa', '<svg><script>alert(1)</script></svg>'],
-    ['un manejador de eventos', '<svg onload="alert(1)"></svg>'],
-    ['un enlace a un programa', '<svg><a href="javascript:alert(1)">x</a></svg>'],
-    ['contenido de otra clase', '<svg><foreignObject><p>x</p></foreignObject></svg>'],
-    ['una entidad', '<!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]><svg>&x;</svg>'],
-    ['algo que no es un dibujo', '<html><body>hola</body></html>'],
-  ]) {
-    it(`rechaza ${motivo}`, () => assert.equal(esUnSvgSinProgramas(Buffer.from(texto)), false));
-  }
-});
-
 describe('logoParaDocumentos', () => {
   it('usa el de impresión si está cargado, con enlace temporal', async () => {
-    const db = baseCon({ logo_url: 'https://pub/logo.webp', logo_impresion_ruta: 'p1/logo.svg' });
-    assert.deepEqual(await logoParaDocumentos(db), { url: 'https://firmado/logo', tipo: 'image/svg+xml' });
-    assert.deepEqual(db.pedidos, [{ deposito: 'logos-para-impresion', ruta: 'p1/logo.svg' }]);
+    const db = baseCon({ logo_url: 'https://pub/logo.webp', logo_impresion_ruta: 'p1/logo.png' });
+    assert.deepEqual(await logoParaDocumentos(db), { url: 'https://firmado/logo', tipo: 'image/png' });
+    assert.deepEqual(db.pedidos, [{ deposito: 'logos-para-impresion', ruta: 'p1/logo.png' }]);
   });
 
   it('sin el de impresión, usa el de internet si es PNG', async () => {

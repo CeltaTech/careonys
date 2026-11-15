@@ -72,17 +72,17 @@ adentro y se sirve con dirección pública. Los dos controles los hace el backen
 (`backend/src/routes/panelConfiguracion.js`), porque el depósito no tiene tope de tamaño ni de tipo.
 
 **El logo para impresión es otro archivo, opcional.** Es el que llevan los documentos que se
-imprimen —presupuestos, facturas, correspondencia—: PNG, JPG o SVG de hasta 2 MB, en el depósito
+imprimen —presupuestos, facturas, correspondencia—: PNG o JPG de hasta 2 MB, en el depósito
 privado `logos-para-impresion`, ruta `<id de la Prestadora>/logo.<extensión>`, guardado en
-`prestadoras.logo_impresion_ruta` y servido con enlace temporal. Un SVG se acepta sólo si no trae
-programas adentro (`backend/src/utils/logoParaImpresion.js`, `esUnSvgSinProgramas`).
+`prestadoras.logo_impresion_ruta` y servido con enlace temporal. SVG tampoco entra: es texto que
+puede llevar programas adentro, y revisarlo no da certeza.
 
 **Qué logo lleva un documento** lo decide `logoParaDocumentos` en ese mismo archivo: el de
 impresión si está cargado; si no, el de internet cuando es PNG o JPG; si es WEBP, el documento sale
 sin logo, con el nombre escrito.
 
 **El membrete se dibuja en un solo lugar**, `panel/src/lib/membrete.js`: `prepararMembrete()` baja
-el logo que contesta `/api/panel/membrete/logo` —un SVG lo pasa a PNG— y `dibujarMembrete()` pone
+el logo que contesta `/api/panel/membrete/logo` y `dibujarMembrete()` pone
 el logo, el nombre de la Prestadora y el título del documento. Un documento nuevo lo suma con esas
 dos llamadas. Hoy lo usa la constancia de ausencia.
 

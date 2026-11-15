@@ -115,3 +115,21 @@ Lo que ya está y lo que no se toca:
   usuario, `parte_código`, y la recuperación de la clave va por el nombre de usuario. Ni el
   ingreso ni la recuperación miran la dirección de la página, porque no todas las Prestadoras van
   a tener una.
+
+## El logo en SVG
+
+Que la Prestadora pueda subir su logo en SVG, que se ve nítido a cualquier tamaño.
+
+Hoy no se acepta, en ninguno de los dos logos. Un SVG es texto, y puede llevar programas adentro.
+Revisarlo buscando partes prohibidas no da certeza: siempre queda alguna forma que la lista no
+prevé.
+
+Lo que hay que estudiar antes de aceptarlo:
+
+- **Convertirlo a PNG al recibirlo** y guardar sólo el PNG. Lo que queda guardado es una imagen sin
+  instrucciones, y el original no se conserva. Hace falta sumarle al backend una herramienta que
+  convierta imágenes.
+- **Reescribirlo con una lista de lo permitido**, copiando sólo las partes autorizadas y
+  descartando el resto, con una herramienta conocida y mantenida.
+- **Cómo lo resuelven los sistemas que lo aceptan**: Wikipedia guarda el SVG y muestra un PNG que
+  genera ella misma; WordPress no lo acepta de fábrica.

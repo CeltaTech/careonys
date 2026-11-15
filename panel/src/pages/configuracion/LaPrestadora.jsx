@@ -129,7 +129,7 @@ function TabEmpresa() {
             />
             <ElLogo
               ruta="/empresa/logo-impresion"
-              tipos="image/png,image/jpeg,image/svg+xml"
+              tipos="image/png,image/jpeg"
               claveDeRespuesta="logo_impresion_url"
               etiqueta={t.configuracion.empresa_logo_impresion}
               logoUrl={form.logo_impresion_url}

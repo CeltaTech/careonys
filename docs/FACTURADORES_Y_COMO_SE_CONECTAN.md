@@ -1,10 +1,9 @@
 # Con qué software de facturación se conecta Careonys, y cómo
 
-**Por qué existe este documento.** No hay una primera Prestadora todavía, así que no hay un nombre.
-El primer software de facturación que se conecte será el que ella elija, si es que no prefiere
-cargar a mano o intercambiar una planilla. Entonces, en vez de esperar ese nombre, se miró qué
-software se usa en Argentina y cómo se conecta cada uno, para saber **cuánto cuesta agregar el
-primero y cuánto cuesta agregar el segundo**.
+**Qué dice este documento.** Qué software de facturación se usa en Argentina y cómo se conecta cada
+uno con Careonys, para saber **cuánto cuesta agregar el primero y cuánto cuesta agregar el
+segundo**. Cuál se conecta lo elige cada Prestadora, que también puede anotar las facturas a mano o
+intercambiar una planilla.
 
 Relevado en octubre de 2026 contra la documentación pública de cada programa. Lo que no se pudo
 comprobar ahí va marcado **[sin verificar]**. La RG ARCA 5866/2026 actualiza el régimen de
@@ -26,10 +25,11 @@ que ya existe.
 
 **Tango, el más usado, es el más incómodo** (sección 3).
 
-**Y hay un límite que vale para todos:** Careonys no guarda con qué número se identifica
-fiscalmente quien paga, y no lo va a guardar. Eso es dato de facturación puro, y lo tiene quien
-factura, en su propio padrón de clientes. Careonys le dice a quién cobrarle y cuánto; con qué
-número figura esa persona ante el organismo fiscal es asunto del software de facturación.
+**Y Careonys entrega a quién se le factura, con sus datos.** Cada renglón lleva el nombre, el
+documento —tipo, número y país—, el domicilio, el código postal y el email de esa persona, tomados
+del Directorio de Personas (`aQuienFacturarle`, en `panel/src/lib/intercambioDeFacturacion.js`).
+La condición frente al organismo fiscal y qué clase de comprobante corresponde los decide el
+software de facturación.
 
 ---
 
@@ -86,8 +86,8 @@ tiempos, lo que Careonys necesita anotar: cómo se llama el comprobante, qué n�
 código de autorización del organismo fiscal (CAE).
 
 **Lo que cambia:** el nombre de cada campo y la forma de la credencial. Eso es traducción, y es
-poco trabajo por software. **Ninguno obliga a tocar a los demás**, que es la condición del paso 39
-de `docs/PLAN_HASTA_PRODUCCION.md`.
+poco trabajo por software. **Ninguno obliga a tocar a los demás**, que es la condición que fija
+`docs/PLAN_HASTA_PRODUCCION.md`.
 
 **Tango.** Son dos productos distintos de la misma empresa, y ninguno hace las dos mitades:
 
@@ -105,14 +105,14 @@ respuesta al pedido: llega después, por aviso o por consulta.
 
 ---
 
-## 4. Los dos sentidos, y en cuál estamos
+## 4. Los dos sentidos
 
-**De Careonys hacia el software de facturación** —«cobrale tanto a este Cliente»—. Es la mitad que
-falta, y es la que hay que escribir una vez por software. Hoy ese mismo pedido sale en un archivo
-que alguien baja y entrega.
+**De Careonys hacia el software de facturación** —«facture tanto a este Cliente»—. Sale en un
+archivo que alguien baja y entrega. La conexión directa de este sentido se escribe una vez por
+software.
 
-**Del software de facturación hacia Careonys** —«emití este comprobante, con este número, por este
-importe»—. Esta mitad **ya está construida, probada y publicada**, y es una sola para todos.
+**Del software de facturación hacia Careonys** —«se emitió este comprobante, con este número, por
+este importe»—. Es una sola para todos los programas.
 
 > **Ningún software de facturación comprado firma su aviso**, según su propia documentación.
 > Careonys tiene su forma de comprobar que un pedido es auténtico, y quien programe a medida la
@@ -130,20 +130,17 @@ entró.
 
 ---
 
-## 5. Lo que falta, y no depende de cuál se elija
+## 5. Cómo se reconoce a la misma persona de los dos lados
 
-**Falta que los dos lados sepan que están hablando de la misma persona.** Hoy, lo que sale hacia el
-software de facturación es: de qué Cliente es la factura, de qué período, en qué moneda, por cuánto y para cuándo
-(`panel/src/lib/intercambioDeFacturacion.js`, `COLUMNAS_QUE_SALEN`).
+**Lo que sale hacia el software de facturación** es, por renglón: la factura, el número de cliente,
+el nombre visible del Cliente, a quién se le factura —nombre, documento, domicilio, código postal y
+email—, el período, la moneda, el importe a facturar y el vencimiento
+(`panel/src/lib/intercambioDeFacturacion.js:34-49`, `COLUMNAS_QUE_SALEN`).
 
-Con el archivo a mano eso alcanza, porque quien lo carga reconoce a sus clientes por el nombre.
-**Con conexión directa no alcanza**, porque no hay nadie del otro lado que reconozca nada: el
-software recibe un nombre y tiene que saber a cuál de sus clientes corresponde.
-
-Lo que falta entonces **no es el dato fiscal, es la correspondencia**: que cada Cliente de Careonys
-se corresponda con el cliente que el software de facturación ya tiene cargado. Una referencia, y
-nada más. El número de identificación fiscal, la condición frente al organismo y qué clase de
-comprobante corresponde viven del otro lado, que es donde se factura.
+Con el archivo a mano, quien lo carga reconoce a sus clientes por el nombre y el documento. Con
+conexión directa, el software recibe esos datos y tiene que saber a cuál de sus clientes
+corresponden. Careonys no guarda ninguna referencia al cliente del otro lado: lo que entrega para
+reconocerlo son los datos de quien recibe la factura.
 
 Cada programa la resuelve distinto: Tango Factura acepta un código propio del cliente, Sistemas 360
 una referencia externa, Alegra y Odoo piden el identificador del cliente en su propio padrón, y
@@ -151,17 +148,14 @@ Facturante no tiene código de cliente y obliga a corresponder por número de do
 
 ---
 
-## 6. Qué se hace, entonces
+## 6. Qué cambia según el software de la Prestadora
 
-1. **Resolver cómo se corresponde cada Cliente de Careonys con el cliente del otro lado.** Es lo único que la
-   conexión directa necesita y hoy no existe.
-2. **Esperar a la primera Prestadora** para escribir la pieza de su software. Antes de eso, escribir
-   una es elegir a ciegas y acertar con suerte.
-3. **Si esa Prestadora usa un software que avisa solo lo que emitió** —TusFacturasAPP, Facturante,
-   Alegra o Tango Gestión—, la mitad de vuelta es todavía menos trabajo, porque la parte que anota
-   ya está hecha.
-4. **Si usa uno sin interfaz** —Bejerman, Holistor, Contagram—, no hay pieza que escribir: sigue con
-   el intercambio por archivo.
+- **La conexión directa necesita saber a qué cliente del otro lado corresponde cada Cliente de
+  Careonys**, con el dato que pida ese programa (sección 5).
+- **Un software que avisa solo lo que emitió** —TusFacturasAPP, Facturante, Alegra o Tango Gestión—
+  pide menos trabajo en el sentido de vuelta, porque la parte que anota es la misma para todos.
+- **Un software sin interfaz** —Bejerman, Holistor, Contagram— no tiene conexión directa: la
+  Prestadora intercambia el archivo.
 
 ---
 

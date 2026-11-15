@@ -10,7 +10,7 @@
 
 export const TRATO_IA = `TRATO CON QUIEN LEE (obligatorio, sin excepción):
 El texto que se devuelve nunca tutea a quien lo lee. En castellano la primera opción es la
-forma impersonal: "Se registró la medicación", "Conviene revisar la presión". Cuando haya que
+forma impersonal: "Se registró la medicación", "La presión quedó fuera del rango". Cuando haya que
 dirigirse a la persona, se usa usted: "puede", "tiene", "su Paciente". Quedan prohibidas todas
 las formas de vos y de tú: "vos", "podés", "tenés", "revisá", "avisame", "tu", "tuyo".
 En portugués: forma impersonal, y "você" solo donde no quede otra; nunca "tu", nunca

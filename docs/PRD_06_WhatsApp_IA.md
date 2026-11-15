@@ -76,8 +76,10 @@ abierto, pero eso es justamente lo que había que acotar antes de construir algo
 
 **Decisión:** ningún mensaje entrante queda sin atender, y la IA no contesta. Contesta una
 regla fija (`backend/src/utils/respuestaAutomaticaWhatsapp.js`) que manda, letra por letra, sólo
-los textos que la Prestadora escribió y aprobó en el Panel, en Configuración → «Mensajes» →
-«Respuestas preparadas», y nunca redacta. Lo que toca la salud, quien pide hablar con una persona,
+los textos que la Prestadora escribió y aprobó en el Panel, en la página «Respuestas preparadas» del menú «Comunicación», que es sólo de la
+administración (`panel/src/pages/RespuestasPreparadas.jsx`), y nunca redacta. En Configuración →
+«Mensajes», la tarjeta del mismo nombre fija las horas sin mensajes después de las cuales la
+conversación se cierra. Lo que toca la salud, quien pide hablar con una persona,
 la conversación que ya atiende una persona y el mensaje sin respuesta aprobada pasan a una
 persona; una emergencia, además, se avisa al servicio de emergencias de esa jurisdicción. Ante la
 duda no contesta y deriva. La pieza que le pedía a la IA proponer respuestas está en el estante,
@@ -94,9 +96,9 @@ administración de esa Prestadora.
 
 ### D. Los mensajes del sistema
 
-El sistema manda diecinueve mensajes: turnos sin cubrir o sin cerrar, ausencias, alertas
-tempranas, relevos, emergencias, documentos por vencer, cambios de Asistente, entre otros. En la
-pantalla de Avisos del Panel, cada Prestadora enciende o apaga cada uno, elige a quién le llega y
+El sistema manda veinte mensajes (`backend/src/utils/catalogoAvisos.js:72-239`): turnos sin cubrir
+o sin cerrar, ausencias, alertas tempranas, relevos, emergencias, documentos por vencer, cambios de
+Asistente, entre otros. En Configuración → «Mensajes» del Panel, tarjeta «Notificaciones», cada Prestadora enciende o apaga cada uno, elige a quién le llega y
 si sale también por WhatsApp. Tres no se pueden apagar, porque hay alguien esperándolos en ese
 momento: la emergencia en una guardia, el pedido de relevo de emergencia y el código con el que
 el Cliente firma una instrucción.
@@ -165,13 +167,16 @@ resultante mientras se configura (`panel/src/lib/ordenDeLaEscalada.js`).
 ## Cómo se relaciona con el resto del proyecto
 
 - Configuración → «Mensajes» del Panel — este documento vive en sus tarjetas «Notificaciones»,
-  «Plantillas de mensaje», «Respuestas preparadas» y «Escalada a Coordinador».
+  «Plantillas de mensaje», «Respuestas preparadas» y «Escalada a Coordinador»
+  (`panel/src/pages/configuracion/Avisos.jsx`).
+- La página «Respuestas preparadas» del menú «Comunicación» (`panel/src/pages/RespuestasPreparadas.jsx`)
+  — el banco de textos aprobados que manda la respuesta automática.
 - Continuidad de guardia (`panel/src/pages/Continuidad.jsx`,
   `backend/src/utils/ausenciaAutomatica.js`) — el caso
   de uso principal que dispara el primer evento de WhatsApp saliente.
 - `docs/PLAN_HASTA_PRODUCCION.md`, sección «Configuración que todavía está escrita en el
-  código» — lo que falta parametrizar por Prestadora; este documento aplica ese mismo principio
-  a un canal de mensajería.
+  código» — la configuración por Prestadora; este documento aplica ese mismo principio a un
+  canal de mensajería.
 - Este caso vive en la relación con el Asistente durante el trabajo, no en el reclutamiento ni
   en la relación con Clientes — las reglas de riesgo legal sobre subordinación
   (`celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`, sección «Riesgo legal») aplican con todo su

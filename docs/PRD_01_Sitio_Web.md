@@ -1,7 +1,7 @@
 # PRD_01 — La página pública de Careonys
 
-> Nada de lo que sigue está construido. Hoy en `careonys.com` hay una sola página que dice
-> "En construcción" (ver §7).
+> Hoy `careonys.com` muestra una sola página, que dice "En construcción" (ver §7). Las páginas
+> que define este documento son las de §4.
 
 ## 0. Qué vende esta página, y qué no
 
@@ -85,10 +85,12 @@ Son límites duros, no preferencias.
 5. **Los tres idiomas desde el primer día**: español de Argentina, inglés y portugués de
    Brasil, siempre juntos (regla «i18n desde el día uno», `celtatech/CLAUDE.md`). No se publica una página en un idioma
    "para traducirla después".
-6. **No se promete lo que el producto no hace.** A la fecha de hoy no existen: el cobro
-   automático a los Clientes de la Prestadora, la aplicación instalable desde las tiendas de Android y Apple, y
-   los niveles de inteligencia artificial 3 a 5. Lo que está a medias se
-   cuenta como lo que es o no se cuenta.
+6. **No se promete lo que el producto no hace.** Careonys no cobra a los Clientes de la
+   Prestadora: no asume tareas de facturación ni de créditos y cobranzas, le entrega al software
+   de facturación de la Prestadora qué hay que cobrarle a cada Cliente y se informa del estado de
+   cuenta (`CLAUDE.md:225-230`). Las aplicaciones se abren desde el navegador y no se instalan
+   desde las tiendas de Android y Apple. La inteligencia artificial tiene los niveles 1 y 2
+   (`docs/AI_PROMPTS.md:14,51`). Una función a medias se cuenta como lo que es o no se cuenta.
 
 ## 4. Las páginas
 
@@ -131,8 +133,11 @@ visible de que están en revisión.
 
 Acá hay una trampa que conviene ver antes de construir nada.
 
-**La página no guarda nada.** Ofrece correo y WhatsApp, con un botón flotante como el que ya
-usa el resto del producto para cualquier teléfono visible (`DESIGN_SYSTEM.md`). Quien pide una
+**La página no guarda nada.** Ofrece correo y WhatsApp. El de WhatsApp es un botón flotante:
+queda a la vista en todas las páginas mientras la persona recorre el sitio, y al tocarlo abre una
+conversación de WhatsApp con el número comercial mediante un enlace `wa.me/{número}`, la misma
+forma con la que el Panel arma el enlace de cualquier teléfono (`panel/src/lib/telefono.js:5`).
+El número sale de la configuración del sitio y no se escribe en la página. Quien pide una
 demostración no es persona del Directorio de Personas de ninguna Prestadora: el Directorio es
 de cada una y todo lo que se guarda ahí lleva la Prestadora como dato obligatorio.
 
@@ -177,8 +182,6 @@ publica, y no suma nada nuevo que aprender ni que mantener. La decisión anterio
 Next.js quedó sin efecto junto con el documento que la contenía; si se retoma, se retoma por
 un motivo nuevo y escrito.
 
-**Una cosa para hacer junto con el sitio:** sacarle el `noindex` (§6).
-
 ## 8. ¿Y el sitio de cada Prestadora?
 
 La pregunta es si el sitio que **sí** le habla a quien busca cuidado —el de cada empresa
@@ -188,8 +191,8 @@ empresa se arregla por su cuenta, o nada.
 **Respuesta (decidida por el Desarrollador): no es una función de Careonys, y cada
 Prestadora lo arma con quien elija.** La página con la que se publicita —la que enlaza desde
 sus redes— la puede hacer su propio diseñador, cualquier servicio de páginas web, o
-**OctoBuilder**, el generador de páginas web de CeltaTech, que todavía está por construirse.
-OctoBuilder es una opción, no una obligación.
+**OctoBuilder**, el generador de páginas web de CeltaTech. OctoBuilder es una opción, no una
+obligación.
 
 **El formulario de postulación es de Careonys y llega por una API única.** Esa API entrega la
 definición del formulario —sus casilleros, sus listas de opciones y cuáles son obligatorios— y
@@ -209,29 +212,13 @@ Por qué va afuera y no acá adentro:
 3. **Cada empresa va a querer su diseño, su dominio y su correo.** Como función suelta metida
    acá, eso sería soporte para siempre.
 
-**Qué cambia en este repositorio: sólo la API del formulario de postulación**
-(`docs/PLAN_HASTA_PRODUCCION.md`, paso 66). El sitio queda afuera. OctoBuilder es de CeltaTech
-y todavía no existe; mientras tanto, la empresa que ya tiene su página sigue con la suya, y
-desde ahí manda a sus clientes y a sus asistentes a las direcciones que le damos.
+**A este repositorio le corresponde sólo la API del formulario de postulación**; el trabajo
+está en `docs/PLAN_HASTA_PRODUCCION.md`. El sitio queda afuera. OctoBuilder es de CeltaTech. La
+empresa que tiene su página sigue con la suya, y desde ahí manda a sus clientes y a sus
+asistentes a las direcciones que le damos.
 
-**Lo que sí conviene no olvidar cuando OctoBuilder se construya:** esa página va a querer
-mostrar cosas que Careonys ya sabe —los servicios que la Prestadora ofrece, sus zonas de
-cobertura, su teléfono— y la tentación va a ser que las lea directo de la base del producto.
-No se hace así: se piden por una interfaz, como cualquier otro producto de la empresa
-(regla «Todo se usa por API», `celtatech/CLAUDE.md`, y `celtatech/docs/POLITICA_DE_MODULOS.md`).
-
-## 9. Lo que falta decidir, y es del Desarrollador
-
-1. **Quién es dueño de esta página.** Cuando se definieron los tres niveles, el Desarrollador
-   dejó dicho que de *"la pagina web de careonys"* se ocupa CeltaTech, no el producto. Hoy el código vive acá, en el repositorio del
-   producto, junto a las tres aplicaciones y compartiendo con ellas el nombre del producto y
-   la forma de publicar. Hay que decidir si se queda o se muda — y este documento se muda con
-   ella. **Mientras no se decida, se queda acá**, que es donde funciona.
-2. **Cuándo se saca el cartel de obra.** Depende de tener las seis páginas escritas y los
-   legales, no de una fecha.
-
-## 10. Estado
-
-Documento de definición, sin nada construido. La única página que existe es la de obra (§7).
-Lo que sigue abierto está en `docs/PLAN_HASTA_PRODUCCION.md`; el porqué de este cambio de rumbo, en
-`docs/claude_history.md`.
+**Los datos que Careonys ya tiene se piden por una interfaz.** La página de una Prestadora, la
+haga OctoBuilder o cualquier otro, puede mostrar los servicios que ella ofrece, sus zonas de
+cobertura y su teléfono. Esos datos nunca se leen directo de la base del producto: se piden por
+una interfaz, como cualquier otro producto de la empresa (regla «Todo se usa por API»,
+`celtatech/CLAUDE.md`, y `celtatech/docs/POLITICA_DE_MODULOS.md`).

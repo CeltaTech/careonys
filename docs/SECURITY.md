@@ -76,8 +76,124 @@ Prestadora. Baja el más nuevo, lo abre y contesta `bien`, `roto` o `no_probado`
 otra Prestadora o trae alguna fila de otra, y `no_probado` si estaba en orden pero no traía una sola
 fila. Muestra cantidades, nunca una fila. Qué decide cada uno está en
 `backend/src/utils/comprobacionDeRestauracion.js`. Lo corre el Desarrollador, porque pide la clave
-privada. Que deje constancia y se repita sola es el paso 126 de `docs/PLAN_HASTA_PRODUCCION.md`,
-«Respaldos que se probaron».
+privada.
+
+### Si hay que dejar el servicio de identidad de Supabase
+
+No hay ninguna decisión de migrar. Esto es lo que se hace si Supabase deja de servir para
+autenticar —cierre de cuenta, cambio de precios, fin del servicio—, para no empezar de cero en el
+peor momento.
+
+- **Qué se exporta:** la lista de usuarios —email, `id` (UUID), fecha de alta y estado— y el rol,
+  que vive en `usuarios.rol`, la tabla propia del producto, no en Supabase Auth.
+- **Los identificadores de verificación de las contraseñas no se pueden migrar.** Supabase Auth
+  usa bcrypt con su propia configuración interna, y ningún otro proveedor ni un esquema propio los
+  puede volver a verificar. Pasa en cualquier migración de un proveedor de identidad a otro.
+- **Por eso toda cuenta restablece su contraseña** la primera vez que entra al sistema nuevo:
+  Superadmin, Admin_prestadora, Coordinador, Asistente y Cliente, los valores de `usuarios.rol`. Se
+  avisa por email antes del corte.
+- **Qué no cambia:** la lógica de negocio, que vive en el backend propio, y los datos de la base,
+  que son otro servicio y tienen su propio respaldo, el de arriba.
+
+| Opción | A favor | En contra |
+|---|---|---|
+| **Auth0** | Proveedor maduro, migración de usuarios asistida, multi-tenant nativo | Costo por usuario activo, otro proveedor externo del que depender |
+| **Clerk** | Más simple de integrar, gestión de usuarios lista para usar | Más joven que Auth0, menos historial en volumen alto |
+| **JWT propio en el backend** | Ninguna dependencia externa nueva, control total | Hay que construir y mantener el cálculo del identificador de verificación de las contraseñas, la rotación de tokens, el tope de intentos y el restablecimiento de la contraseña, que hoy resuelve Supabase Auth |
+
+Qué opción conviene depende de por qué se migra —sólo la identidad, o también la base— y de
+cuántas Prestadoras haya en ese momento. La copia en caliente del servicio de identidad queda
+fuera de alcance.
+
+### Railway, donde corre el backend
+
+1. El backend es un repositorio Git estándar (`backend/`), sin nada propio de Railway salvo las
+   variables de entorno, que lista `backend/.env.example`.
+2. **Alternativas:** Render, Fly.io, un servidor propio con PM2 o Docker. **El plan del proveedor
+   nuevo no puede dormir el servicio por inactividad:** las tareas programadas corren adentro del
+   mismo proceso (`programar()` en `backend/src/server.js`), y un servicio dormido no las corre. En
+   Railway no duerme (`sleepApplication: false` en `railway status --json`). La dirección del
+   backend es la que asigna Railway, `careonys-backend-production-e7ee.up.railway.app`, la que
+   comprueba `.github/workflows/deploy-backend.yml`: al mudarse cambia.
+3. **Pasos:** crear el proyecto en el proveedor elegido, cargar las mismas variables de entorno con
+   `backend/.env.example` como lista, apuntar el mismo repositorio, y cambiar la dirección del
+   backend en `panel/.env` para el desarrollo local, en el secreto `VITE_API_URL` del repositorio
+   para lo que se publica (`.github/workflows/publicar-pantallas.yml`) y en toda dirección que otro
+   software llama para dejar un dato, como la de WhatsApp en el panel de Meta.
+4. `RAILWAY_TOKEN`, en `.github/workflows/deploy-backend.yml`, sirve sólo para la publicación
+   automática y se reemplaza por el mecanismo del proveedor nuevo.
+
+### Cloudflare Pages, donde se publican el Panel, las dos aplicaciones y la página raíz
+
+1. El Panel y las dos aplicaciones (`panel/`, `pwa-clientes/`, `pwa-asistentes/`) son proyectos
+   Vite y React estándar y se publican ya compilados. Lo único propio del proveedor es el archivo
+   `_redirects` de cada uno, una regla de una línea para que al recargar una dirección interna no
+   salga 404. La página raíz de `careonys.com` (`sitio-web/`) es un HTML suelto que arma
+   `node sitio-web/construir.mjs`.
+2. **Alternativas:** Netlify, Vercel, GitHub Pages.
+3. **Los proyectos de Cloudflare Pages son de subida directa: no están enganchados a GitHub.**
+   Compila y publica `.github/workflows/publicar-pantallas.yml`, que corre `npm run build` con las
+   variables `VITE_*` guardadas como secretos del repositorio —o `construir.mjs`, para la página
+   raíz— y sube la carpeta compilada con `wrangler pages deploy` a cuatro proyectos:
+   `careonys-panel`, `careonys-clientes`, `careonys-asistentes` y `careonys-sitio`. Cambiar de
+   proveedor es cambiar ese último paso, no la compilación.
+4. **Pasos:** crear los cuatro proyectos en el proveedor nuevo, reemplazar el paso de `wrangler`
+   por el comando equivalente, cargar allá el token que ese comando necesite —hoy son
+   `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`— y repuntar por DNS `careonys.com`,
+   `gestion.careonys.com`, `clientes.careonys.com` y `asistentes.careonys.com`.
+5. **Dos cosas fallan en vivo y no al compilar:** la regla de reescritura equivalente a
+   `_redirects`, sin la cual toda dirección interna da 404 al recargar, y el tipo de contenido del
+   manifiesto y de `sw.js` de las dos aplicaciones, sin el cual dejan de instalarse en el teléfono.
+6. Las direcciones que el backend pone en los correos de activación (`PWA_CLIENTES_URL` y
+   `PWA_ASISTENTES_URL`, en Railway) apuntan a los dominios propios: con el DNS repuntado no se
+   tocan.
+7. En el proveedor nuevo se comprueba si publica solo o si necesita un paso explícito, y se deja
+   escrito en el automatismo (`celtatech/CLAUDE.md`, «Y terminar la tarea incluye comprobar que la
+   publicación salió bien»).
+
+### Resend, el despachante de correo
+
+**Por qué hay un despachante y no una casilla.** Railway no deja salir tráfico por los puertos de
+correo, así que el backend no puede entrar a ninguna casilla. El envío sale por un despachante que
+habla por el puerto 443, como cualquier pedido web. **Un proveedor de SMTP puro no sirve mientras
+el backend corra en Railway.**
+
+1. **Un despachante, con una dirección de envío por Prestadora.** `RESEND_API_KEY` y
+   `REMITENTE_AVISOS`, cargadas en Railway (`docs/SECRETOS.md`), las consume
+   `backend/src/utils/email.js`, el único archivo del producto que manda correo. Al despachante se
+   le autoriza el dominio `careonys.com` una sola vez y de ahí cuelgan todas las direcciones, así
+   que el costo no sube por Prestadora. Cada Prestadora manda desde `[prestadora]@careonys.com` y
+   las respuestas se reenvían a la casilla que ella declare (`docs/MARCA.md`, sección «Antes que
+   nada: acá hay tres marcas, no una»).
+2. **El camino por SMTP es para la máquina de desarrollo.** Sin clave del despachante,
+   `crearTransporterPara` arma un transporte de Nodemailer contra `smtp.gmail.com` con `SMTP_USER`
+   y `SMTP_PASSWORD`, resolviendo a mano una IPv4. No hay un tercer camino: el servidor de correo
+   propio de cada Prestadora se retiró junto con la pantalla que lo pedía, porque sale por SMTP.
+3. **Alternativas:** cualquier despachante que hable por el puerto 443 —Amazon SES, Postmark,
+   Cloudflare Email Service, la API de Gmail—. Amazon SES cobra por correo mandado y no tiene abono
+   fijo. El plan gratuito de SendGrid es una prueba de sesenta días.
+4. **El tope:** el plan gratuito de Resend deja 3.000 correos por mes y como mucho 100 por día.
+   Cada envío queda contado en `envios_de_correo`.
+5. **Pasos:** dar de alta la cuenta en el despachante nuevo, autorizar `careonys.com`, generar sus
+   claves de acceso, cargarlas en Railway con nombres propios y cambiar `transporteDelDespachante`
+   en `backend/src/utils/email.js`. El armado de cada correo —a quién va, qué dice, con qué marca—
+   no sabe por dónde viaja, y hay un solo juego de claves que reemplazar, no uno por Prestadora.
+6. **Verificar el remitente antes del corte** (SPF y DKIM del proveedor nuevo), o los correos caen
+   en correo no deseado. Los renglones de DNS van en Cloudflare sin proxi: proxiados, el dominio no
+   verifica nunca.
+7. **El reenvío de las respuestas es de Cloudflare, no del despachante**, así que no se mueve con
+   él. Vive en Email Routing de `careonys.com`, una regla por Prestadora, con un techo de 200
+   reglas por dominio y 200 direcciones de destino por cuenta.
+
+### GitHub, el repositorio y los automatismos
+
+1. El código y su historial completo están en cada clon local, no sólo en GitHub.
+2. **Alternativas:** GitLab, Bitbucket, un servidor Git propio.
+3. **Pasos:** `git remote add nuevo-origen <url>` y `git push nuevo-origen --all --tags` desde un
+   clon al día.
+4. Lo que se reconstruye son los automatismos de `.github/workflows/`, que pasan a GitLab CI o
+   Bitbucket Pipelines con ajustes de sintaxis menores. Los secretos del repositorio, como
+   `RAILWAY_TOKEN`, no se exportan: se vuelven a cargar a mano.
 
 ## RBAC — roles del sistema
 
@@ -139,7 +255,7 @@ superadmin da un permiso *dentro* del tenant en el que uno está parado, no perm
 salirse de él. Una policy que diga solamente `USING (es_superadmin())` sobre una tabla con
 `prestadora_id` es un bypass cross-tenant.
 
-**Excepciones vigentes** (140 policies usan
+**Excepciones vigentes** (141 policies usan
 `es_superadmin()`; estas 6 la usan sin `prestadora_actual()` sobre una tabla que sí tiene
 `prestadora_id`):
 
@@ -328,11 +444,15 @@ al ser ambas permisivas. Una alarma que llega a todos los Coordinadores abre una
 la zona: en `guardias` y en `incidentes_relevo`, el Coordinador ve la fila de la alarma que tiene a
 la vista y modifica la de la alarma que tomó (`coordinador_ve_la_guardia_de_una_alarma_que_llego_a_todos`,
 `coordinador_resuelve_la_guardia_de_una_alarma_que_tomo`, `coordinador_ve_la_alarma_que_llego_a_todos`,
-`coordinador_resuelve_la_alarma_que_tomo`). **Pendiente, no resuelto**:
-`clientes`/`pacientes`/`prestaciones` no filtran por zona — Coordinador sigue viendo todas las
-filas de estas 3 tablas, igual que Admin, hasta que exista una decisión de producto sobre cómo
-derivar la zona de un Cliente. El dato disponible es el lugar de los datos de la persona
-(`personas.lugar_id`). No adivinar esa semántica sin confirmarla primero.
+`coordinador_resuelve_la_alarma_que_tomo`).
+
+En `clientes`, `pacientes` y `prestaciones` el alcance del Coordinador no sale de la zona sino de
+los Servicios. `coordinador_lee_clientes` usa `interno.coordinador_ve_al_cliente`, que lo deja ver
+al Cliente cuando coordina uno de sus Servicios o cuando atiende a alguno de sus Pacientes;
+`coordinador_lee_pacientes` usa `interno.coordinador_ve_al_paciente`, con las mismas dos vías, y
+`panel_gestiona_prestaciones` también. Editar un Cliente o un Paciente le pide además el permiso
+`editar_datos_cliente` o `editar_datos_paciente`, y agregar un Paciente, coordinar un Servicio de
+ese Cliente (`coordinador_agrega_pacientes`).
 
 **Guardias:** las tablas de guardias tienen RLS multi-tenant aplicada, incluido el patrón
 OR-de-dos-EXISTS de `incidentes_relevo` documentado arriba, y las consume el backend —entre
@@ -435,12 +555,9 @@ CREATE POLICY prestadora_ve_los_contactos_vistos ON contactos_vistos_intermediac
   );
 ```
 
-**Pendiente de decisión, no bloquea desarrollo:** `guardias_tracking_gps` guarda histórico de
-posiciones GPS del Asistente durante una guardia activa — esto es un dato personal sensible
-bajo Ley 25.326 (geolocalización de una persona física). Falta definir política de retención
-(cuánto tiempo se conserva el histórico) y si se necesita una advertencia/consentimiento explícito
-al Asistente más allá del que ya cubre el vínculo contractual — no se ha tomado ninguna
-decisión de producto sobre esto todavía.
+`guardias_tracking_gps` guarda el histórico de posiciones del Asistente durante una guardia
+activa, que es un dato personal sensible bajo la Ley 25.326 (geolocalización de una persona
+física).
 
 ## Datos sensibles — qué nunca se loguea ni va en URL/GET
 
@@ -463,8 +580,8 @@ rota y cuándo se rotó por última vez. Sin ningún valor adentro, y no se le a
 ## Cumplimiento normativo
 
 Lo de cada país está en su documento, en `docs/legal/<país>.md`, con el artículo de cada norma y el
-estado del producto frente a ella; lo que no es de un país, en `docs/CUMPLIMIENTO_NORMATIVO.md`. Lo que falta construir, en `docs/PLAN_HASTA_PRODUCCION.md`. Acá no se
-duplica ninguna de las dos cosas.
+estado del producto frente a ella; lo que no es de un país, en `docs/CUMPLIMIENTO_NORMATIVO.md`; lo que se va a construir, en `docs/PLAN_HASTA_PRODUCCION.md`. Acá no se
+duplica ninguna de las tres cosas.
 
 Lo que no espera: Careonys trata datos de salud, así que lo alcanzan HIPAA en Estados Unidos, el
 Reglamento General de Protección de Datos en Europa y las leyes de los diez países
@@ -473,10 +590,8 @@ Paulo**, lo que para todo país que no sea Brasil es transferencia internacional
 
 ## Verificación de antecedentes penales (etapa 3 del Proceso de Incorporación de Asistentes)
 
-Hoy es un proceso manual/semi-manual (consulta al Registro Nacional de Reincidencia,
-renovación anual) — no hay integración de API elegida. Si se automatiza, la elección del
-proveedor es decisión pendiente de negocio y de presupuesto, y no bloquea el desarrollo de las
-etapas 1-2.
+Es un proceso manual: consulta al Registro Nacional de Reincidencia, con renovación anual. El
+producto no está conectado con ningún proveedor de esa consulta.
 
 ## Referencias laborales del Asistente
 
@@ -519,20 +634,4 @@ depósito `fotos-identidad`.
   es la única verdad posible; una columna podría decir que sí cuando el archivo ya no está.
 - **Las fotos se sirven con enlace temporal que vence al minuto**, nunca con dirección pública.
 - **Comparar las dos caras no lo hace el producto.** Hoy las mira una persona y marca la etapa.
-  Compararlas automáticamente es tratamiento de dato biométrico, y no se construye hasta que estén
-  las dos decisiones de más abajo.
-
-## Decisiones de seguridad pendientes (no bloquean desarrollo, hay que saberlas)
-
-- Proveedor de reconocimiento facial para la etapa de verificación de identidad del Proceso
-  de Incorporación de Asistentes: no elegido.
-- Documento legal del que salga la advertencia al Asistente por el tratamiento de su dato biométrico:
-  no existe. Sin ese documento no hay advertencia —`celtatech/CLAUDE.md`, sección «El riesgo legal»,
-  dice que no se improvisa—,
-  y sin advertencia no se compara ninguna cara.
-- Si se automatiza la consulta de antecedentes penales: proveedor no elegido.
-- Cómo la Prestadora le cobra al Cliente el cuidado prestado **en prestación directa**: no hay
-  decisión de negocio, y por lo tanto tampoco de seguridad de datos de pago. En la modalidad
-  Match sí está resuelto y construido (`docs/PRD_07_Modalidad_Match.md`): el cobro lo
-  hace una pasarela y el producto no guarda nunca un dato de tarjeta — sólo el identificador que
-  devuelve el proveedor.
+  Compararlas automáticamente es tratamiento de dato biométrico, y el producto no lo hace.

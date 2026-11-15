@@ -1,7 +1,7 @@
 # Dónde el producto dice «la Prestadora»
 
 Este documento existe para que usted revise, uno por uno, **todos los textos del producto que
-nombran a la empresa como «la Prestadora»**. Son 70 en castellano.
+nombran a la empresa como «la Prestadora»**. Son 64 en castellano.
 
 ## Qué se está revisando
 
@@ -11,15 +11,15 @@ que licenció el producto se llama PresDemo, o Cuidados del Sur, o como se llame
 
 La pieza para decir el nombre real ya está construida y funcionando en las tres pantallas: se
 escribe `{{prestadora}}` adentro de la frase y el producto lo reemplaza por el nombre con el que
-esa empresa se presenta. De los 70 la usa uno solo, la ficha 112. Fuera de esta lista ya la usan
+esa empresa se presenta. De los 64 la usa uno solo, la ficha 112. Fuera de esta lista ya la usan
 el botón «Llamar a {{prestadora}}» de la aplicación de los Asistentes
 (`pwa-asistentes/src/i18n/translations.js:375`), la aceptación de términos de la medicación en la
-de los Clientes (`pwa-clientes/src/i18n/translations.js:632`) y los dos `responsable_directa` del
-Panel (`panel/src/i18n/translations.js:1185` y `:1949`).
+de los Clientes (`pwa-clientes/src/i18n/translations.js:613`) y los dos `responsable_directa` del
+Panel (`panel/src/i18n/translations.js:1249` y `:2033`).
 
 ## Las tres salidas posibles de cada texto
 
-Cada uno de los 70 puede terminar en una de tres, y **la decisión es suya, texto por texto**:
+Cada uno de los 64 puede terminar en una de tres, y **la decisión es suya, texto por texto**:
 
 1. **Poner el nombre** — la frase nombra a la empresa y corresponde que diga su nombre.
 2. **No nombrar a nadie** — la frase se entiende sin nombrar a nadie, y el sujeto sobra.
@@ -45,7 +45,7 @@ Por quién lee. Tres partes:
   guardias.
 - **Parte II — La aplicación de los Clientes** (25 textos). Los lee el Cliente y sus personas
   autorizadas.
-- **Parte III — El Panel** (36 textos). Los lee la propia empresa, por dentro.
+- **Parte III — El Panel** (30 textos). Los lee la propia empresa, por dentro.
 
 ---
 
@@ -774,7 +774,7 @@ nueva indicación», arriba del botón Enviar.
 
 # PARTE III — El Panel
 
-Los lee, casi siempre, la propia empresa: su Administrador o su Coordinador. **Son 36.**
+Los lee, casi siempre, la propia empresa: su Administrador o su Coordinador. **Son 30.**
 
 Hay dos excepciones que conviene tener a la vista al recorrerlos, y son un hecho del código, no
 una opinión:
@@ -824,46 +824,6 @@ cobro, Calificaciones, Auditoría legal—.
 **Archivo:** `panel/src/lib/errores.js:167`
 
 **DECISIÓN:** aprobado así.
-
----
-
-## 74. No hay pasarela conectada
-
-**Ruta:** `errores.motivos.sin_pasarela_conectada`
-
-**Texto de hoy:**
-> Esta Prestadora no tiene ninguna pasarela de cobro conectada. Se conecta en Configuración ›
-> Prestadora › Pasarela de pago.
-
-**Dónde se ve:** Clientes > Clientes (Match), al confirmar el alta de un acceso cobrable.
-
-**Qué lo dispara:** no hay ninguna pasarela conectada.
-
-**Quién lo lee:** la empresa.
-
-**Archivo:** `panel/src/lib/errores.js:167`
-
-**DECISIÓN:**
-
----
-
-## 76. Esa pasarela no está conectada
-
-**Ruta:** `errores.motivos.pasarela_no_conectada`
-
-**Texto de hoy:**
-> Esa pasarela de cobro no está conectada en esta Prestadora. Se conecta en Configuración ›
-> Prestadora › Pasarela de pago.
-
-**Dónde se ve:** Clientes > Clientes (Match), al confirmar el alta de un acceso.
-
-**Qué lo dispara:** se pidió cobrar por una pasarela puntual que no está conectada.
-
-**Quién lo lee:** la empresa.
-
-**Archivo:** `panel/src/lib/errores.js:167`
-
-**DECISIÓN:**
 
 ---
 
@@ -1127,7 +1087,7 @@ postulante con la llave que le llegó por correo. Es el título de la página.
 
 **Archivo:** `panel/src/pages/EntrevistaPublica.jsx:98`
 
-**OBSERVACIÓN:** es el único texto de los 70 que ya usa el marcador `{{prestadora}}`.
+**OBSERVACIÓN:** es el único texto de los 64 que ya usa el marcador `{{prestadora}}`.
 
 **DECISIÓN:**
 
@@ -1220,8 +1180,7 @@ bloque de referencias laborales.
 > Esta Prestadora todavía no cargó qué documentación pide. Se configura en Configuración.
 
 **Dónde se ve:** Clientes > Directorio de Clientes > un Cliente > pestaña Contacto, tarjeta
-«Documentación que pide el Pagador», donde iría la tabla de documentos. El detalle de esa
-pantalla está en la ficha 6 de `docs/CARTELES_DEL_PANEL.md`.
+«Documentación que pide el Pagador», donde iría la tabla de documentos.
 
 **Qué lo dispara:** el catálogo de documentación está vacío.
 

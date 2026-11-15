@@ -1,9 +1,8 @@
-# Marca del producto — qué archivos tienen que existir
+# Marca del producto y de cada Prestadora
 
-> Etapa 0.5 de `celtatech/docs/PLAN_SEPARACION_CELTATECH.md`. Este documento es el **contrato**: la lista de
-> archivos que hay que entregar cuando la marca exista. Hoy **no existe ninguno** — no hay
-> isotipo ni logotipo diseñados. El dominio sí está registrado: `careonys.com`, declarado en
-> `backend/src/config/identidadProducto.js`. Ningún archivo de marca está hecho.
+> Describe la marca del producto, la de cada Prestadora y dónde vive cada una. El producto no
+> tiene isotipo ni logotipo diseñados. El dominio es `careonys.com`, declarado en
+> `backend/src/config/identidadProducto.js`.
 
 ## 0. Antes que nada: acá hay tres marcas, no una
 
@@ -24,8 +23,8 @@ Paciente.
 **La regla:** en toda pantalla, email o notificación dirigida a un Cliente o a un Asistente,
 la marca **principal** la pone la Prestadora, nunca `identidadProducto.js`.
 
-**El modelo es co-branding** — decidido por el Desarrollador el 2026-07-27, después de mirar
-qué hace la industria. No es marca blanca total: la marca de la Prestadora va primera y
+**El modelo es co-branding**, decidido por el Desarrollador después de mirar qué hace la
+industria. No es marca blanca total: la marca de la Prestadora va primera y
 grande, y el producto queda en una línea discreta al pie, *"con la tecnología de
 {{producto}}"*. Esa línea es el **único** lugar donde la marca del producto puede aparecer
 ante un Cliente o un Asistente, y **va siempre**: es el crédito de quién hizo el software, no
@@ -69,7 +68,8 @@ en el alta.
 leen el Panel, las dos aplicaciones, los correos y los avisos. **El logo** es una imagen PNG, JPG o
 WEBP de hasta 2 MB, y es el que se ve en internet; SVG no entra, porque puede llevar programas
 adentro y se sirve con dirección pública. Los dos controles los hace el backend
-(`backend/src/routes/panelConfiguracion.js`), porque el depósito no tiene tope de tamaño ni de tipo.
+(`backend/src/routes/panelConfiguracion.js:217-218`), porque el depósito no tiene tope de tamaño
+ni de tipo.
 
 **El logo para impresión es otro archivo, opcional.** Es el que llevan los documentos que se
 imprimen —presupuestos, facturas, correspondencia—: PNG o JPG de hasta 2 MB, en el depósito
@@ -77,14 +77,15 @@ privado `logos-para-impresion`, ruta `<id de la Prestadora>/logo.<extensión>`, 
 `prestadoras.logo_impresion_ruta` y servido con enlace temporal. SVG tampoco entra: es texto que
 puede llevar programas adentro, y revisarlo no da certeza.
 
-**Qué logo lleva un documento** lo decide `logoParaDocumentos` en ese mismo archivo: el de
+**Qué logo lleva un documento** lo decide `logoParaDocumentos`, en
+`backend/src/utils/logoParaImpresion.js:47`, y lo entrega `backend/src/routes/panelMembrete.js`: el de
 impresión si está cargado; si no, el de internet cuando es PNG o JPG; si es WEBP, el documento sale
 sin logo, con el nombre escrito.
 
 **El membrete se dibuja en un solo lugar**, `panel/src/lib/membrete.js`: `prepararMembrete()` baja
 el logo que contesta `/api/panel/membrete/logo` y `dibujarMembrete()` pone
 el logo, el nombre de la Prestadora y el título del documento. Un documento nuevo lo suma con esas
-dos llamadas. Hoy lo usa la constancia de ausencia.
+dos llamadas. Lo usa la constancia de ausencia (`panel/src/lib/constanciaDeAusencia.js`).
 
 **Dónde viven los archivos de marca de la Prestadora.** En el depósito `marca-prestadoras`, y
 cada Prestadora tiene su carpeta, que se llama como su identificador:
@@ -105,8 +106,8 @@ ingreso no pregunta de qué Prestadora es la cuenta ni muestra ninguna marca: la
 la coordinación entra con su nombre de usuario, `parte_código`, y el código dice de qué
 Prestadora es.
 
-**Ese código no lo elige Careonys: lo elige CeltaTech** y llega con el alta de la Prestadora
-(`docs/PLAN_HASTA_PRODUCCION.md`, paso 111). Careonys lo guarda y no lo cambia nunca, porque forma
+**Ese código no lo elige Careonys: lo elige CeltaTech** y llega con el alta de la Prestadora.
+Careonys lo guarda y no lo cambia nunca, porque forma
 parte del nombre de usuario de toda su coordinación, y de él sale también la casilla desde la que
 manda (`backend/src/utils/casillaDeEnvio.js`). Que ninguno se repita y que ninguno cambie lo hace
 cumplir la base, no la pantalla.
@@ -122,44 +123,7 @@ El isotipo es el que va en los lugares chicos y cuadrados: el ícono de la app e
 la pestaña del navegador, la notificación push. El logotipo va donde hay ancho: el
 encabezado del Panel, la firma de un email.
 
-## 2. Archivos a entregar
-
-Todos van en `public/marca/` de cada app que los use (`panel/`, `pwa-asistentes/`,
-`pwa-clientes/`). Las rutas tienen su lugar en `src/config/identidadProducto.js`, campos
-`isotipo` y `logotipo`, pero ningún archivo lee todavía esos dos campos: ver «Lo que hoy hay en
-su lugar».
-
-### Isotipo
-
-| Archivo | Para qué | Por qué ese formato |
-|---|---|---|
-| `isotipo.svg` | Todo uso en pantalla | Escala sin pixelarse a cualquier tamaño |
-| `isotipo-512-maskable.png` | Ícono de la PWA instalada en Android | Android recorta el ícono con la forma que elija el fabricante (forma redonda, cuadrado redondeado, gota). "Maskable" significa que el dibujo tiene margen suficiente para que ningún recorte le coma un pedazo |
-| `isotipo-512.png` | Ícono de la PWA, uso general | |
-| `isotipo-192.png` | Ícono de la PWA, pantallas chicas | |
-| `isotipo-180.png` | Ícono en iPhone/iPad (`apple-touch-icon`) | iOS no usa el manifiesto para esto, pide su propio archivo |
-| `isotipo-32.png`, `isotipo-16.png` | Pestaña del navegador en escritorio | |
-
-### Logotipo
-
-| Archivo | Para qué |
-|---|---|
-| `logotipo-horizontal.svg` | Encabezados anchos (Panel en escritorio) |
-| `logotipo-vertical.svg` | Espacios altos y angostos (pantalla de ingreso en celular) |
-| `logotipo-horizontal.png` | **Emails** — ver abajo |
-
-**Por qué un PNG solo para email:** los programas de correo (Gmail, Outlook, el Mail del
-iPhone) no dibujan archivos SVG. Un logotipo en SVG dentro de un email se ve como un
-recuadro roto. Es el único lugar donde el PNG no es una alternativa sino la única opción.
-
-### Variantes claro / oscuro
-
-Cada SVG que se vea sobre fondo puede necesitar dos versiones, con el sufijo `-claro` y
-`-oscuro` (ej. `logotipo-horizontal-oscuro.svg`), para cuando el teléfono está en modo
-oscuro y un logotipo de tinta negra desaparecería. Si la marca se diseña de modo que funcione
-sobre cualquier fondo, alcanza con una sola versión y no hacen falta las variantes.
-
-## 3. Lo que ya está resuelto y no hay que rehacer
+## 2. Nombre, colores y manifiesto
 
 - **El nombre en texto** no necesita ningún archivo: sale de `identidadProducto.js` y se
   reparte solo por los marcadores `{{producto}}` / `{{productoCorto}}`.
@@ -173,25 +137,11 @@ sobre cualquier fondo, alcanza con una sola versión y no hacen falta las varian
   manifiesto de las dos PWA.
 - **El nombre del manifiesto y el `<title>`** de las PWA ya se arman desde la identidad.
 
-## 4. Lo que hoy hay en su lugar
+## 3. Íconos y favicon
 
 `identidadProducto.js` apunta `isotipo` a `/favicon.svg` (el archivo provisorio que ya existe
 en las tres apps) y deja `logotipo` en `null`. **Ningún archivo lee esos dos campos.** Las rutas
 de los íconos están escritas a mano: el manifiesto de las dos PWA (`vite.config.js`) declara
 `icon-192.png`, `icon-512.png`, `icon-maskable-192.png` e `icon-maskable-512.png`, y el
 `index.html` de cada app apunta a `favicon.svg` y, en las dos PWA, a `icon-192.png` como
-`apple-touch-icon`. Son los archivos provisorios que hoy viven en `public/`.
-
-El punto de consumo que se escriba tiene que tolerar `logotipo: null` y caer al nombre en
-texto — nunca romper ni dejar un hueco por una imagen que todavía no se dibujó.
-
-## 5. Cuándo hay que tener esto
-
-No bloquea nada del plan de separación. La fecha límite real es **antes de la primera
-Prestadora real**. Hasta entonces el producto funciona completo
-con el favicon provisorio.
-
-Hay un motivo para no dejarlo para el final: el ícono de una PWA queda grabado en el teléfono
-de quien la instaló. Cambiarlo después obliga a cada persona a desinstalar y reinstalar la
-app para verlo actualizado. Hoy eso no cuesta nada — **no hay una sola PWA instalada**.
-Después de la primera Prestadora, cuesta.
+`apple-touch-icon`. Son los archivos provisorios que viven en `public/`.

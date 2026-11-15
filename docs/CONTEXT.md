@@ -1,9 +1,7 @@
 # CONTEXT.md — Contexto técnico de Careonys
 
-> Versión de trabajo para generación de código. Condensa los documentos originales de contexto
-> y prompt maestro (históricos), quitando el contenido que no afecta decisiones de código
-> (mercado, competidores, marketing). Para el análisis de negocio completo, ver los
-> documentos originales en la raíz del proyecto — no hace falta releerlos para programar.
+> Versión de trabajo para generación de código. Describe cómo es el producto en lo que afecta
+> decisiones de código, sin mercado, competidores ni marketing.
 
 ## Modelo de negocio (lo mínimo que el código necesita saber)
 
@@ -22,20 +20,20 @@
   (`panel/src/context/ModalidadesContext.jsx`) y el backend (`backend/src/middleware/exigirModalidad.js`).
 - **El modelo está pensado para operar con muy poca gente administrando.** Toda tarea operativa
   que se pueda automatizar con IA sin comprometer el riesgo legal es deseable, no un extra
-  opcional. Pesa a favor de adelantar algunos de los niveles de IA que `PLAN_HASTA_PRODUCCION.md`
-  marca como "Diferida", evaluando cada nivel cuando se llegue a esa etapa.
+  opcional. Pesa a favor de adelantar niveles de IA, evaluando cada uno por separado.
 - Qué es el producto y de quién es está en `careonys/CLAUDE.md`, «Qué es Careonys». Cada tabla
   lleva `prestadora_id` y la RLS resuelve la Prestadora con `prestadora_actual()`; la configuración
   es por Prestadora (`configuracion_prestadora`). Cómo entra CeltaTech a una Prestadora está en
   `careonys/CLAUDE.md`, «Los tres roles».
-- **El correo es lo único estructural que sigue abierto.** Railway bloquea los puertos de
-  correo, así que el backend no puede entrar a ninguna casilla —ni propia ni de una Prestadora— y
-  **hoy no se entrega ningún correo**. El envío ya pasa por un despachante que habla por el puerto
-  443 (`backend/src/utils/email.js`); falta dar de alta la cuenta, crear la dirección de envío
-  de cada Prestadora (`careonys/CLAUDE.md`, «Qué es Careonys») y el reenvío de las respuestas a la
-  casilla que ella declare (`docs/MARCA.md`, sección 0). Se cierra con la sección «El correo» de
-  `docs/PLAN_HASTA_PRODUCCION.md`, y hay que hacerlo antes de dar de alta la primera Prestadora
-  real.
+- **El correo sale por un despachante.** Railway bloquea los puertos de correo, así que el
+  backend no entra a ninguna casilla —ni propia ni de una Prestadora— y manda por Resend, que
+  habla por el puerto 443 (`backend/src/utils/email.js:36`, `transporteDelDespachante` en :83).
+  Sin la clave del despachante usa SMTP, que es el camino de la máquina de desarrollo. Cada envío
+  queda contado en `envios_de_correo`, con la Prestadora y si el despachante lo aceptó, sin
+  destinatario ni contenido (`email.js:257-270`). La dirección de envío de cada Prestadora la arma
+  `backend/src/utils/casillaDeEnvio.js` a partir de su código, y las respuestas vuelven a la
+  casilla que ella declare con `backend/src/utils/reenvioDeRespuestas.js` (`careonys/CLAUDE.md`,
+  «Qué es Careonys»; `docs/MARCA.md`, sección «Antes que nada: acá hay tres marcas, no una»).
 
 ## Roles de usuario
 
@@ -56,15 +54,14 @@ rol sin que se apruebe explícitamente.
 
 ```
 Etapa 1 — La página pública de Careonys (le vende el software a empresas de cuidado)
-  Estado:    no construida. Lo único que hay hoy en careonys.com es una sola página
-             estática que dice "En construcción" (sitio-web/index.html + construir.mjs),
-             publicada a mano a Cloudflare Pages, proyecto careonys-sitio.
+  Hoy:       careonys.com es una sola página estática que dice "En construcción"
+             (sitio-web/index.html + construir.mjs), publicada en Cloudflare Pages,
+             proyecto careonys-sitio.
   Requisito: el texto tiene que llegar ya escrito desde el servidor, para que los
              buscadores lo lean, y cada idioma con su propia dirección (/es-AR, /en,
              /pt-BR).
-  Con qué:   sin decidir. La recomendación es estirar lo que ya hay —páginas estáticas sin
-             framework— y traer una herramienta solo si el sitio crece. Ver
-             docs/PRD_01_Sitio_Web.md §7.
+  Con qué:   docs/PRD_01_Sitio_Web.md §7. La construcción está en
+             docs/PLAN_HASTA_PRODUCCION.md.
   Datos:     ninguno. La página ofrece correo y WhatsApp y no guarda nada
              (PRD_01_Sitio_Web.md §5).
 
@@ -110,7 +107,7 @@ Etapa 2 — Panel de administración
   - **Reportes, alertas y medicación** — el reporte diario que arma la IA, las alertas por
     patrones, los signos vitales con su autorización, y las indicaciones de medicación.
   - **El dinero** — lista de precios y prestaciones, facturación a los Clientes, cobros,
-    informes a obras sociales y los rieles de cobro de Match.
+    e informes a obras sociales.
   - **Match** — vidriera, perfiles públicos, conversaciones con videollamada, formas de
     cobro que arma cada Prestadora, accesos, calificaciones y auditoría legal.
   - **Configuración y gobierno** — configuración por Prestadora y de plataforma, usuarios y
@@ -155,14 +152,12 @@ Careonys no cuida a nadie: le vende el software a las empresas que cuidan (`care
 «Qué es Careonys»), así que un lema que le habla a un Cliente está fuera de lugar tanto en el
 producto como en `careonys.com` (ver `docs/PRD_01_Sitio_Web.md` §0).
 
-Careonys todavía no tiene lema propio, y no hace falta inventarle uno para poder trabajar.
+Careonys no tiene lema propio.
 
 ## Identidad visual
 
-Ver `DESIGN_SYSTEM.md` para la paleta de colores, tipografía y convenciones de CSS.
-La identidad completa es **provisional** — no invertir tiempo puliendo detalles de logo o
-color de divisiones que no están activas (Junior, Pets, Bienestar, Hogar, Legal). Solo
-la Prestadora Demo tiene logo y paleta relevantes hoy.
+Ver `DESIGN_SYSTEM.md` para la paleta de colores, tipografía y convenciones de CSS, y
+`MARCA.md` para la marca del producto y la de cada Prestadora.
 
 ## Modelo de datos
 
@@ -279,7 +274,7 @@ cosa que se agregue acá:
   visible lo configura cada Prestadora, con «franquera / franquero» como valor de fábrica.
 - **La Asistente que está adentro se queda hasta que llegue el relevo.** No se le pregunta —es un
   deber del oficio, y abandonar al Paciente la expone a ella—, pero se le pide, no se le ordena.
-- **Al familiar no se le pide nada.** Es el cliente y no le debe nada a nadie. Ningún Coordinador
+- **Al Cliente no se le pide nada.** No le debe nada a nadie. Ningún Coordinador
   puede pedirle que se quede. Que igual termine quedándose puede pasar, y cuando pasa es porque la
   ausencia de la Asistente no se resolvió a tiempo: entonces **se registra como un defecto grave
   del servicio que no se pudo solucionar**, nunca como un turno cubierto y nunca como un pedido con

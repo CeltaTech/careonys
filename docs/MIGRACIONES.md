@@ -4,9 +4,6 @@
 > `supabase/migrations/`, y la base se puede reconstruir desde cero corriendo esos archivos en
 > orden.
 
-Vigente desde el **2026-07-28**. Es el paso 2 de la Etapa 0 de
-`celtatech/docs/PLAN_SEPARACION_CELTATECH.md`.
-
 ## 1. La foto de la base
 
 La migración inicial es una **foto fiel al esquema real de producción**. Hoy la foto vigente es:
@@ -20,7 +17,8 @@ tenía 221 tablas en `public`, con 2094 columnas; 696 políticas de seguridad so
 sobre los depósitos de archivos; 306 funciones propias, 110 en `public` y 196 en `interno`; 210
 disparadores y 644 índices en `public`; y 13 depósitos de archivos. La foto trae además las filas
 de los 31 catálogos que el producto trae de fábrica y las de los 13 depósitos. No es lo que
-alguien quiso hacer: es lo que había.
+alguien quiso hacer: es lo que había. Las cifras son las del día de la foto; la base de hoy se
+consulta en vivo, con `supabase db query --linked`.
 
 **Cómo se comprobó.** Se reconstruyó la base local desde cero con la foto sola y se la comparó,
 objeto por objeto —tablas, columnas, políticas, funciones, disparadores, índices, permisos—,

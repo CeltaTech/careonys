@@ -12,7 +12,7 @@ afirmación se pueda verificar contra el producto.
 | Estado | Qué significa |
 |---|---|
 | **Cumple** | Está construido y se puede mostrar funcionando |
-| **En obra** | Está planificado en `docs/PLAN_HASTA_PRODUCCION.md`, con su paso |
+| **En obra** | Está planificado en `docs/PLAN_HASTA_PRODUCCION.md` |
 | **No alcanza** | La norma no aplica al producto, y se dice por qué |
 
 Lo que no está en ninguno de los tres no se afirma.
@@ -74,8 +74,8 @@ Países Bajos y Portugal suman lo propio en su documento.
 **Las cinco exigencias que los diez comparten, y que el plan traduce a producto:**
 
 1. **Consentimiento expreso para datos de salud** (Costa Rica art. 5, Panamá art. 8, Brasil art. 11,
-   Argentina art. 8, Ecuador, Perú). **Cumple** la estructura; **en obra** los textos por país —
-   paso 127.
+   Argentina art. 8, Ecuador, Perú). **Cumple** la estructura; **en obra** los textos por país, en
+   `docs/PLAN_HASTA_PRODUCCION.md`.
 2. **Acceso limitado a lo necesario.** La norma panameña no dice «mínimo privilegio»: el art. 8 del
    Decreto 285 se titula **principio de proporcionalidad**, y su párrafo final impone tres límites
    que se acumulan — **quién** accede (sólo quien lo necesita para su función), **cuánta**
@@ -86,15 +86,20 @@ Países Bajos y Portugal suman lo propio en su documento.
    Decreto 285 art. 35 num. 12; Costa Rica reglamento art. 47). La norma panameña pide sólo dos
    datos: quién ingresó y en qué período; no exige anotar la operación ni el registro tocado. Aun
    así conviene anotar la operación, porque el art. 38 obliga a documentar «los hechos y efectos»
-   de toda violación y sin eso es imposible. **En obra** — paso 9. Hoy no se cumple: el registro
-   anota escrituras, no lecturas.
+   de toda violación y sin eso es imposible. **Cumple** para la información de salud: ninguna
+   tabla de salud se lee directo, la única salida es `backend/src/db/informacionDeSalud.js` y cada
+   lectura queda anotada en `consultas_a_hce`, con quién, cuándo y qué Paciente.
 4. **Corrección por nota aclaratoria, nunca por sobreescritura** (Brasil; Argentina; Uruguay
    Decreto 242/017 art. 13; Ecuador). **Cumple** en `indicaciones_medicacion`,
-   `rangos_referencia_vitales` y `domicilios_temporales_paciente`: cada corrección deja su versión
-   con nota aclaratoria, y nadie la edita ni la borra. Lo corregido desde el Panel todavía queda sin
-   autor — **en obra**, paso 9.
+   `rangos_referencia_vitales` e `informacion_de_salud_del_paciente`: el disparador
+   `trg_versiones_del_registro_clinico` guarda cada corrección como versión nueva en
+   `versiones_registro_clinico`, con su nota aclaratoria, y nadie la edita ni la borra.
+   `domicilios_temporales_paciente` guarda sus versiones con el mismo disparador, sin nota
+   aclaratoria. La versión anota como autor a quien inició sesión; la corrección que el backend
+   escribe con la credencial del trabajo sin persona queda sin autor — **en obra**, en
+   `docs/PLAN_HASTA_PRODUCCION.md`.
 5. **Plazo de conservación y anonimización al vencer** (Costa Rica Ley art. 6.1, Panamá Decreto
-   art. 7, Ecuador art. 31). **En obra** — paso 122.
+   art. 7, Ecuador art. 31). **En obra**, en `docs/PLAN_HASTA_PRODUCCION.md`.
 
 **Transferencia internacional, y la pregunta previa que casi nadie hace.** Antes de preguntarse con
 qué instrumento se transfiere, hay que preguntarse **si esto es una transferencia**. Y la respuesta
@@ -108,11 +113,11 @@ Ninguno es ley, y todos los pide el mercado.
 
 | Marco | Qué es | Qué dice sobre separar clientes | Estado |
 |---|---|---|---|
-| **BSI C5:2026** | Dictamen de auditor, no certificación. Condición legal en Alemania por §393 SGB V | `OPS-30.01B` exige políticas de separación atadas a un modelo documentado de capas, con medidas por capa, monitoreo y acción ante desvíos, y cubre **cliente-de-cliente y cliente-del-proveedor**. `OPS-31.02B`: datos «segura y estrictamente separados». `OPS-31.03B`: revisión ante cambios y **al menos anual**. `OPS-15.01B`: identificación del acceso **a nivel de cliente**. `COS-06.01B`: separación de red | **En obra** — pasos 9, 125 y 129 |
+| **BSI C5:2026** | Dictamen de auditor, no certificación. Condición legal en Alemania por §393 SGB V | `OPS-30.01B` exige políticas de separación atadas a un modelo documentado de capas, con medidas por capa, monitoreo y acción ante desvíos, y cubre **cliente-de-cliente y cliente-del-proveedor**. `OPS-31.02B`: datos «segura y estrictamente separados». `OPS-31.03B`: revisión ante cambios y **al menos anual**. `OPS-15.01B`: identificación del acceso **a nivel de cliente**. `COS-06.01B`: separación de red | **En obra**, en `docs/PLAN_HASTA_PRODUCCION.md` |
 | **ISO/IEC 27017:2015** | Se audita junto con ISO/IEC 27001 | `CLD.9.5.1` — separación lógica de datos, aplicaciones, sistemas operativos, almacenamiento y red, **y separar la administración del proveedor de los recursos de los clientes** | **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md` |
 | **CSA CCM v4** | Cuestionario de mercado | `IVS-06` — el acceso del proveedor y el de cada cliente segmentados, monitoreados y restringidos respecto de otros clientes | **En obra** |
 | **SOC 2** | Atestación, no certificación | `CC6.1` es genérico. **No existe una regla de SOC 2 que diga «aísle a sus clientes»**: los controles los define la empresa. Sirve igual, porque es el sustituto de mercado del derecho de auditoría que HIPAA no da | No obtenido |
-| **PCI DSS 4.0, Apéndice A1** | Aplica sólo si se procesan tarjetas | El único marco con separación entre clientes dura y con plazo: A1.1.1 a A1.1.3, y **A1.1.4 confirmación de la eficacia de la separación lógica al menos cada seis meses mediante pruebas de penetración**, exigible desde el 31 de marzo de 2025 | **No alcanza** hoy: el cobro lo hacen pasarelas de terceros |
+| **PCI DSS 4.0, Apéndice A1** | Aplica sólo si se procesan tarjetas | El único marco con separación entre clientes dura y con plazo: A1.1.1 a A1.1.3, y **A1.1.4 confirmación de la eficacia de la separación lógica al menos cada seis meses mediante pruebas de penetración**, exigible desde el 31 de marzo de 2025 | **No alcanza**: Careonys no procesa tarjetas, el cobro lo hace el software de cobranzas de la Prestadora |
 | **ISO 27799** | Guía de seguridad en salud | **No se certifica** | — |
 | **HITRUST** | Marco privado | No es requisito legal en ningún país | No obtenido |
 | **TISAX** | Sector automotriz | **No alcanza** | — |
@@ -126,16 +131,20 @@ prueba de aislamiento repetible que **pueda fallar**. Comprobar que una consulta
 prueba nada, porque una política que niega todo devuelve exactamente lo mismo.
 
 Y hay un hallazgo que deshace una historia de aislamiento por lo demás buena: **una credencial que
-pueda leer a todos los clientes.** Hoy Careonys la tiene. Sacarla es el objeto entero de
-la sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`, y es la condición previa de casi
-todo lo de este documento.
+pueda leer a todos los clientes.** Careonys no la tiene. Cada ruta de persona trabaja con la
+credencial de quien pide, y el trabajo sin persona entra de a una Prestadora por vez con
+`enLaPrestadora`, en `backend/src/db/connection.js`, con el pase que arma la base en
+`interno.armar_el_pase`: cada contraseña abre una sola Prestadora. La clave de servicio de
+Supabase está dada de baja y ningún archivo del repositorio la usa.
 
 ---
 
-## Lo que hoy cumple, sin obra pendiente
+## Lo que cumple hoy
 
-- Los secretos de las pasarelas de pago no están en claro en la base: viven en Supabase Vault.
-- Once de los doce depósitos de archivos son privados y se sirven con enlace temporal.
+- El secreto con el que el software de cobranzas firma sus avisos se guarda cifrado en Supabase
+  Vault, nunca en claro en la base.
+- Trece de los catorce depósitos de archivos son privados y se sirven con enlace temporal. El único
+  público es `marca-prestadoras`, el del logo de cada Prestadora.
 - El consentimiento se registra con texto versionado, con quién consintió, por qué medio, desde
   cuándo y hasta cuándo.
 - Existe la estructura de aviso legal por jurisdicción, con constancia de que se avisó.

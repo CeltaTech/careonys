@@ -11,7 +11,7 @@
 
 ## Los errores del Panel del 4 y el 5 de octubre, y lo que se aprendió (2026-10-05)
 
-El 5 de octubre el Panel volvió entero a como estaba al cerrar el 1 de octubre, porque los cambios del 4 y del 5 lo habían dejado sin contenido, sin formato, sin tarjetas y sin información. Lo que quedó pendiente de esos días está en `docs/CAMBIOS_DESHECHOS_EL_5_DE_OCTUBRE.md`. Los errores se anotan acá para no repetirlos:
+El 5 de octubre el Panel volvió entero a como estaba al cerrar el 1 de octubre, porque los cambios del 4 y del 5 lo habían dejado sin contenido, sin formato, sin tarjetas y sin información. Lo que quedó pendiente de esos días está en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Los cambios del diseño que se deshicieron». Los errores se anotan acá para no repetirlos:
 
 - **El diseño v2 se aplicó de una sola vez.** Fueron 36 archivos en un solo cambio: aspecto, menú, nombres, cuatro secciones afuera, una columna afuera y las páginas fusionadas. El Desarrollador no pudo ver ninguna parte por separado antes de que estuviera publicada, y se sacaron páginas y una columna con información de trabajo sin presentarlas como pérdidas.
 - **Se demolió la página de entrada en vez de agregarle lo nuevo.** El pedido era sumar alertas a una página que funcionaba. Se la reemplazó entera por una tarjeta con once renglones y números, y salieron los cinco números de arriba, la tabla de Servicios, las dos donas y las incidencias. El plan decía que cada renglón es «una tarjeta, una lista o un gráfico», y se hizo una lista de renglones para todo. Se le hizo caso a una línea del plan («lo que sale del tablero…») por encima del sistema en marcha que el Desarrollador tenía aprobado.

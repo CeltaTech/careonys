@@ -1,7 +1,10 @@
 # PRD_02B — Gestión de Personal (Ausencias, Cobertura, Escalas legales)
 
 > Este PRD **extiende el Padrón de Asistentes del Panel, no es un módulo separado** — vive en la misma navegación, mismo rol de acceso
-> (Admin_prestadora; Coordinador solo lectura de su zona, sin acceso a montos — ver
+> (Admin_prestadora gestiona todo lo de su Prestadora. El Coordinador da de alta, modifica y borra
+> las ausencias y las guardias de cobertura de los Asistentes de su zona: las políticas
+> `coordinador_gestiona_ausencias_de_su_zona` y `coordinador_gestiona_guardias_cobertura_de_su_zona`
+> valen para toda operación y resuelven la zona con `interno.coordinador_alcanza_asistente` — ver
 > `docs/SECURITY.md`).
 
 ## Por qué existe este módulo
@@ -25,7 +28,7 @@ versionados por fecha y nunca escritos en el código.
 | 4 | Tabla versionada de valores legales (`escalas_legales`) |
 | 5 | Notificaciones de vencimientos de documentación (catálogo configurable por prestadora) |
 
-## Glosario nuevo (sumar a `celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md`, donde todavía no figura)
+## Glosario del módulo
 
 | Término | Definición |
 |---|---|
@@ -52,6 +55,21 @@ poder leerse:
 
 Están separadas porque las reglas de acceso de la base filtran filas y no columnas: dentro del
 Legajo del Asistente no hay forma de exigir un permiso para un dato y no para el resto.
+
+`ausencias` guarda también las ausencias de los Coordinadores: esas filas llevan `usuario_id` en
+vez del Asistente, y `coordinador_que_cubre_id` dice qué Coordinador lo reemplaza mientras dura.
+Se cargan desde la ficha del Coordinador en Usuarios del Panel
+(`panel/src/pages/UsuariosPanel.jsx:355`, `panel/src/pages/AusenciasDelCoordinador.jsx:90`).
+
+En la base quedan piezas del modelo de relación de dependencia y cese, que ningún archivo del
+Backend, del Panel ni de las aplicaciones lee ni escribe: la tabla `ceses`, sin filas; la tabla
+`formulas_cese`, con nueve filas; el depósito privado `documentos-cese`; en `escalas_legales`, las filas de los tipos `indemnizacion_antiguedad`,
+`preaviso_dias`, `tope_indemnizatorio`, `periodo_prueba_dias`, `indicador_riesgo_dependencia`,
+`umbral_riesgo_dependencia`, `multiplicador_agravado` y `fraccion_computable_antiguedad`; las
+columnas `sueldo_basico` y `categoria_cct` de `remuneraciones_asistente`; y las columnas
+`causal_baja`, `score_riesgo_reclasificacion` e `indicadores_riesgo` de
+`datos_reservados_asistente`; y el valor `dependencia` que admite la restricción de
+`textos_consentimiento.modalidad`, con tres textos de consentimiento de esa modalidad.
 
 Los vencimientos de documentación del Asistente (Monotributo, ART, Seguro, Certificado de
 Antecedentes Penales u otros que agregue cada prestadora) viven en las tablas

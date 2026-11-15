@@ -1,7 +1,8 @@
 # Modalidad Match — diseño de negocio (Cliente ↔ Asistente)
 
 > Decisiones tomadas con el Desarrollador el 2026-07-24. Este documento fija **qué se decidió
-> y por qué**. Lo que falta construir está en `docs/PLAN_HASTA_PRODUCCION.md`.
+> y por qué**, y cómo está construido hoy. El trabajo que sigue está en
+> `docs/PLAN_HASTA_PRODUCCION.md`.
 
 Las 2 modalidades de trabajo de una Prestadora —prestación directa e intermediación, cuyo
 nombre comercial es Match— son **combinables entre sí**, no mutuamente excluyentes: una
@@ -52,17 +53,17 @@ directa paga después del servicio, contra factura. El mismo software atiende la
 mismos medios de pago de la Prestadora. Careonys no factura, no cobra, no gestiona la mora y no
 decide restricciones.
 
-**El botón de compra abre la ventana de pago de ese software** adentro de la página de Match, con
-la imagen de la Prestadora. El software resuelve todos los medios de pago y, apenas el pago queda
-aprobado, le avisa a Careonys con un aviso firmado. Careonys abre el contacto por esa orden y por
-ninguna otra: no consulta el estado del pago ni toma por bueno lo que diga la ventana del
-navegador. Qué tiene que cumplir ese software está en
-`celtatech/docs/SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md`, sección «La compra de un acceso de Match».
+**Match está cerrado para los Clientes** (`backend/src/utils/intermediacionDeLaPrestadora.js:50-52`).
+La aplicación del Cliente muestra el acceso que tiene —estado, importe y próximo cobro— y no tiene
+botón de compra ni de baja (`pwa-clientes/src/pages/AccesoIntermediacion.jsx`). El backend no tiene
+ninguna entrada por la que el software de cobranzas informe un pago. Qué tiene que cumplir ese
+software está en `celtatech/docs/SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md`, sección «La compra de un
+acceso de Match».
 
-**Cada aviso nombra un acceso** y dice uno de cuatro estados: pagó el período, está en período de
-gracia, quedó suspendido o se dio de baja. Careonys lo anota en `cobros_intermediacion` y mueve el
-acceso según lo que dice; no calcula nada por su cuenta. La entrada que recibe ese aviso y el botón
-de compra se construyen con Match: hoy Match está cerrado para los Clientes.
+**Lo que informa el software de cobranzas vive en `cobros_intermediacion`**, una fila por aviso. El
+backend la lee y no la escribe: de ahí saca, para la lista de Clientes del Panel, el estado del
+cobro más reciente y el último cobro exitoso de cada acceso (`backend/src/utils/estadoDeCobroDelAcceso.js`,
+`backend/src/routes/panelIntermediacion.js:300` y `:422`). No calcula nada por su cuenta.
 
 ### 3.2 Lo que vale para cualquier forma
 
@@ -100,7 +101,7 @@ la Prestadora lo elige sabiendo que tiene que cumplirlos:
 
 ### 3.5 Dónde las carga
 
-En **Panel > Formas de cobro de Match**, que es para esta modalidad lo que la lista de
+En **Panel > Facturación > Paquetes de Match** (`panel/src/components/layout/Layout.jsx:246`), que es para esta modalidad lo que la lista de
 precios es para la prestación directa. La pantalla pregunta por las piezas, no por un tipo de
 forma: nombre, importe, cada cuántos y de qué, días gratis, contactos incluidos, si se renueva
 sola y si se ofrece. La moneda no se pregunta —es la de la Prestadora y la completa la base—, y
@@ -117,12 +118,11 @@ apuntando a algo que existe.
 
 ### 3.6 Cómo se mueve el saldo de un paquete
 
-**Se carga cuando entra la plata.** El paquete se paga una vez, y ése es el momento en que el
-saldo existe: el aviso de pago del software de cobranzas le suma al acceso los contactos que
-traiga la forma.
-
-**Suma, no pisa.** Un paquete no vence por calendario, así que lo que quedó sin abrir de una
-compra anterior sigue estando; escribir el total nuevo encima sería vencerlo.
+**La carga es la función `sumar_contactos_al_saldo` de la base**, que le suma al acceso los
+contactos de una compra. **Suma, no pisa.** Un paquete no vence por calendario, así que los
+contactos que quedaron sin abrir de una compra anterior siguen estando; escribir el total nuevo
+encima sería vencerlos. El backend la envuelve en `backend/src/utils/contactosIntermediacion.js:57`,
+y ninguna ruta la llama, porque no hay entrada que reciba el aviso de pago.
 
 **Se gasta de a un Asistente, no de a una mirada.** Abierto el contacto de alguien, volver a
 mirarlo no descuenta otro: queda anotado a quién se le abrió, y eso es lo que hace que cinco
@@ -140,12 +140,9 @@ funciones está en `docs/SECURITY.md`.
 
 ### 3.7 La baja, el corte y la gracia
 
-**Los decide el software de cobranzas, y Careonys ejecuta lo que le avisa.** La baja se hace en la
-ventana de ese software, en un solo paso; el aviso dice que el acceso no se renueva y hasta qué
-fecha sigue vigente, y el acceso funciona igual hasta esa fecha. Un cobro que no entra lo informa
-el mismo software como período de gracia, con la fecha hasta la que alcanza, y después como
-suspensión. Cuando entra la plata, el aviso de pago vuelve a dejar el acceso vigente, incluso si ya
-se lo había suspendido.
+**Los decide el software de cobranzas.** El backend no tiene ninguna ruta que dé de baja, ponga
+en gracia o suspenda un acceso: la única escritura en `accesos_intermediacion` termina el período
+gratuito cuando se abre un contacto (`backend/src/utils/contactoDelAsistente.js:258-268`).
 
 **Sólo se da de baja lo que se renueva solo.** Un paquete se pagó una vez y lo que lo sostiene es
 su saldo: no hay renovación que apagar.
@@ -189,7 +186,7 @@ ejerza ese control de forma agregada entre todos los Clientes.
 | Exclusividad exigida por la plataforma | Alto | Restringe la libertad de trabajar para otros, elemento central de la autonomía real. |
 | Mediación de conflictos por la plataforma | Alto (por eso se descartó, §4) | Se parece a dirigir el vínculo. |
 
-**Mitigante de diseño a incorporar, no opcional**: derecho de **descargo** del Asistente
+**Mitigante de diseño, no opcional**: derecho de **descargo** del Asistente
 ante una queja/calificación negativa — los casos que fallaron en contra de plataformas no
 tenían ese resguardo.
 
@@ -223,7 +220,7 @@ persona):
   — sujeto al consentimiento del §6).
 - Incentivos de retención del §4 (prioridad de reemplazo, historial, vencimientos,
   alertas críticas, contenido educativo).
-- Gestión de su propio cobro con la Prestadora: ver el estado y darse de baja en un clic (§3).
+- Ver el estado de su acceso: estado, importe y próximo cobro (§3).
 - **No incluye**: mediación de conflictos, ni campos donde la plataforma fije precio u horario.
 
 **PWA Asistente:**
@@ -233,7 +230,10 @@ persona):
   general.
 - Chat interno, mismo resguardo de contacto protegido.
 - Ver sus propias calificaciones, con derecho a descargo.
-- Gestión de su propia documentación (identidad, antecedentes, certificados).
+- Su propia documentación (identidad, antecedentes, certificados): la ve siempre, y la carga
+  desde el teléfono con la opción `asistente_carga_sus_documentos` encendida, que viene así de
+  fábrica; el documento cargado queda en revisión hasta que lo aprueba la Prestadora
+  (`backend/src/routes/appAsistentesDocumentos.js:15-23`).
 - Consentimiento de geolocalización (§6), activable/revocable en cualquier momento.
 - **No incluye**: horario fijado por la plataforma, precio fijado por la plataforma,
   ranking global que condicione su acceso a futuras oportunidades.

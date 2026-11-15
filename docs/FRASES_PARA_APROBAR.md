@@ -88,7 +88,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | primera opción de la lista de índices. |
 | **Decisión** | |
 
-### 51. Cobrar lo que canceló el Cliente
+### 51. Cobro de servicios cancelados por el Cliente
 
 | | |
 |---|---|
@@ -104,7 +104,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | etiqueta de una casilla. |
 | **Decisión** | |
 
-### 52. Descontar lo no prestado
+### 52. Descuento de servicios no prestados
 
 | | |
 |---|---|
@@ -168,7 +168,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | etiqueta de un casillero con lista. |
 | **Decisión** | |
 
-### 59. Lo que incluye el permiso de condiciones comerciales
+### 59. Alcance del permiso de condiciones comerciales
 
 | | |
 |---|---|

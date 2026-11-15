@@ -5,8 +5,8 @@
 
 ## Objetivo
 
-La PWA de servicio es donde se hace real la propuesta de valor: reporte diario con IA, GPS
-en tiempo real, Certificado de Aptitud en el perfil, alertas inteligentes. La usan Asistentes durante la guardia y
+La PWA de servicio es donde se hace real la propuesta de valor: reporte diario con IA, ubicación
+del Asistente durante el viaje, Certificado de Aptitud en el perfil, alertas inteligentes. La usan Asistentes durante la guardia y
 Clientes para seguir el servicio.
 
 ## Stack
@@ -14,7 +14,7 @@ Clientes para seguir el servicio.
 ```
 Framework:  React 18 + Vite + Vite PWA Plugin
 Auth:       Supabase Auth (usuario y contraseña)
-DB:         Supabase (PostgreSQL + RLS + Realtime)
+DB:         Supabase (PostgreSQL + RLS)
 Storage:    Supabase Storage (fotos de reportes, documentos)
 GPS:        navigator.geolocation API (browser nativo)
 Cámara:     MediaDevices API (browser nativo)
@@ -37,27 +37,43 @@ el acceso guardado (`src/lib/accesoGuardado.js`). Primer login: completar perfil
 Sesión persistente — no pedir login en cada visita.
 
 ### Guardias (pantalla principal)
-Lista de guardias asignadas (próximas + historial). Cada card: paciente, dirección, fecha,
-hora, modalidad, estado. Botón prominente "CHECK-IN" en la guardia activa o próxima.
+La aplicación abre en «Inicio» (`pwa-asistentes/src/pages/Inicio.jsx`): el saludo y una tarjeta
+con la guardia en curso o la próxima, con cuándo es, a quién atiende y un botón que la abre
+(«Registrar inicio» o «Abrir la guardia»). La lista de guardias está aparte
+(`pwa-asistentes/src/pages/MisGuardias.jsx`). Cada tarjeta muestra los Pacientes, la fecha, la
+hora de inicio y de fin y el estado, sin dirección ni modalidad, con una marca cuando el domicilio
+de ese día es temporal y otra cuando la guardia quedó sin cerrar. El check-in se marca adentro de
+la guardia (`pwa-asistentes/src/pages/GuardiaActiva.jsx:552-558`).
+
+La lista trae hasta cien guardias del Asistente y deja afuera las que caen en una licencia y las
+pasadas que ya cubre una liquidación pagada; una guardia activa queda siempre
+(`backend/src/routes/appAsistentes.js:668-702`).
 
 ### Flujo de Check-in
 
-1. El Asistente toca "CHECK-IN" al llegar al domicilio.
+1. El Asistente toca «Marcar check-in» en la guardia al llegar al domicilio.
 2. La app pide permiso de geolocalización si no lo tiene.
-3. Registra `checkin_lat`/`checkin_lng`/`checkin_at` en `guardias`.
+3. Registra `checkin_at` en `guardias`, y `checkin_lat`/`checkin_lng` sólo con el consentimiento
+   de seguimiento vigente (`backend/src/routes/appAsistentes.js:955-972`).
 4. Valida distancia contra el domicilio del paciente:
    - Dentro del rango → check-in exitoso, guardia pasa a `activa`.
    - Fuera del rango → el check-in se registra igual y queda una nota automática para el
      coordinador (`mensajes_asistente`): la distancia nunca bloquea el check-in, porque el
      Asistente puede tener razones legítimas. La tolerancia en metros es configuración de cada
      Prestadora.
-5. Notificación push al Cliente: "Llegó el Asistente: [nombre] llegó al domicilio de [Paciente]".
+5. Notificación push al Cliente de cada Paciente del turno: título «Llegó el Asistente», cuerpo
+   «[nombre] llegó al domicilio de [Paciente].». Los dos textos salen de los mensajes del sistema,
+   en el idioma de la Prestadora, y cada Prestadora puede poner el suyo (`llegada_del_asistente`).
 
 ### Guardia Activa
-Timer desde el check-in. Datos del paciente (nombre, patologías, medicación habitual, notas
-del coordinador). Botón "Ver reportes anteriores". Botón "Reporte de emergencia" (formulario
+Timer desde el check-in. Datos del paciente (nombre, patologías, medicación habitual).
+Botón "Ver reportes anteriores". Botón "Reporte de emergencia" (formulario
 simplificado + alerta inmediata al coordinador, separado del flujo normal de check-out).
-Botón "Check-out" habilitado recién después de las horas mínimas de la modalidad.
+Botón "Check-out" a la vista cuando cada Paciente del turno tiene su Reporte Diario y la guardia no
+tiene `checkout_bloqueado` (`pwa-asistentes/src/pages/GuardiaActiva.jsx:615-623`). El backend
+exige el check-in previo, el reporte de cada Paciente y que el protocolo de continuidad no haya
+bloqueado la salida, y pasa la guardia a `completada`; no compara contra ninguna cantidad de horas
+(`backend/src/routes/appAsistentes.js:2006-2081`).
 
 ### El botón de emergencia — cómo quedó construido
 
@@ -65,17 +81,15 @@ Botón "Check-out" habilitado recién después de las horas mínimas de la modal
 mensajes salen de `pwa-asistentes/src/i18n/translations.js` en los tres idiomas, como todo el resto.
 
 Se aprieta desde la Guardia Activa (`pwa-asistentes/src/components/EmergenciaEnGuardia.jsx`).
-**Hoy no tiene lista de tipos para elegir**: se escribe qué está pasando y se manda. **La lista la
-arma cada Prestadora en su configuración**, sobre una propuesta de fábrica de Careonys con un plan
-de acción sugerido y acciones preparadas que corren solas o no, según elija ella. El Asistente
-elige de esa lista al apretar el botón, y si no figura usa «Otras» y escribe qué pasa. Qué falta
-contestar y construir está en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Las dos aplicaciones».
+**No tiene lista de tipos para elegir**: se escribe qué está pasando y se manda.
 
 **Sale aunque no haya señal.** Es un tipo más de la cola sin conexión
-(`pwa-asistentes/src/lib/colaOffline.js`), y por eso el backend acepta acá —y sólo acá— el momento
-que marca el teléfono: un aviso que estuvo media hora esperando red guardado con la hora de la
-sincronización contaría mal lo que pasó. Se acepta hacia atrás nada más; una hora futura es un
-reloj mal puesto.
+(`pwa-asistentes/src/lib/colaOffline.js`), y por eso el backend acepta el momento que marca el
+teléfono: un aviso que estuvo media hora esperando red guardado con la hora de la sincronización
+contaría mal lo que pasó. Se acepta hacia atrás nada más; una hora futura es un reloj mal puesto.
+La regla vive en `backend/src/utils/horaDelHecho.js` y la usan cuatro rutas: la emergencia, el
+relevo de emergencia y el inicio y el fin del descanso (`backend/src/routes/appAsistentes.js:1255`,
+`:1364`, `:1695` y `:1740`).
 
 **Se guarda primero y se avisa después.** La fila queda en `emergencias_guardia`
 (`backend/src/routes/appAsistentes.js`, `POST /guardias/:id/emergencia`) y recién entonces sale el
@@ -94,17 +108,24 @@ marca atendida con una nota de qué se hizo, y queda con nombre y hora.
 **Está afuera de la bandeja de alertas y de la de alertas tempranas**, y no es un descuido: esas
 dos las deduce un programa, y ésta la apretó una persona que está adentro de una casa.
 
-### Flujo de Reporte Diario (dispara IA Nivel 1 al hacer check-out)
+### Flujo de Reporte Diario (IA Nivel 1)
+
+Se carga uno por cada Paciente del turno (`pwa-asistentes/src/pages/ReporteDiario.jsx`).
 
 1. **Dictado o escritura libre** — textarea grande + botón de micrófono, placeholder
-   invitando a hablar en lenguaje natural.
+   invitando a hablar en lenguaje natural. Aparece con la opción `asistente_relato_con_ia`
+   encendida; apagada, la pantalla va directo a los campos y el Asistente los completa a mano
+   (`pwa-asistentes/src/pages/ReporteDiario.jsx:67`, `:111`).
 2. **Revisión del reporte estructurado** — la IA devuelve el JSON de `AI_PROMPTS.md`
    (Nivel 1) en campos editables: alimentación, medicación, signos vitales, estado de ánimo,
    incidentes, observaciones. El Asistente corrige antes de confirmar — **nunca guardar sin
    este paso** (regla ya fijada en `AI_PROMPTS.md`).
-3. **Foto opcional** — cámara → sube a Supabase Storage, referencia en `reportes.foto_url`.
-4. **Confirmar y enviar** — persiste el reporte, hace el check-out (lat/lng/timestamp),
-   notifica push al Cliente, guardia pasa a `completada`.
+3. **Foto opcional** — cámara → sube al depósito privado `reportes-fotos`, referencia en
+   `reportes.foto_url`. Se guarda con la opción `asistente_foto_en_el_reporte` encendida.
+4. **Confirmar y enviar** — persiste el reporte y notifica push al Cliente de ese Paciente
+   (`backend/src/routes/appAsistentes.js:1845-1961`). El check-out es un acto aparte, descripto
+   en «Guardia Activa». La fila queda con `ia_procesado` en verdadero sólo si los campos los llenó la IA
+   a partir del relato; completados a mano, en falso (`backend/src/routes/appAsistentes.js:1935`).
 
 ### El micrófono — cómo quedó construido
 
@@ -138,10 +159,15 @@ persona no queda encendido porque se tocó «volver».
 Foto, datos personales, tipo de vínculo, matrícula, la carpeta de documentos con el Certificado de
 Aptitud, y el historial de evaluaciones recibidas.
 
-**La carpeta de documentos se mira, no se carga.** Los documentos del Asistente los recibe la Prestadora
-y los carga ella desde el Panel; el teléfono los muestra para que la persona sepa qué tiene, qué
-está por vencerse y qué le falta. Al pie lo dice con todas las letras, para que nadie espere un
-botón de subir que no está.
+**La carpeta de documentos se mira siempre, y se carga si la Prestadora lo permite.** El teléfono
+muestra los documentos para que la persona sepa qué tiene, qué está por vencerse y qué le falta.
+Con la opción «Cargar sus documentos desde el teléfono» (`asistente_carga_sus_documentos`,
+encendida de fábrica, `backend/src/utils/catalogoVisibilidad.js:155-161`), el Asistente abre un
+documento y lo envía (`pwa-asistentes/src/pages/Documento.jsx:108`); el documento enviado entra en
+revisión y lo aprueba la Prestadora, y la base sólo le deja insertar filas en revisión. Con la opción
+apagada no aparece el formulario, el backend rechaza el envío
+(`backend/src/routes/appAsistentesDocumentos.js:181`) y los documentos los carga la Prestadora
+desde el Panel.
 
 **Acá sí va el nombre de cada documento, y eso la diferencia de lo que ve el Cliente.** Al Cliente se
 le dan cuentas y nunca el nombre de un documento, porque el nombre puede ser dato de salud. El dueño de
@@ -189,10 +215,10 @@ Dos reglas de fondo:
    Intervención humana minimizada al máximo, no eliminada: el Coordinador siempre puede
    intervenir en la resolución.
 
-   **Falta** el seguimiento por GPS de que el Asistente sigue en su domicilio y el medio de
-   transporte habitual de cada Asistente hacia cada Paciente: hoy el tiempo de viaje se estima
-   con una velocidad media única y en línea recta. Son decisiones abiertas de
-   `docs/PLAN_HASTA_PRODUCCION.md`, sección «Las dos aplicaciones».
+   El tiempo de viaje se estima con una velocidad media única y la distancia en línea recta
+   (`backend/src/utils/llegadaEstimada.js:7-17`). El medio de transporte se escribe como texto
+   libre en cada salida y queda en `guardias.medio_transporte`. La ubicación del Asistente se
+   sigue durante el viaje, desde «Salgo ahora» hasta el check-in.
 
 ### Notificaciones
 Nueva guardia asignada, mensajes del coordinador, recordatorios.
@@ -207,9 +233,14 @@ guardado (huella o rostro vía WebAuthn, si el dispositivo lo permite). Sesión 
 Un solo paciente → va directo a su pantalla. Varios → lista con estado actual de cada uno.
 
 ### Pantalla del Paciente
-Guardia actual: si hay una activa, muestra Asistente + mapa con ubicación en tiempo real
-(Supabase Realtime); si no, próxima guardia programada. Botón "Ver al Asistente en el mapa".
-Alertas activas (ROJA/AMARILLA) con descripción.
+Guardia actual: si hay una activa, muestra el Asistente; si no, próxima guardia programada.
+Mientras el Asistente viaja, muestra que está en camino y la hora estimada de llegada, y el mapa
+con su posición, que aparece con «Salgo ahora» y se va con el check-in
+(`pwa-clientes/src/pages/PacienteDetalle.jsx:157-160`). Con una guardia por venir, la pantalla le
+vuelve a pedir los datos al backend cada veinte segundos (`pwa-clientes/src/pages/PacienteDetalle.jsx:18`,
+`:61-72`). El mapa se apaga con la opción `cliente_ubicacion_en_vivo` y con el permiso
+`persona_autorizada_ubicacion_en_vivo` (`pwa-clientes/src/pages/PacienteDetalle.jsx:34`).
+Alertas activas con su nivel —«Alerta», «Atención», «Sin novedades»— y su descripción.
 
 ### Reportes
 Lista por fecha (más reciente primero) — fecha, Asistente, resumen breve. Al abrir: campos
@@ -218,8 +249,8 @@ estructurados completos + foto si la hay.
 ### Asistente Asignado
 Foto, nombre, especialidades y el Certificado de Aptitud con su estado y su fecha: que esté
 cargado en el perfil es prueba suficiente, sin certificado impreso ni código para escanear.
-Evaluaciones anteriores con este Cliente. Botón de contacto (WhatsApp o chat
-interno).
+Evaluaciones anteriores con este Cliente, y la calificación que deja el Cliente
+(`pwa-clientes/src/pages/AsistenteAsignado.jsx`).
 
 ### Alertas
 Lista de alertas del paciente (activas + historial resuelto), descripción generada por IA,

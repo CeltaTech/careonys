@@ -1,7 +1,6 @@
 # AI_PROMPTS.md — Prompts de sistema para Claude (Anthropic API)
 
-> Fuente: documento único original de especificación (histórico) Parte O (PRD App de Servicio). Estos son los
-> prompts exactos a usar — no reformular ni "mejorar" sin actualizar este archivo primero,
+> Estos son los prompts exactos a usar — no reformular ni "mejorar" sin actualizar este archivo primero,
 > porque el contrato JSON de salida está acoplado a las columnas de `reportes` y `alertas`
 > en la base.
 
@@ -51,8 +50,8 @@ que son `TEXT`). Marcar `ia_procesado = true` solo después de la revisión del 
 ## Nivel 2 — Alertas por patrones
 
 Análisis diario automático (job nocturno) + análisis inmediato si el reporte contiene
-palabras clave críticas (lista de palabras clave: definir en configuración, no hardcodear
-en el código del job).
+palabras clave críticas. La lista de palabras clave vive en la columna `palabras_clave` de
+`configuracion_alertas_ia`, no en el código del job (`backend/src/routes/appAsistentes.js:1971`).
 
 **Prompt de sistema:**
 
@@ -118,17 +117,13 @@ Si el trato cambia, se cambia ahí y en ningún otro lado. Este es el texto:
 ```
 TRATO CON QUIEN LEE (obligatorio, sin excepción):
 El texto que se devuelve nunca tutea a quien lo lee. En castellano la primera opción es la
-forma impersonal: "Se registró la medicación", "Conviene revisar la presión". Cuando haya que
+forma impersonal: "Se registró la medicación", "La presión quedó fuera del rango". Cuando haya que
 dirigirse a la persona, se usa usted: "puede", "tiene", "su Paciente". Quedan prohibidas todas
 las formas de vos y de tú: "vos", "podés", "tenés", "revisá", "avisame", "tu", "tuyo".
 En portugués: forma impersonal, y "você" solo donde no quede otra; nunca "tu", nunca
 "o senhor / a senhora".
 Vale para todo texto en prosa que se devuelva, incluido el que va adentro de un campo JSON.
 ```
-
-**El ejemplo «Conviene revisar la presión» no es un modelo a seguir.** Es una construcción
-dubitativa, de las que prohíben las pautas de redacción de `celtatech/CLAUDE.md`, sección «Las
-reglas de desarrollo». Figura arriba porque es el texto que hoy tiene el código.
 
 Debajo del bloque, cada prompt agrega **qué campos suyos lee una persona**, para que el
 modelo sepa a dónde apunta la regla.

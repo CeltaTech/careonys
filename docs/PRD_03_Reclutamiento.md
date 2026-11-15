@@ -1,4 +1,4 @@
-# PRD_03 — Reclutamiento (Sitio de Captación + Postulación + Verificación)
+# PRD_03 — Reclutamiento (Postulación + Verificación)
 
 > Fuente: documento original de PRD de Reclutamiento (fuera del repositorio, v1.0, mayo 2026),
 > condensado para ejecución directa. Las entrevistas las agenda el Responsable del reclutamiento
@@ -51,8 +51,7 @@ etapa.
 **Las compara una persona, no el producto.** Quien revisa las mira una al lado de la otra y marca
 la etapa como venía haciéndolo; lo que cambió es que ahora queda guardado lo que miró. La
 comparación automática de las dos caras —la «comparación por IA» que pedía el PRD original— es
-tratamiento de dato biométrico y **no está construida**: falta el documento legal del que salga la
-advertencia al Asistente, y falta elegir proveedor (`docs/PLAN_HASTA_PRODUCCION.md`, paso 69).
+tratamiento de dato biométrico, y el trabajo está en `docs/PLAN_HASTA_PRODUCCION.md`.
 
 ### Referencias laborales — cómo quedó construido
 
@@ -103,27 +102,9 @@ La pantalla de verificación muestra, arriba de todo, cuánto lleva hecho el asp
 El postulante no tiene rol ni cuenta: deja su postulación y recibe la cuenta de Asistente cuando
 la Prestadora lo incorpora.
 
-## Landing page de reclutamiento (sitio público)
+## Formulario de postulación
 
-Cara pública de la campaña de incorporación — comunica a quién busca la prestadora, qué ofrece y
-cómo es el proceso, antes de llevar al aspirante al formulario.
-
-**Perfiles buscados** (checklist visual, no un formulario todavía): Asistente Integral /
-Auxiliar de Enfermería / Enfermero/a profesional / Kinesiólogo/a / Acompañante Terapéutico/a
-/ Fonoaudiólogo/a / Psicólogo/a / Terapista Ocupacional / Nutricionista / otras
-especialidades vinculadas al cuidado de personas — mismo catálogo `especialidades` de cada
-Prestadora, no crear una lista paralela.
-
-**Beneficios que comunica el sitio**: trabajo registrado; honorarios acordados según
-tipo de Asistente y experiencia (sin publicar montos — ver regla abajo); Certificado de Aptitud;
-respaldo operativo permanente; aplicación propia de gestión de guardias; capacitación continua.
-
-**Zonas de cobertura**: mismo catálogo de zonas que la Sección E del formulario
-(ver abajo) — no duplicar como una lista independiente en el código.
-
-## Formulario de postulación (landing pública)
-
-Regla explícita del PRD original: **no publicar honorarios en el sitio** — se relevan en el
+Regla explícita del PRD original: **no publicar honorarios en el sitio de la Prestadora** — se relevan en el
 formulario sin sesgar la respuesta del aspirante, se acuerdan individualmente en la
 entrevista.
 
@@ -132,7 +113,7 @@ entrevista.
 | Campo | Tipo | Obligatorio | Notas |
 |---|---|---|---|
 | Nombre / Apellido | texto | Sí | |
-| DNI | numérico | Sí | validar formato |
+| Tipo y número de documento | select + texto | Sí | validar formato según el tipo |
 | Fecha de nacimiento | date | Sí | validar mayoría de edad (18+) |
 | Teléfono/WhatsApp | tel | Sí | |
 | Email | email | Sí | con confirmación |
@@ -141,7 +122,7 @@ entrevista.
 | Nacionalidad | select | No | |
 | CUIL | numérico | No | |
 | Género | select (opciones que carga cada Prestadora; ver «Cómo quedó construido») | Sí | |
-| Foto de perfil | file (imagen) | Sí | detectar rostro antes de aceptar |
+| Foto de perfil | file (imagen) | Sí | |
 
 ### Sección B — Situación fiscal
 
@@ -151,9 +132,9 @@ entrevista.
 | Tipo de registro AFIP | No inscripto / Monotributo social / Monotributista / Responsable inscripto | Sí |
 | Obra social | texto libre | No |
 
-Hoy ningún control del sistema impide asignar guardias a quien no es monotributista. Si eso
-avisa o bloquea es una decisión abierta (`docs/PLAN_HASTA_PRODUCCION.md`, pasos 67 y 68); la
-regla de la empresa es que el producto avisa y no prohíbe (`celtatech/CLAUDE.md`, «El riesgo
+Ningún control del sistema impide asignar guardias a quien no es monotributista. Si eso avisa o
+bloquea está en `docs/PLAN_HASTA_PRODUCCION.md`; la regla de la empresa es que el producto avisa y
+no prohíbe (`celtatech/CLAUDE.md`, «El riesgo
 legal»). La relación laboral de cada Asistente se elige de la lista que define cada Prestadora en Configuración.
 
 ### Sección C — Formación y certificaciones
@@ -162,7 +143,7 @@ Profesión/especialidad (checkboxes múltiples — mismo catálogo `especialidad
 Prestadora; el original enumeraba: Asistente Integral, Acompañante Terapéutico/a, Enfermero/a, Auxiliar de
 Enfermería, Asistente Gerontológico/a, Kinesiólogo/a, Fonoaudiólogo/a, Psicólogo/a,
 Terapista Ocupacional, Nutricionista, Voluntario/a, Otro — mínimo 1 obligatorio). Estudios/cursos y experiencia
-laboral: formularios dinámicos (múltiples entradas), opcionales pero mejoran ranking.
+laboral: formularios dinámicos (múltiples entradas), opcionales.
 Referencias laborales: nombre/apellido/teléfono, 0 a 5. Cuántas verificadas se esperan es
 configuración de cada Prestadora, y dos es el valor con el que nace — ver «Referencias laborales —
 cómo quedó construido», más arriba.
@@ -171,7 +152,8 @@ cómo quedó construido», más arriba.
 
 Checkboxes en 5 subgrupos: discapacidades con experiencia, patologías clínicas atendidas,
 tareas de cuidado directo, tareas de acompañamiento, tareas domésticas — catálogo completo
-en el documento fuente, usar como opciones fijas de un multi-select, no texto libre.
+en el documento fuente. Son opciones de un multi-select que carga cada Prestadora, no texto
+libre (ver «Cómo quedó construido», más abajo).
 
 ### Sección E — Zonas de cobertura
 
@@ -193,12 +175,19 @@ postulación, porque se leen enteros con ella y nunca por separado. Domicilio, l
 se llaman igual que en `asistentes`: una postulación aprobada se convierte en Asistente y los dos
 nombres tienen que coincidir.
 
-**Las listas de opciones no están escritas en la pantalla.** Género, nacionalidad, tipo de
-registro ante AFIP y los cinco subgrupos de experiencia clínica van en `opciones_postulacion`,
-una fila por opción y por Prestadora. Las opciones que este documento enumera más arriba son lo
-que se esperaba encontrar, no lo que el sistema impone: **cada Prestadora carga las suyas.** La
-tabla está vacía, y hoy sólo la lee el Panel para rotular las especialidades de una postulación
-(`panel/src/hooks/useOpcionesPostulacion.js`). El catálogo completo de experiencia clínica está
+**Las listas de opciones no están escritas en la pantalla.** Las opciones que este documento
+enumera más arriba son lo que se esperaba encontrar, no lo que el sistema impone: **cada
+Prestadora carga las suyas.** Hoy las listas de la postulación están en dos tablas:
+
+- `opciones_postulacion`, una fila por opción, por grupo y por Prestadora. Está pensada para
+  género, nacionalidad, tipo de registro ante AFIP y los cinco subgrupos de experiencia clínica.
+  No tiene filas, y el Panel la lee sólo para rotular las especialidades en la ficha de una
+  postulación (`panel/src/pages/PostulacionDetalle.jsx:50`,
+  `panel/src/hooks/useOpcionesPostulacion.js:12`).
+- `listas_de_opciones` y `opciones_de_lista`, el registro de listas que usa el resto del Panel.
+  La pantalla de postulaciones toma de ahí las listas `disponibilidad` y `situacion_fiscal` para
+  sus filtros (`panel/src/pages/Postulaciones.jsx:54-55`).
+ El catálogo completo de experiencia clínica está
 en el documento fuente, que no está en el repositorio, así que no se sembró ninguno: inventarlo
 sería inventar contenido de negocio.
 
@@ -215,16 +204,16 @@ entero— no están en el producto: están en el estante,
 `celtatech/Codigos-utiles/postulacion-desde-un-sitio-publico/`, con su documento de cómo se
 vuelven a poner.
 
-**Falta la API del formulario.** El formulario va en el sitio de cada Prestadora, hecho con quien
-ella elija, y Careonys lo entrega por una API única (`docs/PRD_01_Sitio_Web.md`, §8). Es el paso 66
-de `docs/PLAN_HASTA_PRODUCCION.md`.
+**El formulario se entrega por una API.** El formulario va en el sitio de cada Prestadora, hecho
+con quien ella elija, y Careonys lo entrega por una API única (`docs/PRD_01_Sitio_Web.md`, §8). El
+trabajo está en `docs/PLAN_HASTA_PRODUCCION.md`.
 
 ## Panel de administración — sección Postulantes
 
 ### Los totales — cómo quedaron construidos
 
 Arriba de la lista hay cinco números: cuántas postulaciones hay, y cuántas pendientes, en
-verificación, aprobadas y rechazadas.
+revisión, aprobadas y rechazadas.
 
 - **Los números son de todas las postulaciones, no de las que quedaron después de los filtros.**
   Contados sobre lo filtrado, elegir una situación dejaría los otros cuatro en cero: dirían lo
@@ -235,13 +224,9 @@ verificación, aprobadas y rechazadas.
   cinco se cuenta en el total y en ninguna otra parte: cuántas postulaciones hay no depende de que
   se sepa clasificarlas.
 
-**Falta un sexto número, las aprobadas sin monotributo**, y no se construyó porque todavía no está
-decidido si eso avisa o bloquea — ver `docs/PLAN_HASTA_PRODUCCION.md`, paso 67. Un
-número que diga «bloqueadas» antes de esa decisión adelanta la respuesta.
-
 ### La tabla y los filtros — cómo quedaron construidos
 
-Columnas: nombre, especialidades, zonas, fecha, pretensión de honorario por hora, años de
+Columnas: nombre, zonas, fecha, pretensión de honorario por hora, años de
 experiencia, condición fiscal, urgencias, cómo nos conoció y situación. Más reciente primero, que
 es el orden con el que la pantalla pide los datos.
 
@@ -253,7 +238,7 @@ es el orden con el que la pantalla pide los datos.
   llamaba «canal de llegada», y son dos cosas distintas: acá un canal es por dónde sale un mensaje del sistema
   —WhatsApp, correo, notificación— y está escrito así en `panel/src/lib/modalidades.js`. Lo que la
   postulación guarda es lo que la persona contestó, y así se rotula.
-- **Once condiciones no entran adentro de una pantalla.** El filtrado vive en
+- **Diez condiciones no entran adentro de una pantalla.** El filtrado vive en
   `panel/src/lib/filtrarPostulaciones.js`, con sus pruebas: varias de esas condiciones no son una
   comparación sino una decisión, y una decisión se prueba.
 - **Quien no declaró un dato queda afuera sólo cuando ese dato se pide.** Buscando gente que
@@ -266,13 +251,15 @@ es el orden con el que la pantalla pide los datos.
   armada de antemano sería un valor operativo escrito en el código, distinto en cada Prestadora y
   en cada zona.
 
-Filtros: texto libre, situación de la postulación, especialidad, zona, franja horaria, condición
-fiscal, urgencias, tipo de servicio —por horas o cama adentro—, rango de honorario por hora y
-distancia («viaja al menos tantos kilómetros», que es la pregunta que se hace quien busca a
+Filtros: texto libre, situación de la postulación, zona, franja horaria, condición fiscal,
+urgencias, tipo de servicio —por horas o cama adentro—, honorario por hora desde, honorario por
+hora hasta y distancia («viaja al menos tantos kilómetros», que es la pregunta que se hace quien busca a
 alguien para una casa lejos).
 
 **El filtro por «Suspendida» no existe porque esa situación no existe**: una postulación está
-pendiente, en revisión, aprobada o rechazada.
+pendiente, en revisión, aprobada o rechazada. Las cuatro situaciones están escritas en la
+pantalla (`panel/src/pages/Postulaciones.jsx:23`), y la base no tiene ninguna restricción sobre
+`postulaciones.estado`.
 
 Mapa geolocalizado de los Asistentes activos del Padrón agrupado por zona (mismo componente de mapa
 del Padrón, `panel/src/components/mapa/MapaDelPadron.jsx`, no duplicar implementación).

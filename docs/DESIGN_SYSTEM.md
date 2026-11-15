@@ -1,20 +1,12 @@
 # DESIGN_SYSTEM.md — Identidad visual para código
 
-> **Sistema de tokens, tonos y modo oscuro: vigente desde 2026-07-31.** Es el estado actual
-> del Panel y está descrito abajo, en "Paleta y tokens del Panel" y las cuatro secciones que
-> le siguen. Los valores exactos no se copian acá: viven en `panel/src/styles/variables.css`.
+> Describe el sistema de tokens, tonos y modo oscuro del Panel, en "Paleta y tokens del Panel"
+> y las cuatro secciones que le siguen. Los valores exactos no se copian acá: viven en
+> `panel/src/styles/variables.css`. Los estilos están centralizados en variables CSS, nunca
+> escritos componente por componente, para que un cambio de marca no obligue a tocar los
+> componentes uno por uno.
 
-> **Identidad visual base: vigente desde 2026-07-18.** Reemplazó a la identidad anterior por
-> decisión explícita del Desarrollador — ver el detalle del cambio, motivo y qué se preservó sin
-> tocar en `docs/claude_history.md` (entrada 2026-07-18).
-
-> Fuente: manual de identidad original (histórico, documento fuera del repo) + prompt maestro original Parte B.
-> Advertencia que hay que respetar: el manual se declara "Provisional — identidad
-> definitiva pendiente de definición". Construir el sistema de estilos de forma
-> centralizada (variables CSS, nunca hardcodeado por componente) para que un reemplazo
-> futuro de marca no requiera tocar componentes uno por uno.
-
-## Paleta y tokens del Panel (vigente desde 2026-07-31)
+## Paleta y tokens del Panel
 
 **El archivo manda, no este documento.** Los valores exactos viven en
 `panel/src/styles/variables.css` y ahí se leen. Acá se explica cómo está armado y qué regla
@@ -71,7 +63,7 @@ estado semántico (guardias, alertas), ver abajo.
 
 ## Los cinco tonos de señal
 
-Todo lo que el Panel marca como "está bien" / "prestá atención" / "esto es grave" / "esto es
+Todo lo que el Panel marca como "está bien" / "preste atención" / "esto es grave" / "esto es
 un dato más" / "esto no dice nada" sale de acá y de ningún otro lado.
 
 | Tono | Qué significa | Clase |
@@ -164,7 +156,7 @@ se deshace, un archivo por vez.
 Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;650;700;750). Las
 dos variables viven en `variables.css`.
 
-## Layout general del Panel (vigente desde 2026-07-18)
+## Layout general del Panel
 
 - **Sidebar** (`.panel-sidebar`): 242px de ancho, fondo en degradado vertical de
   `--barra-fondo` a `--barra-fondo-abajo`. El enlace de navegación activo se marca con fondo
@@ -198,15 +190,14 @@ que cambia entre modo claro y oscuro.
 
 ## Estados visuales de alertas (Nivel 2 de IA)
 
-Las tres clases `.alerta-verde` / `.alerta-amarilla` / `.alerta-roja` que este documento
-describía **ya no existen** (retiradas el 2026-07-31). Los tres niveles que devuelve el backend
-de alertas (ver `AI_PROMPTS.md`) pasaron al sistema de tonos: `roja` → `critico`,
+Los tres niveles que devuelve el backend de alertas (ver `AI_PROMPTS.md`) usan el sistema de
+tonos: `roja` → `critico`,
 `amarilla` → `atencion`, `verde` → `exito`. Ese mapeo vive en `panel/src/lib/tonos.js` y la
 pantalla solo llama a `claseBadge(nivel)`.
 
-El motivo del cambio es el que da nombre a los tonos: una clase que se llama por su color no
-sobrevive al modo oscuro ni a un cambio de paleta, y obliga a que cada pantalla sepa que
-"amarilla" quiere decir "prestá atención". Ahora eso lo sabe un solo archivo.
+El motivo es el que da nombre a los tonos: una clase que se llama por su color no sobrevive al
+modo oscuro ni a un cambio de paleta, y obliga a que cada pantalla sepa que "amarilla" quiere
+decir "preste atención". Eso lo sabe un solo archivo.
 
 ## Estados visuales de guardias (Módulo 6 del Panel Admin)
 
@@ -222,13 +213,12 @@ pinta el borde izquierdo con la variable de marca de ese tono:
 `completada`, `cancelada`, `ausente` y `pausada`. `ausente` es distinto de `cancelada`. En cualquier
 badge de un estado de guardia se usa `claseBadge()` como en el resto del Panel.
 
-## Convenciones de UI (patrón adoptado de análisis de GlamourOS/ERP salones — no vinculante,
-## solo se toman estas dos prácticas puntuales, ver justificación en memoria de sesión)
+## Convenciones de interfaz
 
-- **Teléfono siempre como link, nunca texto plano.** Cualquier campo de teléfono/WhatsApp
-  visible en UI (Ficha del cliente, Legajo del Asistente, tabla de postulantes) se renderiza
-  como `wa.me/{telefono}`, no como texto estático — reduce fricción de contacto en un solo
-  clic, consistente con el botón de WhatsApp flotante que ya define `PRD_01_Sitio_Web.md`.
+- **Teléfono siempre como enlace, nunca texto plano.** Todo teléfono o WhatsApp visible en la
+  interfaz (Ficha del Cliente, Legajo del Asistente, tabla de postulantes) se muestra como un
+  enlace `https://wa.me/{teléfono}`, que abre una conversación de WhatsApp con ese número en un
+  solo clic. El enlace lo arma `linkWhatsapp` de `panel/src/lib/telefono.js`.
 - **Listas largas de opciones se agrupan por categoría, nunca scroll vertical infinito.**
   Aplica directo a la Sección D del formulario de postulación (`PRD_03_Reclutamiento.md`):
   discapacidades, patologías, tareas de cuidado directo/acompañamiento/domésticas — cada

@@ -5,8 +5,8 @@ los ojos cada cartel que el sistema pone por su cuenta. Cada ficha arranca dicie
 llega a esa pantalla** —el camino por el menú, los clics— y qué hay que hacer para que ese cartel
 aparezca.
 
-**Son cinco.** Llevan el mismo número que tienen en el punto 15 de `docs/CARTELES_DEL_PANEL.docx`
-—el 2, el 9, el 12, el 21 y el 26—, que son los que siguen en el código de los veintiséis de
+**Son cuatro.** Llevan el mismo número que tienen en el punto 15 de `docs/CARTELES_DEL_PANEL.docx`
+—el 2, el 9, el 12 y el 21—, que son los que siguen en el código de los veintiséis de
 ese punto. Están ordenados por el camino del menú, de arriba abajo, para que se puedan ir viendo
 uno atrás del otro sin saltar de un lado al otro del Panel.
 
@@ -41,8 +41,8 @@ nunca uno más corto—, CAMBIAR, AJUSTAR, DEJAR y REVISAR.
 ubica, se describe y se aplica exactamente un texto aprobado. Donde hace falta un texto y no hay uno
 aprobado, queda escrito que falta definirlo. Nunca se inventa.
 
-**El relevamiento son cinco, y el punto 15 avisa que no alcanza:** «hay que evaluar
-absolutamente todos». Lo que todavía no se relevó está anotado al pie.
+**El relevamiento son cuatro, y el punto 15 avisa que no alcanza:** «hay que evaluar
+absolutamente todos».
 
 ---
 
@@ -259,73 +259,6 @@ zona elegida.
 
 ---
 
-# Gestión → Configuración → Prestadora
-
-## 26. El aviso de que falta la clave de un proveedor conectado
-
-**Cómo llegar.** Menú lateral → grupo **Gestión** → **Configuración** → **Configuración** → solapa
-**«Prestadora»** → bajar hasta la sección **«Pasarela de pago»**. El aviso está adentro de la tabla, en la columna
-«Estado», justo debajo de la palabra «Activo», en el renglón del proveedor al que le falta la clave.
-Este bloque sólo existe si esta Prestadora tiene contratada la modalidad Match.
-
-**Qué es ese texto.** No es un cartel de lista vacía ni el valor de un campo: es un aviso de que falta
-terminar de configurar algo, y de que mientras tanto ese medio de cobro no funciona. Está puesto en
-la fila del proveedor a propósito, para que se sepa antes de que un cobro no entre y no después.
-
-**Qué es esa pantalla y para qué se usa.** Dentro de Configuración, en la sección de la Prestadora,
-está el bloque de pasarela de pago. Ahí se elige por qué medios cobra la suscripción de los Clientes:
-tarjeta por distintos proveedores, transferencia por código, débito automático en cuenta bancaria, red
-de cobranza en efectivo. La clave de cada medio se guarda cifrada y no se vuelve a mostrar una vez
-cargada. Conectar los medios y cambiar sus claves es del administrador de la Prestadora; el soporte
-técnico ve cuáles están conectados y nada más.
-
-**Qué se ve en pantalla, de arriba abajo.**
-- Título de la pantalla: «Configuración», con la solapa «Prestadora».
-- Título de sección: «Pasarela de pago»
-- La tabla, con tres columnas: «Proveedor», «Estado» y una última sin nombre para los botones. En la
-  columna de estado se lee «Activo» o «Inactivo», y es justo ahí, debajo de esa palabra, donde aparece
-  este aviso.
-
-**El texto, textual.**
-«Falta la clave: sin ella no se aceptan los cobros que informe este proveedor.»
-
-**Cuándo aparece.** Con tres condiciones a la vez, en el renglón de un mismo proveedor: que esté
-activo, que ese proveedor sea de los que necesitan una segunda clave para comprobar la autenticidad de
-lo que informa, y que esa clave no esté cargada. Un proveedor apagado no lo muestra, aunque le falte la
-clave.
-
-**Qué desaparece mientras el aviso está puesto.** Nada. Este aviso no reemplaza a nada: se suma a la
-celda de estado, debajo de la palabra «Activo», que sigue diciendo «Activo».
-
-**Qué queda alrededor si el aviso se saca.** La fila del proveedor con su nombre y la palabra «Activo»,
-y, si quien mira es el administrador de la Prestadora, los botones de esa fila: «Desactivar cuenta»
-y «Cargar secreto de firma» o «Reemplazar secreto de firma».
-
-**Problemas que se ven acá.** La misma cosa tiene tres nombres distintos en la misma pantalla: el aviso
-la llama «la clave», los botones de al lado la llaman «secreto de firma», y el casillero que se abre
-para conectar un proveedor se llama «Datos de acceso». Leído solo, no se sabe qué falta ni cuál de
-los botones lo resuelve.
-Y hay una contradicción visible en un mismo renglón: la columna de estado dice «Activo» y abajo se
-aclara que los cobros no se aceptan, que es lo contrario de estar activo, sin que ninguna de las dos
-afirmaciones desmienta a la otra. Por último, cuando quien mira no es el administrador de la
-Prestadora, el aviso aparece igual pero los botones para resolverlo no están, así que se ve el problema
-y no hay ninguna manera de actuar desde ahí; ni el aviso ni ningún otro texto de la sección dice a
-quién hay que pedírselo.
-
-
-**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
-`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
-
-> Debe indicar únicamente que falta la credencial necesaria, con una redacción formal y sencilla. Texto a aprobar. Quiero suponer que en ninguna pantalla dice «La Prestadora»
-
-**Dato para esta decisión.** Hoy sí hay pantallas del Panel que dicen «La Prestadora». Dos
-ejemplos: el selector de lugares sin ninguno cargado dice «La Prestadora todavía no cargó ningún
-lugar. Se cargan en Configuración.», y el error de una modalidad apagada dice «La Prestadora no
-tiene habilitada la modalidad {modalidad}. Se habilita en Configuración.». El relevamiento completo,
-texto por texto, está en `docs/NOMBRAR_A_LA_PRESTADORA.md`.
-
----
-
 # Lo que queda afuera de este documento
 
 **El cartel de Habilitar cambio de contraseña.** Se ve en Menú lateral → grupo **Gestión** →
@@ -336,15 +269,5 @@ particular, ningún cartel es mas útil que tener uno vacío esperando. Puede ll
 hay que analizar en detalle primero los procedimientos y la lógica de los mismos antes de decir si o
 no cuando eventualmente surja la necesidad»*. No se toca y no se opina sobre él acá.
 
-**Lo que el punto 15 manda evaluar y todavía no se relevó.** Su título dice «Aplicación algunos de
-los casos, hay que evaluar absolutamente todos», así que los cinco de acá no cierran la
-revisión. Falta relevar, con la misma ficha de ocho apartados:
-
-1. Los textos al pie de los casilleros, cuando un dato está mal cargado.
-2. Los avisos de «se guardó».
-3. Las ventanas de confirmar.
-4. Los carteles de las dos aplicaciones de teléfono, la de los Clientes y la de los Asistentes.
-5. El cartel de Habilitar cambio de contraseña, que está parado por la decisión de arriba.
-
-**Y el punto 8 abre un trabajo aparte**, que no es de carteles: eliminar el tuteo y el voseo de todo
-el Panel y de las dos aplicaciones, sin excepción.
+**Lo que el punto 15 manda evaluar.** Su título dice «Aplicación algunos de los casos, hay que
+evaluar absolutamente todos», así que los cuatro de acá no cierran la revisión.

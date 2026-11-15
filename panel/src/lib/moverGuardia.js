@@ -56,8 +56,8 @@ export function seArrastra(guardia) {
 }
 
 /**
- * @param {object} guardia  La guardia entera, como está hoy — hacen falta `paciente_id` y
- *                          `prestadora_id` para rehacer la lista de Pacientes. Con el id solo no alcanzaría.
+ * @param {object} guardia  La guardia entera, como está hoy — hace falta `paciente_id` para
+ *                          rehacer la lista de Pacientes. Con el id solo no alcanzaría.
  * @param {object} movimiento  Lo que informa la grilla al soltar:
  *   - `fila`: a qué fila se la llevó (un Asistente o un Paciente, según la vista).
  *   - `filaOrigen`: de qué fila se la sacó. Solo se usa en la vista por Paciente.
@@ -67,6 +67,7 @@ export function seArrastra(guardia) {
  *     pantalla cree si nadie la controla.
  *   - `horaInicio` y `horaFin`: solo desde la línea de tiempo. Si no vienen, el horario no se
  *     toca.
+ *   - `prestadoraId`: la Prestadora de la sesión, con la que se guarda la lista de Pacientes.
  * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
  *                          acá no se sabe en qué idioma está, y hacen falta para que ningún
  *                          error de la base llegue crudo a la pantalla.
@@ -74,7 +75,7 @@ export function seArrastra(guardia) {
  * @returns {Promise<{ error: string | null, documentosPendientes?: string[] | null }>} El motivo si
  *          algo falló, o null si salió todo; y los documentos, si la asignación la frenaron ellos.
  */
-export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, horaInicio, horaFin }, t = null, motivoExcepcion = null) {
+export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, horaInicio, horaFin, prestadoraId }, t = null, motivoExcepcion = null) {
   if (!guardia?.id || !seArrastra(guardia)) return { error: null };
 
   if (!VISTAS.includes(vista)) {
@@ -87,7 +88,7 @@ export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, ho
     if (fila !== filaOrigen && quienTieneElTurno(guardia)) {
       return moverTurnoAOtroPaciente(guardia.id, { pacienteId: fila, fecha, horaInicio, horaFin }, t);
     }
-    const { error: falla } = await cambiarPacienteDeGuardia(guardia, filaOrigen, fila, t);
+    const { error: falla } = await cambiarPacienteDeGuardia(guardia, filaOrigen, fila, t, prestadoraId);
     if (falla) return { error: falla };
     return moverEnElCalendario(guardia, { fecha, horaInicio, horaFin }, t);
   }

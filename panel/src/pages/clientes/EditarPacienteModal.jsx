@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { mensajeDeError } from '../../lib/errores';
 import { avisarSiQuedoPendiente } from '../../lib/cargasPendientes';
@@ -13,6 +14,7 @@ import { informacionDeSalud } from '../../lib/informacionDeSalud';
 export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const [nivelComplejidad, setNivelComplejidad] = useState(paciente.nivel_complejidad || '');
   const [patologias, setPatologias] = useState((paciente.patologias || []).join(', '));
   const [obraSocialPersonaId, setObraSocialPersonaId] = useState(paciente.obra_social_persona_id || null);
@@ -50,7 +52,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         ({ error: errorSalud } = vigente
           ? await informacionDeSalud.from('informacion_de_salud_del_paciente').update(salud).eq('paciente_id', paciente.id)
           : await informacionDeSalud.from('informacion_de_salud_del_paciente')
-            .insert({ prestadora_id: paciente.prestadora_id, paciente_id: paciente.id, ...salud }));
+            .insert({ prestadora_id: usuario?.prestadora_id, paciente_id: paciente.id, ...salud }));
       }
     }
     if (!errorUpdate && !errorSalud) await avisarSiQuedoPendiente(paciente.id, t);

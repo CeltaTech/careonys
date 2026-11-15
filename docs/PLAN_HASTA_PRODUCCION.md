@@ -950,14 +950,10 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
 
 **49.** Ponerlo en el tablero. Se calcula desde `asistentes`, sin tabla nueva.
 
-**50.** El aislamiento del Panel, que hoy descansa entero en la base. Dos cosas:
-
-- **Unas cuarenta consultas no llevan ningún filtro propio.** Si una política se afloja, o entra
-  una tabla nueva sin la suya, esas pantallas muestran listas y números mezclados y nada en el
-  código lo frena. Lo más visible serían los números del tablero y el mapa de los Asistentes.
-- **Cinco pantallas guardan con la Prestadora que traía la fila que estaba en pantalla**, no con
-  la de la sesión. Hoy coincide. Es un dato de aislamiento viajando por un camino que la sesión no
-  controla.
+**50.** El aislamiento del Panel, que hoy descansa entero en la base: **unas cuarenta consultas no
+llevan ningún filtro propio.** Si una política se afloja, o entra una tabla nueva sin la suya, esas
+pantallas muestran listas y números mezclados y nada en el código lo frena. Lo más visible serían
+los números del tablero y el mapa de los Asistentes.
 
 **156. Usted** — El teléfono del Asistente en el Legajo y en las postulaciones se muestra sin enlace
 a WhatsApp, y en la Ficha del cliente sí lo tiene (`linkWhatsapp`, `panel/src/lib/telefono.js:3`).

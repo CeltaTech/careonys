@@ -288,8 +288,10 @@ export function Guardias() {
       if (!(await pedirConfirmacion(pedidoDeConfirmacionDelMovimiento(guardiaActual, origen, destino, t)))) return;
     }
 
-    const resultado = await moverGuardia(guardiaActual, movimiento, t);
-    avisarResultado(resultado, (motivoExcepcion) => moverGuardia(guardiaActual, movimiento, t, motivoExcepcion));
+    // La Prestadora con la que se guarda es la de la sesión, nunca la que trae la guardia.
+    const conLaSesion = { ...movimiento, prestadoraId: usuario?.prestadora_id ?? null };
+    const resultado = await moverGuardia(guardiaActual, conLaSesion, t);
+    avisarResultado(resultado, (motivoExcepcion) => moverGuardia(guardiaActual, conLaSesion, t, motivoExcepcion));
   }
 
   const tl = t.guardias.listado;

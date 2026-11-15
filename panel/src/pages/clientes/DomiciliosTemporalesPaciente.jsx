@@ -179,9 +179,9 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     const { error: errorGuardar } = editandoId
       ? await tabla.update(datos).eq('id', editandoId)
       : await tabla.insert({
-          // De la misma Prestadora que el Paciente, siempre: la base lo exige con una clave
-          // foránea sobre las dos columnas juntas.
-          prestadora_id: paciente.prestadora_id,
+          // La de la sesión, nunca la que trae la fila en pantalla. La base exige además que sea
+          // la del Paciente, con una clave foránea sobre las dos columnas juntas.
+          prestadora_id: usuario?.prestadora_id,
           paciente_id: paciente.id,
           ...datos,
         });

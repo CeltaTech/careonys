@@ -291,7 +291,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     if (faltan.length > 0) {
       const { error: errorAgregar } = await supabase.from('especialidades_asistente').insert(
         faltan.map((especialidad_id) => ({
-          prestadora_id: asistente.prestadora_id,
+          prestadora_id: usuario?.prestadora_id,
           asistente_id: asistente.id,
           especialidad_id,
         })),
@@ -398,7 +398,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
         .upsert(
           {
             asistente_id: asistente.id,
-            prestadora_id: asistente.prestadora_id,
+            prestadora_id: usuario?.prestadora_id,
             domicilio: domicilioEscrito,
             ...partes,
             ...(await coordenadasSiCambio(asistente, partes)),
@@ -419,7 +419,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
         ? await supabase.from('relacion_laboral_asistente').upsert(
             {
               asistente_id: asistente.id,
-              prestadora_id: asistente.prestadora_id,
+              prestadora_id: usuario?.prestadora_id,
               relacion_laboral_id: form.relacion_laboral_id,
               updated_at: new Date().toISOString(),
             },
@@ -443,7 +443,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
         .upsert(
           {
             asistente_id: asistente.id,
-            prestadora_id: asistente.prestadora_id,
+            prestadora_id: usuario?.prestadora_id,
             unidad_medicion: form.unidad_medicion,
             valor_hora: form.valor_hora || null,
             valor_guardia: form.valor_guardia || null,

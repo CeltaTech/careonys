@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { ORIGEN, equipoDelServicio, reglaDeEquipoDe } from '../../lib/equipoDelServicio';
@@ -25,6 +26,7 @@ import '../tarjetas.css';
 export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const e = t.equipo_servicio;
   const confirmarDestructivo = useConfirmarDestructivo();
 
@@ -120,7 +122,7 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
     setErrorFila(null);
     const { error: errorUpsert } = await supabase.from('equipo_servicio').upsert(
       {
-        prestadora_id: servicio.prestadora_id,
+        prestadora_id: usuario?.prestadora_id,
         servicio_id: servicio.id,
         asistente_id: fila.asistente_id ?? null,
         usuario_id: fila.usuario_id ?? null,

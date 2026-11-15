@@ -24,17 +24,19 @@ import { mensajeDeError } from './errores';
    `sincronizar_paciente_principal` de `guardias`. */
 
 /**
- * @param {object} guardia  La guardia entera, ya enriquecida por `conPacientes` — hacen falta
- *                          `paciente_id` (el de la columna vieja) y `prestadora_id`.
+ * @param {object} guardia  La guardia entera, ya enriquecida por `conPacientes` — hace falta
+ *                          `paciente_id` (el de la columna vieja).
  * @param {string} pacienteOrigen  De qué fila se la sacó. Puede no ser un Paciente real: si se
  *                          arrastra desde la fila de "sin Paciente", acá llega esa marca y no
  *                          hay nada que sacar.
  * @param {string} pacienteDestino  A qué fila se la llevó.
  * @param {object} t  Los textos del idioma en que está el Panel, para que un error de la base
  *                          no llegue a la pantalla escrito en inglés. Ver `lib/errores.js`.
+ * @param {string} prestadoraId  La Prestadora de la sesión, nunca la que trae la guardia: un dato
+ *                          de aislamiento no viaja por la fila que está en pantalla.
  * @returns {Promise<{ error: string | null }>} El motivo si algo falló, o null si salió todo.
  */
-export async function cambiarPacienteDeGuardia(guardia, pacienteOrigen, pacienteDestino, t = null) {
+export async function cambiarPacienteDeGuardia(guardia, pacienteOrigen, pacienteDestino, t = null, prestadoraId = null) {
   if (!guardia?.id || !pacienteDestino) return { error: null };
   if (pacienteOrigen === pacienteDestino) return { error: null };
 
@@ -54,7 +56,7 @@ export async function cambiarPacienteDeGuardia(guardia, pacienteOrigen, paciente
   const { error: errorAlta } = await supabase
     .from('guardia_pacientes')
     .upsert(
-      { guardia_id: guardia.id, paciente_id: pacienteDestino, prestadora_id: guardia.prestadora_id },
+      { guardia_id: guardia.id, paciente_id: pacienteDestino, prestadora_id: prestadoraId },
       { onConflict: 'guardia_id,paciente_id', ignoreDuplicates: true }
     );
   if (errorAlta) return { error: mensajeDeError(errorAlta, t) };

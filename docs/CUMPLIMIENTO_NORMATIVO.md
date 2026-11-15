@@ -90,14 +90,13 @@ Países Bajos y Portugal suman lo propio en su documento.
    tabla de salud se lee directo, la única salida es `backend/src/db/informacionDeSalud.js` y cada
    lectura queda anotada en `consultas_a_hce`, con quién, cuándo y qué Paciente.
 4. **Corrección por nota aclaratoria, nunca por sobreescritura** (Brasil; Argentina; Uruguay
-   Decreto 242/017 art. 13; Ecuador). **Cumple** en `indicaciones_medicacion`,
-   `rangos_referencia_vitales` e `informacion_de_salud_del_paciente`: el disparador
-   `trg_versiones_del_registro_clinico` guarda cada corrección como versión nueva en
-   `versiones_registro_clinico`, con su nota aclaratoria, y nadie la edita ni la borra.
-   `domicilios_temporales_paciente` guarda sus versiones con el mismo disparador, sin nota
-   aclaratoria. La versión anota como autor a quien inició sesión; la corrección que el backend
-   escribe con la credencial del trabajo sin persona queda sin autor — **en obra**, en
-   `docs/PLAN_HASTA_PRODUCCION.md`.
+   Decreto 242/017 art. 13; Ecuador). **Cumple** en no sobreescribir, en `indicaciones_medicacion`,
+   `rangos_referencia_vitales`, `domicilios_temporales_paciente` e
+   `informacion_de_salud_del_paciente`: el disparador `trg_versiones_del_registro_clinico` guarda
+   cada corrección como versión nueva en `versiones_registro_clinico`, con quién la hizo y cuándo,
+   y nadie la edita ni la borra. Lo que el backend escribe con la credencial del trabajo sin persona
+   queda a nombre de la cuenta automática de esa Prestadora. No se guarda una nota escrita que
+   explique la corrección.
 5. **Plazo de conservación y anonimización al vencer** (Costa Rica Ley art. 6.1, Panamá Decreto
    art. 7, Ecuador art. 31). **En obra**, en `docs/PLAN_HASTA_PRODUCCION.md`.
 

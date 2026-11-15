@@ -232,7 +232,7 @@ Lo demás de Argentina:
   pasos 9, 13, 124 y 125.
 - **Ley 26.529.** Historia clínica cronológica, foliada y completa, propiedad del paciente, con
   copia entregada dentro de las 48 horas y conservación de **diez años como mínimo**. **En obra** —
-  el autor de cada corrección, paso 9; la copia en plazo, paso 123; la conservación, paso 122.
+  la copia en plazo, paso 123; la conservación, paso 122.
 - **El art. 4(7) manda destruir, y la Ley 26.529 manda guardar diez años.** No es contradicción sino
   dos relojes: el dato deja de ser necesario y se destruye, salvo el que una ley obliga a conservar.
   La consecuencia de producto es que la conservación se parametriza por tipo de dato, con el plazo
@@ -268,9 +268,11 @@ Argentina figura en dos:
 
 - **Consentimiento expreso para datos de salud** (Ley 25.326 art. 8). **Cumple** la estructura;
   **en obra** los textos por país — paso 127.
-- **Corrección por nota aclaratoria, nunca por sobreescritura.** **Cumple** en `indicaciones_medicacion`, `rangos_referencia_vitales` y
-  `domicilios_temporales_paciente`: cada corrección deja su versión con nota aclaratoria, y nadie
-  la edita ni la borra. Lo corregido desde el Panel todavía queda sin autor — **en obra**, paso 9.
+- **Corrección por nota aclaratoria, nunca por sobreescritura.** El Decreto 1089/2012, anexo I, art. 15, pide escribir «ERROR» y hacer
+  la aclaración en el espacio siguiente, sin tachar ni escribir sobre lo escrito. **Cumple** en no sobreescribir, en `indicaciones_medicacion`, `rangos_referencia_vitales`,
+  `domicilios_temporales_paciente` e `informacion_de_salud_del_paciente`: cada corrección guarda la
+  versión anterior, con quién la hizo y cuándo, y nadie la edita ni la borra. No se guarda una nota
+  escrita que explique la corrección.
 
 ### Las obligaciones particulares
 

@@ -58,10 +58,11 @@ que tener su documento (`celtatech/CLAUDE.md`, sección «El riesgo legal»).
 De las cinco exigencias que los diez comparten, listadas en `docs/CUMPLIMIENTO_NORMATIVO.md`,
 Uruguay figura en una:
 
-- **Corrección por nota aclaratoria, nunca por sobreescritura** (Decreto 242/017 art. 13).
-  **Cumple** en `indicaciones_medicacion`, `rangos_referencia_vitales` y
-  `domicilios_temporales_paciente`: cada corrección deja su versión con nota aclaratoria, y nadie
-  la edita ni la borra. Lo corregido desde el Panel todavía queda sin autor — **en obra**, paso 9.
+- **Corrección sin suprimir lo corregido** (Decreto 242/017 art. 13): se agrega el dato nuevo con
+  la fecha, la hora y la firma electrónica de quien corrige. **Cumple** en `indicaciones_medicacion`, `rangos_referencia_vitales`,
+  `domicilios_temporales_paciente` e `informacion_de_salud_del_paciente`: cada corrección guarda la
+  versión anterior, con quién la hizo y cuándo, y nadie la edita ni la borra. No se guarda una nota
+  escrita que explique la corrección.
 
 ### Las obligaciones particulares
 

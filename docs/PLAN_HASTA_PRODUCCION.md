@@ -1302,11 +1302,6 @@ los registros de actividad y de errores guardan datos personales. Nada de esto e
 **Comprobación:** cada columna con dato personal tiene escrito para qué se usa, y ninguna queda sin
 uso.
 
-**159. Usted** — `domicilios_temporales_paciente` guarda sus versiones con el disparador de la información
-de salud, pero sin la nota que explica cada corrección: la tabla no tiene dónde guardarla. Hace
-falta la columna y un casillero en el formulario del Panel, y el casillero es interfaz: espera el sí
-del Desarrollador.
-
 ---
 
 ## Respaldo, continuidad y secretos

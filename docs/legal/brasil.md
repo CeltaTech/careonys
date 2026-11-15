@@ -60,9 +60,10 @@ Brasil figura en dos:
 
 - **Consentimiento expreso para datos de salud** (LGPD art. 11). **Cumple** la estructura; **en
   obra** los textos por país — paso 127.
-- **Corrección por nota aclaratoria, nunca por sobreescritura.** **Cumple** en `indicaciones_medicacion`, `rangos_referencia_vitales` y
-  `domicilios_temporales_paciente`: cada corrección deja su versión con nota aclaratoria, y nadie
-  la edita ni la borra. Lo corregido desde el Panel todavía queda sin autor — **en obra**, paso 9.
+- **Corrección por nota aclaratoria, nunca por sobreescritura.** **Cumple** en no sobreescribir, en `indicaciones_medicacion`, `rangos_referencia_vitales`,
+  `domicilios_temporales_paciente` e `informacion_de_salud_del_paciente`: cada corrección guarda la
+  versión anterior, con quién la hizo y cuándo, y nadie la edita ni la borra. No se guarda una nota
+  escrita que explique la corrección.
 
 ### Las obligaciones particulares
 

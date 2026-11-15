@@ -347,15 +347,6 @@ INSERT INTO public.remuneraciones_asistente (
   ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 5200.00),
   ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 4200.00);
 
--- Lo reservado del Legajo del Asistente. Solo se carga donde hay algo que decir: la causa de
--- la baja de Delia, que es la única dada de baja. Los otros tres no tienen fila, que es el
--- estado normal de un Asistente al que nunca se le cargó nada.
-INSERT INTO public.datos_reservados_asistente (
-  asistente_id, prestadora_id, causal_baja
-) VALUES
-  ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
-   'renuncia');
-
 
 -- ----------------------------------------------------------------------------
 -- 3.b El Directorio de Personas de la Prestadora de prueba

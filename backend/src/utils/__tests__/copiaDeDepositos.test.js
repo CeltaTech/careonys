@@ -70,7 +70,7 @@ describe('copiarDepositos', () => {
   });
 
   it('sube a los dos destinos y baja el archivo una sola vez', async () => {
-    const almacenamiento = almacenamientoFalso({ 'documentos-cese': [{ ruta: 'p/uno.pdf', tamano: 10, actualizado: 'x' }] });
+    const almacenamiento = almacenamientoFalso({ 'certificados-medicos': [{ ruta: 'p/uno.pdf', tamano: 10, actualizado: 'x' }] });
     const r2 = destinoFalso();
     const b2 = destinoFalso();
 
@@ -78,7 +78,7 @@ describe('copiarDepositos', () => {
 
     assert.equal(r2.subidos.length, 1);
     assert.equal(b2.subidos.length, 1);
-    assert.deepEqual(almacenamiento.bajados, ['documentos-cese/p/uno.pdf']);
+    assert.deepEqual(almacenamiento.bajados, ['certificados-medicos/p/uno.pdf']);
   });
 
   it('lo que ya está igual no se vuelve a subir, y ni siquiera se baja', async () => {
@@ -111,7 +111,7 @@ describe('copiarDepositos', () => {
   });
 
   it('un destino que no sabe contestar se trata como si no lo tuviera', async () => {
-    const almacenamiento = almacenamientoFalso({ 'documentos-cese': [{ ruta: 'p/uno.pdf', tamano: 10, actualizado: 'x' }] });
+    const almacenamiento = almacenamientoFalso({ 'certificados-medicos': [{ ruta: 'p/uno.pdf', tamano: 10, actualizado: 'x' }] });
     const destino = destinoFalso();
     destino.yaEstaIgual = async () => { throw new Error('el depósito no contesta'); };
 
@@ -122,7 +122,7 @@ describe('copiarDepositos', () => {
   });
 
   it('se le pasa al destino la fecha de modificación, que es con lo que después se compara', async () => {
-    const almacenamiento = almacenamientoFalso({ 'documentos-cese': [{ ruta: 'p/uno.pdf', tamano: 10, actualizado: '2026-09-04T12:00:00Z' }] });
+    const almacenamiento = almacenamientoFalso({ 'certificados-medicos': [{ ruta: 'p/uno.pdf', tamano: 10, actualizado: '2026-09-04T12:00:00Z' }] });
     const destino = destinoFalso();
 
     await copiarDepositos({ almacenamiento, destinos: [destino] });

@@ -49,7 +49,7 @@
 //   alerta_ia_nivel2               → utils/revisarAlertasIA.js:114 (notificarCoordinador)
 //   vencimiento_documento_asistente→ utils/vencimientos.js (notificarCoordinador)
 //   aviso_rutina_asistente         → utils/revisarRecordatoriosPush.js:24 (push, con respaldo WhatsApp)
-//   aviso_cese_asistente           → utils/avisoAutomaticoCese.js (push, con respaldo WhatsApp)
+//   aviso_cierre_del_servicio      → utils/avisoAutomaticoDelCierreDelServicio.js (push, con respaldo WhatsApp)
 //   codigo_instruccion_personas_autorizadas     → utils/instruccionesPersonasAutorizadas.js (WhatsApp, con caída a correo)
 //   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
 //                                    al Cliente), pedido por routes/panelGuardias.js
@@ -190,7 +190,7 @@ export const CATALOGO_MENSAJES = [
     admite_cliente: false,
   },
   {
-    evento: 'aviso_cese_asistente',
+    evento: 'aviso_cierre_del_servicio',
     descripcion: 'Se cerró el servicio en el que participaba un Asistente, y nadie le avisó dentro del plazo',
     admite_whatsapp: true,
     admite_cliente: false,

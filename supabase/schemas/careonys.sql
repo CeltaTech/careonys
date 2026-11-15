@@ -11182,25 +11182,6 @@ CREATE TABLE IF NOT EXISTS "public"."certificados" (
 ALTER TABLE "public"."certificados" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."ceses" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "asistente_id" "uuid" NOT NULL,
-    "fecha_cese" "date" NOT NULL,
-    "causal" "public"."causal_cese" NOT NULL,
-    "detalle_calculo" "jsonb",
-    "monto_total" numeric(14,2),
-    "documentos_generados" "jsonb",
-    "revisado_por_abogado" boolean DEFAULT false NOT NULL,
-    "creado_por" "uuid",
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "prestadora_id" "uuid" NOT NULL,
-    "moneda" "public"."moneda_iso" NOT NULL
-);
-
-
-ALTER TABLE "public"."ceses" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."cierre_servicio_asistentes" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
@@ -11581,7 +11562,7 @@ COMMENT ON TABLE "public"."configuracion_ausencias" IS 'Con cuanta anticipacion 
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."configuracion_aviso_cese_asistente" (
+CREATE TABLE IF NOT EXISTS "public"."configuracion_aviso_cierre_del_servicio" (
     "prestadora_id" "uuid" NOT NULL,
     "horas_plazo_aviso_verbal" smallint DEFAULT 24 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -11589,7 +11570,7 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_aviso_cese_asistente" (
 );
 
 
-ALTER TABLE "public"."configuracion_aviso_cese_asistente" OWNER TO "postgres";
+ALTER TABLE "public"."configuracion_aviso_cierre_del_servicio" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."configuracion_aviso_guardia_sin_cubrir" (
@@ -12371,14 +12352,10 @@ COMMENT ON COLUMN "public"."datos_bancarios_asistente"."identificador" IS 'El nu
 CREATE TABLE IF NOT EXISTS "public"."datos_reservados_asistente" (
     "asistente_id" "uuid" NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "causal_baja" "text",
-    "score_riesgo_reclasificacion" integer DEFAULT 0 NOT NULL,
-    "indicadores_riesgo" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     "motivo_exclusion_directo" "text",
     "motivo_exclusion_intermediacion" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "datos_reservados_asistente_score_riesgo_reclasificacion_check" CHECK ((("score_riesgo_reclasificacion" >= 0) AND ("score_riesgo_reclasificacion" <= 100)))
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
@@ -13381,22 +13358,6 @@ COMMENT ON COLUMN "public"."formularios_declarados"."titulo" IS 'El título visi
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."formulas_cese" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "jurisdiccion" "text" NOT NULL,
-    "causal" "text" NOT NULL,
-    "definicion" "jsonb" NOT NULL,
-    "vigencia_desde" "date" NOT NULL,
-    "vigencia_hasta" "date",
-    "fuente" "text",
-    "cargado_por" "uuid",
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
-);
-
-
-ALTER TABLE "public"."formulas_cese" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."guardia_comprobaciones" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -13874,7 +13835,7 @@ CREATE TABLE IF NOT EXISTS "public"."liquidaciones_asistente" (
     "importe_horas_extra" numeric(12,2) DEFAULT 0 NOT NULL,
     "periodo_desde" "date" NOT NULL,
     "periodo_hasta" "date" NOT NULL,
-    CONSTRAINT "liquidaciones_asistente_base_unidad_check" CHECK (("base_unidad" = ANY (ARRAY['valor_hora'::"text", 'sueldo_basico'::"text", 'valor_guardia'::"text", 'valor_semana'::"text"]))),
+    CONSTRAINT "liquidaciones_asistente_base_unidad_check" CHECK (("base_unidad" = ANY (ARRAY['valor_hora'::"text", 'valor_guardia'::"text", 'valor_semana'::"text"]))),
     CONSTRAINT "liquidaciones_asistente_bordes_en_orden" CHECK ((("periodo_desde" <= "periodo_hasta") AND ("periodo" = "periodo_desde"))),
     CONSTRAINT "liquidaciones_asistente_estado_check" CHECK (("estado" = ANY (ARRAY['pendiente'::"text", 'pagada'::"text"]))),
     CONSTRAINT "liquidaciones_asistente_horas_extra_con_valor" CHECK (((("importe_horas_extra" = (0)::numeric) AND ("valor_hora_extra" IS NULL)) OR (("importe_horas_extra" > (0)::numeric) AND ("valor_hora_extra" IS NOT NULL)))),
@@ -15244,8 +15205,6 @@ CREATE TABLE IF NOT EXISTS "public"."remuneraciones_asistente" (
     "asistente_id" "uuid" NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "valor_hora" numeric(12,2),
-    "sueldo_basico" numeric(12,2),
-    "categoria_cct" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "moneda" "public"."moneda_iso" NOT NULL,
@@ -15256,7 +15215,7 @@ CREATE TABLE IF NOT EXISTS "public"."remuneraciones_asistente" (
     "frecuencia_pago" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     CONSTRAINT "remuneraciones_asistente_frecuencia_es_objeto" CHECK (("jsonb_typeof"("frecuencia_pago") = 'object'::"text")),
     CONSTRAINT "remuneraciones_asistente_unidad_conocida" CHECK (("unidad_medicion" = ANY (ARRAY['hora'::"text", 'guardia'::"text", 'semana'::"text", 'mes'::"text"]))),
-    CONSTRAINT "remuneraciones_asistente_valores_no_negativos" CHECK (((COALESCE("valor_hora", (0)::numeric) >= (0)::numeric) AND (COALESCE("sueldo_basico", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_guardia", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_semana", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_hora_extra", (0)::numeric) >= (0)::numeric)))
+    CONSTRAINT "remuneraciones_asistente_valores_no_negativos" CHECK (((COALESCE("valor_hora", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_guardia", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_semana", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_hora_extra", (0)::numeric) >= (0)::numeric)))
 );
 
 
@@ -16305,9 +16264,6 @@ ALTER TABLE ONLY "public"."certificados"
 
 
 
-ALTER TABLE ONLY "public"."ceses"
-    ADD CONSTRAINT "ceses_pkey" PRIMARY KEY ("id");
-
 
 
 ALTER TABLE ONLY "public"."cierre_servicio_asistentes"
@@ -16405,8 +16361,8 @@ ALTER TABLE ONLY "public"."configuracion_ausencias"
 
 
 
-ALTER TABLE ONLY "public"."configuracion_aviso_cese_asistente"
-    ADD CONSTRAINT "configuracion_aviso_cese_asistente_pkey" PRIMARY KEY ("prestadora_id");
+ALTER TABLE ONLY "public"."configuracion_aviso_cierre_del_servicio"
+    ADD CONSTRAINT "configuracion_aviso_cierre_del_servicio_pkey" PRIMARY KEY ("prestadora_id");
 
 
 
@@ -16874,13 +16830,7 @@ ALTER TABLE ONLY "public"."formularios_declarados"
 
 
 
-ALTER TABLE ONLY "public"."formulas_cese"
-    ADD CONSTRAINT "formulas_cese_jurisdiccion_causal_vigencia_desde_key" UNIQUE ("jurisdiccion", "causal", "vigencia_desde");
 
-
-
-ALTER TABLE ONLY "public"."formulas_cese"
-    ADD CONSTRAINT "formulas_cese_pkey" PRIMARY KEY ("id");
 
 
 
@@ -18036,8 +17986,6 @@ CREATE INDEX "idx_certificados_prestadora_id" ON "public"."certificados" USING "
 
 
 
-CREATE INDEX "idx_ceses_prestadora_id" ON "public"."ceses" USING "btree" ("prestadora_id");
-
 
 
 CREATE INDEX "idx_cierre_servicio_asistentes_cierre" ON "public"."cierre_servicio_asistentes" USING "btree" ("cierre_id");
@@ -18291,8 +18239,6 @@ CREATE INDEX "idx_formulario_campos_prestadora_id" ON "public"."formulario_campo
 CREATE INDEX "idx_formulario_secciones_prestadora_id" ON "public"."formulario_secciones" USING "btree" ("prestadora_id");
 
 
-
-CREATE INDEX "idx_formulas_cese_jurisdiccion_causal" ON "public"."formulas_cese" USING "btree" ("jurisdiccion", "causal", "vigencia_desde");
 
 
 
@@ -19332,8 +19278,6 @@ CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDAT
 
 
 
-CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."ceses" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
-
 
 
 CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."cierres_servicio_paciente" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
@@ -19571,8 +19515,6 @@ CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDAT
 CREATE OR REPLACE TRIGGER "trg_completar_moneda" BEFORE INSERT ON "public"."accesos_intermediacion" FOR EACH ROW EXECUTE FUNCTION "public"."fn_completar_moneda"();
 
 
-
-CREATE OR REPLACE TRIGGER "trg_completar_moneda" BEFORE INSERT ON "public"."ceses" FOR EACH ROW EXECUTE FUNCTION "public"."fn_completar_moneda"();
 
 
 
@@ -20303,18 +20245,9 @@ ALTER TABLE ONLY "public"."certificados"
 
 
 
-ALTER TABLE ONLY "public"."ceses"
-    ADD CONSTRAINT "ceses_asistente_id_fkey" FOREIGN KEY ("asistente_id") REFERENCES "public"."asistentes"("id");
 
 
 
-ALTER TABLE ONLY "public"."ceses"
-    ADD CONSTRAINT "ceses_creado_por_fkey" FOREIGN KEY ("creado_por") REFERENCES "public"."usuarios"("id");
-
-
-
-ALTER TABLE ONLY "public"."ceses"
-    ADD CONSTRAINT "ceses_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
@@ -20508,8 +20441,8 @@ ALTER TABLE ONLY "public"."configuracion_ausencias"
 
 
 
-ALTER TABLE ONLY "public"."configuracion_aviso_cese_asistente"
-    ADD CONSTRAINT "configuracion_aviso_cese_asistente_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."configuracion_aviso_cierre_del_servicio"
+    ADD CONSTRAINT "configuracion_aviso_cierre_del_servicio_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
 
@@ -21280,9 +21213,6 @@ ALTER TABLE ONLY "public"."formularios_declarados"
     ADD CONSTRAINT "formularios_declarados_prestadora_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
-
-ALTER TABLE ONLY "public"."formulas_cese"
-    ADD CONSTRAINT "formulas_cese_cargado_por_fkey" FOREIGN KEY ("cargado_por") REFERENCES "public"."usuarios"("id");
 
 
 
@@ -22482,10 +22412,6 @@ CREATE POLICY "admin_gestiona_certificados" ON "public"."certificados" USING (((
 
 
 
-CREATE POLICY "admin_gestiona_ceses" ON "public"."ceses" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."usuarios" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
-
 
 
 CREATE POLICY "admin_gestiona_clientes" ON "public"."clientes" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
@@ -22506,7 +22432,7 @@ CREATE POLICY "admin_gestiona_configuracion_ausencia_automatica" ON "public"."co
 
 
 
-CREATE POLICY "admin_gestiona_configuracion_aviso_cese_asistente" ON "public"."configuracion_aviso_cese_asistente" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "admin_gestiona_configuracion_aviso_cierre_del_servicio" ON "public"."configuracion_aviso_cierre_del_servicio" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -23270,12 +23196,6 @@ ALTER TABLE "public"."catalogo_usos_del_codigo_al_telefono" ENABLE ROW LEVEL SEC
 ALTER TABLE "public"."certificados" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."ceses" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "ceses_los_lee_y_anota_el_trabajo" ON "public"."ceses" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
-
-
 
 ALTER TABLE "public"."cierre_servicio_asistentes" ENABLE ROW LEVEL SECURITY;
 
@@ -23444,7 +23364,7 @@ CREATE POLICY "configuracion_ausencias_la_lee_su_prestadora" ON "public"."config
 
 
 
-ALTER TABLE "public"."configuracion_aviso_cese_asistente" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."configuracion_aviso_cierre_del_servicio" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."configuracion_aviso_guardia_sin_cubrir" ENABLE ROW LEVEL SECURITY;
@@ -23798,7 +23718,7 @@ CREATE POLICY "coordinador_lee_configuracion_ausencia_automatica" ON "public"."c
 
 
 
-CREATE POLICY "coordinador_lee_configuracion_aviso_cese_asistente" ON "public"."configuracion_aviso_cese_asistente" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "coordinador_lee_configuracion_aviso_cierre_del_servicio" ON "public"."configuracion_aviso_cierre_del_servicio" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'coordinador'::"text"))))));
 
@@ -24235,9 +24155,6 @@ ALTER TABLE "public"."formulario_secciones" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."formularios_declarados" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."formulas_cese" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "gestiona_conceptos_solo_la_administracion" ON "public"."conceptos_liquidacion" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"()))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
@@ -24941,10 +24858,6 @@ CREATE POLICY "panel_lee_extensiones_de_turno" ON "public"."extensiones_de_turno
 
 
 
-CREATE POLICY "panel_lee_formulas_cese" ON "public"."formulas_cese" FOR SELECT USING (("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
-   FROM "public"."usuarios" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text"))))));
-
 
 
 CREATE POLICY "panel_lee_lista_precios" ON "public"."lista_precios" FOR SELECT USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
@@ -25346,8 +25259,6 @@ CREATE POLICY "superadmin_gestiona_escalas_legales" ON "public"."escalas_legales
 CREATE POLICY "superadmin_gestiona_formularios" ON "public"."formularios_declarados" USING ("interno"."es_superadmin"()) WITH CHECK ("interno"."es_superadmin"());
 
 
-
-CREATE POLICY "superadmin_gestiona_formulas_cese" ON "public"."formulas_cese" USING ("interno"."es_superadmin"());
 
 
 
@@ -25754,7 +25665,7 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracio
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracion_aviso_cese_asistente" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracion_aviso_cierre_del_servicio" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -29643,10 +29554,6 @@ GRANT ALL ON TABLE "public"."certificados" TO "service_role";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."ceses" TO "authenticated";
-GRANT ALL ON TABLE "public"."ceses" TO "service_role";
-GRANT SELECT,UPDATE ON TABLE "public"."ceses" TO "trabajo_sin_persona";
-
 
 
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."cierre_servicio_asistentes" TO "authenticated";
@@ -29912,9 +29819,9 @@ GRANT SELECT ON TABLE "public"."configuracion_ausencias" TO "trabajo_sin_persona
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."configuracion_aviso_cese_asistente" TO "authenticated";
-GRANT ALL ON TABLE "public"."configuracion_aviso_cese_asistente" TO "service_role";
-GRANT SELECT ON TABLE "public"."configuracion_aviso_cese_asistente" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."configuracion_aviso_cierre_del_servicio" TO "authenticated";
+GRANT ALL ON TABLE "public"."configuracion_aviso_cierre_del_servicio" TO "service_role";
+GRANT SELECT ON TABLE "public"."configuracion_aviso_cierre_del_servicio" TO "trabajo_sin_persona";
 
 
 
@@ -30708,9 +30615,6 @@ GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."formularios_declar
 GRANT ALL ON TABLE "public"."formularios_declarados" TO "service_role";
 
 
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."formulas_cese" TO "authenticated";
-GRANT ALL ON TABLE "public"."formulas_cese" TO "service_role";
 
 
 
@@ -32192,19 +32096,7 @@ CREATE POLICY "copia_de_respaldo_ve_los_depositos" ON "storage"."buckets" FOR SE
 
 
 
-CREATE POLICY "documentos_cese_los_alcanza_el_trabajo" ON "storage"."objects" TO "trabajo_sin_persona" USING ((("bucket_id" = 'documentos-cese'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."ceses" "c"
-  WHERE ((("c"."id")::"text" = ("storage"."foldername"("objects"."name"))[2]) AND ("c"."prestadora_id" = "interno"."prestadora_actual"())))))) WITH CHECK ((("bucket_id" = 'documentos-cese'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."ceses" "c"
-  WHERE ((("c"."id")::"text" = ("storage"."foldername"("objects"."name"))[2]) AND ("c"."prestadora_id" = "interno"."prestadora_actual"()))))));
 
-
-
-CREATE POLICY "documentos_cese_los_alcanza_quien_ve_el_cese" ON "storage"."objects" TO "authenticated" USING ((("bucket_id" = 'documentos-cese'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND "interno"."es_personal_de_la_prestadora"() AND (EXISTS ( SELECT 1
-   FROM "public"."ceses" "c"
-  WHERE ((("c"."id")::"text" = ("storage"."foldername"("objects"."name"))[2]) AND ("c"."prestadora_id" = "interno"."prestadora_actual"())))))) WITH CHECK ((("bucket_id" = 'documentos-cese'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND "interno"."es_personal_de_la_prestadora"() AND (EXISTS ( SELECT 1
-   FROM "public"."ceses" "c"
-  WHERE ((("c"."id")::"text" = ("storage"."foldername"("objects"."name"))[2]) AND ("c"."prestadora_id" = "interno"."prestadora_actual"()))))));
 
 
 
@@ -32298,7 +32190,7 @@ CREATE POLICY "logos_para_impresion_los_borra_la_administracion" ON "storage"."o
 
 
 
-CREATE POLICY "logos_para_impresion_los_lee_el_personal" ON "storage"."objects" FOR SELECT TO "authenticated" USING (((("bucket_id" = 'logos-para-impresion'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND "interno"."es_personal_de_la_prestadora"()));
+CREATE POLICY "logos_para_impresion_los_lee_el_personal" ON "storage"."objects" FOR SELECT TO "authenticated" USING (((("bucket_id" = 'logos-para-impresion'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND "interno"."es_personal_de_la_prestadora"())));
 
 
 

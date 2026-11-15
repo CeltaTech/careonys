@@ -5,29 +5,29 @@ import { configuracionEvento } from './email.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
-const EVENTO_CESE = 'aviso_cese_asistente';
+const EVENTO_CIERRE_DEL_SERVICIO = 'aviso_cierre_del_servicio';
 
 // Mensaje automático al Asistente cuando se cierra el servicio de su Paciente por una causa
 // ajena a su desempeño (Fase 6, docs/PLAN dentro de
 // C:\Users\Usuario\.claude\plans\distributed-scribbling-wirth.md). El Coordinador debe avisar
 // verbalmente primero (señal de respeto, decisión del Desarrollador 2026-07-22); este proceso
 // es el resguardo que dispara push + WhatsApp solo si esa llamada no quedó marcada dentro del
-// plazo configurado por la Prestadora (configuracion_aviso_cese_asistente).
+// plazo configurado por la Prestadora (configuracion_aviso_cierre_del_servicio).
 //
 // Corre como tarea programada, adentro del trabajo de una sola Prestadora por vez
 // (`paraCadaPrestadora`, en `server.js`): la base no le deja ver ninguna otra.
-export async function revisarMensajesAutomaticosCese() {
+export async function revisarAvisosAutomaticosDelCierreDelServicio() {
   // SIN PRESTADORA A PROPÓSITO
   // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna
   // Prestadora: trae sus identificadores y su plazo, y a partir de ahí el trabajo recorre de a una,
   // nombrándola en cada consulta de adentro —la de los cierres pendientes, acá abajo, la nombra.
   const { data: configuraciones, error: errorConfig } = await supabase
-    .from('configuracion_aviso_cese_asistente')
+    .from('configuracion_aviso_cierre_del_servicio')
     .select('prestadora_id, horas_plazo_aviso_verbal')
     .eq('activo', true);
 
   if (errorConfig) {
-    console.error('Error consultando configuracion_aviso_cese_asistente:', errorConfig.message);
+    console.error('Error consultando configuracion_aviso_cierre_del_servicio:', errorConfig.message);
     return;
   }
   if (!configuraciones?.length) return;
@@ -46,18 +46,18 @@ export async function revisarMensajesAutomaticosCese() {
       .lte('created_at', limite);
 
     if (errorPendientes) {
-      console.error(`Error consultando avisos de cese pendientes (prestadora ${prestadoraId}):`, errorPendientes.message);
+      console.error(`Error consultando avisos de cierre del servicio pendientes (prestadora ${prestadoraId}):`, errorPendientes.message);
       continue;
     }
 
     for (const pendiente of pendientes ?? []) {
-      await enviarMensajeDeCese({ pendiente, prestadoraId });
+      await enviarAvisoDelCierreDelServicio({ pendiente, prestadoraId });
     }
   }
 }
 
-async function enviarMensajeDeCese({ pendiente, prestadoraId }) {
-  const config = await configuracionEvento(EVENTO_CESE, prestadoraId);
+async function enviarAvisoDelCierreDelServicio({ pendiente, prestadoraId }) {
+  const config = await configuracionEvento(EVENTO_CIERRE_DEL_SERVICIO, prestadoraId);
   // Apagado en la pantalla de Avisos, no se manda por ningún canal. La marca de enviado se pone
   // igual más abajo: el plazo ya venció y este pendiente no tiene que volver mañana.
   const apagado = config?.activo === false;
@@ -76,7 +76,7 @@ async function enviarMensajeDeCese({ pendiente, prestadoraId }) {
         valores: [titulo, cuerpo],
       });
     } catch (err) {
-      console.error(`Error enviando WhatsApp de aviso de cese (asistente ${pendiente.asistente_id}):`, err.message);
+      console.error(`Error enviando WhatsApp de aviso de cierre del servicio (asistente ${pendiente.asistente_id}):`, err.message);
     }
   }
 
@@ -86,6 +86,6 @@ async function enviarMensajeDeCese({ pendiente, prestadoraId }) {
     .eq('prestadora_id', prestadoraId)
     .eq('id', pendiente.id);
   if (errorUpdate) {
-    console.error(`Error marcando aviso automático de cese enviado (${pendiente.id}):`, errorUpdate.message);
+    console.error(`Error marcando aviso automático de cierre del servicio enviado (${pendiente.id}):`, errorUpdate.message);
   }
 }

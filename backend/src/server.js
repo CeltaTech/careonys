@@ -88,7 +88,7 @@ import { panelAvisosEnVivoRouter } from './routes/panelAvisosEnVivo.js';
 import { cobranzaExternaRouter } from './routes/avisoDeCobranzaExterna.js';
 import { facturacionExternaRouter } from './routes/avisoDeFacturacionExterna.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
-import { revisarMensajesAutomaticosCese } from './utils/avisoAutomaticoCese.js';
+import { revisarAvisosAutomaticosDelCierreDelServicio } from './utils/avisoAutomaticoDelCierreDelServicio.js';
 import { responderError } from './utils/errorConMotivo.js';
 import { cargarMensajesDelSistema } from './i18n/cargarMensajesDelSistema.js';
 
@@ -256,9 +256,9 @@ programar(revisarRecordatoriosPush, CINCO_MINUTOS_MS);
 // clave crítica corre aparte, en el momento de confirmar el reporte (appAsistentes.js).
 programar(revisarAlertasIA, UN_DIA_MS);
 
-// Mensaje automático de cese de servicio al Asistente (Fase 6) — el plazo se mide en horas,
+// Aviso automático del cierre del servicio al Asistente (Fase 6) — el plazo se mide en horas,
 // misma cadencia que revisarAusenciasAutomaticas.
-programar(revisarMensajesAutomaticosCese, CINCO_MINUTOS_MS);
+programar(revisarAvisosAutomaticosDelCierreDelServicio, CINCO_MINUTOS_MS);
 
 // Mensaje al Coordinador de guardias próximas que siguen sin cubrir (pendiente #106,
 // docs/PLAN_HASTA_PRODUCCION.md). Con cuánta anticipación avisar y cada cuánto repetirlo los define

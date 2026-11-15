@@ -23,7 +23,7 @@ import './avisos.css';
 import { MINUTOS_REPETIR_EMERGENCIA, minutosRepetirEmergenciaAjustados } from '../../lib/minutosRepetirEmergencia';
 
 /* A quién se le avisa y por dónde: los correos de cada evento, la casilla desde la
-   que salen, el aviso de cese, la revisión con inteligencia artificial y todo lo de
+   que salen, el aviso del cierre del servicio, la revisión con inteligencia artificial y todo lo de
    WhatsApp. */
 export function ConfiguracionAvisos() {
   return (
@@ -240,7 +240,7 @@ function TabNotificaciones() {
         </div>
       </EstadoLista>
       </section>
-      <TabMensajeDeCese />
+      <TabAvisoDelCierreDelServicio />
       <TabMensajeGuardiaSinCubrir />
       <TabAvisoPrevioGuardia />
       <TabCorreoDeLaPrestadora />
@@ -597,7 +597,7 @@ function TabMensajeDeTexto() {
   );
 }
 
-function TabMensajeDeCese() {
+function TabAvisoDelCierreDelServicio() {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const [config, setConfig] = useState(null);
@@ -609,7 +609,7 @@ function TabMensajeDeCese() {
     setEstado('cargando');
     setError(null);
     const { data, error: errorConsulta } = await supabase
-      .from('configuracion_aviso_cese_asistente')
+      .from('configuracion_aviso_cierre_del_servicio')
       .select('*')
       .eq('prestadora_id', prestadoraId)
       .maybeSingle();
@@ -629,7 +629,7 @@ function TabMensajeDeCese() {
   async function guardar() {
     setGuardando(true);
     setError(null);
-    const { error: errorUpsert } = await supabase.from('configuracion_aviso_cese_asistente').upsert({
+    const { error: errorUpsert } = await supabase.from('configuracion_aviso_cierre_del_servicio').upsert({
       prestadora_id: prestadoraId,
       activo: config.activo,
       horas_plazo_aviso_verbal: Number(config.horas_plazo_aviso_verbal),
@@ -645,7 +645,7 @@ function TabMensajeDeCese() {
   return (
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.aviso_cese_titulo}</h2>
+        <h2>{t.configuracion.aviso_cierre_del_servicio_titulo}</h2>
       </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {config && (
@@ -653,15 +653,15 @@ function TabMensajeDeCese() {
             {error && <Alert variant="error">{error}</Alert>}
             <div className="molde-formgrid">
             <FormField
-              label={t.configuracion.aviso_cese_activo}
-              name="aviso_cese_activo"
+              label={t.configuracion.aviso_cierre_del_servicio_activo}
+              name="aviso_cierre_del_servicio_activo"
               type="checkbox"
               checked={config.activo}
               onChange={(e) => setConfig((c) => ({ ...c, activo: e.target.checked }))}
             />
             <FormField
-              label={t.configuracion.aviso_cese_horas_plazo}
-              name="aviso_cese_horas_plazo"
+              label={t.configuracion.aviso_cierre_del_servicio_horas_plazo}
+              name="aviso_cierre_del_servicio_horas_plazo"
               type="number"
               value={config.horas_plazo_aviso_verbal}
               onChange={(e) => setConfig((c) => ({ ...c, horas_plazo_aviso_verbal: e.target.value }))}
@@ -678,7 +678,7 @@ function TabMensajeDeCese() {
 }
 
 // Los dos números del mensaje de guardia sin cubrir (pendiente #106). Mismo camino que
-// TabMensajeDeCese —el navegador escribe directo en la tabla y RLS decide si puede— en vez de
+// TabAvisoDelCierreDelServicio —el navegador escribe directo en la tabla y RLS decide si puede— en vez de
 // una ruta nueva del backend: es la misma clase de dato y no hay motivo para dos caminos.
 function TabMensajeGuardiaSinCubrir() {
   const { t } = useLocale();

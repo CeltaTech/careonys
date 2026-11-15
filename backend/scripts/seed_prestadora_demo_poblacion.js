@@ -20,8 +20,6 @@ const CLAVES_TIPO = ['cuidador', 'enfermero', 'kinesiologo', 'medico'];
 const ZONAS = [
   'CABA', 'San Isidro', 'Vicente López', 'Tigre', 'Quilmes', 'Lomas de Zamora', 'La Matanza', 'Morón', 'San Martín', 'Avellaneda',
 ];
-const CAUSALES_BAJA = ['renuncia', 'mutuo_acuerdo', 'periodo_de_prueba'];
-
 function slug(nombre) {
   return nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, '.');
 }
@@ -44,12 +42,10 @@ function construirAsistente(nombre, idx) {
 
   let estado = 'activo';
   let fecha_baja = null;
-  let causal_baja = null;
   if (idx % 13 === 6) { estado = 'inactivo'; }
   if (idx % 13 === 11) {
     estado = 'cesado';
     fecha_baja = `2026-0${(idx % 6) + 1}-15`;
-    causal_baja = CAUSALES_BAJA[idx % CAUSALES_BAJA.length];
   }
 
   const anioAlta = 2022 + (idx % 4);
@@ -71,7 +67,6 @@ function construirAsistente(nombre, idx) {
     estado,
     fecha_alta: `${anioAlta}-${mesAlta}-${diaAlta}`,
     fecha_baja,
-    causal_baja,
   };
 }
 
@@ -181,15 +176,6 @@ async function main() {
       prestadora_id: PRESTADORA_ID,
       valor_hora: perfil.valor_hora,
     }).throwOnError();
-    // Por qué se lo dio de baja también va aparte, con su propio permiso
-    // (`ver_datos_reservados_asistente`). Solo se carga a quien tiene una baja.
-    if (perfil.causal_baja) {
-      await supabase.from('datos_reservados_asistente').insert({
-        asistente_id: asistenteId,
-        prestadora_id: PRESTADORA_ID,
-        causal_baja: perfil.causal_baja,
-      }).throwOnError();
-    }
     resumen.asistentes.push(asistenteId);
     console.log(`asistente OK (${i + 1}/${NOMBRES_ASISTENTES.length}): ${nombre}`);
   }

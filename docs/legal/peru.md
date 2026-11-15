@@ -32,9 +32,12 @@ estructura; **en obra** los textos por país — paso 127.
 - **Perú: el registro de accesos se conserva dos años y tiene que estar disponible de inmediato.**
   El art. 46 del DS 016-2024-JUS lo dice con esa palabra, y enumera qué anotar: cuentas, hora de
   inicio y de fin de sesión, y las operaciones de tratamiento, **visualización**, modificación,
-  eliminación, importación y exportación. Es la exigencia más precisa de los diez países y fija el
-  piso del paso 9. El art. 51 agrega respaldos **semanales** con verificación de integridad, y el
-  52 exige cifrado en toda transferencia externa. **En obra** — pasos 9, 13 y 126.
+  eliminación, importación y exportación. Es la exigencia más precisa de los diez países. **Cumple
+  parcialmente**: quedan anotadas la entrada al Panel de cada cuenta, cada visualización de
+  información de salud (`consultas_a_hce`), cada modificación con su versión y su autor, y cada
+  importación con quien la hizo. **En obra** la hora de fin de sesión y las exportaciones — paso
+  125. El art. 51 agrega respaldos **semanales** con verificación de integridad, y el
+  52 exige cifrado en toda transferencia externa. **En obra** — pasos 13 y 126.
 - **Perú exige representante en el país a quien opera desde afuera.** Art. VII del Título Preliminar
   del DS 016-2024-JUS. Es obligación de CeltaTech, no del producto, y es societaria: hay que
   resolverla antes de vender ahí. Ninguno de los otros nueve países la tiene. **No alcanza** — no

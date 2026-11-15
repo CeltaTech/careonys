@@ -67,7 +67,7 @@ que tener su documento (`celtatech/CLAUDE.md`, sección «El riesgo legal»).
   tablas de información de salud, y la función `interno.alcanza_la_informacion_de_salud`.
 - **Chile: el registro de accesos es de lecturas, y es reglamentario.** El mismo art. 9 del Decreto
   41/2012: «Este sistema debe llevar registro de las fechas y personas que han accedido a las
-  fichas.» No es auditoría de escritura. **En obra** — paso 9.
+  fichas.» No es auditoría de escritura. **Cumple**: cada lectura de información de salud queda anotada en `consultas_a_hce`, con quién, cuándo y qué Paciente.
 - **Chile: no hay refugio geográfico.** El art. 1 bis lit. b) de la Ley 19.628 nueva aplica la ley
   chilena al encargado que trata datos por cuenta de un responsable establecido en Chile, esté
   donde esté y con la base donde esté. Y el art. 3 de la Ley 20.584 lo dice desde el lado sanitario:

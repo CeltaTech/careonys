@@ -229,7 +229,7 @@ Lo demás de Argentina:
   **en obra**, sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`.
 - **Resolución AAIP 47/2018.** Medidas de seguridad recomendadas y contenido del informe de
   incidente. No es obligatoria, pero es el estándar contra el que mide la autoridad. **En obra** —
-  pasos 9, 13, 124 y 125.
+  pasos 13, 124 y 125.
 - **Ley 26.529.** Historia clínica cronológica, foliada y completa, propiedad del paciente, con
   copia entregada dentro de las 48 horas y conservación de **diez años como mínimo**. **En obra** —
   la copia en plazo, paso 123; la conservación, paso 122.
@@ -250,7 +250,8 @@ Lo demás de Argentina:
   aplica si Careonys presta teleasistencia en los términos de esa norma.
 - **Ley 27.706 art. 7.** Trazabilidad que asocie inequívocamente cada acción a una persona, y al
   menos tres niveles de acceso: consulta; consulta y actualización; consulta, actualización y
-  modificación. **En obra** — pasos 9 y 125. ⚠️ Sin verificar si fue reglamentada.
+  modificación. **Cumple** la trazabilidad: cada lectura de información de salud queda anotada en `consultas_a_hce`, con quién, cuándo y qué Paciente, y
+  cada corrección guarda su versión con su autor. **En obra** los tres niveles — paso 125. ⚠️ Sin verificar si fue reglamentada.
 - **Registro de bases del art. 21.** Lo inscribe la Prestadora, es gratuito, y el producto le avisa.
   **En obra** — paso 127.
 - **Sin plazo legal de notificación de brechas.** Se aplica igual el de 24 horas del paso 124, porque

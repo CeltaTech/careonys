@@ -38,9 +38,11 @@ No obliga todavía. Autocertificación desde el 26 de marzo de 2029 y ampliació
 organismo notificado. El art. 26(2) considera puesto en servicio el software ofrecido como servicio,
 así que alcanzará al producto.
 
-- **Anexo II sección 3** — cinco campos por evento de acceso. **En obra** — paso 9.
+- **Anexo II punto 3.2** — cinco campos por evento de acceso: quién accedió, qué persona, qué
+  categorías de datos, fecha y hora, y origen. **Cumple**: `consultas_a_hce` anota la Prestadora,
+  la persona, las categorías, el momento y el origen de cada lectura.
 - **Art. 9** — el paciente puede saber quién accedió a lo suyo, con tres años de disponibilidad.
-  **En obra** — paso 9.
+  **En obra** — paso 123.
 - **Anexo II sección 2** — exportación en formato interoperable. **En obra** — paso 123.
 - **Art. 54** — prohíbe el uso de los datos para entrenar modelos. **Cumple** — paso 130.
 

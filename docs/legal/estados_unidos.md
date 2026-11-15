@@ -17,12 +17,12 @@ la introducción de `docs/CUMPLIMIENTO_NORMATIVO.md`.
 | **164.312(a)(2)(iii)** | Cierre de sesión automático | **En obra** — paso 125. Hoy existe sólo para el permiso de acceso de CeltaTech |
 | **164.312(a)(2)(iv)** y **164.312(e)(2)(ii)** | Cifrado en reposo y en tránsito, «Addressable» | **Cumple en tránsito** (TLS forzado). **En obra** el resto — paso 13 |
 | **164.306(d)(3)** | Lo «Addressable» que no se implementa se documenta por escrito | **En obra** — paso 129 |
-| **164.312(b)** | Registro que examine la actividad sobre los sistemas con datos de salud | **En obra** — paso 9. Hoy se registran escrituras, no lecturas |
+| **164.312(b)** | Registro que examine la actividad sobre los sistemas con datos de salud | **Cumple**: cada lectura de información de salud queda anotada en `consultas_a_hce`, con quién, cuándo y qué Paciente; las correcciones guardan su versión con su autor, y las acciones sensibles quedan en `registro_actividad` |
 | **164.308(a)(1)(ii)(D)** «Required» | **Revisar** periódicamente los registros, con constancia | **En obra** — paso 121 |
 | **164.308(a)(1)(ii)(A)** | Análisis de riesgos | **En obra** — paso 129, con el Apéndice C de NIST SP 800-66r2, que enumera el acceso entre clientes como amenaza |
 | **164.306(a)(2)** | Protección frente a amenazas razonablemente anticipadas | **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md` |
 | **164.308(a)(7)(ii)(A)(B)(C)** «Required» | Copia exacta y recuperable, restauración, modo de emergencia | **En obra** — paso 126 |
-| **164.308(a)(4)** y mínimo necesario **164.502(b)** | Acceso acotado a lo necesario | **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`, pasos 9 y 10 |
+| **164.308(a)(4)** y mínimo necesario **164.502(b)** | Acceso acotado a lo necesario | **En obra** — sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md` |
 | **164.312(d)** | Verificación de identidad de quien accede | **Cumple parcialmente**: entrada con usuario y contraseña, sin segundo factor. La entrada con token está guardada en el estante de CeltaTech (`Codigos-utiles`) — paso 125 |
 | **164.410** | El business associate notifica la brecha al covered entity | **En obra** — paso 124, construido para 24 horas |
 | **164.402(2)** | Presunción de brecha salvo evaluación de cuatro factores, con carga de la prueba de la empresa | **En obra** — paso 124 |

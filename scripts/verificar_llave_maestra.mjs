@@ -19,7 +19,7 @@
 //      que git reconoce como renombrado de uno que ya estaba.
 //
 // La lista queda vacía y el chequeo sigue: si la llave vuelve a aparecer en cualquier archivo,
-// el push no sale (docs/PLAN_HASTA_PRODUCCION.md, paso 15).
+// el push no sale.
 // ---------------------------------------------------------------------------
 
 import { readFileSync, existsSync } from 'node:fs';

@@ -126,7 +126,7 @@ export async function habilitarCambioDeClave({ quien, usuarioId }) {
 }
 
 /**
- * El atajo del paso 17: quien atiende el llamado confirma que ese número es de esa persona, y con
+ * El atajo: quien atiende el llamado confirma que ese número es de esa persona, y con
  * eso el número no espera nada para servir de llave.
  *
  * NO CAMBIA EL NÚMERO. Confirma el que la cuenta ya tiene cargado. Cambiarlo es de la persona, con

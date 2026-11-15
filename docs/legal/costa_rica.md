@@ -23,7 +23,7 @@ texto compara con «los diez países», son los de Latinoamérica relevados en e
 - **Consentimiento expreso para datos de salud** (art. 5). **Cumple** la estructura; **en obra**
   los textos por país — paso 127.
 - **Registro de accesos con identidad y período de todas las personas que ingresaron** (reglamento
-  art. 47). **En obra** — paso 9. Hoy no se cumple: el registro anota escrituras, no lecturas.
+  art. 47). **Cumple**: cada lectura de información de salud queda anotada en `consultas_a_hce`, con quién, cuándo y qué Paciente.
 - **Plazo de conservación y anonimización al vencer** (Ley art. 6.1). **En obra** — paso 122.
 
 ### Las obligaciones particulares

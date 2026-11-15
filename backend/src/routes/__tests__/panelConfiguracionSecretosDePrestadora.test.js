@@ -1,5 +1,5 @@
 /**
- * Quién llega a los secretos de una Prestadora en Configuración (paso 10 del plan).
+ * Quién llega a los secretos de una Prestadora en Configuración.
  *
  *   npm test --prefix backend
  *

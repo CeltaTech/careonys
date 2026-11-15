@@ -1681,6 +1681,9 @@ alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva 
   La NEN 7513 (6.2.2) pide además que quede anotada como hecho aparte, no como una lectura más.
 - **Cierre por inactividad para todos**, no sólo para el permiso de acceso de CeltaTech. El Panel
   ya lo tiene; las dos aplicaciones no.
+- **Fin de sesión y exportaciones en el registro.** Perú (DS 016-2024-JUS art. 46) pide anotar la
+  hora de inicio y de fin de sesión y cada exportación. Hoy se anota la entrada al Panel; el fin de
+  sesión y las exportaciones, no.
 - **El acceso del personal propio.** C5 OPS-30.01B cubre la separación cliente-de-cliente **y**
   cliente-del-proveedor: el camino por el que el personal de CeltaTech alcanza los datos está dentro
   del alcance de la auditoría. La forma ya está escrita en `..\..\CLAUDE.md` §6 —una Organización

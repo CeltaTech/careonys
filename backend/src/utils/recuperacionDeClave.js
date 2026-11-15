@@ -189,7 +189,7 @@ async function puertaAbiertaParaLaCuenta(cuenta) {
  * NO DEVUELVE EL NÚMERO, ni entero ni tapado: la pantalla no lo necesita para pedirle a alguien que
  * mire su teléfono.
  *
- * Y CUANDO LA PRESTADORA YA HABILITÓ EL CAMBIO, no se pide nada. Es el paso 17: quien llamó por
+ * Y CUANDO LA PRESTADORA YA HABILITÓ EL CAMBIO, no se pide nada: quien llamó por
  * teléfono ya fue reconocido por una persona, y ésa es la salida cuando el segundo factor no se
  * puede cumplir —número perdido, número viejo, teléfono robado—.
  *

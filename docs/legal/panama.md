@@ -35,7 +35,7 @@ texto compara con «los diez países», son los de Latinoamérica relevados en e
   285 art. 35 num. 12). La norma panameña pide sólo dos datos: quién ingresó y en qué período; no
   exige anotar la operación ni el registro tocado. Aun así conviene anotar la operación, porque el
   art. 38 obliga a documentar «los hechos y efectos» de toda violación y sin eso es imposible.
-  **En obra** — paso 9. Hoy no se cumple: el registro anota escrituras, no lecturas.
+  **Cumple**: cada lectura de información de salud queda anotada en `consultas_a_hce`, con quién, cuándo y qué Paciente.
 - **Plazo de conservación y anonimización al vencer** (Decreto art. 7). **En obra** — paso 122.
 
 ### Las obligaciones particulares

@@ -359,7 +359,7 @@ describe('sin Prestadora activa no hay Match', () => {
 });
 
 // ---------------------------------------------------------------------------------------
-// Paso 7 del plan. Hasta acá el Match se abría por rol: una Prestadora que trabaja
+// Hasta acá el Match se abría por rol: una Prestadora que trabaja
 // solamente en prestación directa —que nunca contrató el Match— entraba a todas estas
 // rutas con sólo escribir la dirección, porque el único candado era quién es la persona, no
 // qué contrató la Prestadora. El menú del Panel ya escondía los enlaces, pero esconder un

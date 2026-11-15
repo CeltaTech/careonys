@@ -1302,17 +1302,10 @@ los registros de actividad y de errores guardan datos personales. Nada de esto e
 **Comprobación:** cada columna con dato personal tiene escrito para qué se usa, y ninguna queda sin
 uso.
 
-**158.** **Las correcciones de la información de salud que hace el backend quedan sin autor.** El
-backend las escribe con la credencial del trabajo sin persona, e `interno.anotar_version_clinica()`
-toma el autor de `auth.uid()`: de las 27 versiones de `versiones_registro_clinico`, ninguna tiene
-autor. La regla del producto pide `interno.usuario_de_la_sesion()` en un disparador, pero con el
-trabajo sin persona eso tampoco es la persona que corrigió: el backend tiene que pasar quién fue.
-Va en su propia tarea porque cambia cómo escribe el backend toda corrección clínica. Se cierra cuando
-una corrección hecha desde el Panel queda con el autor que la hizo.
-
-**159.** `domicilios_temporales_paciente` guarda sus versiones con el disparador de la información
-de salud, pero sin la nota que explica cada corrección. Va con el paso 158, porque es el mismo
-disparador.
+**159. Usted** — `domicilios_temporales_paciente` guarda sus versiones con el disparador de la información
+de salud, pero sin la nota que explica cada corrección: la tabla no tiene dónde guardarla. Hace
+falta la columna y un casillero en el formulario del Panel, y el casillero es interfaz: espera el sí
+del Desarrollador.
 
 ---
 

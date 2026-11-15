@@ -1405,12 +1405,28 @@ async function probarLoQueCargaOtroCoordinador({ base, llavePublica }, d) {
       const [[despues]] = consultarBase(`SELECT count(*) FROM public.domicilios_temporales_paciente WHERE domicilio = '${domicilio}';`);
       if (acepta.cuerpo === true && despues === '1') bien('la administración la acepta y queda vigente');
       else mal('la administración la acepta y queda vigente', `${acepta.estado} ${JSON.stringify(acepta.cuerpo)} vigentes=${despues}`);
+
+      // Quien corrige desde el Panel queda anotado como autor de la versión, sin que el backend
+      // tenga que decirlo: la base lo toma de la sesión.
+      const [[adminId]] = consultarBase(`SELECT id FROM public.usuarios WHERE lower(email) = '${ADMINISTRADORA}';`);
+      const corrige = await pedir(admin, 'PATCH', `domicilios_temporales_paciente?domicilio=eq.${encodeURIComponent(domicilio)}`,
+        { motivo: 'Prueba corregida' });
+      const autores = consultarBase(`SELECT v.operacion, coalesce(v.autor_id::text, 'sin autor')
+          FROM public.versiones_registro_clinico v JOIN public.domicilios_temporales_paciente t ON t.id = v.registro_id
+         WHERE t.domicilio = '${domicilio}' ORDER BY v.version;`);
+      const correccion = autores.find(([operacion]) => operacion === 'modificacion');
+      if (corrige.estado < 400 && correccion?.[1] === adminId) bien('la corrección queda con el autor que la hizo');
+      else mal('la corrección queda con el autor que la hizo', `${corrige.estado} versiones=${JSON.stringify(autores)}`);
+      if (autores.every(([, autor]) => autor !== 'sin autor')) bien('ninguna versión del domicilio queda sin autor');
+      else mal('ninguna versión del domicilio queda sin autor', JSON.stringify(autores));
     }
   } finally {
     consultarBase(`UPDATE public.servicios SET coordinador_id = '${carla}' WHERE id IN (${lista});`);
     // El domicilio temporal es historia clínica y un disparador impide borrarlo; lo de la prueba se
     // borra igual, con los disparadores apagados sólo para esta limpieza.
     consultarBase(`SET session_replication_role = replica;
+      DELETE FROM public.versiones_registro_clinico WHERE registro_id IN
+        (SELECT id FROM public.domicilios_temporales_paciente WHERE domicilio = '${domicilio}');
       DELETE FROM public.domicilios_temporales_paciente WHERE domicilio = '${domicilio}';
       DELETE FROM public.cargas_sujetas_a_aprobacion WHERE datos->>'domicilio' = '${domicilio}';
       DELETE FROM public.usuarios WHERE id = '${otro}';

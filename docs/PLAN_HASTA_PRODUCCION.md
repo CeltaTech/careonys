@@ -1389,7 +1389,7 @@ compra de un acceso de Match», y cómo queda Match, en `docs/PRD_07_Modalidad_M
 Prestadora puede tener a la vez Asistentes independientes y empleados en relación de dependencia,
 y cuál es cada uno lo anota la relación laboral de su Legajo. Lo que no está en el producto es el
 cálculo del sueldo, de la indemnización y del cese: el código está en el estante, en
-`Codigos-utilesinculo-laboral-cese-y-riesgo-de-dependencia`, y lo que usaba en la base ya salió.
+`celtatech/Codigos-utiles/vinculo-laboral-cese-y-riesgo-de-dependencia`, y lo que usaba en la base ya salió.
 
 **Los mensajes de cobros y facturación se redactan acá, no antes.** Salieron de la revisión de
 frases porque se van con el módulo: en el Panel, forma de cobro con nombre repetido, renovación sin período, falta la fecha
@@ -1400,18 +1400,12 @@ comprobante y faltan datos de la corrección.
 
 ## Decisiones que no traban nada empezado
 
-**150. Usted** — ¿El Coordinador sólo mira las ausencias y las guardias de cobertura de sus
-Asistentes, o también las carga, las cambia y las borra? Hoy hace las cuatro cosas: las políticas
-`coordinador_gestiona_ausencias_de_su_zona` y `coordinador_gestiona_guardias_cobertura_de_su_zona`
-le dejan todo. Si queda sólo la lectura, se cambian las dos políticas.
-
 **151. Usted** — ¿Qué tabla de opciones queda? Hay dos para lo mismo: `listas_de_opciones`, con su
 pantalla y cuatro listas cargadas, y `opciones_postulacion`, vacía, que lee sólo el detalle de la
 postulación para las especialidades (`panel/src/pages/PostulacionDetalle.jsx:50`).
 
 **152.** Hacerlo según lo contestado, y sumar al glosario de los productos Careonys las palabras que
-sigan en uso: «Guardia de cobertura» y, si queda, «Escala legal». Las definiciones se le presentan
-para aprobar.
+sigan en uso: «Guardia de cobertura». La definición se le presenta para aprobar.
 
 **162. Usted** — La consulta de antecedentes penales hoy es manual. Si se automatiza, ¿con qué
 proveedor?

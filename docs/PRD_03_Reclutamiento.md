@@ -215,8 +215,9 @@ entero— no están en el producto: están en el estante,
 `celtatech/Codigos-utiles/postulacion-desde-un-sitio-publico/`, con su documento de cómo se
 vuelven a poner.
 
-**Faltan la pantalla y la entrada del backend.** Dónde vive el formulario público y el
-formulario en sí son los pasos 65 y 66 de `docs/PLAN_HASTA_PRODUCCION.md`.
+**Falta la API del formulario.** El formulario va en el sitio de cada Prestadora, hecho con quien
+ella elija, y Careonys lo entrega por una API única (`docs/PRD_01_Sitio_Web.md`, §8). Es el paso 66
+de `docs/PLAN_HASTA_PRODUCCION.md`.
 
 ## Panel de administración — sección Postulantes
 

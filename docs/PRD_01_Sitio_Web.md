@@ -185,10 +185,16 @@ La pregunta es si el sitio que **sí** le habla a quien busca cuidado —el de c
 de cuidados, con sus servicios y su teléfono— es una función de Careonys, algo que cada
 empresa se arregla por su cuenta, o nada.
 
-**Respuesta (decidida por el Desarrollador): no es una función de Careonys,
-pero tampoco queda librada al cliente.** La página con la que cada Prestadora se publicita
-—la que enlaza desde sus redes— se va a armar con **OctoBuilder**, el generador de páginas
-web de CeltaTech, que todavía está por construirse.
+**Respuesta (decidida por el Desarrollador): no es una función de Careonys, y cada
+Prestadora lo arma con quien elija.** La página con la que se publicita —la que enlaza desde
+sus redes— la puede hacer su propio diseñador, cualquier servicio de páginas web, o
+**OctoBuilder**, el generador de páginas web de CeltaTech, que todavía está por construirse.
+OctoBuilder es una opción, no una obligación.
+
+**El formulario de postulación es de Careonys y llega por una API única.** Esa API entrega la
+definición del formulario —sus casilleros, sus listas de opciones y cuáles son obligatorios— y
+recibe la postulación. Con OctoBuilder, el formulario viene listo como una pieza más de la
+página. Con otro diseñador, el diseñador lo conecta a la misma API.
 
 Por qué va afuera y no acá adentro:
 
@@ -203,9 +209,10 @@ Por qué va afuera y no acá adentro:
 3. **Cada empresa va a querer su diseño, su dominio y su correo.** Como función suelta metida
    acá, eso sería soporte para siempre.
 
-**Qué cambia en este repositorio: nada.** OctoBuilder es de CeltaTech y todavía no existe.
-Mientras tanto, la empresa que ya tiene su página sigue con la suya, y desde ahí manda a sus
-clientes y a sus asistentes a las direcciones que le damos.
+**Qué cambia en este repositorio: sólo la API del formulario de postulación**
+(`docs/PLAN_HASTA_PRODUCCION.md`, paso 66). El sitio queda afuera. OctoBuilder es de CeltaTech
+y todavía no existe; mientras tanto, la empresa que ya tiene su página sigue con la suya, y
+desde ahí manda a sus clientes y a sus asistentes a las direcciones que le damos.
 
 **Lo que sí conviene no olvidar cuando OctoBuilder se construya:** esa página va a querer
 mostrar cosas que Careonys ya sabe —los servicios que la Prestadora ofrece, sus zonas de

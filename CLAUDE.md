@@ -56,8 +56,11 @@ dirección de correo no es una dirección web. **Careonys no le construye a ning
 dirección web propia dentro del producto: el Panel y las aplicaciones son los mismos para todas.**
 Eso no impide que cada Prestadora tenga su propio sitio público. Al contrario, es lo que
 corresponde, porque así ninguna se mezcla con las demás y cada una defiende sus intereses a su
-manera. El sitio lo hace ella con quien elija, o con el creador de páginas de CeltaTech cuando esté
-listo. En ese sitio va su formulario de postulación, que Careonys le da por API.
+manera. El sitio lo hace ella con quien elija; OctoBuilder, el creador de páginas de CeltaTech, es
+una opción y no una obligación. En ese sitio va su formulario de postulación, que Careonys le da
+por una API única: la API entrega la definición del formulario —casilleros, listas, cuáles son
+obligatorios— y recibe la postulación. OctoBuilder lo trae listo como una pieza más de la página;
+con otro diseñador, el diseñador lo conecta a la misma API.
 
 ## 2. Sandbox
 

@@ -637,3 +637,8 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el esquema vivía sólo en `supabase/migrations/`, una foto inicial con los cambios apilados encima, y fuera de esa carpeta no se guardaba ningún `.sql` de esquema.
 - **Qué dice ahora:** las migraciones se fundieron en una foto única y el esquema declarado, `supabase/schemas/careonys.sql`, dice cómo es la base hoy; un cambio de estructura se escribe ahí primero y la migración sale de `supabase db diff`.
 - **Motivo:** el plan hasta producción lo pide en los cimientos, para que el estado se lea en un archivo y ninguna migración vieja se confunda con él.
+## El sitio de cada Prestadora lo arma ella con quien elija
+
+- **Qué decía antes:** el sitio de cada Prestadora no era función de Careonys, pero tampoco quedaba librado a ella: se iba a armar siempre con OctoBuilder.
+- **Qué dice ahora:** cada Prestadora arma su sitio con quien elija, y OctoBuilder es una opción. El formulario de postulación lo entrega Careonys por una API única, con su definición; OctoBuilder lo trae listo y otro diseñador lo conecta a la misma API.
+- **Motivo:** obligar a usar OctoBuilder era imponerle a la Prestadora con quién hacer su sitio.

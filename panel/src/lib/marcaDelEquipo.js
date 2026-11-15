@@ -20,20 +20,34 @@ import { IDENTIDAD } from '../config/identidadProducto';
    entonces las dos funciones no hacen nada y no se rompen. Quien esté en esa situación escribe el
    código en cada entrada, que es molesto pero seguro. */
 
-const CLAVE = `${IDENTIDAD.codigo}_marca_del_equipo`;
+// UNA POR CUENTA. Quien trabaja para dos Prestadoras tiene dos cuentas, y el backend reconoce el
+// aparato por cuenta. Con un solo casillero para todas, la última pisaba a la anterior y una marca
+// de una Organización viajaba adentro del pedido de otra.
+const PREFIJO = `${IDENTIDAD.codigo}_marca_del_equipo`;
 
-export function marcaGuardada() {
+// El casillero de antes, compartido por todas las cuentas. Se borra al guardar la primera marca nueva.
+const CLAVE_COMPARTIDA = PREFIJO;
+
+function claveDe(cuentaId) {
+  return cuentaId ? `${PREFIJO}_${cuentaId}` : null;
+}
+
+export function marcaGuardada(cuentaId) {
+  const clave = claveDe(cuentaId);
+  if (!clave) return null;
   try {
-    return window.localStorage.getItem(CLAVE) || null;
+    return window.localStorage.getItem(clave) || null;
   } catch {
     return null;
   }
 }
 
-export function guardarMarca(marca) {
-  if (!marca) return;
+export function guardarMarca(cuentaId, marca) {
+  const clave = claveDe(cuentaId);
+  if (!clave || !marca) return;
   try {
-    window.localStorage.setItem(CLAVE, marca);
+    window.localStorage.setItem(clave, marca);
+    window.localStorage.removeItem(CLAVE_COMPARTIDA);
   } catch {
     // Sin almacenamiento, este aparato vuelve a ser nuevo la próxima vez. No hay nada que hacer.
   }

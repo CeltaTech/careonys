@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { llamarApiPanel } from '../../lib/apiPanel';
@@ -21,6 +22,8 @@ import { FormField } from '../ui/FormField';
    Mientras el código esté pendiente, la pantalla de atrás no se usa. */
 export function EquipoNuevo() {
   const { t } = useLocale();
+  const { session } = useAuth();
+  const cuentaId = session?.user?.id ?? null;
   // No lleva forma de cerrarse: mientras el código esté pendiente no hay nada que hacer detrás.
   // El recuadro se anuncia igual y el tabulador da la vuelta adentro.
   const modal = useModalAccesible(() => {});
@@ -30,16 +33,18 @@ export function EquipoNuevo() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Sin cuenta todavía no hay casillero que leer: se pregunta cuando la sesión está hecha.
+    if (!cuentaId) return undefined;
     let vigente = true;
 
     (async () => {
       try {
         const respuesta = await llamarApiPanel('/cuenta-segura/equipo/reconocer', {
           method: 'POST',
-          body: JSON.stringify({ marca: marcaGuardada() }),
+          body: JSON.stringify({ marca: marcaGuardada(cuentaId) }),
         });
         if (!vigente) return;
-        if (respuesta.marca) guardarMarca(respuesta.marca);
+        if (respuesta.marca) guardarMarca(cuentaId, respuesta.marca);
         if (respuesta.requiereCodigo) setPidiendoCodigo(true);
       } catch (err) {
         // Que este control falle no puede dejar a nadie afuera del Panel: lo que se pierde es la
@@ -51,7 +56,7 @@ export function EquipoNuevo() {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [cuentaId]);
 
   if (!pidiendoCodigo) return null;
 
@@ -64,7 +69,7 @@ export function EquipoNuevo() {
         method: 'POST',
         body: JSON.stringify({ codigo }),
       });
-      if (respuesta.marca) guardarMarca(respuesta.marca);
+      if (respuesta.marca) guardarMarca(cuentaId, respuesta.marca);
       setPidiendoCodigo(false);
       setCodigo('');
     } catch (err) {

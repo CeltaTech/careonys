@@ -959,10 +959,6 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
   la de la sesión. Hoy coincide. Es un dato de aislamiento viajando por un camino que la sesión no
   controla.
 
-**51.** La marca del equipo del Panel usa un solo casillero del navegador para todas las
-Prestadoras: la última pisa a la anterior. El backend la valida contra la Prestadora, así que no
-sale ningún dato; es un dato de una Organización viajando adentro del pedido de otra.
-
 **156. Usted** — El teléfono del Asistente en el Legajo y en las postulaciones se muestra sin enlace
 a WhatsApp, y en la Ficha del cliente sí lo tiene (`linkWhatsapp`, `panel/src/lib/telefono.js:3`).
 ¿Se le pone el mismo enlace? Es interfaz, así que espera su sí.

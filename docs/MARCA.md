@@ -67,9 +67,24 @@ en el alta.
 
 **El nombre de fantasía se guarda una sola vez**, en `prestadoras.nombre_fantasia`, y de ahí lo
 leen el Panel, las dos aplicaciones, los correos y los avisos. **El logo** es una imagen PNG, JPG o
-WEBP de hasta 2 MB; SVG no entra, porque puede llevar programas adentro y se sirve con dirección
-pública. Los dos controles los hace el backend (`backend/src/routes/panelConfiguracion.js`), porque
-el depósito no tiene tope de tamaño ni de tipo.
+WEBP de hasta 2 MB, y es el que se ve en internet; SVG no entra, porque puede llevar programas
+adentro y se sirve con dirección pública. Los dos controles los hace el backend
+(`backend/src/routes/panelConfiguracion.js`), porque el depósito no tiene tope de tamaño ni de tipo.
+
+**El logo para impresión es otro archivo, opcional.** Es el que llevan los documentos que se
+imprimen —presupuestos, facturas, correspondencia—: PNG, JPG o SVG de hasta 2 MB, en el depósito
+privado `logos-para-impresion`, ruta `<id de la Prestadora>/logo.<extensión>`, guardado en
+`prestadoras.logo_impresion_ruta` y servido con enlace temporal. Un SVG se acepta sólo si no trae
+programas adentro (`backend/src/utils/logoParaImpresion.js`, `esUnSvgSinProgramas`).
+
+**Qué logo lleva un documento** lo decide `logoParaDocumentos` en ese mismo archivo: el de
+impresión si está cargado; si no, el de internet cuando es PNG o JPG; si es WEBP, el documento sale
+sin logo, con el nombre escrito.
+
+**El membrete se dibuja en un solo lugar**, `panel/src/lib/membrete.js`: `prepararMembrete()` baja
+el logo que contesta `/api/panel/membrete/logo` —un SVG lo pasa a PNG— y `dibujarMembrete()` pone
+el logo, el nombre de la Prestadora y el título del documento. Un documento nuevo lo suma con esas
+dos llamadas. Hoy lo usa la constancia de ausencia.
 
 **Dónde viven los archivos de marca de la Prestadora.** En el depósito `marca-prestadoras`, y
 cada Prestadora tiene su carpeta, que se llama como su identificador:

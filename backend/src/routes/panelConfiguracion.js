@@ -7,6 +7,13 @@ import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
+import {
+  DEPOSITO_DE_LOGOS_PARA_IMPRESION,
+  TAMANO_MAXIMO_DEL_LOGO_PARA_IMPRESION,
+  TIPOS_DE_LOGO_PARA_IMPRESION,
+  enlaceDelLogoParaImpresion,
+  esUnSvgSinProgramas,
+} from '../utils/logoParaImpresion.js';
 import { prestadoraVisible, prestadoraVisibleOContestar } from '../utils/prestadoraVisible.js';
 import { CLAVES_DE_LAS_CONDICIONES, condicionesDe, condicionesQueSePuedenGuardar } from '../utils/condicionesDelCliente.js';
 import { personasDelPanel, responsableDelReclutamiento } from '../utils/responsableDelReclutamiento.js';
@@ -130,10 +137,24 @@ panelConfiguracionRouter.get('/empresa', async (req, res) => {
   const db = clienteDelPedido(req);
   const [{ data, error }, { data: prestadora, error: errorPrestadora }] = await Promise.all([
     db.from('configuracion_prestadora').select('*').single(),
-    db.from('prestadoras').select('nombre_fantasia, logo_url').single(),
+    db.from('prestadoras').select('nombre_fantasia, logo_url, logo_impresion_ruta').single(),
   ]);
   if (error || errorPrestadora) return responderError(res, error || errorPrestadora);
-  res.json({ empresa: { ...data, nombre: prestadora.nombre_fantasia, logo_url: prestadora.logo_url } });
+  // El logo para impresión vive en un depósito privado: viaja con enlace temporal, para verlo.
+  let logoImpresionUrl = null;
+  try {
+    logoImpresionUrl = await enlaceDelLogoParaImpresion(db, prestadora.logo_impresion_ruta);
+  } catch (errorDelEnlace) {
+    return responderError(res, errorDelEnlace);
+  }
+  res.json({
+    empresa: {
+      ...data,
+      nombre: prestadora.nombre_fantasia,
+      logo_url: prestadora.logo_url,
+      logo_impresion_url: logoImpresionUrl,
+    },
+  });
 });
 
 panelConfiguracionRouter.patch('/empresa', async (req, res) => {
@@ -264,6 +285,82 @@ panelConfiguracionRouter.delete('/empresa/logo', async (req, res) => {
     await borrarLogosDeLaCarpeta(db, prestadoraId);
     await anotarLogo(req, prestadoraId, null);
     res.json({ logo_url: null });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// --- El logo para impresión ---
+//
+// El que va en los documentos que se imprimen: presupuestos, facturas, correspondencia. Acepta PNG,
+// JPG o SVG, y vive en el depósito privado `logos-para-impresion`, en la carpeta de la Prestadora.
+// Qué logo lleva cada documento lo decide `utils/logoParaImpresion.js`. Escribirlo sólo puede su
+// Administración, en su carpeta: lo hace cumplir el depósito.
+const subidaDelLogoParaImpresion = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: TAMANO_MAXIMO_DEL_LOGO_PARA_IMPRESION, files: 1 },
+  fileFilter(req, file, cb) {
+    cb(null, TIPOS_DE_LOGO_PARA_IMPRESION.includes(file.mimetype));
+  },
+}).single('logo');
+
+async function borrarLogosParaImpresion(db, prestadoraId) {
+  const deposito = db.storage.from(DEPOSITO_DE_LOGOS_PARA_IMPRESION);
+  const { data: archivos, error } = await deposito.list(prestadoraId);
+  if (error) throw error;
+  const rutas = (archivos ?? []).filter((a) => a.name?.startsWith('logo.')).map((a) => `${prestadoraId}/${a.name}`);
+  if (!rutas.length) return;
+  const { error: errorAlBorrar } = await deposito.remove(rutas);
+  if (errorAlBorrar) throw errorAlBorrar;
+}
+
+async function anotarLogoParaImpresion(req, prestadoraId, ruta) {
+  const { error } = await enLaPrestadora(prestadoraId, 'cambio del logo para impresión', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ logo_impresion_ruta: ruta }).eq('id', prestadoraId));
+  if (error) throw error;
+  await registrarActividad(req.usuarioPanel, ACCION_MODIFICACION_CRITICA, {
+    tablaAfectada: 'prestadoras',
+    registroId: prestadoraId,
+    camposCambiados: ['logo_impresion_ruta'],
+  });
+}
+
+panelConfiguracionRouter.put('/empresa/logo-impresion', (req, res) => {
+  subidaDelLogoParaImpresion(req, res, async (errorDeSubida) => {
+    try {
+      if (errorDeSubida || !req.file) {
+        return responderError(res, new ErrorConMotivo('logo_para_impresion_invalido', errorDeSubida?.message ?? 'logo sin imagen o de otro tipo'));
+      }
+      if (req.file.mimetype === 'image/svg+xml' && !esUnSvgSinProgramas(req.file.buffer)) {
+        return responderError(res, new ErrorConMotivo('logo_para_impresion_invalido', 'SVG con programas adentro o que no es un dibujo'));
+      }
+      const db = clienteDelPedido(req);
+      const prestadoraId = await prestadoraVisibleOContestar(db, res);
+      if (!prestadoraId) return;
+
+      await borrarLogosParaImpresion(db, prestadoraId);
+      const ruta = `${prestadoraId}/logo.${extensionDeArchivo(req.file.mimetype)}`;
+      const { error: errorAlSubir } = await db.storage
+        .from(DEPOSITO_DE_LOGOS_PARA_IMPRESION)
+        .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+      if (errorAlSubir) throw errorAlSubir;
+
+      await anotarLogoParaImpresion(req, prestadoraId, ruta);
+      res.json({ logo_impresion_url: await enlaceDelLogoParaImpresion(db, ruta) });
+    } catch (error) {
+      responderError(res, error);
+    }
+  });
+});
+
+panelConfiguracionRouter.delete('/empresa/logo-impresion', async (req, res) => {
+  try {
+    const db = clienteDelPedido(req);
+    const prestadoraId = await prestadoraVisibleOContestar(db, res);
+    if (!prestadoraId) return;
+    await borrarLogosParaImpresion(db, prestadoraId);
+    await anotarLogoParaImpresion(req, prestadoraId, null);
+    res.json({ logo_impresion_url: null });
   } catch (error) {
     responderError(res, error);
   }

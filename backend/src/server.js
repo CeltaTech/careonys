@@ -20,6 +20,7 @@ import { panelReferenciasLaboralesRouter } from './routes/panelReferenciasLabora
 import { panelDocumentosAsistenteRouter } from './routes/panelDocumentosAsistente.js';
 import { panelPersonasTelefonosRouter } from './routes/panelPersonasTelefonos.js';
 import { panelConfiguracionRouter } from './routes/panelConfiguracion.js';
+import { panelMembreteRouter } from './routes/panelMembrete.js';
 import { panelContenidosRouter } from './routes/panelContenidos.js';
 import { panelImportacionRouter } from './routes/panelImportacion.js';
 import { panelActualizacionRouter } from './routes/panelActualizacion.js';
@@ -156,6 +157,7 @@ app.use('/api/panel/referencias-laborales', panelReferenciasLaboralesRouter);
 app.use('/api/panel/documentos-asistente', panelDocumentosAsistenteRouter);
 app.use('/api/panel/personas/telefonos', panelPersonasTelefonosRouter);
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
+app.use('/api/panel/membrete', panelMembreteRouter);
 app.use('/api/panel/importacion', panelImportacionRouter);
 app.use('/api/panel/actualizacion', panelActualizacionRouter);
 app.use('/api/panel/informes-obra-social', panelInformesObraSocialRouter);

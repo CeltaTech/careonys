@@ -7,6 +7,7 @@ import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion'
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { IconoInfo } from '../../components/ui/IconoInfo';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
@@ -116,12 +117,26 @@ function TabEmpresa() {
               <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
             </div>
             <ElLogo
+              ruta="/empresa/logo"
+              tipos="image/png,image/jpeg,image/webp"
+              claveDeRespuesta="logo_url"
+              etiqueta={t.configuracion.empresa_logo}
               logoUrl={form.logo_url}
               nombre={form.nombre}
               alCambiar={(logoUrl) => {
                 setForm((f) => ({ ...f, logo_url: logoUrl }));
                 recargarEmpresa();
               }}
+            />
+            <ElLogo
+              ruta="/empresa/logo-impresion"
+              tipos="image/png,image/jpeg,image/svg+xml"
+              claveDeRespuesta="logo_impresion_url"
+              etiqueta={t.configuracion.empresa_logo_impresion}
+              info={t.configuracion.empresa_logo_impresion_info}
+              logoUrl={form.logo_impresion_url}
+              nombre={form.nombre}
+              alCambiar={(logoUrl) => setForm((f) => ({ ...f, logo_impresion_url: logoUrl }))}
             />
           </>
         )}
@@ -130,10 +145,11 @@ function TabEmpresa() {
   );
 }
 
-/* El logo de la Prestadora: el que ven sus Clientes y sus Asistentes arriba de las dos
-   aplicaciones. Se guarda apenas se elige el archivo, sin esperar al botón de los datos, porque
-   es un archivo y no un casillero. Sin logo, las aplicaciones muestran el nombre escrito. */
-function ElLogo({ logoUrl, nombre, alCambiar }) {
+/* Un logo de la Prestadora. Son dos, con el mismo casillero: el de internet, que ven sus Clientes
+   y sus Asistentes arriba de las dos aplicaciones, y el de impresión, que va en el membrete de los
+   documentos (`lib/membrete.js`). Se guarda apenas se elige el archivo, sin esperar al botón de
+   los datos, porque es un archivo y no un casillero. */
+function ElLogo({ ruta, tipos, claveDeRespuesta, etiqueta, info, logoUrl, nombre, alCambiar }) {
   const { t } = useLocale();
   const elegir = useRef(null);
   const [trabajando, setTrabajando] = useState(false);
@@ -146,8 +162,8 @@ function ElLogo({ logoUrl, nombre, alCambiar }) {
     try {
       const cuerpo = new FormData();
       cuerpo.append('logo', archivo);
-      const { logo_url } = await llamarApi('/empresa/logo', { method: 'PUT', body: cuerpo });
-      alCambiar(logo_url);
+      const respuesta = await llamarApi(ruta, { method: 'PUT', body: cuerpo });
+      alCambiar(respuesta[claveDeRespuesta] ?? null);
     } catch (err) {
       setError(mensajeDeError(err, t, 'subida del logo'));
     } finally {
@@ -160,7 +176,7 @@ function ElLogo({ logoUrl, nombre, alCambiar }) {
     setTrabajando(true);
     setError(null);
     try {
-      await llamarApi('/empresa/logo', { method: 'DELETE' });
+      await llamarApi(ruta, { method: 'DELETE' });
       alCambiar(null);
     } catch (err) {
       setError(mensajeDeError(err, t, 'quitar el logo'));
@@ -171,13 +187,16 @@ function ElLogo({ logoUrl, nombre, alCambiar }) {
 
   return (
     <div className="molde-logo-prestadora">
-      <span className="molde-logo-prestadora-etiqueta">{t.configuracion.empresa_logo}</span>
+      <span className="molde-logo-prestadora-etiqueta">
+        {etiqueta}
+        {info && <IconoInfo texto={info} etiqueta={t.configuracion.empresa_logo_que_formato} />}
+      </span>
       {error && <Alert variant="error">{error}</Alert>}
       {logoUrl && <img className="molde-logo-prestadora-imagen" src={logoUrl} alt={nombre || ''} />}
       <input
         ref={elegir}
         type="file"
-        accept="image/png,image/jpeg,image/webp"
+        accept={tipos}
         hidden
         onChange={(e) => subir(e.target.files?.[0])}
       />

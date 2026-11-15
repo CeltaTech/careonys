@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { dibujarMembrete } from './membrete';
 
 // La constancia de ausencia justificada que se le entrega a un Asistente: un PDF armado con los
 // datos de la ausencia ya cargada. No calcula nada ni inventa texto legal; devuelve el documento
@@ -27,18 +28,6 @@ function nuevoDocumento() {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   doc.setFont('helvetica', 'normal');
   return doc;
-}
-
-function encabezado(doc, titulo, nombreEmpresa) {
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(nombreEmpresa.toUpperCase(), MARGEN, 20);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(titulo, MARGEN, 28);
-  doc.setDrawColor(180);
-  doc.line(MARGEN, 32, MARGEN + ANCHO_UTIL, 32);
-  return 42;
 }
 
 function parrafo(doc, texto, y, opciones = {}) {
@@ -71,9 +60,10 @@ function formatoFecha(fecha) {
   return new Date(fecha).toLocaleDateString(IDIOMA_DEL_DOCUMENTO);
 }
 
-export function generarConstanciaAusencia({ asistente, ausencia, tipoLabel, nombreEmpresa }) {
+// `membrete` es el que devuelve `prepararMembrete()` de `membrete.js`; sin él sale con el nombre escrito.
+export function generarConstanciaAusencia({ asistente, ausencia, tipoLabel, nombreEmpresa, membrete = null }) {
   const doc = nuevoDocumento();
-  let y = encabezado(doc, 'Constancia de ausencia justificada', nombreEmpresa);
+  let y = dibujarMembrete(doc, membrete, { nombre: nombreEmpresa, titulo: 'Constancia de ausencia justificada' });
 
   y = parrafo(doc, `Asistente: ${asistente.nombre} (DNI ${asistente.dni ?? '—'})`, y);
   y = parrafo(doc, `Tipo de ausencia: ${tipoLabel}`, y);

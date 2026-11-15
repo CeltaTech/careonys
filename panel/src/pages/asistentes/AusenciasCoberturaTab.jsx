@@ -8,6 +8,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/constanciaDeAusencia';
+import { prepararMembrete } from '../../lib/membrete';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { guardiasAfectadas, guardiasSinCubrir, sumarLasYaCubiertas } from '../../lib/guardiasAfectadas';
 import { diasComputados } from '../../lib/diasDeAusencia';
@@ -59,6 +60,7 @@ export function AusenciasCoberturaTab({ asistente }) {
   const [turnosCubiertos, setTurnosCubiertos] = useState({});
   const [turnosFijos, setTurnosFijos] = useState([]);
   const [subiendoCertificado, setSubiendoCertificado] = useState(null);
+  const [armandoConstancia, setArmandoConstancia] = useState(null);
   const [errorCertificado, setErrorCertificado] = useState(null);
   const {
     filas: motivosSustitucion,
@@ -284,11 +286,17 @@ export function AusenciasCoberturaTab({ asistente }) {
     return new Date(`${fecha}T00:00:00`).toLocaleDateString(locale);
   }
 
-  function descargarConstancia(ausencia) {
-    const doc = generarConstanciaAusencia({
-      asistente, ausencia, tipoLabel: t.asistentes.ausencias[`tipo_${ausencia.tipo}`], nombreEmpresa: empresa?.nombre ?? '',
-    });
-    descargarPDF(doc, `constancia-ausencia-${asistente.nombre}-${ausencia.fecha_inicio}.pdf`);
+  async function descargarConstancia(ausencia) {
+    setArmandoConstancia(ausencia.id);
+    try {
+      const membrete = await prepararMembrete();
+      const doc = generarConstanciaAusencia({
+        asistente, ausencia, tipoLabel: t.asistentes.ausencias[`tipo_${ausencia.tipo}`], nombreEmpresa: empresa?.nombre ?? '', membrete,
+      });
+      descargarPDF(doc, `constancia-ausencia-${asistente.nombre}-${ausencia.fecha_inicio}.pdf`);
+    } finally {
+      setArmandoConstancia(null);
+    }
   }
 
   async function subirCertificado(ausenciaId, archivo) {
@@ -493,7 +501,7 @@ export function AusenciasCoberturaTab({ asistente }) {
                   </div>
                 </div>
                 <div className="molde-acciones">
-                  <Button variant="secondary" onClick={() => descargarConstancia(a)}>
+                  <Button variant="secondary" onClick={() => descargarConstancia(a)} disabled={armandoConstancia === a.id}>
                     {t.asistentes.ausencias.descargar_constancia}
                   </Button>
                   {a.certificado_url && (

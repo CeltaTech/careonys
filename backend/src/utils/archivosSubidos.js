@@ -20,6 +20,7 @@ const EXTENSIONES = {
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
   'image/heic': 'heic',
+  'image/svg+xml': 'svg',
 };
 
 /**

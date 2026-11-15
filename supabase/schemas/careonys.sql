@@ -14897,6 +14897,7 @@ CREATE TABLE IF NOT EXISTS "public"."prestadoras" (
     "minutos_entre_controles_de_ubicacion" integer DEFAULT 5 NOT NULL,
     "dias_para_aceptar_la_ubicacion" integer DEFAULT 30 NOT NULL,
     "control_de_ubicacion_en_el_turno_desde" timestamp with time zone,
+    "logo_impresion_ruta" "text",
     CONSTRAINT "prestadoras_cierre_por_inactividad_minutos_check" CHECK ((("cierre_por_inactividad_minutos" >= 5) AND ("cierre_por_inactividad_minutos" <= 120))),
     CONSTRAINT "prestadoras_dias_para_aceptar_la_ubicacion_check" CHECK ((("dias_para_aceptar_la_ubicacion" >= 1) AND ("dias_para_aceptar_la_ubicacion" <= 365))),
     CONSTRAINT "prestadoras_minutos_aviso_previo_guardia_check" CHECK ((("minutos_aviso_previo_guardia" >= 5) AND ("minutos_aviso_previo_guardia" <= 1440))),
@@ -14909,6 +14910,10 @@ ALTER TABLE "public"."prestadoras" OWNER TO "postgres";
 
 
 COMMENT ON COLUMN "public"."prestadoras"."logo_url" IS 'Dirección del logo de la Prestadora, la marca que ven el Cliente y el Asistente. Vacío significa que todavía no lo subió: en ese caso las pantallas muestran nombre_fantasia escrito. Los archivos viven en el depósito marca-prestadoras, en la carpeta de esa Prestadora.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."logo_impresion_ruta" IS 'Ruta del logo para impresión adentro del depósito logos-para-impresion: el que va en los documentos que se imprimen. Vacío significa que no lo cargó: en ese caso el documento usa el logo de internet si es PNG o JPG, y si no sale sin logo.';
 
 
 
@@ -31486,6 +31491,18 @@ GRANT UPDATE("moneda") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 
+GRANT UPDATE("nombre_fantasia") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+
+
+
+GRANT UPDATE("logo_url") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+
+
+
+GRANT UPDATE("logo_impresion_ruta") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+
+
+
 GRANT UPDATE("regla_reenvio") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
@@ -32274,6 +32291,22 @@ CREATE POLICY "instrucciones_personas_autorizadas_panel_lee" ON "storage"."objec
 
 
 CREATE POLICY "instrucciones_personas_autorizadas_panel_sube" ON "storage"."objects" FOR INSERT TO "authenticated", "anon" WITH CHECK ((("bucket_id" = 'instrucciones-acceso-personas-autorizadas'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND "interno"."puede_configurar_accesos_de_personas_autorizadas"()));
+
+
+
+CREATE POLICY "logos_para_impresion_los_borra_la_administracion" ON "storage"."objects" FOR DELETE TO "authenticated" USING (((("bucket_id" = 'logos-para-impresion'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND ("interno"."es_admin_prestadora"() OR "interno"."es_superadmin"()))));
+
+
+
+CREATE POLICY "logos_para_impresion_los_lee_el_personal" ON "storage"."objects" FOR SELECT TO "authenticated" USING (((("bucket_id" = 'logos-para-impresion'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND "interno"."es_personal_de_la_prestadora"()));
+
+
+
+CREATE POLICY "logos_para_impresion_los_reemplaza_la_administracion" ON "storage"."objects" FOR UPDATE TO "authenticated" USING (((("bucket_id" = 'logos-para-impresion'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND ("interno"."es_admin_prestadora"() OR "interno"."es_superadmin"())))) WITH CHECK (((("bucket_id" = 'logos-para-impresion'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND ("interno"."es_admin_prestadora"() OR "interno"."es_superadmin"()))));
+
+
+
+CREATE POLICY "logos_para_impresion_los_sube_la_administracion" ON "storage"."objects" FOR INSERT TO "authenticated" WITH CHECK (((("bucket_id" = 'logos-para-impresion'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND ("interno"."es_admin_prestadora"() OR "interno"."es_superadmin"()))));
 
 
 

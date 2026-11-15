@@ -111,11 +111,12 @@ Notas de aplicación (mismo principio que el resto del documento, `celtatech/CLA
 
 ## Fórmula de cálculo de cese
 
-> La estructura descrita acá
-> vive como dato en `formulas_cese` (jurisdicción `AR`). El código que la interpretaba salió del
-> producto y está en `celtatech/Codigos-utiles/vinculo-laboral-cese-y-riesgo-de-dependencia` — hoy el producto no calcula ningún cese. Este documento describe en lenguaje humano lo que esas
-> filas codifican y qué hace ese código cuando se lo vuelve a poner, no fija ningún valor nuevo. Pendiente de revisión por un abogado
-> laboralista, igual que el resto de este documento (ver nota al inicio).
+> El producto no calcula ningún cese: es tarea de un módulo de sueldos y jornales que todavía no
+> existe. El código que lo calculaba está en el estante, en
+> `celtatech/Codigos-utiles/vinculo-laboral-cese-y-riesgo-de-dependencia`, y la base ya no guarda
+> ni la fórmula ni sus escalas. Esta sección describe en lenguaje humano lo que dice la ley y lo
+> que hace ese código cuando se lo vuelve a poner, no fija ningún valor nuevo. Pendiente de
+> revisión por un abogado laboralista, igual que el resto de este documento (ver nota al inicio).
 
 El cálculo de indemnización por cese de un Asistente en relación de dependencia depende de
 la causal del cese (art. 231/232/241/242/244/245/248/249 LCT, art. 92 bis para el período de
@@ -156,7 +157,7 @@ de la persona cuidada.
 
 ### Sin fórmula cargada para una jurisdicción
 
-Si una Prestadora opera en un país sin fila en `formulas_cese` para la causal elegida, el
+Si una Prestadora opera en un país sin fórmula cargada para la causal elegida, el
 código del estante nunca aproxima con la fórmula de otro país (mismo principio que las advertencias de
 este documento, `celtatech/CLAUDE.md`, sección «El riesgo legal»): devuelve `requiereRevisionAbogado: true`, sin monto
 calculado, y una advertencia indicando que la legislación de esa jurisdicción todavía no fue

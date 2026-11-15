@@ -61,15 +61,11 @@ vez del Asistente, y `coordinador_que_cubre_id` dice qué Coordinador lo reempla
 Se cargan desde la ficha del Coordinador en Usuarios del Panel
 (`panel/src/pages/UsuariosPanel.jsx:355`, `panel/src/pages/AusenciasDelCoordinador.jsx:90`).
 
-En la base quedan piezas del modelo de relación de dependencia y cese, que ningún archivo del
-Backend, del Panel ni de las aplicaciones lee ni escribe: la tabla `ceses`, sin filas; la tabla
-`formulas_cese`, con nueve filas; el depósito privado `documentos-cese`; en `escalas_legales`, las filas de los tipos `indemnizacion_antiguedad`,
-`preaviso_dias`, `tope_indemnizatorio`, `periodo_prueba_dias`, `indicador_riesgo_dependencia`,
-`umbral_riesgo_dependencia`, `multiplicador_agravado` y `fraccion_computable_antiguedad`; las
-columnas `sueldo_basico` y `categoria_cct` de `remuneraciones_asistente`; y las columnas
-`causal_baja`, `score_riesgo_reclasificacion` e `indicadores_riesgo` de
-`datos_reservados_asistente`; y el valor `dependencia` que admite la restricción de
-`textos_consentimiento.modalidad`, con tres textos de consentimiento de esa modalidad.
+Una Prestadora puede tener a la vez Asistentes independientes y empleados en relación de
+dependencia: cuál es cada uno lo anota su relación laboral, y `textos_consentimiento.modalidad`
+admite `dependencia` y `autonomo`. El cálculo del sueldo, de la indemnización y del cese no está
+en el producto: es de un módulo de sueldos y jornales, y el código que lo hacía está en el estante,
+en `celtatech/Codigos-utiles/vinculo-laboral-cese-y-riesgo-de-dependencia`.
 
 Los vencimientos de documentación del Asistente (Monotributo, ART, Seguro, Certificado de
 Antecedentes Penales u otros que agregue cada prestadora) viven en las tablas

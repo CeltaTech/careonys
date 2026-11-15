@@ -319,11 +319,11 @@ CREATE POLICY coordinador_gestiona_incidentes_relevo_de_sus_servicios ON inciden
 ```
 
 Tablas que **nunca** deben tener policy de lectura para `asistente` ni `cliente`:
-`escalas_legales`, `ceses`, `ausencias`, `guardias_cobertura`, `remuneraciones_asistente`,
+`escalas_legales`, `ausencias`, `guardias_cobertura`, `remuneraciones_asistente`,
 `datos_reservados_asistente`.
 
 **Lo que se le paga al Asistente vive en una tabla aparte.** `valor_hora`, `valor_guardia`,
-`valor_semana`, `valor_hora_extra`, `sueldo_basico`, `categoria_cct`, `moneda`, `unidad_medicion` y
+`valor_semana`, `valor_hora_extra`, `moneda`, `unidad_medicion` y
 `frecuencia_pago` están en `remuneraciones_asistente`, no en `asistentes`, con su propia policy de
 lectura. Contra `asistentes` es uno a uno
 —la clave primaria es el propio `asistente_id`, y la fila existe sólo si hay algún importe
@@ -391,10 +391,8 @@ esa acción. `saldos_cliente` es una vista que se consulta con los permisos de q
 administración pide `interno.gestiona_la_facturacion()`, que alcanza también a quien manda a
 facturar.
 
-**Lo reservado del Legajo del Asistente también vive aparte.** `causal_baja`,
-`score_riesgo_reclasificacion`, `indicadores_riesgo`, `motivo_exclusion_directo` y
-`motivo_exclusion_intermediacion` —por qué se lo dio de baja, su puntaje de riesgo con los motivos
-que lo forman, y por qué quedó excluido de recibir trabajo— están en `datos_reservados_asistente`,
+**Lo reservado del Legajo del Asistente también vive aparte.** `motivo_exclusion_directo` y
+`motivo_exclusion_intermediacion` —por qué quedó excluido de recibir trabajo— están en `datos_reservados_asistente`,
 no en `asistentes`. Una vista que las omita no alcanza: describe lo que consulta la pantalla, y la
 tabla contestaría esas columnas a cualquiera que preguntara con su propia sesión. La tabla tiene
 su propia policy de lectura:
@@ -624,8 +622,7 @@ depósito `fotos-identidad`.
   carpeta de la ruta, que tiene que ser un identificador válido; si no lo es, niega). El backend lo
   escribe y lo lee con la sesión de quien pide, así que es esa política la que decide
   (`backend/src/routes/panelVerificacionIdentidad.js`).
-  `certificados-medicos`, `autorizaciones-monitoreo` y `documentos-cese` también tienen sus
-  políticas.
+  `certificados-medicos` y `autorizaciones-monitoreo` también tienen sus políticas.
 - **La ruta empieza por la Prestadora** y se arma siempre con los mismos tres datos —Prestadora,
   Asistente y cuál de las dos fotos es—, nunca con algo que venga en el pedido. Va sin extensión:
   el formato viaja en el tipo de contenido. Qué tipos hay y cómo se arma la ruta está en

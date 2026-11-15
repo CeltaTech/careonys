@@ -1385,27 +1385,21 @@ anota en `cobros_intermediacion`, y el botón de compra en la aplicación del Cl
 cumplir el software está en `celtatech/docs/SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md`, sección «La
 compra de un acceso de Match», y cómo queda Match, en `docs/PRD_07_Modalidad_Match.md` §3.
 
-**Y lo de la relación de dependencia sale también, a un módulo de sueldos y jornales.** El
-Asistente es monotributista o trabajador independiente: se lo contrata para una tarea, y la
-contratación termina porque se completó, porque se canceló o porque él desistió. Ahí no hay
-liquidación final, telegrama, notificación ni cese. El código ya salió del producto y está en el
-estante, en `Codigos-utiles\vinculo-laboral-cese-y-riesgo-de-dependencia`. En la base quedó lo
-que usaba, sin que el producto lo lea ni lo escriba: la tabla `ceses`, la tabla `formulas_cese`,
-el depósito `documentos-cese`, las filas de `escalas_legales` del cese y del riesgo de
-dependencia, las columnas `categoria_cct` y `sueldo_basico` de `remuneraciones_asistente`,
-`causal_baja`, `score_riesgo_reclasificacion` e `indicadores_riesgo` de
-`datos_reservados_asistente`, el valor `dependencia` en la restricción de
-`textos_consentimiento.modalidad`, y los textos de
-consentimiento de esa modalidad. Esperan al módulo de sueldos y jornales, o a la decisión de
-borrarlos con una migración.
+**Y el cálculo de la relación de dependencia es de un módulo de sueldos y jornales.** Una
+Prestadora puede tener a la vez Asistentes independientes y empleados en relación de dependencia,
+y cuál es cada uno lo anota la relación laboral de su Legajo. Lo que no está en el producto es el
+cálculo del sueldo, de la indemnización y del cese: el código está en el estante, en
+`Codigos-utilesinculo-laboral-cese-y-riesgo-de-dependencia`, y lo que usaba en la base ya salió.
 
-**148. Usted** — ¿Se borran con una migración, o esperan al módulo de sueldos y jornales? Si se
-borran y la palabra «cese» se retira, alcanza también a `configuracion_aviso_cese_asistente`, que
-sí está en uso: es el aviso al Asistente cuando se cierra el Servicio de su Paciente
-(`backend/src/utils/avisoAutomaticoCese.js:25`). Y si se borran, «Escala legal» no hace falta en el
-glosario.
+**148. Usted** — Texto nuevo del permiso de ver los datos reservados del Asistente. Hoy dice
+«Causa de la baja, riesgo de dependencia y motivo de exclusión.»
+(`panel/src/i18n/translations.js:816`, y en inglés y portugués en 3895 y 6945), pero la causa de la
+baja y el riesgo de dependencia ya no existen: de esos datos queda sólo el motivo de exclusión.
 
-**149.** Hacerlo según lo contestado.
+**149.** Cambiar el nombre del mensaje `cese_de_servicio` por uno que no diga «cese», en
+`mensajes_del_sistema` y en `backend/src/i18n/avisos.js:706`. El texto que lee el Asistente no
+cambia. Espera a que la sesión que tiene `avisos.js` modificado sin guardar en el repositorio lo
+guarde, para no pisarle el trabajo.
 
 **Los mensajes de cobros y facturación se redactan acá, no antes.** Salieron de la revisión de
 frases porque se van con el módulo: en el Panel, forma de cobro con nombre repetido, renovación sin período, falta la fecha
@@ -1541,8 +1535,8 @@ hace falta alguien más además de esa persona.
 **116. Usted** — Cursos para Clientes: ¿va o no va?
 
 **118. Usted** — La categoría de convenio del Asistente, de la que depende su remuneración básica.
-Hoy no se carga en ningún lado: la columna quedó en la base y ningún archivo la lee ni la escribe,
-porque el cese salió al estante. Cuando vuelva, si se teclea a mano queda escrita distinto en cada
+Hoy no se carga en ningún lado: la columna salió de la base junto con los restos del cálculo de
+sueldos e indemnizaciones. Cuando vuelva, si se teclea a mano queda escrita distinto en cada
 Legajo: no se puede saber cuántos Asistentes hay en cada categoría, ni aplicarle un cambio de escala
 a todos los de una de una sola vez. **Qué hay que analizar:** si pasa a ser una lista que la Prestadora carga —porque las
 categorías de otro país son otras y no pueden venir escritas en el código—, y qué se hace con las

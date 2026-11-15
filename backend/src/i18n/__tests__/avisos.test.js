@@ -149,7 +149,7 @@ const DATOS = {
   recordatorio_de_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
   fin_periodo_sin_cargo: { dia: '7/10/2026', importe: '4500.00 ARS' },
   cobro_no_realizado: { importe: '4500.00 ARS', dia: '7/10/2026' },
-  cese_de_servicio: {},
+  cierre_del_servicio: {},
   entrevista_agendada: {
     prestadora: 'Cuidados del Sur', cuando: 'martes, 7 de octubre de 2026, 10:00',
     enlace: 'https://ejemplo/entrevista/una-llave', anticipo: 15,

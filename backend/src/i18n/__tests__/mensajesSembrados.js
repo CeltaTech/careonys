@@ -21,6 +21,7 @@ import { filasDeFabrica } from '../../__tests__/laFotoDeLaBase.js';
 const MIGRACIONES_POSTERIORES = [
   '20270326000000_alarma_de_las_cuentas_automaticas.sql',
   '20270401000800_la_frase_antes_del_enlace.sql',
+  '20270402000200_el_mensaje_del_cierre_del_servicio_cambia_de_nombre.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;

@@ -1391,16 +1391,6 @@ y cuál es cada uno lo anota la relación laboral de su Legajo. Lo que no está 
 cálculo del sueldo, de la indemnización y del cese: el código está en el estante, en
 `Codigos-utilesinculo-laboral-cese-y-riesgo-de-dependencia`, y lo que usaba en la base ya salió.
 
-**148. Usted** — Texto nuevo del permiso de ver los datos reservados del Asistente. Hoy dice
-«Causa de la baja, riesgo de dependencia y motivo de exclusión.»
-(`panel/src/i18n/translations.js:816`, y en inglés y portugués en 3895 y 6945), pero la causa de la
-baja y el riesgo de dependencia ya no existen: de esos datos queda sólo el motivo de exclusión.
-
-**149.** Cambiar el nombre del mensaje `cese_de_servicio` por uno que no diga «cese», en
-`mensajes_del_sistema` y en `backend/src/i18n/avisos.js:706`. El texto que lee el Asistente no
-cambia. Espera a que la sesión que tiene `avisos.js` modificado sin guardar en el repositorio lo
-guarde, para no pisarle el trabajo.
-
 **Los mensajes de cobros y facturación se redactan acá, no antes.** Salieron de la revisión de
 frases porque se van con el módulo: en el Panel, forma de cobro con nombre repetido, renovación sin período, falta la fecha
 límite de pago de los saldos, falta el motivo para anular un cobro, falta el importe o el tipo de

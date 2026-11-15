@@ -693,9 +693,9 @@ const ARMADORES = {
   // No dice por qué se cerró el servicio: el motivo es del Paciente y de su Cliente. Y no dice
   // nada del desempeño del Asistente, porque este mensaje sale justamente cuando el cierre no
   // tuvo que ver con él.
-  cese_de_servicio: (t) => ({
-    titulo: t('cese_de_servicio.titulo'),
-    cuerpo: t('cese_de_servicio.cuerpo'),
+  cierre_del_servicio: (t) => ({
+    titulo: t('cierre_del_servicio.titulo'),
+    cuerpo: t('cierre_del_servicio.cuerpo'),
   }),
 
   /* Los tres mensajes de la entrevista salen por correo, porque quien se postuló todavía no tiene

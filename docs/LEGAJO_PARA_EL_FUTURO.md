@@ -133,3 +133,20 @@ Lo que hay que estudiar antes de aceptarlo:
   descartando el resto, con una herramienta conocida y mantenida.
 - **Cómo lo resuelven los sistemas que lo aceptan**: Wikipedia guarda el SVG y muestra un PNG que
   genera ella misma; WordPress no lo acepta de fábrica.
+
+## Las tareas del producto, a cargo de cada Prestadora
+
+Que ninguna tarea de los tipos de Asistente lleve candado. Las tareas que trae el producto también
+se podrían editar y borrar, igual que las que agrega la Prestadora.
+
+Cada Prestadora lo haría sobre su propia lista. Hoy, las tareas del producto son una sola lista
+por país, compartida por todas las Prestadoras: cada una recibiría su propia copia y la cambiaría
+sin alcanzar a ninguna otra.
+
+Lo que hay que resolver antes:
+
+- **Las Prohibidas.** Son las tareas que la ley de cada país le prohíbe a un tipo de Asistente:
+  el Cuidador, por ejemplo, no pone inyecciones. Por la regla de CeltaTech sobre el riesgo legal,
+  la tarea que la ley prohíbe no se asigna. Si la Prestadora pudiera borrar una prohibida, podría
+  asignársela a un Cuidador. Hay que decidir si las Prohibidas entran o si se quedan como las trae
+  el producto.

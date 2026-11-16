@@ -236,6 +236,77 @@ export function TiposAsistenteTab() {
   );
 }
 
+/* Alta y edición de un tipo propio de la Prestadora. Los tipos de fábrica no llegan acá. */
+function TipoModal({ tipo, prestadoraId, onClose, onGuardado }) {
+  const modal = useModalAccesible(onClose);
+  const { t } = useLocale();
+  const esNuevo = !tipo?.id;
+  const [nombre, setNombre] = useState(tipo?.nombre ?? '');
+  const [descripcion, setDescripcion] = useState(tipo?.descripcion ?? '');
+  const [intentado, setIntentado] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+
+  const faltaNombre = !nombre.trim();
+
+  async function guardar() {
+    setIntentado(true);
+    if (faltaNombre) {
+      setTimeout(() => document.querySelector('.panel-modal [aria-invalid="true"]')?.focus(), 0);
+      return;
+    }
+    if (!prestadoraId) return;
+    setGuardando(true);
+    setError(null);
+    const datos = { nombre: nombre.trim(), descripcion: descripcion.trim() || null };
+    const { error: fallo } = esNuevo
+      ? await supabase.from('tipos_asistente').insert({ ...datos, prestadora_id: prestadoraId })
+      : await supabase
+          .from('tipos_asistente')
+          .update({ ...datos, updated_at: new Date().toISOString() })
+          .eq('id', tipo.id)
+          .eq('prestadora_id', prestadoraId);
+    if (fallo) {
+      setError(mensajeDeError(fallo, t));
+      setGuardando(false);
+      return;
+    }
+    onGuardado();
+  }
+
+  return (
+    <div className="panel-modal-fondo" onClick={onClose}>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{esNuevo ? t.configuracion.tipos_nuevo : t.configuracion.tipos_editar}</h2>
+        {error && <Alert variant="error">{error}</Alert>}
+        <FormField
+          label={t.configuracion.tipos_col_nombre}
+          name="tipo_nombre"
+          required
+          value={nombre}
+          error={intentado && faltaNombre ? t.formularios.falta_un_dato_obligatorio : null}
+          onChange={(e) => setNombre(e.target.value)}
+        />
+        <FormField
+          label={t.configuracion.tipos_descripcion}
+          name="tipo_descripcion"
+          type="textarea"
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+        />
+        <div className="panel-modal-acciones">
+          <Button variant="secondary" onClick={onClose} disabled={guardando}>
+            {t.comun.cancelar}
+          </Button>
+          <Button onClick={guardar} disabled={guardando}>
+            {guardando ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* Las Ramas son de cada Prestadora: las agrega, las renombra y las borra. Borrar una Rama no
    borra sus tipos: quedan sin Rama. */
 function RamasDeLaPrestadora({ ramas, prestadoraId, estado, onCambio }) {
@@ -517,6 +588,50 @@ function FormularioDeEspecialidad({ nombre, inicial, ocupado, etiquetaBoton, onG
           name={`${nombre}_matricula`}
           value={matricula}
           onChange={(e) => setMatricula(e.target.value)}
+        />
+      </div>
+      <div className="molde-acciones">
+        {onCancelar && (
+          <Button variant="secondary" onClick={onCancelar} disabled={ocupado}>
+            {t.comun.cancelar}
+          </Button>
+        )}
+        <Button onClick={guardar} disabled={ocupado || !texto.trim()}>
+          {ocupado ? t.comun.guardando : etiquetaBoton}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function FormularioDeTarea({ nombre, inicial, ocupado, etiquetaBoton, onGuardar, onCancelar }) {
+  const { t } = useLocale();
+  const [texto, setTexto] = useState(inicial?.texto ?? '');
+  const [descripcion, setDescripcion] = useState(inicial?.descripcion ?? '');
+
+  async function guardar() {
+    const listo = await onGuardar({ texto: texto.trim(), descripcion: descripcion.trim() || null });
+    if (listo && !inicial) {
+      setTexto('');
+      setDescripcion('');
+    }
+  }
+
+  return (
+    <>
+      <div className="molde-formgrid">
+        <FormField
+          label={t.configuracion.tareas_texto}
+          name={`${nombre}_texto`}
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          required
+        />
+        <FormField
+          label={t.configuracion.tareas_descripcion}
+          name={`${nombre}_descripcion`}
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
         />
       </div>
       <div className="molde-acciones">

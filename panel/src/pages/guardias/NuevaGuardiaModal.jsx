@@ -68,6 +68,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!prestadoraId) return;
     async function cargarListas() {
       const [
         { data: asistentesData },
@@ -81,7 +82,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         // `estaEnElPadron`, y no escrito a mano acá: si mañana la Prestadora suma otra forma de
         // seguir en el Padrón, esta puerta no puede quedarse con la regla vieja
         // (regla 12 de CLAUDE.md §7).
-        supabase.from('asistentes').select('id, nombre, disponibilidad').eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).order('nombre'),
+        supabase.from('asistentes').select('id, nombre, disponibilidad').eq('prestadora_id', prestadoraId).eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).order('nombre'),
         // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al
         // lado del nombre es lo que hace evidente que ese turno los cubre a los dos.
         // `cliente_id` viene porque es lo que decide qué Servicios se le pueden ofrecer al
@@ -89,11 +90,13 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         supabase
           .from('pacientes')
           .select(`id, cliente_id, ${FICHA_DOMICILIO}`)
+          .eq('prestadora_id', prestadoraId)
           .is('deleted_at', null),
         supabase.from('prestadoras').select('dias_generacion_series_guardia').eq('id', prestadoraId).single(),
         supabase
           .from('servicios')
           .select('id, etiqueta, cliente_id')
+          .eq('prestadora_id', prestadoraId)
           .eq('estado', 'vigente')
           // Sin Coordinador el Servicio no está habilitado y la base rechaza sus guardias.
           .not('coordinador_id', 'is', null)

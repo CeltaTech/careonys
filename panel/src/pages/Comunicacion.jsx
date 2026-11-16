@@ -11,6 +11,7 @@ import { HiloComunicacion } from '../components/comunicacion/HiloComunicacion';
 import { HiloWhatsapp } from '../components/comunicacion/HiloWhatsapp';
 import { mensajeDeError } from '../lib/errores';
 import { RenglonesDeEmergencias } from '../components/emergencias/RenglonesDeEmergencias';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import '../styles/molde-paginas.css';
 import './comunicacion.css';
 
@@ -33,6 +34,7 @@ function ultimoPorClave(filas, clave) {
 
 export function Comunicacion() {
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const { usuario } = useAuth();
   const esAdmin = esAdminOSuperior(usuario?.rol);
 
@@ -44,6 +46,7 @@ export function Comunicacion() {
   const { f, set, limpiar, hayFiltros } = useFiltros({ canal: 'todos', soloPendientes: false });
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     setMensajeWhatsapp(null);
@@ -56,19 +59,22 @@ export function Comunicacion() {
     ] = await Promise.all([
       // A un Asistente desactivado no se le escribe. La vista del coordinador ya no lo trae.
       esAdmin
-        ? supabase.from('asistentes').select('id, nombre').eq('cuenta_desactivada', false)
+        ? supabase.from('asistentes').select('id, nombre').eq('prestadora_id', prestadoraId).eq('cuenta_desactivada', false)
         : supabase.from('asistentes_coordinador').select('id, nombre'),
       supabase
         .from('mensajes_asistente')
         .select('asistente_id, mensaje, created_at')
+        .eq('prestadora_id', prestadoraId)
         .order('created_at', { ascending: false }),
       supabase
         .from('conversaciones_whatsapp')
         .select('id, telefono, ultimo_mensaje_at, requiere_atencion_coordinador, asistentes(nombre)')
+        .eq('prestadora_id', prestadoraId)
         .order('ultimo_mensaje_at', { ascending: false }),
       supabase
         .from('mensajes_whatsapp')
         .select('conversacion_id, texto, created_at')
+        .eq('prestadora_id', prestadoraId)
         .order('created_at', { ascending: false })
         .limit(TOPE_MENSAJES_PREVIA),
     ]);
@@ -127,7 +133,7 @@ export function Comunicacion() {
 
     setConversaciones(items);
     setEstado('listo');
-  }, [esAdmin, t]);
+  }, [esAdmin, prestadoraId, t]);
 
   useEffect(() => {
     recargar();

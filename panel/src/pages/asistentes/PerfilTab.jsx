@@ -209,11 +209,12 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
   const [relacionesLaborales, setRelacionesLaborales] = useState([]);
   const [errorRelaciones, setErrorRelaciones] = useState(null);
   useEffect(() => {
-    if (!veRelacion) return;
+    if (!veRelacion || !prestadoraId) return;
     let vigente = true;
     supabase
       .from('relaciones_laborales')
       .select('id, nombre, activo')
+      .eq('prestadora_id', prestadoraId)
       .order('orden')
       .order('nombre')
       .then(({ data, error: errorLista }) => {
@@ -227,7 +228,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     return () => {
       vigente = false;
     };
-  }, [veRelacion, asistente.relacion_laboral_id, t]);
+  }, [veRelacion, asistente.relacion_laboral_id, prestadoraId, t]);
 
   /* Sus Especialidades, elegidas del catálogo del tipo que tiene. La base sólo acepta las del tipo
      ya guardado en el Legajo, así que se escriben después del Legajo, y al cambiar de tipo se
@@ -239,10 +240,11 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
   const [errorEspecialidades, setErrorEspecialidades] = useState(null);
 
   const cargarEspecialidades = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstadoEspecialidades('cargando');
     setErrorEspecialidades(null);
     const [catalogo, propias] = await Promise.all([
-      supabase.from('especialidades').select('id, nombre, tipo_asistente_id, activo').order('orden').order('nombre'),
+      supabase.from('especialidades').select('id, nombre, tipo_asistente_id, activo').eq('prestadora_id', prestadoraId).order('orden').order('nombre'),
       supabase.from('especialidades_asistente').select('especialidad_id').eq('asistente_id', asistente.id),
     ]);
     if (catalogo.error || propias.error) {
@@ -255,7 +257,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     setEspecialidadesGuardadas(ids);
     setEspecialidadesElegidas(ids);
     setEstadoEspecialidades('listo');
-  }, [asistente.id, t]);
+  }, [asistente.id, prestadoraId, t]);
 
   useEffect(() => {
     cargarEspecialidades();

@@ -8,11 +8,14 @@ import { impideTrabajarHoy } from './documentos';
 // usa la base para no dejar asignar. El Estado actual lo usa para señalar las guardias asignadas a
 // quien los tiene. El documento que nunca se cargó no es una alerta propia: es del reclutamiento.
 
-export async function documentosQueImpidenTrabajar() {
+// Sin la Prestadora de quien mira no se consulta y vuelve un error.
+export async function documentosQueImpidenTrabajar(prestadoraId) {
+  if (!prestadoraId) return { documentos: null, error: new Error('Falta la Prestadora.') };
   const hoy = hoyISO();
   const { data: docs, error } = await supabase
     .from('documentos_pedidos_al_asistente')
     .select('asistente_id, tipo_documento_id, nombre, impide_trabajar, estado, fecha_vencimiento, gracia_hasta')
+    .eq('prestadora_id', prestadoraId)
     .eq('impide_trabajar', true);
   if (error) return { documentos: null, error };
 
@@ -23,6 +26,7 @@ export async function documentosQueImpidenTrabajar() {
   const { data: asistentes, error: errorAsistentes } = await supabase
     .from('asistentes')
     .select('id, nombre')
+    .eq('prestadora_id', prestadoraId)
     .eq('estado', ESTADO_ACTIVO)
     .in('id', ids);
   if (errorAsistentes) return { documentos: null, error: errorAsistentes };

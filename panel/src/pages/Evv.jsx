@@ -13,6 +13,7 @@ import { mensajeDeError } from '../lib/errores';
 import './tarjetas.css';
 import './seguimientoDeGuardias.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 /*
  * Esta pantalla existe para auditar los check-in, así que tiene que dar el mismo veredicto que
@@ -67,6 +68,7 @@ function estadoVerificacionDelTurno(punto, pacientes, configuracion) {
 
 export function Evv() {
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const [filas, setFilas] = useState([]);
   const [estadoCarga, setEstadoCarga] = useState('cargando');
   const [error, setError] = useState(null);
@@ -78,6 +80,7 @@ export function Evv() {
   const { f, set, limpiar, hayFiltros } = useFiltros(filtrosIniciales);
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstadoCarga('cargando');
     setError(null);
 
@@ -90,18 +93,22 @@ export function Evv() {
       supabase
         .from('guardias')
         .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, asistente_id, paciente_id, checkin_at, checkin_lat, checkin_lng, checkout_at, checkout_lat, checkout_lng')
+        .eq('prestadora_id', prestadoraId)
         .gte('fecha', f.desde)
         .lte('fecha', f.hasta)
         .in('estado', ['activa', 'completada'])
         .order('fecha', { ascending: false })
         .order('hora_inicio', { ascending: true }),
-      supabase.from('asistentes').select('id, nombre'),
+      supabase.from('asistentes').select('id, nombre').eq('prestadora_id', prestadoraId),
       // Del Paciente alcanza con el nombre: las coordenadas contra las que se mide no son las
       // del Paciente sino las del día de cada turno, y esas las contesta la base más abajo.
-      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
-      // Los metros que tolera esta Prestadora. No lleva filtro por Prestadora porque la regla
-      // de acceso de la base ya deja ver una sola fila, la del tenant de esta sesión.
-      supabase.from('configuracion_ausencia_automatica').select('metros_tolerancia_checkin').maybeSingle(),
+      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).eq('prestadora_id', prestadoraId),
+      // Los metros que tolera esta Prestadora: una sola fila.
+      supabase
+        .from('configuracion_ausencia_automatica')
+        .select('metros_tolerancia_checkin')
+        .eq('prestadora_id', prestadoraId)
+        .maybeSingle(),
     ]);
 
     if (errorGuardias) {
@@ -163,7 +170,7 @@ export function Evv() {
     setEstadoCarga('listo');
     // Solo el rango de fechas se pide al servidor: el filtro de verificación se aplica acá,
     // en memoria, y no tiene que volver a consultar la base cada vez que cambia.
-  }, [f.desde, f.hasta, t]);
+  }, [f.desde, f.hasta, prestadoraId, t]);
 
   useEffect(() => {
     recargar();

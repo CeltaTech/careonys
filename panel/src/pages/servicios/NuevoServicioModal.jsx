@@ -52,10 +52,12 @@ export function NuevoServicioModal({ onClose, onCreado }) {
   const [intentado, setIntentado] = useState(false);
 
   const cargarClientes = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstadoClientes('cargando');
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
       .select('id, personas!clientes_contratante_de_la_misma_prestadora(nombre_visible)')
+      .eq('prestadora_id', prestadoraId)
       .is('deleted_at', null);
     if (errorConsulta) {
       setError(mensajeDeError(errorConsulta, t));
@@ -67,7 +69,7 @@ export function NuevoServicioModal({ onClose, onCreado }) {
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
     setClientes(ordenados);
     setEstadoClientes('listo');
-  }, [t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     cargarClientes();

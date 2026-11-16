@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { FormField } from '../ui/FormField';
 import { Alert } from '../ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 /* El casillero que nombra a una Persona del Directorio de Personas.
    ==========================================================================
@@ -28,12 +29,14 @@ export function SelectorDePersona({
   error: errorDelCasillero = null,
 }) {
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     // `clase` acota la lista cuando el casillero admite una sola. Sin `clase` se ofrecen las dos, que
@@ -41,6 +44,7 @@ export function SelectorDePersona({
     let consulta = supabase
       .from('personas')
       .select('id, nombre_visible, documento_numero')
+      .eq('prestadora_id', prestadoraId)
       .order('nombre_visible', { ascending: true });
     if (clase) consulta = consulta.eq('clase', clase);
 
@@ -54,7 +58,7 @@ export function SelectorDePersona({
 
     setFilas(data ?? []);
     setEstado(data && data.length > 0 ? 'listo' : 'vacio');
-  }, [t, clase]);
+  }, [t, clase, prestadoraId]);
 
   useEffect(() => {
     recargar();

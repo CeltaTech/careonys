@@ -106,6 +106,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [marcandoAvisoId, setMarcandoAvisoId] = useState(null);
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
 
@@ -114,12 +115,12 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       supabase.rpc('precios_de_lista_que_rigen', { p_fecha: hoyISO() }).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
       supabase.from('cierres_servicio_paciente').select('id, servicio_id').eq('paciente_id', paciente.id),
-      // Los Servicios vigentes que alcanza esta sesión. La protección por fila ya los acota a la
-      // Prestadora; cuáles de ellos sirven para este Paciente lo decide abajo la misma regla que
-      // aplica la base, y no una consulta escrita a medida acá.
+      // Los Servicios vigentes de la Prestadora. Cuáles de ellos sirven para este Paciente lo
+      // decide abajo la misma regla que aplica la base, y no una consulta escrita a medida acá.
       supabase
         .from('servicios')
         .select('id, etiqueta, cliente_id')
+        .eq('prestadora_id', prestadoraId)
         .eq('estado', 'vigente')
         .order('etiqueta'),
       // Los valores de fábrica de la Prestadora. La protección por fila sólo se los abre a la

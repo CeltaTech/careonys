@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { mensajeDeError } from '../lib/errores';
 import { esAdminOSuperior } from '../lib/roles';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { con } from '../lib/textos';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
@@ -21,17 +22,19 @@ export function AlarmaDeAjustesPorIndice() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const esAdministracion = esAdminOSuperior(usuario?.rol);
+  const prestadoraId = usePrestadoraActual();
   const [estado, setEstado] = useState('cargando');
   const [cantidad, setCantidad] = useState(0);
   const [error, setError] = useState(null);
 
   const cargar = useCallback(async () => {
-    if (!esAdministracion) return;
+    if (!esAdministracion || !prestadoraId) return;
     setEstado('cargando');
     setError(null);
     const { count, error: falla } = await supabase
       .from('propuestas_de_ajuste_por_indice')
       .select('id', { count: 'exact', head: true })
+      .eq('prestadora_id', prestadoraId)
       .eq('estado', 'pendiente');
     if (falla) {
       setError(mensajeDeError(falla, t, 'alarma de ajustes por índice'));
@@ -40,7 +43,7 @@ export function AlarmaDeAjustesPorIndice() {
     }
     setCantidad(count ?? 0);
     setEstado(count ? 'listo' : 'vacio');
-  }, [esAdministracion, t]);
+  }, [esAdministracion, prestadoraId, t]);
 
   useEffect(() => {
     cargar();

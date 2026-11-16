@@ -7,6 +7,7 @@ import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
 import '../../pages/seguimientoDeGuardias.css';
 import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 /* LOS CONSENTIMIENTOS QUE TODAVÍA VALEN
 
@@ -26,17 +27,20 @@ const TABLA = 'consentimientos_paciente_solo';
 
 export function ConsentimientosVigentes() {
   const { t, locale } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     try {
       const { data, error: errorConsentimientos } = await supabase
         .from(TABLA)
         .select('id, paciente_id, quien_consintio, medio, desde_at, hasta_at, nota')
+        .eq('prestadora_id', prestadoraId)
         .gte('hasta_at', new Date().toISOString())
         .order('hasta_at', { ascending: true });
       if (errorConsentimientos) throw errorConsentimientos;
@@ -57,7 +61,7 @@ export function ConsentimientosVigentes() {
       setError(mensajeDeError(e, t));
       setEstado('error');
     }
-  }, [t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => { recargar(); }, [recargar]);
 

@@ -37,7 +37,7 @@ export function useAlarmasTomadas() {
   const recargar = useCallback(async () => {
     if (!prestadoraId) return;
     const [{ data: filas }, { data: configuracion }] = await Promise.all([
-      supabase.from(VISTA).select('*').is('soltada_at', null).order('tomada_at', { ascending: false }),
+      supabase.from(VISTA).select('*').eq('prestadora_id', prestadoraId).is('soltada_at', null).order('tomada_at', { ascending: false }),
       supabase
         .from('configuracion_alarmas_tomadas')
         .select('regla')

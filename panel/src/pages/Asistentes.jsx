@@ -10,6 +10,7 @@ import { nombreTipo } from '../lib/tiposAsistente';
 import { conDatosAparte } from '../lib/datosAparteDelAsistente';
 import { MODALIDAD, modalidadesDelAsistente } from '../lib/modalidades';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useFiltros } from '../hooks/useFiltros';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
 import { useRamas } from '../hooks/useRamas';
@@ -38,6 +39,7 @@ export function Asistentes() {
   const { t } = useLocale();
   const navigate = useNavigate();
   const { usuario } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
   const puedeAltaManual = esAdmin || puede('gestionar_asistentes');
@@ -58,10 +60,16 @@ export function Asistentes() {
   }, [aviso]);
   // El Coordinador consulta la vista restringida, sin los datos que la Prestadora reserva. Esa vista no trae
   // las modalidades del Asistente, así que para él la columna queda sin dato, y tampoco trae a los
-  // desactivados. La tabla sí los trae, así que para la administración se filtra siempre.
+  // desactivados. La tabla sí los trae, así que para la administración se filtra siempre, y por la
+  // Prestadora actual.
   const { filas, estado, error, recargar } = useSupabaseTable(
     esAdmin ? 'asistentes' : 'asistentes_coordinador',
-    { orderBy: 'created_at', select: '*', filtros: esAdmin ? { cuenta_desactivada: desactivados } : null },
+    {
+      orderBy: 'created_at',
+      select: '*',
+      filtros: esAdmin ? { prestadora_id: prestadoraId, cuenta_desactivada: desactivados } : null,
+      requiere: [prestadoraId],
+    },
   );
   const { f, set, limpiar, hayFiltros } = useFiltros({
     busqueda: '',

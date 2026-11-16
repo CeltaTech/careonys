@@ -52,8 +52,8 @@ export function PuestaEnMarchaProvider({ children }) {
       const [config, equipo, gente, clientes] = await Promise.all([
         llamarApiPanel('/cuentas/configuracion-inicial'),
         veLaGuia ? llamarApiPanel('/usuarios').then((r) => r?.usuarios ?? []) : [],
-        veLaGuia ? supabase.from('asistentes').select(COLUMNAS_ASISTENTES) : { data: [] },
-        veLaGuia ? supabase.from('clientes').select(COLUMNAS_CLIENTES) : { data: [] },
+        veLaGuia ? supabase.from('asistentes').select(COLUMNAS_ASISTENTES).eq('prestadora_id', prestadoraId) : { data: [] },
+        veLaGuia ? supabase.from('clientes').select(COLUMNAS_CLIENTES).eq('prestadora_id', prestadoraId) : { data: [] },
       ]);
       if (gente?.error || clientes?.error) throw gente?.error ?? clientes?.error;
       setConfiguracion(config);
@@ -69,7 +69,7 @@ export function PuestaEnMarchaProvider({ children }) {
       setConfiguracion(null);
       setEstado('error');
     }
-  }, [corresponde, veLaGuia]);
+  }, [corresponde, veLaGuia, prestadoraId]);
 
   useEffect(() => {
     cargar();

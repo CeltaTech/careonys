@@ -43,12 +43,13 @@ export function TiposAsistenteTab() {
   const [tipoAbierto, setTipoAbierto] = useState(null);
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     const [resTipos, resRamas, resAgrupados] = await Promise.all([
       supabase.from('tipos_asistente').select('*').order('orden'),
-      supabase.from('agrupaciones_tipos_asistente').select('id, nombre, orden').order('orden').order('nombre'),
-      supabase.from('tipos_asistente_agrupados').select('tipo_asistente_id, agrupacion_id'),
+      supabase.from('agrupaciones_tipos_asistente').select('id, nombre, orden').eq('prestadora_id', prestadoraId).order('orden').order('nombre'),
+      supabase.from('tipos_asistente_agrupados').select('tipo_asistente_id, agrupacion_id').eq('prestadora_id', prestadoraId),
     ]);
     const fallo = resTipos.error || resRamas.error || resAgrupados.error;
     if (fallo) {
@@ -60,7 +61,7 @@ export function TiposAsistenteTab() {
     setRamas(resRamas.data ?? []);
     setRamaDeCadaTipo(Object.fromEntries((resAgrupados.data ?? []).map((f) => [f.tipo_asistente_id, f.agrupacion_id])));
     setEstado('listo');
-  }, [t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();

@@ -84,7 +84,12 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
           : Promise.resolve({ data: [], error: null }),
         // Para el desplegable de «sumar a alguien». La vista recorta lo que un Coordinador puede
         // ver de una Asistente; acá alcanza con el nombre.
-        supabase.from('asistentes').select('id, nombre, apellido').eq('cuenta_desactivada', false).order('apellido'),
+        supabase
+          .from('asistentes')
+          .select('id, nombre, apellido')
+          .eq('prestadora_id', servicio.prestadora_id)
+          .eq('cuenta_desactivada', false)
+          .order('apellido'),
         idsUsuarios.length
           ? supabase.from('usuarios').select('id, nombre, apellido').in('id', idsUsuarios)
           : Promise.resolve({ data: [], error: null }),

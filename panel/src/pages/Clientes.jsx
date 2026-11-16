@@ -19,6 +19,7 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { mensajeDeError } from '../lib/errores';
 import './listadosMaqueta.css';
 import { conSusFichas, fichaCon } from '../lib/fichaDelPaciente';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 /* La sección Clientes es una sola para las dos modalidades: en la base el Cliente ya es uno solo
    (`clientes`), y cada uno se muestra con lo que tiene. Los Servicios de prestación directa se
@@ -28,6 +29,7 @@ import { conSusFichas, fichaCon } from '../lib/fichaDelPaciente';
    las columnas no aparecen. */
 export function Clientes() {
   const { t, locale } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const { tieneModalidad } = useModalidades();
@@ -44,6 +46,7 @@ export function Clientes() {
   const catalogo = useCatalogoDeLugares();
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     let respuestas;
@@ -56,9 +59,10 @@ export function Clientes() {
               'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, ' +
               'telefonos_de_la_persona!el_telefono_es_de_una_persona_de_esta_prestadora(telefono))',
           )
+          .eq('prestadora_id', prestadoraId)
           .is('deleted_at', null)
           .order('created_at', { ascending: false }),
-        supabase.from('servicios').select('id, estado, cliente_id'),
+        supabase.from('servicios').select('id, estado, cliente_id').eq('prestadora_id', prestadoraId),
         verMatch ? llamarApiIntermediacion('/accesos') : Promise.resolve({ accesos: [] }),
       ]);
     } catch (errorAccesos) {
@@ -80,7 +84,7 @@ export function Clientes() {
     setServicios(serviciosData ?? []);
     setAccesos(accesosData ?? []);
     setEstado('listo');
-  }, [t, verMatch]);
+  }, [prestadoraId, t, verMatch]);
 
   useEffect(() => {
     recargar();

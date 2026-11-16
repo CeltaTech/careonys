@@ -58,14 +58,17 @@ export function TurnosSinCubrirAbiertos() {
   const [error, setError] = useState(null);
   const [cerrando, setCerrando] = useState(null);
   const tomas = useAlarmasTomadas();
+  const prestadoraId = usePrestadoraActual();
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     try {
       const { data, error: errorIncidentes } = await supabase
         .from(TABLA)
         .select('id, guardia_id, abierto_at, veces_recordado')
+        .eq('prestadora_id', prestadoraId)
         .is('resuelto_at', null)
         .order('abierto_at', { ascending: true });
       if (errorIncidentes) throw errorIncidentes;
@@ -114,7 +117,7 @@ export function TurnosSinCubrirAbiertos() {
       setError(mensajeDeError(e, t));
       setEstado('error');
     }
-  }, [t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => { recargar(); }, [recargar]);
 

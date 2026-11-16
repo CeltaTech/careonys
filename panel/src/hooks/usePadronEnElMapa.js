@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { mensajeDeError } from '../lib/errores';
 import { useLugaresDelPadron } from './useLugaresDelPadron';
 import { mapaDelPadron } from '../lib/mapaDelPadron';
+import { usePrestadoraActual } from './usePrestadoraActual';
 
 /* El Padrón de este momento, listo para dibujar en el mapa.
    -----------------------------------------------------------------------------------------
@@ -20,16 +21,19 @@ import { mapaDelPadron } from '../lib/mapaDelPadron';
    ni viaja por la dirección de la pantalla. */
 export function usePadronEnElMapa() {
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
 
   const cargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     const { data, error: fallo } = await supabase
       .from('asistentes')
       .select('id, nombre, estado, disponible, cuenta_desactivada, domicilio_asistente(lat, lng)')
+      .eq('prestadora_id', prestadoraId)
       .is('deleted_at', null);
 
     if (fallo) {
@@ -44,7 +48,7 @@ export function usePadronEnElMapa() {
       return { ...fila, lat: punto?.lat ?? null, lng: punto?.lng ?? null };
     }));
     setEstado('listo');
-  }, [t]);
+  }, [t, prestadoraId]);
 
   useEffect(() => {
     cargar();

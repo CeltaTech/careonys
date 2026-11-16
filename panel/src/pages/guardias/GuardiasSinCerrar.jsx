@@ -16,6 +16,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { useAlarmasTomadas } from '../../hooks/useAlarmasTomadas';
 import { LaTomoYo } from '../../components/continuidad/LaTomoYo';
 import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
 
@@ -43,6 +44,7 @@ const ID_DE_LA_SECCION = 'guardias-sin-cerrar';
 
 export function GuardiasSinCerrar({ onCerrada }) {
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [filas, setFilas] = useState([]);
@@ -53,6 +55,7 @@ export function GuardiasSinCerrar({ onCerrada }) {
   const { hash } = useLocation();
 
   const cargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstadoCarga('cargando');
     setError(null);
 
@@ -65,13 +68,14 @@ export function GuardiasSinCerrar({ onCerrada }) {
         supabase
           .from('guardias')
           .select('*')
+          .eq('prestadora_id', prestadoraId)
           .eq('estado', ESTADO_EN_CURSO)
           .is('checkout_at', null)
           .lt('fecha', hoy)
           .order('fecha', { ascending: true })
           .order('hora_inicio', { ascending: true }),
-        supabase.from('asistentes').select('id, nombre'),
-        supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
+        supabase.from('asistentes').select('id, nombre').eq('prestadora_id', prestadoraId),
+        supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).eq('prestadora_id', prestadoraId),
       ]);
 
     if (errorGuardias) {
@@ -93,7 +97,7 @@ export function GuardiasSinCerrar({ onCerrada }) {
       }))
     );
     setEstadoCarga('listo');
-  }, [t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     cargar();

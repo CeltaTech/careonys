@@ -20,14 +20,17 @@ const DOCUMENTO_APROBADO = 'aprobado';
 /**
  * Los documentos con vencimiento, con el nombre del Asistente.
  *
+ * @param prestadoraId  la Prestadora de quien mira. Sin ella no se consulta y vuelve un error.
  * @param hasta  `AAAA-MM-DD`: si viene, sólo los que vencen hasta ese día —lo vencido incluido—.
  * @returns `{ documentos, error }`. Cada documento trae `documento_id`, `asistente_id`,
  *          `asistente_nombre`, `nombre` (el tipo) y `fecha_vencimiento`.
  */
-export async function documentosQueVencen({ hasta } = {}) {
+export async function documentosQueVencen({ prestadoraId, hasta } = {}) {
+  if (!prestadoraId) return { documentos: null, error: new Error('Falta la Prestadora.') };
   let consulta = supabase
     .from('documentos_pedidos_al_asistente')
     .select('documento_id, asistente_id, nombre, fecha_vencimiento')
+    .eq('prestadora_id', prestadoraId)
     .eq('estado', DOCUMENTO_APROBADO)
     .not('fecha_vencimiento', 'is', null);
   if (hasta) consulta = consulta.lte('fecha_vencimiento', hasta);
@@ -41,6 +44,7 @@ export async function documentosQueVencen({ hasta } = {}) {
   const { data: asistentes, error: errorAsistentes } = await supabase
     .from('asistentes')
     .select('id, nombre')
+    .eq('prestadora_id', prestadoraId)
     .eq('estado', ESTADO_ACTIVO)
     .in('id', ids);
   if (errorAsistentes) return { documentos: null, error: errorAsistentes };

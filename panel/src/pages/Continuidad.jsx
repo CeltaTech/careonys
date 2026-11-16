@@ -30,6 +30,7 @@ import { RegistrarConsentimiento, RegistrarFamiliarQueSeQuedo } from '../compone
 import '../styles/molde-paginas.css';
 import './seguimientoDeGuardias.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 /* QUIÉN RESUELVE UN INCIDENTE DE RELEVO
    Resolverlo es mandar a alguien a una casa, o dejar escrito que el Paciente quedó con un familiar
@@ -91,6 +92,7 @@ const TABLA_EXCEPCIONES = 'excepciones_familiar_relevo';
 
 export function Continuidad() {
   const { t, locale } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [incidentes, setIncidentes] = useState([]);
@@ -106,6 +108,7 @@ export function Continuidad() {
   const tomas = useAlarmasTomadas();
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     try {
@@ -115,10 +118,10 @@ export function Continuidad() {
         { data: notificacionesData, error: errorNotificaciones },
         { data: excepcionesData, error: errorExcepciones },
       ] = await Promise.all([
-        supabase.from('incidentes_relevo').select('*').is('resuelto_at', null).order('iniciado_at', { ascending: true }),
-        supabase.from('alertas_tempranas_guardia').select('*').is('resuelto_at', null).order('detectado_at', { ascending: true }),
-        supabase.from(VISTA_MENSAJES_DE_CIERRE).select('*').is('visto_at', null).order('created_at', { ascending: true }),
-        supabase.from(TABLA_EXCEPCIONES).select('*').is('hasta_at', null).order('desde_at', { ascending: true }),
+        supabase.from('incidentes_relevo').select('*').eq('prestadora_id', prestadoraId).is('resuelto_at', null).order('iniciado_at', { ascending: true }),
+        supabase.from('alertas_tempranas_guardia').select('*').eq('prestadora_id', prestadoraId).is('resuelto_at', null).order('detectado_at', { ascending: true }),
+        supabase.from(VISTA_MENSAJES_DE_CIERRE).select('*').eq('prestadora_id', prestadoraId).is('visto_at', null).order('created_at', { ascending: true }),
+        supabase.from(TABLA_EXCEPCIONES).select('*').eq('prestadora_id', prestadoraId).is('hasta_at', null).order('desde_at', { ascending: true }),
       ]);
       if (errorIncidentes) throw errorIncidentes;
       if (errorAlertas) throw errorAlertas;
@@ -161,11 +164,11 @@ export function Continuidad() {
 
       const [{ data: pacientesData }, { data: asistentesData }, { data: personasData }] = await Promise.all([
         idsPacientes.length ? supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPacientes) : Promise.resolve({ data: [] }),
-        // El Padrón entero, con su estado. Sin filtrar acá porque esta misma lista le pone el
+        // El Padrón entero, con su estado. Sin filtrar por estado porque esta misma lista le pone el
         // nombre al Asistente que faltó en cada incidente y en cada alerta, y quien después se
         // fue de la Prestadora tiene que seguir teniendo nombre en un incidente de la semana
         // pasada. Quién puede tomar el reemplazo lo decide `ResolverIncidente`, más abajo.
-        supabase.from('asistentes').select('id, nombre, estado, cuenta_desactivada').order('nombre'),
+        supabase.from('asistentes').select('id, nombre, estado, cuenta_desactivada').eq('prestadora_id', prestadoraId).order('nombre'),
         idsPersonasFamiliares.length
           ? supabase.from('personas').select('id, nombre_visible').in('id', idsPersonasFamiliares)
           : Promise.resolve({ data: [] }),
@@ -237,7 +240,7 @@ export function Continuidad() {
       setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, [t]);
+  }, [prestadoraId, t]);
 
   async function resolverAlerta(alerta) {
     if (!(await confirmarDestructivo(t.continuidad.confirmar_resolver_alerta))) return;

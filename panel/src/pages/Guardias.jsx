@@ -42,6 +42,7 @@ import { esAdminOSuperior } from '../lib/roles';
 import { hoyISO, sumarDias } from '../lib/horarios';
 import './listadosMaqueta.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', 'pausada'];
 
@@ -69,6 +70,7 @@ function lecturaDeGuardia(guardia, ctx) {
 
 export function Guardias() {
   const { t, locale } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const [filas, setFilas] = useState([]);
   const [estadoCarga, setEstadoCarga] = useState('cargando');
   const [error, setError] = useState(null);
@@ -125,6 +127,7 @@ export function Guardias() {
   const { pedirConfirmacion } = useConfirmacion();
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstadoCarga('cargando');
     setError(null);
 
@@ -137,6 +140,7 @@ export function Guardias() {
       supabase
         .from('guardias')
         .select('*')
+        .eq('prestadora_id', prestadoraId)
         .gte('fecha', f.desde)
         .lte('fecha', f.hasta)
         .order('fecha', { ascending: true })
@@ -147,9 +151,9 @@ export function Guardias() {
       // nombre, no un guión— y también para llenar el desplegable de reasignación, que sí tiene
       // que dejar afuera a quien ya no trabaja acá. Por eso el estado viaja: el filtro lo aplica
       // la puerta que reparte trabajo (`estaEnElPadron` en GuardiaAcciones.jsx), no la consulta.
-      supabase.from('asistentes').select('id, nombre, estado, cuenta_desactivada, disponibilidad'),
-      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
-      supabase.from('servicios').select('id, etiqueta'),
+      supabase.from('asistentes').select('id, nombre, estado, cuenta_desactivada, disponibilidad').eq('prestadora_id', prestadoraId),
+      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).eq('prestadora_id', prestadoraId),
+      supabase.from('servicios').select('id, etiqueta').eq('prestadora_id', prestadoraId),
     ]);
 
     if (errorGuardias) {
@@ -193,7 +197,7 @@ export function Guardias() {
     setEstadoCarga('listo');
     // Solo el rango de fechas se pide al servidor: los demás filtros se aplican acá, en
     // memoria, y no tienen que volver a consultar la base cada vez que cambian.
-  }, [f.desde, f.hasta, t]);
+  }, [f.desde, f.hasta, prestadoraId, t]);
 
   useEffect(() => {
     recargar();

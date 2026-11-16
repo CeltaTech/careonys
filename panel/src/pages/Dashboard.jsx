@@ -67,13 +67,22 @@ export function Dashboard() {
   // Estado actual había otra con cinco: dos listas distintas de «primeros pasos» para la misma
   // Prestadora según en qué pantalla estuviera. Quedó una sola, en la pantalla de entrada —
   // `components/estado-actual/GuiaPrimerosPasos.jsx` (pendiente #139).
-  const postulaciones = useSupabaseTable('postulaciones');
+  const postulaciones = useSupabaseTable('postulaciones', {
+    filtros: { prestadora_id: prestadoraId },
+    requiere: [prestadoraId],
+  });
   // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
   const asistentes = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', {
     orderBy: 'created_at',
     select: esAdmin ? '*, cuenta_desactivada' : '*',
+    filtros: esAdmin ? { prestadora_id: prestadoraId } : null,
+    requiere: [prestadoraId],
   });
-  const clientes = useSupabaseTable('clientes', { orderBy: 'created_at' });
+  const clientes = useSupabaseTable('clientes', {
+    orderBy: 'created_at',
+    filtros: { prestadora_id: prestadoraId },
+    requiere: [prestadoraId],
+  });
   const [guardiasEnCurso, setGuardiasEnCurso] = useState(null);
   const [guardiasPorModalidad, setGuardiasPorModalidad] = useState(null);
   const [errorGuardias, setErrorGuardias] = useState(null);
@@ -97,6 +106,7 @@ export function Dashboard() {
   // una que nadie cerró, y eso se mira en otro lado —contarla acá diría que hay gente
   // trabajando donde no hay nadie.
   const cargarGuardiasEnCurso = useCallback(async () => {
+    if (!prestadoraId) return;
     setGuardiasEnCurso(null);
     setGuardiasPorModalidad(null);
     setErrorGuardias(null);
@@ -106,6 +116,7 @@ export function Dashboard() {
     const { data, error } = await supabase
       .from('guardias')
       .select('canal_modalidad')
+      .eq('prestadora_id', prestadoraId)
       .eq('estado', ESTADO_EN_CURSO)
       .eq('fecha', hoyISO());
 
@@ -115,7 +126,7 @@ export function Dashboard() {
     }
     setGuardiasEnCurso(data?.length ?? 0);
     setGuardiasPorModalidad(contarPorModalidad(data, (g) => g.canal_modalidad));
-  }, [t]);
+  }, [prestadoraId, t]);
 
   // Cuántas personas tienen hoy vínculo activo con la Prestadora, y en qué modalidad trabaja cada
   // una. Se pide una sola columna, la modalidad, y ni siquiera el nombre: de acá no sale ningún
@@ -128,13 +139,14 @@ export function Dashboard() {
   // porque ese Padrón le llega al Coordinador por una vista que no trae la modalidad. Es la
   // misma tabla y la misma columna que ya consulta el Estado actual para armar sus candidatos.
   const cargarVinculosPorModalidad = useCallback(async () => {
-    if (!desgloseModalidadHabilitado) return;
+    if (!desgloseModalidadHabilitado || !prestadoraId) return;
     setVinculosPorModalidad(null);
     setErrorVinculos(null);
 
     const { data, error } = await supabase
       .from('asistentes')
       .select('canales')
+      .eq('prestadora_id', prestadoraId)
       .eq('estado', ESTADO_ACTIVO)
       .eq('cuenta_desactivada', false);
 
@@ -143,7 +155,7 @@ export function Dashboard() {
       return;
     }
     setVinculosPorModalidad(contarPorModalidad(data, modalidadesDelAsistente));
-  }, [desgloseModalidadHabilitado, t]);
+  }, [desgloseModalidadHabilitado, prestadoraId, t]);
 
   useEffect(() => {
     cargarGuardiasEnCurso();
@@ -165,6 +177,7 @@ export function Dashboard() {
     const { data: filasAusentes, error: errorAusentes } = await supabase
       .from('incidentes_relevo')
       .select('guardias!incidentes_relevo_entrante_tenant_fk(canal_modalidad)')
+      .eq('prestadora_id', prestadoraId)
       .is('resuelto_at', null)
       .is('guardia_saliente_id', null);
 
@@ -173,6 +186,7 @@ export function Dashboard() {
     const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
     // Qué documento cuenta lo decide `lib/documentosQueVencen.js`, el mismo que arma la lista.
     const { documentos: documentosQueVencenYa, error: errorDocumentos } = await documentosQueVencen({
+      prestadoraId,
       hasta: fechaLimiteDeAviso(diasDePreaviso),
     });
 

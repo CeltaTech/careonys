@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePermisos } from '../context/PermisosContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { NuevoServicioModal } from './servicios/NuevoServicioModal';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 // De las prestaciones salen qué incluye el Servicio y a quién cuida; de las guardias, a quién cuida
 // también y en qué modalidades trabaja, porque la modalidad la lleva cada guardia.
@@ -32,6 +33,7 @@ const ESTADO_ACTIVO = 'vigente';
 
 export function Servicios() {
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const navigate = useNavigate();
   const [filas, setFilas] = useState([]);
   const [contactos, setContactos] = useState(new Map());
@@ -45,11 +47,13 @@ export function Servicios() {
   const [creando, setCreando] = useState(false);
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('servicios')
       .select(CONSULTA)
+      .eq('prestadora_id', prestadoraId)
       .order('created_at', { ascending: false });
 
     if (errorConsulta) {
@@ -84,7 +88,7 @@ export function Servicios() {
     setContactos(mapa);
     setNombresPaciente(Object.fromEntries(conSusFichas(pacientes.data).map((p) => [p.id, p.nombre])));
     setEstado('listo');
-  }, [t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();

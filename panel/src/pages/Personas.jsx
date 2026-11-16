@@ -61,11 +61,13 @@ export function Personas() {
   const { nombreDe: nombreDelPais } = usePaises();
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('personas')
       .select('*')
+      .eq('prestadora_id', prestadoraId)
       .order('apellido', { ascending: true })
       .order('nombre', { ascending: true });
 
@@ -87,7 +89,7 @@ export function Personas() {
     }
 
     setEstado('listo');
-  }, [t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     recargar();

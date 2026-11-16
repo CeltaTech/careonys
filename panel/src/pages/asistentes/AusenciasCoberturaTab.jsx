@@ -78,6 +78,7 @@ export function AusenciasCoberturaTab({ asistente }) {
   }
 
   async function recargar() {
+    if (!prestadoraId) return;
     setEstado('cargando');
     const [
       { data: dataAusencias, error: errorAusencias },
@@ -90,7 +91,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       // el desplegable del sustituto. El valor sale de `ESTADO_ACTIVO`, la misma constante que
       // contesta `estaEnElPadron`, para que la regla quede escrita en un solo lugar
       // (regla 12 de CLAUDE.md §7).
-      supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).neq('id', asistente.id),
+      supabase.from('asistentes').select('id, nombre').eq('prestadora_id', prestadoraId).eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).neq('id', asistente.id),
       // Los turnos fijos de esta persona, para elegir cuál se cubre.
       supabase.from('series_guardias').select('id, dias_semana, hora_inicio, hora_fin').eq('asistente_id', asistente.id),
     ]);
@@ -147,7 +148,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     setEstado('listo');
   }
 
-  useEffect(() => { recargar(); }, [asistente.id]);
+  useEffect(() => { recargar(); }, [asistente.id, prestadoraId]);
 
   // Qué guardias deja sin Asistente esta ausencia. Se pregunta al guardarla y queda escrito en la
   // ausencia: lo que hay que cubrir son turnos, no un rango de fechas, y sin esta lista la

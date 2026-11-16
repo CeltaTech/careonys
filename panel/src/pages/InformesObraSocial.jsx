@@ -17,6 +17,7 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 import '../styles/molde-paginas.css';
 import './informesObraSocial.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -200,6 +201,7 @@ function VistaImpresion({ informe, onCerrar, t }) {
 
 export function InformesObraSocial() {
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const { puede, cargado } = usePermisos();
   const confirmarDestructivo = useConfirmarDestructivo();
 
@@ -223,11 +225,13 @@ export function InformesObraSocial() {
   const [informeAAnular, setInformeAAnular] = useState(null);
 
   useEffect(() => {
+    if (!prestadoraId) return;
     async function cargarPacientes() {
       setEstadoPacientes('cargando');
       const { data, error: errorConsulta } = await supabase
         .from('pacientes')
         .select(`id, cliente_id, ${FICHA_NOMBRE}`)
+        .eq('prestadora_id', prestadoraId)
         .is('deleted_at', null);
       if (errorConsulta) {
         setEstadoPacientes('error');
@@ -237,7 +241,7 @@ export function InformesObraSocial() {
       setEstadoPacientes('listo');
     }
     cargarPacientes();
-  }, []);
+  }, [prestadoraId]);
 
   const recargarHistorial = useCallback(async () => {
     setEstadoHistorial('cargando');

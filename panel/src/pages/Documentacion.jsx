@@ -22,13 +22,14 @@ export function Documentacion() {
   const { f, set, limpiar, hayFiltros } = useFiltros({ filtro: 'vencido_o_por_vencer' });
 
   const recargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
 
     // Qué documentos entran lo decide `lib/documentosQueVencen.js`, el mismo que usan los avisos
     // que traen hasta acá: si contaran otra cosa, el aviso diría un número y la lista otro.
     const [{ documentos, error: errorDocs }, diasDePreaviso] = await Promise.all([
-      documentosQueVencen(),
+      documentosQueVencen({ prestadoraId }),
       diasDePreavisoDeLaPrestadora(prestadoraId),
     ]);
 

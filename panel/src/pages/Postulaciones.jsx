@@ -39,7 +39,10 @@ const FILTROS_INICIALES = {
 export function Postulaciones() {
   const { t, locale } = useLocale();
   const prestadoraId = usePrestadoraActual();
-  const { filas, estado, error, recargar } = useSupabaseTable('postulaciones');
+  const { filas, estado, error, recargar } = useSupabaseTable('postulaciones', {
+    filtros: { prestadora_id: prestadoraId },
+    requiere: [prestadoraId],
+  });
   // Los cuatro estados de cada catálogo van al filtro que alimenta: quien filtra tiene que poder
   // distinguir «todavía no llegó» de «falló» de «esta Prestadora no tiene ninguna».
   const zonasDeCobertura = useZonasCobertura(prestadoraId);

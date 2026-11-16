@@ -9,6 +9,7 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 /* Revisar precios: los precios ajustados por índice que esperan revisión.
    ==========================================================================
@@ -20,6 +21,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
    mostrar y vuelve a Estado actual. Sólo la administración. */
 export function AjustesPorIndice() {
   const { t, locale } = useLocale();
+  const prestadoraId = usePrestadoraActual();
   const [estado, setEstado] = useState('cargando');
   const [errorDeCarga, setErrorDeCarga] = useState(null);
   const [propuestas, setPropuestas] = useState([]);
@@ -29,12 +31,14 @@ export function AjustesPorIndice() {
   const [error, setError] = useState(null);
 
   const cargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setErrorDeCarga(null);
     const [lista, catalogo] = await Promise.all([
       supabase
         .from('propuestas_de_ajuste_por_indice')
         .select('id, indice, precio_actual, precio_propuesto, moneda, rige_desde, servicio:servicios(etiqueta), prestacion:prestaciones!prestacion_id(tipo_servicio)')
+        .eq('prestadora_id', prestadoraId)
         .eq('estado', 'pendiente')
         .order('rige_desde'),
       supabase.from('indices_de_actualizacion').select('codigo, nombre'),
@@ -50,7 +54,7 @@ export function AjustesPorIndice() {
     setPrecios(Object.fromEntries(filas.map((p) => [p.id, String(p.precio_propuesto)])));
     setIndices(Object.fromEntries((catalogo.data ?? []).map((i) => [i.codigo, i.nombre])));
     setEstado('listo');
-  }, [t]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     cargar();

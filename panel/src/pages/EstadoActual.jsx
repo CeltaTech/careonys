@@ -241,6 +241,7 @@ export function EstadoActual() {
   const [datos, setDatos] = useState(null);
 
   const cargar = useCallback(async () => {
+    if (!prestadoraId) return;
     setEstado('cargando');
     setError(null);
 
@@ -251,14 +252,15 @@ export function EstadoActual() {
     const limiteDocumentos = fechaLimiteDeAviso(diasDePreaviso);
 
     const [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas, au, cp, cm] = await Promise.all([
-      supabase.from('guardias').select('*').gte('fecha', desde).lte('fecha', hasta),
-      supabase.from('asistentes').select('id, estado'),
-      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
-      documentosQueVencen({ hasta: limiteDocumentos }).then(({ documentos, error }) => ({ data: documentos, error })),
-      documentosQueImpidenTrabajar().then(({ documentos, error }) => ({ data: documentos, error })),
+      supabase.from('guardias').select('*').eq('prestadora_id', prestadoraId).gte('fecha', desde).lte('fecha', hasta),
+      supabase.from('asistentes').select('id, estado').eq('prestadora_id', prestadoraId),
+      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).eq('prestadora_id', prestadoraId),
+      documentosQueVencen({ prestadoraId, hasta: limiteDocumentos }).then(({ documentos, error }) => ({ data: documentos, error })),
+      documentosQueImpidenTrabajar(prestadoraId).then(({ documentos, error }) => ({ data: documentos, error })),
       supabase
         .from('servicios')
         .select(CONSULTA_SERVICIOS)
+        .eq('prestadora_id', prestadoraId)
         .eq('estado', SERVICIO_EN_PIE)
         .order('created_at', { ascending: false }),
       informacionDeSalud.from('emergencias_guardia').select('id', { count: 'exact', head: true }).is('atendida_at', null),
@@ -266,14 +268,28 @@ export function EstadoActual() {
       supabase
         .from('incidentes_relevo')
         .select('id, guardia_saliente_id, iniciado_at, resuelto_at')
+        .eq('prestadora_id', prestadoraId)
         .order('iniciado_at', { ascending: false })
         .limit(INCIDENCIAS_A_LA_VISTA),
-      supabase.from('incidentes_relevo').select('id', { count: 'exact', head: true }).is('resuelto_at', null),
-      supabase.from('instrucciones_acceso_personas_autorizadas').select('cliente_id').eq('estado', ESPERA_FIRMA),
-      supabase.from('consentimientos_pagador').select('cliente_id, servicio_id').eq('estado', ESPERA_FIRMA),
+      supabase
+        .from('incidentes_relevo')
+        .select('id', { count: 'exact', head: true })
+        .eq('prestadora_id', prestadoraId)
+        .is('resuelto_at', null),
+      supabase
+        .from('instrucciones_acceso_personas_autorizadas')
+        .select('cliente_id')
+        .eq('prestadora_id', prestadoraId)
+        .eq('estado', ESPERA_FIRMA),
+      supabase
+        .from('consentimientos_pagador')
+        .select('cliente_id, servicio_id')
+        .eq('prestadora_id', prestadoraId)
+        .eq('estado', ESPERA_FIRMA),
       supabase
         .from('consentimientos_medicacion')
         .select('indicaciones_medicacion!consentimientos_medicacion_indicacion_id_prestadora_id_fkey(cliente_id)')
+        .eq('prestadora_id', prestadoraId)
         .eq('estado', ESPERA_FIRMA),
     ]);
 
@@ -350,6 +366,7 @@ export function EstadoActual() {
       const { data: clientes, error: errorClientes } = await supabase
         .from('clientes')
         .select('id, personas!clientes_contratante_de_la_misma_prestadora(nombre_visible)')
+        .eq('prestadora_id', prestadoraId)
         .in('id', idsDeClientes);
       if (errorClientes) {
         setError(mensajeDeError(errorClientes, t));

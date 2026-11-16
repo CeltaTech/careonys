@@ -8,6 +8,7 @@ import { useModalidades } from '../../context/ModalidadesContext';
 import { useTelefonosEsperando } from '../../context/TelefonosEsperandoContext';
 import { useEmergenciasSinAtender } from '../../context/EmergenciasSinAtenderContext';
 import { esAdminOSuperior } from '../../lib/roles';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { MODALIDAD } from '../../lib/modalidades';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiContenidos } from '../../lib/apiContenidos';
@@ -128,6 +129,7 @@ function coincide(ruta, enlace) {
 export function Layout() {
   const { t } = useLocale();
   const { usuario, logout } = useAuth();
+  const prestadoraId = usePrestadoraActual();
   const { empresa } = useEmpresa();
   const { puede } = usePermisos();
   const { tieneModalidad, ambas, vista, elegirVista, enVista } = useModalidades();
@@ -319,10 +321,10 @@ export function Layout() {
     return () => document.removeEventListener('mousedown', alHacerClic);
   }, []);
 
-  // El buscador encuentra Asistentes por nombre. La base sólo devuelve los de la Prestadora.
+  // El buscador encuentra Asistentes de la Prestadora actual por nombre.
   const texto = busqueda.trim();
   useEffect(() => {
-    if (!hayPadron || texto.length < 2) {
+    if (!hayPadron || !prestadoraId || texto.length < 2) {
       setAsistentesEncontrados([]);
       setEstadoBusqueda('listo');
       return undefined;
@@ -334,6 +336,7 @@ export function Layout() {
       const { data, error } = await supabase
         .from('asistentes')
         .select('id, nombre')
+        .eq('prestadora_id', prestadoraId)
         .eq('cuenta_desactivada', false)
         .ilike('nombre', `%${limpio}%`)
         .order('nombre')
@@ -352,7 +355,7 @@ export function Layout() {
       vigente = false;
       clearTimeout(espera);
     };
-  }, [texto, hayPadron]);
+  }, [texto, hayPadron, prestadoraId]);
 
   const normalizar = (valor) => valor.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const paginasEncontradas =

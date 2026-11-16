@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { claseBadge } from '../lib/tonos';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
@@ -20,7 +21,12 @@ import '../styles/molde-paginas.css';
 export function ListaPrecios() {
   const { t, locale } = useLocale();
   const { usuario } = useAuth();
-  const { filas, estado, error, recargar } = useSupabaseTable('lista_precios', { orderBy: 'created_at' });
+  const prestadoraId = usePrestadoraActual();
+  const { filas, estado, error, recargar } = useSupabaseTable('lista_precios', {
+    orderBy: 'created_at',
+    filtros: { prestadora_id: prestadoraId },
+    requiere: [prestadoraId],
+  });
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '' });
   const [seleccionado, setSeleccionado] = useState(null);
   const [creandoNuevo, setCreandoNuevo] = useState(false);

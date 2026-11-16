@@ -12,11 +12,11 @@
 // cambie, que es justamente el patrón repetido sin punto único de verdad.
 //
 // SE LEE CON EL PASE DE QUIEN MIRA. Las tres tablas tienen política de lectura para el Coordinador
-// y para el Admin de su Prestadora, así que la protección por fila resuelve de cuál se trata: acá
-// no viaja ningún identificador de Prestadora, que es lo que haría falsificable la consulta. Lo que
-// sí se mira es `usePrestadoraActual()`, y sólo para volver a preguntar: un permiso de acceso
-// abierta cambia la Prestadora sin cambiar la sesión, y sin esto la grilla de la Prestadora ajena
-// se pintaría con los umbrales de la anterior.
+// y para el Admin de su Prestadora, y es la protección por fila la que decide qué filas ve. La
+// consulta lleva además la Prestadora de `usePrestadoraActual()`: no abre nada que la base no deje
+// ver, sólo acota la pregunta a esa Prestadora. Y cuando cambia, se vuelve a preguntar: un permiso
+// de acceso abierto cambia la Prestadora sin cambiar la sesión, y sin esto la grilla de la
+// Prestadora ajena se pintaría con los umbrales de la anterior.
 //
 // MIENTRAS NO LLEGÓ LA RESPUESTA, VALEN LOS DE FÁBRICA. Una pantalla que no puede pintar un chip
 // no sirve, y la diferencia entre un umbral y otro es de matiz: en el peor caso una guardia queda
@@ -36,13 +36,22 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 const UmbralesContext = createContext(UMBRALES);
 const EstadoDeUmbralesContext = createContext('cargando');
 
-async function cargarUmbralesPropios() {
+async function cargarUmbralesPropios(prestadoraId) {
   const [mensajeSinCubrir, ausenciaAutomatica, escaladaCoordinador] = await Promise.all([
-    supabase.from('configuracion_aviso_guardia_sin_cubrir').select('horas_antes').maybeSingle(),
-    supabase.from('configuracion_ausencia_automatica').select('minutos_tolerancia_checkin').maybeSingle(),
+    supabase
+      .from('configuracion_aviso_guardia_sin_cubrir')
+      .select('horas_antes')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle(),
+    supabase
+      .from('configuracion_ausencia_automatica')
+      .select('minutos_tolerancia_checkin')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle(),
     supabase
       .from('configuracion_escalada_coordinador')
       .select('minutos_gracia_cierre_guardia')
+      .eq('prestadora_id', prestadoraId)
       .maybeSingle(),
   ]);
 
@@ -79,7 +88,7 @@ export function UmbralesProvider({ children }) {
 
     let activo = true;
     setEstado('cargando');
-    cargarUmbralesPropios()
+    cargarUmbralesPropios(prestadoraId)
       .then((traidos) => {
         if (!activo) return;
         setUmbrales(traidos.umbrales);

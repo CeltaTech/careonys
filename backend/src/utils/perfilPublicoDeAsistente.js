@@ -17,7 +17,7 @@
 // abajo no es un adorno, es lo que prueban las pruebas.
 //
 // EL ORDEN DE LA LISTA ES NEUTRO, Y ESO NO ES UNA PREFERENCIA DE DISEÑO.
-// `ranking_plataforma` es una de las tres funciones de riesgo catalogadas: en
+// `ranking_plataforma` es una de las dos funciones de riesgo catalogadas: en
 // Argentina, que la plataforma ordene a quién se le ofrece trabajo primero es uno
 // de los indicios de dirección del trabajo (`docs/legal/argentina.md`, y el
 // catálogo en `catalogo_funciones_intermediacion`). Nace apagada, y mientras esté

@@ -182,7 +182,7 @@ ejerza ese control de forma agregada entre todos los Clientes.
 | Herramientas de horario/penalización/calificación **operadas por el Cliente sobre su propio Asistente** | Bajo | Es el Cliente ejerciendo su rol de empleador doméstico (Ley 26.844), no la plataforma. |
 | Ranking o puntaje que la **plataforma** calcula y usa para decidir si el Asistente sigue apareciendo ante *cualquier* Cliente | Alto | La plataforma decide el futuro laboral del Asistente en general — mismo hecho citado en Uber BV vs Aslam (Reino Unido, 2021). |
 | Consecuencia automática atada a la nota agregada (ej. "por debajo de X estrellas dejás de aparecer") | Alto | Convierte la opinión del consumidor en una decisión algorítmica de la plataforma sobre el Asistente. |
-| Exclusividad exigida por la plataforma | Alto | Restringe la libertad de trabajar para otros, elemento central de la autonomía real. |
+| Exclusividad exigida por la plataforma | Alto (por eso se descartó: los mismos Asistentes trabajan en Match y en prestación directa) | Restringe la libertad de trabajar para otros, elemento central de la autonomía real. |
 | Mediación de conflictos por la plataforma | Alto (por eso se descartó, §4) | Se parece a dirigir el vínculo. |
 
 **Mitigante de diseño, no opcional**: derecho de **descargo** del Asistente

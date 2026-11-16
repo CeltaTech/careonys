@@ -65,7 +65,6 @@ entre todos los Clientes:
 |---|---|
 | Ranking o puntaje calculado por la plataforma que decide si un Asistente sigue apareciendo ante cualquier Cliente | Un ranking calculado por la plataforma que condiciona si el Asistente sigue visible para cualquier Cliente puede interpretarse como la plataforma decidiendo su acceso al trabajo en general, un indicio de subordinación bajo el art. 23 de la LCT — mismo hecho que pesó en contra de Uber en el caso Aslam (Reino Unido, 2021). |
 | Consecuencia automática atada a la calificación agregada (ej. exclusión por debajo de un puntaje) | Atar una exclusión automática a la calificación agregada convierte la opinión de los Clientes en una decisión algorítmica de la plataforma sobre el Asistente, un indicio de subordinación bajo el art. 23 de la LCT. |
-| Exclusividad exigida por la plataforma | Exigir exclusividad reduce la libertad real del Asistente de trabajar para otros, elemento central para sostener autonomía y no dependencia (art. 23 LCT). |
 
 No generan advertencia en Match (bajo riesgo): calificación por estrellas visible
 como opinión sin consecuencia automática, verificación de identidad/antecedentes, toggle de

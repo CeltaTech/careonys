@@ -59,7 +59,6 @@ renglón por renglón.
 No es una decisión sino un documento completo puesto a su nombre. Si no es suyo, lo que hay que
 revisar es el documento entero, no un renglón.
 
-- `docs/PRD_07_Modalidad_Match.md` — en Match, si la plataforma puede fijar el horario del Asistente y exigirle exclusividad. Lo demás del documento ya es del Desarrollador.
 - `docs/SECURITY.md`, sección «Portabilidad de datos» — qué se hace si cae un proveedor.
 
 ### 6. Cómo se elige construir, que no se ve en ninguna pantalla

@@ -17,7 +17,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { con } from '../../lib/textos';
 import '../../styles/molde-paginas.css';
 
-/* Cómo es el Padrón: qué tipos de Asistente existen —con sus Ramas y sus tareas—, qué documentos
+/* Cómo es el Padrón: qué tipos de Asistente existen —con sus tareas—, qué documentos
    se le piden a cada uno, con cuánta anticipación una falta se considera avisada con tiempo y
    cómo se le paga el período a quien cobra un monto fijo. */
 export function ConfiguracionAsistentes() {

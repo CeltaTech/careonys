@@ -2418,26 +2418,6 @@ $$;
 ALTER FUNCTION "interno"."el_texto_propio_solo_donde_el_producto_lo_admite"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."el_tipo_agrupado_es_visible"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
-    SET "search_path" TO 'public', 'interno'
-    AS $$
-begin
-  if not exists (
-    select 1 from public.tipos_asistente t
-     where t.id = new.tipo_asistente_id
-       and (t.prestadora_id is null or t.prestadora_id = new.prestadora_id)
-  ) then
-    raise exception 'El tipo de Asistente no existe o no es de esta Prestadora.' using errcode = 'P0001';
-  end if;
-  return new;
-end;
-$$;
-
-
-ALTER FUNCTION "interno"."el_tipo_agrupado_es_visible"() OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "interno"."encadenar_consulta_a_hce"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -10388,20 +10368,6 @@ CREATE TABLE IF NOT EXISTS "public"."advertencias_legales" (
 ALTER TABLE "public"."advertencias_legales" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."agrupaciones_tipos_asistente" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "prestadora_id" "uuid" NOT NULL,
-    "nombre" "text" NOT NULL,
-    "orden" integer DEFAULT 0 NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "agrupaciones_tipos_asistente_nombre_check" CHECK (("length"("btrim"("nombre")) > 0))
-);
-
-
-ALTER TABLE "public"."agrupaciones_tipos_asistente" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."alarmas_tomadas" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
@@ -15761,17 +15727,6 @@ COMMENT ON COLUMN "public"."tipos_asistente"."clave" IS 'Solo para los tipos gen
 COMMENT ON COLUMN "public"."tipos_asistente"."nombre" IS 'Solo para los tipos que crea una Prestadora. Es información suya, escrita por ella, y no se traduce.';
 
 
-
-CREATE TABLE IF NOT EXISTS "public"."tipos_asistente_agrupados" (
-    "prestadora_id" "uuid" NOT NULL,
-    "tipo_asistente_id" "uuid" NOT NULL,
-    "agrupacion_id" "uuid" NOT NULL
-);
-
-
-ALTER TABLE "public"."tipos_asistente_agrupados" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."tipos_documento_pagador" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
@@ -16031,16 +15986,6 @@ ALTER TABLE ONLY "public"."advertencias_legales"
 
 ALTER TABLE ONLY "public"."advertencias_legales"
     ADD CONSTRAINT "advertencias_legales_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."agrupaciones_tipos_asistente"
-    ADD CONSTRAINT "agrupaciones_tipos_asistente_id_prestadora_id_key" UNIQUE ("id", "prestadora_id");
-
-
-
-ALTER TABLE ONLY "public"."agrupaciones_tipos_asistente"
-    ADD CONSTRAINT "agrupaciones_tipos_asistente_pkey" PRIMARY KEY ("id");
 
 
 
@@ -17439,11 +17384,6 @@ ALTER TABLE ONLY "public"."textos_consentimiento"
 
 
 
-ALTER TABLE ONLY "public"."tipos_asistente_agrupados"
-    ADD CONSTRAINT "tipos_asistente_agrupados_pkey" PRIMARY KEY ("prestadora_id", "tipo_asistente_id");
-
-
-
 ALTER TABLE ONLY "public"."tipos_asistente"
     ADD CONSTRAINT "tipos_asistente_pkey" PRIMARY KEY ("id");
 
@@ -17594,10 +17534,6 @@ ALTER TABLE ONLY "public"."zonas_cobertura"
 
 
 CREATE INDEX "cambios_de_clave_autorizados_libres" ON "interno"."cambios_de_clave_autorizados" USING "btree" ("usuario_id") WHERE (("usado_en" IS NULL) AND ("anulado_en" IS NULL));
-
-
-
-CREATE UNIQUE INDEX "agrupaciones_tipos_asistente_nombre_unico" ON "public"."agrupaciones_tipos_asistente" USING "btree" ("prestadora_id", "lower"("nombre"));
 
 
 
@@ -18626,14 +18562,6 @@ CREATE INDEX "idx_textos_consentimiento_busqueda" ON "public"."textos_consentimi
 
 
 
-CREATE INDEX "idx_tipos_asistente_agrupados_agrupacion" ON "public"."tipos_asistente_agrupados" USING "btree" ("agrupacion_id");
-
-
-
-CREATE INDEX "idx_tipos_asistente_agrupados_tipo" ON "public"."tipos_asistente_agrupados" USING "btree" ("tipo_asistente_id");
-
-
-
 CREATE UNIQUE INDEX "idx_tipos_asistente_clave_general" ON "public"."tipos_asistente" USING "btree" ("clave") WHERE ("prestadora_id" IS NULL);
 
 
@@ -19075,10 +19003,6 @@ CREATE OR REPLACE TRIGGER "el_telefono_dice_si_es_celular" BEFORE INSERT OR UPDA
 
 
 CREATE OR REPLACE TRIGGER "el_texto_propio_solo_donde_el_producto_lo_admite" BEFORE INSERT OR UPDATE ON "public"."mensajes_del_sistema" FOR EACH ROW EXECUTE FUNCTION "interno"."el_texto_propio_solo_donde_el_producto_lo_admite"();
-
-
-
-CREATE OR REPLACE TRIGGER "el_tipo_agrupado_es_visible" BEFORE INSERT OR UPDATE ON "public"."tipos_asistente_agrupados" FOR EACH ROW EXECUTE FUNCTION "interno"."el_tipo_agrupado_es_visible"();
 
 
 
@@ -19826,11 +19750,6 @@ ALTER TABLE ONLY "public"."accesos_intermediacion"
 
 ALTER TABLE ONLY "public"."accesos_intermediacion"
     ADD CONSTRAINT "accesos_intermediacion_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
-
-
-
-ALTER TABLE ONLY "public"."agrupaciones_tipos_asistente"
-    ADD CONSTRAINT "agrupaciones_tipos_asistente_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
 
@@ -22221,21 +22140,6 @@ ALTER TABLE ONLY "public"."textos_consentimiento_pagador"
 
 
 
-ALTER TABLE ONLY "public"."tipos_asistente_agrupados"
-    ADD CONSTRAINT "tipos_asistente_agrupados_agrupacion_id_prestadora_id_fkey" FOREIGN KEY ("agrupacion_id", "prestadora_id") REFERENCES "public"."agrupaciones_tipos_asistente"("id", "prestadora_id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."tipos_asistente_agrupados"
-    ADD CONSTRAINT "tipos_asistente_agrupados_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."tipos_asistente_agrupados"
-    ADD CONSTRAINT "tipos_asistente_agrupados_tipo_asistente_id_fkey" FOREIGN KEY ("tipo_asistente_id") REFERENCES "public"."tipos_asistente"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."tipos_asistente"
     ADD CONSTRAINT "tipos_asistente_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
@@ -22738,9 +22642,6 @@ CREATE POLICY "administracion_y_coordinacion_leen_las_excepciones" ON "public"."
 
 
 ALTER TABLE "public"."advertencias_legales" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."agrupaciones_tipos_asistente" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."alarmas_tomadas" ENABLE ROW LEVEL SECURITY;
@@ -24243,10 +24144,6 @@ CREATE POLICY "la_administracion_carga_un_descanso" ON "public"."descansos_guard
 
 
 
-CREATE POLICY "la_administracion_gestiona_las_agrupaciones" ON "public"."agrupaciones_tipos_asistente" TO "authenticated" USING ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id")) WITH CHECK ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id"));
-
-
-
 CREATE POLICY "la_administracion_gestiona_las_especialidades" ON "public"."especialidades" TO "authenticated" USING ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id")) WITH CHECK ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id"));
 
 
@@ -24256,10 +24153,6 @@ CREATE POLICY "la_administracion_gestiona_las_vias_de_su_prohibicion" ON "public
 
 
 CREATE POLICY "la_administracion_gestiona_lo_que_alcanza_su_prohibicion" ON "public"."tareas_que_alcanza_la_prohibicion" TO "authenticated" USING ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id")) WITH CHECK ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id"));
-
-
-
-CREATE POLICY "la_administracion_gestiona_los_tipos_agrupados" ON "public"."tipos_asistente_agrupados" TO "authenticated" USING ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id")) WITH CHECK ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id"));
 
 
 
@@ -25216,19 +25109,12 @@ ALTER TABLE "public"."series_guardias_pacientes" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."servicios" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "su_prestadora_lee_las_agrupaciones" ON "public"."agrupaciones_tipos_asistente" FOR SELECT TO "authenticated" USING ("interno"."lee_la_configuracion"("prestadora_id"));
-
-
 
 CREATE POLICY "su_prestadora_lee_las_especialidades" ON "public"."especialidades" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_personal_de_la_prestadora"()));
 
 
 
 CREATE POLICY "su_prestadora_lee_las_especialidades_de_cada_asistente" ON "public"."especialidades_asistente" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_personal_de_la_prestadora"()));
-
-
-
-CREATE POLICY "su_prestadora_lee_los_tipos_agrupados" ON "public"."tipos_asistente_agrupados" FOR SELECT TO "authenticated" USING ("interno"."lee_la_configuracion"("prestadora_id"));
 
 
 
@@ -25411,9 +25297,6 @@ CREATE POLICY "textos_consentimiento_pagador_los_lee_su_prestadora" ON "public".
 
 
 ALTER TABLE "public"."tipos_asistente" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."tipos_asistente_agrupados" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."tipos_documento_asistente" ENABLE ROW LEVEL SECURITY;
@@ -27456,11 +27339,6 @@ GRANT ALL ON FUNCTION "interno"."el_texto_propio_solo_donde_el_producto_lo_admit
 
 
 
-GRANT ALL ON FUNCTION "interno"."el_tipo_agrupado_es_visible"() TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."el_tipo_agrupado_es_visible"() TO "service_role";
-
-
-
 REVOKE ALL ON FUNCTION "interno"."encadenar_consulta_a_hce"() FROM PUBLIC;
 
 
@@ -29091,11 +28969,6 @@ GRANT SELECT("funcion_clave") ON TABLE "public"."advertencias_legales" TO "traba
 
 
 GRANT SELECT("texto_advertencia") ON TABLE "public"."advertencias_legales" TO "trabajo_sin_persona";
-
-
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."agrupaciones_tipos_asistente" TO "authenticated";
-GRANT ALL ON TABLE "public"."agrupaciones_tipos_asistente" TO "service_role";
 
 
 
@@ -31824,11 +31697,6 @@ GRANT SELECT("nombre") ON TABLE "public"."tipos_asistente" TO "trabajo_sin_perso
 
 
 GRANT SELECT("activo") ON TABLE "public"."tipos_asistente" TO "trabajo_sin_persona";
-
-
-
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."tipos_asistente_agrupados" TO "authenticated";
-GRANT ALL ON TABLE "public"."tipos_asistente_agrupados" TO "service_role";
 
 
 

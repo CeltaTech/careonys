@@ -773,9 +773,6 @@ ON CONFLICT (prestadora_id) DO UPDATE SET
 -- Las listas están cargadas a propósito con las cosas que en la vida real
 -- generan la discusión en la puerta: limpiar toda la casa, cocinar para la
 -- familia, dar una inyección.
---
--- Las Ramas son de cada Prestadora; Sandbox lleva las cinco de siempre y agrupa
--- con ellas sus tipos, los de fábrica y el propio.
 
 INSERT INTO public.tipos_asistente (id, prestadora_id, clave, nombre, descripcion, activo, orden)
 VALUES
@@ -800,30 +797,6 @@ VALUES
    'no_incluida', NULL, 'Dar inyecciones o curar heridas', NULL, 30),
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    'no_incluida', NULL, 'Cambiar la dosis de un remedio por su cuenta', NULL, 40);
-
-INSERT INTO public.agrupaciones_tipos_asistente (id, prestadora_id, nombre, orden)
-VALUES
-  ('3b000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Cuidados', 10),
-  ('3b000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'Enfermería', 20),
-  ('3b000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'Rehabilitación', 30),
-  ('3b000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'Medicina', 40),
-  ('3b000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'Salud mental', 50);
-
-INSERT INTO public.tipos_asistente_agrupados (prestadora_id, tipo_asistente_id, agrupacion_id)
-SELECT '11111111-1111-4111-8111-111111111111', t.id, a.agrupacion
-FROM (VALUES
-  ('cuidador',                        '3b000000-0000-4000-8000-000000000001'::uuid),
-  ('asistente_personal_discapacidad', '3b000000-0000-4000-8000-000000000001'::uuid),
-  ('enfermero',                       '3b000000-0000-4000-8000-000000000002'::uuid),
-  ('kinesiologo',                     '3b000000-0000-4000-8000-000000000003'::uuid),
-  ('medico',                          '3b000000-0000-4000-8000-000000000004'::uuid),
-  ('acompanante_terapeutico',         '3b000000-0000-4000-8000-000000000005'::uuid)
-) AS a(clave, agrupacion)
-JOIN public.tipos_asistente t ON t.clave = a.clave AND t.prestadora_id IS NULL;
-
-INSERT INTO public.tipos_asistente_agrupados (prestadora_id, tipo_asistente_id, agrupacion_id)
-VALUES ('11111111-1111-4111-8111-111111111111', '3a000000-0000-4000-8000-000000000001',
-        '3b000000-0000-4000-8000-000000000001');
 
 -- Ana lleva el tipo propio de la Prestadora; Clara, uno de fábrica, que se
 -- traduce al idioma de quien mira.

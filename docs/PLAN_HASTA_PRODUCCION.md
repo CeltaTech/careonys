@@ -1265,10 +1265,6 @@ Y algo que hoy está mal pensado y se corrige acá: **a qué número se llama.**
 
 **83.** Que el cálculo de candidatos lo use.
 
-**86. Usted** — Las ramas. Decidido por el Desarrollador, textual: *«cada prestadora puede disponer cuales tiene, pero no las puede inventar»*. Hoy es al revés: cada Prestadora agrega, edita y borra las suyas, porque así lo pidió el 8 de octubre —*«Tanto las ramas como las tareas y el detalle de las mismas se deben poder agregar, editar y borrar. Cada prestadora dispone su set.»*—. Antes de tocar nada se vuelve sobre el tema con él: algo no está bien, y hay que encontrar el documento con el que se trabajó ese día y releerlo.
-
-**87.** Construir lo que salga de ahí.
-
 **88. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
 
 **89. Usted** — Un código QR fijo por Asistente, que lleve a su perfil público y a otros lugares todavía sin definir: ¿qué muestra esa página pública? No es el código con el que se entrega la guardia.

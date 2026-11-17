@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -38,6 +38,12 @@ export function TiposAsistenteTab() {
   const [tipoEnModal, setTipoEnModal] = useState(null);
   const [ocupadoId, setOcupadoId] = useState(null);
   const [tipoAbierto, setTipoAbierto] = useState(null);
+  const abierto = useRef(null);
+
+  // Lo que se abre queda debajo de toda la tabla: se baja hasta ahí.
+  useEffect(() => {
+    if (tipoAbierto) abierto.current?.scrollIntoView({ block: 'start' });
+  }, [tipoAbierto]);
 
   const recargar = useCallback(async () => {
     if (!prestadoraId) return;
@@ -156,7 +162,7 @@ export function TiposAsistenteTab() {
       </section>
 
       {tipoAbierto && (
-        <>
+        <div ref={abierto} className="molde-pila">
           <EspecialidadesDelTipo
             tipo={tipos.find((x) => x.id === tipoAbierto)}
             prestadoraId={prestadoraId}
@@ -165,7 +171,7 @@ export function TiposAsistenteTab() {
             tipo={tipos.find((x) => x.id === tipoAbierto)}
             prestadoraId={prestadoraId}
           />
-        </>
+        </div>
       )}
 
       {tipoEnModal && (

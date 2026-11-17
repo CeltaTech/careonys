@@ -1113,11 +1113,11 @@ aplicaciones del teléfono y 7 textos que no cumplen las cuatro fuentes de `..\.
 relevamiento está hecho: no hay tuteo ni voseo en las traducciones, y el botón «Habilitar cambio de
 contraseña» no necesita cambio. Se cierra cuando usted contesta cada ficha y se aplica.
 
-**64.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
-con el nombre comercial que informa CeltaTech como dato. Hoy la nombra en dos lugares —el
-recuadro de Servicios por modalidad de Estado actual y el motivo por el que un Asistente no puede
-tomar una guardia—, con «Prestación directa» y «Match» escritos en los textos
-del Panel, y lo hace aunque tenga una sola.
+**64.** Que el Panel nombre la modalidad con el nombre comercial que informa CeltaTech como dato.
+**Espera el paso 111**, que es la puerta por la que CeltaTech le informa al producto qué tiene
+habilitado cada Prestadora: hoy no entra nada por ahí. Mientras tanto, «Prestación directa» y
+«Match» siguen escritos en los textos del Panel. Con una sola modalidad habilitada, el Panel ya no
+la nombra.
 
 ---
 

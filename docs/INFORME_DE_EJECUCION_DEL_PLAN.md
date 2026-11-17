@@ -67,6 +67,12 @@ El Panel muestra los dos estados nuevos en los tres idiomas. La función que ant
 contactos quedó sin uso y se guardó en el estante de código. Falta el botón de compra y el de baja
 en la aplicación del Cliente: son pantallas nuevas y quedaron en el plan como suyas.
 
+**Paso 64, la modalidad en el Panel.** Con una sola modalidad habilitada, Estado actual ya no
+muestra el recuadro «Servicios por modalidad», y las otras dos tarjetas ocupan el ancho. El Resumen
+ya lo hacía así. El motivo por el que un Asistente no puede tomar una guardia hoy no se ve en
+ninguna pantalla, así que no hubo nada que cambiar ahí. Queda en el plan el nombre comercial de
+cada modalidad, que tiene que llegar desde CeltaTech: espera el paso del alta de una Prestadora.
+
 ## Cómo se comprobó
 
 Pasaron las 2449 pruebas del backend y las 884 del Panel. La prueba que lee cada tabla con cada

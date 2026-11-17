@@ -234,7 +234,8 @@ export function EstadoActual() {
   const prestadoraId = usePrestadoraActual();
   const umbrales = useUmbrales();
   const { emergencias } = useEmergenciasSinAtender();
-  const { modalidades } = useModalidades();
+  // Con una sola modalidad habilitada, el Panel no la nombra: el recuadro de modalidades sale entero.
+  const { modalidades, ambas } = useModalidades();
 
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -660,8 +661,8 @@ export function EstadoActual() {
         </Tarjeta>}
       </div>
 
-      <div className="panel-grilla panel-columnas-3">
-        <Tarjeta
+      <div className={`panel-grilla ${ambas ? 'panel-columnas-3' : 'panel-columnas-2'}`}>
+        {ambas && <Tarjeta
           titulo={tx.servicios_por_modalidad}
           enlace={
             <Link className="panel-enlace" to="/servicios">
@@ -688,7 +689,7 @@ export function EstadoActual() {
               </div>
             </div>
           )}
-        </Tarjeta>
+        </Tarjeta>}
 
         <Tarjeta
           titulo={tx.cobertura_guardias}

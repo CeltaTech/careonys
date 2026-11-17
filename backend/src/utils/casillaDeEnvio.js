@@ -10,7 +10,7 @@ import { direccionRemitente } from './email.js';
 // guardada en el buzón de cada Cliente y de cada Asistente que alguna vez recibió un correo.
 //
 // Sale del código de la Prestadora, que no elige Careonys: lo elige CeltaTech y llega con el alta
-// (`docs/PLAN_HASTA_PRODUCCION.md`, paso 111). Ese código ya es único, así que la casilla no
+// (`routes/altaDePrestadora.js`). Ese código ya es único, así que la casilla no
 // necesita mirar las de las demás Prestadoras.
 
 // Quita los acentos y deja sólo lo que puede vivir a la izquierda de una arroba sin traer

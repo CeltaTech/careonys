@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { respaldosQueSeBorran, fechaDelRespaldo } from '../retencionDeRespaldos.js';
+import { respaldosQueSeBorran, fechaDelRespaldo, borrarLosVencidos } from '../retencionDeRespaldos.js';
 import { IDENTIDAD } from '../../config/identidadProducto.js';
 
 const CODIGO = IDENTIDAD.codigo;
@@ -56,5 +56,65 @@ describe('respaldosQueSeBorran', () => {
 
   it('con un plazo mal configurado no borra nada: falla', () => {
     assert.throws(() => respaldosQueSeBorran([nombre('backup', haceDias(400))], CODIGO, AHORA, { dias: NaN, meses: 12 }));
+  });
+});
+
+/* Un depósito de mentira: guarda las claves en memoria y anota qué se pidió borrar. */
+function depositoDePrueba(claves, { fallaAlBorrar = () => false } = {}) {
+  const hay = new Set(claves);
+  return {
+    hay,
+    async listar(prefijo) { return [...hay].filter((c) => c.startsWith(prefijo)); },
+    async borrar(clave) {
+      if (fallaAlBorrar(clave)) throw new Error('el depósito no dejó borrar');
+      hay.delete(clave);
+    },
+  };
+}
+
+describe('borrarLosVencidos, con el paquete del código', () => {
+  const PREFIJO = `${CODIGO}_codigo_`;
+
+  it('borra el paquete que pasó el plazo y deja el de hoy y el mensual', async () => {
+    const hoy = nombre('codigo', haceDias(0));
+    const mensual = nombre('codigo', new Date('2026-08-01T06:00:00.000Z'));
+    const vencido = nombre('codigo', new Date('2026-08-02T06:00:00.000Z'));
+    const deposito = depositoDePrueba([hoy, mensual, vencido]);
+    const borrados = await borrarLosVencidos(deposito, { prefijo: PREFIJO, codigo: CODIGO, ahora: AHORA });
+    assert.equal(borrados, 1);
+    assert.deepEqual([...deposito.hay].sort(), [hoy, mensual].sort());
+  });
+
+  it('no toca el volcado viejo de la base ni los datos de las Prestadoras, aunque estén vencidos', async () => {
+    const volcado = nombre('backup', haceDias(400));
+    const datos = `datos/abc/${CODIGO}_datos_${haceDias(400).toISOString().replace(/[:.]/g, '-')}.json.gz.age`;
+    const deposito = depositoDePrueba([volcado, datos]);
+    assert.equal(await borrarLosVencidos(deposito, { prefijo: PREFIJO, codigo: CODIGO, ahora: AHORA }), 0);
+    assert.deepEqual([...deposito.hay].sort(), [volcado, datos].sort());
+  });
+
+  it('una falla al borrar se anota y sigue con el siguiente', async () => {
+    const a = nombre('codigo', new Date('2026-08-02T06:00:00.000Z'));
+    const b = nombre('codigo', new Date('2026-08-03T06:00:00.000Z'));
+    const mensual = nombre('codigo', new Date('2026-08-01T06:00:00.000Z'));
+    const avisos = [];
+    const deposito = depositoDePrueba([mensual, a, b], { fallaAlBorrar: (c) => c === a });
+    const borrados = await borrarLosVencidos(deposito, { prefijo: PREFIJO, codigo: CODIGO, ahora: AHORA, avisar: (t) => avisos.push(t) });
+    assert.equal(borrados, 1);
+    assert.equal(avisos.length, 1);
+    assert.deepEqual([...deposito.hay].sort(), [mensual, a].sort());
+  });
+
+  it('en una carpeta, no mira lo que está más hondo', async () => {
+    const hondo = `datos/abc/viejo/${nombre('datos', haceDias(400))}`;
+    const deposito = depositoDePrueba([hondo]);
+    assert.equal(await borrarLosVencidos(deposito, { carpeta: 'datos/abc/', codigo: CODIGO, ahora: AHORA }), 0);
+    assert.ok(deposito.hay.has(hondo));
+  });
+
+  it('sin el código del producto no borra nada: falla', async () => {
+    const deposito = depositoDePrueba([nombre('codigo', haceDias(400))]);
+    await assert.rejects(borrarLosVencidos(deposito, { prefijo: PREFIJO, ahora: AHORA }));
+    assert.equal(deposito.hay.size, 1);
   });
 });

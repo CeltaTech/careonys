@@ -42,7 +42,7 @@
    nada y se devuelve el motivo. Nunca se muestra un contacto que no se pudo descontar. */
 
 import { supabase, enLaPrestadora } from '../db/connection.js';
-import { abrirElContacto, MOTIVO_CONTACTO } from './contactosIntermediacion.js';
+import { abrirElContacto, elAccesoAbreContactos, MOTIVO_CONTACTO } from './contactosIntermediacion.js';
 
 /** Las columnas del Legajo del Asistente que son el dato que se vende. Están acá, en una sola
  *  lista, por el mismo motivo que `COLUMNAS_PERFIL_PUBLICO` tiene la suya: para que ninguna ruta
@@ -62,7 +62,7 @@ export const MOTIVO_VER_CONTACTO = {
 };
 
 const COLUMNAS_DEL_ACCESO =
-  'id, prestadora_id, estado, importe, moneda, gratis_hasta, proximo_cobro, saldo_contactos, created_at, ' +
+  'id, prestadora_id, estado, importe, moneda, gratis_hasta, proximo_cobro, saldo_contactos, suspension_desde, vigente_hasta, created_at, ' +
   'formas_de_cobro_intermediacion(nombre, renueva_sola, periodo_cantidad, periodo_unidad, contactos_incluidos)';
 
 /** ¿Este acceso está todavía en período gratuito? Se compara por día, que es como está guardado:
@@ -104,7 +104,9 @@ export async function accesoQuePagaElContacto({ prestadoraId, clienteId }) {
   }
 
   const todos = data || [];
-  const vigentes = todos.filter((a) => a.estado === 'vigente');
+  // «Vigente» acá quiere decir que hoy abre contactos: además del vigente, el que está en período
+  // de gracia antes de su suspensión y el dado de baja antes de su último día pagado.
+  const vigentes = todos.filter((a) => elAccesoAbreContactos(a));
   const conSaldo = vigentes.find((a) => a.saldo_contactos !== null && a.saldo_contactos > 0);
   const porFecha = vigentes.find((a) => a.saldo_contactos === null);
 

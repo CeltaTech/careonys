@@ -212,7 +212,7 @@ para lo mismo en la misma pantalla; el que se muestra sale de `GET
 /api/panel/cobros/estados-de-cuenta`, que lee la vista `estado_de_cuenta_externo_vigente` —lo
 último que entró de cada Cliente—. Ese otro software avisa por una
 puerta propia, `POST /api/avisos-de-cobranza/:prestadoraId`, firmada con un secreto que la
-Prestadora carga una sola vez y que se guarda en la caja fuerte de la base, nunca a la vista. El
+Prestadora carga una sola vez y que se guarda cifrado con la clave de esa Prestadora, nunca a la vista. El
 pedido repetido no suma nada, una Prestadora no puede escribir sobre el Cliente de otra, y **lo
 avisado se muestra y no decide nada**: quien decide es una persona. La puerta está en
 `backend/src/routes/avisoDeCobranzaExterna.js` y la prueba en

@@ -23,8 +23,8 @@
 //   3. **Ante la duda se corta con 401, antes de tocar una sola fila.** No hay configuración
 //      de WhatsApp de esa Prestadora, no hay secreto de la aplicación guardado, falta la
 //      cabecera, la firma no da: se rechaza. Nunca "se sigue igual".
-//   4. **El saludo inicial de Meta se contesta con el token de esa Prestadora**, sacado de la
-//      caja fuerte. Antes era una sola variable de entorno para todo el producto: quien la
+//   4. **El saludo inicial de Meta se contesta con el token de esa Prestadora**, que se guarda
+//      cifrado con la clave de esa Prestadora. Antes era una sola variable de entorno para todo el producto: quien la
 //      supiera de una Prestadora la sabía de todas.
 //
 // Lo que todavía no se probó: el formato real del cuerpo que manda Meta. El parseo de abajo
@@ -33,6 +33,7 @@
 import express, { Router } from 'express';
 import { conexionDeLaDireccion, enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { enviarWhatsApp } from '../utils/whatsapp.js';
+import { USO, secretoParaComprobar } from '../utils/secretosDeTerceros.js';
 import {
   resolverRespuestaAutomatica,
   laConversacionSigueConUnaPersona,
@@ -76,7 +77,7 @@ whatsappWebhookRouter.use(express.raw({ type: 'application/json', limit: '1mb' }
 
 // El saludo inicial: Meta pega un GET a la dirección antes de empezar a mandar eventos y
 // espera que le devuelvan el desafío tal cual, siempre que el token que trae sea el que la
-// Prestadora escribió en su panel de Meta. Ese token ahora sale de la caja fuerte de esa
+// Prestadora escribió en su panel de Meta. Ese token se guarda cifrado con la clave de esa
 // Prestadora — es la parte del pendiente #165 que hace que conectar la dirección de una no
 // sirva para conectarse a la de otra.
 whatsappWebhookRouter.get('/:prestadoraId', enLaPrestadoraDeLaDireccion('Saludo de WhatsApp', (res) => res.status(403).send('Verificación fallida')), async (req, res) => {
@@ -98,10 +99,11 @@ whatsappWebhookRouter.get('/:prestadoraId', enLaPrestadoraDeLaDireccion('Saludo 
   const challenge = req.query['hub.challenge'];
   if (modo !== 'subscribe' || !token) return rechazar(MOTIVO_WHATSAPP.TOKEN_DE_SALUDO_NO_COINCIDE);
 
-  const { data: tokenGuardado } = await db.rpc('leer_verify_token_whatsapp', {
-    p_prestadora_id: prestadoraId,
-  });
-  if (!tokenGuardado) return rechazar(MOTIVO_WHATSAPP.TOKEN_DE_SALUDO_AUSENTE);
+  const { texto: tokenGuardado, motivo: motivoDelToken } = await secretoParaComprobar(
+    db, prestadoraId, USO.WHATSAPP_TOKEN_DEL_SALUDO);
+  if (!tokenGuardado) {
+    return rechazar(motivoDelToken === 'secreto_no_cargado' ? MOTIVO_WHATSAPP.TOKEN_DE_SALUDO_AUSENTE : motivoDelToken);
+  }
   if (!secretosIguales(token, tokenGuardado)) return rechazar(MOTIVO_WHATSAPP.TOKEN_DE_SALUDO_NO_COINCIDE);
 
   return res.status(200).send(String(challenge ?? ''));
@@ -126,7 +128,7 @@ whatsappWebhookRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
 
   const { data: configuracion } = await db
     .from('configuracion_whatsapp_prestadora')
-    .select('phone_number_id, app_secret_secret_id')
+    .select('phone_number_id')
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
 
@@ -134,10 +136,11 @@ whatsappWebhookRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
   // qué comprobar nada, y nada que atender. Corta acá, sin leer ningún secreto.
   if (!configuracion) return rechazar(MOTIVO_WHATSAPP.SIN_CONFIGURACION);
 
-  const { data: appSecret } = await db.rpc('leer_app_secret_whatsapp', {
-    p_prestadora_id: prestadoraId,
-  });
-  if (!appSecret) return rechazar(MOTIVO.SECRETO_AUSENTE);
+  const { texto: appSecret, motivo: motivoDelSecreto } = await secretoParaComprobar(
+    db, prestadoraId, USO.WHATSAPP_SECRETO_DE_LA_APLICACION);
+  if (!appSecret) {
+    return rechazar(motivoDelSecreto === 'secreto_no_cargado' ? MOTIVO.SECRETO_AUSENTE : motivoDelSecreto);
+  }
 
   // Meta firma el cuerpo entero con el secreto de la aplicación y lo escribe como
   // `sha256=<hexadecimal>`. No hay instante adentro —a diferencia de Stripe y Mercado Pago—,

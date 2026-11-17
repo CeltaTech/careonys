@@ -20,9 +20,11 @@ import { strict as assert } from 'node:assert';
 import { after, afterEach, beforeEach, describe, it } from 'node:test';
 import { createHmac } from 'node:crypto';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
+import { quitarClaveDePrueba, respuestaDeSecretosDePrueba } from '../../__tests__/secretosDeTercerosDePrueba.js';
 import { createServer } from 'node:http';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
+const OTRA_PRESTADORA_DEL_SECRETO = '88888888-8888-4888-8888-888888888888';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
 const FACTURA = '60000000-0000-4000-8000-000000000001';
 const SECRETO = 'un-secreto-largo-de-mas-de-32-caracteres';
@@ -130,7 +132,13 @@ beforeEach(() => {
   facturaEnLaBase = { id: FACTURA, facturado_at: null };
   secretoCargado = SECRETO;
   respuestas.clear();
-  respuestas.set('POST /rest/v1/rpc/leer_secreto_del_aviso_de_facturacion', () => secretoCargado);
+  // El secreto llega como lo devuelve la base: cifrado con la clave de esta Prestadora.
+  // Cada Prestadora tiene su clave: la fila se cifra para la Prestadora que pide la consulta.
+  respuestas.set('GET /rest/v1/secretos_de_terceros', (filtros) =>
+    respuestaDeSecretosDePrueba(
+      filtros.get('prestadora_id')?.replace(/^eq\./, '') ?? PRESTADORA,
+      { secreto_del_aviso_de_facturacion: secretoCargado },
+    )(filtros));
   respuestas.set('GET /rest/v1/facturas_cliente', (filtros) =>
     // La base sólo devuelve lo que pide el filtro: si la consulta no lleva escrito el filtro de
     // Prestadora, esta prueba no lo detectaría, así que se mira aparte más abajo.
@@ -173,6 +181,23 @@ describe('sin firma no entra nada', () => {
 
   it('sin secreto cargado no entra ningún aviso, aunque venga firmado', async () => {
     secretoCargado = null;
+    const { estado } = await avisar(LO_FACTURADO);
+    assert.equal(estado, 401);
+    assert.equal(loEscrito(), undefined);
+  });
+
+  it('sin la clave de la Prestadora el secreto no se lee, y no entra ningún aviso', async () => {
+    const fila = respuestaDeSecretosDePrueba(PRESTADORA, { secreto_del_aviso_de_facturacion: SECRETO })();
+    respuestas.set('GET /rest/v1/secretos_de_terceros', () => fila);
+    quitarClaveDePrueba(PRESTADORA);
+    const { estado } = await avisar(LO_FACTURADO);
+    assert.equal(estado, 401);
+    assert.equal(loEscrito(), undefined);
+  });
+
+  it('un secreto cifrado para otra Prestadora no sirve para esta', async () => {
+    const deOtra = respuestaDeSecretosDePrueba(OTRA_PRESTADORA_DEL_SECRETO, { secreto_del_aviso_de_facturacion: SECRETO })();
+    respuestas.set('GET /rest/v1/secretos_de_terceros', () => deOtra);
     const { estado } = await avisar(LO_FACTURADO);
     assert.equal(estado, 401);
     assert.equal(loEscrito(), undefined);
@@ -281,7 +306,7 @@ function noFiltraLaBase(cuerpo) {
   const texto = JSON.stringify(cuerpo ?? {});
   assert.doesNotMatch(
     texto,
-    /facturas_cliente|configuracion_facturacion|prestadora_id|jsonb|constraint|select|column|relation|PGRST|vault/i,
+    /facturas_cliente|configuracion_facturacion|prestadora_id|jsonb|constraint|select|column|relation|PGRST|secretos_de_terceros/i,
     `el mensaje nombra algo de la base: ${texto}`
   );
 }

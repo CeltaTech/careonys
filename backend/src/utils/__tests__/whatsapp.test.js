@@ -4,8 +4,8 @@
  *   node --test src/utils/__tests__/whatsapp.test.js
  *
  * Las credenciales del número, la plantilla de un aviso y el teléfono de mensajes de la Prestadora
- * se leen con el trabajo de esa Prestadora, de a una por vez. El token lo entrega la base sólo a
- * quien trabaja para la misma Prestadora que pide.
+ * se leen con el trabajo de esa Prestadora, de a una por vez. El token llega cifrado con la clave
+ * de esa Prestadora y se descifra acá.
  *
  * La base es de mentira y contesta por HTTP como la de verdad: además del resultado se mira con qué
  * credencial se le pidió cada cosa. Con el sistema roto —otra credencial u otra Prestadora— las
@@ -17,9 +17,11 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
+import { respuestaDeSecretosDePrueba } from '../../__tests__/secretosDeTercerosDePrueba.js';
 
 const PRESTADORA = '11111111-1111-4111-8111-111111111111';
 const PLANTILLA = '66666666-6666-4666-8666-666666666666';
+const TOKEN_CIFRADO = respuestaDeSecretosDePrueba(PRESTADORA, { whatsapp_access_token: 'token-inventado' });
 
 let llamadas = [];
 
@@ -44,7 +46,7 @@ const baseFalsa = createServer((req, res) => {
     if (clave === 'GET /rest/v1/configuracion_whatsapp_prestadora') {
       respuesta = { activo: true, phone_number_id: 'numero-inventado', waba_id: 'cuenta-inventada' };
     }
-    if (clave === 'POST /rest/v1/rpc/leer_token_whatsapp') respuesta = 'token-inventado';
+    if (clave === 'GET /rest/v1/secretos_de_terceros') respuesta = TOKEN_CIFRADO(url.searchParams);
     if (clave === 'GET /rest/v1/plantillas_whatsapp') {
       respuesta = { id: PLANTILLA, nombre_interno: 'aviso', idioma: 'es-AR', cuerpo_texto: '{{1}}', estado: 'aprobada' };
     }
@@ -80,7 +82,8 @@ describe('lo que lee el envío por WhatsApp', () => {
     assert.deepEqual(credenciales, { phoneNumberId: 'numero-inventado', wabaId: 'cuenta-inventada', token: 'token-inventado' });
     assert.equal(llamadas.length, 2);
     for (const llamada of llamadas) conElTrabajoDeLaPrestadora(llamada);
-    assert.equal(JSON.parse(llamadas[1].cuerpo).p_prestadora_id, PRESTADORA);
+    assert.equal(llamadas[1].url.searchParams.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(llamadas[1].url.searchParams.get('uso'), 'eq.whatsapp_access_token');
   });
 
   it('la plantilla de un aviso se lee con el trabajo de la Prestadora', async () => {

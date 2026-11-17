@@ -268,7 +268,7 @@ function noSeCalculaAca(res) {
  * Vive acá y no sólo en Configuración porque la pantalla de saldos lo necesita para saber qué
  * mostrar, y a Configuración entra únicamente quien administra: un Coordinador que abre la
  * pantalla tiene que ver lo mismo que ve su Admin. De la fila sale sólo el interruptor; el
- * secreto de la caja fuerte no se toca acá.
+ * secreto con el que firma el otro software no se toca acá.
  */
 panelCobrosRouter.get('/configuracion', requiereRolPanel, async (req, res) => {
   // Con el trabajo de la Prestadora, porque la base le abre `configuracion_facturacion_clientes`

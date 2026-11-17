@@ -10,13 +10,21 @@
    y `src/utils/copiaDeLosArchivos.js`). No hay ninguna cuenta que copie la base entera.
 
    Exige que la copia de trabajo tenga la historia completa: con una copia de un solo commit el
-   paquete sale igual y no sirve para nada. */
+   paquete sale igual y no sirve para nada.
+
+   CUÁNTO SE GUARDA lo decide `src/utils/retencionDeRespaldos.js`, el mismo que decide cuánto se
+   guarda de los datos: los paquetes de los últimos 30 días y, de lo anterior, el más viejo de cada
+   mes durante 12 meses. Recién con el paquete de hoy arriba en los dos depósitos se borran los
+   vencidos, y sólo los que tienen nombre de paquete del código. Una falla al borrar se anota y no
+   tumba el respaldo. */
 
 import { spawn } from 'node:child_process';
 import { createReadStream } from 'node:fs';
 import { unlink } from 'node:fs/promises';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { IDENTIDAD } from '../src/config/identidadProducto.js';
+import { destinoS3 } from '../src/utils/copiaDeLosArchivos.js';
+import { borrarLosVencidos } from '../src/utils/retencionDeRespaldos.js';
 
 function requireEnv(nombre) {
   const valor = process.env[nombre];
@@ -78,6 +86,25 @@ async function main() {
   await subirA(b2, requireEnv('B2_BUCKET'), nombrePaquete, rutaPaquete);
   await unlink(rutaPaquete);
   console.log(`Código: ${nombrePaquete} subido a los dos depósitos.`);
+
+  const ahora = new Date();
+  const destinos = [
+    ['R2', destinoS3(r2, requireEnv('R2_BUCKET'))],
+    ['B2', destinoS3(b2, requireEnv('B2_BUCKET'))],
+  ];
+  for (const [nombre, destino] of destinos) {
+    try {
+      const borrados = await borrarLosVencidos(destino, {
+        prefijo: `${IDENTIDAD.codigo}_codigo_`,
+        codigo: IDENTIDAD.codigo,
+        ahora,
+        avisar: (texto) => console.warn(`${nombre}: ${texto}`),
+      });
+      console.log(`${nombre}: ${borrados} paquetes vencidos borrados.`);
+    } catch (error) {
+      console.warn(`${nombre}: no se pudieron revisar los paquetes vencidos: ${error.message}`);
+    }
+  }
 }
 
 main().catch((error) => {

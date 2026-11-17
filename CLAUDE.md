@@ -351,7 +351,7 @@ de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 `supabase/config.toml` a propósito: así no son direcciones web. Las políticas las siguen
 encontrando porque guardan el identificador interno de la función, no su nombre. **Una función se
 queda en `public` solamente si el navegador la llama a propósito, y entonces no puede recibir un
-identificador que la apunte a otra Prestadora** — hoy el Panel llama siete: `resolver`, que
+identificador que la apunte a otra Prestadora** — hoy el Panel llama ocho: `resolver`, que
 resuelve la Prestadora adentro con `prestadora_actual()`; `reasignar_guardia_por_emergencia`, que
 también la resuelve adentro, corre con los permisos de quien llama y es el único camino por el que
 una guardia empezada —la ausente— cambia de Asistente, con motivo y registro, con un
@@ -360,6 +360,9 @@ ya tiene otro turno a esa hora; `servicios_que_coordino`, que no recibe a nadie 
 Servicios que coordina quien inició sesión; y
 `domicilio_del_paciente_en` y `domicilios_de_pacientes_en`, que reciben pacientes y una fecha y
 corren con los permisos de quien llama, así que la protección por fila de cada tabla decide qué ve;
+`distancias_de_asistentes_a_pacientes`, que recibe Asistentes, Pacientes y una fecha, corre con
+los permisos de quien llama, sólo le contesta al personal de la Prestadora y devuelve la distancia
+en metros, redondeada a cien, sin entregar ningún domicilio;
 y `registrar_hospitalizacion` y `cerrar_hospitalizacion`, que corren con los permisos de quien
 llama, resuelven la Prestadora adentro y guardan en una sola operación la internación, el
 domicilio temporal en la institución o la pausa de las guardias.

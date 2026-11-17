@@ -36,7 +36,7 @@ export async function proveedorDeMensajeDeTexto(prestadoraId) {
   const { data } = await enLaPrestadora(prestadoraId, 'proveedor de mensajes de texto', (db) =>
     db
       .from('configuracion_mensaje_de_texto_prestadora')
-      .select('proveedor, remitente, token_secret_id, activo')
+      .select('proveedor, remitente, activo')
       .eq('prestadora_id', prestadoraId)
       .maybeSingle());
 
@@ -53,8 +53,9 @@ export async function hayProveedorDeMensajeDeTexto(prestadoraId) {
  * El envío contra el proveedor. Es el único hueco que queda por escribir.
  *
  * El día que se contrate uno, acá adentro va la llamada a su API —con el remitente y la credencial
- * que ya vienen en `proveedor`, leída de Vault con el mismo molde que el token de WhatsApp
- * (`leer_token_whatsapp`)— y nada más. No hace falta tocar ningún otro archivo: ni el catálogo de
+ * del remitente que viene en `proveedor` y la credencial, que se lee descifrada con
+ * `leerSecretoDeTercero(db, prestadoraId, USO.MENSAJE_DE_TEXTO)`, con el mismo molde que el token
+ * de WhatsApp— y nada más. No hace falta tocar ningún otro archivo: ni el catálogo de
  * mensajes, ni la cascada, ni la pantalla.
  *
  * Mientras tanto avisa que no está escrito, en vez de decir que mandó algo que no mandó.

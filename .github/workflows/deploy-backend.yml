@@ -30,6 +30,11 @@ jobs:
         with:
           node-version: '22'
 
+      # Ningún modelo de IA se entrena con datos de las Prestadoras. Si aparece una llamada de
+      # entrenamiento en el código, la publicación no sale.
+      - name: Revisar que nada entrene un modelo con datos de producción
+        run: node scripts/verificar_entrenamiento_con_datos.mjs
+
       - name: Correr las pruebas del backend
         working-directory: backend
         run: |

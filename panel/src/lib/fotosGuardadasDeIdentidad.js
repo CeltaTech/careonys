@@ -3,10 +3,9 @@ import { llamadorDe } from './apiPanel';
 /* Las dos fotos de la verificación de identidad van y vuelven por el backend.
    ==========================================================================
 
-   El depósito `fotos-identidad` no tiene políticas y nadie lo alcanza con su propio pase: adentro
-   hay imágenes de documentos de identidad. Lo escribe y lo lee el backend con la llave maestra,
-   después de comprobar de qué Prestadora es el Asistente
-   (`backend/src/routes/panelVerificacionIdentidad.js`). */
+   El depósito `fotos-identidad` es privado: adentro hay imágenes de documentos de identidad. Lo
+   escribe y lo lee el backend con la credencial de quien pide, y la base decide a qué Asistentes
+   alcanza (`backend/src/routes/panelVerificacionIdentidad.js`). */
 
 const llamarApi = llamadorDe('/verificacion-identidad');
 

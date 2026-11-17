@@ -17,6 +17,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { respuestaDeSecretosDePrueba } from '../../__tests__/secretosDeTercerosDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -93,7 +94,7 @@ function enMinutos(minutos) {
 }
 
 /**
- * Una cuenta con el enlace vivo, el teléfono verificado y habilitado por la Prestadora, sin puerta
+ * Una cuenta con el enlace vivo, el teléfono verificado, sin puerta
  * abierta, y un código pendiente que vence cuando diga la prueba.
  */
 function prepararRecuperacion({ codigoExpiraEn, pedidosEnLaHora = 0 }) {
@@ -120,7 +121,6 @@ function prepararRecuperacion({ codigoExpiraEn, pedidosEnLaHora = 0 }) {
       estado: 'aprobada',
     },
   ]);
-  respuestas.set('GET /rest/v1/telefonos_confirmados_por_la_prestadora', [{ id: '99999999-9999-4999-8999-999999999999' }]);
   respuestas.set('GET /rest/v1/codigos_al_telefono', [
     {
       id: CODIGO_ID,
@@ -145,7 +145,7 @@ function prepararRecuperacion({ codigoExpiraEn, pedidosEnLaHora = 0 }) {
   respuestas.set('GET /rest/v1/configuracion_whatsapp_prestadora', [
     { activo: true, phone_number_id: '1234567890', waba_id: '0987654321' },
   ]);
-  respuestas.set('POST /rest/v1/rpc/leer_token_whatsapp', 'token-de-mentira');
+  respuestas.set('GET /rest/v1/secretos_de_terceros', respuestaDeSecretosDePrueba(PRESTADORA, { whatsapp_access_token: 'token-de-mentira' }));
 }
 
 function seEmitioUnCodigoNuevo() {

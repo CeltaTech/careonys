@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { Cabecera } from '../components/ui/Cabecera';
-import { useTelefonosEsperando } from '../context/TelefonosEsperandoContext';
 import { llamarApiPanel } from '../lib/apiPanel';
 import { mensajeDeError } from '../lib/errores';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -22,20 +21,9 @@ import './habilitar-clave.css';
    que se ve es lo que se puede hacer.
 
    NO SE MUESTRA NINGÚN NÚMERO DE TELÉFONO. Lo que hay es la foto de la ficha y el correo, que es
-   con lo que se reconoce a quien llama.
-
-   ARRIBA, LO QUE ESTÁ ESPERANDO. Quien cambió su número queda a la espera, y esa espera aparece
-   sola acá: no hace falta ir a buscar a la persona a mano. Se la llama, se verifica que el cambio
-   es real, y recién ahí se habilita. La lista llega filtrada por el backend, igual que la búsqueda:
-   lo que se ve es lo que se puede hacer. */
+   con lo que se reconoce a quien llama. */
 export function HabilitarClave() {
   const { t } = useLocale();
-  const {
-    cuentas: esperando,
-    estado: estadoEsperando,
-    error: errorEsperando,
-    recargar: recargarEsperando,
-  } = useTelefonosEsperando();
   const [texto, setTexto] = useState('');
   const [estado, setEstado] = useState('inicial');
   const [error, setError] = useState(null);
@@ -85,74 +73,11 @@ export function HabilitarClave() {
     }
   }
 
-  async function confirmarTelefono(cuenta) {
-    setError(null);
-    setMensaje(null);
-    setTrabajando(`telefono:${cuenta.id}`);
-    try {
-      await llamarApiPanel('/habilitar-clave/telefono', {
-        method: 'POST',
-        body: JSON.stringify({ usuarioId: cuenta.id }),
-      });
-      setMensaje(t.habilitar_clave.telefono_confirmado.replace('{{nombre}}', cuenta.nombre));
-      // Uno menos esperando. El backend ya avisó por el canal, y esto es para quien lo hizo: su
-      // pantalla no espera a que le llegue la vuelta.
-      await recargarEsperando();
-    } catch (err) {
-      setError(mensajeDeError(err, t, 'HabilitarClave'));
-    } finally {
-      setTrabajando(null);
-    }
-  }
-
   return (
     <div>
       <Cabecera titulo={t.habilitar_clave.titulo} />
 
       <div className="molde-pila">
-        <section className="panel-tarjeta">
-          <div className="panel-tarjeta-titulo">
-            <h2>{t.habilitar_clave.pendientes_titulo}</h2>
-            {estadoEsperando === 'listo' && <span className="panel-mini">{esperando.length}</span>}
-          </div>
-          <EstadoLista
-            estado={estadoEsperando}
-            error={errorEsperando}
-            recargar={recargarEsperando}
-            vacio={esperando.length === 0}
-            mensajeVacio={t.habilitar_clave.pendientes_vacio}
-          >
-            <table className="panel-tabla">
-              <thead>
-                <tr>
-                  <th>{t.habilitar_clave.columna_persona}</th>
-                  <th>{t.habilitar_clave.columna_acciones}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {esperando.map((cuenta) => (
-                  <tr key={cuenta.id}>
-                    <td>
-                      <b>{cuenta.nombre}</b>
-                      <div className="panel-mini">{cuenta.email}</div>
-                    </td>
-                    <td>
-                      <Button
-                        onClick={() => confirmarTelefono(cuenta)}
-                        disabled={trabajando !== null}
-                      >
-                        {trabajando === `telefono:${cuenta.id}`
-                          ? t.comun.guardando
-                          : t.habilitar_clave.confirmar_telefono}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </EstadoLista>
-        </section>
-
         <section className="panel-tarjeta">
           <div className="panel-tarjeta-titulo">
             <h2>{t.habilitar_clave.buscar_boton}</h2>
@@ -230,17 +155,6 @@ export function HabilitarClave() {
                               ? t.comun.guardando
                               : t.habilitar_clave.habilitar}
                           </Button>
-                          {cuenta.telefonoCargado && !cuenta.telefonoVerificado && (
-                            <Button
-                              variant="secondary"
-                              onClick={() => confirmarTelefono(cuenta)}
-                              disabled={trabajando !== null}
-                            >
-                              {trabajando === `telefono:${cuenta.id}`
-                                ? t.comun.guardando
-                                : t.habilitar_clave.confirmar_telefono}
-                            </Button>
-                          )}
                         </div>
                       </td>
                     </tr>

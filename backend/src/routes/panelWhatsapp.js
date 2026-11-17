@@ -14,8 +14,8 @@ export const panelWhatsappRouter = Router();
 // el camino que abre esta ruta.
 //
 // La bandeja lee las conversaciones directo de Supabase con RLS, pero el envío tiene que pasar
-// por acá: el token de Meta de cada Prestadora vive en Supabase Vault y solo lo puede leer este
-// backend, nunca el navegador.
+// por acá: el token de Meta de cada Prestadora se guarda cifrado con la clave de esa Prestadora y
+// solo lo puede descifrar este backend, nunca el navegador.
 //
 // Un mensaje saliente con `enviado_automaticamente = false` y `revisado_por_coordinador_at`
 // vacío es un texto que quedó anotado y nunca salió —el caso del envío fallido—. Cuando el
@@ -25,7 +25,7 @@ export const panelWhatsappRouter = Router();
 // `clienteDelPedido(req)`, no con la llave maestra: la base sabe quién pide y le contesta sólo lo
 // de su Prestadora. Por eso ninguna consulta lleva el filtro de la Prestadora de la sesión, y la
 // Prestadora que se nombra es la de la conversación que la base ya dejó ver. El envío va con el
-// trabajo de la Prestadora, adentro de `enviarWhatsApp`, porque lee el token de Vault.
+// trabajo de la Prestadora, adentro de `enviarWhatsApp`, porque lee el token cifrado.
 
 async function conversacionVisible(db, conversacionId) {
   const { data } = await db

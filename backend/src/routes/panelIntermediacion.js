@@ -349,8 +349,9 @@ panelIntermediacionRouter.get('/accesos', soloAdministracion, async (req, res) =
  * para que el software de facturación lea un solo formato. La Liquidación de un acceso es su
  * importe, en su moneda, el día de su próximo cobro; se le factura al Contratante del Cliente.
  *
- * Un acceso cancelado, sin importe o todavía en su período sin cargo no sale: no hay nada que
- * facturar.
+ * Sale el vigente y el que está en período de gracia, porque en la gracia el software de
+ * cobranzas sigue reintentando el mismo cobro. Un acceso suspendido, vencido o dado de baja, sin
+ * importe o todavía en su período sin cargo no sale: no hay nada que facturar.
  */
 panelIntermediacionRouter.get('/accesos/para-facturar', soloAdministracion, async (req, res) => {
   const periodo = primerDiaDelPeriodo(req.query.periodo);
@@ -363,7 +364,7 @@ panelIntermediacionRouter.get('/accesos/para-facturar', soloAdministracion, asyn
     dbDelTrabajo
       .from('accesos_intermediacion')
       .select('id, cliente_id, importe, moneda, proximo_cobro, gratis_hasta')
-      .eq('estado', 'vigente')
+      .in('estado', ['vigente', 'en_gracia'])
       .gte('proximo_cobro', periodo)
       .lt('proximo_cobro', hasta)
       .order('proximo_cobro', { ascending: true })

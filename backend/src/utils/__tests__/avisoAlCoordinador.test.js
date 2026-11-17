@@ -17,6 +17,7 @@ import { strict as assert } from 'node:assert';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { respuestaDeSecretosDePrueba } from '../../__tests__/secretosDeTercerosDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const PLANTILLA = '22222222-2222-2222-2222-222222222222';
@@ -87,7 +88,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/configuracion_whatsapp_prestadora', () => [
     { activo: true, phone_number_id: NUMERO, waba_id: '100000000000001' },
   ]);
-  respuestas.set('POST /rest/v1/rpc/leer_token_whatsapp', () => TOKEN);
+  respuestas.set('GET /rest/v1/secretos_de_terceros', respuestaDeSecretosDePrueba(PRESTADORA, { whatsapp_access_token: TOKEN }));
   respuestas.set('GET /rest/v1/plantillas_whatsapp', () => [
     {
       id: PLANTILLA,

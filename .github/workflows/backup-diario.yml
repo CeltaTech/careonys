@@ -2,7 +2,9 @@ name: Backup diario a buckets (R2 + B2)
 
 # Sube el código entero, con toda su historia, a los dos depósitos de respaldo (Cloudflare R2
 # como principal, Backblaze B2 como espejo). Estaba sólo en GitHub: una copia, en una cuenta, en
-# manos de un tercero.
+# manos de un tercero. Con el paquete de hoy arriba, borra los paquetes que pasaron el plazo: los
+# de los últimos 30 días quedan, y de lo anterior el más viejo de cada mes durante 12 meses
+# (backend/src/utils/retencionDeRespaldos.js, el mismo que usa el respaldo de los datos).
 #
 # Los datos y los archivos de las Prestadoras no se respaldan acá: los respalda el backend cada
 # noche, de a una Prestadora y cifrados con la clave de cada una

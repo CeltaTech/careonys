@@ -5,7 +5,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
-import { useTelefonosEsperando } from '../../context/TelefonosEsperandoContext';
 import { useEmergenciasSinAtender } from '../../context/EmergenciasSinAtenderContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -133,9 +132,8 @@ export function Layout() {
   const { empresa } = useEmpresa();
   const { puede } = usePermisos();
   const { tieneModalidad, ambas, vista, elegirVista, enVista } = useModalidades();
-  // Los dos contadores se preguntan solos cada pocos segundos: del otro lado hay alguien
+  // El contador de emergencias se pregunta solo cada pocos segundos: del otro lado hay alguien
   // esperando, y no puede depender de que a alguien se le ocurra abrir esa sección.
-  const { cuentas: telefonosEsperando } = useTelefonosEsperando();
   const { emergencias: emergenciasSinAtender } = useEmergenciasSinAtender();
   const ubicacion = useLocation();
   const navegar = useNavigate();
@@ -276,7 +274,7 @@ export function Layout() {
         { a: '/configuracion', texto: t.nav.configuracion, ver: esAdmin },
         { a: '/usuarios-panel', texto: t.nav.usuarios_panel, ver: esAdmin },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
-        { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave'), contador: telefonosEsperando.length },
+        { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave') },
         { a: '/intermediacion/funciones-con-riesgo-legal', texto: t.nav.intermediacion_funciones_riesgo, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION },
       ],
     },

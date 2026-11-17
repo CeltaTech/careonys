@@ -157,7 +157,7 @@ export const CABECERA_CONVENCION_PROPIA = 'x-signature';
 /**
  * La comprobación para un proveedor cuyo esquema de firma no está publicado.
  *
- * @param secretoFirma      el secreto guardado para esa Prestadora y ese proveedor (Vault)
+ * @param secretoFirma      el secreto guardado para esa Prestadora y ese proveedor, ya descifrado
  * @param secretoDeAmbiente el secreto del ambiente, para el despliegue que todavía no cargó
  *                          uno por Prestadora. Se usa **sólo si no hay el de la Prestadora**:
  *                          un secreto compartido prueba quién firmó, no para qué Prestadora,

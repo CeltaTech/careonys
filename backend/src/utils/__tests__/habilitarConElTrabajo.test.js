@@ -1,12 +1,11 @@
 /**
- * Habilitar un cambio de clave y confirmar un teléfono: con qué credencial se le pide cada cosa a
- * la base.
+ * Habilitar un cambio de clave: con qué credencial se le pide cada cosa a la base.
  *
  *   node --test src/utils/__tests__/habilitarConElTrabajo.test.js
  *
  * Todo va con el trabajo de la Prestadora de la cuenta, que alcanza sus cuentas y ninguna otra. La
- * base es de mentira y contesta por HTTP como la de verdad: muestra la cuenta, la puerta abierta y
- * el teléfono confirmado sólo al trabajo de esa Prestadora. Con el sistema roto —otra credencial u
+ * base es de mentira y contesta por HTTP como la de verdad: muestra la cuenta y la puerta abierta sólo
+ * al trabajo de esa Prestadora. Con el sistema roto —otra credencial u
  * otra Prestadora— las pruebas dan al revés.
  *
  * Datos inventados.
@@ -50,7 +49,6 @@ const baseFalsa = createServer((req, res) => {
       }
       if (clave === 'GET /rest/v1/cambios_de_clave_habilitados') filas = [{ id: LA_PUERTA, expira_en: new Date(Date.now() + 600000).toISOString() }];
       if (clave === 'PATCH /rest/v1/cambios_de_clave_habilitados' && url.searchParams.get('id')) filas = [{ id: LA_PUERTA }];
-      if (clave === 'GET /rest/v1/telefonos_confirmados_por_la_prestadora') filas = [{ id: 'confirmado' }];
     } else if (req.method !== 'GET') {
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ code: '42501', message: 'permission denied' }));
@@ -67,8 +65,6 @@ prepararCredencialDePrueba();
 
 const {
   habilitarCambioDeClave,
-  confirmarTelefonoDeLaCuenta,
-  telefonoConfirmadoPorLaPrestadora,
   cambioDeClaveHabilitado,
   usarCambioDeClaveHabilitado,
 } = await import('../habilitarCambioDeClave.js');
@@ -100,21 +96,9 @@ describe('habilitar desde el Panel', () => {
     conElTrabajoDeLaPrestadora('PATCH /rest/v1/cambios_de_clave_habilitados');
     conElTrabajoDeLaPrestadora('POST /rest/v1/cambios_de_clave_habilitados');
   });
-
-  it('el teléfono se confirma con el trabajo de la Prestadora', async () => {
-    const cuenta = await confirmarTelefonoDeLaCuenta({ quien: QUIEN, usuarioId: LA_CUENTA });
-    assert.equal(cuenta.id, LA_CUENTA);
-    conElTrabajoDeLaPrestadora('GET /rest/v1/usuarios');
-    conElTrabajoDeLaPrestadora('POST /rest/v1/telefonos_confirmados_por_la_prestadora');
-  });
 });
 
 describe('usar lo habilitado al recuperar la clave', () => {
-  it('el teléfono confirmado se lee con el trabajo de la Prestadora', async () => {
-    assert.equal(await telefonoConfirmadoPorLaPrestadora({ usuarioId: LA_CUENTA, prestadoraId: PRESTADORA, telefono: '+5400000001' }), true);
-    conElTrabajoDeLaPrestadora('GET /rest/v1/telefonos_confirmados_por_la_prestadora');
-  });
-
   it('la puerta abierta se lee y se gasta con el trabajo de la Prestadora', async () => {
     const puerta = await cambioDeClaveHabilitado(LA_CUENTA, PRESTADORA);
     assert.equal(puerta?.id, LA_PUERTA);

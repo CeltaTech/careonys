@@ -31,6 +31,8 @@ import { panelCobrosRouter } from './routes/panelCobros.js';
 import { panelDatosBancariosRouter } from './routes/panelDatosBancarios.js';
 import { panelVitalesAutorizacionRouter } from './routes/panelVitalesAutorizacion.js';
 import { panelCuentaSeguraRouter } from './routes/panelCuentaSegura.js';
+import { appAsistentesCuentaSeguraRouter } from './routes/appAsistentesCuentaSegura.js';
+import { appClientesCuentaSeguraRouter } from './routes/appClientesCuentaSegura.js';
 import { panelHabilitarClaveRouter } from './routes/panelHabilitarClave.js';
 import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
 import { activarCuentaRouter } from './routes/activarCuenta.js';
@@ -86,7 +88,9 @@ import { panelGuardiasRouter } from './routes/panelGuardias.js';
 import { panelComprobacionesRouter } from './routes/panelComprobaciones.js';
 import { panelAvisosEnVivoRouter } from './routes/panelAvisosEnVivo.js';
 import { cobranzaExternaRouter } from './routes/avisoDeCobranzaExterna.js';
+import { altaDePrestadoraRouter } from './routes/altaDePrestadora.js';
 import { facturacionExternaRouter } from './routes/avisoDeFacturacionExterna.js';
+import { accesoDeMatchRouter } from './routes/avisoDeAccesoDeMatch.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosDelCierreDelServicio } from './utils/avisoAutomaticoDelCierreDelServicio.js';
 import { responderError } from './utils/errorConMotivo.js';
@@ -104,7 +108,9 @@ app.use(cors());
    adentro; acá lo único que hace falta es que se monten primero. */
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 app.use('/api/avisos-de-cobranza', cobranzaExternaRouter);
+app.use('/integracion/v1/tenants', altaDePrestadoraRouter);
 app.use('/api/avisos-de-facturacion', facturacionExternaRouter);
+app.use('/api/avisos-de-acceso-de-match', accesoDeMatchRouter);
 
 app.use(express.json());
 
@@ -186,6 +192,7 @@ app.use('/api/app-asistentes/medicacion', appAsistentesMedicacionRouter);
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);
 app.use('/api/app-asistentes/documentos', appAsistentesDocumentosRouter);
 app.use('/api/app-asistentes/asignaciones', appAsistentesAsignacionesRouter);
+app.use('/api/app-asistentes/cuenta-segura', appAsistentesCuentaSeguraRouter);
 // Agregar, ver y sacar las llaves propias sí pide sesión: son cosas de alguien que ya entró. El
 // mismo juego de rutas se monta dos veces, una por aplicación, cada una detrás del rol que le toca.
 app.use('/api/app-asistentes/llaves', requiereRolAsistente, routerDeLlavesConSesion('asistente'));
@@ -193,6 +200,7 @@ app.use('/api/app-clientes', appClientesRouter);
 app.use('/api/app-clientes/medicacion', appClientesMedicacionRouter);
 app.use('/api/app-clientes/vitales-autorizacion', appClientesVitalesAutorizacionRouter);
 app.use('/api/app-clientes/apoderado', appClientesApoderadoRouter);
+app.use('/api/app-clientes/cuenta-segura', appClientesCuentaSeguraRouter);
 app.use('/api/app-clientes/llaves', requiereRolCliente, routerDeLlavesConSesion('cliente'));
 app.use('/api/panel/medicacion', panelMedicacionRouter);
 app.use('/api/panel/intermediacion', panelIntermediacionRouter);

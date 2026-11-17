@@ -26,9 +26,15 @@
 // La cercanía: cuándo se dice y cuándo se calla
 // ----------------------------------------------------------------------------
 //
-// El Legajo del Asistente guarda su domicilio (`domicilio_asistente`: `lat`, `lng`), así que la
-// distancia hasta la casa del Paciente entra como un criterio más. Pero **solo cuando los
-// dos puntos existen de verdad**: si a cualquiera de los dos le falta la ubicación, este
+// El Legajo del Asistente guarda su domicilio, así que la distancia hasta la casa del Paciente
+// entra como un criterio más. La calcula la base, no este archivo: el domicilio del Asistente
+// sólo lo ve quien tiene el permiso de verlo, y la Coordinadora sin ese permiso también tiene que
+// poder ordenar la lista por cercanía. La pantalla pide las distancias ya calculadas con
+// `cargarDistanciasDeAsistentes` (`lib/distanciasDeAsistentes.js`), redondeadas a cien metros,
+// y las pasa en `datos.distancias`. Ninguna coordenada del Asistente llega al navegador.
+//
+// Pero la distancia se dice **solo cuando los dos puntos existen de verdad**: si a cualquiera de
+// los dos le falta la ubicación, la base no devuelve distancia para ese Asistente y este
 // archivo no dice nada sobre cercanía, ni a favor ni en contra. Un candidato ordenado por una
 // distancia inventada es peor que un candidato sin ese criterio, porque parece confiable.
 //
@@ -49,7 +55,6 @@
 // Mientras eso no exista, este archivo no lo nombra. Cuando exista, es un peso más en `PESOS`
 // y una comprobación más abajo — nada del resto cambia.
 
-import { distanciaKm } from './distancia';
 import {
   inicioDeGuardia,
   finDeGuardia,
@@ -320,31 +325,25 @@ export function vecesQueAtendio(asistenteId, pacienteIds, guardias, ahora) {
 /**
  * A cuántos kilómetros vive el Asistente del Paciente más cercano de esta guardia, o `null`.
  *
- * Devuelve `null` —y no un número grande, ni un cero— cuando falta cualquiera de los dos puntos:
- * si el Asistente no tiene su domicilio ubicado en el mapa, o si ninguno de los Pacientes de la
- * guardia lo tiene. Quien llama tiene que callarse en ese caso. Una distancia inventada es peor
- * que ninguna distancia, porque parece confiable y nadie la vuelve a revisar.
+ * `distancias` es lo que devolvió `cargarDistanciasDeAsistentes`: un objeto de id de Asistente →
+ * metros, ya calculado por la base contra el Paciente más cercano del hueco. Con varios Pacientes
+ * la base toma **el más cercano**, que es lo único que se puede afirmar: el Asistente viaja hasta
+ * esa casa y las demás le quedan a un paso.
  *
- * Con varios Pacientes se toma **el más cercano**, que es lo único que se puede afirmar: el
- * Asistente viaja hasta esa casa y las demás le quedan a un paso. Promediar daría un número que
- * no corresponde a ningún viaje real.
+ * Devuelve `null` —y no un número grande, ni un cero— cuando ese Asistente no tiene distancia:
+ * le falta el domicilio ubicado en el mapa, o a ninguno de los Pacientes de la guardia. Quien
+ * llama tiene que callarse en ese caso. Una distancia inventada es peor que ninguna distancia,
+ * porque parece confiable y nadie la vuelve a revisar.
  *
- * Es distancia en línea recta (`lib/distancia.js`), no tiempo de viaje.
+ * Es distancia en línea recta, no tiempo de viaje.
  */
-export function kmHastaElPaciente(asistente, pacientes) {
-  const lat = Number(asistente?.lat);
-  const lng = Number(asistente?.lng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-  let menor = null;
-  for (const paciente of lista(pacientes)) {
-    const pLat = Number(paciente?.lat);
-    const pLng = Number(paciente?.lng);
-    if (!Number.isFinite(pLat) || !Number.isFinite(pLng)) continue;
-    const km = distanciaKm(lat, lng, pLat, pLng);
-    if (menor === null || km < menor) menor = km;
-  }
-  return menor;
+export function kmHastaElPaciente(asistenteId, distancias) {
+  if (!asistenteId || !distancias) return null;
+  const valor = distancias[asistenteId];
+  if (valor === null || valor === undefined || valor === '') return null;
+  const metros = Number(valor);
+  if (!Number.isFinite(metros) || metros < 0) return null;
+  return metros / 1000;
 }
 
 // ============================================================================
@@ -365,9 +364,10 @@ export function kmHastaElPaciente(asistente, pacientes) {
  *                                     más: el tipo de ausencia no viaja (CLAUDE.md §6). Si no
  *                                     vienen, nadie se bloquea por ausencia
  *                    documentos     → filas de `documentos_asistente`
- *                    pacientes      → filas de `pacientes` con `id`, `lat` y `lng`, para poder
- *                                     medir la distancia. Si no vienen, no se dice nada de la
- *                                     cercanía; ningún otro criterio cambia.
+ *                    distancias     → id de Asistente → metros hasta el Paciente más cercano
+ *                                     del hueco, como lo devuelve `cargarDistanciasDeAsistentes`.
+ *                                     Si no vienen, no se dice nada de la cercanía; ningún otro
+ *                                     criterio cambia.
  *                    ahora          → Date
  * @param opciones  `{ pesos, topes }` — todos opcionales, todos para pisar
  *                  los valores de arriba sin tocar este archivo.
@@ -412,11 +412,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   const ausencias = lista(datos.ausencias);
   const documentos = lista(datos.documentos);
 
-  // Los Pacientes de este hueco, una sola vez para toda la lista: la distancia se mide contra
-  // los mismos puntos para cada Asistente, y volver a filtrarlos por candidato sería recorrer
-  // la lista entera de Pacientes tantas veces como Asistentes tenga el Padrón.
-  const buscados = new Set(idsDePacientes(hueco).filter(Boolean));
-  const pacientesDelHueco = lista(datos.pacientes).filter((p) => buscados.has(p?.id));
+  const distancias = datos.distancias ?? null;
 
   const evaluados = asistentes.map((asistente) =>
     evaluarAsistente(asistente, {
@@ -424,7 +420,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
       guardias,
       ausencias,
       documentos,
-      pacientesDelHueco,
+      distancias,
       ahora,
       pesos,
       topes,
@@ -594,11 +590,10 @@ function evaluarAsistente(asistente, ctx) {
   }
 
   // --- 7. Cercanía. No bloquea nunca: hay gente que viaja una hora todos los días y lo tiene
-  //        resuelto. Y se calla cuando falta cualquiera de los dos domicilios en el mapa, que
-  //        hoy es lo más común, porque nadie convierte todavía una dirección escrita en un par
-  //        de coordenadas. El motivo muestra los kilómetros para que quien lee la lista pueda
+  //        resuelto. Y se calla cuando falta cualquiera de los dos domicilios en el mapa. El
+  //        motivo muestra los kilómetros para que quien lee la lista pueda
   //        corregir con lo que sabe del barrio: son en línea recta, no de viaje.
-  const km = kmHastaElPaciente(asistente, ctx.pacientesDelHueco);
+  const km = kmHastaElPaciente(asistente?.id, ctx.distancias);
   if (km !== null) {
     if (km <= topes.km_cerca) {
       suma(aFavor, MOTIVO.CERCA, { km: redondear(km) }, pesos.cerca);

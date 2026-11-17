@@ -336,9 +336,9 @@ describe('lo que sale hacia el software de facturación', () => {
     assert.equal(fila.monto_a_facturar, 12000.46);
     assert.equal(fila.fecha_vencimiento, '2026-09-05');
 
-    // Pide sólo los vigentes cuyo próximo cobro cae en el mes.
+    // Pide sólo los vigentes y los que están en gracia, cuyo próximo cobro cae en el mes.
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
-    assert.match(lectura.busqueda, /estado=eq\.vigente/);
+    assert.match(decodeURIComponent(lectura.busqueda), /estado=in\.\("?vigente"?,"?en_gracia"?\)/);
     assert.match(lectura.busqueda, /proximo_cobro=gte\.2026-09-01/);
     assert.match(lectura.busqueda, /proximo_cobro=lt\.2026-10-01/);
   });

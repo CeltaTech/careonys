@@ -20,9 +20,9 @@ describe('mensaje emergente', () => {
   });
 
   it('el catálogo trae la frase del enlace nuevo en los tres idiomas', () => {
-    expect(T['es-AR'].auth.activar_enlace_nuevo_enviado).toBe('Le enviamos un nuevo enlace a su email.');
-    expect(T.en.auth.activar_enlace_nuevo_enviado).toBe('We sent a new link to your email.');
-    expect(T['pt-BR'].auth.activar_enlace_nuevo_enviado).toBe('Enviamos um novo link para o seu e-mail.');
+    expect(T['es-AR'].auth.activar_enlace_nuevo_enviado).toBe('Se envió un enlace nuevo a su correo.');
+    expect(T.en.auth.activar_enlace_nuevo_enviado).toBe('A new link was sent to your email.');
+    expect(T['pt-BR'].auth.activar_enlace_nuevo_enviado).toBe('Um novo link foi enviado para o seu e-mail.');
   });
 
   it('la zona anunciable está puesta aunque no haya mensaje', () => {

@@ -6,13 +6,10 @@ import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import {
   habilitarCambioDeClave,
-  confirmarTelefonoDeLaCuenta,
-  telefonosEsperandoHabilitacion,
   puedeHabilitar,
   minutosDeLaHabilitacion,
 } from '../utils/habilitarCambioDeClave.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 import { emitirElEnlaceYAvisar } from '../utils/recuperacionDeClave.js';
 import { avisarDeSeguridad, MENSAJE_CAMBIO_HABILITADO } from '../utils/avisoDeSeguridad.js';
 import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActividad.js';
@@ -44,7 +41,6 @@ export const panelHabilitarClaveRouter = Router();
 
 const ACCION = 'habilitar_cambio_de_clave';
 const ACCION_HABILITAR = 'habilitacion_de_cambio_de_clave';
-const ACCION_CONFIRMAR_TELEFONO = 'confirmacion_de_telefono_por_la_prestadora';
 
 const TOPE_DE_LA_BUSQUEDA = 20;
 
@@ -117,32 +113,6 @@ async function conFoto(db, cuenta, prestadoraId) {
 }
 
 /**
- * Los números que están esperando que alguien los habilite.
- *
- * ES LA TAREA PENDIENTE, y por eso aparece sola: no hace falta ir a buscar a la persona a mano. Quien
- * la tiene a cargo la ve en su lista, la llama, verifica que el cambio es real y la habilita.
- *
- * LA LISTA LA FILTRA EL BACKEND, no la pantalla: la coordinación ve a los Asistentes y a los Clientes;
- * a quien coordina lo ve la administración de la Prestadora. Nadie se ve a sí mismo.
- *
- * NO DEVUELVE NINGÚN NÚMERO DE TELÉFONO. Tampoco va nada por la dirección web: lo único que este
- * pedido dice es «qué está esperando en la Prestadora de mi sesión».
- */
-panelHabilitarClaveRouter.get(
-  '/pendientes',
-  requiereRolPanel,
-  requierePermiso(ACCION),
-  exigirOrganizacionActiva,
-  async (req, res) => {
-    try {
-      res.json({ cuentas: await telefonosEsperandoHabilitacion(req.usuarioPanel) });
-    } catch (err) {
-      responderError(res, err);
-    }
-  },
-);
-
-/**
  * Abrir la puerta.
  *
  * Son dos cosas y van juntas: queda anotada la habilitación, y sale el enlace para elegir la clave
@@ -173,41 +143,6 @@ panelHabilitarClaveRouter.post(
       if (cuenta.email) await emitirElEnlaceYAvisar(cuenta, cuenta.email);
 
       res.json({ ok: true, minutos: minutosDeLaHabilitacion() });
-    } catch (err) {
-      responderError(res, err);
-    }
-  },
-);
-
-/**
- * Confirmar que el número que la cuenta tiene cargado es de esa persona.
- *
- * ES EL ATAJO PARA QUIEN CAMBIÓ DE NÚMERO y no puede esperar a que se le crea. No cambia el número:
- * cambiarlo es de su dueño, con su clave actual, desde su propia pantalla.
- */
-panelHabilitarClaveRouter.post(
-  '/telefono',
-  requiereRolPanel,
-  requierePermiso(ACCION),
-  topeDePedidos({ nombre: 'habilitar_cambio_de_clave' }),
-  async (req, res) => {
-    try {
-      const { usuarioId } = req.body ?? {};
-      if (!usuarioId) throw new ErrorConMotivo('faltan_datos');
-
-      const cuenta = await confirmarTelefonoDeLaCuenta({ quien: req.usuarioPanel, usuarioId });
-
-      await registrarActividad(req.usuarioPanel, ACCION_CONFIRMAR_TELEFONO, {
-        tablaAfectada: 'telefonos_confirmados_por_la_prestadora',
-        registroId: cuenta.id,
-      });
-      yaQuedoRegistrado(res);
-
-      // Uno menos esperando. El mensaje no lleva ningún dato: dice qué cambió, y cada pantalla que
-      // estaba mirando esa lista la vuelve a pedir por el camino de siempre, que comprueba la sesión.
-      empujar(req.usuarioPanel.prestadoraId, ASUNTOS.TELEFONOS_ESPERANDO_HABILITACION);
-
-      res.json({ ok: true });
     } catch (err) {
       responderError(res, err);
     }

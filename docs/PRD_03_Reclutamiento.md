@@ -114,7 +114,7 @@ entrevista.
 |---|---|---|---|
 | Nombre / Apellido | texto | Sí | |
 | Tipo y número de documento | select + texto | Sí | validar formato según el tipo |
-| Fecha de nacimiento | date | Sí | validar mayoría de edad (18+) |
+| Fecha de nacimiento | date | Sí | edad mínima de la escala legal del país |
 | Teléfono/WhatsApp | tel | Sí | |
 | Email | email | Sí | con confirmación |
 | Domicilio | texto + Maps | Sí | confirmar en mapa |
@@ -195,7 +195,8 @@ sería inventar contenido de negocio.
 valor legal y vive en `escalas_legales` (`tipo = 'edad_minima_para_trabajar'`), resuelta a la
 fecha de la postulación y en la jurisdicción de la Prestadora. Si no hay escala vigente, **no se
 rechaza a nadie por edad**: la postulación entra con su fecha de nacimiento y quien la revisa
-decide.
+decide. Hoy ningún código lee esa escala: la base no recibe postulaciones de ningún formulario, y
+el control se escribe junto con la recepción.
 
 La entrada pública de postulaciones y la comprobación del servidor antes de guardar —edad, forma
 del CUIL y que corresponda al documento, que lo elegido esté en el catálogo, que las listas

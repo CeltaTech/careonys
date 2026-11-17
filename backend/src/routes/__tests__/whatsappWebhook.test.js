@@ -21,6 +21,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
+import { quitarClaveDePrueba, respuestaDeSecretosDePrueba } from '../../__tests__/secretosDeTercerosDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const CONVERSACION = '22222222-2222-2222-2222-222222222222';
@@ -193,10 +194,13 @@ beforeEach(() => {
   anotados = [];
   respuestas.clear();
   respuestas.set('GET /rest/v1/configuracion_whatsapp_prestadora', () => [
-    { phone_number_id: NUMERO_CONFIGURADO, app_secret_secret_id: 'aaaaaaaa-0000-4000-8000-000000000000' },
+    { phone_number_id: NUMERO_CONFIGURADO },
   ]);
-  respuestas.set('POST /rest/v1/rpc/leer_app_secret_whatsapp', () => APP_SECRET);
-  respuestas.set('POST /rest/v1/rpc/leer_verify_token_whatsapp', () => TOKEN_DE_SALUDO);
+  // Los dos secretos, cifrados con la clave de esta Prestadora como los guarda la base.
+  respuestas.set(
+    'GET /rest/v1/secretos_de_terceros',
+    respuestaDeSecretosDePrueba(PRESTADORA, { whatsapp_app_secret: APP_SECRET, whatsapp_verify_token: TOKEN_DE_SALUDO })
+  );
   respuestas.set('GET /rest/v1/mensajes_whatsapp', () => []);
   respuestas.set('GET /rest/v1/conversaciones_whatsapp', () => []);
   respuestas.set('GET /rest/v1/configuracion_respuesta_automatica_whatsapp', () => [{ horas_sin_mensajes_para_terminar: 24 }]);
@@ -227,14 +231,13 @@ afterEach(() => {
   }
 });
 
-/** Lo que el backend escribió en la base. Las llamadas a funciones (`/rpc/`) quedan afuera: leer
- *  un secreto no es escribir. */
+/** Lo que el backend escribió en la base. Las llamadas a funciones (`/rpc/`) quedan afuera. */
 function escrituras() {
   return llamadas.filter((l) => (l.clave.startsWith('POST ') || l.clave.startsWith('PATCH ')) && !l.clave.includes('/rpc/'));
 }
 
 function secretosLeidos() {
-  return llamadas.filter((l) => l.clave.startsWith('POST /rest/v1/rpc/'));
+  return llamadas.filter((l) => l.clave === 'GET /rest/v1/secretos_de_terceros');
 }
 
 describe('el pedido de WhatsApp auténtico', () => {
@@ -428,7 +431,17 @@ describe('el pedido que no se puede probar auténtico', () => {
   });
 
   it('sin secreto de la aplicación guardado se rechaza con 401', async () => {
-    respuestas.set('POST /rest/v1/rpc/leer_app_secret_whatsapp', () => null);
+    respuestas.set('GET /rest/v1/secretos_de_terceros', () => null);
+    const { estado } = await avisar();
+    assert.equal(estado, 401);
+    await dejarTerminar();
+    assert.equal(escrituras().length, 0);
+  });
+
+  it('sin la clave de la Prestadora el secreto no se descifra: se rechaza con 401', async () => {
+    const fila = respuestaDeSecretosDePrueba(PRESTADORA, { whatsapp_app_secret: APP_SECRET })();
+    respuestas.set('GET /rest/v1/secretos_de_terceros', () => fila);
+    quitarClaveDePrueba(PRESTADORA);
     const { estado } = await avisar();
     assert.equal(estado, 401);
     await dejarTerminar();
@@ -502,10 +515,12 @@ describe('el saludo inicial con el que Meta conecta la dirección', () => {
     assert.equal(cuerpo, '1234567890');
   });
 
-  it('el token sale de la caja fuerte de esa Prestadora, y se pide por su identificador', async () => {
+  it('el token se lee cifrado de esa Prestadora, y se pide por su identificador', async () => {
     await saludar();
-    const lectura = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/leer_verify_token_whatsapp');
-    assert.equal(lectura.cuerpo.p_prestadora_id, PRESTADORA);
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/secretos_de_terceros');
+    const filtros = new URL(lectura.url, 'http://interno').searchParams;
+    assert.equal(filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(filtros.get('uso'), 'eq.whatsapp_verify_token');
   });
 
   it('con otro token se rechaza con 403', async () => {
@@ -514,7 +529,7 @@ describe('el saludo inicial con el que Meta conecta la dirección', () => {
   });
 
   it('sin token guardado para esa Prestadora se rechaza con 403', async () => {
-    respuestas.set('POST /rest/v1/rpc/leer_verify_token_whatsapp', () => null);
+    respuestas.set('GET /rest/v1/secretos_de_terceros', () => null);
     const { estado } = await saludar();
     assert.equal(estado, 403);
     assert.ok(anotados.some((linea) => linea.includes('token_de_verificacion_no_guardado')));

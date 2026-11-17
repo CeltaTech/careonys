@@ -25,7 +25,7 @@ Son cinco lugares, y ninguno se superpone con otro:
 |---|---|---|
 | **Railway** — variables del servicio del backend | Todo lo que el backend necesita para funcionar en producción | El backend, en ejecución |
 | **Secretos del repositorio en GitHub** | Lo que necesitan los automatismos: publicar, desplegar, respaldar y comprobar los textos | Los archivos de `.github/workflows/` |
-| **La caja fuerte de la base** (`vault` de Supabase) | Lo de **cada Prestadora**: su correo, su WhatsApp | El backend, con el trabajo sin persona de esa Prestadora, a través de funciones `SECURITY DEFINER` |
+| **La tabla `secretos_de_terceros`**, cifrada con la clave de cada Prestadora | Lo de **cada Prestadora**: su WhatsApp y su conexión con otro software | El backend, con el trabajo sin persona de esa Prestadora, que es el único que tiene la clave para descifrarlo |
 | **El panel de cada proveedor** | El valor original, que es de donde sale la copia que va a los otros lugares | Quien tenga la cuenta |
 | **La máquina del Desarrollador** — `backend/.env` y la caja fuerte local | Lo mismo que Railway, pero apuntando al ambiente de desarrollo | El backend corriendo en local |
 
@@ -42,6 +42,7 @@ Cada uno con el archivo que lo usa, para no tener que buscarlo.
 | Secreto | Para qué sirve | Si falta | Última rotación |
 |---|---|---|---|
 | `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` | Las contraseñas de las cuentas con las que entra a la base lo que trabaja sin la sesión de una persona —una tarea programada, la dirección que llama otro software, el respaldo nocturno—, una cuenta por Prestadora y por trabajo. `backend/src/db/connection.js`. El mismo texto arma además, al ingresar, la dirección que se devuelve para un usuario que no existe, para que no se distinga de uno que sí (`backend/src/routes/ingreso.js`) | Falla todo trabajo sin persona en el momento de entrar a la base, y el respaldo nocturno | Sin registro |
+| `CLAVES_DE_LOS_SECRETOS_DE_TERCEROS` | Las claves con las que se cifran y se descifran los secretos que carga cada Prestadora (§4). Una clave por Prestadora, con su número de versión. `backend/src/utils/secretosDeTerceros.js` | Lo de esa Prestadora que necesita su secreto se rechaza: no manda WhatsApp, no acepta los avisos de otro software, y no deja guardar uno nuevo. Las demás Prestadoras siguen andando | Sin registro |
 | `SECRETO_DE_LOS_CODIGOS` | Calcula el identificador de verificación de cada código de un solo uso, para que la base no guarde el código. Tiene que tener 32 caracteres o más. `backend/src/utils/codigoDeUnSoloUso.js` | El backend no arranca (`backend/src/server.js`) | Sin registro |
 | `ANTHROPIC_API_KEY` | Todo lo que hace la IA: leer un aviso de ausencia, redactar plantillas de WhatsApp, interpretar una importación, resumir | Cada función de IA devuelve «sin respuesta» y el resto del producto sigue andando | Sin registro |
 | `RESEND_API_KEY` | El acceso al despachante por el que sale todo el correo del producto. Va junto con `REMITENTE_AVISOS`, que no es secreta y dice desde qué dirección sale. `backend/src/utils/email.js` | No se manda ningún correo, en silencio | Sin registro |
@@ -63,8 +64,8 @@ publicar, el token de publicar no tiene por qué andar dando vueltas en una comp
 |---|---|---|
 | `RAILWAY_TOKEN` | Subir el backend a Railway en cada push que toca `backend/` | `deploy-backend.yml` |
 | `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` | Publicar el Panel, las dos aplicaciones y la página raíz. El token está acotado a Pages y DNS | `publicar-pantallas.yml` |
-| `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Subir la copia del código al depósito principal | `backup-diario.yml` |
-| `B2_ENDPOINT`, `B2_BUCKET`, `B2_KEY_ID`, `B2_APPLICATION_KEY` | Subir la misma copia del código al espejo de Backblaze, y pasarle a Railway los mismos valores para el respaldo nocturno | `backup-diario.yml`, `deploy-backend.yml` |
+| `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Subir la copia del código al depósito principal y borrar los paquetes vencidos | `backup-diario.yml` |
+| `B2_ENDPOINT`, `B2_BUCKET`, `B2_KEY_ID`, `B2_APPLICATION_KEY` | Subir la misma copia del código al espejo de Backblaze y borrar los paquetes vencidos, y pasarle a Railway los mismos valores para el respaldo nocturno | `backup-diario.yml`, `deploy-backend.yml` |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`, `VITE_SITE_URL`, `VITE_VAPID_PUBLIC_KEY` | Los valores que se compilan adentro de cada pantalla. **No son secretos** —quedan a la vista de cualquiera que abra la aplicación— y están acá únicamente porque los archivos `.env.production` no se versionan | `publicar-pantallas.yml` |
 
 **La clave anónima de Supabase no es una contraseña.** Es pública por diseño: lo que decide qué
@@ -73,26 +74,64 @@ Rotarla no protege nada y rompe todas las pantallas publicadas.
 
 ---
 
-## 4. Los secretos de cada Prestadora (la caja fuerte de la base)
+## 4. Los secretos de cada Prestadora (cifrados con la clave de cada una)
 
 Estos no son de CeltaTech ni del producto: son de cada Prestadora, los carga ella y **nadie los
-vuelve a ver, ni ella misma**. No viven en ninguna tabla: lo que la tabla guarda es el número de
-referencia de una caja de `vault`, y adentro de esa caja está el texto cifrado.
+vuelve a ver, ni ella misma**. La base guarda sólo el texto cifrado, en la tabla
+`secretos_de_terceros`, con el número de versión de la clave que lo cifró. **La clave no está en la
+base**: está en la variable `CLAVES_DE_LOS_SECRETOS_DE_TERCEROS` del backend, una por Prestadora.
+Quien se lleve una copia de la base se lleva texto que no puede leer, y la clave de una Prestadora
+no abre el secreto de otra.
 
-| Caja | Qué guarda | Funciones que la abren |
-|---|---|---|
-| `whatsapp_token_<prestadora>` | El token con el que manda mensajes por WhatsApp | `guardar_token_whatsapp` / `leer_token_whatsapp` |
-| `whatsapp_app_secret_<prestadora>` | Con qué se comprueba la firma de lo que llega de Meta | `guardar_app_secret_whatsapp` / `leer_app_secret_whatsapp` |
-| `whatsapp_verify_token_<prestadora>` | Con qué se contesta el saludo de enganche de Meta | `guardar_verify_token_whatsapp` / `leer_verify_token_whatsapp` |
-| `software_externo_<clase>_<prestadora>` | El dato de acceso al software de facturación o al de cobranzas que la Prestadora conectó. Cambiar de software borra la caja | `guardar_conexion_con_software_externo` / `leer_credencial_de_software_externo` |
-| `aviso_de_facturacion_<prestadora>` | Con qué se comprueba la firma de lo que informa el software de facturación | `guardar_secreto_del_aviso_de_facturacion` / `leer_secreto_del_aviso_de_facturacion` |
-| `aviso_de_cobranza_<prestadora>` | Con qué se comprueba la firma de lo que informa el software de cobranzas | `guardar_secreto_del_aviso_de_cobranza` / `leer_secreto_del_aviso_de_cobranza` |
+El cifrado es AES-256-GCM: si alguien cambia un solo carácter del texto guardado, o lo pasa a otra
+Prestadora o a otro uso, no se descifra y el pedido se rechaza.
 
-**Las doce funciones son `SECURITY DEFINER` y sólo las alcanza el trabajo sin persona**, o sea el
-backend, de a una Prestadora por vez.
-Ni el Superadmin ni el Admin de la propia Prestadora llegan al texto. Rotar uno de estos secretos
-no es trabajo de CeltaTech: la Prestadora lo vuelve a cargar desde Configuración, y el cambio
-reemplaza el contenido de la caja en vez de abrir otra.
+| Uso | Qué guarda |
+|---|---|
+| `whatsapp_access_token` | El token con el que manda mensajes por WhatsApp |
+| `whatsapp_app_secret` | Con qué se comprueba la firma de lo que llega de Meta |
+| `whatsapp_verify_token` | Con qué se contesta el saludo de enganche de Meta |
+| `credencial_software_facturacion` y `credencial_software_creditos_y_cobranzas` | El dato de acceso al software de facturación o al de créditos y cobranzas que la Prestadora conectó. Cambiar de software lo borra |
+| `credencial_del_mensaje_de_texto` | El dato de acceso al proveedor de mensajes de texto de la Prestadora |
+| `secreto_del_aviso_de_facturacion` | Con qué se comprueba la firma de lo que informa el software de facturación |
+| `secreto_del_aviso_de_cobranza` | Con qué se comprueba la firma de lo que informa el software de cobranzas |
+
+**La tabla sólo la alcanza el trabajo sin persona de esa Prestadora**, o sea el backend, de a una
+Prestadora por vez, y la base no le deja ver ni escribir filas de otra. Ni el Superadmin ni el
+Admin de la propia Prestadora llegan al texto. Rotar uno de estos secretos no es trabajo de
+CeltaTech: la Prestadora lo vuelve a cargar desde Configuración, y el cambio reemplaza la fila en
+vez de agregar otra.
+
+**Todo falla cerrado.** Si falta la clave de la Prestadora, si la versión guardada no está entre
+sus claves, o si el texto no se descifra, el secreto se da por ausente: no se manda el mensaje, el
+aviso de otro software se rechaza, y Configuración no deja guardar.
+
+### Cómo se da de alta la clave de una Prestadora
+
+Lo hace el Desarrollador, a mano, una vez por Prestadora y cada vez que se rota.
+
+1. En la computadora del Desarrollador, abra una terminal en la carpeta `careonys\backend`.
+2. Escriba este comando, con el identificador de la Prestadora y la ruta de un archivo dentro de
+   su carpeta segura:
+
+   ```
+   node scripts/generar_clave_de_secretos.mjs --prestadora <identificador> --archivo <ruta>
+   ```
+
+   El comando no muestra la clave en pantalla: la escribe en ese archivo, ya armada como renglón
+   de la variable. Si el archivo ya trae claves de esa Prestadora, agrega una versión nueva y
+   conserva las anteriores.
+3. Abra el archivo y copie su contenido entero.
+4. En Railway, en las variables del servicio del backend, pegue ese contenido en
+   `CLAVES_DE_LOS_SECRETOS_DE_TERCEROS` y guarde. Railway vuelve a arrancar el backend.
+5. Guarde una copia del mismo contenido en el administrador de contraseñas de Google.
+6. Deje el archivo en su carpeta segura. No lo suba a ningún repositorio.
+
+**Si se pierde la clave, los secretos de esa Prestadora no se recuperan**: la Prestadora los
+vuelve a cargar desde Configuración. Por eso la copia se guarda en dos lugares.
+
+**Al rotar**, la versión nueva cifra lo que se guarde de ahí en adelante; las anteriores quedan en
+la variable para seguir leyendo lo ya guardado hasta que la Prestadora lo vuelva a cargar.
 
 ---
 

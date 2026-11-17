@@ -31,8 +31,9 @@ rompiera la conexión al otro.
 | Lo que se facturó | `POST /api/avisos-de-facturacion/<identificador de la Prestadora>` |
 | El comprobante emitido, en PDF | `POST /api/avisos-de-facturacion/<identificador de la Prestadora>/<factura_id>/comprobante` |
 | Que a un Cliente se le restringe el servicio por falta de pago | `POST /api/avisos-de-cobranza/<identificador de la Prestadora>` |
+| Cómo está cada acceso de Match: pagó el período, está en período de gracia, quedó suspendido o se dio de baja | `POST /api/avisos-de-acceso-de-match/<identificador de la Prestadora>` |
 
-En las dos, **el identificador de la Prestadora va en la dirección y nunca en el cuerpo**. Lo que
+En todas, **el identificador de la Prestadora va en la dirección y nunca en el cuerpo**. Lo que
 venga adentro del pedido no elige sobre quién se escribe.
 
 ---

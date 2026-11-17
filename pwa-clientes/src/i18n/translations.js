@@ -520,6 +520,8 @@ export const T = {
     acceso: {
       titulo: 'Acceso',
       estado_vigente: 'Vigente',
+      estado_en_gracia: 'En período de gracia',
+      estado_suspendida: 'Suspendida',
       estado_vencida: 'Vencida',
       estado_cancelada: 'Cancelada',
       sin_acceso: 'Todavía no hay un acceso de Match para este Paciente.',
@@ -1146,6 +1148,8 @@ export const T = {
     acceso: {
       titulo: 'Access',
       estado_vigente: 'Current',
+      estado_en_gracia: 'In grace period',
+      estado_suspendida: 'Suspended',
       estado_vencida: 'Overdue',
       estado_cancelada: 'Cancelled',
       sin_acceso: 'There is no Match access for this Patient yet.',
@@ -1757,6 +1761,8 @@ export const T = {
     acceso: {
       titulo: 'Acesso',
       estado_vigente: 'Vigente',
+      estado_en_gracia: 'Em período de carência',
+      estado_suspendida: 'Suspensa',
       estado_vencida: 'Vencida',
       estado_cancelada: 'Cancelada',
       sin_acceso: 'Ainda não há um acesso a Match para este Paciente.',

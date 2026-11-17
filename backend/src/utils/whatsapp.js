@@ -1,4 +1,5 @@
 import { enLaPrestadora } from '../db/connection.js';
+import { USO, leerSecretoDeTercero } from './secretosDeTerceros.js';
 import { enviarEmailCoordinador, configuracionEvento } from './email.js';
 import { avisarPorMensajeDeTexto } from './mensajeDeTexto.js';
 import { idiomaParaMeta, nombreParaMeta, valoresDePlantilla } from './nombresDeMeta.js';
@@ -7,9 +8,10 @@ export const META_GRAPH_VERSION = 'v20.0';
 
 // Credenciales por prestadora — nunca en variables de entorno globales, cada prestadora
 // licenciataria tiene su propia cuenta de Meta Cloud API (docs/PRD_06_WhatsApp_IA.md punto C).
-// El token nunca vive en esta tabla en texto plano: se lee desde Supabase Vault a través de
-// la función leer_token_whatsapp (supabase/migrations/), que sólo lo entrega a quien trabaja
-// para esa misma Prestadora. Por eso se lee con el trabajo de la Prestadora, de a una por vez.
+// El token nunca vive en esta tabla: se guarda cifrado con la clave de esa Prestadora
+// (`secretosDeTerceros.js`), en una tabla que sólo el trabajo de esa misma Prestadora alcanza. Por
+// eso se lee con el trabajo de la Prestadora, de a una por vez. Si no se puede descifrar —falta la
+// clave, el texto está alterado— no hay token: el motivo queda en el registro y no sale nada.
 //
 // Devuelve además `wabaId`, que es la cuenta de WhatsApp Business y no el número: los mensajes
 // salen por el número y las plantillas se dan de alta contra la cuenta. Son dos identificadores
@@ -25,8 +27,14 @@ export async function credencialesWhatsapp(prestadoraId) {
 
     if (!config?.activo || !config.phone_number_id) return null;
 
-    const { data: token, error } = await db.rpc('leer_token_whatsapp', { p_prestadora_id: prestadoraId });
-    if (error || !token) return null;
+    let token;
+    try {
+      token = await leerSecretoDeTercero(db, prestadoraId, USO.WHATSAPP_TOKEN_DE_ACCESO);
+    } catch (error) {
+      console.warn('Token de WhatsApp ilegible:', prestadoraId, error?.motivo ?? 'lectura_fallida');
+      return null;
+    }
+    if (!token) return null;
 
     return { phoneNumberId: config.phone_number_id, wabaId: config.waba_id, token };
   });

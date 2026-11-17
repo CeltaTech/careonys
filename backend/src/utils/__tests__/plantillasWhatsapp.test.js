@@ -22,6 +22,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { respuestaDeSecretosDePrueba } from '../../__tests__/secretosDeTercerosDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
@@ -125,7 +126,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/configuracion_whatsapp_prestadora', () => [
     { activo: true, phone_number_id: NUMERO, waba_id: CUENTA },
   ]);
-  respuestas.set('POST /rest/v1/rpc/leer_token_whatsapp', () => TOKEN);
+  respuestas.set('GET /rest/v1/secretos_de_terceros', respuestaDeSecretosDePrueba(PRESTADORA, { whatsapp_access_token: TOKEN }));
 });
 
 describe('el nombre con el que la plantilla queda dada de alta en Meta', () => {
@@ -246,7 +247,7 @@ describe('cuando no se puede dar de alta', () => {
   });
 
   it('sin el token guardado avisa lo mismo', async () => {
-    respuestas.set('POST /rest/v1/rpc/leer_token_whatsapp', () => null);
+    respuestas.set('GET /rest/v1/secretos_de_terceros', () => null);
 
     await assert.rejects(darDeAltaEnMeta(plantilla()), (err) => err.motivo === 'whatsapp_sin_cuenta');
     assert.equal(pedidosAMeta.length, 0);

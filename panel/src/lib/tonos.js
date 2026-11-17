@@ -72,6 +72,7 @@ const TONO_POR_ESTADO = {
   ausente: TONO.ATENCION,
   borrador: TONO.ATENCION,
   en_certificacion: TONO.ATENCION,
+  en_gracia: TONO.ATENCION,
   en_gestion: TONO.ATENCION,
   en_revision: TONO.ATENCION,
   enviada_meta: TONO.ATENCION,

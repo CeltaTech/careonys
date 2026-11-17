@@ -26,6 +26,7 @@ import {
 import { mensajeDelCatalogo, mezclarMensajesConCatalogo, sePuedeApagar, VALORES_POR_DEFECTO_MENSAJE } from '../utils/catalogoAvisos.js';
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { mensajeDeTextoQueSeGuarda } from '../utils/viaMensajeDeTexto.js';
+import { USO, estadoDelErrorDeSecreto, guardarSecretoDeTercero, secretosCargados } from '../utils/secretosDeTerceros.js';
 import { hayProveedorDeMensajeDeTexto, proveedorDeMensajeDeTexto } from '../utils/mensajeDeTexto.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura, validarMinutosEmergencia } from '../utils/umbralesPremura.js';
@@ -1499,11 +1500,20 @@ panelConfiguracionRouter.get('/facturacion-clientes', async (req, res) => {
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('configuracion_facturacion_clientes')
-    .select('regla, secreto_del_aviso_secret_id, secreto_del_aviso_de_facturacion_secret_id')
+    .select('regla')
     .maybeSingle();
   if (error) return responderError(res, error);
   const prestadoraId = await prestadoraVisibleOContestar(db, res);
   if (!prestadoraId) return;
+  // Qué secretos hay cargados se pregunta con el trabajo de la Prestadora: la tabla donde viven,
+  // cifrados, no tiene ningún permiso para quien inicia sesión.
+  let cargados;
+  try {
+    cargados = await enLaPrestadora(prestadoraId, 'secretos cargados de la facturación', (dbDelTrabajo) =>
+      secretosCargados(dbDelTrabajo, prestadoraId));
+  } catch (errorDeLectura) {
+    return responderError(res, errorDeLectura);
+  }
 
   res.json({
     configuracion: {
@@ -1514,13 +1524,11 @@ panelConfiguracionRouter.get('/facturacion-clientes', async (req, res) => {
       ...condicionesDe(data?.regla, null),
       sigue_la_cobranza: sigueLaCobranza(data?.regla),
       entrega_la_factura: entregaLaFactura(data?.regla),
-      // Del secreto sale de acá si está cargado o no, nunca su contenido, y tampoco la referencia
-      // a la caja fuerte: al navegador no le sirve para nada y sí sirve para terminar en un
-      // registro donde no tendría que estar.
-      aviso_de_restriccion_conectado: !!data?.secreto_del_aviso_secret_id,
+      // Del secreto sale de acá si está cargado o no, nunca su contenido: ni en claro ni cifrado.
+      aviso_de_restriccion_conectado: cargados.has(USO.AVISO_DE_COBRANZA),
       // Lo mismo para el secreto con el que firma el software de facturación, que es otro: son dos
       // software distintos y pueden ser de dos proveedores que no se conocen.
-      aviso_de_facturacion_conectado: !!data?.secreto_del_aviso_de_facturacion_secret_id,
+      aviso_de_facturacion_conectado: cargados.has(USO.AVISO_DE_FACTURACION),
       // Para que la pantalla pueda mostrar a qué dirección tiene que escribir el otro
       // software. No es un secreto: sin el secreto de firma, conocerla no sirve de nada.
       prestadora_id: prestadoraId,
@@ -1597,8 +1605,8 @@ panelConfiguracionRouter.get('/facturacion-clientes/indices', async (req, res) =
 //
 // Se cierra más que el resto de la configuración, por lo mismo que las credenciales de WhatsApp:
 // es una llave de la Prestadora, y Superadmin es un rol técnico de CeltaTech. Quien lo carga es
-// Admin, y una vez cargado no vuelve a mostrarse: de la caja fuerte no sale nada hacia el
-// navegador. Para cambiarlo se escribe uno nuevo, que reemplaza al anterior.
+// Admin, y una vez cargado no vuelve a mostrarse: se guarda cifrado con la clave de la Prestadora
+// y no sale nada hacia el navegador. Para cambiarlo se escribe uno nuevo, que reemplaza al anterior.
 const soloAdminParaElSecretoDelAviso = exigirAdminDePrestadora(
   'La clave del software de cobranzas es de la Prestadora: solo Admin puede cambiarla'
 );
@@ -1614,15 +1622,14 @@ panelConfiguracionRouter.put(
 
     const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
     if (!prestadoraId) return;
-    // Con el trabajo de la Prestadora: la función que guarda el secreto en la caja fuerte no se le
-    // dio a quien inicia sesión. La Prestadora es la que la base acaba de dejar ver.
-    const { error } = await enLaPrestadora(prestadoraId, 'secreto del aviso de cobranza', (dbDelTrabajo) =>
-      dbDelTrabajo.rpc('guardar_secreto_del_aviso_de_cobranza', {
-        p_prestadora_id: prestadoraId,
-        p_secreto: secreto,
-      })
-    );
-    if (error) return responderError(res, error);
+    // Con el trabajo de la Prestadora: la tabla de los secretos no tiene ningún permiso para quien
+    // inicia sesión. La Prestadora es la que la base acaba de dejar ver.
+    try {
+      await enLaPrestadora(prestadoraId, 'secreto del aviso de cobranza', (dbDelTrabajo) =>
+        guardarSecretoDeTercero(dbDelTrabajo, prestadoraId, USO.AVISO_DE_COBRANZA, secreto));
+    } catch (error) {
+      return responderError(res, error, estadoDelErrorDeSecreto(error));
+    }
     res.json({ ok: true });
   }
 );
@@ -1651,20 +1658,18 @@ panelConfiguracionRouter.put(
     const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
     if (!prestadoraId) return;
     // Con el trabajo de la Prestadora, por lo mismo que el secreto de arriba.
-    const { error } = await enLaPrestadora(prestadoraId, 'secreto del aviso de facturación', (dbDelTrabajo) =>
-      dbDelTrabajo.rpc('guardar_secreto_del_aviso_de_facturacion', {
-        p_prestadora_id: prestadoraId,
-        p_secreto: secreto,
-      })
-    );
-    if (error) return responderError(res, error);
+    try {
+      await enLaPrestadora(prestadoraId, 'secreto del aviso de facturación', (dbDelTrabajo) =>
+        guardarSecretoDeTercero(dbDelTrabajo, prestadoraId, USO.AVISO_DE_FACTURACION, secreto));
+    } catch (error) {
+      return responderError(res, error, estadoDelErrorDeSecreto(error));
+    }
     res.json({ ok: true });
   }
 );
 
-// --- WhatsApp: credenciales de Meta Cloud API (Supabase Vault, ver
-//     supabase/migrations/ — el token nunca vuelve a
-//     mostrarse en el Panel una vez guardado) ---
+// --- WhatsApp: credenciales de Meta Cloud API. Se guardan cifradas con la clave de la
+//     Prestadora (`utils/secretosDeTerceros.js`) y nunca vuelven a mostrarse en el Panel ---
 //
 // Acá se cierra más que en el resto del router. El candado de arriba
 // (`soloAdministracion`) deja pasar a Superadmin, y para casi toda la configuración está bien:
@@ -1684,23 +1689,28 @@ panelConfiguracionRouter.get('/whatsapp', soloAdminDePrestadora, async (req, res
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('configuracion_whatsapp_prestadora')
-    .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at, app_secret_secret_id, verify_token_secret_id')
+    .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at')
     .maybeSingle();
   if (error) return responderError(res, error);
   const prestadoraId = data?.prestadora_id ?? await prestadoraVisibleOContestar(db, res);
   if (!prestadoraId) return;
-  // De los tres secretos sale de acá si están cargados o no, nunca su contenido: la referencia
-  // a la caja fuerte tampoco viaja al navegador, porque no le sirve para nada y sí sirve para
-  // aparecer en un registro donde no tendría que estar.
+  // De los tres secretos sale de acá si están cargados o no, nunca su contenido: ni en claro ni
+  // cifrado. La tabla donde viven no tiene permiso para quien inicia sesión: se pregunta con el
+  // trabajo de la Prestadora.
+  let cargados;
+  try {
+    cargados = await enLaPrestadora(prestadoraId, 'secretos cargados de WhatsApp', (dbDelTrabajo) =>
+      secretosCargados(dbDelTrabajo, prestadoraId));
+  } catch (errorDeLectura) {
+    return responderError(res, errorDeLectura);
+  }
   res.json({
     whatsapp: data
       ? {
           ...data,
-          token_cargado: true,
-          app_secret_cargado: !!data.app_secret_secret_id,
-          verify_token_cargado: !!data.verify_token_secret_id,
-          app_secret_secret_id: undefined,
-          verify_token_secret_id: undefined,
+          token_cargado: cargados.has(USO.WHATSAPP_TOKEN_DE_ACCESO),
+          app_secret_cargado: cargados.has(USO.WHATSAPP_SECRETO_DE_LA_APLICACION),
+          verify_token_cargado: cargados.has(USO.WHATSAPP_TOKEN_DEL_SALUDO),
         }
       : {
           prestadora_id: prestadoraId,
@@ -1734,36 +1744,22 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
     });
   if (error) return responderError(res, error);
 
-  // Con el trabajo de la Prestadora, las tres claves: las funciones que las guardan en la caja
-  // fuerte no se le dieron a quien inicia sesión. La Prestadora es la que la base acaba de dejar ver.
-  const guardarEnLaCajaFuerte = (funcion, parametros) =>
-    enLaPrestadora(prestadoraId, 'claves de WhatsApp', (dbDelTrabajo) => dbDelTrabajo.rpc(funcion, parametros));
-  if (token) {
-    const { error: errorToken } = await guardarEnLaCajaFuerte('guardar_token_whatsapp', {
-      p_prestadora_id: prestadoraId,
-      p_token: token,
-    });
-    if (errorToken) return responderError(res, errorToken);
-  }
-
-  // Los dos secretos con los que el backend le cree a lo que entra de Meta (pendiente #165):
-  // el de la aplicación, con el que se comprueba la firma de cada mensaje, y el token del
-  // saludo inicial, que ahora es de esta Prestadora y no uno solo para todo el producto. Los
-  // dos van a la caja fuerte y no vuelven a mostrarse acá, igual que el token de acceso.
-  if (app_secret) {
-    const { error: errorAppSecret } = await guardarEnLaCajaFuerte('guardar_app_secret_whatsapp', {
-      p_prestadora_id: prestadoraId,
-      p_secreto: app_secret,
-    });
-    if (errorAppSecret) return responderError(res, errorAppSecret);
-  }
-
-  if (verify_token) {
-    const { error: errorVerifyToken } = await guardarEnLaCajaFuerte('guardar_verify_token_whatsapp', {
-      p_prestadora_id: prestadoraId,
-      p_token: verify_token,
-    });
-    if (errorVerifyToken) return responderError(res, errorVerifyToken);
+  // Con el trabajo de la Prestadora, las tres claves: la tabla donde se guardan, cifradas con la
+  // clave de la Prestadora, no tiene permiso para quien inicia sesión. La Prestadora es la que la
+  // base acaba de dejar ver. Son el token de acceso, el secreto de la aplicación —con el que se
+  // comprueba la firma de cada mensaje que entra de Meta— y el token del saludo inicial.
+  const claves = [
+    [USO.WHATSAPP_TOKEN_DE_ACCESO, token],
+    [USO.WHATSAPP_SECRETO_DE_LA_APLICACION, app_secret],
+    [USO.WHATSAPP_TOKEN_DEL_SALUDO, verify_token],
+  ].filter(([, texto]) => texto);
+  try {
+    for (const [uso, texto] of claves) {
+      await enLaPrestadora(prestadoraId, 'claves de WhatsApp', (dbDelTrabajo) =>
+        guardarSecretoDeTercero(dbDelTrabajo, prestadoraId, uso, texto));
+    }
+  } catch (errorAlGuardar) {
+    return responderError(res, errorAlGuardar, estadoDelErrorDeSecreto(errorAlGuardar));
   }
 
   res.json({ ok: true });

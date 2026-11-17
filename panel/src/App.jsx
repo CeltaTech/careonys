@@ -9,7 +9,6 @@ import { ModalidadesProvider } from './context/ModalidadesContext';
 import { ConfirmacionProvider } from './context/ConfirmacionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { PedidosDeAutorizacionProvider } from './context/PedidosDeAutorizacionContext';
-import { TelefonosEsperandoProvider } from './context/TelefonosEsperandoContext';
 import { EmergenciasSinAtenderProvider } from './context/EmergenciasSinAtenderContext';
 import { PuestaEnMarchaProvider } from './context/PuestaEnMarchaContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -89,10 +88,6 @@ function App() {
                 Asistente parado en una puerta tiene que aparecer aunque nadie esté mirando la
                 lista. */}
             <PedidosDeAutorizacionProvider>
-            {/* Los números cargados que esperan que alguien los habilite. Va acá por el mismo
-                motivo: es una tarea pendiente de la Prestadora que se está mirando ahora, y el
-                contador del menú la consulta desde cualquier pantalla. */}
-            <TelefonosEsperandoProvider>
             {/* Las emergencias sin atender. Va acá por el mismo motivo: el menú las cuenta desde
                 cualquier pantalla, y Situación operativa y Comunicación las muestran. */}
             <EmergenciasSinAtenderProvider>
@@ -284,7 +279,6 @@ function App() {
             </PuestaEnMarchaProvider>
             </UmbralesProvider>
             </EmergenciasSinAtenderProvider>
-            </TelefonosEsperandoProvider>
             </PedidosDeAutorizacionProvider>
           </ConfirmacionProvider>
           </ModalidadesProvider>

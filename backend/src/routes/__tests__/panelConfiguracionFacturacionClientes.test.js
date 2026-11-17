@@ -113,6 +113,8 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/configuracion_facturacion_clientes', () => []);
   respuestas.set('POST /rest/v1/configuracion_facturacion_clientes', () => []);
+  // Qué secretos de otro software tiene cargados: ninguno, salvo que la prueba diga otra cosa.
+  respuestas.set('GET /rest/v1/secretos_de_terceros', () => []);
 });
 
 // ---------------------------------------------------------------------------------------
@@ -130,6 +132,15 @@ describe('leer el plazo de pago', () => {
     ]);
     const { cuerpo } = await leer();
     assert.equal(cuerpo.configuracion.dias_hasta_el_vencimiento, 10);
+  });
+
+  it('dice qué avisos de otro software están conectados según los secretos guardados', async () => {
+    respuestas.set('GET /rest/v1/secretos_de_terceros', () => [{ uso: 'secreto_del_aviso_de_cobranza' }]);
+    const { cuerpo } = await leer();
+    assert.equal(cuerpo.configuracion.aviso_de_restriccion_conectado, true);
+    assert.equal(cuerpo.configuracion.aviso_de_facturacion_conectado, false);
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/secretos_de_terceros');
+    assert.notEqual(consulta.credencial, sesionDePrueba(USUARIO), 'los secretos se preguntaron con la sesión de la persona');
   });
 
   it('la consulta va con la credencial de quien pide, y la base acota a su Prestadora', async () => {

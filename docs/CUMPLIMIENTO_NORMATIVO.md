@@ -140,14 +140,17 @@ Supabase está dada de baja y ningún archivo del repositorio la usa.
 
 ## Lo que cumple hoy
 
-- El secreto con el que el software de cobranzas firma sus avisos se guarda cifrado en Supabase
-  Vault, nunca en claro en la base.
+- El secreto con el que el software de cobranzas firma sus avisos, y los demás secretos que carga
+  cada Prestadora, se guardan cifrados con AES-256-GCM y una clave propia de esa Prestadora, que
+  vive fuera de la base. La base guarda sólo el texto cifrado, nunca en claro.
 - Trece de los catorce depósitos de archivos son privados y se sirven con enlace temporal. El único
   público es `marca-prestadoras`, el del logo de cada Prestadora.
 - El consentimiento se registra con texto versionado, con quién consintió, por qué medio, desde
   cuándo y hasta cuándo.
 - Existe la estructura de aviso legal por jurisdicción, con constancia de que se avisó.
-- No se entrenan modelos con datos de los Clientes, y no se monetiza ningún dato de salud.
+- No se entrenan modelos con datos de los Clientes, y no se monetiza ningún dato de salud. Una
+  llamada de entrenamiento en el código corta la publicación del backend y de las pantallas
+  (`scripts/verificar_entrenamiento_con_datos.mjs`).
 - El tráfico va cifrado.
 
 ---

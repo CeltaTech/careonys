@@ -11,17 +11,21 @@
    que cinco contactos alcancen para cinco Asistentes y no para tres mirados dos veces.
 
    LAS CUENTAS NO SE HACEN ACÁ. Sumar al saldo y restarle uno son dos funciones de la base
-   (`sumar_contactos_al_saldo` y `consumir_contacto_intermediacion`), y este archivo no hace más que llamarlas. No es una
+   (`sumar_contactos_al_saldo` y `consumir_contacto_intermediacion`). No es una
    preferencia de estilo: leer el saldo, restarle uno y volver a escribirlo son dos viajes, y dos
    ventanas abiertas a la vez descuentan una sola vez. Del lado de la base el descuento y la
    anotación pasan juntos, con la fila del acceso tomada.
 
-   QUIÉN LLAMA A CADA UNA. La carga del saldo la va a llamar la entrada por la que el software de
-   cobranzas avisa que un acceso de Match se pagó, que se construye con Match
-   (`docs\SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md` de CeltaTech, §4). El descuento lo va a llamar la
-   pantalla que le abre el
-   contacto al Cliente —el paso «La activación al intentar ver el contacto» del plan—, que
-   todavía no existe: hasta entonces el Panel puede ver el saldo y nadie lo gasta. */
+   QUIÉN LLAMA A CADA UNA. La carga del saldo la hace la base adentro de
+   `anotar_aviso_de_acceso_de_match`, cuando el software de cobranzas avisa que un paquete se
+   pagó (`routes/avisoDeAccesoDeMatch.js`): así el cobro, el estado y los contactos quedan
+   anotados en una sola operación. El descuento lo llama `contactoDelAsistente.js`, cuando el
+   Cliente abre el contacto de un Asistente.
+
+   QUÉ ACCESO ABRE CONTACTOS. Lo decide `elAccesoAbreContactos`, que es la misma regla que la base
+   aplica antes de descontar (`interno.el_acceso_abre_contactos`): el vigente abre; el que está en
+   período de gracia abre hasta el día anterior al de la suspensión; el dado de baja abre hasta el
+   último día pagado; el suspendido y el vencido no abren. Si una cambia, cambia la otra. */
 
 import { enLaPrestadora } from '../db/connection.js';
 
@@ -37,38 +41,38 @@ export const MOTIVO_CONTACTO = {
   NO_SE_PUDO_GUARDAR: 'no_se_pudo_guardar',
 };
 
+/** Los estados que puede tener guardados un acceso de Match. */
+export const ESTADO_DEL_ACCESO = {
+  VIGENTE: 'vigente',
+  EN_GRACIA: 'en_gracia',
+  SUSPENDIDA: 'suspendida',
+  VENCIDA: 'vencida',
+  CANCELADA: 'cancelada',
+};
+
 /**
- * Le carga contactos al saldo de un acceso. Se llama cuando entra la plata de un paquete.
+ * ¿Este acceso abre contactos hoy? Es la misma regla que aplica la base antes de descontar, y
+ * falla cerrado: un estado que no conoce o una fecha que falta contestan que no.
  *
- * Suma, no pisa: el paquete no vence por calendario, así que lo que quedó sin abrir de una compra
- * anterior sigue estando. Pisarlo sería vencerlo.
+ * Las fechas se comparan como texto `AAAA-MM-DD`, que es como las devuelve la base.
  *
- * @param {object} argumentos
- * @param {string} argumentos.accesoId
- * @param {number} argumentos.cuantos  Cuántos contactos trae lo que se acaba de pagar.
- * @param {object} db  La conexión con la que trabaja quien carga.
- * @returns {Promise<{ok: boolean, saldo_contactos?: number, motivo?: string, detalle?: string}>}
+ * @param {{estado?: string, suspension_desde?: string|null, vigente_hasta?: string|null}} acceso
+ * @param {string} [hoy]  El día de hoy, `AAAA-MM-DD`, en hora universal como la base.
  */
-export async function cargarContactosEnElSaldo({ accesoId, cuantos }, db) {
-  if (!Number.isInteger(cuantos) || cuantos <= 0) {
-    return { ok: false, motivo: MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR, detalle: `cuantos: ${cuantos}` };
+export function elAccesoAbreContactos(acceso, hoy = new Date().toISOString().slice(0, 10)) {
+  if (!acceso) return false;
+  switch (acceso.estado) {
+    case ESTADO_DEL_ACCESO.VIGENTE:
+      return true;
+    case ESTADO_DEL_ACCESO.EN_GRACIA:
+      // La suspensión empieza ese día: el anterior es el último que abre.
+      return Boolean(acceso.suspension_desde) && acceso.suspension_desde > hoy;
+    case ESTADO_DEL_ACCESO.CANCELADA:
+      // Dado de baja, sigue abriendo hasta el último día pagado inclusive.
+      return Boolean(acceso.vigente_hasta) && acceso.vigente_hasta >= hoy;
+    default:
+      return false;
   }
-
-  const { data, error } = await db.rpc('sumar_contactos_al_saldo', {
-    p_acceso_id: accesoId,
-    p_cuantos: cuantos,
-  });
-
-  if (error) {
-    return { ok: false, motivo: MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR, detalle: error.message };
-  }
-  // Sin fila que cargar, la base contesta vacío. No se trata como un saldo en cero: es que ese
-  // acceso no está, y decir que quedó en cero taparía el problema.
-  if (data === null || data === undefined) {
-    return { ok: false, motivo: MOTIVO_CONTACTO.ACCESO_INEXISTENTE };
-  }
-
-  return { ok: true, saldo_contactos: data };
 }
 
 /**

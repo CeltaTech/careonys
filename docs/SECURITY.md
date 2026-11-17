@@ -535,6 +535,18 @@ políticas—, y ninguna de las dos se puede ejecutar como `PUBLIC`, `anon` ni `
 dos quedan al alcance de `service_role` y del trabajo sin persona (`trabajo_sin_persona`) y de nadie
 más. Sin eso serían dos direcciones web, y una de ellas gasta plata ajena.
 
+**El estado del acceso y la carga del saldo los escribe el aviso firmado del software de
+cobranzas, y nada más.** Entra por `POST /api/avisos-de-acceso-de-match/<prestadora>`
+(`backend/src/routes/avisoDeAccesoDeMatch.js`), que comprueba la firma antes de tocar una fila, y
+la anotación la hace `anotar_aviso_de_acceso_de_match`: corre con los permisos de quien llama,
+resuelve la Prestadora adentro con `interno.prestadora_actual()`, toma el acceso de esa Prestadora
+y nada más —uno de otra contesta como inexistente—, y en una sola operación anota el cobro, cambia
+el estado, llama a `sumar_contactos_al_saldo` si es un paquete pagado y deja la constancia en el
+registro de actividad. Se ejecuta sólo como `trabajo_sin_persona`: `PUBLIC`, `anon` y
+`authenticated` no la alcanzan. El número de aviso es único por Prestadora, así que el mismo aviso
+mandado dos veces no suma contactos dos veces. Qué acceso abre contactos lo decide
+`interno.el_acceso_abre_contactos`, que usa `consumir_contacto_intermediacion` antes de descontar.
+
 La tabla lleva RLS y sólo políticas de lectura, porque desde una pantalla no se escribe: la fila
 la escribe el descuento, en la misma transacción.
 

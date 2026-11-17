@@ -66,7 +66,7 @@ revisar es el documento entero, no un renglón.
 Las tres deciden con qué criterio se elige, no qué se construye. Por eso van juntas: o valen las
 tres o no vale ninguna.
 
-- `docs/claude_history.md:415-419` — que lo propio del producto no quede atado a la plataforma de base de datos. Construido sólo en parte: la lógica de negocio vive en disparadores de Postgres y los secretos en Supabase Vault.
+- `docs/claude_history.md:415-419` — que lo propio del producto no quede atado a la plataforma de base de datos. Construido sólo en parte: la lógica de negocio vive en disparadores de Postgres.
 - `docs/claude_history.md:426` — que la arquitectura se elija pensando en que dure, no en lo más rápido de hacer.
 - `docs/claude_history.md:381-383` — que la empresa tenga que poder operar con poca gente.
 - `docs/claude_history.md:439-441` — que el nivel visual del producto tenga que superar al de la competencia.
@@ -173,8 +173,8 @@ de protección de datos. `escalas_legales` también es sólo `AR`.
 **Los datos están en São Paulo** (`sa-east-1`). Para Brasil es tratamiento local; para todos los
 demás países es transferencia internacional hacia Brasil.
 
-**Lo que sí está bien.** Los secretos de terceros se guardan en Supabase Vault, no en claro; hoy
-no hay ninguno cargado. Trece de los catorce depósitos son privados —el único público es el de la marca de las Prestadoras— y se sirven con enlace temporal. El consentimiento se registra
+**Lo que sí está bien.** Los secretos de terceros se guardan cifrados con la clave de cada
+Prestadora, no en claro; hoy no hay ninguno cargado. Trece de los catorce depósitos son privados —el único público es el de la marca de las Prestadoras— y se sirven con enlace temporal. El consentimiento se registra
 con texto versionado, con quién consintió, por qué medio, desde cuándo y hasta cuándo.
 
 ### Qué queda cuando esto termina
@@ -316,12 +316,12 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
   (`backend/src/utils/copiaDeLosArchivos.js`). El respaldo de GitHub sube sólo el código.
 - **Un respaldo se abre con `backend/scripts/abrir_respaldo.mjs`** y la clave privada de su
   Prestadora; revisa que no traiga ninguna fila de otra.
-- **Ningún dato se cifra en la aplicación.** El único cifrado del código es el del acceso guardado
-  en el teléfono.
-- **Los secretos de terceros de cada Prestadora** —la conexión con WhatsApp y los secretos de
-  firma de los avisos de facturación y de cobranzas— se guardan con el depósito de secretos de
-  Supabase, que usa **una sola clave para todo el proyecto**. La conexión con un software de
-  facturación o de cobranzas no está construida.
+- **Los secretos de terceros de cada Prestadora** —la conexión con WhatsApp, el proveedor de
+  mensajes de texto, los secretos de firma de los avisos de facturación y de cobranzas y el acceso
+  a esos dos programas— los cifra el backend con la clave de esa Prestadora
+  (`backend/src/utils/secretosDeTerceros.js`), y la base guarda sólo el texto cifrado, bajo la
+  protección por fila. Las claves van en `CLAVES_DE_LOS_SECRETOS_DE_TERCEROS` de Railway. Fuera de
+  eso, el único cifrado del código es el del acceso guardado en el teléfono.
 - **El cifrado del disco** lo pone Supabase, con una clave suya. No se puede comprobar desde la base.
 
 **Lo que falta:**
@@ -344,11 +344,12 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
    equivocadas, Supabase sólo las informa en el plan Teams. Espera ese cambio de plan. Para
    reactivar una cuenta cortada: contraseña nueva, `banned_until` vacío y la contraseña nueva en
    Railway y en la caja fuerte. Si la cortada es `lista@`, el correo no sale hasta reactivarla.
-3. **Los secretos de terceros pasan a tener una clave por Prestadora.** La clave va a Railway, con
-   copia en la caja fuerte y en el gestor de contraseñas de Google; el backend cifra y descifra, y
-   la base guarda sólo el texto cifrado, bajo la protección por fila. Estos secretos dejan de ir al
-   depósito de secretos de Supabase. **Se construye antes de que la primera Prestadora real cargue
-   la conexión con WhatsApp o el secreto de un aviso de facturación o de cobranzas.**
+3. **Usted** — Generar la clave de los secretos de terceros de cada Prestadora y cargarla en
+   `CLAVES_DE_LOS_SECRETOS_DE_TERCEROS` de Railway, con copia en la caja fuerte y en el gestor de
+   contraseñas de Google. El paso a paso está en `docs/SECRETOS.md`. Mientras falte la clave de
+   una Prestadora, esa Prestadora no manda mensajes de WhatsApp, rechaza los avisos firmados y
+   Configuración no le deja guardar esos datos. Hace falta antes de que la primera Prestadora real
+   cargue alguno de ellos.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra; ningún secreto del
 repositorio, de GitHub ni del backend alcanza a más de una Prestadora —el backend las guarda todas,
@@ -571,20 +572,14 @@ guardia. El equipo del Servicio muestra como Coordinador a quien lo coordina. La
 de alarma y las reasignaciones por emergencia se leen sólo de lo que ve; WhatsApp, por zona del
 Asistente; y los archivos de prescripciones, documento firmado y autorizaciones de monitoreo, sólo de
 los Pacientes que ve. Del Directorio de Personas lee las que tienen un rol en sus Clientes y
-Pacientes, salvo que tenga el permiso de editar personas. Lo prueba
+Pacientes, salvo que tenga el permiso de editar personas. De cada Asistente recibe la distancia al
+Paciente, redondeada a cien metros, y nunca el domicilio
+(`distancias_de_asistentes_a_pacientes`); del Padrón lee los Asistentes de su zona y los de sus
+Servicios, y todos sólo mientras tiene una emergencia abierta
+(`coordinador_lee_asistentes_de_sus_servicios`); y las calificaciones, sólo de esos mismos
+Asistentes o de las guardias que ve (`interno.personal_ve_la_calificacion`). Lo prueba
 `scripts/probar_altas_con_sesion.mjs`. Falta:
 
-- **De cada Asistente, la distancia al domicilio y no el domicilio.** El domicilio ya vive aparte,
-  en `domicilio_asistente`, y la base se lo deja leer sólo al propio Asistente y a quien tenga el
-  permiso `ver_domicilio_asistente`, reservado de fábrica a la administración; el mapa de
-  Postulaciones ya no recibe las coordenadas de quien no lo tiene. Falta la distancia para la
-  Coordinadora: la base la calcula sólo para el propio Asistente, en
-  `turnos_asignados_sin_responder` (`supabase/schemas/careonys.sql:10070`), y
-  `panel/src/lib/candidatos.js` la mide con el domicilio, así que la Coordinadora sin ese permiso se
-  queda sin distancia. Y el Padrón y las
-  calificaciones no van por zona: la Coordinadora lee todo el Padrón de su Prestadora
-  (`coordinador_lee_el_padron_de_asistentes`) y todo el personal lee las calificaciones
-  (`prestadora_ve_calificaciones`).
 - **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y
   se habilitan con un permiso. Hoy la facturación del Cliente, sus cobros y correcciones pasan
   por una sola función, `interno.gestiona_la_facturacion()`, que deja entrar a todo el personal;
@@ -846,24 +841,12 @@ contraseña para las tres, esa puerta daba también a las otras dos y esto no se
 - **Nada de esto puede impedirle a nadie trabajar.** La habilitación es para que un número se vuelva
   llave, nunca para entrar.
 
-**36.** Sacar la habilitación del número por una persona. Hoy un número verificado con su código de verificación
-todavía no sirve para restablecer la contraseña hasta que alguien de la oficina lo habilite, y el Panel
-muestra una lista de cuentas esperando esa habilitación. Esa lista además está mal: muestra a todo
-el que tiene un número que nadie confirmó, aunque lo haya cargado el primer día. Con la regla de
-arriba, la lista, la confirmación por la oficina y el renglón del tablero salen. En la base hay tres
-números confirmados por la oficina, los tres de datos inventados de la Prestadora de prueba, así
-que no hay nada guardado que decidir. La página
-Habilitar cambio de contraseña queda para la tercera vía, la de quien llama porque no puede entrar.
-
-**37.** Lo mismo, en las dos aplicaciones de teléfono. Hoy un Asistente y un Cliente ya pueden
-cambiar su contraseña, y nada más de esto: no pueden verificar ni cambiar su número con código de verificación, entrar desde un equipo nuevo no
-les pide código de verificación, y **no pueden cerrar la sesión de todos los equipos**, que es justo lo que
-necesita alguien a quien le robaron el teléfono. La única puerta es el Panel, y ahí no entran.
-**Acá falta backend y no sólo pantalla**, al revés que en los pasos de arriba: las piezas de fondo
-—mandar el código de verificación, comprobarlo, reconocer el equipo, cerrar todas las sesiones— están escritas y
-no conocen ningún rol, pero las únicas puertas que las usan exigen ser del Panel y rechazan a un
-Asistente y a un Cliente. Hay que abrir las puertas equivalentes para ellos dos, y recién
-después las pantallas.
+**37. Usted** — Las pantallas de la seguridad de la cuenta en las dos aplicaciones de teléfono.
+El backend ya atiende al Asistente y al Cliente igual que al Panel: mandar y comprobar el código de
+verificación, cambiar el número, reconocer el equipo, confirmar el equipo nuevo y cerrar la sesión
+de todos los equipos (`backend/src/routes/cuentaSegura.js`). Falta la pantalla donde cada uno lo
+hace, en la aplicación del Asistente y en la del Cliente. Espera que usted autorice pantallas
+nuevas en las aplicaciones.
 
 ---
 
@@ -929,11 +912,12 @@ sólo lectura, así que el renglón se saca cuando se lo toque.
 
 **44.** Construirla según lo contestado.
 
-**140.** La compra de contactos, de punta a punta. Hoy no existe ninguna de sus piezas:
-
-- **La entrada por la que el software de cobranzas avisa, firmado, que el Cliente pagó**, y el botón de compra en la aplicación del Cliente. El contrato está en `celtatech/docs/SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md`, sección «2.5 La compra de un acceso de Match». Ninguna ruta escribe `cobros_intermediacion`.
-- **Sumar el saldo cuando entra el pago.** La función `sumar_contactos_al_saldo` existe en la base y nadie la llama (`backend/src/utils/contactosIntermediacion.js:57`).
-- **La baja, la gracia y la suspensión del acceso** según lo que avise el software de cobranzas, y **el botón de baja en la aplicación del Cliente**. Hoy la única escritura en `accesos_intermediacion` es la de abrir un contacto (`backend/src/utils/contactoDelAsistente.js:258-268`), y `pwa-clientes/src/pages/AccesoIntermediacion.jsx` no tiene baja.
+**140. Usted** — Los botones de compra y de baja del acceso en la aplicación del Cliente. El
+backend ya recibe, firmado, el aviso del software de cobranzas por cada acceso de Match: anota el
+pago, suma los contactos de un paquete y pone el acceso vigente, en gracia, suspendido o de baja
+(`backend/src/routes/avisoDeAccesoDeMatch.js`). Falta dónde el Cliente compra y da de baja, en
+`pwa-clientes/src/pages/AccesoIntermediacion.jsx`. Espera que usted autorice pantallas nuevas en
+las aplicaciones.
 
 ---
 
@@ -1123,12 +1107,11 @@ país.
 
 **61.** Aplicar todo lo contestado.
 
-**63.** Relevar lo que nadie relevó todavía: los textos al pie del campo, los mensajes de «se
-guardó», las ventanas de confirmación, los carteles de las dos aplicaciones del teléfono y el botón
-«Habilitar cambio de contraseña»; y barrer el tuteo y el voseo de las traducciones. **Y todo el texto visible, contra
-las cuatro fuentes** que fija `..\..\CLAUDE.md` §8: términos sin aprobar, giros locales,
-construcciones dubitativas como «Conviene…» e impersonalidades innecesarias. Cada cambio de redacción se le presenta para
-aprobar, uno por uno.
+**63. Usted** — Aprobar las 44 fichas de redacción de `docs/RELEVAMIENTO_DE_TEXTOS.md`: 10 textos
+al pie del campo, 7 mensajes de «se guardó», 17 ventanas de confirmación, 3 carteles de las dos
+aplicaciones del teléfono y 7 textos que no cumplen las cuatro fuentes de `..\..\CLAUDE.md` §8. El
+relevamiento está hecho: no hay tuteo ni voseo en las traducciones, y el botón «Habilitar cambio de
+contraseña» no necesita cambio. Se cierra cuando usted contesta cada ficha y se aplica.
 
 **64.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
 con el nombre comercial que informa CeltaTech como dato. Hoy la nombra en dos lugares —el
@@ -1284,13 +1267,13 @@ muestra en ningún lado.
 
 **94.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
 
-**95.** **Guardar sólo lo que hace falta.** Revisar tabla por tabla qué dato personal se guarda y
-para qué se usa, y sacar lo que no tenga un para qué. En la misma revisión: qué datos de personas
-salen hacia terceros —el modelo de IA que lee una planilla y cualquier otro servicio externo— y si
-los registros de actividad y de errores guardan datos personales. Nada de esto está revisado todavía.
-
-**Comprobación:** cada columna con dato personal tiene escrito para qué se usa, y ninguna queda sin
-uso.
+**95. Usted** — **Guardar sólo lo que hace falta.** La revisión está hecha y escrita en
+`docs/DATOS_PERSONALES.md`: cada dato personal dice para qué sirve y quién lo lee, qué sale hacia
+terceros y que los registros de actividad y de errores no guardan valores personales. Quedan cinco
+grupos de datos que nadie usa y que hay que decidir si se sacan, porque sacarlos borra columnas: el
+recorrido punto por punto del Asistente, 17 datos de las postulaciones, el dato del navegador de
+los avisos de la aplicación, la Persona dentro de la guardia y las notas de la Persona. Se cierra
+cuando usted decide cada uno y se aplica.
 
 ---
 
@@ -1315,8 +1298,6 @@ una copia de trabajo**, que no es un archivo del repositorio y por eso el barrid
 **99. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 
 **136. Usted** — Abierto el 2026-10-25. Borrar la llave de la cuenta vieja de Backblaze, la del depósito `aurevia-backups-mirror`, que quedó escrita a la vista. El respaldo diario ya no la usa: escribe en la cuenta nueva, a nombre de cuentas@celtatech.com. Hoy no se pudo porque la cuenta bloqueó el ingreso por intentos fallidos. Se cierra cuando la llave ya no figure en **Application Keys**. Qué se hace con esa cuenta y con los respaldos viejos lo decide usted aparte.
-
-**137.** Los dos depósitos tienen 10 GB gratis. El respaldo de los datos de cada Prestadora ya borra lo vencido: guarda los diarios de los últimos 30 días y uno por mes durante 12 meses (`backend/src/utils/retencionDeRespaldos.js`). El respaldo diario del código, `backend/scripts/backup_a_buckets.mjs`, no borra nada. Se cierra cuando ese respaldo también borre solo el paquete que pasó el plazo.
 
 **160.** Mostrar en el Panel cuántos correos mandó cada Prestadora contra el tope de Resend. El
 conteo ya existe (`envios_de_correo`), y la pantalla está en el estante, en
@@ -1449,27 +1430,26 @@ entera o una parte. **Por qué, Careonys no lo sabe ni lo pregunta**: recibe la 
 trabajando y Clientes con acceso abierto. Cortar el acceso y dejarlo todo en su lugar no es lo
 mismo que darlo de baja.
 
-**113.** Construirlo, todo de este lado. **Primero, la puerta y el alta**, con el contrato de
-`celtatech/docs/MODELO_COMERCIAL_CELTATECH.md` §6.1 y la firma de §6.2: con la firma mal o sin
-clave configurada no abre; la referencia de CeltaTech se guarda como texto opaco y el alta repetida
-con la misma referencia devuelve la misma Prestadora. Con lo que llega, el alta:
+**113.** Terminar el alta y construir lo contratado. **La puerta y el alta ya están**:
+`/integracion/v1/tenants` (`backend/src/routes/altaDePrestadora.js`) comprueba la firma de
+`celtatech/docs/MODELO_COMERCIAL_CELTATECH.md` §6.2 y no abre con la firma mal o sin
+`CLAVE_DE_FIRMA_DE_CELTATECH`; `public.dar_de_alta_la_prestadora` crea en una sola operación la
+Prestadora con la moneda de su país, guarda el código que manda CeltaTech en
+`configuracion_prestadora.dominio` (único, y con un código repetido el alta no se hace), guarda la
+referencia de CeltaTech como texto opaco en `prestadoras.referencia_celtatech` (el alta repetida
+devuelve la misma Prestadora), crea al Administrador, fija la casilla de envío a partir del código,
+abre el reenvío de las respuestas, lo deshace todo si algo falla y queda auditada. Falta:
 
-- **Crea la Prestadora** con sus datos y la moneda de su país.
-- **Guarda el código de la Prestadora que manda CeltaTech**, que la nombra en el usuario de su
-  coordinación, en los formularios públicos y en los enlaces de activación. Careonys no lo elige
-  ni lo cambia. Hoy la Prestadora no tiene dónde guardarlo: la columna y su índice único se crean en
-  este paso, y con un código repetido el alta no se hace.
-- **Le fija la casilla de envío a partir de ese código** —`utils/casillaDeEnvio.js`— y le abre el
-  reenvío de las respuestas a la casilla que ella declaró —`utils/reenvioDeRespuestas.js`—.
-- **Crea la cuenta del Administrador** con los datos que manda CeltaTech
-  —`utils/cuentasPanel.js`—.
-- **Si cualquier parte falla, deshace todo**, reenvío incluido.
-- **Queda auditada**, y devuelve el identificador de la Organización.
-
-La casilla a partir del código queda en el código para esto (`casillaDeEnvioDelCodigo`), sin nadie
-que la llame hasta entonces. Cómo elige CeltaTech el código —del dominio propio que declaró, si no
-de su nombre, y con un sufijo si ya está tomado— está en el estante de CeltaTech, en
-`Codigos-utiles/eleccion-del-codigo-de-una-organizacion/`.
+- **Usted** — Cargar `CLAVE_DE_FIRMA_DE_CELTATECH` en Railway, la misma que use CeltaTech.
+- **Usted** — Agregar el código de la Prestadora a `datos_del_producto` en
+  `celtatech/docs/MODELO_COMERCIAL_CELTATECH.md` §6.1: la puerta lo exige y el contrato no lo nombra.
+- **Usted** — La herramienta de CeltaTech que le entrega la contraseña al Administrador: la cuenta
+  nace con una contraseña al azar que nadie conoce.
+- **Las cuentas automáticas de la Prestadora nueva.** Hoy sólo las crea un guion local
+  (`scripts/cuentas_automaticas_local.mjs`); sin ellas, las tareas programadas, el correo y el
+  respaldo de esa Prestadora fallan. Espera la decisión de dónde se guarda la contraseña de cada
+  cuenta automática nueva en Railway, que es de usted.
+- **La región por país.** Con una sola región alcanza; con más de una, el alta elige según el país.
 
 **Después,** recibir qué tiene habilitado cada Prestadora y que su
 Configuración ofrezca solamente eso; y recibir la orden de deshabilitar, sin la comprobación que
@@ -1745,21 +1725,17 @@ cuenta.
 
 **Comprobación:** cada documento existe y lo que afirma se puede verificar en el sistema.
 
-**130.** **Lo que no se hace nunca.**
-
-- **No se entrenan modelos con datos de las Prestadoras.** Prohibido por tres vías: el art. 28(10)
-  del GDPR convierte al encargado en responsable, el EHDS haría del producto titular de datos
-  sanitarios y su art. 54 lo prohíbe expresamente, y el art. 11 §4º de la LGPD brasileña prohíbe
-  compartir datos de salud con fines de ventaja económica.
-- **Nada de riesgo alto del AI Act sin saberlo.** La exposición no está en la vía clínica sino en el
-  Anexo III punto 4(b): la IA que asigna tareas según comportamiento o rasgos personales o evalúa
-  desempeño. Un emparejamiento o una planificación de Asistentes que los puntúa **es alto riesgo**,
-  y la salida del art. 6(3) queda cerrada por el perfilado. Rige desde el 2 de diciembre de 2027,
-  con autoevaluación, pero no hay norma armonizada y tampoco presunción de conformidad. **La
-  transparencia del art. 50 no se aplazó y rige desde el 2 de agosto de 2026.**
-
-**Comprobación:** un automatismo que corte la publicación si aparece una llamada de entrenamiento
-con datos de producción.
+**130. Usted** — **Nada de riesgo alto del AI Act sin saberlo.** Que no se entrenen modelos con
+datos de las Prestadoras ya lo hace cumplir un control que corta la publicación si aparece una
+llamada de entrenamiento (`scripts/verificar_entrenamiento_con_datos.mjs`). Queda esto, que no se
+puede comprobar con un control automático y espera su decisión sobre qué hace la IA con los
+Asistentes. La exposición no está en la vía clínica sino en el Anexo III punto 4(b): la IA que
+asigna tareas según comportamiento o rasgos personales o evalúa desempeño. Un emparejamiento o una
+planificación de Asistentes que los puntúa **es alto riesgo**, y la salida del art. 6(3) queda
+cerrada por el perfilado. Rige desde el 2 de diciembre de 2027, con autoevaluación, pero no hay
+norma armonizada y tampoco presunción de conformidad. **La transparencia del art. 50 no se aplazó
+y rige desde el 2 de agosto de 2026.** Se cierra cuando usted decide si la IA puntúa Asistentes;
+si los puntúa, la autoevaluación se hace antes de esa fecha.
 
 ### Lo que no hay que construir
 

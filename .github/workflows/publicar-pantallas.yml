@@ -86,6 +86,12 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ matrix.carpeta }}/package-lock.json
 
+      # Ningún modelo de IA se entrena con datos de las Prestadoras. Si aparece una llamada de
+      # entrenamiento en el código, la publicación no sale.
+      - name: Revisar que nada entrene un modelo con datos de producción
+        if: steps.cambios.outputs.hay == 'si'
+        run: node scripts/verificar_entrenamiento_con_datos.mjs
+
       - name: Instalar dependencias
         if: steps.cambios.outputs.hay == 'si'
         working-directory: ${{ matrix.carpeta }}
@@ -173,6 +179,10 @@ jobs:
         if: steps.cambios.outputs.hay == 'si'
         with:
           node-version: '22'
+
+      - name: Revisar que nada entrene un modelo con datos de producción
+        if: steps.cambios.outputs.hay == 'si'
+        run: node scripts/verificar_entrenamiento_con_datos.mjs
 
       - name: Armar la página
         if: steps.cambios.outputs.hay == 'si'

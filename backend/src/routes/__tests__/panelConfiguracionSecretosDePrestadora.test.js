@@ -30,6 +30,11 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
+import {
+  claveDePruebaPara,
+  quitarClaveDePrueba,
+  respuestaDeSecretosDePrueba,
+} from '../../__tests__/secretosDeTercerosDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
@@ -51,7 +56,8 @@ const baseFalsa = createServer((req, res) => {
     crudo += parte;
   });
   req.on('end', () => {
-    const ruta = new URL(req.url, 'http://interno').pathname;
+    const direccion = new URL(req.url, 'http://interno');
+    const ruta = direccion.pathname;
     const clave = `${req.method} ${ruta}`;
     llamadas.push({
       clave,
@@ -61,7 +67,7 @@ const baseFalsa = createServer((req, res) => {
     });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada() : preparada;
+    const valor = typeof preparada === 'function' ? preparada(direccion.searchParams) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -105,6 +111,15 @@ async function pedir(metodo, ruta, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
+/** Con qué rol y para qué Prestadora entró a la base cada pedido. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
 const dentroDeUnRato = () => new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
 beforeEach(() => {
@@ -113,6 +128,7 @@ beforeEach(() => {
   prestadoraDelUsuario = PRESTADORA;
   sesionDeSoporteAbierta = false;
   respuestas.clear();
+  claveDePruebaPara(PRESTADORA);
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () =>
@@ -134,10 +150,7 @@ beforeEach(() => {
 /** Todo lo que sólo se toca cuando la ruta llegó a hacer su trabajo con los secretos. */
 const RASTROS_DE_LOS_SECRETOS = [
   'configuracion_whatsapp_prestadora',
-  'rpc/guardar_token_whatsapp',
-  'rpc/guardar_app_secret_whatsapp',
-  'rpc/guardar_verify_token_whatsapp',
-  'rpc/leer_token_whatsapp',
+  'secretos_de_terceros',
 ];
 
 function noTocoLosSecretos() {
@@ -158,16 +171,21 @@ function prepararLosSecretos() {
       phone_number_id: 'numero-de-mentira',
       verificado_at: null,
       updated_at: new Date().toISOString(),
-      app_secret_secret_id: 'cccccccc-0000-4000-8000-000000000000',
-      verify_token_secret_id: 'dddddddd-0000-4000-8000-000000000000',
     },
   ]);
   respuestas.set('POST /rest/v1/configuracion_whatsapp_prestadora', () => []);
   // La Prestadora con la que se escribe es la que la base deja ver a quien pide.
   respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
-  respuestas.set('POST /rest/v1/rpc/guardar_token_whatsapp', () => null);
-  respuestas.set('POST /rest/v1/rpc/guardar_app_secret_whatsapp', () => null);
-  respuestas.set('POST /rest/v1/rpc/guardar_verify_token_whatsapp', () => null);
+  // Las tres claves cargadas, cifradas con la clave de esta Prestadora como las guarda la base.
+  respuestas.set(
+    'GET /rest/v1/secretos_de_terceros',
+    respuestaDeSecretosDePrueba(PRESTADORA, {
+      whatsapp_access_token: 'token-cargado-de-mentira',
+      whatsapp_app_secret: 'secreto-cargado-de-mentira',
+      whatsapp_verify_token: 'saludo-cargado-de-mentira',
+    })
+  );
+  respuestas.set('POST /rest/v1/secretos_de_terceros', () => []);
 }
 
 const CAMBIO_WHATSAPP = {
@@ -207,7 +225,7 @@ describe('Superadmin no llega a los secretos de una Prestadora', () => {
       assert.match(respuesta.error, mensajeEsperado);
       assert.doesNotMatch(
         respuesta.error,
-        /configuracion_whatsapp|select|column|relation|vault/i
+        /configuracion_whatsapp|secretos_de_terceros|select|column|relation/i
       );
       noTocoLosSecretos();
     });
@@ -262,10 +280,32 @@ describe('Admin_prestadora sí llega a los secretos de su Prestadora', () => {
     assert.equal(cuerpo.whatsapp.token_cargado, true);
     assert.equal(cuerpo.whatsapp.app_secret_cargado, true);
     assert.equal(cuerpo.whatsapp.verify_token_cargado, true);
-    // Ni el contenido de los secretos ni la referencia a la caja fuerte viajan al navegador.
-    assert.equal(cuerpo.whatsapp.app_secret_secret_id, undefined);
-    assert.equal(cuerpo.whatsapp.verify_token_secret_id, undefined);
-    assert.equal(JSON.stringify(cuerpo).includes('cccccccc-0000-4000-8000-000000000000'), false);
+    // Ni el texto de los secretos ni su versión cifrada viajan al navegador.
+    const enviado = JSON.stringify(cuerpo);
+    assert.equal(enviado.includes('cargado-de-mentira'), false);
+    assert.equal(enviado.includes('texto_cifrado'), false);
+  });
+
+  it('sin secretos guardados, dice que no están cargados aunque el número esté configurado', async () => {
+    prepararLosSecretos();
+    respuestas.set('GET /rest/v1/secretos_de_terceros', () => []);
+
+    const { estado, cuerpo } = await pedir('GET', '/whatsapp');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.whatsapp.token_cargado, false);
+    assert.equal(cuerpo.whatsapp.app_secret_cargado, false);
+    assert.equal(cuerpo.whatsapp.verify_token_cargado, false);
+  });
+
+  it('qué secretos hay se pregunta con el trabajo de la Prestadora, y sólo por los de ella', async () => {
+    prepararLosSecretos();
+    await pedir('GET', '/whatsapp');
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/secretos_de_terceros');
+    assert.ok(consulta, 'no preguntó qué secretos hay');
+    const credencial = leerCredencial(consulta.credencial ?? '');
+    assert.equal(credencial?.role, 'trabajo_sin_persona');
+    assert.equal(credencial.prestadora_id, PRESTADORA);
+    assert.equal(new URL(consulta.url, 'http://interno').searchParams.get('prestadora_id'), `eq.${PRESTADORA}`);
   });
 
   it('la lectura va con la credencial de quien pide, y la base acota a su Prestadora', async () => {
@@ -275,17 +315,44 @@ describe('Admin_prestadora sí llega a los secretos de su Prestadora', () => {
     assert.equal(busqueda.credencial, sesionDePrueba(USUARIO));
   });
 
-  it('las guarda: los tres secretos van a la caja fuerte, cada uno por su función', async () => {
+  it('las guarda cifradas con la clave de la Prestadora, cada una por su uso', async () => {
     prepararLosSecretos();
 
     const { estado, cuerpo } = await pedir('PATCH', '/whatsapp', CAMBIO_WHATSAPP);
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { ok: true });
 
-    for (const funcion of ['guardar_token_whatsapp', 'guardar_app_secret_whatsapp', 'guardar_verify_token_whatsapp']) {
-      const guardado = llamadas.find((l) => l.clave === `POST /rest/v1/rpc/${funcion}`);
-      assert.ok(guardado, `no se llamó a ${funcion}`);
-      assert.equal(guardado.cuerpo.p_prestadora_id, PRESTADORA);
+    const guardados = llamadas.filter((l) => l.clave === 'POST /rest/v1/secretos_de_terceros');
+    const filas = guardados.flatMap((l) => (Array.isArray(l.cuerpo) ? l.cuerpo : [l.cuerpo]));
+    assert.deepEqual(
+      filas.map((f) => f.uso).sort(),
+      ['whatsapp_access_token', 'whatsapp_app_secret', 'whatsapp_verify_token']
+    );
+    for (const guardado of guardados) {
+      const credencial = leerCredencial(guardado.credencial ?? '');
+      assert.equal(credencial?.role, 'trabajo_sin_persona', 'se guardó con otra credencial');
+      assert.equal(credencial.prestadora_id, PRESTADORA, 'se guardó fuera de la Prestadora');
     }
+    for (const fila of filas) {
+      assert.equal(fila.prestadora_id, PRESTADORA);
+      assert.ok(fila.texto_cifrado, 'no llegó el texto cifrado');
+      assert.ok(fila.version_de_clave > 0);
+    }
+    // A la base no le llega ninguna de las tres en claro.
+    const enviado = JSON.stringify(filas);
+    for (const texto of [CAMBIO_WHATSAPP.token, CAMBIO_WHATSAPP.app_secret, CAMBIO_WHATSAPP.verify_token]) {
+      assert.equal(enviado.includes(texto), false, 'un secreto llegó a la base sin cifrar');
+    }
+  });
+
+  it('sin la clave de la Prestadora no guarda nada y lo dice, sin detalle de la base', async () => {
+    prepararLosSecretos();
+    quitarClaveDePrueba(PRESTADORA);
+
+    const { estado, cuerpo } = await pedir('PATCH', '/whatsapp', CAMBIO_WHATSAPP);
+    assert.equal(estado, 503);
+    assert.ok(cuerpo.error);
+    assert.doesNotMatch(JSON.stringify(cuerpo), /secretos_de_terceros|texto_cifrado|CLAVES_DE/i);
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/secretos_de_terceros'), false);
   });
 });

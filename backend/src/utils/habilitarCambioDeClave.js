@@ -1,6 +1,5 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
-import { verificadorDelTelefono } from './codigoAlTelefono.js';
 
 // LA PRESTADORA HABILITA, NO CAMBIA.
 //
@@ -123,121 +122,6 @@ export async function habilitarCambioDeClave({ quien, usuarioId }) {
   if (error) throw new Error(error.message);
 
   return cuenta;
-}
-
-/**
- * El atajo: quien atiende el llamado confirma que ese número es de esa persona, y con
- * eso el número no espera nada para servir de llave.
- *
- * NO CAMBIA EL NÚMERO. Confirma el que la cuenta ya tiene cargado. Cambiarlo es de la persona, con
- * su clave actual, y desde su propia pantalla.
- */
-export async function confirmarTelefonoDeLaCuenta({ quien, usuarioId }) {
-  if (!quien?.id || !quien?.prestadoraId || !usuarioId) throw new ErrorConMotivo('faltan_datos');
-  if (quien.id === usuarioId) throw new ErrorConMotivo('no_puede_habilitar');
-
-  const cuenta = await cuentaDeLaPrestadora(usuarioId, quien.prestadoraId);
-  if (!cuenta) throw new ErrorConMotivo('no_encontrado');
-  if (!puedeHabilitar(quien.rol, cuenta.rol)) throw new ErrorConMotivo('no_puede_habilitar');
-  if (!cuenta.telefono) throw new ErrorConMotivo('telefono_invalido');
-
-  const { error } = await enLaPrestadora(quien.prestadoraId, TRABAJO, (db) => db
-    .from('telefonos_confirmados_por_la_prestadora')
-    .upsert(
-      {
-        prestadora_id: quien.prestadoraId,
-        usuario_id: usuarioId,
-        confirmado_por: quien.id,
-        telefono_verificador: verificadorDelTelefono(cuenta.telefono),
-      },
-      { onConflict: 'usuario_id,telefono_verificador' },
-    ));
-  if (error) throw new Error(error.message);
-
-  return cuenta;
-}
-
-const TOPE_DE_LOS_PENDIENTES = 50;
-
-/**
- * Los números que están a la espera de que alguien los habilite.
- *
- * QUÉ ES ESTAR A LA ESPERA: la cuenta cargó un número, todavía no lo habilitó nadie, y por eso ese
- * número no sirve para recuperar la clave. Entrar con el correo y la clave no depende de esto: lo
- * único que el número no habilitado no puede hacer es recuperarla.
- *
- * QUE ESE NÚMERO ESTÉ VERIFICADO NO LO SACA DE LA LISTA. Verificar prueba que el número funciona y
- * que quien lo cargó lo tiene a mano; lo que falta es que alguien reconozca a esa persona, y eso es
- * justamente lo que esta lista pide. Filtrar por la verificación dejaba afuera a quien cargó su
- * número y lo verificó antes de que nadie lo llamara, que es el caso corriente.
- *
- * NO HAY ESPERA POR TIEMPO. Nada de esta lista se habilita solo ni se vence solo: sale de la lista
- * cuando una persona lo habilita, y no antes.
- *
- * LA LISTA SALE FILTRADA POR QUIÉN PUEDE HABILITAR A QUIÉN, con la misma regla que usan las dos
- * acciones de más arriba. Quien coordina no se ve a sí mismo ni ve a otro que coordine: a la
- * coordinación la habilita la administración de la Prestadora. Es el backend el que lo niega, no la
- * pantalla.
- *
- * NO DEVUELVE NINGÚN NÚMERO DE TELÉFONO, igual que la búsqueda: lo que hace falta para llamar a esa
- * persona y verificar que el cambio es real es su nombre y su correo.
- */
-export async function telefonosEsperandoHabilitacion(quien) {
-  // Falla cerrado: sin sesión entendible no hay nada que mostrar.
-  if (!quien?.id || !quien?.prestadoraId || !quien?.rol) return [];
-
-  const { data, error } = await enLaPrestadora(quien.prestadoraId, TRABAJO, (db) => db
-    .from('usuarios')
-    .select('id, nombre, email, rol, telefono, telefono_verificado_en')
-    .eq('prestadora_id', quien.prestadoraId)
-    .is('desactivada_en', null)
-    .not('telefono', 'is', null)
-    .order('nombre', { ascending: true })
-    .limit(TOPE_DE_LOS_PENDIENTES));
-  if (error) throw new Error(error.message);
-
-  const alcanzables = (data ?? [])
-    .filter((cuenta) => cuenta.id !== quien.id)
-    .filter((cuenta) => puedeHabilitar(quien.rol, cuenta.rol))
-    .filter((cuenta) => Boolean(cuenta.telefono));
-  if (alcanzables.length === 0) return [];
-
-  // Las que ya habilitó alguien salen de la lista. Se pregunta una sola vez por todas, y se compara
-  // contra el identificador de verificación del número que la cuenta tiene hoy: habilitar un número viejo no habilita el
-  // que vino después.
-  const { data: confirmados, error: errorConfirmados } = await enLaPrestadora(quien.prestadoraId, TRABAJO, (db) => db
-    .from('telefonos_confirmados_por_la_prestadora')
-    .select('usuario_id, telefono_verificador')
-    .eq('prestadora_id', quien.prestadoraId)
-    .in('usuario_id', alcanzables.map((cuenta) => cuenta.id)));
-  if (errorConfirmados) throw new Error(errorConfirmados.message);
-
-  const yaHabilitados = new Set(
-    (confirmados ?? []).map((fila) => `${fila.usuario_id}:${fila.telefono_verificador}`),
-  );
-
-  return alcanzables
-    .filter((cuenta) => !yaHabilitados.has(`${cuenta.id}:${verificadorDelTelefono(cuenta.telefono)}`))
-    .map((cuenta) => ({
-      id: cuenta.id,
-      nombre: cuenta.nombre,
-      email: cuenta.email,
-      rol: cuenta.rol,
-    }));
-}
-
-/** ¿Este número ya lo confirmó la Prestadora para esta cuenta? La Prestadora se nombra siempre, y
- *  la trae quien llama: es la de la cuenta que se está mirando. */
-export async function telefonoConfirmadoPorLaPrestadora({ usuarioId, prestadoraId, telefono }) {
-  if (!usuarioId || !prestadoraId || !telefono) return false;
-  const { data } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
-    .from('telefonos_confirmados_por_la_prestadora')
-    .select('id')
-    .eq('prestadora_id', prestadoraId)
-    .eq('usuario_id', usuarioId)
-    .eq('telefono_verificador', verificadorDelTelefono(telefono))
-    .maybeSingle());
-  return Boolean(data);
 }
 
 /** La puerta que sigue abierta para esta cuenta, si hay alguna. */

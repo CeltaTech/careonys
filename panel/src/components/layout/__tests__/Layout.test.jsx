@@ -41,9 +41,6 @@ vi.mock('../../../context/ModalidadesContext', () => ({
     enVista: (m) => activas.length < 2 || activas[0] === m,
   }),
 }));
-vi.mock('../../../context/TelefonosEsperandoContext', () => ({
-  useTelefonosEsperando: () => ({ cuentas: [] }),
-}));
 vi.mock('../../../context/EmergenciasSinAtenderContext', () => ({
   useEmergenciasSinAtender: () => ({ emergencias: [] }),
 }));

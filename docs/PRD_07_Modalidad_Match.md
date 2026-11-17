@@ -55,13 +55,17 @@ decide restricciones.
 
 **Match está cerrado para los Clientes** (`backend/src/utils/intermediacionDeLaPrestadora.js:50-52`).
 La aplicación del Cliente muestra el acceso que tiene —estado, importe y próximo cobro— y no tiene
-botón de compra ni de baja (`pwa-clientes/src/pages/AccesoIntermediacion.jsx`). El backend no tiene
-ninguna entrada por la que el software de cobranzas informe un pago. Qué tiene que cumplir ese
-software está en `celtatech/docs/SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md`, sección «La compra de un
+botón de compra ni de baja (`pwa-clientes/src/pages/AccesoIntermediacion.jsx`). El software de
+cobranzas informa cada acceso por una entrada firmada, `POST /api/avisos-de-acceso-de-match/<prestadora>`
+(`backend/src/routes/avisoDeAccesoDeMatch.js`), con el mismo secreto que el aviso por Cliente. Qué
+tiene que cumplir ese software está en `celtatech/docs/SOFTWARE_DE_CREDITOS_Y_COBRANZAS.md`, sección «La compra de un
 acceso de Match».
 
-**Lo que informa el software de cobranzas vive en `cobros_intermediacion`**, una fila por aviso. El
-backend la lee y no la escribe: de ahí saca, para la lista de Clientes del Panel, el estado del
+**Lo que informa el software de cobranzas vive en `cobros_intermediacion`**, una fila por aviso. La
+escribe una sola función de la base, `anotar_aviso_de_acceso_de_match`, que en la misma operación
+anota el cobro, cambia el estado del acceso, suma los contactos de un paquete pagado y deja la
+constancia en el registro de actividad. El mismo número de aviso mandado dos veces se anota una
+sola vez. El resto del backend la lee: de ahí saca, para la lista de Clientes del Panel, el estado del
 cobro más reciente y el último cobro exitoso de cada acceso (`backend/src/utils/estadoDeCobroDelAcceso.js`,
 `backend/src/routes/panelIntermediacion.js:300` y `:422`). No calcula nada por su cuenta.
 
@@ -114,22 +118,27 @@ que ya se contrató se apaga con `ofrecida`, de modo que los accesos que la tien
 apuntando a algo que existe.
 
 **Lo que hay que cobrar de cada período lo toma el software de cobranzas** de
-`GET /accesos/para-facturar`: los accesos vigentes con importe, moneda y fecha del próximo cobro.
+`GET /accesos/para-facturar`: los accesos vigentes y los que están en período de gracia, con
+importe, moneda y fecha del próximo cobro.
 
 ### 3.6 Cómo se mueve el saldo de un paquete
 
 **La carga es la función `sumar_contactos_al_saldo` de la base**, que le suma al acceso los
 contactos de una compra. **Suma, no pisa.** Un paquete no vence por calendario, así que los
 contactos que quedaron sin abrir de una compra anterior siguen estando; escribir el total nuevo
-encima sería vencerlos. El backend la envuelve en `backend/src/utils/contactosIntermediacion.js:57`,
-y ninguna ruta la llama, porque no hay entrada que reciba el aviso de pago.
+encima sería vencerlos. La llama `anotar_aviso_de_acceso_de_match` cuando entra el pago de un
+paquete, con los contactos que trae su forma de cobro.
 
 **Se gasta de a un Asistente, no de a una mirada.** Abierto el contacto de alguien, volver a
 mirarlo no descuenta otro: queda anotado a quién se le abrió, y eso es lo que hace que cinco
 contactos alcancen para cinco personas y no para tres miradas dos veces. La anotación vale para el
 Cliente entero, así que tampoco se paga dos veces por haber comprado dos paquetes.
 
-**No abre nada un acceso que no está vigente**, aunque le haya quedado saldo, y un acceso que se
+**Abre contactos el acceso vigente, el que está en período de gracia hasta el día anterior a su
+suspensión y el dado de baja hasta su último día pagado.** El suspendido y el vencido no abren
+nada, aunque les haya quedado saldo. La regla es una sola en la base
+(`interno.el_acceso_abre_contactos`), y su espejo en el backend es `elAccesoAbreContactos`. Un
+acceso que se
 sostiene por fecha y no por saldo lo dice con sus propias palabras: comprar un paquete no es lo
 que le falta.
 
@@ -140,9 +149,20 @@ funciones está en `docs/SECURITY.md`.
 
 ### 3.7 La baja, el corte y la gracia
 
-**Los decide el software de cobranzas.** El backend no tiene ninguna ruta que dé de baja, ponga
-en gracia o suspenda un acceso: la única escritura en `accesos_intermediacion` termina el período
-gratuito cuando se abre un contacto (`backend/src/utils/contactoDelAsistente.js:258-268`).
+**Los decide el software de cobranzas, y Careonys los anota.** Llegan por la entrada del aviso de
+acceso de Match, y cada aviso dice uno de cuatro estados:
+
+- **Pagó el período:** el acceso queda vigente. Si estaba suspendido, la suspensión se levanta sola.
+- **Período de gracia:** el cobro fue rechazado y el software reintenta. El aviso trae el día fijo
+  en que el acceso queda suspendido si el pago no entra. Hasta el día anterior sigue abriendo.
+- **Suspendido:** no abre nada hasta que entre el pago.
+- **Baja:** el Cliente dio de baja la renovación. El aviso trae el último día pagado, y hasta ese
+  día inclusive el acceso sigue abriendo.
+
+Un aviso de un período anterior al último anotado queda guardado como cobro, pero no cambia el
+estado del acceso. La fecha del próximo cobro no la mueve Careonys: el calendario de cobro es del
+software de cobranzas. La otra escritura en `accesos_intermediacion` termina el período gratuito
+cuando se abre un contacto (`backend/src/utils/contactoDelAsistente.js`).
 
 **Sólo se da de baja lo que se renueva solo.** Un paquete se pagó una vez y lo que lo sostiene es
 su saldo: no hay renovación que apagar.

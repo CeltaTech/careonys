@@ -50,11 +50,6 @@ COMMENT ON SCHEMA "interno" IS 'Lo interno de la base: las funciones que usan la
 
 
 
-
-
-
-
-
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
@@ -64,11 +59,7 @@ CREATE EXTENSION IF NOT EXISTS "btree_gist" WITH SCHEMA "extensions";
 
 
 
-
-
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
-
-
 
 
 
@@ -78,18 +69,12 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
 
 
 
-
-
 CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
 
 
 
 
-
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
-
-
 
 
 
@@ -624,6 +609,66 @@ ALTER FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid
 
 
 COMMENT ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") IS 'Si este Asistente trabaja en esa modalidad. La usan las tres puertas por las que un Asistente queda a cargo: la guardia, la asignación y la serie (regla 12).';
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."asistentes_que_trabajan_con_el_coordinador"() RETURNS "uuid"[]
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prestadora uuid := interno.prestadora_actual();
+  v_servicios uuid[];
+  v_tomadas uuid[];
+  v_asistentes uuid[];
+BEGIN
+  IF v_prestadora IS NULL OR NOT interno.es_coordinador() THEN
+    RETURN '{}';
+  END IF;
+
+  SELECT coalesce(array_agg(s.id), '{}') INTO v_servicios
+    FROM servicios s
+   WHERE s.prestadora_id = v_prestadora
+     AND s.coordinador_id = ANY (interno.coordinadores_que_represento());
+
+  v_tomadas := interno.guardias_a_la_vista_por_una_alarma(true);
+
+  SELECT coalesce(array_agg(DISTINCT x.asistente_id), '{}') INTO v_asistentes
+    FROM (
+      SELECT g.asistente_id
+        FROM guardias g
+       WHERE g.prestadora_id = v_prestadora
+         AND g.asistente_id IS NOT NULL
+         AND (g.servicio_id = ANY (v_servicios)
+              OR g.id = ANY (v_tomadas)
+              OR (g.servicio_id IS NULL
+                  AND interno.coordinador_alcanza_la_guardia_de(NULL, g.paciente_id, g.id)))
+      UNION
+      SELECT sg.asistente_id
+        FROM series_guardias sg
+       WHERE sg.prestadora_id = v_prestadora
+         AND sg.asistente_id IS NOT NULL
+         AND (sg.servicio_id = ANY (v_servicios)
+              OR (sg.servicio_id IS NULL
+                  AND interno.coordinador_alcanza_la_serie_de(NULL, sg.paciente_id, sg.id)))
+      UNION
+      SELECT t.asistente_id
+        FROM asignaciones_de_turno t
+        JOIN guardias g ON g.id = t.guardia_id AND g.prestadora_id = t.prestadora_id
+       WHERE t.prestadora_id = v_prestadora
+         AND (g.servicio_id = ANY (v_servicios)
+              OR g.id = ANY (v_tomadas)
+              OR (g.servicio_id IS NULL
+                  AND interno.coordinador_alcanza_la_guardia_de(NULL, g.paciente_id, g.id)))
+    ) x;
+
+  RETURN v_asistentes;
+END;
+$$;
+
+
+
+ALTER FUNCTION "interno"."asistentes_que_trabajan_con_el_coordinador"() OWNER TO "postgres";
 
 
 
@@ -1337,6 +1382,47 @@ $$;
 ALTER FUNCTION "interno"."coordinador_alcanza_la_serie_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_serie" "uuid") OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "interno"."coordinador_tiene_una_emergencia_abierta"() RETURNS boolean
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prestadora uuid := interno.prestadora_actual();
+BEGIN
+  IF v_prestadora IS NULL OR NOT interno.es_coordinador() THEN
+    RETURN false;
+  END IF;
+
+  RETURN EXISTS (
+           SELECT 1 FROM emergencias_guardia e
+             JOIN guardias g ON g.id = e.guardia_id AND g.prestadora_id = e.prestadora_id
+            WHERE e.prestadora_id = v_prestadora
+              AND e.atendida_at IS NULL
+              AND (e.id = ANY (interno.alarmas_a_la_vista_del_coordinador('emergencia_guardia'))
+                   OR interno.coordinador_alcanza_la_guardia_de(g.servicio_id, g.paciente_id, g.id)))
+      OR EXISTS (
+           SELECT 1 FROM incidentes_turno_sin_cubrir i
+             JOIN guardias g ON g.id = i.guardia_id AND g.prestadora_id = i.prestadora_id
+            WHERE i.prestadora_id = v_prestadora
+              AND i.resuelto_at IS NULL
+              AND (i.id = ANY (interno.alarmas_a_la_vista_del_coordinador('incidente_turno_sin_cubrir'))
+                   OR interno.coordinador_alcanza_la_guardia_de(g.servicio_id, g.paciente_id, g.id)))
+      OR EXISTS (
+           SELECT 1 FROM alertas_tempranas_guardia a
+             JOIN guardias g ON g.id = a.guardia_id AND g.prestadora_id = a.prestadora_id
+            WHERE a.prestadora_id = v_prestadora
+              AND a.resuelto_at IS NULL
+              AND (a.id = ANY (interno.alarmas_a_la_vista_del_coordinador('alerta_temprana_guardia'))
+                   OR interno.coordinador_alcanza_la_guardia_de(g.servicio_id, g.paciente_id, g.id)));
+END;
+$$;
+
+
+
+ALTER FUNCTION "interno"."coordinador_tiene_una_emergencia_abierta"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."coordinador_ve_a_la_persona"("p_persona" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -1629,6 +1715,37 @@ $$;
 ALTER FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "interno"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") RETURNS TABLE("asistente_id" "uuid", "metros" integer)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  WITH prestadora AS (
+    SELECT interno.prestadora_actual() AS id
+  ),
+  casas AS (
+    SELECT d.lat, d.lng
+      FROM public.domicilios_de_pacientes_en(p_pacientes, p_fecha) d
+      JOIN pacientes p ON p.id = d.paciente_id
+     WHERE p.prestadora_id = (SELECT id FROM prestadora)
+       AND d.lat IS NOT NULL AND d.lng IS NOT NULL
+  )
+  SELECT da.asistente_id,
+         (round(min(interno.metros_en_linea_recta(da.lat, da.lng, c.lat, c.lng)) / 100.0) * 100)::integer
+    FROM domicilio_asistente da
+    CROSS JOIN casas c
+   WHERE (SELECT id FROM prestadora) IS NOT NULL
+     AND da.prestadora_id = (SELECT id FROM prestadora)
+     AND da.asistente_id = ANY (p_asistentes)
+     AND da.lat IS NOT NULL AND da.lng IS NOT NULL
+   GROUP BY da.asistente_id;
+$$;
+
+
+
+ALTER FUNCTION "interno"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."documento_autorizacion_signos_vitales"("p_paciente" "uuid", "p_idioma" "text") RETURNS TABLE("titulo" "text", "texto" "text", "verificador" "text", "idioma" "text")
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -1746,6 +1863,27 @@ $$;
 
 
 ALTER FUNCTION "interno"."documentos_que_bloquean"("p_asistente_id" "uuid", "p_dia" "date", "p_paciente_id" "uuid", "p_servicio_id" "uuid") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") RETURNS boolean
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+  SELECT CASE p_estado
+    WHEN 'vigente' THEN true
+    -- En gracia abre hasta el día anterior a la suspensión. Sin fecha de suspensión no hay
+    -- fecha conocida y se niega: falla cerrado.
+    WHEN 'en_gracia' THEN p_suspension_desde IS NOT NULL AND p_suspension_desde > current_date
+    -- Dado de baja, abre hasta el último día del período pagado, ese día incluido.
+    WHEN 'cancelada' THEN p_vigente_hasta IS NOT NULL AND p_vigente_hasta >= current_date
+    ELSE false
+  END;
+$$;
+
+
+
+ALTER FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."el_asistente_marca_solo_su_guardia"() RETURNS "trigger"
@@ -4549,6 +4687,22 @@ COMMENT ON FUNCTION "interno"."marca_de_lo_tapado"() IS 'Lo que queda escrito en
 
 
 
+CREATE OR REPLACE FUNCTION "interno"."metros_en_linea_recta"("p_lat1" double precision, "p_lng1" double precision, "p_lat2" double precision, "p_lng2" double precision) RETURNS double precision
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+  SELECT 2 * 6371000 * asin(sqrt(
+           power(sin(radians(p_lat2 - p_lat1) / 2), 2)
+           + cos(radians(p_lat1)) * cos(radians(p_lat2)) * power(sin(radians(p_lng2 - p_lng1) / 2), 2)
+         ));
+$$;
+
+
+
+ALTER FUNCTION "interno"."metros_en_linea_recta"("p_lat1" double precision, "p_lng1" double precision, "p_lat2" double precision, "p_lng2" double precision) OWNER TO "postgres";
+
+
+
 CREATE OR REPLACE FUNCTION "interno"."minutos_que_dura_la_toma"("p_prestadora" "uuid") RETURNS integer
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -4874,6 +5028,23 @@ $$;
 
 
 ALTER FUNCTION "interno"."persona_autorizada_puede"("p_usuario" "uuid", "p_clave" "text") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT interno.es_superadmin()
+      OR interno.es_admin_prestadora()
+      OR (interno.es_coordinador()
+          AND ((p_asistente IS NOT NULL AND interno.coordinador_alcanza_asistente(p_asistente))
+               OR (p_guardia IS NOT NULL AND interno.coordinador_ve_la_guardia(p_guardia))));
+$$;
+
+
+
+ALTER FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."prestadora_actual"() RETURNS "uuid"
@@ -6032,6 +6203,166 @@ $$;
 ALTER FUNCTION "public"."alcanza_la_informacion_de_salud_la_sesion"("p_paciente" "uuid") OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "public"."anotar_aviso_de_acceso_de_match"("p_acceso_id" "uuid", "p_estado" "text", "p_periodo" "date", "p_monto" numeric, "p_moneda" "text", "p_numero_del_aviso" "text", "p_fecha_cobro" "date" DEFAULT NULL::"date", "p_suspende_el" "date" DEFAULT NULL::"date", "p_vigente_hasta" "date" DEFAULT NULL::"date", "p_medio" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+DECLARE
+  v_prestadora uuid := interno.prestadora_actual();
+  v_acceso public.accesos_intermediacion%ROWTYPE;
+  v_renueva_sola boolean;
+  v_contactos integer;
+  v_hay_uno_posterior boolean;
+  v_estado_nuevo text;
+  v_campos text[];
+BEGIN
+  -- Falla cerrado: sin Prestadora del trabajo no se anota nada.
+  IF v_prestadora IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'acceso_inexistente');
+  END IF;
+
+  IF p_estado IS NULL OR p_estado NOT IN ('pagado', 'gracia', 'suspendido', 'baja') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'aviso_incompleto', 'dato', 'estado');
+  END IF;
+  IF p_periodo IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'aviso_incompleto', 'dato', 'periodo');
+  END IF;
+  IF p_monto IS NULL OR p_monto < 0 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'aviso_incompleto', 'dato', 'monto');
+  END IF;
+  IF p_moneda IS NULL OR p_moneda !~ '^[A-Z]{3}$' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'aviso_incompleto', 'dato', 'moneda');
+  END IF;
+  IF p_numero_del_aviso IS NULL OR btrim(p_numero_del_aviso) = '' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'aviso_incompleto', 'dato', 'numero_del_aviso');
+  END IF;
+  IF p_estado = 'gracia' AND p_suspende_el IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'aviso_incompleto', 'dato', 'suspende_el');
+  END IF;
+  IF p_estado = 'baja' AND p_vigente_hasta IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'aviso_incompleto', 'dato', 'vigente_hasta');
+  END IF;
+
+  -- La fila del acceso tomada: dos avisos del mismo acceso que llegan juntos se anotan de a uno.
+  -- El filtro por la Prestadora está escrito además de la política de fila: un acceso de otra
+  -- Prestadora contesta igual que uno que no existe.
+  SELECT * INTO v_acceso
+    FROM public.accesos_intermediacion
+   WHERE id = p_acceso_id AND prestadora_id = v_prestadora
+     FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'acceso_inexistente');
+  END IF;
+
+  SELECT f.renueva_sola, f.contactos_incluidos
+    INTO v_renueva_sola, v_contactos
+    FROM public.formas_de_cobro_intermediacion f
+   WHERE f.id = v_acceso.forma_de_cobro_id AND f.prestadora_id = v_prestadora;
+
+  -- Sólo se da de baja lo que se renueva solo. Lo que no se renueva termina por sí mismo.
+  IF p_estado = 'baja' AND v_renueva_sola IS NOT TRUE THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'no_se_renueva');
+  END IF;
+
+  -- Un aviso de un período anterior al último cobro anotado llegó tarde: se anota el cobro, pero
+  -- no cambia el estado, que ya lo fijó un aviso más nuevo.
+  SELECT EXISTS (
+    SELECT 1 FROM public.cobros_intermediacion
+     WHERE acceso_id = p_acceso_id AND periodo > p_periodo
+  ) INTO v_hay_uno_posterior;
+
+  IF p_estado = 'baja' THEN
+    -- La baja no es un cobro, así que no deja fila en los cobros. Repetida es la que encuentra el
+    -- acceso ya dado de baja con la misma fecha.
+    IF v_acceso.estado = 'cancelada' AND v_acceso.vigente_hasta = p_vigente_hasta THEN
+      RETURN jsonb_build_object('ok', true, 'repetido', true,
+        'estado', v_acceso.estado, 'saldo_contactos', v_acceso.saldo_contactos);
+    END IF;
+  ELSE
+    -- El cobro se anota con el número del aviso como referencia. El índice único de la
+    -- referencia es lo que hace que el mismo aviso mandado dos veces se anote una sola.
+    BEGIN
+      INSERT INTO public.cobros_intermediacion
+        (acceso_id, prestadora_id, medio, monto, moneda, periodo, estado_cobro,
+         referencia_externa, fecha_cobro)
+      VALUES
+        (p_acceso_id, v_prestadora,
+         COALESCE(NULLIF(btrim(p_medio), ''), 'otro'),
+         round(p_monto, 2), p_moneda, p_periodo,
+         CASE WHEN p_estado = 'pagado' THEN 'exitoso' ELSE 'fallido' END,
+         btrim(p_numero_del_aviso),
+         COALESCE(p_fecha_cobro, current_date));
+    EXCEPTION WHEN unique_violation THEN
+      RETURN jsonb_build_object('ok', true, 'repetido', true,
+        'estado', v_acceso.estado, 'saldo_contactos', v_acceso.saldo_contactos);
+    END;
+
+    -- El paquete pagado suma sus contactos en la misma operación que anota el cobro. Si algo
+    -- falla después, no queda un cobro anotado sin sus contactos ni contactos sin su cobro.
+    IF p_estado = 'pagado' AND COALESCE(v_contactos, 0) > 0 THEN
+      PERFORM public.sumar_contactos_al_saldo(p_acceso_id, v_contactos);
+    END IF;
+  END IF;
+
+  v_estado_nuevo := v_acceso.estado;
+
+  IF NOT v_hay_uno_posterior THEN
+    IF p_estado = 'pagado' THEN
+      -- El pago levanta la gracia, la suspensión y la baja, sin que nadie intervenga.
+      UPDATE public.accesos_intermediacion
+         SET estado = 'vigente', suspension_desde = NULL, cancelada_en = NULL,
+             vigente_hasta = NULL, updated_at = now()
+       WHERE id = p_acceso_id;
+      v_estado_nuevo := 'vigente';
+      v_campos := ARRAY['estado', 'suspension_desde', 'cancelada_en', 'vigente_hasta'];
+    ELSIF p_estado = 'gracia' THEN
+      UPDATE public.accesos_intermediacion
+         SET estado = 'en_gracia', suspension_desde = p_suspende_el, updated_at = now()
+       WHERE id = p_acceso_id;
+      v_estado_nuevo := 'en_gracia';
+      v_campos := ARRAY['estado', 'suspension_desde'];
+    ELSIF p_estado = 'suspendido' THEN
+      UPDATE public.accesos_intermediacion
+         SET estado = 'suspendida',
+             suspension_desde = COALESCE(p_suspende_el, v_acceso.suspension_desde, current_date),
+             updated_at = now()
+       WHERE id = p_acceso_id;
+      v_estado_nuevo := 'suspendida';
+      v_campos := ARRAY['estado', 'suspension_desde'];
+    ELSE
+      UPDATE public.accesos_intermediacion
+         SET estado = 'cancelada', cancelada_en = now(), vigente_hasta = p_vigente_hasta,
+             updated_at = now()
+       WHERE id = p_acceso_id;
+      v_estado_nuevo := 'cancelada';
+      v_campos := ARRAY['estado', 'cancelada_en', 'vigente_hasta'];
+    END IF;
+  END IF;
+
+  IF p_estado = 'pagado' AND COALESCE(v_contactos, 0) > 0 THEN
+    v_campos := array_append(COALESCE(v_campos, ARRAY[]::text[]), 'saldo_contactos'::text);
+  END IF;
+
+  -- La constancia: quién (el sistema), cuándo, sobre qué acceso y qué cambió. Sin importes.
+  INSERT INTO public.registro_actividad
+    (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, campos_cambiados, detalle)
+  VALUES
+    (v_prestadora, NULL, 'aviso_de_acceso_de_match', 'accesos_intermediacion', p_acceso_id,
+     v_campos,
+     jsonb_build_object('estado_anterior', v_acceso.estado, 'estado_nuevo', v_estado_nuevo));
+
+  RETURN jsonb_build_object('ok', true, 'estado', v_estado_nuevo,
+    'saldo_contactos', (SELECT saldo_contactos FROM public.accesos_intermediacion WHERE id = p_acceso_id));
+END;
+$_$;
+
+
+
+ALTER FUNCTION "public"."anotar_aviso_de_acceso_de_match"("p_acceso_id" "uuid", "p_estado" "text", "p_periodo" "date", "p_monto" numeric, "p_moneda" "text", "p_numero_del_aviso" "text", "p_fecha_cobro" "date", "p_suspende_el" "date", "p_vigente_hasta" "date", "p_medio" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."anotar_aviso_de_borrado_de_consultas_a_hce"("p_anio" integer, "p_aviso" "text") RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -6741,8 +7072,9 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'motivo', 'acceso_inexistente');
   END IF;
 
-  -- Falla cerrado: un acceso vencido o dado de baja no abre nada, aunque le haya quedado saldo.
-  IF v_acceso.estado <> 'vigente' THEN
+  -- Falla cerrado: un acceso suspendido, vencido o dado de baja con el período pagado ya
+  -- terminado no abre nada, aunque le haya quedado saldo.
+  IF NOT interno.el_acceso_abre_contactos(v_acceso.estado, v_acceso.suspension_desde, v_acceso.vigente_hasta) THEN
     RETURN jsonb_build_object('ok', false, 'motivo', 'acceso_no_vigente');
   END IF;
 
@@ -7031,6 +7363,140 @@ $_$;
 ALTER FUNCTION "public"."dar_de_alta_la_cuenta"("p_email" "text", "p_clave" "text", "p_rol" "text", "p_nombre" "text", "p_telefono" "text", "p_nombre_de_usuario" "text") OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "public"."dar_de_alta_la_prestadora"("p_referencia" "text", "p_razon_social" "text", "p_identificacion_fiscal" "text", "p_pais" "text", "p_nombre_fantasia" "text", "p_codigo" "text", "p_casilla_envio" "text", "p_email_respuestas" "text", "p_regla_reenvio" "text", "p_admin_nombre" "text", "p_admin_email" "text", "p_admin_telefono" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_pase         jsonb := COALESCE(auth.jwt(), '{}'::jsonb);
+  v_pase_crudo   text  := current_setting('request.jwt.claims', true);
+  v_id           uuid;
+  v_admin        uuid;
+  v_email        text  := lower(btrim(COALESCE(p_admin_email, '')));
+  v_restriccion  text;
+  v_mensaje      text;
+BEGIN
+  -- Sólo la cuenta automática sin Prestadora. Una cuenta de una Prestadora, aunque sea del
+  -- trabajo sin persona, no da de alta otra.
+  IF v_pase ->> 'role' IS DISTINCT FROM 'trabajo_sin_persona'
+     OR COALESCE(v_pase ->> 'prestadora_id', '') <> ''
+     OR v_pase ->> 'trabajo' IS NOT NULL THEN
+    RAISE EXCEPTION 'sin_permiso';
+  END IF;
+
+  IF NULLIF(btrim(COALESCE(p_referencia, '')), '') IS NULL
+     OR NULLIF(btrim(COALESCE(p_razon_social, '')), '') IS NULL
+     OR NULLIF(btrim(COALESCE(p_pais, '')), '') IS NULL
+     OR NULLIF(btrim(COALESCE(p_nombre_fantasia, '')), '') IS NULL
+     OR NULLIF(btrim(COALESCE(p_codigo, '')), '') IS NULL
+     OR NULLIF(btrim(COALESCE(p_admin_nombre, '')), '') IS NULL
+     OR v_email = '' THEN
+    RAISE EXCEPTION 'faltan_datos';
+  END IF;
+
+  -- El alta repetida devuelve la misma Prestadora.
+  SELECT id INTO v_id FROM prestadoras WHERE referencia_celtatech = p_referencia;
+  IF FOUND THEN
+    RETURN jsonb_build_object('prestadora_id', v_id, 'creada', false);
+  END IF;
+
+  v_id := gen_random_uuid();
+
+  BEGIN
+    -- La sesión apunta a la Prestadora nueva, y a ninguna otra, mientras dura esta operación.
+    -- Es lo que piden los disparadores que siembran su configuración.
+    PERFORM set_config('request.jwt.claims',
+                       (v_pase || jsonb_build_object('prestadora_id', v_id))::text, true);
+
+    INSERT INTO prestadoras (id, razon_social, identificacion_fiscal, pais, nombre_fantasia,
+                             casilla_envio, regla_reenvio, referencia_celtatech, fecha_alta)
+    VALUES (v_id, btrim(p_razon_social), NULLIF(btrim(COALESCE(p_identificacion_fiscal, '')), ''),
+            upper(btrim(p_pais)), btrim(p_nombre_fantasia), NULLIF(btrim(COALESCE(p_casilla_envio, '')), ''),
+            NULLIF(btrim(COALESCE(p_regla_reenvio, '')), ''), p_referencia, current_date);
+
+    -- El código y el correo que recibe las respuestas viven en la configuración, que el
+    -- disparador de la Prestadora ya sembró.
+    UPDATE configuracion_prestadora
+       SET dominio = p_codigo,
+           email   = NULLIF(lower(btrim(COALESCE(p_email_respuestas, ''))), ''),
+           updated_at = now()
+     WHERE prestadora_id = v_id;
+
+    -- La cuenta del Administrador. Entra con su correo. La contraseña nace al azar y nadie la
+    -- conoce: la que va a usar se la da CeltaTech.
+    v_admin := gen_random_uuid();
+
+    INSERT INTO auth.users (
+      instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+      raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+      confirmation_token, recovery_token, email_change_token_new, email_change,
+      email_change_token_current, phone_change, phone_change_token, reauthentication_token
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000000', v_admin, 'authenticated', 'authenticated', v_email,
+      extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf', 10)),
+      now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(),
+      '', '', '', '', '', '', '', ''
+    );
+
+    INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    VALUES (v_admin::text, v_admin,
+            jsonb_build_object('sub', v_admin::text, 'email', v_email, 'email_verified', true),
+            'email', NULL, now(), now());
+
+    INSERT INTO usuarios (id, rol, nombre, telefono, email, prestadora_id, nombre_de_usuario)
+    VALUES (v_admin, 'admin_prestadora', btrim(p_admin_nombre),
+            NULLIF(btrim(COALESCE(p_admin_telefono, '')), ''), v_email, v_id, NULL);
+
+    INSERT INTO registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
+    VALUES (v_id, NULL, 'alta_de_la_prestadora', 'prestadoras', v_id,
+            jsonb_build_object('rol_nuevo', 'admin_prestadora'));
+
+    PERFORM set_config('request.jwt.claims', COALESCE(v_pase_crudo, ''), true);
+
+  EXCEPTION
+    WHEN unique_violation THEN
+      GET STACKED DIAGNOSTICS v_restriccion = CONSTRAINT_NAME;
+      PERFORM set_config('request.jwt.claims', COALESCE(v_pase_crudo, ''), true);
+
+      -- Dos altas iguales a la vez: la otra ganó, y se devuelve la suya.
+      IF v_restriccion = 'prestadoras_referencia_celtatech_unica' THEN
+        SELECT id INTO v_id FROM prestadoras WHERE referencia_celtatech = p_referencia;
+        RETURN jsonb_build_object('prestadora_id', v_id, 'creada', false);
+      END IF;
+
+      RAISE EXCEPTION '%', CASE
+        WHEN v_restriccion IN ('configuracion_prestadora_dominio_key', 'configuracion_prestadora_dominio_unico') THEN 'codigo_en_uso'
+        WHEN v_restriccion = 'prestadoras_casilla_envio_unica' THEN 'casilla_en_uso'
+        WHEN v_restriccion = 'prestadoras_nombre_fantasia_unico' THEN 'nombre_en_uso'
+        WHEN v_restriccion LIKE 'users_%' OR v_restriccion LIKE 'identities_%' THEN 'correo_de_administracion_en_uso'
+        ELSE 'dato_en_uso'
+      END;
+
+    WHEN raise_exception THEN
+      GET STACKED DIAGNOSTICS v_mensaje = MESSAGE_TEXT;
+      PERFORM set_config('request.jwt.claims', COALESCE(v_pase_crudo, ''), true);
+
+      RAISE EXCEPTION '%', CASE
+        WHEN v_mensaje = 'la_direccion_de_la_prestadora_no_tiene_forma' THEN 'codigo_mal_escrito'
+        WHEN v_mensaje LIKE 'No se sabe en qué moneda trabaja%' THEN 'pais_sin_moneda'
+        ELSE 'alta_rechazada'
+      END;
+  END;
+
+  RETURN jsonb_build_object('prestadora_id', v_id, 'creada', true);
+END;
+$$;
+
+
+
+ALTER FUNCTION "public"."dar_de_alta_la_prestadora"("p_referencia" "text", "p_razon_social" "text", "p_identificacion_fiscal" "text", "p_pais" "text", "p_nombre_fantasia" "text", "p_codigo" "text", "p_casilla_envio" "text", "p_email_respuestas" "text", "p_regla_reenvio" "text", "p_admin_nombre" "text", "p_admin_email" "text", "p_admin_telefono" "text") OWNER TO "postgres";
+
+
+
+COMMENT ON FUNCTION "public"."dar_de_alta_la_prestadora"("p_referencia" "text", "p_razon_social" "text", "p_identificacion_fiscal" "text", "p_pais" "text", "p_nombre_fantasia" "text", "p_codigo" "text", "p_casilla_envio" "text", "p_email_respuestas" "text", "p_regla_reenvio" "text", "p_admin_nombre" "text", "p_admin_email" "text", "p_admin_telefono" "text") IS 'El alta de una Prestadora que hace CeltaTech, entera o nada. Sólo la llama la cuenta automática sin Prestadora. No lee ni cambia ninguna Prestadora existente.';
+
+
 CREATE OR REPLACE FUNCTION "public"."dar_de_baja_el_servicio"("p_servicio" "uuid", "p_motivo" "text", "p_motivo_detalle" "text", "p_comprobaciones" "uuid"[]) RETURNS "uuid"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
@@ -7204,6 +7670,27 @@ $$;
 
 
 ALTER FUNCTION "public"."deshacer_el_alta_de_la_cuenta"("p_usuario" "uuid") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "public"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") RETURNS TABLE("asistente_id" "uuid", "metros" integer)
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT x.asistente_id, x.metros
+    FROM interno.distancias_de_asistentes_a_pacientes(
+           ARRAY(SELECT a.id FROM public.asistentes a
+                  WHERE a.id = ANY (p_asistentes)
+                    AND a.prestadora_id = interno.prestadora_actual()),
+           ARRAY(SELECT d.paciente_id FROM public.domicilios_de_pacientes_en(p_pacientes, p_fecha) d),
+           p_fecha
+         ) x
+   WHERE interno.es_personal_de_la_prestadora();
+$$;
+
+
+
+ALTER FUNCTION "public"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."documento_autorizacion_signos_vitales"("p_paciente" "uuid", "p_idioma" "text") RETURNS TABLE("titulo" "text", "texto" "text", "verificador" "text", "idioma" "text")
@@ -7837,55 +8324,18 @@ COMMENT ON FUNCTION "public"."fn_servicio_de_la_serie"() IS 'Copia el Servicio d
 
 
 
-CREATE OR REPLACE FUNCTION "public"."guardar_app_secret_whatsapp"("p_prestadora_id" "uuid", "p_secreto" "text") RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE
-  v_secret_id UUID;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN
-    RAISE EXCEPTION 'la Prestadora no corresponde a quien llama' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT app_secret_secret_id INTO v_secret_id
-  FROM configuracion_whatsapp_prestadora
-  WHERE prestadora_id = p_prestadora_id;
-
-  IF v_secret_id IS NULL THEN
-    v_secret_id := vault.create_secret(p_secreto, 'whatsapp_app_secret_' || p_prestadora_id::text);
-    INSERT INTO configuracion_whatsapp_prestadora (prestadora_id, app_secret_secret_id)
-    VALUES (p_prestadora_id, v_secret_id)
-    ON CONFLICT (prestadora_id)
-    DO UPDATE SET app_secret_secret_id = EXCLUDED.app_secret_secret_id, updated_at = NOW();
-  ELSE
-    PERFORM vault.update_secret(v_secret_id, p_secreto);
-    UPDATE configuracion_whatsapp_prestadora SET updated_at = NOW()
-    WHERE prestadora_id = p_prestadora_id;
-  END IF;
-
-  RETURN v_secret_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."guardar_app_secret_whatsapp"("p_prestadora_id" "uuid", "p_secreto" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text", "p_credencial" "text" DEFAULT NULL::"text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
+    SET "search_path" TO 'public'
     AS $$
 DECLARE
   v_software_anterior TEXT;
-  v_secret_id UUID;
 BEGIN
   IF NOT interno.le_corresponde(p_prestadora_id) THEN
     RAISE EXCEPTION 'la Prestadora no corresponde a quien llama' USING ERRCODE = '42501';
   END IF;
 
-  SELECT software, credencial_secret_id
-    INTO v_software_anterior, v_secret_id
+  SELECT software INTO v_software_anterior
   FROM conexiones_con_software_externo
   WHERE prestadora_id = p_prestadora_id AND clase = p_clase;
 
@@ -7894,184 +8344,23 @@ BEGIN
   ON CONFLICT (prestadora_id, clase)
   DO UPDATE SET software = EXCLUDED.software, updated_at = NOW();
 
-  -- Cambiar de software deja sin valor la credencial anterior: es la llave de otra puerta. Se
-  -- borra la caja fuerte en vez de dejarla ahi, para que la pantalla no diga que hay una
-  -- credencial cargada cuando la que hay no sirve.
-  IF v_secret_id IS NOT NULL AND v_software_anterior IS DISTINCT FROM p_software THEN
-    UPDATE conexiones_con_software_externo
-       SET credencial_secret_id = NULL, updated_at = NOW()
-     WHERE prestadora_id = p_prestadora_id AND clase = p_clase;
-    DELETE FROM vault.secrets WHERE id = v_secret_id;
-    v_secret_id := NULL;
+  IF v_software_anterior IS DISTINCT FROM p_software THEN
+    DELETE FROM secretos_de_terceros
+     WHERE prestadora_id = p_prestadora_id
+       AND uso = 'credencial_software_' || p_clase;
   END IF;
-
-  -- Vacio quiere decir «no se toca la que hay», no «borrala». Para sacarla se cambia de software.
-  IF p_credencial IS NULL OR length(btrim(p_credencial)) = 0 THEN
-    RETURN v_secret_id;
-  END IF;
-
-  IF v_secret_id IS NULL THEN
-    v_secret_id := vault.create_secret(
-      p_credencial,
-      'software_externo_' || p_clase || '_' || p_prestadora_id::text
-    );
-    UPDATE conexiones_con_software_externo
-       SET credencial_secret_id = v_secret_id, updated_at = NOW()
-     WHERE prestadora_id = p_prestadora_id AND clase = p_clase;
-  ELSE
-    PERFORM vault.update_secret(v_secret_id, p_credencial);
-    UPDATE conexiones_con_software_externo SET updated_at = NOW()
-     WHERE prestadora_id = p_prestadora_id AND clase = p_clase;
-  END IF;
-
-  RETURN v_secret_id;
 END;
 $$;
 
 
-ALTER FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text", "p_credencial" "text") OWNER TO "postgres";
+
+ALTER FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text", "p_credencial" "text") IS 'Anota cual es el software de esa clase para esa Prestadora y, si se le pasa una, guarda la credencial en la caja fuerte. Devuelve la referencia a la caja, nunca el texto.';
+
+COMMENT ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text") IS 'Anota cual es el software de esa clase para esa Prestadora. Si cambio de software, borra la credencial cifrada del anterior.';
 
 
-CREATE OR REPLACE FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE
-  v_secret_id UUID;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN
-    RAISE EXCEPTION 'la Prestadora no corresponde a quien llama' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT secreto_del_aviso_secret_id INTO v_secret_id
-  FROM configuracion_facturacion_clientes
-  WHERE prestadora_id = p_prestadora_id;
-
-  IF v_secret_id IS NULL THEN
-    v_secret_id := vault.create_secret(p_secreto, 'aviso_de_cobranza_' || p_prestadora_id::text);
-    INSERT INTO configuracion_facturacion_clientes (prestadora_id, secreto_del_aviso_secret_id)
-    VALUES (p_prestadora_id, v_secret_id)
-    ON CONFLICT (prestadora_id)
-    DO UPDATE SET secreto_del_aviso_secret_id = EXCLUDED.secreto_del_aviso_secret_id, updated_at = NOW();
-  ELSE
-    PERFORM vault.update_secret(v_secret_id, p_secreto);
-    UPDATE configuracion_facturacion_clientes SET updated_at = NOW()
-    WHERE prestadora_id = p_prestadora_id;
-  END IF;
-
-  RETURN v_secret_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE
-  v_secret_id UUID;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN
-    RAISE EXCEPTION 'la Prestadora no corresponde a quien llama' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT secreto_del_aviso_de_facturacion_secret_id INTO v_secret_id
-  FROM configuracion_facturacion_clientes
-  WHERE prestadora_id = p_prestadora_id;
-
-  IF v_secret_id IS NULL THEN
-    v_secret_id := vault.create_secret(p_secreto, 'aviso_de_facturacion_' || p_prestadora_id::text);
-    INSERT INTO configuracion_facturacion_clientes (prestadora_id, secreto_del_aviso_de_facturacion_secret_id)
-    VALUES (p_prestadora_id, v_secret_id)
-    ON CONFLICT (prestadora_id)
-    DO UPDATE SET secreto_del_aviso_de_facturacion_secret_id = EXCLUDED.secreto_del_aviso_de_facturacion_secret_id,
-                  updated_at = NOW();
-  ELSE
-    PERFORM vault.update_secret(v_secret_id, p_secreto);
-    UPDATE configuracion_facturacion_clientes SET updated_at = NOW()
-    WHERE prestadora_id = p_prestadora_id;
-  END IF;
-
-  RETURN v_secret_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."guardar_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE
-  v_secret_id UUID;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN
-    RAISE EXCEPTION 'la Prestadora no corresponde a quien llama' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT token_secret_id INTO v_secret_id
-  FROM configuracion_whatsapp_prestadora
-  WHERE prestadora_id = p_prestadora_id;
-
-  IF v_secret_id IS NULL THEN
-    v_secret_id := vault.create_secret(p_token, 'whatsapp_token_' || p_prestadora_id::text);
-    UPDATE configuracion_whatsapp_prestadora
-    SET token_secret_id = v_secret_id, updated_at = NOW()
-    WHERE prestadora_id = p_prestadora_id;
-  ELSE
-    PERFORM vault.update_secret(v_secret_id, p_token);
-    UPDATE configuracion_whatsapp_prestadora SET updated_at = NOW() WHERE prestadora_id = p_prestadora_id;
-  END IF;
-
-  RETURN v_secret_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."guardar_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."guardar_verify_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE
-  v_secret_id UUID;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN
-    RAISE EXCEPTION 'la Prestadora no corresponde a quien llama' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT verify_token_secret_id INTO v_secret_id
-  FROM configuracion_whatsapp_prestadora
-  WHERE prestadora_id = p_prestadora_id;
-
-  IF v_secret_id IS NULL THEN
-    v_secret_id := vault.create_secret(p_token, 'whatsapp_verify_token_' || p_prestadora_id::text);
-    INSERT INTO configuracion_whatsapp_prestadora (prestadora_id, verify_token_secret_id)
-    VALUES (p_prestadora_id, v_secret_id)
-    ON CONFLICT (prestadora_id)
-    DO UPDATE SET verify_token_secret_id = EXCLUDED.verify_token_secret_id, updated_at = NOW();
-  ELSE
-    PERFORM vault.update_secret(v_secret_id, p_token);
-    UPDATE configuracion_whatsapp_prestadora SET updated_at = NOW()
-    WHERE prestadora_id = p_prestadora_id;
-  END IF;
-
-  RETURN v_secret_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."guardar_verify_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."hay_permiso_de_acceso_vigente"() RETURNS boolean
@@ -8214,48 +8503,6 @@ $$;
 ALTER FUNCTION "public"."la_restriccion_de_hce_de_la_sesion"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."leer_app_secret_whatsapp"("p_prestadora_id" "uuid") RETURNS "text"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE v_secret_id UUID; v_secreto TEXT;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN RETURN NULL; END IF;
-  SELECT app_secret_secret_id INTO v_secret_id
-    FROM configuracion_whatsapp_prestadora WHERE prestadora_id = p_prestadora_id;
-  IF v_secret_id IS NULL THEN RETURN NULL; END IF;
-  SELECT decrypted_secret INTO v_secreto FROM vault.decrypted_secrets WHERE id = v_secret_id;
-  RETURN v_secreto;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."leer_app_secret_whatsapp"("p_prestadora_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."leer_credencial_de_software_externo"("p_prestadora_id" "uuid", "p_clase" "text") RETURNS "text"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE
-  v_secret_id UUID;
-  v_credencial TEXT;
-BEGIN
-  SELECT credencial_secret_id INTO v_secret_id
-  FROM conexiones_con_software_externo
-  WHERE prestadora_id = p_prestadora_id AND clase = p_clase;
-
-  IF v_secret_id IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  SELECT decrypted_secret INTO v_credencial FROM vault.decrypted_secrets WHERE id = v_secret_id;
-  RETURN v_credencial;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."leer_credencial_de_software_externo"("p_prestadora_id" "uuid", "p_clase" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[] DEFAULT NULL::"text"[], "p_filtros" "jsonb" DEFAULT '[]'::"jsonb", "p_orden" "jsonb" DEFAULT '[]'::"jsonb", "p_limite" integer DEFAULT NULL::integer, "p_contar" boolean DEFAULT false) RETURNS "jsonb"
@@ -8303,80 +8550,6 @@ $$;
 ALTER FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[], "p_filtros" "jsonb", "p_orden" "jsonb", "p_limite" integer, "p_contar" boolean) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."leer_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid") RETURNS "text"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE v_secret_id UUID; v_secreto TEXT;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN RETURN NULL; END IF;
-  SELECT secreto_del_aviso_secret_id INTO v_secret_id
-    FROM configuracion_facturacion_clientes WHERE prestadora_id = p_prestadora_id;
-  IF v_secret_id IS NULL THEN RETURN NULL; END IF;
-  SELECT decrypted_secret INTO v_secreto FROM vault.decrypted_secrets WHERE id = v_secret_id;
-  RETURN v_secreto;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."leer_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") RETURNS "text"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE v_secret_id UUID; v_secreto TEXT;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN RETURN NULL; END IF;
-  SELECT secreto_del_aviso_de_facturacion_secret_id INTO v_secret_id
-    FROM configuracion_facturacion_clientes WHERE prestadora_id = p_prestadora_id;
-  IF v_secret_id IS NULL THEN RETURN NULL; END IF;
-  SELECT decrypted_secret INTO v_secreto FROM vault.decrypted_secrets WHERE id = v_secret_id;
-  RETURN v_secreto;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."leer_token_whatsapp"("p_prestadora_id" "uuid") RETURNS "text"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE v_secret_id UUID; v_token TEXT;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN RETURN NULL; END IF;
-  SELECT token_secret_id INTO v_secret_id
-    FROM configuracion_whatsapp_prestadora WHERE prestadora_id = p_prestadora_id;
-  IF v_secret_id IS NULL THEN RETURN NULL; END IF;
-  SELECT decrypted_secret INTO v_token FROM vault.decrypted_secrets WHERE id = v_secret_id;
-  RETURN v_token;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."leer_token_whatsapp"("p_prestadora_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."leer_verify_token_whatsapp"("p_prestadora_id" "uuid") RETURNS "text"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public', 'vault'
-    AS $$
-DECLARE v_secret_id UUID; v_token TEXT;
-BEGIN
-  IF NOT interno.le_corresponde(p_prestadora_id) THEN RETURN NULL; END IF;
-  SELECT verify_token_secret_id INTO v_secret_id
-    FROM configuracion_whatsapp_prestadora WHERE prestadora_id = p_prestadora_id;
-  IF v_secret_id IS NULL THEN RETURN NULL; END IF;
-  SELECT decrypted_secret INTO v_token FROM vault.decrypted_secrets WHERE id = v_secret_id;
-  RETURN v_token;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."leer_verify_token_whatsapp"("p_prestadora_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."marcar_prestaciones_a_revisar"() RETURNS "trigger"
@@ -10339,7 +10512,8 @@ CREATE TABLE IF NOT EXISTS "public"."accesos_intermediacion" (
     "vigente_hasta" "date",
     "saldo_contactos" integer,
     "gratis_hasta" "date",
-    CONSTRAINT "accesos_intermediacion_estado_check" CHECK (("estado" = ANY (ARRAY['vigente'::"text", 'vencida'::"text", 'cancelada'::"text"]))),
+    "suspension_desde" "date",
+    CONSTRAINT "accesos_intermediacion_estado_check" CHECK (("estado" = ANY (ARRAY['vigente'::"text", 'en_gracia'::"text", 'suspendida'::"text", 'vencida'::"text", 'cancelada'::"text"]))),
     CONSTRAINT "accesos_intermediacion_saldo_no_negativo" CHECK ((("saldo_contactos" IS NULL) OR ("saldo_contactos" >= 0)))
 );
 
@@ -11423,7 +11597,6 @@ CREATE TABLE IF NOT EXISTS "public"."conexiones_con_software_externo" (
     "prestadora_id" "uuid" NOT NULL,
     "clase" "text" NOT NULL,
     "software" "text" NOT NULL,
-    "credencial_secret_id" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     CONSTRAINT "conexiones_con_software_externo_clase_check" CHECK (("clase" = ANY (ARRAY['facturacion'::"text", 'creditos_y_cobranzas'::"text"])))
@@ -11433,11 +11606,8 @@ CREATE TABLE IF NOT EXISTS "public"."conexiones_con_software_externo" (
 ALTER TABLE "public"."conexiones_con_software_externo" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."conexiones_con_software_externo" IS 'Cual es el software de facturacion y cual el de creditos y cobranzas de cada Prestadora, y la referencia a la caja fuerte con la credencial con la que se entra. Aca no se factura ni se cobra: esto dice unicamente con quien habla.';
+COMMENT ON TABLE "public"."conexiones_con_software_externo" IS 'Cual es el software de facturacion y cual el de creditos y cobranzas de cada Prestadora. La credencial con la que se entra vive cifrada en secretos_de_terceros. Aca no se factura ni se cobra: esto dice unicamente con quien habla.';
 
-
-
-COMMENT ON COLUMN "public"."conexiones_con_software_externo"."credencial_secret_id" IS 'Referencia a vault.secrets con la credencial con la que se entra a ese software. El texto nunca se guarda aca y nunca sale hacia el navegador.';
 
 
 
@@ -11671,8 +11841,6 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_facturacion_clientes" (
     "prestadora_id" "uuid" NOT NULL,
     "regla" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "secreto_del_aviso_secret_id" "uuid",
-    "secreto_del_aviso_de_facturacion_secret_id" "uuid",
     CONSTRAINT "configuracion_facturacion_clientes_regla_es_objeto" CHECK (("jsonb_typeof"("regla") = 'object'::"text"))
 );
 
@@ -11682,13 +11850,6 @@ ALTER TABLE "public"."configuracion_facturacion_clientes" OWNER TO "postgres";
 
 COMMENT ON TABLE "public"."configuracion_facturacion_clientes" IS 'Como factura y como cobra esta Prestadora lo que no depende de un Cliente sola: el plazo de pago acordado y si el seguimiento de la cobranza es suyo o de otro software. Solo lo que corrio respecto de fabrica; los bordes viven en panel/src/lib/facturacionDeClientes.js.';
 
-
-
-COMMENT ON COLUMN "public"."configuracion_facturacion_clientes"."secreto_del_aviso_secret_id" IS 'Referencia a vault.secrets con el secreto con el que el software de creditos y cobranzas de esta Prestadora firma sus avisos de restriccion. El texto nunca se guarda aca. Vacio quiere decir que no entra ningun aviso.';
-
-
-
-COMMENT ON COLUMN "public"."configuracion_facturacion_clientes"."secreto_del_aviso_de_facturacion_secret_id" IS 'Referencia a vault.secrets con el secreto con el que el software de facturacion de esta Prestadora firma lo que emitio. El texto nunca se guarda aca. Vacio quiere decir que no entra ningun aviso.';
 
 
 
@@ -11746,7 +11907,6 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_mensaje_de_texto_prestadora" 
     "prestadora_id" "uuid" NOT NULL,
     "proveedor" "text",
     "remitente" "text",
-    "token_secret_id" "uuid",
     "activo" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -11757,11 +11917,8 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_mensaje_de_texto_prestadora" 
 ALTER TABLE "public"."configuracion_mensaje_de_texto_prestadora" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."configuracion_mensaje_de_texto_prestadora" IS 'Con que proveedor manda mensajes de texto cada Prestadora. Sin fila no hay proveedor y la via no se puede elegir. La credencial vive en Vault; aca solo su puntero.';
+COMMENT ON TABLE "public"."configuracion_mensaje_de_texto_prestadora" IS 'Con que proveedor manda mensajes de texto cada Prestadora. Sin fila no hay proveedor y la via no se puede elegir. La credencial vive cifrada en secretos_de_terceros.';
 
-
-
-COMMENT ON COLUMN "public"."configuracion_mensaje_de_texto_prestadora"."token_secret_id" IS 'Puntero al secreto de Vault. Nunca la credencial en texto plano, igual que el token de WhatsApp.';
 
 
 
@@ -11912,23 +12069,14 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_whatsapp_prestadora" (
     "numero_telefono" "text",
     "waba_id" "text",
     "phone_number_id" "text",
-    "token_secret_id" "uuid",
     "verificado_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "app_secret_secret_id" "uuid",
-    "verify_token_secret_id" "uuid"
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
 ALTER TABLE "public"."configuracion_whatsapp_prestadora" OWNER TO "postgres";
 
-
-COMMENT ON COLUMN "public"."configuracion_whatsapp_prestadora"."app_secret_secret_id" IS 'Referencia a vault.secrets con el secreto de la aplicación de Meta, con el que se comprueba la firma X-Hub-Signature-256 de cada aviso entrante. El texto nunca se guarda acá. Pendiente #165.';
-
-
-
-COMMENT ON COLUMN "public"."configuracion_whatsapp_prestadora"."verify_token_secret_id" IS 'Referencia a vault.secrets con el token que Meta devuelve en el saludo inicial de la dirección de esta Prestadora. Uno por Prestadora, nunca uno solo para todo el producto. El texto nunca se guarda acá. Pendiente #165.';
 
 
 
@@ -14670,7 +14818,7 @@ COMMENT ON COLUMN "public"."postulaciones"."especialidades" IS 'Claves de opcion
 
 
 
-COMMENT ON COLUMN "public"."postulaciones"."fecha_nacimiento" IS 'La mayoría de edad se comprueba contra la escala legal vigente de la jurisdicción, nunca contra un 18 escrito en el código.';
+COMMENT ON COLUMN "public"."postulaciones"."fecha_nacimiento" IS 'Fecha de nacimiento que declara quien se postula.';
 
 
 
@@ -14825,6 +14973,7 @@ CREATE TABLE IF NOT EXISTS "public"."prestadoras" (
     "dias_para_aceptar_la_ubicacion" integer DEFAULT 30 NOT NULL,
     "control_de_ubicacion_en_el_turno_desde" timestamp with time zone,
     "logo_impresion_ruta" "text",
+    "referencia_celtatech" "text",
     CONSTRAINT "prestadoras_cierre_por_inactividad_minutos_check" CHECK ((("cierre_por_inactividad_minutos" >= 5) AND ("cierre_por_inactividad_minutos" <= 120))),
     CONSTRAINT "prestadoras_dias_para_aceptar_la_ubicacion_check" CHECK ((("dias_para_aceptar_la_ubicacion" >= 1) AND ("dias_para_aceptar_la_ubicacion" <= 365))),
     CONSTRAINT "prestadoras_minutos_aviso_previo_guardia_check" CHECK ((("minutos_aviso_previo_guardia" >= 5) AND ("minutos_aviso_previo_guardia" <= 1440))),
@@ -14841,6 +14990,10 @@ COMMENT ON COLUMN "public"."prestadoras"."logo_url" IS 'Dirección del logo de l
 
 
 COMMENT ON COLUMN "public"."prestadoras"."logo_impresion_ruta" IS 'Ruta del logo para impresión adentro del depósito logos-para-impresion: el que va en los documentos que se imprimen. Vacío significa que no lo cargó: en ese caso el documento usa el logo de internet si es PNG o JPG, y si no sale sin logo.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."referencia_celtatech" IS 'Con qué identifica CeltaTech el alta de esta Prestadora. Llega con el alta, no se interpreta y no cambia. Con ella un alta repetida devuelve la misma Prestadora.';
 
 
 
@@ -15385,6 +15538,41 @@ COMMENT ON VIEW "public"."saldos_cliente" IS 'El saldo de cada factura de Client
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."secretos_de_terceros" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "uso" "text" NOT NULL,
+    "texto_cifrado" "text" NOT NULL,
+    "version_de_clave" integer NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "secretos_de_terceros_texto_no_vacio" CHECK (("length"("texto_cifrado") > 0)),
+    CONSTRAINT "secretos_de_terceros_uso_conocido" CHECK (("uso" = ANY (ARRAY['whatsapp_access_token'::"text", 'whatsapp_app_secret'::"text", 'whatsapp_verify_token'::"text", 'secreto_del_aviso_de_cobranza'::"text", 'secreto_del_aviso_de_facturacion'::"text", 'credencial_del_mensaje_de_texto'::"text", 'credencial_software_facturacion'::"text", 'credencial_software_creditos_y_cobranzas'::"text"]))),
+    CONSTRAINT "secretos_de_terceros_version_positiva" CHECK (("version_de_clave" > 0))
+);
+
+
+
+ALTER TABLE "public"."secretos_de_terceros" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."secretos_de_terceros" IS 'Las contraseñas con las que cada Prestadora habla con otro software. El backend las cifra con la clave de esa Prestadora antes de guardarlas; la base nunca tiene la clave ni el texto en claro.';
+
+
+
+COMMENT ON COLUMN "public"."secretos_de_terceros"."uso" IS 'Para qué es la contraseña: cuál de las de WhatsApp, cuál de los avisos firmados, la del proveedor de mensajes de texto o la de un software externo.';
+
+
+
+COMMENT ON COLUMN "public"."secretos_de_terceros"."texto_cifrado" IS 'El texto cifrado por el backend con la clave de esta Prestadora. Sin esa clave no se puede leer.';
+
+
+
+COMMENT ON COLUMN "public"."secretos_de_terceros"."version_de_clave" IS 'Con qué versión de la clave de esta Prestadora se cifró. Permite cambiar la clave sin perder lo guardado con la anterior.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."series_guardias" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
@@ -15522,23 +15710,6 @@ COMMENT ON COLUMN "public"."tareas_tipo_asistente"."prestadora_id" IS 'Se repite
 
 COMMENT ON COLUMN "public"."tareas_tipo_asistente"."clase" IS 'corresponde = le toca hacerlo. no_corresponde = no le toca, y conviene que el Cliente lo sepa antes de pedirlo.';
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."telefonos_confirmados_por_la_prestadora" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "prestadora_id" "uuid" NOT NULL,
-    "usuario_id" "uuid" NOT NULL,
-    "confirmado_por" "uuid" NOT NULL,
-    "telefono_verificador" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "telefonos_confirmados_no_a_uno_mismo" CHECK (("usuario_id" <> "confirmado_por"))
-);
-
-
-ALTER TABLE "public"."telefonos_confirmados_por_la_prestadora" OWNER TO "postgres";
-
-
-COMMENT ON TABLE "public"."telefonos_confirmados_por_la_prestadora" IS 'Quien atiende el llamado confirma que ese número es de esa persona, y con eso el número no espera nada para servir de llave. Guarda el identificador de verificación del número, no el número.';
 
 
 
@@ -16210,7 +16381,6 @@ ALTER TABLE ONLY "public"."certificados"
 
 
 
-
 ALTER TABLE ONLY "public"."cierre_servicio_asistentes"
     ADD CONSTRAINT "cierre_servicio_asistentes_pkey" PRIMARY KEY ("id");
 
@@ -16776,9 +16946,6 @@ ALTER TABLE ONLY "public"."formularios_declarados"
 
 
 
-
-
-
 ALTER TABLE ONLY "public"."guardia_comprobaciones"
     ADD CONSTRAINT "guardia_comprobaciones_momento_unico_por_guardia" UNIQUE ("guardia_id", "momento");
 
@@ -17274,6 +17441,16 @@ ALTER TABLE ONLY "public"."restricciones_de_cobranza"
 
 
 
+ALTER TABLE ONLY "public"."secretos_de_terceros"
+    ADD CONSTRAINT "secretos_de_terceros_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."secretos_de_terceros"
+    ADD CONSTRAINT "secretos_de_terceros_uno_por_uso" UNIQUE ("prestadora_id", "uso");
+
+
+
 ALTER TABLE ONLY "public"."series_guardias"
     ADD CONSTRAINT "series_guardias_id_prestadora_unique" UNIQUE ("id", "prestadora_id");
 
@@ -17322,15 +17499,6 @@ ALTER TABLE ONLY "public"."tareas_que_alcanza_la_prohibicion"
 ALTER TABLE ONLY "public"."tareas_tipo_asistente"
     ADD CONSTRAINT "tareas_tipo_asistente_pkey" PRIMARY KEY ("id");
 
-
-
-ALTER TABLE ONLY "public"."telefonos_confirmados_por_la_prestadora"
-    ADD CONSTRAINT "telefonos_confirmados_por_la_prestadora_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."telefonos_confirmados_por_la_prestadora"
-    ADD CONSTRAINT "telefonos_confirmados_uno_por_numero" UNIQUE ("usuario_id", "telefono_verificador");
 
 
 
@@ -17837,7 +18005,7 @@ CREATE INDEX "idx_accesos_intermediacion_cliente" ON "public"."accesos_intermedi
 
 
 
-CREATE INDEX "idx_accesos_intermediacion_por_cobrar" ON "public"."accesos_intermediacion" USING "btree" ("prestadora_id", "proximo_cobro") WHERE (("estado" = 'vigente'::"text") AND ("proximo_cobro" IS NOT NULL));
+CREATE INDEX "idx_accesos_intermediacion_por_cobrar" ON "public"."accesos_intermediacion" USING "btree" ("prestadora_id", "proximo_cobro") WHERE (("estado" = ANY (ARRAY['vigente'::"text", 'en_gracia'::"text"])) AND ("proximo_cobro" IS NOT NULL));
 
 
 
@@ -17923,7 +18091,6 @@ CREATE INDEX "idx_certificados_prestadora_id" ON "public"."certificados" USING "
 
 
 
-
 CREATE INDEX "idx_cierre_servicio_asistentes_cierre" ON "public"."cierre_servicio_asistentes" USING "btree" ("cierre_id");
 
 
@@ -17958,9 +18125,6 @@ CREATE INDEX "idx_cobros_intermediacion_acceso" ON "public"."cobros_intermediaci
 
 CREATE INDEX "idx_cobros_intermediacion_prestadora" ON "public"."cobros_intermediacion" USING "btree" ("prestadora_id", "periodo" DESC);
 
-
-
-CREATE INDEX "idx_cobros_intermediacion_referencia" ON "public"."cobros_intermediacion" USING "btree" ("prestadora_id", "referencia_externa") WHERE ("referencia_externa" IS NOT NULL);
 
 
 
@@ -18173,7 +18337,6 @@ CREATE INDEX "idx_formulario_campos_prestadora_id" ON "public"."formulario_campo
 
 
 CREATE INDEX "idx_formulario_secciones_prestadora_id" ON "public"."formulario_secciones" USING "btree" ("prestadora_id");
-
 
 
 
@@ -18554,9 +18717,6 @@ CREATE INDEX "idx_tareas_tipo_asistente_tipo" ON "public"."tareas_tipo_asistente
 
 
 
-CREATE INDEX "idx_telefonos_confirmados_por_la_prestadora_prestadora_id" ON "public"."telefonos_confirmados_por_la_prestadora" USING "btree" ("prestadora_id");
-
-
 
 CREATE INDEX "idx_textos_consentimiento_busqueda" ON "public"."textos_consentimiento" USING "btree" ("jurisdiccion", "clave", "modalidad", "idioma") WHERE ("vigente_hasta" IS NULL);
 
@@ -18726,6 +18886,10 @@ COMMENT ON INDEX "public"."prestadoras_nombre_fantasia_unico" IS 'Dos Prestadora
 
 
 
+CREATE UNIQUE INDEX "prestadoras_referencia_celtatech_unica" ON "public"."prestadoras" USING "btree" ("referencia_celtatech") WHERE ("referencia_celtatech" IS NOT NULL);
+
+
+
 CREATE INDEX "propuestas_de_ajuste_por_prestadora" ON "public"."propuestas_de_ajuste_por_indice" USING "btree" ("prestadora_id", "estado");
 
 
@@ -18839,6 +19003,10 @@ CREATE UNIQUE INDEX "una_respuesta_preparada_por_nombre_y_prestadora" ON "public
 
 
 CREATE UNIQUE INDEX "uq_cobros_intermediacion_periodo_pendiente" ON "public"."cobros_intermediacion" USING "btree" ("acceso_id", "periodo") WHERE ("estado_cobro" = 'pendiente'::"text");
+
+
+
+CREATE UNIQUE INDEX "uq_cobros_intermediacion_referencia" ON "public"."cobros_intermediacion" USING "btree" ("prestadora_id", "referencia_externa") WHERE ("referencia_externa" IS NOT NULL);
 
 
 
@@ -19203,7 +19371,6 @@ CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDAT
 
 
 
-
 CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."cierres_servicio_paciente" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
 
 
@@ -19441,7 +19608,6 @@ CREATE OR REPLACE TRIGGER "trg_completar_moneda" BEFORE INSERT ON "public"."acce
 
 
 
-
 CREATE OR REPLACE TRIGGER "trg_completar_moneda" BEFORE INSERT ON "public"."coberturas_de_ausencia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_completar_moneda"();
 
 
@@ -19636,9 +19802,6 @@ CREATE OR REPLACE TRIGGER "trg_registro_actividad_solo_lo_permitido" BEFORE INSE
 
 CREATE OR REPLACE TRIGGER "trg_reporte_paciente_del_turno" BEFORE INSERT OR UPDATE OF "guardia_id", "paciente_id" ON "public"."reportes" FOR EACH ROW EXECUTE FUNCTION "public"."exigir_paciente_del_turno"();
 
-
-
-CREATE OR REPLACE TRIGGER "trg_se_confirma_hacia_abajo" BEFORE INSERT ON "public"."telefonos_confirmados_por_la_prestadora" FOR EACH ROW EXECUTE FUNCTION "interno"."se_habilita_hacia_abajo_y_nunca_a_uno_mismo"();
 
 
 
@@ -20161,11 +20324,6 @@ ALTER TABLE ONLY "public"."certificados"
 
 ALTER TABLE ONLY "public"."certificados"
     ADD CONSTRAINT "certificados_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
-
-
-
-
-
 
 
 
@@ -21134,7 +21292,6 @@ ALTER TABLE ONLY "public"."formularios_declarados"
 
 
 
-
 ALTER TABLE ONLY "public"."guardia_comprobaciones"
     ADD CONSTRAINT "guardia_comprobaciones_asistente_tenant_fk" FOREIGN KEY ("asistente_id", "prestadora_id") REFERENCES "public"."asistentes"("id", "prestadora_id");
 
@@ -21995,6 +22152,11 @@ ALTER TABLE ONLY "public"."restricciones_de_cobranza"
 
 
 
+ALTER TABLE ONLY "public"."secretos_de_terceros"
+    ADD CONSTRAINT "secretos_de_terceros_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."series_guardias"
     ADD CONSTRAINT "series_guardias_asistente_tenant_fk" FOREIGN KEY ("asistente_id", "prestadora_id") REFERENCES "public"."asistentes"("id", "prestadora_id");
 
@@ -22088,20 +22250,6 @@ ALTER TABLE ONLY "public"."tareas_tipo_asistente"
 ALTER TABLE ONLY "public"."tareas_tipo_asistente"
     ADD CONSTRAINT "tareas_tipo_asistente_tipo_asistente_id_fkey" FOREIGN KEY ("tipo_asistente_id") REFERENCES "public"."tipos_asistente"("id") ON DELETE CASCADE;
 
-
-
-ALTER TABLE ONLY "public"."telefonos_confirmados_por_la_prestadora"
-    ADD CONSTRAINT "telefonos_confirmados_por_la_prestadora_confirmado_por_fkey" FOREIGN KEY ("confirmado_por") REFERENCES "public"."usuarios"("id");
-
-
-
-ALTER TABLE ONLY "public"."telefonos_confirmados_por_la_prestadora"
-    ADD CONSTRAINT "telefonos_confirmados_por_la_prestadora_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
-
-
-
-ALTER TABLE ONLY "public"."telefonos_confirmados_por_la_prestadora"
-    ADD CONSTRAINT "telefonos_confirmados_por_la_prestadora_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "public"."usuarios"("id") ON DELETE CASCADE;
 
 
 
@@ -22317,7 +22465,6 @@ CREATE POLICY "admin_gestiona_certificados" ON "public"."certificados" USING (((
 
 
 
-
 CREATE POLICY "admin_gestiona_clientes" ON "public"."clientes" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
@@ -22465,7 +22612,7 @@ CREATE POLICY "admin_lee_importaciones_de_su_prestadora" ON "public"."importacio
 
 
 
-CREATE POLICY "admin_prestadora_actualiza_visibilidad" ON "public"."calificaciones_asistente" FOR UPDATE USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_personal_de_la_prestadora"()));
+CREATE POLICY "admin_prestadora_actualiza_visibilidad" ON "public"."calificaciones_asistente" FOR UPDATE USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."personal_ve_la_calificacion"("asistente_id", "guardia_id")));
 
 
 
@@ -23603,6 +23750,10 @@ CREATE POLICY "coordinador_lee_asistentes_de_su_zona" ON "public"."asistentes" F
 
 
 
+CREATE POLICY "coordinador_lee_asistentes_de_sus_servicios" ON "public"."asistentes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (("id" = ANY (( SELECT "interno"."asistentes_que_trabajan_con_el_coordinador"() AS "asistentes_que_trabajan_con_el_coordinador")::"uuid"[])) OR ( SELECT "interno"."coordinador_tiene_una_emergencia_abierta"() AS "coordinador_tiene_una_emergencia_abierta"))));
+
+
+
 CREATE POLICY "coordinador_lee_clientes" ON "public"."clientes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_al_cliente"("id")));
 
 
@@ -23661,9 +23812,6 @@ CREATE POLICY "coordinador_lee_descansos_de_sus_servicios" ON "public"."descanso
 
 CREATE POLICY "coordinador_lee_documentos_asistente_de_su_zona" ON "public"."documentos_asistente" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_alcanza_asistente"("asistente_id")));
 
-
-
-CREATE POLICY "coordinador_lee_el_padron_de_asistentes" ON "public"."asistentes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"()));
 
 
 
@@ -24166,9 +24314,6 @@ CREATE POLICY "la_administracion_lee_las_propuestas" ON "public"."propuestas_de_
 
 CREATE POLICY "la_administracion_lee_los_cambios_habilitados" ON "public"."cambios_de_clave_habilitados" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_la_administracion_de_la_prestadora"("prestadora_id"))));
 
-
-
-CREATE POLICY "la_administracion_lee_los_telefonos_confirmados" ON "public"."telefonos_confirmados_por_la_prestadora" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_la_administracion_de_la_prestadora"("prestadora_id"))));
 
 
 
@@ -24752,7 +24897,6 @@ CREATE POLICY "panel_lee_extensiones_de_turno" ON "public"."extensiones_de_turno
 
 
 
-
 CREATE POLICY "panel_lee_lista_precios" ON "public"."lista_precios" FOR SELECT USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = ANY (ARRAY['admin_prestadora'::"text", 'coordinador'::"text"]))))))));
@@ -24926,7 +25070,7 @@ CREATE POLICY "prestadora_ve_accesos_intermediacion" ON "public"."accesos_interm
 
 
 
-CREATE POLICY "prestadora_ve_calificaciones" ON "public"."calificaciones_asistente" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_personal_de_la_prestadora"()));
+CREATE POLICY "prestadora_ve_calificaciones" ON "public"."calificaciones_asistente" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."personal_ve_la_calificacion"("asistente_id", "guardia_id")));
 
 
 
@@ -25100,6 +25244,10 @@ CREATE POLICY "se_ven_los_pacientes_de_una_serie_visible" ON "public"."series_gu
 
 
 
+ALTER TABLE "public"."secretos_de_terceros" ENABLE ROW LEVEL SECURITY;
+
+
+
 ALTER TABLE "public"."series_guardias" ENABLE ROW LEVEL SECURITY;
 
 
@@ -25143,7 +25291,6 @@ CREATE POLICY "superadmin_gestiona_escalas_legales" ON "public"."escalas_legales
 
 
 CREATE POLICY "superadmin_gestiona_formularios" ON "public"."formularios_declarados" USING ("interno"."es_superadmin"()) WITH CHECK ("interno"."es_superadmin"());
-
 
 
 
@@ -25229,7 +25376,6 @@ ALTER TABLE "public"."tareas_que_alcanza_la_prohibicion" ENABLE ROW LEVEL SECURI
 ALTER TABLE "public"."tareas_tipo_asistente" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."telefonos_confirmados_por_la_prestadora" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."telefonos_de_emergencia" ENABLE ROW LEVEL SECURITY;
@@ -25826,6 +25972,10 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."restriccione
 
 
 
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."secretos_de_terceros" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+
+
+
 CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."series_guardias" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
@@ -25836,9 +25986,6 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."series_guard
 
 CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."servicios" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
-
-
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."telefonos_confirmados_por_la_prestadora" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -26114,723 +26261,11 @@ GRANT USAGE ON SCHEMA "interno" TO "copia_de_respaldo";
 
 
 
-
-
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
 GRANT USAGE ON SCHEMA "public" TO "trabajo_sin_persona";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -26950,6 +26385,18 @@ REVOKE ALL ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_i
 GRANT ALL ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") TO "service_role";
 GRANT ALL ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") TO "trabajo_sin_persona";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."asistentes_que_trabajan_con_el_coordinador"() FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "interno"."asistentes_que_trabajan_con_el_coordinador"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "interno"."asistentes_que_trabajan_con_el_coordinador"() TO "authenticated";
 
 
 
@@ -27100,6 +26547,18 @@ GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_la_serie_de"("p_servicio" "
 
 
 
+REVOKE ALL ON FUNCTION "interno"."coordinador_tiene_una_emergencia_abierta"() FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "interno"."coordinador_tiene_una_emergencia_abierta"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "interno"."coordinador_tiene_una_emergencia_abierta"() TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."coordinador_ve_a_la_persona"("p_persona" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."coordinador_ve_a_la_persona"("p_persona" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "interno"."coordinador_ve_a_la_persona"("p_persona" "uuid") TO "authenticated";
@@ -27178,6 +26637,18 @@ GRANT ALL ON FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "date", "
 
 
 
+REVOKE ALL ON FUNCTION "interno"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "interno"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "interno"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."documento_autorizacion_signos_vitales"("p_paciente" "uuid", "p_idioma" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."documento_autorizacion_signos_vitales"("p_paciente" "uuid", "p_idioma" "text") TO "service_role";
 
@@ -27187,6 +26658,18 @@ REVOKE ALL ON FUNCTION "interno"."documentos_que_bloquean"("p_asistente_id" "uui
 GRANT ALL ON FUNCTION "interno"."documentos_que_bloquean"("p_asistente_id" "uuid", "p_dia" "date", "p_paciente_id" "uuid", "p_servicio_id" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "interno"."documentos_que_bloquean"("p_asistente_id" "uuid", "p_dia" "date", "p_paciente_id" "uuid", "p_servicio_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."documentos_que_bloquean"("p_asistente_id" "uuid", "p_dia" "date", "p_paciente_id" "uuid", "p_servicio_id" "uuid") TO "trabajo_sin_persona";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") TO "trabajo_sin_persona";
 
 
 
@@ -27848,6 +27331,18 @@ GRANT ALL ON FUNCTION "interno"."marca_de_lo_tapado"() TO "trabajo_sin_persona";
 
 
 
+REVOKE ALL ON FUNCTION "interno"."metros_en_linea_recta"("p_lat1" double precision, "p_lng1" double precision, "p_lat2" double precision, "p_lng2" double precision) FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "interno"."metros_en_linea_recta"("p_lat1" double precision, "p_lng1" double precision, "p_lat2" double precision, "p_lng2" double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "interno"."metros_en_linea_recta"("p_lat1" double precision, "p_lng1" double precision, "p_lat2" double precision, "p_lng2" double precision) TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."minutos_que_dura_la_toma"("p_prestadora" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."minutos_que_dura_la_toma"("p_prestadora" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."minutos_que_dura_la_toma"("p_prestadora" "uuid") TO "service_role";
@@ -27965,6 +27460,18 @@ REVOKE ALL ON FUNCTION "interno"."persona_autorizada_puede"("p_usuario" "uuid", 
 GRANT ALL ON FUNCTION "interno"."persona_autorizada_puede"("p_usuario" "uuid", "p_clave" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."persona_autorizada_puede"("p_usuario" "uuid", "p_clave" "text") TO "service_role";
 GRANT ALL ON FUNCTION "interno"."persona_autorizada_puede"("p_usuario" "uuid", "p_clave" "text") TO "trabajo_sin_persona";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") TO "authenticated";
 
 
 
@@ -28134,16 +27641,9 @@ REVOKE ALL ON FUNCTION "interno"."versionar_tabla_clinica"("p_tabla" "regclass")
 
 
 
-
-
-
-
-
 REVOKE ALL ON FUNCTION "public"."aceptar_asignacion"("p_asignacion_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."aceptar_asignacion"("p_asignacion_id" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "public"."aceptar_asignacion"("p_asignacion_id" "uuid") TO "authenticated";
-
-
 
 
 
@@ -28181,6 +27681,18 @@ GRANT ALL ON FUNCTION "public"."alcanza_al_asistente_la_sesion"("p_asistente" "u
 REVOKE ALL ON FUNCTION "public"."alcanza_la_informacion_de_salud_la_sesion"("p_paciente" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."alcanza_la_informacion_de_salud_la_sesion"("p_paciente" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "public"."alcanza_la_informacion_de_salud_la_sesion"("p_paciente" "uuid") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."anotar_aviso_de_acceso_de_match"("p_acceso_id" "uuid", "p_estado" "text", "p_periodo" "date", "p_monto" numeric, "p_moneda" "text", "p_numero_del_aviso" "text", "p_fecha_cobro" "date", "p_suspende_el" "date", "p_vigente_hasta" "date", "p_medio" "text") FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "public"."anotar_aviso_de_acceso_de_match"("p_acceso_id" "uuid", "p_estado" "text", "p_periodo" "date", "p_monto" numeric, "p_moneda" "text", "p_numero_del_aviso" "text", "p_fecha_cobro" "date", "p_suspende_el" "date", "p_vigente_hasta" "date", "p_medio" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."anotar_aviso_de_acceso_de_match"("p_acceso_id" "uuid", "p_estado" "text", "p_periodo" "date", "p_monto" numeric, "p_moneda" "text", "p_numero_del_aviso" "text", "p_fecha_cobro" "date", "p_suspende_el" "date", "p_vigente_hasta" "date", "p_medio" "text") TO "trabajo_sin_persona";
 
 
 
@@ -28406,6 +27918,18 @@ GRANT ALL ON FUNCTION "public"."dar_de_alta_la_cuenta"("p_email" "text", "p_clav
 
 
 
+REVOKE ALL ON FUNCTION "public"."dar_de_alta_la_prestadora"("p_referencia" "text", "p_razon_social" "text", "p_identificacion_fiscal" "text", "p_pais" "text", "p_nombre_fantasia" "text", "p_codigo" "text", "p_casilla_envio" "text", "p_email_respuestas" "text", "p_regla_reenvio" "text", "p_admin_nombre" "text", "p_admin_email" "text", "p_admin_telefono" "text") FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "public"."dar_de_alta_la_prestadora"("p_referencia" "text", "p_razon_social" "text", "p_identificacion_fiscal" "text", "p_pais" "text", "p_nombre_fantasia" "text", "p_codigo" "text", "p_casilla_envio" "text", "p_email_respuestas" "text", "p_regla_reenvio" "text", "p_admin_nombre" "text", "p_admin_email" "text", "p_admin_telefono" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."dar_de_alta_la_prestadora"("p_referencia" "text", "p_razon_social" "text", "p_identificacion_fiscal" "text", "p_pais" "text", "p_nombre_fantasia" "text", "p_codigo" "text", "p_casilla_envio" "text", "p_email_respuestas" "text", "p_regla_reenvio" "text", "p_admin_nombre" "text", "p_admin_email" "text", "p_admin_telefono" "text") TO "trabajo_sin_persona";
+
+
+
 REVOKE ALL ON FUNCTION "public"."dar_de_baja_el_servicio"("p_servicio" "uuid", "p_motivo" "text", "p_motivo_detalle" "text", "p_comprobaciones" "uuid"[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."dar_de_baja_el_servicio"("p_servicio" "uuid", "p_motivo" "text", "p_motivo_detalle" "text", "p_comprobaciones" "uuid"[]) TO "service_role";
 GRANT ALL ON FUNCTION "public"."dar_de_baja_el_servicio"("p_servicio" "uuid", "p_motivo" "text", "p_motivo_detalle" "text", "p_comprobaciones" "uuid"[]) TO "authenticated";
@@ -28421,6 +27945,18 @@ GRANT ALL ON FUNCTION "public"."desactivar_la_cuenta"("p_usuario" "uuid", "p_mot
 REVOKE ALL ON FUNCTION "public"."deshacer_el_alta_de_la_cuenta"("p_usuario" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."deshacer_el_alta_de_la_cuenta"("p_usuario" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "public"."deshacer_el_alta_de_la_cuenta"("p_usuario" "uuid") TO "trabajo_sin_persona";
+
+
+
+REVOKE ALL ON FUNCTION "public"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") FROM PUBLIC;
+
+
+
+GRANT ALL ON FUNCTION "public"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."distancias_de_asistentes_a_pacientes"("p_asistentes" "uuid"[], "p_pacientes" "uuid"[], "p_fecha" "date") TO "authenticated";
 
 
 
@@ -28552,39 +28088,12 @@ GRANT ALL ON FUNCTION "public"."fn_servicio_de_la_serie"() TO "service_role";
 
 
 
-REVOKE ALL ON FUNCTION "public"."guardar_app_secret_whatsapp"("p_prestadora_id" "uuid", "p_secreto" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guardar_app_secret_whatsapp"("p_prestadora_id" "uuid", "p_secreto" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."guardar_app_secret_whatsapp"("p_prestadora_id" "uuid", "p_secreto" "text") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text") FROM PUBLIC;
 
 
 
-REVOKE ALL ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text", "p_credencial" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text", "p_credencial" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text", "p_credencial" "text") TO "trabajo_sin_persona";
+GRANT ALL ON FUNCTION "public"."guardar_conexion_con_software_externo"("p_prestadora_id" "uuid", "p_clase" "text", "p_software" "text") TO "trabajo_sin_persona";
 
-
-
-REVOKE ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid", "p_secreto" "text") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."guardar_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid", "p_secreto" "text") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."guardar_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guardar_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."guardar_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."guardar_verify_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."guardar_verify_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."guardar_verify_token_whatsapp"("p_prestadora_id" "uuid", "p_token" "text") TO "trabajo_sin_persona";
 
 
 
@@ -28617,44 +28126,11 @@ GRANT ALL ON FUNCTION "public"."la_restriccion_de_hce_de_la_sesion"() TO "authen
 
 
 
-REVOKE ALL ON FUNCTION "public"."leer_app_secret_whatsapp"("p_prestadora_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."leer_app_secret_whatsapp"("p_prestadora_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "public"."leer_app_secret_whatsapp"("p_prestadora_id" "uuid") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."leer_credencial_de_software_externo"("p_prestadora_id" "uuid", "p_clase" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."leer_credencial_de_software_externo"("p_prestadora_id" "uuid", "p_clase" "text") TO "service_role";
-
-
 
 REVOKE ALL ON FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[], "p_filtros" "jsonb", "p_orden" "jsonb", "p_limite" integer, "p_contar" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[], "p_filtros" "jsonb", "p_orden" "jsonb", "p_limite" integer, "p_contar" boolean) TO "service_role";
 GRANT ALL ON FUNCTION "public"."leer_informacion_de_salud"("p_tabla" "text", "p_origen" "text", "p_columnas" "text"[], "p_filtros" "jsonb", "p_orden" "jsonb", "p_limite" integer, "p_contar" boolean) TO "authenticated";
 
-
-
-REVOKE ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_cobranza"("p_prestadora_id" "uuid") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "public"."leer_secreto_del_aviso_de_facturacion"("p_prestadora_id" "uuid") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."leer_token_whatsapp"("p_prestadora_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."leer_token_whatsapp"("p_prestadora_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "public"."leer_token_whatsapp"("p_prestadora_id" "uuid") TO "trabajo_sin_persona";
-
-
-
-REVOKE ALL ON FUNCTION "public"."leer_verify_token_whatsapp"("p_prestadora_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."leer_verify_token_whatsapp"("p_prestadora_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "public"."leer_verify_token_whatsapp"("p_prestadora_id" "uuid") TO "trabajo_sin_persona";
 
 
 
@@ -28775,8 +28251,6 @@ GRANT ALL ON FUNCTION "public"."reactivar_la_cuenta"("p_usuario" "uuid") TO "aut
 REVOKE ALL ON FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") TO "service_role";
 GRANT ALL ON FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") TO "authenticated";
-
-
 
 
 
@@ -28931,20 +28405,6 @@ GRANT ALL ON FUNCTION "public"."valor_del_indice"("p_indice" "text", "p_periodo"
 REVOKE ALL ON FUNCTION "public"."verificar_cadena_de_consultas"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."verificar_cadena_de_consultas"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."verificar_cadena_de_consultas"() TO "trabajo_sin_persona";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -29428,7 +28888,6 @@ GRANT ALL ON TABLE "public"."certificados" TO "service_role";
 
 
 
-
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."cierre_servicio_asistentes" TO "authenticated";
 GRANT ALL ON TABLE "public"."cierre_servicio_asistentes" TO "service_role";
 GRANT SELECT,UPDATE ON TABLE "public"."cierre_servicio_asistentes" TO "trabajo_sin_persona";
@@ -29594,8 +29053,6 @@ GRANT UPDATE("cobra_horas_adicionales") ON TABLE "public"."condiciones_comercial
 
 
 
-
-
 GRANT UPDATE("meses_entre_actualizaciones") ON TABLE "public"."condiciones_comerciales_servicio" TO "authenticated";
 
 
@@ -29626,9 +29083,6 @@ GRANT SELECT("clase") ON TABLE "public"."conexiones_con_software_externo" TO "tr
 GRANT SELECT("software") ON TABLE "public"."conexiones_con_software_externo" TO "authenticated";
 GRANT SELECT("software") ON TABLE "public"."conexiones_con_software_externo" TO "trabajo_sin_persona";
 
-
-
-GRANT SELECT("credencial_secret_id") ON TABLE "public"."conexiones_con_software_externo" TO "trabajo_sin_persona";
 
 
 
@@ -30461,8 +29915,6 @@ GRANT SELECT("concepto"),INSERT("concepto"),UPDATE("concepto") ON TABLE "public"
 
 
 
-
-
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."finales_turno_sin_cubrir" TO "authenticated";
 GRANT ALL ON TABLE "public"."finales_turno_sin_cubrir" TO "service_role";
 
@@ -30486,7 +29938,6 @@ GRANT ALL ON TABLE "public"."formulario_secciones" TO "service_role";
 
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."formularios_declarados" TO "authenticated";
 GRANT ALL ON TABLE "public"."formularios_declarados" TO "service_role";
-
 
 
 
@@ -31512,6 +30963,10 @@ GRANT ALL ON TABLE "public"."saldos_cliente" TO "service_role";
 
 
 
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."secretos_de_terceros" TO "trabajo_sin_persona";
+
+
+
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."series_guardias" TO "authenticated";
 GRANT ALL ON TABLE "public"."series_guardias" TO "service_role";
 GRANT SELECT ON TABLE "public"."series_guardias" TO "trabajo_sin_persona";
@@ -31591,27 +31046,6 @@ GRANT SELECT("pais") ON TABLE "public"."tareas_tipo_asistente" TO "trabajo_sin_p
 
 GRANT SELECT("descripcion") ON TABLE "public"."tareas_tipo_asistente" TO "trabajo_sin_persona";
 
-
-
-GRANT ALL ON TABLE "public"."telefonos_confirmados_por_la_prestadora" TO "service_role";
-GRANT SELECT ON TABLE "public"."telefonos_confirmados_por_la_prestadora" TO "authenticated";
-GRANT SELECT ON TABLE "public"."telefonos_confirmados_por_la_prestadora" TO "trabajo_sin_persona";
-
-
-
-GRANT INSERT("prestadora_id"),UPDATE("prestadora_id") ON TABLE "public"."telefonos_confirmados_por_la_prestadora" TO "trabajo_sin_persona";
-
-
-
-GRANT INSERT("usuario_id"),UPDATE("usuario_id") ON TABLE "public"."telefonos_confirmados_por_la_prestadora" TO "trabajo_sin_persona";
-
-
-
-GRANT INSERT("confirmado_por"),UPDATE("confirmado_por") ON TABLE "public"."telefonos_confirmados_por_la_prestadora" TO "trabajo_sin_persona";
-
-
-
-GRANT INSERT("telefono_verificador"),UPDATE("telefono_verificador") ON TABLE "public"."telefonos_confirmados_por_la_prestadora" TO "trabajo_sin_persona";
 
 
 
@@ -31835,11 +31269,6 @@ GRANT SELECT ON TABLE "public"."zonas_cobertura" TO "trabajo_sin_persona";
 
 
 
-
-
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "interno" GRANT ALL ON FUNCTIONS TO "service_role";
 
 
@@ -31850,12 +31279,8 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQ
 
 
 
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
-
-
 
 
 
@@ -31866,34 +31291,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" REVOKE ALL ON FUNCTIONS FROM PUBLIC;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -31961,9 +31359,6 @@ CREATE POLICY "copia_de_respaldo_lee_los_archivos_de_su_prestadora" ON "storage"
 
 
 CREATE POLICY "copia_de_respaldo_ve_los_depositos" ON "storage"."buckets" FOR SELECT TO "copia_de_respaldo" USING (("interno"."prestadora_actual"() IS NOT NULL));
-
-
-
 
 
 

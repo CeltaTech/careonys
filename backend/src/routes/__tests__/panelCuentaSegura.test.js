@@ -1,18 +1,14 @@
 /**
- * Las escrituras sobre la propia cuenta del Panel: marcar el número verificado y cambiarlo.
+ * Las escrituras sobre la propia cuenta, la misma para el Panel y las dos aplicaciones: marcar el número verificado y cambiarlo.
  *
  *   npm test --prefix backend
  *   node --test backend/src/routes/__tests__/panelCuentaSegura.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. La base no le da a nadie con sesión permiso de modificar su fila de
- * `usuarios`, así que las dos escrituras de `../panelCuentaSegura.js` pasan por
+ * `usuarios`, así que las dos escrituras de `../cuentaSegura.js` pasan por
  * `escribirMiCuenta`, que va con la credencial del trabajo de la Prestadora de la cuenta, y la base
  * la acota a esa Prestadora. Lo que hay que sostener acá es que vaya con esa credencial y con
  * ninguna otra, filtrada por la cuenta y por su Prestadora, y que sin Prestadora no escriba nada.
- *
- * Se prueba la función y no la ruta entera porque lo demás que hace la ruta —el código al teléfono,
- * los prefijos de celular, el aviso— todavía va con la llave maestra, y una prueba nueva no puede
- * nombrarla (`scripts/verificar_llave_maestra.mjs`).
  *
  * La base es de mentira y contesta por HTTP como la de verdad: con la credencial del trabajo deja
  * escribir sólo las filas de la Prestadora que lleva adentro, y con cualquier otra, ninguna.
@@ -66,7 +62,7 @@ prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
-const { escribirMiCuenta } = await import('../panelCuentaSegura.js');
+const { escribirMiCuenta } = await import('../cuentaSegura.js');
 
 after(() => {
   baseFalsa.close();

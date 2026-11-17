@@ -262,8 +262,8 @@ zona elegida.
 # Lo que queda afuera de este documento
 
 **El cartel de Habilitar cambio de contraseña.** Se ve en Menú lateral → grupo **Gestión** →
-**Configuración** → **Habilitar cambio de contraseña**, que es la pantalla donde se atienden los pedidos de habilitación, y el enlace del menú
-lleva un contador al lado. Ese cartel **queda afuera por decisión del Desarrollador**, hasta que se
+**Configuración** → **Habilitar cambio de contraseña**, que es la pantalla donde se busca a la persona
+y se le permite cambiar la contraseña. Ese cartel **queda afuera por decisión del Desarrollador**, hasta que se
 analicen en detalle los procedimientos y la lógica de esa pantalla. Textual: *«en este caso en
 particular, ningún cartel es mas útil que tener uno vacío esperando. Puede llega a aparecer uno, y
 hay que analizar en detalle primero los procedimientos y la lógica de los mismos antes de decir si o

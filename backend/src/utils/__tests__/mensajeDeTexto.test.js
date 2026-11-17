@@ -68,7 +68,7 @@ after(() => {
 
 beforeEach(() => {
   llamadas = [];
-  configuracion = { proveedor: 'proveedor-de-prueba', remitente: 'Prueba', token_secret_id: null, activo: true };
+  configuracion = { proveedor: 'proveedor-de-prueba', remitente: 'Prueba', activo: true };
 });
 
 describe('el proveedor de mensajes de texto', () => {

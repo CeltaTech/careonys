@@ -28,7 +28,7 @@ import { paraCadaPrestadora } from '../db/connection.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { cifradorDeLaPrestadora } from './cifradoDeLosRespaldos.js';
 import { losDestinos } from './copiaDeLosArchivos.js';
-import { respaldosQueSeBorran } from './retencionDeRespaldos.js';
+import { borrarLosVencidos } from './retencionDeRespaldos.js';
 
 const TRAMO = 1000;
 
@@ -56,23 +56,6 @@ export async function leerLosDatos(conexion) {
 function claveDelRespaldo(prestadoraId, ahora) {
   const fecha = ahora.toISOString().replace(/[:.]/g, '-');
   return `datos/${prestadoraId}/${IDENTIDAD.codigo}_datos_${fecha}.json.gz.age`;
-}
-
-async function borrarLoVencido(destino, prestadoraId, ahora, avisar) {
-  if (typeof destino.listar !== 'function' || typeof destino.borrar !== 'function') return 0;
-  const carpeta = `datos/${prestadoraId}/`;
-  const claves = await destino.listar(carpeta);
-  const nombres = claves.map((c) => c.slice(carpeta.length));
-  let borrados = 0;
-  for (const nombre of respaldosQueSeBorran(nombres, IDENTIDAD.codigo, ahora)) {
-    try {
-      await destino.borrar(carpeta + nombre);
-      borrados += 1;
-    } catch (err) {
-      avisar(`No se pudo borrar un respaldo vencido: ${err.message}`);
-    }
-  }
-  return borrados;
 }
 
 async function yaEstaElDeHoy(destinos, prestadoraId, ahora) {
@@ -115,7 +98,7 @@ export async function respaldarLosDatos({ destinos = losDestinos(), avisar = (t)
 
       for (const destino of destinos) {
         try {
-          total.vencidosBorrados += await borrarLoVencido(destino, prestadoraId, ahora, avisar);
+          if (typeof destino.listar === 'function' && typeof destino.borrar === 'function') total.vencidosBorrados += await borrarLosVencidos(destino, { carpeta: `datos/${prestadoraId}/`, codigo: IDENTIDAD.codigo, ahora, avisar });
         } catch (err) {
           avisar(`No se pudieron revisar los respaldos vencidos: ${err.message}`);
         }

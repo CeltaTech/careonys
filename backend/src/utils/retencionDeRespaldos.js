@@ -48,3 +48,30 @@ export function respaldosQueSeBorran(nombres, codigo, ahora = new Date(), { dias
     .filter((r) => !(mensuales.has(r.nombre) && r.fecha >= limiteMensual))
     .map((r) => r.nombre);
 }
+
+/**
+ * Borra de un destino los respaldos vencidos de una carpeta, y devuelve cuántos borró.
+ *
+ * Es el mismo paso para todos los respaldos: el de los datos de cada Prestadora y el paquete del
+ * código. El destino tiene que saber `listar(prefijo)` y `borrar(clave)`. Sólo mira lo que está
+ * directamente en la carpeta, nunca adentro de otra más honda. Una falla al borrar un respaldo se
+ * anota con `avisar` y sigue con el siguiente: lo que importa es que el nuevo ya esté arriba.
+ */
+export async function borrarLosVencidos(destino, { carpeta = '', prefijo = '', codigo, ahora = new Date(), avisar = (t) => console.log(t) } = {}) {
+  if (!codigo) throw new Error('Falta el código del producto: no se borra nada');
+  const claves = await destino.listar(carpeta + prefijo);
+  const nombres = claves
+    .filter((c) => c.startsWith(carpeta))
+    .map((c) => c.slice(carpeta.length))
+    .filter((n) => !n.includes('/'));
+  let borrados = 0;
+  for (const nombre of respaldosQueSeBorran(nombres, codigo, ahora)) {
+    try {
+      await destino.borrar(carpeta + nombre);
+      borrados += 1;
+    } catch (err) {
+      avisar(`No se pudo borrar un respaldo vencido: ${err.message}`);
+    }
+  }
+  return borrados;
+}

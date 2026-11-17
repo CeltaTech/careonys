@@ -33,9 +33,7 @@ function urlAppPorRol(rol) {
 
 // Punto único de verdad: genera el token de un solo uso y manda el email de activación por
 // el SMTP que ya existe (email.js) — usado por crearCuentaConPerfil cuando la cuenta nueva es de
-// Cliente/Asistente/Personas autorizadas, y también para el administrador que se crea al dar de alta una
-// Prestadora (`routes/panelPrestadoras.js`): esa persona tampoco tiene a quién pedirle su clave,
-// porque quien la dio de alta es de CeltaTech y no puede ver ni elegir la contraseña de nadie.
+// Cliente/Asistente/Personas autorizadas.
 // Las demás cuentas de Panel —las que una Prestadora crea para su propio equipo— siguen con el
 // camino de siempre, en el que quien la crea comunica la primera clave.
 export async function enviarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = null }) {

@@ -8,7 +8,7 @@ import { enLaPrestadora } from '../db/connection.js';
 // una dirección web: no existe ninguna dirección propia por Prestadora.
 //
 // No lo elige Careonys: lo elige CeltaTech y llega con el alta de la Prestadora
-// (`docs/PLAN_HASTA_PRODUCCION.md`, paso 111). Careonys lo guarda y no lo cambia nunca, porque
+// (`routes/altaDePrestadora.js`). Careonys lo guarda y no lo cambia nunca, porque
 // está escrito en los nombres de usuario de toda su coordinación. Que no se repita lo hace cumplir
 // el índice único de la base.
 

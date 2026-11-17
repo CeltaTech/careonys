@@ -35,6 +35,7 @@
 import express, { Router } from 'express';
 import { conexionDeLaDireccion, enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { comprobarFirmaSinEsquemaPublicado } from '../pasarelas/firmaWebhook.js';
+import { USO, secretoParaComprobar } from '../utils/secretosDeTerceros.js';
 import { aDosDecimales, loQueEstaMalEnElAviso } from '../utils/facturacionDeClientes.js';
 
 export const cobranzaExternaRouter = Router();
@@ -76,12 +77,12 @@ cobranzaExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
   const cuerpoCrudo = Buffer.isBuffer(req.body) ? req.body : null;
   if (!cuerpoCrudo) return rechazar('cuerpo_crudo_ausente');
 
-  const { data: secreto } = await db.rpc('leer_secreto_del_aviso_de_cobranza', {
-    p_prestadora_id: prestadoraId,
-  });
+  // El secreto se descifra con la clave de esta Prestadora. Sin secreto cargado esa Prestadora no
+  // conectó ningún software de cobranzas; sin su clave, o con el texto alterado, tampoco hay con
+  // qué probar que lo que llega es suyo. En los tres casos se rechaza; nunca «se sigue igual».
+  const { texto: secreto, motivo: motivoDelSecreto } = await secretoParaComprobar(db, prestadoraId, USO.AVISO_DE_COBRANZA);
+  if (!secreto) return rechazar(motivoDelSecreto);
 
-  // Sin secreto cargado esa Prestadora no conectó ningún software de cobranzas, y no hay con qué
-  // probar que lo que llega es suyo. Se rechaza; nunca «se sigue igual».
   const comprobacion = comprobarFirmaSinEsquemaPublicado({
     secretoFirma: secreto,
     // Acá no hay secreto de ambiente que valga: un secreto compartido probaría quién firmó, no de

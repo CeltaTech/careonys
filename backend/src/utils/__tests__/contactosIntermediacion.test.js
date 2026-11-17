@@ -3,15 +3,14 @@
  *
  *   npm test --prefix backend
  *
- * QUÉ SE PRUEBA ACÁ Y QUÉ NO. Las cuentas —sumar al saldo, restarle uno, anotar a quién se abrió—
+ * QUÉ SE PRUEBA ACÁ Y QUÉ NO. Las cuentas —restarle uno al saldo, anotar a quién se abrió—
  * viven en la base y están probadas contra la base de verdad, incluidas dos sesiones descontando el
  * mismo saldo al mismo tiempo. Lo de acá es lo otro: que este archivo llame bien, que no invente un
  * saldo cuando la base no contestó nada, y que ante cualquier cosa rara falle cerrado. Abrir un
  * contacto es plata, así que contestar que sí ante una respuesta que no se entendió es regalarlo.
  *
- * Y con qué credencial: la carga va con la conexión que le pasa el cobro, y la apertura con el
- * trabajo de la Prestadora del acceso. Con el sistema roto —otra credencial u otra Prestadora— las
- * pruebas dan al revés. Datos inventados.
+ * Y con qué credencial: la apertura va con el trabajo de la Prestadora del acceso. Con el sistema
+ * roto —otra Prestadora— las pruebas dan al revés. Datos inventados.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -21,8 +20,6 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 const PRESTADORA = '11111111-1111-4111-8111-111111111111';
 const ACCESO = '33333333-3333-3333-3333-333333333333';
 const ASISTENTE = '88888888-8888-8888-8888-888888888888';
-
-const DE_QUIEN_CARGA = 'Bearer credencial-de-quien-carga';
 
 const respuestas = new Map();
 let llamadas = [];
@@ -61,14 +58,10 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 prepararCredencialDePrueba();
 
 // Después de las variables de entorno: la conexión a la base se arma al importar.
-const { createClient } = await import('@supabase/supabase-js');
-const { cargarContactosEnElSaldo, abrirElContacto: abrir, MOTIVO_CONTACTO } = await import(
+const { abrirElContacto: abrir, elAccesoAbreContactos, MOTIVO_CONTACTO } = await import(
   '../contactosIntermediacion.js'
 );
 
-const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
-  accessToken: async () => DE_QUIEN_CARGA.replace('Bearer ', ''),
-});
 const abrirElContacto = (argumentos) => abrir({ prestadoraId: PRESTADORA, ...argumentos });
 
 after(() => baseFalsa.close());
@@ -76,45 +69,6 @@ after(() => baseFalsa.close());
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
-});
-
-const sumas = () => llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/sumar_contactos_al_saldo');
-
-describe('cargarle contactos al saldo', () => {
-  it('le pide a la base que sume, y contesta el total que quedó', async () => {
-    respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => 8);
-    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 }, db);
-
-    assert.deepEqual(resultado, { ok: true, saldo_contactos: 8 });
-    assert.deepEqual(sumas()[0].cuerpo, { p_acceso_id: ACCESO, p_cuantos: 3 });
-    assert.equal(sumas()[0].credencial, DE_QUIEN_CARGA, 'la carga va con la conexión que le pasaron');
-  });
-
-  it('un acceso que no está no es un saldo en cero', async () => {
-    // La base contesta vacío cuando no hay fila que cargar. Devolver «quedó en cero» taparía que
-    // la plata entró contra un acceso que no existe.
-    respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => null);
-    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 }, db);
-
-    assert.deepEqual(resultado, { ok: false, motivo: MOTIVO_CONTACTO.ACCESO_INEXISTENTE });
-  });
-
-  it('cargar cero, o medio contacto, no llega a la base', async () => {
-    // Un paquete sin contactos no es un paquete, y medio contacto no existe. Se corta acá para que
-    // no quede una llamada de plata con un número que nadie entiende.
-    for (const cuantos of [0, -2, 1.5, null, undefined, '3']) {
-      const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos }, db);
-      assert.equal(resultado.ok, false, `cuantos: ${cuantos}`);
-      assert.equal(resultado.motivo, MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR);
-    }
-    assert.deepEqual(sumas(), [], 'no se tocó la base');
-  });
-
-  it('si la base falla, no se da por cargado', async () => {
-    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 }, db);
-    assert.equal(resultado.ok, false);
-    assert.equal(resultado.motivo, MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR);
-  });
 });
 
 describe('abrir el contacto de un Asistente', () => {
@@ -189,5 +143,35 @@ describe('abrir el contacto de un Asistente', () => {
     const resultado = await abrirElContacto({ accesoId: ACCESO, asistenteId: ASISTENTE });
     assert.equal(resultado.ok, false);
     assert.equal(resultado.motivo, MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR);
+  });
+});
+
+describe('qué acceso abre contactos hoy', () => {
+  const HOY = '2026-11-17';
+
+  it('el vigente abre', () => {
+    assert.equal(elAccesoAbreContactos({ estado: 'vigente' }, HOY), true);
+  });
+
+  it('en período de gracia abre hasta el día anterior al de la suspensión', () => {
+    assert.equal(elAccesoAbreContactos({ estado: 'en_gracia', suspension_desde: '2026-11-18' }, HOY), true);
+    assert.equal(elAccesoAbreContactos({ estado: 'en_gracia', suspension_desde: HOY }, HOY), false);
+  });
+
+  it('en período de gracia sin día de suspensión no abre', () => {
+    assert.equal(elAccesoAbreContactos({ estado: 'en_gracia', suspension_desde: null }, HOY), false);
+  });
+
+  it('dado de baja abre hasta el último día pagado inclusive', () => {
+    assert.equal(elAccesoAbreContactos({ estado: 'cancelada', vigente_hasta: HOY }, HOY), true);
+    assert.equal(elAccesoAbreContactos({ estado: 'cancelada', vigente_hasta: '2026-11-16' }, HOY), false);
+    assert.equal(elAccesoAbreContactos({ estado: 'cancelada', vigente_hasta: null }, HOY), false);
+  });
+
+  it('el suspendido, el vencido y un estado desconocido no abren', () => {
+    for (const estado of ['suspendida', 'vencida', 'otro', undefined]) {
+      assert.equal(elAccesoAbreContactos({ estado, vigente_hasta: '2099-01-01', suspension_desde: '2099-01-01' }, HOY), false);
+    }
+    assert.equal(elAccesoAbreContactos(null, HOY), false);
   });
 });

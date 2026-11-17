@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -12,7 +12,6 @@ import { TareaConDetalle } from '../../components/ui/TareaConDetalle';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
-import { con } from '../../lib/textos';
 import '../../styles/molde-paginas.css';
 
 /* Los tipos de Asistente, sus especialidades y sus tareas.
@@ -38,12 +37,6 @@ export function TiposAsistenteTab() {
   const [tipoEnModal, setTipoEnModal] = useState(null);
   const [ocupadoId, setOcupadoId] = useState(null);
   const [tipoAbierto, setTipoAbierto] = useState(null);
-  const abierto = useRef(null);
-
-  // Lo que se abre queda debajo de toda la tabla: se baja hasta ahí.
-  useEffect(() => {
-    if (tipoAbierto) abierto.current?.scrollIntoView({ block: 'start' });
-  }, [tipoAbierto]);
 
   const recargar = useCallback(async () => {
     if (!prestadoraId) return;
@@ -108,71 +101,64 @@ export function TiposAsistenteTab() {
           recargar={recargar}
           mensajeVacio={t.configuracion.tipos_vacio}
         >
-          <table className="panel-tabla">
-            <thead>
-              <tr>
-                <th>{t.configuracion.tipos_col_nombre}</th>
-                <th>{t.configuracion.tipos_col_activo}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {tipos.map((tipo) => (
-                <tr key={tipo.id}>
-                  <td>
-                    <b>{nombreTipo(tipo, t)}</b>
-                    {esTipoGeneral(tipo) && <Candado etiqueta={t.configuracion.candado} />}
-                    {tipo.descripcion && <div className="panel-mini">{tipo.descripcion}</div>}
-                  </td>
-                  <td>
-                    {esTipoGeneral(tipo) ? (
-                      '—'
-                    ) : (
-                      <input
-                        type="checkbox"
-                        checked={tipo.activo}
-                        onChange={() => alternarActivo(tipo)}
-                        disabled={ocupadoId === tipo.id}
-                        aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.tipos_col_activo, nombre: tipo.nombre })}
-                      />
-                    )}
-                  </td>
-                  <td>
-                    <Button variant="secondary" onClick={() => setTipoAbierto(tipoAbierto === tipo.id ? null : tipo.id)}>
-                      {tipoAbierto === tipo.id
-                        ? t.configuracion.tipos_ocultar_tareas
-                        : t.configuracion.tipos_ver_tareas}
-                    </Button>{' '}
-                    {!esTipoGeneral(tipo) && (
-                      <>
-                        <Button variant="secondary" onClick={() => setTipoEnModal(tipo)} disabled={ocupadoId === tipo.id}>
-                          {t.comun.editar}
-                        </Button>{' '}
-                        <Button variant="secondary" onClick={() => borrar(tipo)} disabled={ocupadoId === tipo.id}>
-                          {t.comun.borrar}
-                        </Button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="molde-tipos">
+            {tipos.map((tipo) => {
+              const estaAbierto = tipoAbierto === tipo.id;
+              const idContenido = `tipo_${tipo.id}_contenido`;
+              return (
+                <article key={tipo.id} className={`molde-tipo${estaAbierto ? ' molde-tipo-abierto' : ''}`}>
+                  <div className="molde-tipo-cabecera">
+                    <div className="molde-tipo-nombre">
+                      <h3>
+                        {nombreTipo(tipo, t)}
+                        {esTipoGeneral(tipo) && <Candado etiqueta={t.configuracion.candado} />}
+                      </h3>
+                      {tipo.descripcion && <p className="panel-mini">{tipo.descripcion}</p>}
+                    </div>
+                    <div className="molde-tipo-acciones">
+                      {!esTipoGeneral(tipo) && (
+                        <label className="molde-tipo-en-uso">
+                          <input
+                            type="checkbox"
+                            checked={tipo.activo}
+                            onChange={() => alternarActivo(tipo)}
+                            disabled={ocupadoId === tipo.id}
+                          />
+                          {t.configuracion.tipos_col_activo}
+                        </label>
+                      )}
+                      {!esTipoGeneral(tipo) && (
+                        <>
+                          <Button variant="secondary" onClick={() => setTipoEnModal(tipo)} disabled={ocupadoId === tipo.id}>
+                            {t.comun.editar}
+                          </Button>
+                          <Button variant="secondary" onClick={() => borrar(tipo)} disabled={ocupadoId === tipo.id}>
+                            {t.comun.borrar}
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant={estaAbierto ? 'secondary' : 'primary'}
+                        onClick={() => setTipoAbierto(estaAbierto ? null : tipo.id)}
+                        aria-expanded={estaAbierto}
+                        aria-controls={idContenido}
+                      >
+                        {estaAbierto ? t.configuracion.tipos_ocultar_tareas : t.configuracion.tipos_ver_tareas}
+                      </Button>
+                    </div>
+                  </div>
+                  {estaAbierto && (
+                    <div id={idContenido} className="molde-tipo-contenido">
+                      <EspecialidadesDelTipo tipo={tipo} prestadoraId={prestadoraId} />
+                      <TareasDelTipo tipo={tipo} prestadoraId={prestadoraId} />
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
         </EstadoLista>
       </section>
-
-      {tipoAbierto && (
-        <div ref={abierto} className="molde-pila">
-          <EspecialidadesDelTipo
-            tipo={tipos.find((x) => x.id === tipoAbierto)}
-            prestadoraId={prestadoraId}
-          />
-          <TareasDelTipo
-            tipo={tipos.find((x) => x.id === tipoAbierto)}
-            prestadoraId={prestadoraId}
-          />
-        </div>
-      )}
 
       {tipoEnModal && (
         <TipoModal
@@ -338,11 +324,8 @@ function EspecialidadesDelTipo({ tipo, prestadoraId }) {
   if (!tipo) return null;
 
   return (
-    <section className="panel-tarjeta">
-      <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.especialidades_titulo}</h2>
-        <span className="panel-mini">{nombreTipo(tipo, t)}</span>
-      </div>
+    <section className="molde-tipo-seccion">
+      <h4>{t.configuracion.especialidades_titulo}</h4>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {especialidades.length === 0 ? (
@@ -579,11 +562,8 @@ function ListaDeClase({ clase, tareas, tipo, prestadoraId, onCambio }) {
   }
 
   return (
-    <section className="panel-tarjeta">
-      <div className="panel-tarjeta-titulo">
-        <h2>{t.tareas_asistente[`clase_${clase}`]}</h2>
-        <span className="panel-mini">{t.configuracion.tareas_titulo} · {nombreTipo(tipo, t)}</span>
-      </div>
+    <section className="molde-tipo-seccion">
+      <h4>{t.tareas_asistente[`clase_${clase}`]}</h4>
       {error && <Alert variant="error">{error}</Alert>}
       {tareas.length === 0 ? (
         <p className="molde-vacio">{t.configuracion.tareas_vacio_clase}</p>

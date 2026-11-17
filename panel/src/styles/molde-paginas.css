@@ -171,3 +171,83 @@
   max-width: 240px;
   object-fit: contain;
 }
+
+/* Tipos de Asistente: cada tipo es una tarjeta, y lo que se abre queda adentro de la suya. */
+.molde-tipos {
+  display: grid;
+  gap: 10px;
+}
+
+.molde-tipo {
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-card);
+  background: var(--superficie);
+  min-width: 0;
+}
+
+.molde-tipo-abierto {
+  border-color: var(--azul-medio);
+  box-shadow: var(--sombra-card);
+}
+
+.molde-tipo-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 12px 14px;
+}
+
+.molde-tipo-nombre {
+  min-width: 0;
+}
+
+.molde-tipo-nombre h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--texto-titulo);
+}
+
+.molde-tipo-nombre p {
+  margin: 3px 0 0;
+}
+
+.molde-tipo-acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.molde-tipo-en-uso {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--texto-principal);
+  margin-right: 4px;
+}
+
+.molde-tipo-contenido {
+  display: grid;
+  gap: 18px;
+  padding: 14px;
+  border-top: 1px solid var(--borde-card);
+}
+
+.molde-tipo-seccion {
+  min-width: 0;
+}
+
+.molde-tipo-seccion > h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-secundario);
+}

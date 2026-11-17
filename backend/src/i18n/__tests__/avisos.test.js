@@ -145,6 +145,8 @@ const DATOS = {
   // El mensaje no lleva el documento, el teléfono, el correo ni la situación fiscal de quien se
   // postula: eso se mira entrando al Panel, igual que el detalle de una emergencia.
   mensaje_del_coordinador: {},
+  llegada_del_asistente: { asistente: 'Ana Pérez', paciente: 'Rosa Gómez' },
+  reporte_disponible: { paciente: 'Rosa Gómez' },
   guardia_asignada: { fecha: '2026-10-07', horaInicio: '08:00' },
   recordatorio_de_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
   fin_periodo_sin_cargo: { dia: '7/10/2026', importe: '4500.00 ARS' },

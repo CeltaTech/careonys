@@ -643,6 +643,16 @@ const ARMADORES = {
 
   mensaje_del_coordinador: (t) => ({ titulo: t('mensaje_del_coordinador.titulo') }),
 
+  llegada_del_asistente: (t, d) => ({
+    titulo: t('llegada_del_asistente.titulo'),
+    cuerpo: t('llegada_del_asistente.cuerpo', { asistente: d.asistente, paciente: d.paciente }),
+  }),
+
+  reporte_disponible: (t, d) => ({
+    titulo: t('reporte_disponible.titulo'),
+    cuerpo: t('reporte_disponible.cuerpo', { paciente: d.paciente }),
+  }),
+
   guardia_asignada: (t, d) => ({
     titulo: t('guardia_asignada.titulo'),
     cuerpo: t('guardia_asignada.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio }),

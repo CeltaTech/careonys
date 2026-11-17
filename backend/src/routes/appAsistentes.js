@@ -1014,9 +1014,11 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   //
   // Sigue corriendo después de contestar, así que entra con la credencial de esta Prestadora.
   for (const p of conCliente) {
-    enLaPrestadora(guardia.prestadora_id, 'aviso de llegada', () => enviarPushCliente(guardia.prestadora_id, p.cliente_id, {
-      titulo: 'Llegó el Asistente',
-      cuerpo: `${nombreDelAsistente} llegó al domicilio de ${p.nombre}.`,
+    enLaPrestadora(guardia.prestadora_id, 'aviso de llegada', async (dbTrabajo) => enviarPushCliente(guardia.prestadora_id, p.cliente_id, {
+      ...mensajeDelSistema('llegada_del_asistente', await idiomaDeLaPrestadora(dbTrabajo, guardia.prestadora_id), {
+        asistente: nombreDelAsistente,
+        paciente: p.nombre,
+      }, guardia.prestadora_id),
       url: `/pacientes/${p.id}`,
     })).catch((err) => console.error('Error enviando push de llegada a Cliente:', err.message));
   }
@@ -1851,7 +1853,7 @@ appAsistentesRouter.post(
 // El orden de negocio no cambió: sigue sin poder cerrarse una guardia sin reporte — eso ahora
 // lo valida POST /guardias/:id/checkout.
 appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente, async (req, res) => {
-  const { pacienteId, textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl } = req.body;
+  const { pacienteId, textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl, pasoPorLaIa } = req.body;
 
   const db = clienteDelPedido(req);
   const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
@@ -1928,7 +1930,9 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
       incidentes: incidentes || null,
       observaciones: observaciones || null,
       foto_url: visibilidad.asistente_foto_en_el_reporte ? fotoUrl || null : null,
-      ia_procesado: true,
+      // Sólo si la IA armó los campos y la Prestadora la tiene encendida. Una versión de la
+      // aplicación que no lo dice guarda falso: es mejor no afirmar que pasó por la IA.
+      ia_procesado: Boolean(visibilidad.asistente_relato_con_ia && pasoPorLaIa === true),
       confirmado_asistente: true,
     })
     .select('id')
@@ -1954,9 +1958,10 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     .maybeSingle();
   // Lo que sigue corre después de contestar, así que entra con la credencial de esta Prestadora.
   if (datosPaciente?.cliente_id) {
-    enLaPrestadora(guardia.prestadora_id, 'aviso de reporte', () => enviarPushCliente(guardia.prestadora_id, datosPaciente.cliente_id, {
-      titulo: 'Reporte diario disponible',
-      cuerpo: `Ya está listo el reporte de la guardia de ${paciente.nombre}.`,
+    enLaPrestadora(guardia.prestadora_id, 'aviso de reporte', async (dbTrabajo) => enviarPushCliente(guardia.prestadora_id, datosPaciente.cliente_id, {
+      ...mensajeDelSistema('reporte_disponible', await idiomaDeLaPrestadora(dbTrabajo, guardia.prestadora_id), {
+        paciente: paciente.nombre,
+      }, guardia.prestadora_id),
       url: `/pacientes/${paciente.id}/reportes/${reporte.id}`,
     })).catch((err) => console.error('Error enviando push de reporte a Cliente:', err.message));
   }

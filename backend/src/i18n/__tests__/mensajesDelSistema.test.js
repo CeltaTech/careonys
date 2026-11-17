@@ -227,6 +227,8 @@ const DATOS_MINIMOS = {
   },
   estado_postulacion: { empresa: 'Cuidados del Sur', nombre: 'Marta', estado: 'aprobado' },
   mensaje_del_coordinador: {},
+  llegada_del_asistente: { asistente: 'Ana Pérez', paciente: 'Rosa Gómez' },
+  reporte_disponible: { paciente: 'Rosa Gómez' },
   guardia_asignada: { fecha: '2026-10-07', horaInicio: '08:00' },
   recordatorio_de_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
   fin_periodo_sin_cargo: { dia: '7/10/2026', importe: '4500.00 ARS' },

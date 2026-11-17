@@ -48,6 +48,9 @@ export default function ReporteDiario() {
   const [textoLibre, setTextoLibre] = useState('');
   const [estructurando, setEstructurando] = useState(false);
   const [estructurado, setEstructurado] = useState(null);
+  // Si los campos los llenó la IA a partir del relato, o el Asistente a mano. Viaja con el reporte
+  // para que la base no diga que pasó por la IA uno que no pasó.
+  const [pasoPorLaIa, setPasoPorLaIa] = useState(false);
   // Del archivo elegido se guarda sólo la ruta que devuelve el backend: el archivo en sí no se
   // vuelve a mirar, y tenerlo en memoria en un teléfono no aporta nada.
   const [fotoUrl, setFotoUrl] = useState(null);
@@ -117,6 +120,7 @@ export default function ReporteDiario() {
     try {
       const { estructurado: data } = await api.estructurarReporte(id, textoLibre);
       setEstructurado({ ...data, signos_vitales: signosIniciales(data.signos_vitales) });
+      setPasoPorLaIa(true);
     } catch (e) {
       setError(mensajeDeError(e, t, 'estructurar reporte'));
     } finally {
@@ -128,6 +132,7 @@ export default function ReporteDiario() {
   // quedar bloqueado sin poder llegar a la pantalla de revisión/confirmación.
   function completarAMano() {
     setError('');
+    setPasoPorLaIa(false);
     setEstructurado({
       alimentacion: {},
       medicacion: [],
@@ -173,6 +178,7 @@ export default function ReporteDiario() {
       const datos = {
         pacienteId,
         textoLibre: veElRelatoConIa ? textoLibre : null,
+        pasoPorLaIa: veElRelatoConIa && pasoPorLaIa,
         alimentacion: estructurado.alimentacion,
         medicacion: estructurado.medicacion,
         signosVitales: veLosSignos ? estructurado.signos_vitales : null,

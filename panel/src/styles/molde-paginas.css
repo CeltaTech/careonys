@@ -140,13 +140,10 @@
   margin-top: 4px;
 }
 
-@media (max-width: 1100px) {
-  .molde-detalle {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
+/* Lista y detalle van lado a lado hasta el ancho de una tableta: una notebook con el zoom de
+   Windows al 125 % queda por debajo de 1100 y, apiladas, el detalle cae lejos de su lista. */
 @media (max-width: 760px) {
+  .molde-detalle,
   .molde-formgrid {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -1,10 +1,13 @@
 // ---------------------------------------------------------------------------
-// verificar_texto_visible.mjs — el guardarraíl de la regla 1 del §7 de CLAUDE.md
+// verificar_texto_visible.mjs — el control de las reglas del texto visible
 //
 // Uso, desde la raíz del repo:
-//   node scripts/verificar_texto_visible.mjs
+//   node scripts/verificar_texto_visible.mjs              (con la base local encendida)
+//   node scripts/verificar_texto_visible.mjs --sin-base   (sólo los archivos)
+//   node scripts/verificar_texto_visible.mjs --json=<ruta> (además, guarda los hallazgos
+//                                                           completos en esa ruta)
 //
-// Revisa tres cosas y devuelve código de salida 1 si alguna falla:
+// Revisa cuatro cosas y devuelve código de salida 1 si alguna falla:
 //
 //   1. TEXTO ESCRITO A MANO. Que ninguna pantalla tenga una frase escrita
 //      directamente en el código en lugar de salir del archivo de traducciones.
@@ -12,45 +15,56 @@
 //      idioma: quien mire el producto en inglés o en portugués encuentra un
 //      castellano suelto en el medio.
 //
-//   2. TRATO. Que ningún texto visible tutee a quien lo lee. En castellano:
-//      nada de "vos", "podés", "revisá", "tu cuenta". En portugués: nada de
-//      "tu", "teu", "tua", ni "o senhor / a senhora". Quien lee es una
-//      institución que evalúa o paga un software, o un Cliente que confió a
-//      alguien suyo a esa institución — no un conocido.
+//   2. TRATO EN LOS ARCHIVOS DE CÓDIGO. Que ningún texto suelto del código —un
+//      mensaje que arma el backend, un atributo de una pantalla— tutee a quien lo
+//      lee. Ahí no se sabe de antemano qué es frase y qué es un valor del sistema,
+//      así que sólo se revisa el trato, que es lo que menos se confunde.
 //
-//   3. TRATO EN LOS TEXTOS GUARDADOS EN LA BASE. Lo mismo que la revisión 2, pero
-//      para el texto visible que no está en ningún archivo del repositorio: la
-//      advertencia legal, el consentimiento que se firma, el catálogo de módulos.
-//      Se consulta la base real —no los archivos de migración, que dicen lo que se
-//      cargó aquel día y no lo que la gente lee hoy— y únicamente el texto que
-//      escribió la plataforma, nunca lo que escribió una Prestadora ni un dato de
-//      una persona (el porqué está escrito arriba de la lista, más abajo).
+//   3. REDACCIÓN DE LAS TRADUCCIONES Y DEL SITIO WEB. Todas las reglas marcadas
+//      «(lo revisa el control)» en la parte «Textos de la interfaz» del glosario de
+//      los productos Careonys, sobre cada texto de los archivos de traducciones de
+//      las tres aplicaciones y del sitio web, en los tres idiomas.
 //
-// POR QUÉ EXISTE. Las dos reglas estaban escritas en CLAUDE.md desde siempre y
-// las dos se violaron igual, porque solo las controlaba una persona leyendo. La
-// primera apareció el 2026-08-16 en cuatro lugares ("Cargando…" escrito a mano
-// en las dos aplicaciones, y el título del Panel en la pestaña del navegador).
-// La segunda costó cinco tareas enteras de corrección. Una regla que solo se
-// comprueba leyendo se rompe sola con el tiempo; una que corta el build, no.
+//   4. REDACCIÓN DE LOS TEXTOS GUARDADOS EN LA BASE. Las mismas reglas, para el
+//      texto visible que no está en ningún archivo del repositorio: la advertencia
+//      legal, el consentimiento que se firma, los catálogos, los mensajes del
+//      sistema. Se consulta la base real —no los archivos de migración, que dicen lo
+//      que se cargó aquel día y no lo que la gente lee hoy— y únicamente el texto que
+//      escribió la plataforma, nunca lo que escribió una Prestadora ni un dato de una
+//      persona (el porqué está escrito arriba de la lista, más abajo).
+//
+// LAS REGLAS VIVEN EN `reglas_del_texto_visible.mjs`, una sola vez, y las usan las
+// revisiones 3 y 4. Ahí está también la lista de excepciones.
+//
+// POR QUÉ EXISTE. Las reglas estaban escritas desde siempre y se violaron igual,
+// porque sólo las controlaba una persona leyendo. Una regla que sólo se comprueba
+// leyendo se rompe sola con el tiempo; una que corta la publicación, no.
 //
 // CUANDO ESTE PROGRAMA FALLA hay exactamente dos respuestas correctas:
 //   - corregir el texto, o
-//   - si el programa se equivocó, agregar la palabra a la lista de excepciones
-//     de acá abajo, con su motivo escrito al lado.
-// Nunca apagar el control.
+//   - si el programa se equivocó, agregar una excepción para ese texto o esa clave
+//     sola, con su motivo escrito al lado.
+// Nunca apagar el control ni una regla entera.
 //
-// LO QUE NO REVISA, a propósito: los dos son coladores de patrones, no
-// entienden lo que leen. Atrapan lo que se repite —una frase entre etiquetas,
-// una terminación verbal—, no un texto mal redactado ni una traducción floja.
-// Que pase esto no reemplaza leer lo que se escribió.
+// LO QUE NO REVISA, a propósito: son coladores de patrones, no entienden lo que
+// leen. Atrapan lo que se repite —una frase entre etiquetas, una palabra prohibida,
+// un signo—, no un texto mal redactado ni una traducción floja. Que pase esto no
+// reemplaza leer lo que se escribió.
 // ---------------------------------------------------------------------------
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
 import { join, dirname, extname, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import vm from 'node:vm';
+import { reglasRotasEnElTexto, tuteosEnElTexto } from './reglas_del_texto_visible.mjs';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+/* El nombre del producto que se imprime en el informe sale del punto único de la marca,
+   igual que en `verificar_identidad.mjs`: escrito acá, cambiar el nombre obligaría a
+   acordarse de este archivo. */
+const { IDENTIDAD } = await import(new URL('../backend/src/config/identidadProducto.js', import.meta.url));
 
 /* Las tres aplicaciones que ve un cliente. `sitio-web/` no entra en la revisión 1
    porque es una página estática de una sola pieza, sin archivo de traducciones:
@@ -81,6 +95,7 @@ const SOLO_PARA_DESARROLLO = [
    las palabras del bloque de trato, no por un error. */
 const INSTRUCCIONES_PARA_LA_IA = [
   'backend/src/utils/alertasIA.js',
+  'backend/src/utils/iaPlantillasWhatsapp.js',
   'backend/src/utils/iaWhatsapp.js',
   'backend/src/utils/importacionIA.js',
   'backend/src/utils/reporteIA.js',
@@ -182,93 +197,17 @@ function revisarTextoAMano() {
 }
 
 // ---------------------------------------------------------------------------
-// Revisión 2 — el trato
+// Revisión 2 — el trato en los archivos de código
 // ---------------------------------------------------------------------------
 
 /* Se revisan únicamente los textos entre comillas. Es lo que se le muestra a
-   alguien; todo lo demás es código. Así el control vale igual para el archivo de
-   traducciones, para un mensaje que arma el backend y para un atributo suelto, sin
-   tener que saber de antemano dónde vive cada texto. */
+   alguien; todo lo demás es código. */
 const RE_TEXTOS_ENTRE_COMILLAS = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
 
-/* Formas de tuteo que se nombran una por una, porque no siguen ninguna regla de
-   terminación que se pueda reconocer sola. */
-const FORMAS_DIRECTAS = [
-  // Castellano — pronombres y posesivos
-  'vos', 'tu', 'tus', 'ti', 'te', 'contigo', 'tuyo', 'tuya', 'tuyos', 'tuyas',
-  /* Castellano — verbos irregulares que no terminan en -ás/-és/-ís. No se listan
-     "das" ni "anda": en portugués son "das" (de las) y "anda junto", palabras
-     corrientes que aparecen a cada rato y no tienen nada que ver con el trato. */
-  'sos', 'vas', 'ves', 'oís',
-  // Castellano — órdenes (imperativo de vos)
-  'andá', 'mirá', 'fijate', 'acordate', 'dale', 'revisá', 'elegí', 'escribí',
-  'poné', 'hacé', 'tocá', 'apretá', 'cargá', 'guardá', 'probá', 'volvé', 'sacá',
-  'borrá', 'activá', 'desactivá', 'ingresá', 'completá', 'seleccioná', 'confirmá',
-  'verificá', 'contá', 'pedí', 'abrí', 'cerrá', 'agregá', 'sumá', 'enviá', 'marcá',
-  'usá', 'dejá', 'esperá', 'seguí', 'buscá', 'llená', 'avisá', 'mandá', 'subí',
-  // Portugués — pronombres y posesivos informales
-  'teu', 'tua', 'teus', 'tuas',
-  // Portugués — el trato que obliga a adivinar el género de quien lee
-  'o senhor', 'a senhora', 'ao senhor', 'à senhora',
-];
-
-/* La regla de terminación: en castellano, casi todo el presente del tuteo termina
-   en -ás, -és o -ís (tenés, podés, querés, sabés, decís, escribís, estás). Es la
-   red que atrapa las formas que no están en la lista de arriba. */
-/* Los bordes de palabra se escriben a mano en vez de usar `\b`. Motivo: para una
-   expresión regular, `\b` solo reconoce como letras las del alfabeto inglés, así que
-   una palabra terminada en vocal acentuada —"revisá", "elegí"— no tiene borde al
-   final y no se encuentra nunca. Con `á` y `ñ` de por medio, `\b` no sirve.
-   El guion también corta: en portugués el infinitivo con pronombre pegado se acentúa
-   igual que una orden en voseo —"marcá-lo", "revisá-la", "ativá-la"— y es correcto. */
-const BORDE_IZQ = '(?<![\\p{L}\\p{N}_])';
-const BORDE_DER = '(?![\\p{L}\\p{N}_-])';
-
-const RE_TERMINACION = new RegExp(`${BORDE_IZQ}(\\p{L}{2,}(?:ás|és|ís))${BORDE_DER}`, 'giu');
-
-/* Palabras que terminan igual y no son tuteo. Cada una está acá porque el colador
-   la marcó alguna vez y no correspondía. */
-const TERMINACION_PERMITIDA = new Set([
-  'más', 'además', 'jamás', 'quizás', 'atrás', 'detrás', 'demás', 'compás', 'gas',
-  'después', 'inglés', 'francés', 'portugués', 'interés', 'cortés', 'revés', 'través',
-  'mes', 'país', 'raíz', 'anís', 'gris', 'aprés',
-]);
-
-const sinAcentos = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
-
-/* Un texto que no tiene ni una letra acentuada ni una eñe ni una palabra corriente
-   del castellano o del portugués casi seguro es un valor del sistema
-   ('created_at', 'pending'), no una frase para leer. No se revisa. */
-function pareceFraseParaLeer(texto) {
-  if (texto.trim().split(/\s+/).length < 2) return false; // una sola palabra: es un valor
-  if (/^[a-z0-9_.\-/]+$/.test(texto)) return false; //        clave técnica o ruta
-  return /\p{L}{3,}/u.test(texto);
-}
-
-const RE_DIRECTAS = new RegExp(`${BORDE_IZQ}(${FORMAS_DIRECTAS.join('|')})${BORDE_DER}`, 'giu');
-
-/* El colador de una frase suelta. Vive aparte porque lo usan las dos revisiones que
-   miran el trato: la que lee los archivos del repositorio y la que lee los textos
-   guardados en la base. Es la misma regla, así que es una sola función y no dos
-   iguales (regla 12 del §7 de CLAUDE.md). Devuelve las palabras que encontró, o una
-   lista vacía si el texto está bien. */
-function tuteosEnElTexto(texto) {
-  if (!pareceFraseParaLeer(texto)) return [];
-  const encontradas = new Set();
-
-  RE_DIRECTAS.lastIndex = 0;
-  for (const m of texto.matchAll(RE_DIRECTAS)) encontradas.add(m[1].toLowerCase());
-
-  RE_TERMINACION.lastIndex = 0;
-  for (const m of texto.matchAll(RE_TERMINACION)) {
-    const palabra = m[1].toLowerCase();
-    if (TERMINACION_PERMITIDA.has(palabra)) continue;
-    if (TERMINACION_PERMITIDA.has(sinAcentos(palabra))) continue;
-    encontradas.add(palabra);
-  }
-
-  return [...encontradas];
-}
+/* Los archivos de traducciones de cada aplicación. No entran en esta revisión: los
+   revisa entera la revisión 3, con todas las reglas, y así no sale dos veces el
+   mismo hallazgo. */
+const TRADUCCIONES = APPS.map((app) => `${app}/src/i18n/translations.js`);
 
 const recortar = (texto) => (texto.length > 90 ? `${texto.slice(0, 90)}…` : texto);
 
@@ -286,17 +225,19 @@ function revisarTrato() {
     const corta = rutaCorta(ruta);
     if (SOLO_PARA_DESARROLLO.includes(corta)) continue;
     if (INSTRUCCIONES_PARA_LA_IA.includes(corta)) continue;
+    if (TRADUCCIONES.includes(corta)) continue;
 
     const contenido = sinComentarios(readFileSync(ruta, 'utf8'));
     const lineaDe = (indice) => contenido.slice(0, indice).split('\n').length;
 
     /* El HTML no tiene comillas alrededor de sus frases: ahí se revisa el texto
-       que queda entre etiquetas. En los archivos de código, los textos entre
-       comillas. */
+       que queda entre etiquetas, sin el bloque de programa, cuyos textos revisa la
+       revisión 3. En los archivos de código, los textos entre comillas. */
     const esHtml = corta.endsWith('.html');
     const trozos = [];
     if (esHtml) {
-      for (const m of contenido.matchAll(/>([^<>]*)</g)) trozos.push({ texto: m[1], indice: m.index });
+      const sinPrograma = contenido.replace(/<script[\s\S]*?<\/script>/g, (m) => m.replace(/[^\n]/g, ' '));
+      for (const m of sinPrograma.matchAll(/>([^<>]*)</g)) trozos.push({ texto: m[1], indice: m.index });
     } else {
       for (const m of contenido.matchAll(RE_TEXTOS_ENTRE_COMILLAS)) {
         trozos.push({ texto: m[1] ?? m[2] ?? m[3] ?? '', indice: m.index });
@@ -319,60 +260,163 @@ function revisarTrato() {
 }
 
 // ---------------------------------------------------------------------------
-// Revisión 3 — el trato en los textos guardados en la base
+// Revisión 3 — la redacción de las traducciones y del sitio web
+// ---------------------------------------------------------------------------
+
+const IDIOMAS = ['es-AR', 'en', 'pt-BR'];
+
+/* Cada texto de un archivo de traducciones, con su nombre completo: las partes
+   separadas por puntos, y el lugar en la lista entre corchetes. */
+function aplanar(objeto, prefijo, salida) {
+  for (const [k, v] of Object.entries(objeto || {})) {
+    const clave = prefijo ? `${prefijo}.${k}` : k;
+    if (typeof v === 'string') salida.push([clave, v]);
+    else if (Array.isArray(v)) {
+      v.forEach((x, i) => (typeof x === 'string' ? salida.push([`${clave}[${i}]`, x]) : aplanar(x, `${clave}[${i}]`, salida)));
+    } else if (v && typeof v === 'object') aplanar(v, clave, salida);
+  }
+  return salida;
+}
+
+/* El sitio web es una página de una sola pieza: sus textos están en un bloque
+   `var TEXTOS = { … }` adentro de la página. Se toma ese bloque contando llaves y se
+   lo evalúa aparte, sin nada alrededor. */
+function textosDelSitioWeb() {
+  const ruta = join(RAIZ, 'sitio-web', 'index.html');
+  if (!existsSync(ruta)) return null;
+  const html = readFileSync(ruta, 'utf8');
+  const inicio = html.indexOf('var TEXTOS =');
+  if (inicio < 0) throw new Error('No encontré el bloque de textos del sitio web.');
+  const desde = html.indexOf('{', inicio);
+  let nivel = 0;
+  let fin = desde;
+  for (; fin < html.length; fin++) {
+    if (html[fin] === '{') nivel++;
+    else if (html[fin] === '}' && --nivel === 0) break;
+  }
+  return vm.runInNewContext(`(${html.slice(desde, fin + 1)})`, {});
+}
+
+async function revisarTraducciones() {
+  const fuentes = [];
+  for (const app of APPS) {
+    const ruta = join(RAIZ, app, 'src', 'i18n', 'translations.js');
+    if (!existsSync(ruta)) continue;
+    const { T } = await import(pathToFileURL(ruta).href);
+    fuentes.push({ archivo: rutaCorta(ruta), textos: T });
+  }
+  const sitio = textosDelSitioWeb();
+  if (sitio) fuentes.push({ archivo: 'sitio-web/index.html', textos: sitio });
+
+  const hallazgos = [];
+  let cuantos = 0;
+  for (const { archivo, textos } of fuentes) {
+    for (const idioma of IDIOMAS) {
+      for (const [clave, texto] of aplanar(textos[idioma], '', [])) {
+        cuantos++;
+        const reglas = reglasRotasEnElTexto(texto, idioma, clave);
+        if (reglas.length) hallazgos.push({ archivo, clave, idioma, texto, reglas });
+      }
+    }
+  }
+  return { cuantos, hallazgos };
+}
+
+// ---------------------------------------------------------------------------
+// Revisión 4 — la redacción de los textos guardados en la base
 // ---------------------------------------------------------------------------
 
 /* Hay texto visible que no está en ningún archivo del repositorio: vive en la base,
-   porque la regla 1 del §7 de CLAUDE.md prohíbe escribirlo en el código. La
-   advertencia legal que se muestra al activar una función riesgosa, el consentimiento
-   que firma el Asistente, los nombres del catálogo de módulos: todos salen de una
-   tabla. Las dos revisiones de arriba no los ven, y por eso se escaparon dos: la
-   advertencia legal (corregida el 2026-08-16) y el consentimiento de seguimiento de
-   ubicación (corregido el 2026-08-18). A los dos los encontró una persona mirando la
-   pantalla, que es exactamente lo que este programa existe para no depender.
+   porque la regla «Nunca hardcodear» prohíbe escribirlo en el código. La advertencia
+   legal que se muestra al activar una función riesgosa, el consentimiento que firma
+   el Asistente, los catálogos, los mensajes del sistema: todos salen de una tabla.
 
    SE CONSULTA LA BASE, NO LOS ARCHIVOS DE MIGRACIÓN. Un archivo de migración dice lo
-   que se cargó aquel día; la base dice lo que la gente lee hoy. Es lo mismo que manda
-   el §12 de CLAUDE.md para cualquier afirmación sobre el estado real.
+   que se cargó aquel día; la base dice lo que la gente lee hoy.
 
    QUÉ SE MIRA Y QUÉ NO. Únicamente el texto que escribió la plataforma: el catálogo
    general que viene con el producto. Nunca una fila que escribió una Prestadora, y
    nunca un dato de una persona. El motivo no es de estilo: este programa imprime en
    pantalla lo que encuentra, y esa pantalla queda guardada en el registro público de
    la publicación. Un reporte diario, una observación, el nombre de un Paciente son
-   datos de salud y datos personales — volcarlos ahí sería la violación del §6 de
-   CLAUDE.md más grande de todo el proyecto. Por eso la lista de abajo se escribe a
-   mano, tabla por tabla, y no se arma sola recorriendo el esquema.
+   datos de salud y datos personales. Por eso la lista de abajo se escribe a mano,
+   tabla por tabla, y no se arma sola recorriendo el esquema.
 
    El corte entre las dos cosas es la columna `prestadora_id`: donde no existe, la
-   tabla entera es de la plataforma; donde existe, son nuestras solamente las filas
-   que la tienen vacía, que son las del catálogo general. */
+   tabla entera es de la plataforma; donde existe, son de la plataforma solamente las
+   filas que la tienen vacía, que son las del catálogo general.
+
+   Cada renglón dice:
+     - `tabla` y `columnas`: dónde está el texto;
+     - `señal`: con qué se reconoce la fila en el informe (nunca un dato de persona);
+     - `idioma`: la columna que dice el idioma del texto o, si no hay, el idioma fijo
+       entre comillas simples. Si falta, es castellano;
+     - `porIdioma`: la columna guarda un texto por idioma (`{"es-AR": …, "en": …}`);
+     - `soloGeneral`: sólo las filas del catálogo general;
+     - `condicion`: otra condición sobre las filas.
+   Qué columnas son títulos, etiquetas u opciones de una lista lo dice el archivo de
+   las reglas. */
 const TEXTOS_DE_LA_PLATAFORMA = [
-  // La advertencia que se muestra al activar una función con riesgo legal (§3).
+  // La advertencia que se muestra al activar una función con riesgo legal.
   { tabla: 'advertencias_legales', señal: "jurisdiccion || ' / ' || funcion_clave", columnas: ['texto_advertencia'] },
-  // Lo que lee y acepta un Asistente o un Cliente antes de que se active algo.
-  { tabla: 'textos_consentimiento', señal: "jurisdiccion || ' / ' || clave || ' / ' || idioma", columnas: ['titulo', 'cuerpo'] },
-  // De acá para abajo, solo el catálogo general: `prestadora_id` vacío.
-  { tabla: 'tipos_asistente', señal: 'clave', columnas: ['nombre', 'descripcion'], soloGeneral: true },
-  { tabla: 'tareas_tipo_asistente', señal: 'clave', columnas: ['texto'], soloGeneral: true },
-  { tabla: 'etapas_incorporacion_asistente', señal: 'clave', columnas: ['nombre'], soloGeneral: true },
+  // Lo que lee y acepta un Asistente o un Cliente antes de que se active algo. Sólo la versión vigente.
+  {
+    tabla: 'textos_consentimiento',
+    señal: "jurisdiccion || ' / ' || clave || ' / v' || version",
+    columnas: ['titulo', 'cuerpo'],
+    idioma: 'idioma',
+    condicion: 'vigente_hasta is null',
+  },
+  { tabla: 'textos_autorizacion_signos_vitales', señal: 'idioma', columnas: ['cuerpo'], idioma: 'idioma', soloGeneral: true },
+  { tabla: 'textos_consentimiento_medicacion', señal: 'idioma', columnas: ['cuerpo'], idioma: 'idioma', soloGeneral: true },
+  { tabla: 'textos_consentimiento_pagador', señal: 'idioma', columnas: ['cuerpo'], idioma: 'idioma', soloGeneral: true },
+  // Los catálogos generales.
   { tabla: 'configuracion_notificaciones', señal: 'evento', columnas: ['descripcion'], soloGeneral: true },
+  { tabla: 'tipos_asistente', señal: 'clave', columnas: ['nombre', 'descripcion'], soloGeneral: true },
+  { tabla: 'tareas_tipo_asistente', señal: 'clave', columnas: ['texto', 'descripcion'], soloGeneral: true },
+  { tabla: 'etapas_incorporacion_asistente', señal: 'clave', columnas: ['nombre'], soloGeneral: true },
   { tabla: 'tipos_documento_asistente', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'tipos_documento_pagador', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'especialidades', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'conceptos_liquidacion', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'lista_de_comprobacion_baja_servicio', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'motivos_aviso_previo_guardia', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'motivos_cierre_servicio', señal: 'clave', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'motivos_reactivacion_servicio', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'motivos_resolucion', señal: "tabla || ' / ' || estado", columnas: ['nombre_es_ar'], idioma: "'es-AR'", soloGeneral: true },
+  { tabla: 'motivos_resolucion', señal: "tabla || ' / ' || estado", columnas: ['nombre_en'], idioma: "'en'", soloGeneral: true },
+  { tabla: 'motivos_resolucion', señal: "tabla || ' / ' || estado", columnas: ['nombre_pt_br'], idioma: "'pt-BR'", soloGeneral: true },
+  { tabla: 'motivos_sustitucion_guardia', señal: 'clave', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'formas_de_cobro_intermediacion', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'relaciones_laborales', señal: 'nombre', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'finales_turno_sin_cubrir', señal: 'clave', columnas: ['nombre'], soloGeneral: true },
+  { tabla: 'opciones_postulacion', señal: "grupo || ' / ' || clave", columnas: ['etiqueta'], soloGeneral: true },
+  { tabla: 'contenidos', señal: 'id', columnas: ['titulo', 'cuerpo'], soloGeneral: true },
+  { tabla: 'plantillas_whatsapp', señal: 'nombre_interno', columnas: ['cuerpo_texto'], idioma: 'idioma', soloGeneral: true },
+  { tabla: 'configuracion_escalada_relevo', señal: 'nivel', columnas: ['plantilla_mensaje'], soloGeneral: true },
+  // Catálogos que no tienen filas de ninguna Prestadora.
+  { tabla: 'catalogo_software_externo', señal: 'clave', columnas: ['nombre'] },
+  { tabla: 'indices_de_actualizacion', señal: 'codigo', columnas: ['nombre'] },
+  { tabla: 'organismos_otorgantes', señal: 'pais', columnas: ['nombre'] },
+  // Los textos que guardan un valor por idioma.
+  { tabla: 'mensajes_del_sistema', señal: 'clave', columnas: ['i18n'], porIdioma: true, soloGeneral: true },
+  { tabla: 'listas_de_opciones', señal: 'clave', columnas: ['i18n'], porIdioma: true, soloGeneral: true },
+  { tabla: 'opciones_de_lista', señal: 'clave', columnas: ['i18n'], porIdioma: true, soloGeneral: true },
+  { tabla: 'respuestas_preparadas_whatsapp', señal: 'nombre_interno', columnas: ['i18n'], porIdioma: true, soloGeneral: true },
+  { tabla: 'formulario_campos', señal: 'clave', columnas: ['etiqueta'], porIdioma: true, soloGeneral: true },
+  { tabla: 'formulario_secciones', señal: 'clave', columnas: ['titulo'], porIdioma: true, soloGeneral: true },
+  { tabla: 'formularios_declarados', señal: 'clave', columnas: ['titulo'], porIdioma: true, soloGeneral: true },
 ];
 
 /* Cómo se llega a la base: siempre por el contenedor local, que tiene usuario y contraseña
    fijos y conocidos, no son un secreto. En la publicación es la base que
    `probar-aislamiento-en-la-base.yml` levanta desde cero con las migraciones, que es el único
-   lugar de donde sale el catálogo de la plataforma. Antes se entraba a la base de verdad con la
-   cuenta del respaldo, que leía todas las Prestadoras: era una llave maestra, y se retiró
-   (`celtatech/CLAUDE.md`, sección «Aislamiento entre Organizaciones»). */
+   lugar de donde sale el catálogo de la plataforma. Nunca se entra con una cuenta que lea
+   todas las Prestadoras (`celtatech/CLAUDE.md`, sección «Aislamiento entre Organizaciones»). */
 function consultarBase(consulta) {
-  const opciones = { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 };
+  const opciones = { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 };
   /* El contenedor local se llama `supabase_db_<proyecto>`, y ese `<proyecto>` sale de
-     `supabase/config.toml`, que es quien se lo puso. Se lee de ahí y no se escribe a mano:
-     es un solo lugar donde está la verdad (regla 12 del §7 de CLAUDE.md) y, además, ese
-     nombre quedó fijado cuando se creó la base local y no se renombra aunque cambie la
-     marca (regla 13). */
+     `supabase/config.toml`, que es quien se lo puso. Se lee de ahí y no se escribe a mano. */
   const config = readFileSync(new URL('../supabase/config.toml', import.meta.url), 'utf8');
   const proyecto = config.match(/^\s*project_id\s*=\s*"([^"]+)"/m)?.[1];
   if (!proyecto) throw new Error('No encontré project_id en supabase/config.toml');
@@ -384,31 +428,42 @@ function consultarBase(consulta) {
   );
 }
 
-function revisarTextosDeLaBase() {
-  /* Una sola consulta con todas las tablas pegadas una abajo de la otra, y el
-     resultado en un solo bloque de JSON. Así el texto puede tener comillas, barras o
-     renglones adentro sin romper la lectura. */
-  const trozos = TEXTOS_DE_LA_PLATAFORMA.flatMap(({ tabla, señal, columnas, soloGeneral }) =>
-    columnas.map(
-      (columna) =>
-        `select '${tabla}.${columna}' as origen, (${señal})::text as fila, ${columna} as texto ` +
-        `from ${tabla} where ${columna} is not null${soloGeneral ? ' and prestadora_id is null' : ''}`,
-    ),
+/* Una sola consulta con todas las tablas pegadas una abajo de la otra, y el resultado
+   en un solo bloque de JSON. Así el texto puede tener comillas, barras o renglones
+   adentro sin romper la lectura. */
+function consultaDeLosTextosDeLaBase() {
+  const trozos = TEXTOS_DE_LA_PLATAFORMA.flatMap(({ tabla, señal, columnas, idioma, porIdioma, soloGeneral, condicion }) =>
+    columnas.map((columna) => {
+      const filtros = [soloGeneral && 'm.prestadora_id is null', condicion && `(${condicion})`].filter(Boolean);
+      const donde = filtros.length ? ` where ${filtros.join(' and ')}` : '';
+      if (porIdioma) {
+        return (
+          `select '${tabla}.${columna}' as origen, (${señal})::text as fila, e.key as idioma, e.value as texto ` +
+          `from ${tabla} m, jsonb_each_text(m.${columna}) e${donde}`
+        );
+      }
+      return (
+        `select '${tabla}.${columna}' as origen, (${señal})::text as fila, (${idioma || "'es-AR'"})::text as idioma, ` +
+        `m.${columna}::text as texto from ${tabla} m${donde}`
+      );
+    }),
   );
-  const consulta = `select coalesce(json_agg(f), '[]')::text from (${trozos.join(' union all ')}) f;`;
+  return `select coalesce(json_agg(f), '[]')::text from (${trozos.join(' union all ')}) f where texto is not null;`;
+}
 
+function revisarTextosDeLaBase() {
   let filas;
   try {
-    filas = JSON.parse(consultarBase(consulta).trim());
+    filas = JSON.parse(consultarBase(consultaDeLosTextosDeLaBase()).trim());
   } catch (e) {
     return { revisada: false, motivo: (e.stderr || e.message || String(e)).trim().split('\n').slice(-3).join('\n'), hallazgos: [] };
   }
 
   const hallazgos = [];
-  for (const { origen, fila, texto } of filas) {
-    const encontradas = tuteosEnElTexto(texto);
-    if (encontradas.length === 0) continue;
-    hallazgos.push({ archivo: origen, linea: fila, palabras: encontradas.join(', '), frase: recortar(texto) });
+  for (const { origen, fila, idioma, texto } of filas) {
+    const clave = `${origen}:${fila}`;
+    const reglas = reglasRotasEnElTexto(texto, idioma, clave);
+    if (reglas.length) hallazgos.push({ archivo: origen, clave: fila, idioma, texto, reglas });
   }
   return { revisada: true, cuantos: filas.length, hallazgos };
 }
@@ -423,38 +478,54 @@ function informar(titulo, hallazgos, formatear, explicacion) {
     return false;
   }
   console.log(`\n### ${titulo}: ${hallazgos.length} hallazgos`);
-  for (const h of hallazgos) console.log(`  ${h.archivo}:${h.linea} — ${formatear(h)}`);
+  for (const h of hallazgos) console.log(formatear(h));
   console.log(`\n${explicacion}`);
   return true;
 }
+
+/* Un texto puede romper varias reglas: se imprime un renglón por regla, con el
+   nombre de la regla y lo que la rompió. */
+const formatearRedaccion = (h) =>
+  `  ${h.archivo} · ${h.idioma} · ${h.clave}  →  "${recortar(h.texto)}"\n` +
+  h.reglas.map((r) => `      ${r.nombre}: «${r.encontrado}»`).join('\n');
 
 /* `--sin-base` lo usa `verificar-textos.yml`, que corre en cada push y no levanta ninguna base:
    los textos de la base los revisa `probar-aislamiento-en-la-base.yml`, que corre cada vez que
    cambia `supabase/`, que es lo único que puede cambiarlos. */
 const sinBase = process.argv.includes('--sin-base');
+const rutaJson = process.argv.find((a) => a.startsWith('--json='))?.slice('--json='.length);
 const aMano = revisarTextoAMano();
 const trato = revisarTrato();
+const traducciones = await revisarTraducciones();
 const base = sinBase ? null : revisarTextosDeLaBase();
 
 const falla1 = informar(
   'Texto escrito a mano en una pantalla',
   aMano,
-  (h) => `"${h.frase}"`,
-  'Ese texto existe en un solo idioma. Va al archivo de traducciones, en los tres,\ny la pantalla lo toma de ahí (regla 1 y regla 2 del §7 de CLAUDE.md).',
+  (h) => `  ${h.archivo}:${h.linea} — "${h.frase}"`,
+  'Ese texto existe en un solo idioma. Va al archivo de traducciones, en los tres,\ny la pantalla lo toma de ahí (reglas «Nunca hardcodear» e «i18n desde el día uno»).',
 );
 
 const falla2 = informar(
-  'Textos que tutean a quien los lee',
+  'Textos de los archivos de código que tutean a quien los lee',
   trato,
-  (h) => `${h.palabras}  →  "${h.frase}"`,
-  'En castellano el texto visible va en forma impersonal, y usted cuando haya que\ndirigirse a una persona. En portugués, forma impersonal y "você" solo donde no\nquede otra (regla 1 del §7 de CLAUDE.md).',
+  (h) => `  ${h.archivo}:${h.linea} — ${h.palabras}  →  "${h.frase}"`,
+  'El texto visible va de usted, o en forma impersonal. En portugués, forma impersonal\ny "você" sólo donde no quede otra.',
 );
+
+const falla3 = informar(
+  'Textos de las traducciones y del sitio web que rompen una regla de redacción',
+  traducciones.hallazgos,
+  formatearRedaccion,
+  `Cada regla está escrita en la parte «Textos de la interfaz» del glosario de los\nproductos ${IDENTIDAD.nombre}. Se corrige el texto; si la regla se equivocó, se agrega una\nexcepción para ese texto solo, con su motivo.`,
+);
+if (traducciones.hallazgos.length === 0) console.log(`  (${traducciones.cuantos} textos revisados)`);
 
 /* Que no se llegue a la base es una falla cuando esto corre en la publicación: si se
    dejara pasar, el control se apagaría solo el día que cambie una clave y nadie se
    enteraría. En la máquina de quien programa solamente avisa, porque ahí el
    contenedor local puede estar apagado por cualquier motivo. */
-let falla3 = false;
+let falla4 = false;
 if (sinBase) {
   console.log('\n### Textos guardados en la base: los revisa la prueba de aislamiento en la base');
 } else if (!base.revisada) {
@@ -462,18 +533,25 @@ if (sinBase) {
   console.log(`\n### Textos guardados en la base: no se pudo consultar\n${base.motivo}`);
   console.log(
     enLaPublicacion
-      ? '\nSin base no hay control. Hace falta revisar que el automatismo haya levantado la base local.'
-      : '\nAviso: los textos guardados en la base quedaron sin revisar. Para revisarlos hace\nfalta la base local encendida (`npx supabase start`). El automatismo de la\npublicación sí los revisa siempre.',
+      ? '\nSin base no hay control. Revise que el automatismo haya levantado la base local.'
+      : '\nAviso: los textos guardados en la base quedaron sin revisar. Para revisarlos, encienda\nla base local (`npx supabase start`). El automatismo de la publicación sí los revisa siempre.',
   );
-  falla3 = enLaPublicacion;
+  falla4 = enLaPublicacion;
 } else {
-  falla3 = informar(
-    'Textos guardados en la base que tutean a quien los lee',
+  falla4 = informar(
+    'Textos guardados en la base que rompen una regla de redacción',
     base.hallazgos,
-    (h) => `${h.palabras}  →  "${h.frase}"`,
-    'Ese texto no está en ningún archivo: vive en la base y se corrige con una migración.\nEl mismo criterio que arriba — forma impersonal, y usted cuando haya que dirigirse a\nuna persona (regla 1 del §7 de CLAUDE.md).',
+    formatearRedaccion,
+    'Ese texto no está en ningún archivo: vive en la base y se corrige con una migración.\nLas reglas son las mismas que arriba.',
   );
   if (base.hallazgos.length === 0) console.log(`  (${base.cuantos} textos de la plataforma revisados)`);
 }
 
-process.exit(falla1 || falla2 || falla3 ? 1 : 0);
+if (rutaJson) {
+  writeFileSync(
+    rutaJson,
+    JSON.stringify({ aMano, trato, traducciones: traducciones.hallazgos, base: base?.revisada ? base.hallazgos : null }, null, 2),
+  );
+}
+
+process.exit(falla1 || falla2 || falla3 || falla4 ? 1 : 0);

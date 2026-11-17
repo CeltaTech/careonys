@@ -166,18 +166,20 @@ function NombrarApoderado({ funcion, textos, onCerrar, onHecho }) {
   // Hay dos en la misma página cuando el titular abre los dos a la vez: la función separa los casilleros.
   const idDe = (campo) => `apoderado-${funcion}-${campo}`;
 
+  const completo = (campo, valor) => (campo === 'archivo' ? Boolean(valor) : Boolean(valor.trim()));
+
   function cambiar(campo, valor) {
     setValores((v) => ({ ...v, [campo]: valor }));
-    setErrores((e) => ({ ...e, [campo]: undefined }));
+    // El aviso se va en cuanto el dato se completa, sin esperar a que se vuelva a guardar.
+    if (errores[campo] && completo(campo, valor)) setErrores(({ [campo]: _, ...resto }) => resto);
   }
-
-  const estaCompleto = (campo) => (campo === 'archivo' ? Boolean(valores.archivo) : Boolean(valores[campo].trim()));
 
   async function guardar(e) {
     e.preventDefault();
-    const faltantes = CAMPOS.filter((campo) => !estaCompleto(campo));
+    setError('');
+    const faltantes = CAMPOS.filter((campo) => !completo(campo, valores[campo]));
+    setErrores(Object.fromEntries(faltantes.map((campo) => [campo, textos.falta?.[campo]])));
     if (faltantes.length > 0) {
-      setErrores(Object.fromEntries(faltantes.map((campo) => [campo, textos.campo_obligatorio])));
       document.getElementById(idDe(faltantes[0]))?.focus();
       return;
     }

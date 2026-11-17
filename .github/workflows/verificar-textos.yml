@@ -11,10 +11,12 @@ name: Verificar textos traducidos
 #   verificar_texto_visible.mjs (pendientes #144 y #145)
 #     · que ninguna pantalla tenga una frase escrita a mano en vez de tomarla del archivo
 #       de traducciones (regla 1 del §7);
-#     · que ningún texto visible tutee a quien lo lee (misma regla);
-#     · que tampoco tutee ninguno de los textos que no viven en un archivo sino guardados
-#       en la base: la advertencia legal, los consentimientos, el catálogo de módulos.
-#       Esos se le escapaban al control y se corrigieron dos veces a ojo (#145).
+#     · que ningún texto suelto del código tutee a quien lo lee (misma regla);
+#     · que los textos de las traducciones y del sitio web cumplan todas las reglas
+#       marcadas «(lo revisa el control)» en la parte «Textos de la interfaz» del glosario
+#       de los productos Careonys. Las reglas están en reglas_del_texto_visible.mjs;
+#     · lo mismo para los textos guardados en la base. Esa revisión necesita la base y
+#       corre en probar-aislamiento-en-la-base.yml.
 #
 #   verificar_errores_hacia_afuera.mjs
 #     · que ninguna respuesta del backend lleve al navegador el texto crudo de un error de la
@@ -60,6 +62,6 @@ jobs:
       # Los textos guardados en la base no se revisan acá: los revisa
       # `probar-aislamiento-en-la-base.yml`, sobre la base que levanta desde cero, cada vez que
       # cambia `supabase/`. Ningún control entra a la base de verdad.
-      - name: Buscar texto escrito a mano y textos que tutean
+      - name: Revisar el texto escrito a mano y la redacción
         if: always()
         run: node scripts/verificar_texto_visible.mjs --sin-base

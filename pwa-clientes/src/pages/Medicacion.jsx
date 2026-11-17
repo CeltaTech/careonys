@@ -138,7 +138,7 @@ export default function Medicacion() {
     if (faltantes.includes(campo) && valor) setFaltantes((f) => f.filter((x) => x !== campo));
   }
 
-  const faltaEn = (campo) => (faltantes.includes(campo) ? t.comun.campo_obligatorio : undefined);
+  const faltaEn = (campo) => (faltantes.includes(campo) ? t.medicacion.falta[campo] : undefined);
 
   function revisarCompletos() {
     const sinCompletar = CAMPOS_OBLIGATORIOS.filter((campo) => !valores[campo]);

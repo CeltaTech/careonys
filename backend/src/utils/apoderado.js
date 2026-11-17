@@ -21,8 +21,11 @@ const TAMANO_MAXIMO = 10 * 1024 * 1024; // 10 MB
 const CLAVES_DE_LOS_TEXTOS = [
   'titulo', 'nombrar', 'quitar', 'quitar_aviso', 'poder', 'nombre', 'apellido', 'cuil',
   'cancelar', 'guardar', 'cargar', 'ver', 'reemplazar', 'aprobar', 'observar', 'motivo',
-  'campo_obligatorio', 'estado_falta', 'estado_en_revision', 'estado_aprobado', 'estado_observado',
+  'estado_falta', 'estado_en_revision', 'estado_aprobado', 'estado_observado',
 ];
+
+// El aviso de cada casillero que quedó vacío al nombrar o al observar el poder, nombrado por el casillero.
+const CASILLEROS_DEL_FORMULARIO = ['nombre', 'apellido', 'cuil', 'archivo', 'motivo'];
 
 const MOTIVOS_DE_LA_BASE = {
   sin_permiso: 'sin_permiso',
@@ -86,9 +89,11 @@ export async function hayApoderadoDeSignosVitales({ db, clienteId, prestadoraId 
 // Los textos viven en la base y las interfaces no la leen: llegan acá, en el idioma de quien mira y
 // con los propios de la Prestadora si los tiene.
 function textosDelApoderado({ idioma, prestadoraId }) {
-  return Object.fromEntries(
-    CLAVES_DE_LOS_TEXTOS.map((clave) => [clave, frase(`apoderado.${clave}`, idioma, {}, prestadoraId)]),
-  );
+  const deLaClave = (clave) => frase(`apoderado.${clave}`, idioma, {}, prestadoraId);
+  return {
+    ...Object.fromEntries(CLAVES_DE_LOS_TEXTOS.map((clave) => [clave, deLaClave(clave)])),
+    falta: Object.fromEntries(CASILLEROS_DEL_FORMULARIO.map((campo) => [campo, deLaClave(`falta.${campo}`)])),
+  };
 }
 
 export async function estadoDelApoderado({ db, clienteId, prestadoraId, funcion, idioma }) {

@@ -99,6 +99,7 @@ const { default: express } = await import('express');
 await import('express-async-errors');
 const { panelApoderadoRouter } = await import('../panelApoderado.js');
 const { appClientesApoderadoRouter } = await import('../appClientesApoderado.js');
+const { sembrarMensajesDelSistema } = await import('../../i18n/mensajesDelSistema.js');
 
 const app = express();
 app.use(express.json());
@@ -364,6 +365,29 @@ describe('desde la aplicación del Cliente', () => {
     const [lectura] = llamadasA('GET /rest/v1/apoderados');
     assert.ok(lectura.url.includes(`cliente_id=eq.${CLIENTE}`), lectura.url);
     assert.equal(lectura.url.includes(CLIENTE_AJENO), false);
+  });
+
+  it('cada casillero del formulario trae su propio aviso de que falta', async () => {
+    sesionDelCliente();
+    sembrarMensajesDelSistema([
+      { clave: 'apoderado.falta.nombre', i18n: { 'es-AR': 'Ingrese el nombre.', en: 'Enter the first name.', 'pt-BR': 'Informe o nome.' } },
+      { clave: 'apoderado.falta.apellido', i18n: { 'es-AR': 'Ingrese el apellido.', en: 'Enter the last name.', 'pt-BR': 'Informe o sobrenome.' } },
+      { clave: 'apoderado.falta.cuil', i18n: { 'es-AR': 'Ingrese el CUIL.', en: 'Enter the CUIL.', 'pt-BR': 'Informe o CUIL.' } },
+      { clave: 'apoderado.falta.archivo', i18n: { 'es-AR': 'Elija el poder.', en: 'Select the power of attorney.', 'pt-BR': 'Escolha a procuração.' } },
+      { clave: 'apoderado.falta.motivo', i18n: { 'es-AR': 'Ingrese el motivo.', en: 'Enter the reason.', 'pt-BR': 'Informe o motivo.' } },
+    ]);
+
+    const { estado, cuerpo } = await pedir('GET', '/app/pagos?idioma=pt-BR');
+
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
+    assert.deepEqual(cuerpo.textos.falta, {
+      nombre: 'Informe o nome.',
+      apellido: 'Informe o sobrenome.',
+      cuil: 'Informe o CUIL.',
+      archivo: 'Escolha a procuração.',
+      motivo: 'Informe o motivo.',
+    });
+    assert.equal('campo_obligatorio' in cuerpo.textos, false);
   });
 
   it('el titular quita en su nombre', async () => {

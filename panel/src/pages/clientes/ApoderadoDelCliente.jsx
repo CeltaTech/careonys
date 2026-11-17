@@ -222,17 +222,19 @@ function NombrarApoderado({ camino, textos, onCerrar, onHecho }) {
   const [error, setError] = useState(null);
   const [ocupado, setOcupado] = useState(false);
 
+  const completo = (campo, valor) => (campo === 'archivo' ? Boolean(valor) : Boolean(valor.trim()));
+
   function cambiar(campo, valor) {
     setValores((v) => ({ ...v, [campo]: valor }));
-    setErrores((e) => ({ ...e, [campo]: undefined }));
+    // El aviso se va en cuanto el dato se completa, sin esperar a que se vuelva a guardar.
+    if (errores[campo] && completo(campo, valor)) setErrores(({ [campo]: _, ...resto }) => resto);
   }
 
-  const estaCompleto = (campo) => (campo === 'archivo' ? Boolean(valores.archivo) : Boolean(valores[campo].trim()));
-
   async function guardar() {
-    const faltantes = CAMPOS.filter((campo) => !estaCompleto(campo));
+    setError(null);
+    const faltantes = CAMPOS.filter((campo) => !completo(campo, valores[campo]));
+    setErrores(Object.fromEntries(faltantes.map((campo) => [campo, textos.falta?.[campo]])));
     if (faltantes.length > 0) {
-      setErrores(Object.fromEntries(faltantes.map((campo) => [campo, textos.campo_obligatorio])));
       document.getElementById(`field-apoderado-${faltantes[0]}`)?.focus();
       return;
     }
@@ -248,13 +250,14 @@ function NombrarApoderado({ camino, textos, onCerrar, onHecho }) {
       await llamarApiPanel(camino, { method: 'POST', body: cuerpo });
       onHecho();
     } catch (err) {
+      setOcupado(false);
       if (err.motivo === 'numero_no_valido') {
         setErrores((e) => ({ ...e, cuil: mensajeDeError(err, t) }));
-        document.getElementById('field-apoderado-cuil')?.focus();
+        // Se espera a que el casillero vuelva a estar encendido: apagado no recibe el cursor.
+        requestAnimationFrame(() => document.getElementById('field-apoderado-cuil')?.focus());
       } else {
         setError(mensajeDeError(err, t));
       }
-      setOcupado(false);
     }
   }
 
@@ -348,8 +351,12 @@ function ObservarPoder({ id, textos, onCerrar, onHecho }) {
             label={textos.motivo}
             name="apoderado-motivo"
             value={motivo}
-            onChange={(e) => { setMotivo(e.target.value); setFaltaMotivo(false); }}
-            error={faltaMotivo ? textos.campo_obligatorio : undefined}
+            onChange={(e) => {
+              setMotivo(e.target.value);
+              // El aviso se va en cuanto el motivo se completa, sin esperar a que se vuelva a guardar.
+              if (e.target.value.trim()) setFaltaMotivo(false);
+            }}
+            error={faltaMotivo ? textos.falta?.motivo : undefined}
             disabled={ocupado}
             required
           />

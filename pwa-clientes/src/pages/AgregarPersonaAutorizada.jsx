@@ -105,7 +105,7 @@ export default function AgregarPersonaAutorizada() {
     e.preventDefault();
     setErrorGeneral('');
     const faltan = Object.fromEntries(
-      CAMPOS.filter((c) => !datos[c].trim()).map((c) => [c, textos.campo_obligatorio]),
+      CAMPOS.filter((c) => !datos[c].trim()).map((c) => [c, textos.falta[c]]),
     );
     setErrores(faltan);
     const primero = CAMPOS.find((c) => faltan[c]);

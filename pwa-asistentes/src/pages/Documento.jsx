@@ -119,10 +119,11 @@ export default function Documento() {
   // intento: así el texto se va solo en cuanto el dato se completa.
   const vencidaEl = fecha ? fechaYaNoValida(documento, fecha) ?? vencidoSegunServidor : null;
   const errores = {
-    organismo: organismos.length > 1 && !organismoElegido ? td.campo_obligatorio : '',
-    fecha: pideFecha.obligatoria && !fecha ? td.campo_obligatorio : vencidaEl ? con(td.ya_no_valido, { fecha: aDia(vencidaEl) }) : '',
-    numero: documento.lleva_numero && !numero.trim() ? td.campo_obligatorio : '',
-    archivo: !archivo ? td.campo_obligatorio : '',
+    organismo: organismos.length > 1 && !organismoElegido ? td.falta.organismo : '',
+    // La fecha que se pide es la de emisión o la de vencimiento, y el aviso nombra la que es.
+    fecha: pideFecha.obligatoria && !fecha ? td.falta[pideFecha.campo] : vencidaEl ? con(td.ya_no_valido, { fecha: aDia(vencidaEl) }) : '',
+    numero: documento.lleva_numero && !numero.trim() ? td.falta.numero : '',
+    archivo: !archivo ? td.falta.archivo : '',
   };
   const visibles = intentado ? errores : {};
 

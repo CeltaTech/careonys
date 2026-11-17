@@ -3,6 +3,7 @@ import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido, enLaPrestadora, TRABAJO_DE_LA_IMPORTACION } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
+import { anotarExportacion } from '../utils/registroDeActividad.js';
 import {
   crearAsistenteDirecto, crearClienteImportado,
   activarVerificacionAltaAsistente, revertirAsistenteImportado, revertirClienteImportada,
@@ -384,6 +385,7 @@ panelImportacionRouter.post(
   '/filas-no-cargadas',
   requiereRolPanel,
   requierePermiso('importar_datos_masivos'),
+  anotarExportacion(),
   (req, res) => {
     const { archivoNombre, encabezados, filas } = req.body ?? {};
     if (!Array.isArray(encabezados) || !encabezados.length || !Array.isArray(filas) || !filas.length) {

@@ -86,7 +86,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const url = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${url.pathname}`;
-    llamadas.push({ clave, url, credencial: req.headers.authorization });
+    llamadas.push({ clave, url, credencial: req.headers.authorization, cuerpo: crudo ? JSON.parse(crudo) : null });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(url) : preparada;
@@ -162,6 +162,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => (sesionDeSoporte ? [sesionDeSoporte] : []));
   respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('POST /rest/v1/auditoria_de_accesos', () => []);
+  respuestas.set('POST /rest/v1/registro_actividad', () => []);
 
   /* La base de mentira aplica el filtro de verdad. Es lo que hace que estas pruebas puedan
      fallar: sin filtro, contesta las cuatro filas de las tres Organizaciones. */
@@ -477,5 +478,229 @@ describe('el año del registro de accesos que se va a borrar', () => {
     assert.equal((await pedir()).estado, 403);
     assert.equal((await pedir('/renglones')).estado, 403);
     assert.equal(llamadas.some((l) => l.clave.startsWith('POST /rest/v1/rpc/') || l.clave === 'GET /rest/v1/consultas_a_hce'), false);
+  });
+
+  it('la descarga queda anotada como exportación, sin la parte de la consulta', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    await fetch(`${DIRECCION}/registro-de-accesos-por-borrar/renglones?nombre=x`, { headers: { Authorization: sesionDePrueba(SUPERADMIN) } });
+    const [renglon] = renglonesDelRegistro('exportacion');
+    assert.ok(renglon, 'la descarga no quedó anotada');
+    assert.deepEqual(renglon.detalle, { metodo: 'GET', ruta: '/api/panel/auditoria/registro-de-accesos-por-borrar/renglones' });
+    assert.equal(renglon.prestadora_id, PRESTADORA_A);
+  });
+
+  it('si la descarga no se pudo anotar, no se entrega', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    respuestas.delete('POST /rest/v1/registro_actividad');
+    const { estado, cuerpo } = await pedir('/renglones');
+    assert.ok(estado >= 500, `contestó ${estado}`);
+    assert.equal(cuerpo.accesos, undefined);
+  });
+});
+
+/** Los renglones que el backend mandó a escribir al registro de actividad con esa acción. */
+function renglonesDelRegistro(accion) {
+  return llamadas
+    .filter((l) => l.clave === 'POST /rest/v1/registro_actividad')
+    .map((l) => (Array.isArray(l.cuerpo) ? l.cuerpo[0] : l.cuerpo))
+    .filter((r) => r?.accion === accion);
+}
+
+describe('ver el registro de accesos queda anotado siempre', () => {
+  const pedirAccesos = (clienteId) => fetch(`${DIRECCION}/accesos-a-la-informacion-de-salud/${clienteId}`, { headers: { Authorization: sesionDePrueba(SUPERADMIN) } });
+
+  it('mirar los accesos de un Cliente deja su renglón, con quién y en qué Prestadora', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    assert.equal((await pedirAccesos(CLIENTE_A)).status, 200);
+    const [renglon] = renglonesDelRegistro('consulta_del_registro_de_accesos');
+    assert.ok(renglon, 'la consulta no quedó anotada');
+    assert.equal(renglon.usuario_id, SUPERADMIN);
+    assert.equal(renglon.prestadora_id, PRESTADORA_A);
+    assert.equal(renglon.registro_id, CLIENTE_A);
+    assert.deepEqual(renglon.detalle, { vista: 'ficha_del_cliente' });
+    const credencial = credencialDe('POST /rest/v1/registro_actividad');
+    assert.equal(credencial.role, 'trabajo_sin_persona');
+    assert.equal(credencial.prestadora_id, PRESTADORA_A);
+  });
+
+  it('aunque el Cliente no tenga accesos, la consulta se anota igual', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    assert.equal((await pedirAccesos(CLIENTE_B)).status, 200);
+    assert.equal(renglonesDelRegistro('consulta_del_registro_de_accesos').length, 1);
+  });
+
+  it('si el renglón no se pudo escribir, no se entrega nada', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    respuestas.delete('POST /rest/v1/registro_actividad');
+    const respuesta = await pedirAccesos(CLIENTE_A);
+    assert.ok(respuesta.status >= 500, `contestó ${respuesta.status}`);
+    assert.equal((await respuesta.json()).accesos, undefined);
+  });
+
+  it('a quien no tiene permiso no se le anota nada, porque no vio nada', async () => {
+    rolDelUsuario = 'coordinador';
+    prestadoraDelUsuario = PRESTADORA_A;
+    assert.equal((await pedirAccesos(CLIENTE_A)).status, 403);
+    assert.equal(renglonesDelRegistro('consulta_del_registro_de_accesos').length, 0);
+  });
+});
+
+describe('la revisión del registro de accesos', () => {
+  const FUERA_DE_LO_NORMAL = {
+    [PRESTADORA_A]: [
+      { consulta_id: 'acc-a-1', usuario_id: 'ua-1', persona: 'Coordinación Inventada A', paciente_id: 'pa-1', paciente: 'Paciente Inventado A', categorias: ['reportes'], momento: '2026-11-01T03:00:00Z', origen: 'POST /api/panel/informacion-de-salud/reportes', motivos: ['fuera_del_horario', 'sin_relacion_con_el_paciente'] },
+    ],
+    [PRESTADORA_B]: [
+      { consulta_id: 'acc-b-1', usuario_id: 'ub-1', persona: 'Coordinación Inventada B', paciente_id: 'pb-1', paciente: 'Paciente Inventado B', categorias: ['reportes'], momento: '2026-11-02T10:00:00Z', origen: 'GET /api/app-asistentes/guardias/:id', motivos: ['volumen_inusual'] },
+    ],
+  };
+  const RESUMEN = {
+    [PRESTADORA_A]: [{ usuario_id: 'ua-1', persona: 'Coordinación Inventada A', pacientes_distintos: 3, accesos: 12, accesos_de_emergencia: 1 }],
+    [PRESTADORA_B]: [{ usuario_id: 'ub-1', persona: 'Coordinación Inventada B', pacientes_distintos: 1, accesos: 2, accesos_de_emergencia: 0 }],
+  };
+  const CONSTANCIAS = [
+    { id: 'co-a-1', prestadora_id: PRESTADORA_A, desde: '2026-10-01', hasta: '2026-10-31', revisado_por: 'ua-1', revisado_en: '2026-11-03T12:00:00Z', observaciones: null },
+    { id: 'co-b-1', prestadora_id: PRESTADORA_B, desde: '2026-10-01', hasta: '2026-10-31', revisado_por: 'ub-1', revisado_en: '2026-11-04T12:00:00Z', observaciones: 'Revisado sin novedades' },
+  ];
+
+  beforeEach(() => {
+    /* La base de mentira hace lo que la de verdad con la sesión: contesta lo de la Prestadora de
+       quien pide, y nada de la otra. */
+    respuestas.set('POST /rest/v1/rpc/accesos_fuera_de_lo_normal', () => FUERA_DE_LO_NORMAL[prestadoraDelUsuario] ?? []);
+    respuestas.set('POST /rest/v1/rpc/resumen_del_registro_de_accesos_por_persona', () => RESUMEN[prestadoraDelUsuario] ?? []);
+    respuestas.set('GET /rest/v1/constancias_de_revision_del_registro_de_accesos', () => CONSTANCIAS.filter((c) => c.prestadora_id === prestadoraDelUsuario));
+    respuestas.set('POST /rest/v1/constancias_de_revision_del_registro_de_accesos', () => [
+      { id: 'co-nueva', desde: '2026-11-01', hasta: '2026-11-15', revisado_por: 'ua-1', revisado_en: '2026-11-17T12:00:00Z', observaciones: 'Sin novedades' },
+    ]);
+  });
+
+  const pedir = async (ruta, opciones = {}) => {
+    const r = await fetch(`${DIRECCION}${ruta}`, {
+      ...opciones,
+      headers: { Authorization: sesionDePrueba(SUPERADMIN), 'Content-Type': 'application/json', ...(opciones.headers ?? {}) },
+    });
+    return { estado: r.status, cuerpo: await r.json() };
+  };
+
+  it('la administración ve los accesos fuera de lo normal del período, con sus motivos', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado, cuerpo } = await pedir('/accesos-fuera-de-lo-normal?desde=2026-11-01&hasta=2026-11-15');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.accesos, [{
+      id: 'acc-a-1',
+      momento: '2026-11-01T03:00:00Z',
+      persona: 'Coordinación Inventada A',
+      paciente: 'Paciente Inventado A',
+      categorias: ['reportes'],
+      lugar: 'panel',
+      motivos: ['fuera_del_horario', 'sin_relacion_con_el_paciente'],
+    }]);
+
+    const llamada = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/accesos_fuera_de_lo_normal');
+    assert.deepEqual(llamada.cuerpo, { p_desde: '2026-11-01', p_hasta: '2026-11-15' });
+    assert.notEqual(credencialDe('POST /rest/v1/rpc/accesos_fuera_de_lo_normal').role, 'trabajo_sin_persona', 'se preguntó sin la sesión');
+  });
+
+  it('cada Prestadora ve lo suyo y no lo de la otra', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_B;
+    const { cuerpo } = await pedir('/accesos-fuera-de-lo-normal?desde=2026-11-01&hasta=2026-11-15');
+    assert.deepEqual(cuerpo.accesos.map((a) => a.id), ['acc-b-1']);
+  });
+
+  it('mirar los accesos fuera de lo normal queda anotado, con el período', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    await pedir('/accesos-fuera-de-lo-normal?desde=2026-11-01&hasta=2026-11-15');
+    const [renglon] = renglonesDelRegistro('consulta_del_registro_de_accesos');
+    assert.deepEqual(renglon.detalle, { vista: 'fuera_de_lo_normal', desde: '2026-11-01', hasta: '2026-11-15' });
+  });
+
+  it('si no se pudo anotar, no se entrega', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    respuestas.delete('POST /rest/v1/registro_actividad');
+    const { estado, cuerpo } = await pedir('/accesos-fuera-de-lo-normal?desde=2026-11-01&hasta=2026-11-15');
+    assert.ok(estado >= 500, `contestó ${estado}`);
+    assert.equal(cuerpo.accesos, undefined);
+  });
+
+  it('el resumen por persona trae pacientes distintos, accesos y accesos de emergencia, y queda anotado', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado, cuerpo } = await pedir('/resumen-por-persona?desde=2026-10-01&hasta=2026-10-31');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.personas, RESUMEN[PRESTADORA_A]);
+    const [renglon] = renglonesDelRegistro('consulta_del_registro_de_accesos');
+    assert.deepEqual(renglon.detalle, { vista: 'resumen_por_persona', desde: '2026-10-01', hasta: '2026-10-31' });
+  });
+
+  for (const consulta of ['', '?desde=2026-11-01', '?desde=2026-11-15&hasta=2026-11-01', '?desde=2026-02-30&hasta=2026-03-01', '?desde=ayer&hasta=hoy']) {
+    it(`un período mal formado (${consulta || 'sin período'}) no llega a la base`, async () => {
+      rolDelUsuario = 'admin_prestadora';
+      prestadoraDelUsuario = PRESTADORA_A;
+      for (const ruta of ['/accesos-fuera-de-lo-normal', '/resumen-por-persona']) {
+        const { estado, cuerpo } = await pedir(`${ruta}${consulta}`);
+        assert.equal(estado, 400);
+        assert.equal(cuerpo.motivo, 'periodo_invalido');
+      }
+      assert.equal(llamadas.some((l) => l.clave.startsWith('POST /rest/v1/rpc/')), false);
+    });
+  }
+
+  it('el Coordinador no ve nada de la revisión, y no se pregunta nada', async () => {
+    rolDelUsuario = 'coordinador';
+    prestadoraDelUsuario = PRESTADORA_A;
+    assert.equal((await pedir('/accesos-fuera-de-lo-normal?desde=2026-11-01&hasta=2026-11-15')).estado, 403);
+    assert.equal((await pedir('/resumen-por-persona?desde=2026-11-01&hasta=2026-11-15')).estado, 403);
+    assert.equal((await pedir('/constancias-de-revision')).estado, 403);
+    const firma = await pedir('/constancias-de-revision', { method: 'POST', body: JSON.stringify({ desde: '2026-11-01', hasta: '2026-11-15' }) });
+    assert.equal(firma.estado, 403);
+    assert.equal(llamadas.some((l) => l.clave.startsWith('POST /rest/v1/rpc/') || l.clave.includes('constancias_de_revision')), false);
+  });
+
+  it('la administración firma la constancia: del pedido sólo se toman el período y las observaciones', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const { estado, cuerpo } = await pedir('/constancias-de-revision', {
+      method: 'POST',
+      body: JSON.stringify({ desde: '2026-11-01', hasta: '2026-11-15', observaciones: '  Sin novedades  ', revisado_por: 'ub-1', prestadora_id: PRESTADORA_B }),
+    });
+    assert.equal(estado, 201);
+    assert.equal(cuerpo.constancia.id, 'co-nueva');
+    assert.equal(cuerpo.constancia.persona, 'Coordinación Inventada A');
+
+    const llamada = llamadas.find((l) => l.clave === 'POST /rest/v1/constancias_de_revision_del_registro_de_accesos');
+    const fila = Array.isArray(llamada.cuerpo) ? llamada.cuerpo[0] : llamada.cuerpo;
+    assert.deepEqual(fila, { desde: '2026-11-01', hasta: '2026-11-15', observaciones: 'Sin novedades' });
+    assert.notEqual(credencialDe('POST /rest/v1/constancias_de_revision_del_registro_de_accesos').role, 'trabajo_sin_persona', 'se firmó sin la sesión');
+  });
+
+  it('una constancia sin período válido o con observaciones demasiado largas no llega a la base', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const sinPeriodo = await pedir('/constancias-de-revision', { method: 'POST', body: JSON.stringify({ desde: '2026-11-15', hasta: '2026-11-01' }) });
+    assert.equal(sinPeriodo.estado, 400);
+    const larga = await pedir('/constancias-de-revision', { method: 'POST', body: JSON.stringify({ desde: '2026-11-01', hasta: '2026-11-15', observaciones: 'x'.repeat(2001) }) });
+    assert.equal(larga.estado, 400);
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/constancias_de_revision_del_registro_de_accesos'), false);
+  });
+
+  it('las constancias firmadas se listan con el nombre de quien firmó, sólo las de su Prestadora', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_B;
+    const { estado, cuerpo } = await pedir('/constancias-de-revision?desde=2026-10-15&hasta=2026-11-15');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.constancias.map((c) => [c.id, c.persona]), [['co-b-1', 'Coordinación Inventada B']]);
+
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/constancias_de_revision_del_registro_de_accesos').url;
+    assert.equal(consulta.searchParams.get('desde'), 'lte.2026-11-15');
+    assert.equal(consulta.searchParams.get('hasta'), 'gte.2026-10-15');
   });
 });

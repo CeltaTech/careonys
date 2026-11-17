@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabaseClient';
 import { errorDeLaRespuesta } from '../lib/errores';
 import { olvidarMarca } from '../lib/marcaGuardada';
 import { descartarSesionGuardada, guardarSesionBajoLaHuella } from '../lib/accesoGuardado';
+import { api } from '../lib/api';
+import { anotarFinDeSesion, CAUSAS_DE_FIN_DE_SESION } from '../lib/finDeSesion';
+import { anotarActividad } from '../lib/ultimaActividad';
 
 // Este proveedor contesta tres cosas distintas, y nunca las confunde entre sí:
 //   'cargando' — todavía no se sabe quién entró;
@@ -107,6 +110,9 @@ export function AuthProvider({ children }) {
   // Se entra con el nombre de usuario, que es único en todo el sistema: no hace falta decir de qué
   // Prestadora es la cuenta.
   async function login(usuario, password) {
+    // Una entrada nueva empieza a contar de cero: si no, la quietud de la sesión anterior la
+    // cerraría apenas abierta.
+    anotarActividad();
     try {
       const acceso = await direccionDeAcceso(usuario);
       const { error } = await supabase.auth.signInWithPassword({ email: acceso, password });
@@ -123,7 +129,12 @@ export function AuthProvider({ children }) {
   //
   // La marca de la Prestadora se olvida siempre: con la sesión cerrada, el teléfono no dice de qué
   // Prestadora es la cuenta, se haya guardado el acceso o no. Al volver a entrar se pide de nuevo.
-  async function logout() {
+  //
+  // Antes de cerrar queda la constancia en el registro de actividad, con la sesión que todavía
+  // vale; si no se pudo dejar, se cierra igual (`lib/finDeSesion.js`). El cierre por inactividad
+  // hace exactamente lo mismo, con otra causa.
+  async function cerrarSesion(causa) {
+    await anotarFinDeSesion(api.finDeSesion, causa);
     const { data } = await supabase.auth.getSession();
     let guardada = false;
     if (typeof supabase.auth._removeSession === 'function') {
@@ -138,8 +149,13 @@ export function AuthProvider({ children }) {
     await olvidarMarca();
   }
 
+  // El botón de cerrar sesión la llama con el evento del clic: por eso la causa no viaja como
+  // argumento, y cada cierre tiene su propia función.
+  const logout = () => cerrarSesion(CAUSAS_DE_FIN_DE_SESION.A_MANO);
+  const cerrarPorInactividad = () => cerrarSesion(CAUSAS_DE_FIN_DE_SESION.POR_INACTIVIDAD);
+
   return (
-    <AuthContext.Provider value={{ session, usuario, estado, cargando, login, logout }}>
+    <AuthContext.Provider value={{ session, usuario, estado, cargando, login, logout, cerrarPorInactividad }}>
       {children}
     </AuthContext.Provider>
   );

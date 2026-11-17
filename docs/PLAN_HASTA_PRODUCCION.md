@@ -1501,27 +1501,12 @@ hacerlas después cuesta lo mismo.
 **Lo que sí es condición:** antes de dar de alta una Prestadora real de un país, ese país tiene que
 tener cargado lo suyo. Lo de cada país, con artículo, está en su documento, en `docs/legal/<país>.md`.
 
-**121.** **La revisión del registro de accesos, que es lo que casi nadie hace.** El 45 CFR
-164.308(a)(1)(ii)(D) es «Required», no «Addressable»: hay que **revisar** los registros, con
-constancia fechada y revisor con nombre. Un registro que nadie mira incumple aunque sea perfecto.
-
-Se construye como trabajo del sistema, no como formulario: el sistema junta lo que se sale de lo
-normal —accesos fuera de horario, a pacientes sin relación de cuidado con quien accede, en volumen
-inusual— y se lo presenta a quien revisa. Quien revisa firma que revisó, y esa firma es la
-evidencia.
-
-La norma holandesa NEN 7513 pide además dos cosas que sirven en cualquier país: un resumen por
-persona del personal —cuántas historias distintas vio o exportó en un período, cuántos accesos de
-emergencia— y un informe diario de lo que se sale de lo normal. Y que **mirar el registro de
-accesos también quede anotado**, sin forma de apagarlo: hoy consultarlo, desde la Auditoría o desde
-la Ficha del Cliente, no deja fila.
-
-El acceso a un paciente sin relación de cuidado es la regla sueca —Patientdatalagen 4 kap. 2 §— y
-es la más fina del conjunto: no alcanza con pertenecer a la Prestadora. Chile la escribió como
-requisito de arquitectura, y por eso su parte está en los cimientos y no acá.
-
-**Comprobación:** la constancia de revisión existe, tiene fecha y nombre, y se puede mostrar para
-cualquier mes.
+**121. Usted** — **La pantalla de la revisión del registro de accesos.** Espera su autorización,
+porque es una pantalla nueva. El backend ya está: junta los accesos fuera de horario, sin guardia
+con el Paciente o sobre demasiados Pacientes en el día; arma el resumen por persona del personal;
+cuenta todos los días lo del día anterior; guarda la constancia firmada de quien revisó, con fecha
+y nombre; y anota cada vez que alguien mira el registro. Falta la pantalla donde la administración
+lo ve y firma.
 
 **122.** **El motor de conservación y borrado.** La tabla de reglas, `reglas_de_conservacion`,
 tiene un solo renglón, el del registro de accesos en Argentina, y ya puede expresar tramos
@@ -1597,68 +1582,32 @@ vencimiento no lo alcanza, y se conserva hasta diez años.
 **Comprobación:** con dos Prestadoras de países distintos y las mismas fechas cargadas, el motor
 decide distinto en cada una y lo explica citando la regla que aplicó.
 
-**123.** **Los derechos de la persona.** Exportación de lo propio, en formato que se pueda leer en
-otro lado: el Anexo II sección 2 del EHDS lo convierte en deber duro contra el encierro en el
-proveedor, y la portabilidad está en casi todas las leyes latinoamericanas.
+**123. Usted** — **Las pantallas de los derechos de la persona.** Esperan su autorización, porque
+son pantallas nuevas: en el Panel, cargar y responder los pedidos de una persona sobre sus datos y
+bajarle sus datos; en la aplicación del Cliente, bajar los propios y ver quién entró a la
+información de salud de su Paciente. El backend ya está, con el plazo de cada pedido contado en
+días hábiles del país y el aviso antes de que venza. **Los plazos y los feriados de cada país se
+cargan en el paso de la configuración por país**, porque cada uno sale del documento legal de ese
+país con su artículo: hoy ninguno está cargado, y sin plazo un pedido no vence.
 
-Plazo de respuesta por jurisdicción: Costa Rica cinco días hábiles, Panamá diez para responder y
-cinco para modificar, Argentina cuarenta y ocho horas para la copia de la historia clínica. Sale de
-la configuración del país, con aviso a quien tiene que contestar antes de que venza. Y quién hereda
-el derecho al fallecer cambia por país: en Costa Rica pasa a sucesores o herederos.
+**124. Usted** — **La pantalla de las brechas de seguridad.** Espera su autorización, porque es una
+pantalla nueva. El backend ya está: cada incidente guarda cuándo ocurrió y cuándo se supo, los
+Pacientes alcanzados, la evaluación de los cuatro factores y cuándo se avisó; la cuenta regresiva
+la calcula la base con el plazo del país de la Prestadora. Están cargados Costa Rica y Panamá. **Los
+plazos de los otros países y los textos de aviso se cargan en el paso de la configuración por
+país**, porque cada uno sale del documento legal de ese país con su artículo.
 
-La exportación incluye el historial del registro clínico, no sólo el estado de hoy. Y la persona
-puede ver **quién entró a su información de salud** por su cuenta (EHDS art. 9; NEN 7513, 5.2 y
-9.1): hoy depende de que la Prestadora le entregue la planilla desde la Ficha.
-
-**Comprobación:** un pedido de acceso cargado en una Prestadora de Costa Rica vence a los cinco días
-hábiles y avisa antes; el mismo pedido en Panamá vence a los diez.
-
-**124.** **Las brechas, construidas para 24 horas.** Hay cinco relojes y manda el más corto. Europa:
-NIS2 exige aviso temprano a las 24 horas, y el art. 33(2) del GDPR obliga al encargado a avisarle al
-responsable sin dilación indebida, sin umbral y sin derecho a filtrar. Estados Unidos: el 164.410 da
-60 días al proveedor, pero **la regla no le da al cliente 60 días nuevos**, así que un proveedor que
-consuma los suyos deja a su cliente en infracción automática. Latinoamérica: Costa Rica cinco días
-hábiles **contados desde que ocurrió**, no desde que se supo, avisando al titular **y** a la
-autoridad; Perú 48 horas; Brasil tres días hábiles; Panamá y Uruguay 72 horas; Ecuador cinco días
-hábiles a la autoridad de datos **y a la de telecomunicaciones**, con el encargado obligado a
-avisarle al responsable en dos, y tres días al titular contados desde cuando se conoció el riesgo;
-Chile no pone plazo en horas y dice «sin dilaciones indebidas», que es peor porque no da margen.
-
-**Dos relojes distintos en el mismo expediente es lo normal.** De ahí la decisión de diseño: el
-sistema anota **los dos momentos** —cuándo ocurrió y cuándo se supo— en todo incidente, y cada país
-calcula con el que le corresponde. Guardar uno solo obliga a elegir a cuál país incumplirle.
-
-Lo que se construye: poder decir por evento qué Prestadora y qué pacientes —sin eso cualquier
-incidente se vuelve notificación masiva—; registro de todos los incidentes, notificados o no (art.
-33(5) del GDPR, art. 38 del Decreto 285 panameño); la evaluación de cuatro factores del 164.402(2),
-porque allá todo acceso no permitido se presume brecha salvo que se demuestre baja probabilidad de
-compromiso y la carga de la prueba es de la empresa; y plantillas de aviso por jurisdicción, con el
-contenido mínimo de cada una —el 164.404(c) pide cinco elementos—.
-
-**Comprobación:** un incidente de prueba sobre una Prestadora produce la lista de pacientes
-alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva correcta.
-
-**125.** **Quién entra y cómo.**
+**125. Usted** — **El segundo factor obligatorio y la pantalla del acceso de emergencia.** Esperan
+su autorización, porque son pantallas nuevas.
 
 - **Segundo factor obligatorio.** El Panel no lo tiene: la entrada con token salió de Careonys y
   quedó guardada en el estante de CeltaTech (`Codigos-utiles`), lista para volver. Ninguna norma
   vigente de Estados Unidos lo exige —el 164.312(d) es un estándar desnudo—, pero ningún comprador
-  grande compra sin él. La NEN 7513 (8.1) sí lo exige para ver el registro de accesos.
-- **Ninguna cuenta compartida.** El 164.312(a)(2)(i) exige identificación única por persona y está
-  marcado «Required»: una cuenta compartida es incumplimiento liso y llano.
-- **Acceso de emergencia.** El 164.312(a)(2)(ii) también es «Required» y hoy no existe: una vía
-  definida para llegar al dato cuando la normal no está, registrada y revisada como cualquier otra.
-  La NEN 7513 (6.2.2) pide además que quede anotada como hecho aparte, no como una lectura más.
-- **Cierre por inactividad para todos**, no sólo para el permiso de acceso de CeltaTech. El Panel
-  ya lo tiene; las dos aplicaciones no.
-- **Fin de sesión y exportaciones en el registro.** Perú (DS 016-2024-JUS art. 46) pide anotar la
-  hora de inicio y de fin de sesión y cada exportación. Hoy se anota la entrada al Panel; el fin de
-  sesión y las exportaciones, no.
-- **El acceso del personal propio.** C5 OPS-30.01B cubre la separación cliente-de-cliente **y**
-  cliente-del-proveedor: el camino por el que el personal de CeltaTech alcanza los datos está dentro
-  del alcance de la auditoría. La forma ya está escrita en `..\..\CLAUDE.md` §6 —una Organización
-  por vez, acotado, con corte por inactividad, todo auditado— y lo que faltaba era que no exista
-  ninguna credencial permanente que alcance a varias, que es lo que resuelven los cimientos.
+  grande compra sin él. La NEN 7513 (8.1) sí lo exige para ver el registro de accesos. Volver a
+  ponerlo pide la pantalla donde cada persona da de alta su token.
+- **La pantalla del acceso de emergencia.** El backend ya está: quien no alcanza la información de
+  salud de un Paciente la abre por un tiempo acotado, con el motivo escrito, y queda anotado como
+  hecho aparte en el registro (164.312(a)(2)(ii) y NEN 7513, 6.2.2). Falta el botón en el Panel.
 
 **Comprobación:** con el segundo factor obligatorio encendido, una cuenta sin él no entra a ninguna
 pantalla del Panel.

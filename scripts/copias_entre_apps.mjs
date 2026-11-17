@@ -227,9 +227,13 @@ export const GRUPOS = [
     copias: ['backend/src/utils/avisoDeAusencia.js'],
   },
   {
-    que: 'los bordes del cierre del Panel por inactividad',
+    que: 'los bordes del cierre por inactividad, en el Panel y en las dos aplicaciones',
     original: 'panel/src/lib/cierrePorInactividad.js',
-    copias: ['backend/src/utils/cierrePorInactividad.js'],
+    copias: [
+      'backend/src/utils/cierrePorInactividad.js',
+      'pwa-clientes/src/lib/cierrePorInactividad.js',
+      'pwa-asistentes/src/lib/cierrePorInactividad.js',
+    ],
   },
   {
     que: 'cuándo un turno vacío se vuelve un incidente grave y cómo puede cerrarse',
@@ -382,6 +386,26 @@ export const GRUPOS = [
     que: 'el mensaje emergente que avisa que algo salió bien y se va solo',
     original: 'panel/src/lib/mensajeEmergente.js',
     copias: ['pwa-asistentes/src/lib/mensajeEmergente.js', 'pwa-clientes/src/lib/mensajeEmergente.js'],
+  },
+  {
+    que: 'cuándo se tocó la pantalla por última vez, y si la sesión se cerró por inactividad',
+    original: 'panel/src/lib/ultimaActividad.js',
+    copias: ['pwa-clientes/src/lib/ultimaActividad.js', 'pwa-asistentes/src/lib/ultimaActividad.js'],
+  },
+  {
+    que: 'la constancia del fin de la sesión, que nunca frena el cierre',
+    original: 'panel/src/lib/finDeSesion.js',
+    copias: ['pwa-clientes/src/lib/finDeSesion.js', 'pwa-asistentes/src/lib/finDeSesion.js'],
+  },
+  {
+    que: 'el cierre de la aplicación por inactividad',
+    original: 'pwa-clientes/src/hooks/useCierrePorInactividad.js',
+    copias: ['pwa-asistentes/src/hooks/useCierrePorInactividad.js'],
+  },
+  {
+    que: 'la franja del último minuto antes del cierre por inactividad, en las aplicaciones',
+    original: 'pwa-clientes/src/components/AvisoDeInactividad.jsx',
+    copias: ['pwa-asistentes/src/components/AvisoDeInactividad.jsx'],
   },
   {
     que: 'la sesión de quien entró a la aplicación',

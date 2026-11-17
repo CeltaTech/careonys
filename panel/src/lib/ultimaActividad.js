@@ -1,18 +1,22 @@
 import { IDENTIDAD } from '../config/identidadProducto';
 
-/* Cuándo se tocó el Panel por última vez, y por qué se cerró la sesión.
+/* Cuándo se tocó la pantalla por última vez, y por qué se cerró la sesión.
    ==========================================================================
 
-   LA ÚLTIMA ACTIVIDAD se guarda en el almacenamiento local para que todas las pestañas del Panel
-   abiertas en este navegador cuenten el mismo tiempo: quien trabaja en una no ve cerrarse la otra.
-   Si el almacenamiento está bloqueado —ventana privada, permisos del navegador— se cuenta en
-   memoria, y cada pestaña lleva su propia cuenta.
+   Lo usan el Panel y las dos aplicaciones. Original en el Panel; las copias de las aplicaciones
+   las mantiene `scripts/sincronizar_copias.mjs`. Cada una corre en su propia dirección, así que
+   cada una tiene su propio almacenamiento y las claves no se cruzan.
+
+   LA ÚLTIMA ACTIVIDAD se guarda en el almacenamiento local para que todas las pestañas abiertas en
+   este navegador cuenten el mismo tiempo: quien trabaja en una no ve cerrarse la otra. Si el
+   almacenamiento está bloqueado —ventana privada, permisos del navegador— se cuenta en memoria, y
+   cada pestaña lleva su propia cuenta.
 
    EL MOTIVO DEL CIERRE se guarda en el almacenamiento de la pestaña, y lo lee una sola vez la
    pantalla de ingreso para mostrar el aviso. */
 
-const CLAVE_ACTIVIDAD = `${IDENTIDAD.codigo}-panel-ultima-actividad`;
-const CLAVE_CIERRE = `${IDENTIDAD.codigo}-panel-cierre-por-inactividad`;
+const CLAVE_ACTIVIDAD = `${IDENTIDAD.codigo}-ultima-actividad`;
+const CLAVE_CIERRE = `${IDENTIDAD.codigo}-cierre-por-inactividad`;
 
 let enMemoria = Date.now();
 

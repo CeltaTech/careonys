@@ -161,12 +161,18 @@ export const T = {
     marca: {
       con_tecnologia_de: 'con la tecnología de {{producto}}',
     },
+    // La franja del último minuto antes del cierre por inactividad.
+    inactividad: {
+      aviso: 'La sesión se cerrará en 1 minuto por inactividad.',
+      seguir: 'Continuar',
+    },
     auth: {
       titulo: '{{producto}} para Asistentes',
       usuario: 'Usuario',
       password: 'Contraseña',
       ingresar: 'Ingresar',
       ingresando: 'Ingresando…',
+      cerrada_por_inactividad: 'La sesión se cerró por inactividad.',
       error_credenciales: 'Usuario o contraseña incorrectos.',
       activar_titulo: 'Activar la cuenta',
       activar_password_nueva: 'Contraseña nueva',
@@ -850,12 +856,18 @@ export const T = {
     marca: {
       con_tecnologia_de: 'powered by {{producto}}',
     },
+    // La franja del último minuto antes del cierre por inactividad.
+    inactividad: {
+      aviso: 'The session will close in 1 minute due to inactivity.',
+      seguir: 'Continue',
+    },
     auth: {
       titulo: '{{producto}} for Assistants',
       usuario: 'User name',
       password: 'Password',
       ingresar: 'Log in',
       ingresando: 'Logging in…',
+      cerrada_por_inactividad: 'The session was closed due to inactivity.',
       error_credenciales: 'Incorrect user name or password.',
       activar_titulo: 'Activate your account',
       activar_password_nueva: 'New password',
@@ -1479,12 +1491,18 @@ export const T = {
     marca: {
       con_tecnologia_de: 'com a tecnologia de {{producto}}',
     },
+    // La franja del último minuto antes del cierre por inactividad.
+    inactividad: {
+      aviso: 'A sessão será encerrada em 1 minuto por inatividade.',
+      seguir: 'Continuar',
+    },
     auth: {
       titulo: '{{producto}} para Assistentes',
       usuario: 'Usuário',
       password: 'Senha',
       ingresar: 'Entrar',
       ingresando: 'Entrando…',
+      cerrada_por_inactividad: 'A sessão foi encerrada por inatividade.',
       error_credenciales: 'Usuário ou senha incorretos.',
       activar_titulo: 'Ativar a conta',
       activar_password_nueva: 'Nova senha',

@@ -33,7 +33,7 @@ import { useAuth } from './AuthContext';
 
 const MARCA_VACIA = { nombre: null, logoUrl: null };
 const CONTACTO_VACIO = { telefono: null, whatsapp: null, email: null };
-const PERFIL_VACIO = { marca: MARCA_VACIA, contacto: CONTACTO_VACIO, visibilidad: null, intermediacion: false };
+const PERFIL_VACIO = { marca: MARCA_VACIA, contacto: CONTACTO_VACIO, visibilidad: null, intermediacion: false, cierrePorInactividad: null };
 
 // El teléfono para emergencias se guarda en el teléfono, no sólo en memoria: el botón que lo usa
 // aparece cuando una emergencia no pudo salir, y si la aplicación se abrió sin internet `/perfil`
@@ -86,6 +86,7 @@ export function PerfilProvider({ children }) {
           contacto: datos.contacto ?? CONTACTO_VACIO,
           visibilidad: datos.visibilidad ?? null,
           intermediacion: datos.intermediacion === true,
+          cierrePorInactividad: datos.cierrePorInactividad ?? null,
         });
         if (datos.marca) guardarMarca(datos.marca);
         // Sólo la aplicación del Asistente lo recibe; la otra no toca lo guardado.
@@ -154,4 +155,11 @@ export function useSeVe() {
 // que después desaparece es peor que dibujarla un instante más tarde.
 export function useOfreceIntermediacion() {
   return useContext(PerfilContext).intermediacion === true;
+}
+
+// Cuánto queda abierta la sesión sin nadie delante: la misma configuración que usa el Panel. Mientras
+// la respuesta no llegó, o si no llegó, contesta `null` y la aplicación no cierra por inactividad,
+// igual que el Panel cuando no tiene la fila de la Prestadora.
+export function useCierrePorInactividadDeLaPrestadora() {
+  return useContext(PerfilContext).cierrePorInactividad ?? null;
 }

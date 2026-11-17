@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
+import AvisoDeInactividad from './AvisoDeInactividad';
 import { useMarca, useOfreceIntermediacion, useSeVe } from '../context/PerfilContext';
 import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
@@ -55,6 +56,7 @@ export default function Layout() {
         </NavLink>
       </header>
       <main className="pwa-body">
+        <AvisoDeInactividad />
         <Outlet />
         {/* La única mención del producto en toda la aplicación, y al pie. Va siempre: es el
             crédito de quién hizo el software, no una función que se venda. */}

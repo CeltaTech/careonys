@@ -16,6 +16,7 @@ import { conDomicilioDelDia, pacientesConDomicilioDelDia } from '../utils/domici
 import { FICHA_DOMICILIO, FICHA_NOMBRE, FICHA_UBICACION, saludCon } from '../utils/fichaDelPaciente.js';
 import { llegoAlDomicilio } from '../utils/toleranciaCheckin.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
+import { cierrePorInactividadDelPedido } from '../utils/cierrePorInactividadDelPedido.js';
 import { telefonoParaEmergencias } from '../utils/contactoDeLaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
@@ -303,6 +304,9 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // las que agregó su Prestadora. Viajan con el perfil porque se muestran en la misma pantalla.
   const opcionesDisponibilidad = await opcionesDeDisponibilidad(db, req.usuarioAsistente.prestadoraId);
 
+  // Cuánto queda abierta la sesión sin nadie delante: la aplicación cuenta el tiempo desde que abre.
+  const cierrePorInactividad = await cierrePorInactividadDelPedido(db, req.usuarioAsistente.prestadoraId);
+
   res.json({
     perfil: { ...perfil, zonas },
     opciones_disponibilidad: opcionesDisponibilidad,
@@ -312,6 +316,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     visibilidad,
     intermediacion,
     emergencias,
+    cierrePorInactividad,
   });
 });
 

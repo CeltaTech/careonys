@@ -65,6 +65,8 @@ function conElActo(datos) {
 
 export const api = {
   perfil: () => pedido('/perfil'),
+  // La constancia de que la sesión se cierra, a mano o por inactividad. Va antes del cierre.
+  finDeSesion: (causa) => pedido('/cuenta-segura/fin-de-sesion', { method: 'POST', body: JSON.stringify({ causa }) }),
   // Sus documentos, con cuántos lleva enviados de cuántos le exige su Prestadora. Va aparte de
   // `/perfil` porque `/perfil` lo pide la aplicación al arrancar y esto lo mira quien entró a
   // Documentos.

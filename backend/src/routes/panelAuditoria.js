@@ -3,6 +3,35 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { esAdminOSuperior } from '../utils/roles.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import {
+  registrarActividadSinFalta,
+  ACCION_CONSULTA_DEL_REGISTRO_DE_ACCESOS,
+  ACCION_EXPORTACION,
+} from '../utils/registroDeActividad.js';
+
+// Ver el registro de accesos a la información de salud deja siempre su renglón, y si el renglón
+// no se pudo escribir no se entrega nada. Cada vista dice qué parte se vio.
+const VISTA_FICHA_DEL_CLIENTE = 'ficha_del_cliente';
+const VISTA_FUERA_DE_LO_NORMAL = 'fuera_de_lo_normal';
+const VISTA_RESUMEN_POR_PERSONA = 'resumen_por_persona';
+
+function anotarLaConsulta(req, vista, { registroId = null, desde = null, hasta = null } = {}) {
+  const detalle = { vista };
+  if (desde) detalle.desde = desde;
+  if (hasta) detalle.hasta = hasta;
+  return registrarActividadSinFalta(req.usuarioPanel, ACCION_CONSULTA_DEL_REGISTRO_DE_ACCESOS, {
+    tablaAfectada: 'consultas_a_hce',
+    registroId,
+    detalle,
+  });
+}
+
+function anotarLaDescarga(req) {
+  return registrarActividadSinFalta(req.usuarioPanel, ACCION_EXPORTACION, {
+    tablaAfectada: 'consultas_a_hce',
+    detalle: { metodo: req.method, ruta: String(req.originalUrl ?? '').split('?')[0] },
+  });
+}
 
 // Ítem G del pendiente #30 — lectura del registro de auditoría de los permisos de acceso
 // técnico (tabla auditoria_de_accesos) y del registro de actividad de la Prestadora.
@@ -138,19 +167,22 @@ panelAuditoriaRouter.get('/accesos-a-la-informacion-de-salud/:clienteId', requie
     .select('id, persona:personas!pacientes_persona_de_la_misma_prestadora(nombre_visible)')
     .eq('cliente_id', clienteId);
   if (errorPacientes) return responderError(res, errorPacientes);
-  if (!pacientes?.length) return res.json({ accesos: [] });
 
-  const { data: renglones, error: errorRegistro } = await db
-    .from('consultas_a_hce')
-    .select('id, usuario_id, paciente_id, categorias, momento, origen')
-    .in('paciente_id', pacientes.map((p) => p.id))
-    .order('momento', { ascending: false })
-    .limit(5000);
-  if (errorRegistro) return responderError(res, errorRegistro);
-
-  const pacientePorId = new Map(pacientes.map((p) => [p.id, p.persona?.nombre_visible ?? null]));
   try {
-    res.json({ accesos: await armarLosAccesos(prestadoraId, renglones ?? [], pacientePorId) });
+    let accesos = [];
+    if (pacientes?.length) {
+      const { data: renglones, error: errorRegistro } = await db
+        .from('consultas_a_hce')
+        .select('id, usuario_id, paciente_id, categorias, momento, origen')
+        .in('paciente_id', pacientes.map((p) => p.id))
+        .order('momento', { ascending: false })
+        .limit(5000);
+      if (errorRegistro) throw errorRegistro;
+      const pacientePorId = new Map(pacientes.map((p) => [p.id, p.persona?.nombre_visible ?? null]));
+      accesos = await armarLosAccesos(prestadoraId, renglones ?? [], pacientePorId);
+    }
+    await anotarLaConsulta(req, VISTA_FICHA_DEL_CLIENTE, { registroId: clienteId });
+    res.json({ accesos });
   } catch (error) {
     return responderError(res, error);
   }
@@ -254,8 +286,172 @@ panelAuditoriaRouter.get('/registro-de-accesos-por-borrar/renglones', requiereRo
       for (const p of data ?? []) pacientePorId.set(p.id, p.persona?.nombre_visible ?? null);
     }
 
-    res.json({ anio: fila.anio, accesos: await armarLosAccesos(prestadoraId, renglones, pacientePorId) });
+    const accesos = await armarLosAccesos(prestadoraId, renglones, pacientePorId);
+    await anotarLaDescarga(req);
+    res.json({ anio: fila.anio, accesos });
   } catch (error) {
     return responderError(res, error);
   }
 });
+
+// LA REVISIÓN DEL REGISTRO DE ACCESOS.
+//
+// La administración mira, para un período, los accesos que salen de lo normal y el resumen por
+// persona, y firma la constancia de que lo revisó. Todo con la sesión de quien pide: la base
+// resuelve la Prestadora de la sesión, y sólo le contesta a la administración de esa Prestadora.
+// El período son días de la zona horaria de la Prestadora, con los dos extremos incluidos.
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+function esDia(texto) {
+  if (typeof texto !== 'string' || !DIA.test(texto)) return false;
+  const fecha = new Date(`${texto}T00:00:00Z`);
+  return !Number.isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 10) === texto;
+}
+
+// Devuelve el período, o null si vino mal: falta un extremo, no es una fecha o termina antes de
+// empezar.
+export function periodoDelPedido({ desde, hasta } = {}) {
+  if (!esDia(desde) || !esDia(hasta) || hasta < desde) return null;
+  return { desde, hasta };
+}
+
+function periodoInvalido(res) {
+  return res.status(400).json({ error: 'periodo_invalido', motivo: 'periodo_invalido' });
+}
+
+// Una función de la base que devuelve un conjunto se lee de a tandas, para no cortarse en el tope
+// de renglones por respuesta.
+async function todoLoQueDevuelve(db, funcion, parametros) {
+  const filas = [];
+  for (let desde = 0; ; desde += TANDA) {
+    const { data, error } = await db.rpc(funcion, parametros).range(desde, desde + TANDA - 1);
+    if (error) throw error;
+    filas.push(...(data ?? []));
+    if (!data || data.length < TANDA) break;
+  }
+  return filas;
+}
+
+panelAuditoriaRouter.get('/accesos-fuera-de-lo-normal', requiereRolPanel, async (req, res) => {
+  if (!soloAdministracion(req, res)) return;
+  const periodo = periodoDelPedido(req.query);
+  if (!periodo) return periodoInvalido(res);
+  try {
+    const filas = await todoLoQueDevuelve(clienteDelPedido(req), 'accesos_fuera_de_lo_normal', {
+      p_desde: periodo.desde, p_hasta: periodo.hasta,
+    });
+    await anotarLaConsulta(req, VISTA_FUERA_DE_LO_NORMAL, periodo);
+    res.json({
+      accesos: filas.map((f) => ({
+        id: f.consulta_id,
+        momento: f.momento,
+        persona: f.persona ?? null,
+        paciente: f.paciente ?? null,
+        categorias: f.categorias ?? [],
+        lugar: lugarDelOrigen(f.origen),
+        motivos: f.motivos ?? [],
+      })),
+    });
+  } catch (error) {
+    return responderError(res, error);
+  }
+});
+
+panelAuditoriaRouter.get('/resumen-por-persona', requiereRolPanel, async (req, res) => {
+  if (!soloAdministracion(req, res)) return;
+  const periodo = periodoDelPedido(req.query);
+  if (!periodo) return periodoInvalido(res);
+  try {
+    const filas = await todoLoQueDevuelve(clienteDelPedido(req), 'resumen_del_registro_de_accesos_por_persona', {
+      p_desde: periodo.desde, p_hasta: periodo.hasta,
+    });
+    await anotarLaConsulta(req, VISTA_RESUMEN_POR_PERSONA, periodo);
+    res.json({
+      personas: filas.map((f) => ({
+        usuario_id: f.usuario_id,
+        persona: f.persona ?? null,
+        pacientes_distintos: f.pacientes_distintos ?? 0,
+        accesos: f.accesos ?? 0,
+        accesos_de_emergencia: f.accesos_de_emergencia ?? 0,
+      })),
+    });
+  } catch (error) {
+    return responderError(res, error);
+  }
+});
+
+// Las observaciones son opcionales. El tope de largo es el mismo que sostiene la base.
+const LARGO_MAXIMO_DE_OBSERVACIONES = 2000;
+
+// Firmar la constancia de revisión de un período. Quién firma, para qué Prestadora y cuándo lo
+// pone la base desde la sesión: del pedido sólo se toman el período y las observaciones.
+panelAuditoriaRouter.post('/constancias-de-revision', requiereRolPanel, async (req, res) => {
+  if (!soloAdministracion(req, res)) return;
+  const periodo = periodoDelPedido(req.body);
+  if (!periodo) return periodoInvalido(res);
+  const { observaciones } = req.body ?? {};
+  if (observaciones != null && typeof observaciones !== 'string') {
+    return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
+  }
+  const texto = observaciones?.trim() ? observaciones.trim() : null;
+  if (texto && texto.length > LARGO_MAXIMO_DE_OBSERVACIONES) {
+    return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
+  }
+
+  const { data, error } = await clienteDelPedido(req)
+    .from('constancias_de_revision_del_registro_de_accesos')
+    .insert({ desde: periodo.desde, hasta: periodo.hasta, observaciones: texto })
+    .select('id, desde, hasta, revisado_por, revisado_en, observaciones')
+    .single();
+  if (error) return responderError(res, error);
+  // La constancia ya quedó firmada: si el nombre no se pudo leer, se contesta igual que salió
+  // bien, sin el nombre. Contestar que falló haría firmar dos veces el mismo período.
+  let constancia = { ...data, persona: null };
+  try {
+    [constancia] = await conQuienFirmo(req.usuarioPanel.prestadoraId, [data]);
+  } catch (errorNombre) {
+    console.error('No se pudo leer el nombre de quien firmó la constancia:', errorNombre?.message ?? errorNombre);
+  }
+  res.status(201).json({ constancia });
+});
+
+// Las constancias firmadas, de la más nueva a la más vieja. Con un período, sólo las que se
+// cruzan con él: así se muestra la de cualquier mes.
+panelAuditoriaRouter.get('/constancias-de-revision', requiereRolPanel, async (req, res) => {
+  if (!soloAdministracion(req, res)) return;
+  const { prestadoraId } = req.usuarioPanel;
+  const conPeriodo = req.query.desde !== undefined || req.query.hasta !== undefined;
+  const periodo = conPeriodo ? periodoDelPedido(req.query) : null;
+  if (conPeriodo && !periodo) return periodoInvalido(res);
+
+  try {
+    let consulta = clienteDelPedido(req)
+      .from('constancias_de_revision_del_registro_de_accesos')
+      .select('id, desde, hasta, revisado_por, revisado_en, observaciones')
+      .order('desde', { ascending: false })
+      .order('revisado_en', { ascending: false })
+      .limit(500);
+    if (periodo) consulta = consulta.lte('desde', periodo.hasta).gte('hasta', periodo.desde);
+    const { data, error } = await consulta;
+    if (error) throw error;
+
+    res.json({ constancias: await conQuienFirmo(prestadoraId, data ?? []) });
+  } catch (error) {
+    return responderError(res, error);
+  }
+});
+
+// El nombre de quien firmó cada constancia. Se lee con la credencial del trabajo de la Prestadora,
+// por lo mismo que en el registro de accesos: con la de la persona, cada uno lee sólo su fila.
+async function conQuienFirmo(prestadoraId, constancias) {
+  const ids = [...new Set(constancias.map((c) => c.revisado_por).filter(Boolean))];
+  if (!ids.length) return constancias.map((c) => ({ ...c, persona: null }));
+  const { data: usuarios, error } = await enLaPrestadora(prestadoraId, 'nombres de las constancias de revisión', (conexion) => conexion
+    .from('usuarios')
+    .select('id, nombre')
+    .eq('prestadora_id', prestadoraId)
+    .in('id', ids));
+  if (error) throw error;
+  const nombres = new Map((usuarios ?? []).map((u) => [u.id, u.nombre]));
+  return constancias.map((c) => ({ ...c, persona: nombres.get(c.revisado_por) ?? null }));
+}

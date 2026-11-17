@@ -5,6 +5,7 @@ import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsulta
 import { rangosParaLosReportes } from '../utils/vitalesReferencia.js';
 import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
+import { cierrePorInactividadDelPedido } from '../utils/cierrePorInactividadDelPedido.js';
 import { contactoDeLaPrestadora } from '../utils/contactoDeLaPrestadora.js';
 import { visibilidadDelPedido, visibilidadDeLaPrestadora, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
@@ -211,6 +212,9 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   // preguntarlo.
   const intermediacion = elClienteEntraAMatch();
 
+  // Cuánto queda abierta la sesión sin nadie delante: la aplicación cuenta el tiempo desde que abre.
+  const cierrePorInactividad = await cierrePorInactividadDelPedido(db, req.usuarioCliente.prestadoraId);
+
   res.json({
     perfil: {
       ...usuario,
@@ -222,6 +226,7 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
     accesos,
     intermediacion,
     instruccionPendiente: pendiente,
+    cierrePorInactividad,
   });
 });
 

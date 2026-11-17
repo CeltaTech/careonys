@@ -449,6 +449,20 @@ p {
   color: var(--aviso-texto);
 }
 
+/* La franja del último minuto antes del cierre por inactividad: el texto y el botón juntos, y uno
+   debajo del otro cuando no entran en el ancho del teléfono. */
+.franja-inactividad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.franja-inactividad .btn {
+  margin-top: 0;
+}
+
 /* El aviso de que los datos de contacto van tapados. No es una alarma: dice algo que conviene
    saber antes de escribir. */
 .aviso-suave {

@@ -6,6 +6,7 @@ import { esteAparatoGuardaLlaves, loCancelaronAMano } from '../lib/llaveDelDispo
 import { abrirSesionConLaHuella, hayAccesoGuardado, olvidarAccesoGuardado } from '../lib/accesoGuardado';
 import { api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
+import { anotarActividad, huboCierrePorInactividad, olvidarCierrePorInactividad } from '../lib/ultimaActividad';
 
 // ORIGINAL. La copia de `pwa-asistentes/` se regenera con `scripts/sincronizar_copias.mjs` y nunca
 // se edita a mano. Lo único que cambia entre las dos aplicaciones es `lib/api.js`, que cada una
@@ -26,6 +27,8 @@ export default function Login() {
   const [enviando, setEnviando] = useState(false);
   const [hayLlave, setHayLlave] = useState(false);
   const [entrandoConLlave, setEntrandoConLlave] = useState(false);
+  // El aviso es de la sesión que se cerró, y se lee una sola vez al abrir esta pantalla.
+  const [cerradaPorInactividad] = useState(huboCierrePorInactividad);
 
   useEffect(() => {
     let vigente = true;
@@ -47,6 +50,8 @@ export default function Login() {
     setEnviando(false);
     if (errorLogin) {
       setError(t.auth.error_credenciales);
+    } else {
+      olvidarCierrePorInactividad();
     }
   }
 
@@ -56,7 +61,10 @@ export default function Login() {
     try {
       // Si sale bien no hay nada más que hacer acá: la sesión queda abierta y quien escucha los
       // cambios de sesión cambia de pantalla solo.
+      // Una entrada nueva empieza a contar de cero, igual que con la contraseña.
+      anotarActividad();
       const llaveId = await abrirSesionConLaHuella();
+      olvidarCierrePorInactividad();
       try {
         await api.llaveUsada(llaveId);
       } catch (errorAviso) {
@@ -88,6 +96,7 @@ export default function Login() {
             mal, a propósito, porque decirlo le regalaría a cualquiera la mitad de la
             respuesta. Los dos quedan marcados y los dos leen el mismo motivo. */}
         {error && <div id="login-error" className="alert alert-error" role="alert">{error}</div>}
+        {!error && cerradaPorInactividad && <div className="alert alert-info" role="status">{t.auth.cerrada_por_inactividad}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">
             <label htmlFor="usuario">{t.auth.usuario}</label>

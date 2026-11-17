@@ -27,6 +27,8 @@ import {
 import {
   registrarActividad,
   yaQuedoRegistrado,
+  registrarFinDeSesion,
+  causaDeFinDeSesionValida,
   ACCION_VERIFICACION_DE_TELEFONO,
 } from '../utils/registroDeActividad.js';
 
@@ -346,6 +348,17 @@ export function rutasDeLaCuentaSegura({ requiereSesion, quienPide, soloElDuenoDe
     } catch (err) {
       responderError(res, err);
     }
+  });
+
+  // El fin de la sesión, a mano o por inactividad. La pantalla lo avisa justo antes de cerrar,
+  // con la sesión que todavía vale, y cierra igual aunque esto falle: anotar acompaña a la salida,
+  // no la frena. Nada de lo que viene en el pedido elige a quién se le anota: es la sesión.
+  router.post('/fin-de-sesion', requiereSesion, async (req, res) => {
+    const causa = req.body?.causa;
+    if (!causaDeFinDeSesionValida(causa)) return responderError(res, new ErrorConMotivo('faltan_datos'));
+    await registrarFinDeSesion(quienPide(req), causa);
+    yaQuedoRegistrado(res);
+    return res.json({ ok: true });
   });
 
   return router;

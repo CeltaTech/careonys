@@ -122,6 +122,101 @@ COMMENT ON DOMAIN "public"."moneda_iso" IS 'Código de moneda de tres letras may
 
 
 
+CREATE OR REPLACE FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") RETURNS TABLE("consulta_id" "uuid", "usuario_id" "uuid", "persona" "text", "paciente_id" "uuid", "paciente" "text", "categorias" "text"[], "momento" timestamp with time zone, "origen" "text", "motivos" "text"[])
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  WITH configuracion AS (
+    SELECT p.zona_horaria AS zona,
+           p.registro_de_accesos_hora_de_inicio AS inicio,
+           p.registro_de_accesos_hora_de_fin AS fin,
+           p.registro_de_accesos_pacientes_por_dia AS tope,
+           make_interval(hours => p.registro_de_accesos_horas_alrededor_de_la_guardia) AS margen,
+           p.registro_de_accesos_horas_alrededor_de_la_guardia / 24 + 2 AS dias_de_margen
+      FROM prestadoras p
+     WHERE p.id = p_prestadora
+  ),
+  -- Las lecturas de personas en el período, con la hora del lugar.
+  lecturas AS (
+    SELECT c.id, c.usuario_id, c.paciente_id, c.categorias, c.momento, c.origen,
+           (c.momento AT TIME ZONE k.zona) AS hora_local,
+           k.inicio, k.fin, k.tope, k.margen
+      FROM consultas_a_hce c
+      CROSS JOIN configuracion k
+     WHERE c.prestadora_id = p_prestadora
+       AND c.usuario_id IS NOT NULL
+       AND c.momento >= (p_desde::timestamp AT TIME ZONE k.zona)
+       AND c.momento <  ((p_hasta + 1)::timestamp AT TIME ZONE k.zona)
+  ),
+  -- Las guardias que rodean el período, con su comienzo y su fin en hora del lugar. La que
+  -- termina a una hora menor que la de comienzo cruza la medianoche.
+  guardias_del_periodo AS (
+    SELECT g.paciente_id, g.coordinador_id, a.usuario_id AS asistente_usuario_id,
+           (g.fecha + g.hora_inicio) AS empieza,
+           (g.fecha + g.hora_fin
+             + CASE WHEN g.hora_fin <= g.hora_inicio THEN interval '1 day' ELSE interval '0' END) AS termina
+      FROM guardias g
+      CROSS JOIN configuracion k
+      LEFT JOIN asistentes a ON a.id = g.asistente_id AND a.prestadora_id = g.prestadora_id
+     WHERE g.prestadora_id = p_prestadora
+       AND g.estado <> 'cancelada'
+       AND g.fecha BETWEEN p_desde - k.dias_de_margen AND p_hasta + k.dias_de_margen
+  ),
+  -- Las personas que ese día leyeron más Pacientes distintos que el tope.
+  volumen AS (
+    SELECT l.usuario_id, l.hora_local::date AS dia
+      FROM lecturas l
+     GROUP BY l.usuario_id, l.hora_local::date
+    HAVING count(DISTINCT l.paciente_id) > max(l.tope)
+  ),
+  marcadas AS (
+    SELECT l.*,
+           array_remove(ARRAY[
+             CASE WHEN NOT (CASE WHEN l.inicio < l.fin
+                                 THEN l.hora_local::time >= l.inicio AND l.hora_local::time < l.fin
+                                 ELSE l.hora_local::time >= l.inicio OR l.hora_local::time < l.fin END)
+                   AND NOT EXISTS (
+                     SELECT 1 FROM guardias_del_periodo g
+                      WHERE g.asistente_usuario_id = l.usuario_id
+                        AND l.hora_local >= g.empieza AND l.hora_local < g.termina)
+                  THEN 'fuera_del_horario' END,
+             CASE WHEN NOT EXISTS (
+                     SELECT 1 FROM guardias_del_periodo g
+                      WHERE g.paciente_id = l.paciente_id
+                        AND (g.asistente_usuario_id = l.usuario_id OR g.coordinador_id = l.usuario_id)
+                        AND l.hora_local >= g.empieza - l.margen
+                        AND l.hora_local <  g.termina + l.margen)
+                   AND NOT EXISTS (
+                     SELECT 1 FROM pacientes pa
+                       JOIN servicios s ON s.prestadora_id = pa.prestadora_id
+                                       AND s.cliente_id = pa.cliente_id
+                      WHERE pa.id = l.paciente_id
+                        AND pa.prestadora_id = p_prestadora
+                        AND s.estado = 'vigente'
+                        AND s.coordinador_id = l.usuario_id)
+                  THEN 'sin_relacion_con_el_paciente' END,
+             CASE WHEN EXISTS (
+                     SELECT 1 FROM volumen v
+                      WHERE v.usuario_id = l.usuario_id AND v.dia = l.hora_local::date)
+                  THEN 'volumen_inusual' END
+           ], NULL) AS motivos
+      FROM lecturas l
+  )
+  SELECT m.id, m.usuario_id, u.nombre, m.paciente_id, pe.nombre_visible,
+         m.categorias, m.momento, m.origen, m.motivos
+    FROM marcadas m
+    LEFT JOIN usuarios u ON u.id = m.usuario_id
+    LEFT JOIN pacientes pa ON pa.id = m.paciente_id AND pa.prestadora_id = p_prestadora
+    LEFT JOIN personas pe ON pe.id = pa.persona_id
+   WHERE cardinality(m.motivos) > 0
+   ORDER BY m.momento DESC;
+$$;
+
+
+ALTER FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
+
+
+
 CREATE OR REPLACE FUNCTION "interno"."alarmas_a_la_vista_del_coordinador"("p_tipo" "text") RETURNS "uuid"[]
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -208,7 +303,8 @@ CREATE OR REPLACE FUNCTION "interno"."alcanza_la_informacion_de_salud"("p_pacien
           OR (interno.es_admin_prestadora()
               AND EXISTS (SELECT 1 FROM pacientes p
                            WHERE p.id = p_paciente
-                             AND p.prestadora_id = interno.prestadora_actual())))
+                             AND p.prestadora_id = interno.prestadora_actual()))
+          OR interno.tiene_acceso_de_emergencia(p_paciente))
 $$;
 
 
@@ -1661,6 +1757,28 @@ $_$;
 ALTER FUNCTION "interno"."cumple_modulo_11"("p_numero" "text") OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "interno"."derechos_por_vencer"("p_prestadora" "uuid") RETURNS TABLE("solicitud_id" "uuid", "tipo" "text", "recibida_en" timestamp with time zone, "vence_en" timestamp with time zone, "recibida_el" "date", "vence_el" "date")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT s.id, s.tipo, s.recibida_en, s.vence_en,
+         (s.recibida_en AT TIME ZONE interno.zona_horaria_de_la_prestadora(p_prestadora))::date,
+         (s.vence_en AT TIME ZONE interno.zona_horaria_de_la_prestadora(p_prestadora))::date
+    FROM solicitudes_de_derechos s
+    JOIN plazos_de_respuesta_de_derechos pz ON pz.id = s.plazo_id
+   WHERE s.prestadora_id = p_prestadora
+     AND s.estado = 'pendiente'
+     AND s.vence_en IS NOT NULL
+     AND s.aviso_enviado_en IS NULL
+     AND now() >= s.vence_en - make_interval(days => pz.dias_de_aviso)
+   ORDER BY s.vence_en, s.id
+$$;
+
+
+ALTER FUNCTION "interno"."derechos_por_vencer"("p_prestadora" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."descuento_lo_escribe_la_base"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -2228,6 +2346,56 @@ $$;
 
 
 ALTER FUNCTION "interno"."el_historial_clinico_no_se_toca"() OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."el_incidente_de_seguridad_anota_sus_cambios"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  IF (OLD.autoridad_notificada_at IS NOT NULL
+        AND NEW.autoridad_notificada_at IS DISTINCT FROM OLD.autoridad_notificada_at)
+     OR (OLD.titulares_notificados_at IS NOT NULL
+        AND NEW.titulares_notificados_at IS DISTINCT FROM OLD.titulares_notificados_at)
+     OR (OLD.responsable_notificado_at IS NOT NULL
+        AND NEW.responsable_notificado_at IS DISTINCT FROM OLD.responsable_notificado_at) THEN
+    RAISE EXCEPTION 'aviso_ya_dado'
+      USING ERRCODE = '23514',
+            DETAIL = 'La fecha de un aviso que ya se dio no se cambia.';
+  END IF;
+
+  IF NEW.factor_naturaleza_y_alcance IS DISTINCT FROM OLD.factor_naturaleza_y_alcance
+     OR NEW.factor_quien_recibio IS DISTINCT FROM OLD.factor_quien_recibio
+     OR NEW.factor_adquiridos_o_vistos IS DISTINCT FROM OLD.factor_adquiridos_o_vistos
+     OR NEW.factor_mitigacion IS DISTINCT FROM OLD.factor_mitigacion
+     OR NEW.conclusion IS DISTINCT FROM OLD.conclusion THEN
+    NEW.evaluado_por := interno.usuario_de_la_sesion();
+    NEW.evaluado_at := now();
+  END IF;
+
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."el_incidente_de_seguridad_anota_sus_cambios"() OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."el_incidente_de_seguridad_no_se_borra"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  RAISE EXCEPTION 'Un incidente de seguridad y sus pacientes alcanzados no se borran'
+    USING ERRCODE = '42501';
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."el_incidente_de_seguridad_no_se_borra"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."el_medio_de_pago_sale_del_catalogo"() RETURNS "trigger"
@@ -3884,6 +4052,26 @@ $$;
 ALTER FUNCTION "interno"."la_clave_de_la_administracion_la_cambia_celtatech"() OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "interno"."la_constancia_de_revision_la_firma_la_sesion"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    RAISE EXCEPTION 'La constancia de revisión no se edita y no se borra';
+  END IF;
+  NEW.prestadora_id := interno.prestadora_actual();
+  NEW.revisado_por := interno.usuario_de_la_sesion();
+  NEW.revisado_en := now();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."la_constancia_de_revision_la_firma_la_sesion"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."la_direccion_de_la_prestadora_es_suya"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
@@ -5261,6 +5449,52 @@ $$;
 ALTER FUNCTION "interno"."resumen_de_la_consulta"("e" "public"."consultas_a_hce") OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "interno"."resumen_del_registro_de_accesos_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") RETURNS TABLE("usuario_id" "uuid", "persona" "text", "pacientes_distintos" integer, "accesos" integer, "accesos_de_emergencia" integer)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  WITH tramo AS (
+    SELECT (p_desde::timestamp AT TIME ZONE p.zona_horaria) AS desde,
+           ((p_hasta + 1)::timestamp AT TIME ZONE p.zona_horaria) AS hasta
+      FROM prestadoras p
+     WHERE p.id = p_prestadora
+  ),
+  lecturas AS (
+    SELECT c.usuario_id,
+           count(DISTINCT c.paciente_id)::integer AS pacientes,
+           count(*)::integer AS cantidad
+      FROM consultas_a_hce c, tramo t
+     WHERE c.prestadora_id = p_prestadora
+       AND c.usuario_id IS NOT NULL
+       AND c.momento >= t.desde AND c.momento < t.hasta
+     GROUP BY c.usuario_id
+  ),
+  -- El acceso de emergencia lo anota en el registro de actividad la acción de ese nombre.
+  emergencias AS (
+    SELECT r.usuario_id, count(*)::integer AS cantidad
+      FROM registro_actividad r, tramo t
+     WHERE r.prestadora_id = p_prestadora
+       AND r.accion = 'acceso_de_emergencia'
+       AND r.usuario_id IS NOT NULL
+       AND r.created_at >= t.desde AND r.created_at < t.hasta
+     GROUP BY r.usuario_id
+  )
+  SELECT COALESCE(l.usuario_id, e.usuario_id),
+         u.nombre,
+         COALESCE(l.pacientes, 0),
+         COALESCE(l.cantidad, 0),
+         COALESCE(e.cantidad, 0)
+    FROM lecturas l
+    FULL JOIN emergencias e ON e.usuario_id = l.usuario_id
+    LEFT JOIN usuarios u ON u.id = COALESCE(l.usuario_id, e.usuario_id)
+   ORDER BY 3 DESC, 2;
+$$;
+
+
+ALTER FUNCTION "interno"."resumen_del_registro_de_accesos_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."revisar_indice_del_servicio"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -5373,6 +5607,121 @@ $$;
 ALTER FUNCTION "interno"."sin_coordinador_no_hay_guardias"() OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "interno"."solicitud_de_derecho_la_escribe_la_base"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_vence record;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.recibida_en IS NULL OR NEW.recibida_en > now() THEN
+      RAISE EXCEPTION 'fecha_invalida' USING ERRCODE = 'P0001';
+    END IF;
+    NEW.cargada_por      := interno.usuario_de_la_sesion();
+    NEW.cargada_en       := now();
+    NEW.estado           := 'pendiente';
+    NEW.respondida_en    := NULL;
+    NEW.respondida_por   := NULL;
+    NEW.aviso_enviado_en := NULL;
+    SELECT v.plazo_id, v.vence_en INTO v_vence
+      FROM interno.vencimiento_de_la_solicitud(NEW.prestadora_id, NEW.tipo, NEW.recibida_en) v;
+    NEW.plazo_id := v_vence.plazo_id;
+    NEW.vence_en := v_vence.vence_en;
+    RETURN NEW;
+  END IF;
+
+  -- Lo que no cambia nunca después del alta.
+  IF (NEW.prestadora_id, NEW.persona_id, NEW.tipo, NEW.recibida_en, NEW.plazo_id, NEW.vence_en,
+      NEW.cargada_por, NEW.cargada_en)
+     IS DISTINCT FROM
+     (OLD.prestadora_id, OLD.persona_id, OLD.tipo, OLD.recibida_en, OLD.plazo_id, OLD.vence_en,
+      OLD.cargada_por, OLD.cargada_en) THEN
+    -- Salvo la persona, que puede quedar vacía cuando se la borra del Directorio.
+    IF NOT (NEW.persona_id IS NULL AND OLD.persona_id IS NOT NULL
+            AND (NEW.prestadora_id, NEW.tipo, NEW.recibida_en, NEW.plazo_id, NEW.vence_en,
+                 NEW.cargada_por, NEW.cargada_en)
+                IS NOT DISTINCT FROM
+                (OLD.prestadora_id, OLD.tipo, OLD.recibida_en, OLD.plazo_id, OLD.vence_en,
+                 OLD.cargada_por, OLD.cargada_en)) THEN
+      RAISE EXCEPTION 'no_se_edita' USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  -- La constancia del aviso: sólo el trabajo sin persona, una vez.
+  IF NEW.aviso_enviado_en IS DISTINCT FROM OLD.aviso_enviado_en THEN
+    IF OLD.aviso_enviado_en IS NOT NULL
+       OR COALESCE(auth.jwt() ->> 'role', '') <> 'trabajo_sin_persona' THEN
+      RAISE EXCEPTION 'no_se_edita' USING ERRCODE = 'P0001';
+    END IF;
+    NEW.aviso_enviado_en := now();
+  END IF;
+
+  -- La respuesta: de pendiente a respondida, una vez.
+  IF NEW.estado IS DISTINCT FROM OLD.estado THEN
+    IF OLD.estado <> 'pendiente' THEN
+      RAISE EXCEPTION 'ya_resuelta' USING ERRCODE = 'P0001';
+    END IF;
+    IF NEW.estado <> 'respondida' THEN
+      RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+    END IF;
+    NEW.respondida_en  := now();
+    NEW.respondida_por := interno.usuario_de_la_sesion();
+  ELSIF NEW.respondida_en IS DISTINCT FROM OLD.respondida_en
+        OR NEW.respondida_por IS DISTINCT FROM OLD.respondida_por THEN
+    RAISE EXCEPTION 'no_se_edita' USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."solicitud_de_derecho_la_escribe_la_base"() OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."sumar_dias_habiles"("p_pais" "text", "p_desde" timestamp with time zone, "p_dias" integer) RETURNS timestamp with time zone
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_zona   text;
+  v_local  timestamp;
+  v_dia    date;
+  v_cuenta integer := 0;
+BEGIN
+  IF p_desde IS NULL OR p_dias IS NULL THEN
+    RETURN NULL;
+  END IF;
+  IF p_dias < 0 OR p_dias > 3650 THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = '22023';
+  END IF;
+  IF p_dias = 0 THEN
+    RETURN p_desde;
+  END IF;
+
+  v_zona  := interno.zona_horaria_de_la_prestadora(interno.prestadora_actual());
+  v_local := p_desde AT TIME ZONE v_zona;
+  v_dia   := v_local::date;
+
+  WHILE v_cuenta < p_dias LOOP
+    v_dia := v_dia + 1;
+    IF extract(isodow FROM v_dia) < 6
+       AND NOT EXISTS (SELECT 1 FROM feriados_por_pais f WHERE f.pais = p_pais AND f.fecha = v_dia) THEN
+      v_cuenta := v_cuenta + 1;
+    END IF;
+  END LOOP;
+
+  RETURN (v_dia + v_local::time) AT TIME ZONE v_zona;
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."sumar_dias_habiles"("p_pais" "text", "p_desde" timestamp with time zone, "p_dias" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."tablas_de_salud"() RETURNS "text"[]
     LANGUAGE "sql" IMMUTABLE
     AS $$
@@ -5452,6 +5801,26 @@ ALTER FUNCTION "interno"."texto_en_los_tres_idiomas"("texto" "jsonb") OWNER TO "
 
 
 COMMENT ON FUNCTION "interno"."texto_en_los_tres_idiomas"("texto" "jsonb") IS 'Verdadero si el texto trae los tres idiomas con contenido. Única definición: las restricciones de los formularios declarados la llaman en lugar de repetir la condición.';
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."tiene_acceso_de_emergencia"("p_paciente" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT p_paciente IS NOT NULL
+     AND auth.uid() IS NOT NULL
+     AND interno.es_personal_de_la_prestadora()
+     AND EXISTS (SELECT 1 FROM accesos_de_emergencia a
+                  WHERE a.prestadora_id = interno.prestadora_actual()
+                    AND a.usuario_id = auth.uid()
+                    AND a.paciente_id = p_paciente
+                    AND a.desde <= now()
+                    AND a.hasta > now())
+$$;
+
+
+ALTER FUNCTION "interno"."tiene_acceso_de_emergencia"("p_paciente" "uuid") OWNER TO "postgres";
 
 
 
@@ -5600,6 +5969,36 @@ $$;
 ALTER FUNCTION "interno"."valor_del_indice_de_la_prestadora"("p_prestadora" "uuid", "p_indice" "text", "p_periodo" "date") OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) RETURNS TABLE("plazo_id" "uuid", "vence_en" timestamp with time zone)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  WITH lugar AS (
+    SELECT pr.pais, interno.zona_horaria_de_la_prestadora(pr.id) AS zona
+      FROM prestadoras pr
+     WHERE pr.id = p_prestadora
+  )
+  SELECT pz.id,
+         CASE pz.unidad
+           WHEN 'horas' THEN p_recibida + make_interval(hours => pz.cantidad)
+           WHEN 'dias_corridos' THEN p_recibida + make_interval(days => pz.cantidad)
+           ELSE interno.sumar_dias_habiles(l.pais, p_recibida, pz.cantidad)
+         END
+    FROM lugar l
+    JOIN plazos_de_respuesta_de_derechos pz
+      ON pz.pais = l.pais
+     AND pz.tipo = p_tipo
+     AND pz.vigente_desde <= (p_recibida AT TIME ZONE l.zona)::date
+     AND (pz.vigente_hasta IS NULL OR pz.vigente_hasta >= (p_recibida AT TIME ZONE l.zona)::date)
+   ORDER BY pz.vigente_desde DESC
+   LIMIT 1
+$$;
+
+
+ALTER FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."verificar_cadena_de_consultas"("p_prestadora" "uuid") RETURNS TABLE("intacta" boolean, "renglones" bigint, "rota_en_numero" bigint, "rota_en_id" "uuid", "motivo" "text")
     LANGUAGE "plpgsql" STABLE
     SET "search_path" TO 'public', 'interno'
@@ -5701,6 +6100,138 @@ $_$;
 
 
 ALTER FUNCTION "interno"."versionar_tabla_clinica"("p_tabla" "regclass") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") RETURNS "text"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT COALESCE((SELECT p.zona_horaria FROM prestadoras p WHERE p.id = p_prestadora), 'UTC')
+$$;
+
+
+ALTER FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "public"."abrir_acceso_de_emergencia"("p_paciente" "uuid", "p_motivo" "text") RETURNS TABLE("id" "uuid", "hasta" timestamp with time zone)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_usuario    uuid := auth.uid();
+  v_prestadora uuid := interno.prestadora_actual();
+  v_minutos    integer;
+  v_id         uuid;
+  v_hasta      timestamp with time zone;
+BEGIN
+  IF v_usuario IS NULL OR v_prestadora IS NULL OR NOT interno.es_personal_de_la_prestadora() THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
+    RAISE EXCEPTION 'faltan_datos' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_paciente IS NULL OR NOT EXISTS (SELECT 1 FROM pacientes p
+                                        WHERE p.id = p_paciente
+                                          AND p.prestadora_id = v_prestadora) THEN
+    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
+  END IF;
+
+  -- Quien ya alcanza esa información no necesita un acceso de emergencia.
+  IF interno.alcanza_la_informacion_de_salud(p_paciente) THEN
+    RAISE EXCEPTION 'ya_alcanza' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- La configuración de la Prestadora, con sus valores de arranque si todavía no tenía.
+  INSERT INTO configuracion_de_hce (prestadora_id) VALUES (v_prestadora)
+  ON CONFLICT (prestadora_id) DO NOTHING;
+
+  SELECT c.minutos_de_acceso_de_emergencia INTO v_minutos
+    FROM configuracion_de_hce c
+   WHERE c.prestadora_id = v_prestadora;
+
+  INSERT INTO accesos_de_emergencia AS a (prestadora_id, usuario_id, paciente_id, motivo, desde, hasta)
+  VALUES (v_prestadora, v_usuario, p_paciente, btrim(p_motivo), now(),
+          now() + make_interval(mins => v_minutos))
+  RETURNING a.id, a.hasta INTO v_id, v_hasta;
+
+  INSERT INTO registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id)
+  VALUES (v_prestadora, v_usuario, 'acceso_de_emergencia', 'accesos_de_emergencia', v_id);
+
+  RETURN QUERY SELECT v_id, v_hasta;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."abrir_acceso_de_emergencia"("p_paciente" "uuid", "p_motivo" "text") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "public"."accesos_a_la_informacion_de_salud_del_paciente"("p_paciente" "uuid", "p_limite" integer DEFAULT 500) RETURNS TABLE("momento" timestamp with time zone, "quien" "text", "rol" "text", "origen" "text", "categorias" "text"[])
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_usuario uuid := interno.usuario_de_la_sesion();
+  v_prest   uuid := interno.prestadora_actual();
+BEGIN
+  IF v_usuario IS NULL OR v_prest IS NULL THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_limite IS NULL OR p_limite < 1 OR p_limite > 5000 THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM pacientes pa
+     WHERE pa.id = p_paciente
+       AND pa.prestadora_id = v_prest
+       AND pa.deleted_at IS NULL
+       AND pa.cliente_id = interno.cliente_id_de_usuario(v_usuario)
+       AND interno.persona_autorizada_puede(v_usuario, 'persona_autorizada_ficha_del_paciente')
+  ) THEN
+    RAISE EXCEPTION 'paciente_no_encontrado' USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN QUERY
+    SELECT c.momento, u.nombre, u.rol, c.origen, c.categorias
+      FROM consultas_a_hce c
+      LEFT JOIN usuarios u ON u.id = c.usuario_id
+     WHERE c.prestadora_id = v_prest
+       AND c.paciente_id = p_paciente
+     ORDER BY c.momento DESC
+     LIMIT p_limite;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."accesos_a_la_informacion_de_salud_del_paciente"("p_paciente" "uuid", "p_limite" integer) OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "public"."accesos_fuera_de_lo_normal"("p_desde" "date", "p_hasta" "date") RETURNS TABLE("consulta_id" "uuid", "usuario_id" "uuid", "persona" "text", "paciente_id" "uuid", "paciente" "text", "categorias" "text"[], "momento" timestamp with time zone, "origen" "text", "motivos" "text"[])
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prestadora uuid := interno.prestadora_actual();
+BEGIN
+  IF v_prestadora IS NULL OR NOT interno.es_la_administracion_de_la_prestadora(v_prestadora) THEN
+    RAISE EXCEPTION 'Sin permiso para revisar el registro de accesos' USING ERRCODE = '42501';
+  END IF;
+  IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
+    RAISE EXCEPTION 'El período no es válido' USING ERRCODE = '22023';
+  END IF;
+  RETURN QUERY SELECT * FROM interno.accesos_fuera_de_lo_normal_de(v_prestadora, p_desde, p_hasta);
+END;
+$$;
+
+
+ALTER FUNCTION "public"."accesos_fuera_de_lo_normal"("p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."aceptar_asignacion"("p_asignacion_id" "uuid") RETURNS "uuid"
@@ -6390,6 +6921,31 @@ $$;
 
 
 ALTER FUNCTION "public"."anotar_aviso_de_borrado_de_consultas_a_hce"("p_anio" integer, "p_aviso" "text") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "public"."anotar_aviso_de_derecho_por_vencer"("p_solicitud" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+BEGIN
+  IF v_prest IS NULL OR COALESCE(auth.jwt() ->> 'role', '') <> 'trabajo_sin_persona' THEN
+    RAISE EXCEPTION 'sin_permiso_para_avisar_los_derechos_por_vencer' USING ERRCODE = '42501';
+  END IF;
+
+  UPDATE solicitudes_de_derechos s
+     SET aviso_enviado_en = now()
+   WHERE s.id = p_solicitud
+     AND s.prestadora_id = v_prest
+     AND s.id IN (SELECT p.solicitud_id FROM interno.derechos_por_vencer(v_prest) p);
+  RETURN FOUND;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."anotar_aviso_de_derecho_por_vencer"("p_solicitud" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."anotar_valor_de_indice_publico"("p_indice" "text", "p_periodo" "date", "p_valor" numeric) RETURNS boolean
@@ -7255,6 +7811,83 @@ $$;
 ALTER FUNCTION "public"."cuenta_desactivada"("a" "public"."asistentes") OWNER TO "postgres";
 
 
+
+CREATE OR REPLACE FUNCTION "public"."cuenta_regresiva_del_incidente"("p_incidente" "uuid") RETURNS TABLE("destinatario" "text", "organismo" "text", "cantidad" integer, "unidad" "text", "cuenta_desde" "text", "desde_at" timestamp with time zone, "vence_at" timestamp with time zone, "notificado_at" timestamp with time zone, "vencido" boolean, "manda" boolean, "fuente" "text")
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+#variable_conflict use_column
+DECLARE
+  v_incidente public.incidentes_de_seguridad%ROWTYPE;
+  v_pais      text;
+BEGIN
+  IF NOT (interno.es_superadmin() OR interno.es_admin_prestadora()) THEN
+    RETURN;
+  END IF;
+
+  SELECT i.* INTO v_incidente
+    FROM public.incidentes_de_seguridad i
+   WHERE i.id = p_incidente
+     AND i.prestadora_id = interno.prestadora_actual();
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+
+  SELECT p.pais INTO v_pais FROM public.prestadoras p WHERE p.id = v_incidente.prestadora_id;
+  IF v_pais IS NULL THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  WITH plazos AS (
+    SELECT pl.destinatario, pl.organismo, pl.cantidad, pl.unidad, pl.cuenta_desde, pl.fuente,
+           CASE pl.cuenta_desde
+             WHEN 'ocurrido' THEN v_incidente.ocurrido_at
+             ELSE v_incidente.conocido_at
+           END AS desde_at,
+           CASE pl.destinatario
+             WHEN 'autoridad' THEN v_incidente.autoridad_notificada_at
+             WHEN 'titular' THEN v_incidente.titulares_notificados_at
+             ELSE v_incidente.responsable_notificado_at
+           END AS notificado_at
+      FROM public.plazos_de_notificacion_de_brechas pl
+     WHERE pl.jurisdiccion = v_pais
+       AND pl.vigencia_desde <= v_incidente.ocurrido_at::date
+       AND (pl.vigencia_hasta IS NULL OR pl.vigencia_hasta >= v_incidente.ocurrido_at::date)
+  ),
+  con_vencimiento AS (
+    SELECT pz.*,
+           CASE pz.unidad
+             WHEN 'horas' THEN pz.desde_at + make_interval(hours => pz.cantidad)
+             WHEN 'dias_corridos' THEN pz.desde_at + make_interval(days => pz.cantidad)
+             ELSE interno.sumar_dias_habiles(v_pais, pz.desde_at, pz.cantidad)
+           END AS vence_at
+      FROM plazos pz
+  ),
+  el_que_manda AS (
+    SELECT cv.destinatario
+      FROM con_vencimiento cv
+     ORDER BY (cv.notificado_at IS NOT NULL), cv.vence_at, cv.destinatario
+     LIMIT 1
+  )
+  SELECT cv.destinatario, cv.organismo, cv.cantidad, cv.unidad, cv.cuenta_desde,
+         cv.desde_at, cv.vence_at, cv.notificado_at,
+         (cv.notificado_at IS NULL AND cv.vence_at < now()) AS vencido,
+         (cv.destinatario = (SELECT m.destinatario FROM el_que_manda m)) AS manda,
+         cv.fuente
+    FROM con_vencimiento cv
+   ORDER BY cv.vence_at, cv.destinatario;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."cuenta_regresiva_del_incidente"("p_incidente" "uuid") OWNER TO "postgres";
+
+
+
+COMMENT ON FUNCTION "public"."cuenta_regresiva_del_incidente"("p_incidente" "uuid") IS 'Para un incidente de seguridad, cada plazo legal de aviso del país de la Prestadora, cuándo vence y cuál manda. Sólo para la administración de la Prestadora dueña del incidente.';
+
+
 CREATE OR REPLACE FUNCTION "public"."cuentas_nunca_activadas"("p_usuarios" "uuid"[]) RETURNS SETOF "uuid"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -7577,6 +8210,25 @@ $$;
 
 
 ALTER FUNCTION "public"."dar_de_baja_el_servicio"("p_servicio" "uuid", "p_motivo" "text", "p_motivo_detalle" "text", "p_comprobaciones" "uuid"[]) OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "public"."derechos_por_vencer"() RETURNS TABLE("solicitud_id" "uuid", "tipo" "text", "recibida_en" timestamp with time zone, "vence_en" timestamp with time zone, "recibida_el" "date", "vence_el" "date")
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+BEGIN
+  IF v_prest IS NULL OR COALESCE(auth.jwt() ->> 'role', '') <> 'trabajo_sin_persona' THEN
+    RAISE EXCEPTION 'sin_permiso_para_avisar_los_derechos_por_vencer' USING ERRCODE = '42501';
+  END IF;
+  RETURN QUERY SELECT * FROM interno.derechos_por_vencer(v_prest);
+END;
+$$;
+
+
+ALTER FUNCTION "public"."derechos_por_vencer"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."desactivar_la_cuenta"("p_usuario" "uuid", "p_motivo" "text") RETURNS boolean
@@ -8458,6 +9110,54 @@ $$;
 
 
 ALTER FUNCTION "public"."importar_lista_de_precios"("p_renglones" "jsonb", "p_desde" "date") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "public"."informar_accesos_fuera_de_lo_normal_del_dia_anterior"() RETURNS TABLE("dia" "date", "cantidad" integer, "anotado" boolean)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prestadora uuid;
+  v_dia date;
+  v_cantidad integer;
+BEGIN
+  IF COALESCE(auth.jwt() ->> 'role', '') <> 'trabajo_sin_persona' THEN
+    RAISE EXCEPTION 'El informe diario lo hace el trabajo sin persona' USING ERRCODE = '42501';
+  END IF;
+  v_prestadora := interno.prestadora_actual();
+  IF v_prestadora IS NULL THEN
+    RAISE EXCEPTION 'Sin Prestadora para el informe diario' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT (now() AT TIME ZONE p.zona_horaria)::date - 1 INTO v_dia
+    FROM prestadoras p WHERE p.id = v_prestadora;
+
+  PERFORM pg_advisory_xact_lock(hashtext('informe_diario_de_accesos_fuera_de_lo_normal'), hashtext(v_prestadora::text));
+
+  SELECT count(*)::integer INTO v_cantidad
+    FROM interno.accesos_fuera_de_lo_normal_de(v_prestadora, v_dia, v_dia);
+
+  IF EXISTS (
+    SELECT 1 FROM registro_actividad r
+     WHERE r.prestadora_id = v_prestadora
+       AND r.accion = 'informe_diario_de_accesos_fuera_de_lo_normal'
+       AND r.detalle ->> 'desde' = v_dia::text
+  ) THEN
+    RETURN QUERY SELECT v_dia, v_cantidad, false;
+    RETURN;
+  END IF;
+
+  INSERT INTO registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, detalle)
+  VALUES (v_prestadora, NULL, 'informe_diario_de_accesos_fuera_de_lo_normal', 'consultas_a_hce',
+          jsonb_build_object('desde', v_dia::text, 'hasta', v_dia::text, 'cantidad', v_cantidad));
+
+  RETURN QUERY SELECT v_dia, v_cantidad, true;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."informar_accesos_fuera_de_lo_normal_del_dia_anterior"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."intercambiar_orden_etapas_incorporacion"("p_id_a" "uuid", "p_orden_a" smallint, "p_id_b" "uuid", "p_orden_b" smallint) RETURNS "void"
@@ -9603,6 +10303,28 @@ COMMENT ON FUNCTION "public"."resumen_cobros_de_factura"("p_factura_id" "uuid") 
 
 
 
+CREATE OR REPLACE FUNCTION "public"."resumen_del_registro_de_accesos_por_persona"("p_desde" "date", "p_hasta" "date") RETURNS TABLE("usuario_id" "uuid", "persona" "text", "pacientes_distintos" integer, "accesos" integer, "accesos_de_emergencia" integer)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prestadora uuid := interno.prestadora_actual();
+BEGIN
+  IF v_prestadora IS NULL OR NOT interno.es_la_administracion_de_la_prestadora(v_prestadora) THEN
+    RAISE EXCEPTION 'Sin permiso para revisar el registro de accesos' USING ERRCODE = '42501';
+  END IF;
+  IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
+    RAISE EXCEPTION 'El período no es válido' USING ERRCODE = '22023';
+  END IF;
+  RETURN QUERY SELECT * FROM interno.resumen_del_registro_de_accesos_de(v_prestadora, p_desde, p_hasta);
+END;
+$$;
+
+
+ALTER FUNCTION "public"."resumen_del_registro_de_accesos_por_persona"("p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
+
+
+
 CREATE OR REPLACE FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -10492,6 +11214,27 @@ CREATE TABLE IF NOT EXISTS "interno"."cambios_de_clave_autorizados" (
 
 
 ALTER TABLE "interno"."cambios_de_clave_autorizados" OWNER TO "postgres";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."accesos_de_emergencia" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "usuario_id" "uuid" NOT NULL,
+    "paciente_id" "uuid" NOT NULL,
+    "motivo" "text" NOT NULL,
+    "desde" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "hasta" timestamp with time zone NOT NULL,
+    CONSTRAINT "accesos_de_emergencia_motivo_dice_algo" CHECK ((("btrim"("motivo") <> ''::"text") AND ("length"("motivo") <= 1000))),
+    CONSTRAINT "accesos_de_emergencia_termina_despues_de_empezar" CHECK (("hasta" > "desde"))
+);
+
+
+ALTER TABLE "public"."accesos_de_emergencia" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."accesos_de_emergencia" IS 'Cada vez que alguien del personal abrio la informacion de salud de un Paciente que no atiende, con el motivo que declaro y hasta cuando vale.';
 GRANT ALL ON TABLE "interno"."cambios_de_clave_autorizados" TO "postgres";
 
 
@@ -11103,7 +11846,7 @@ CREATE TABLE IF NOT EXISTS "public"."catalogo_acciones_registradas" (
     "orden" smallint NOT NULL,
     "creado_en" timestamp with time zone DEFAULT "now"() NOT NULL,
     "la_hace_el_sistema" boolean DEFAULT false NOT NULL,
-    CONSTRAINT "catalogo_acciones_registradas_grupo_conocido" CHECK (("grupo" = ANY (ARRAY['entrada_administrativa'::"text", 'permisos_y_membresia'::"text", 'borrado_de_datos'::"text", 'modificacion_critica'::"text", 'consecuencia_economica'::"text"])))
+    CONSTRAINT "catalogo_acciones_registradas_grupo_conocido" CHECK (("grupo" = ANY (ARRAY['entrada_administrativa'::"text", 'permisos_y_membresia'::"text", 'borrado_de_datos'::"text", 'modificacion_critica'::"text", 'consecuencia_economica'::"text", 'salida_de_datos'::"text"])))
 );
 
 
@@ -11114,7 +11857,7 @@ COMMENT ON TABLE "public"."catalogo_acciones_registradas" IS 'Que acciones deja 
 
 
 
-COMMENT ON COLUMN "public"."catalogo_acciones_registradas"."grupo" IS 'A cual de los cinco casos que pide la regla de la empresa responde esta accion.';
+COMMENT ON COLUMN "public"."catalogo_acciones_registradas"."grupo" IS 'A cual de los casos que pide la regla de la empresa responde esta accion.';
 
 
 
@@ -11129,6 +11872,22 @@ ALTER TABLE "public"."catalogo_datos_del_registro" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."catalogo_datos_del_registro" IS 'Los unicos datos con nombre que el registro de actividad admite adentro de `detalle`. Lista de lo permitido, no de lo prohibido: lo que no figura acá hace fallar la escritura.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."catalogo_derechos_de_la_persona" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "clave" "text" NOT NULL,
+    "orden" smallint NOT NULL,
+    CONSTRAINT "catalogo_derechos_de_la_persona_clave_escrita" CHECK (("clave" ~ '^[a-z_]+$'::"text"))
+);
+
+
+ALTER TABLE "public"."catalogo_derechos_de_la_persona" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."catalogo_derechos_de_la_persona" IS 'Los derechos que una persona puede pedir sobre sus datos. El nombre visible de cada uno es la frase derechos_de_la_persona.derecho.<clave>.';
 
 
 
@@ -11762,7 +12521,9 @@ COMMENT ON COLUMN "public"."configuracion_calculo_candidatos"."perfil" IS 'Ident
 CREATE TABLE IF NOT EXISTS "public"."configuracion_de_hce" (
     "prestadora_id" "uuid" NOT NULL,
     "restriccion_de_hce" boolean DEFAULT true NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "minutos_de_acceso_de_emergencia" integer DEFAULT 60 NOT NULL,
+    CONSTRAINT "configuracion_de_hce_minutos_de_acceso_de_emergencia_check" CHECK ((("minutos_de_acceso_de_emergencia" >= 5) AND ("minutos_de_acceso_de_emergencia" <= 480)))
 );
 
 
@@ -11770,6 +12531,10 @@ ALTER TABLE "public"."configuracion_de_hce" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."configuracion_de_hce" IS 'Si rige la restricción de HCE: la información de salud de un paciente la ve sólo quien lo atiende. Sin renglón, rige.';
+
+
+
+COMMENT ON COLUMN "public"."configuracion_de_hce"."minutos_de_acceso_de_emergencia" IS 'Cuantos minutos vale un acceso de emergencia a la informacion de salud desde que se abre.';
 
 
 
@@ -12221,6 +12986,27 @@ COMMENT ON COLUMN "public"."consentimientos_pagador"."firmante_persona_id" IS 'E
 
 
 COMMENT ON COLUMN "public"."consentimientos_pagador"."firmante_nombre" IS 'Cómo se llamaba el Apoderado el día que firmó. Si mañana la entidad cambia de Apoderado, el documento sigue diciendo quién lo firmó.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."constancias_de_revision_del_registro_de_accesos" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "desde" "date" NOT NULL,
+    "hasta" "date" NOT NULL,
+    "revisado_por" "uuid" NOT NULL,
+    "revisado_en" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "observaciones" "text",
+    CONSTRAINT "constancias_de_revision_observaciones_validas" CHECK ((("observaciones" IS NULL) OR (("btrim"("observaciones") <> ''::"text") AND ("char_length"("observaciones") <= 2000)))),
+    CONSTRAINT "constancias_de_revision_periodo_valido" CHECK (("desde" <= "hasta"))
+);
+
+
+ALTER TABLE "public"."constancias_de_revision_del_registro_de_accesos" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."constancias_de_revision_del_registro_de_accesos" IS 'Constancia de que la administración de la Prestadora revisó el registro de accesos a la información de salud de un período. No se edita ni se borra.';
 
 
 
@@ -13300,6 +14086,22 @@ COMMENT ON COLUMN "public"."facturas_cliente_items"."prestadora_id" IS 'La Prest
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."feriados_por_pais" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "pais" "text" NOT NULL,
+    "fecha" "date" NOT NULL,
+    CONSTRAINT "feriados_por_pais_pais_escrito" CHECK (("pais" ~ '^[A-Z]{2}$'::"text"))
+);
+
+
+ALTER TABLE "public"."feriados_por_pais" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."feriados_por_pais" IS 'Los feriados de cada país. Es catálogo del producto: lo carga una migración, y lo leen todos.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."finales_turno_sin_cubrir" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
@@ -13738,6 +14540,40 @@ CREATE TABLE IF NOT EXISTS "public"."importaciones_prestadora" (
 
 
 ALTER TABLE "public"."importaciones_prestadora" OWNER TO "postgres";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."incidentes_de_seguridad" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "ocurrido_at" timestamp with time zone NOT NULL,
+    "conocido_at" timestamp with time zone NOT NULL,
+    "descripcion" "text" NOT NULL,
+    "cargado_por" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "autoridad_notificada_at" timestamp with time zone,
+    "titulares_notificados_at" timestamp with time zone,
+    "responsable_notificado_at" timestamp with time zone,
+    "factor_naturaleza_y_alcance" "text",
+    "factor_quien_recibio" "text",
+    "factor_adquiridos_o_vistos" "text",
+    "factor_mitigacion" "text",
+    "conclusion" "text",
+    "evaluado_por" "uuid",
+    "evaluado_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "incidentes_de_seguridad_conclusion_conocida" CHECK ((("conclusion" IS NULL) OR ("conclusion" = ANY (ARRAY['baja_probabilidad_de_compromiso'::"text", 'se_presume_brecha'::"text"])))),
+    CONSTRAINT "incidentes_de_seguridad_conclusion_de_los_cuatro_factores" CHECK ((("conclusion" IS NULL) OR (("btrim"(COALESCE("factor_naturaleza_y_alcance", ''::"text")) <> ''::"text") AND ("btrim"(COALESCE("factor_quien_recibio", ''::"text")) <> ''::"text") AND ("btrim"(COALESCE("factor_adquiridos_o_vistos", ''::"text")) <> ''::"text") AND ("btrim"(COALESCE("factor_mitigacion", ''::"text")) <> ''::"text")))),
+    CONSTRAINT "incidentes_de_seguridad_la_descripcion_no_va_vacia" CHECK (("btrim"("descripcion") <> ''::"text")),
+    CONSTRAINT "incidentes_de_seguridad_no_se_supo_antes_de_ocurrir" CHECK (("conocido_at" >= "ocurrido_at"))
+);
+
+
+ALTER TABLE "public"."incidentes_de_seguridad" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."incidentes_de_seguridad" IS 'Cada incidente de seguridad sobre datos de pacientes de una Prestadora: cuándo ocurrió, cuándo se supo, la evaluación de los cuatro factores del riesgo, la conclusión y a quién se avisó. Todo incidente queda anotado, se haya avisado o no, y no se borra.';
 
 
 CREATE TABLE IF NOT EXISTS "public"."incidentes_relevo" (
@@ -14566,6 +15402,24 @@ COMMENT ON COLUMN "public"."pacientes"."obra_social_persona_id" IS 'Cual Legajo 
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."pacientes_de_incidentes" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "incidente_id" "uuid" NOT NULL,
+    "paciente_id" "uuid" NOT NULL,
+    "agregado_por" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."pacientes_de_incidentes" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."pacientes_de_incidentes" IS 'Los pacientes cuyos datos alcanzó un incidente de seguridad. No se borra.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."pedidos_de_clave_nueva" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
@@ -14715,6 +15569,32 @@ COMMENT ON COLUMN "public"."personas"."nombre_visible" IS 'Cómo se nombra este 
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."plantillas_de_aviso_de_brechas" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "jurisdiccion" "text" NOT NULL,
+    "destinatario" "text" NOT NULL,
+    "texto" "jsonb" NOT NULL,
+    "contenido_minimo" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "fuente" "text" NOT NULL,
+    "vigencia_desde" "date" NOT NULL,
+    "vigencia_hasta" "date",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "plantillas_de_aviso_de_brechas_cita_su_norma" CHECK (("btrim"("fuente") <> ''::"text")),
+    CONSTRAINT "plantillas_de_aviso_de_brechas_destinatario_conocido" CHECK (("destinatario" = ANY (ARRAY['autoridad'::"text", 'titular'::"text", 'responsable'::"text"]))),
+    CONSTRAINT "plantillas_de_aviso_de_brechas_en_los_tres_idiomas" CHECK ((("jsonb_typeof"("texto") = 'object'::"text") AND ("texto" ?& ARRAY['es-AR'::"text", 'en'::"text", 'pt-BR'::"text"]))),
+    CONSTRAINT "plantillas_de_aviso_de_brechas_jurisdiccion_es_un_pais" CHECK (("jurisdiccion" ~ '^[A-Z]{2}$'::"text")),
+    CONSTRAINT "plantillas_de_brechas_la_vigencia_no_termina_antes_de_empezar" CHECK ((("vigencia_hasta" IS NULL) OR ("vigencia_hasta" >= "vigencia_desde")))
+);
+
+
+ALTER TABLE "public"."plantillas_de_aviso_de_brechas" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."plantillas_de_aviso_de_brechas" IS 'Texto del aviso de un incidente de seguridad, por país y destinatario, en los tres idiomas, con el contenido mínimo que pide la norma. Un país sin plantilla no tiene texto de aviso: el producto no lo improvisa.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."personas_autorizadas" (
     "usuario_id" "uuid" NOT NULL,
     "cliente_id" "uuid" NOT NULL,
@@ -14746,6 +15626,63 @@ CREATE TABLE IF NOT EXISTS "public"."plantillas_whatsapp" (
 
 
 ALTER TABLE "public"."plantillas_whatsapp" OWNER TO "postgres";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."plazos_de_notificacion_de_brechas" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "jurisdiccion" "text" NOT NULL,
+    "destinatario" "text" NOT NULL,
+    "organismo" "text",
+    "cantidad" integer NOT NULL,
+    "unidad" "text" NOT NULL,
+    "cuenta_desde" "text" NOT NULL,
+    "fuente" "text" NOT NULL,
+    "vigencia_desde" "date" NOT NULL,
+    "vigencia_hasta" "date",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "plazos_de_brechas_la_vigencia_no_termina_antes_de_empezar" CHECK ((("vigencia_hasta" IS NULL) OR ("vigencia_hasta" >= "vigencia_desde"))),
+    CONSTRAINT "plazos_de_notificacion_de_brechas_cita_su_norma" CHECK (("btrim"("fuente") <> ''::"text")),
+    CONSTRAINT "plazos_de_notificacion_de_brechas_destinatario_conocido" CHECK (("destinatario" = ANY (ARRAY['autoridad'::"text", 'titular'::"text", 'responsable'::"text"]))),
+    CONSTRAINT "plazos_de_notificacion_de_brechas_jurisdiccion_es_un_pais" CHECK (("jurisdiccion" ~ '^[A-Z]{2}$'::"text")),
+    CONSTRAINT "plazos_de_notificacion_de_brechas_la_cantidad_es_positiva" CHECK (("cantidad" > 0)),
+    CONSTRAINT "plazos_de_notificacion_de_brechas_momento_conocido" CHECK (("cuenta_desde" = ANY (ARRAY['ocurrido'::"text", 'conocido'::"text"]))),
+    CONSTRAINT "plazos_de_notificacion_de_brechas_unidad_conocida" CHECK (("unidad" = ANY (ARRAY['horas'::"text", 'dias_corridos'::"text", 'dias_habiles'::"text"])))
+);
+
+
+ALTER TABLE "public"."plazos_de_notificacion_de_brechas" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."plazos_de_notificacion_de_brechas" IS 'Plazo legal para avisar de un incidente de seguridad, por país y destinatario. Se cargan sólo los plazos que el documento legal del país escribe con número, unidad, momento de inicio y artículo. Se cargan con migraciones y ningún plazo vive en el código.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."plazos_de_respuesta_de_derechos" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "pais" "text" NOT NULL,
+    "tipo" "text" NOT NULL,
+    "cantidad" integer NOT NULL,
+    "unidad" "text" NOT NULL,
+    "fuente" "text" NOT NULL,
+    "vigente_desde" "date" NOT NULL,
+    "vigente_hasta" "date",
+    "dias_de_aviso" integer NOT NULL,
+    CONSTRAINT "plazos_de_respuesta_aviso_razonable" CHECK ((("dias_de_aviso" >= 0) AND ("dias_de_aviso" <= 365))),
+    CONSTRAINT "plazos_de_respuesta_cantidad_positiva" CHECK ((("cantidad" >= 1) AND ("cantidad" <= 3650))),
+    CONSTRAINT "plazos_de_respuesta_fechas_en_orden" CHECK ((("vigente_hasta" IS NULL) OR ("vigente_hasta" >= "vigente_desde"))),
+    CONSTRAINT "plazos_de_respuesta_fuente_escrita" CHECK (("btrim"("fuente") <> ''::"text")),
+    CONSTRAINT "plazos_de_respuesta_pais_escrito" CHECK (("pais" ~ '^[A-Z]{2}$'::"text")),
+    CONSTRAINT "plazos_de_respuesta_unidad_conocida" CHECK (("unidad" = ANY (ARRAY['horas'::"text", 'dias_corridos'::"text", 'dias_habiles'::"text"])))
+);
+
+
+ALTER TABLE "public"."plazos_de_respuesta_de_derechos" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."plazos_de_respuesta_de_derechos" IS 'Plazo de respuesta de cada derecho en cada país, con la norma y su artículo en fuente. Rige el vigente el día en que se recibió la solicitud. Sólo se cargan plazos escritos con su artículo en el documento legal del país.';
 
 
 CREATE TABLE IF NOT EXISTS "public"."plazos_de_ubicacion_avisados" (
@@ -14974,11 +15911,20 @@ CREATE TABLE IF NOT EXISTS "public"."prestadoras" (
     "control_de_ubicacion_en_el_turno_desde" timestamp with time zone,
     "logo_impresion_ruta" "text",
     "referencia_celtatech" "text",
+    "zona_horaria" "text" DEFAULT 'America/Argentina/Buenos_Aires'::"text" NOT NULL,
+    "registro_de_accesos_hora_de_inicio" time without time zone DEFAULT '07:00:00'::time without time zone NOT NULL,
+    "registro_de_accesos_hora_de_fin" time without time zone DEFAULT '20:00:00'::time without time zone NOT NULL,
+    "registro_de_accesos_pacientes_por_dia" integer DEFAULT 20 NOT NULL,
+    "registro_de_accesos_horas_alrededor_de_la_guardia" integer DEFAULT 12 NOT NULL,
     CONSTRAINT "prestadoras_cierre_por_inactividad_minutos_check" CHECK ((("cierre_por_inactividad_minutos" >= 5) AND ("cierre_por_inactividad_minutos" <= 120))),
     CONSTRAINT "prestadoras_dias_para_aceptar_la_ubicacion_check" CHECK ((("dias_para_aceptar_la_ubicacion" >= 1) AND ("dias_para_aceptar_la_ubicacion" <= 365))),
     CONSTRAINT "prestadoras_minutos_aviso_previo_guardia_check" CHECK ((("minutos_aviso_previo_guardia" >= 5) AND ("minutos_aviso_previo_guardia" <= 1440))),
     CONSTRAINT "prestadoras_minutos_entre_controles_de_ubicacion_check" CHECK ((("minutos_entre_controles_de_ubicacion" >= 1) AND ("minutos_entre_controles_de_ubicacion" <= 60))),
-    CONSTRAINT "prestadoras_politica_verificacion_alta_manual_check" CHECK (("politica_verificacion_alta_manual" = ANY (ARRAY['omitir'::"text", 'pendiente'::"text", 'aprobado'::"text"])))
+    CONSTRAINT "prestadoras_politica_verificacion_alta_manual_check" CHECK (("politica_verificacion_alta_manual" = ANY (ARRAY['omitir'::"text", 'pendiente'::"text", 'aprobado'::"text"]))),
+    CONSTRAINT "prestadoras_registro_de_accesos_horario_valido" CHECK (("registro_de_accesos_hora_de_inicio" <> "registro_de_accesos_hora_de_fin")),
+    CONSTRAINT "prestadoras_registro_de_accesos_horas_alrededor_valido" CHECK ((("registro_de_accesos_horas_alrededor_de_la_guardia" >= 0) AND ("registro_de_accesos_horas_alrededor_de_la_guardia" <= 72))),
+    CONSTRAINT "prestadoras_registro_de_accesos_pacientes_por_dia_valido" CHECK (("registro_de_accesos_pacientes_por_dia" > 0)),
+    CONSTRAINT "prestadoras_zona_horaria_conocida" CHECK ((('2000-01-01 00:00:00+00'::timestamp with time zone AT TIME ZONE "zona_horaria") IS NOT NULL))
 );
 
 
@@ -14994,6 +15940,26 @@ COMMENT ON COLUMN "public"."prestadoras"."logo_impresion_ruta" IS 'Ruta del logo
 
 
 COMMENT ON COLUMN "public"."prestadoras"."referencia_celtatech" IS 'Con qué identifica CeltaTech el alta de esta Prestadora. Llega con el alta, no se interpreta y no cambia. Con ella un alta repetida devuelve la misma Prestadora.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."zona_horaria" IS 'Zona horaria de la Prestadora, con el nombre de la base internacional de zonas horarias.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."registro_de_accesos_hora_de_inicio" IS 'Hora de inicio del horario de trabajo. Un acceso a información de salud fuera del horario sale de lo normal.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."registro_de_accesos_hora_de_fin" IS 'Hora de fin del horario de trabajo. Si es menor que la de inicio, el horario cruza la medianoche.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."registro_de_accesos_pacientes_por_dia" IS 'Pacientes distintos por día que una persona lee sin que llame la atención.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."registro_de_accesos_horas_alrededor_de_la_guardia" IS 'Horas antes y después de una guardia en las que el Asistente todavía atiende a ese Paciente.';
 
 
 
@@ -15654,6 +16620,34 @@ COMMENT ON COLUMN "public"."servicios"."cliente_id" IS 'Cuál es el Cliente. La 
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."solicitudes_de_derechos" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "persona_id" "uuid",
+    "tipo" "text" NOT NULL,
+    "recibida_en" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "plazo_id" "uuid",
+    "vence_en" timestamp with time zone,
+    "estado" "text" DEFAULT 'pendiente'::"text" NOT NULL,
+    "respondida_en" timestamp with time zone,
+    "respondida_por" "uuid",
+    "cargada_por" "uuid",
+    "cargada_en" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "aviso_enviado_en" timestamp with time zone,
+    CONSTRAINT "solicitudes_de_derechos_estado_conocido" CHECK (("estado" = ANY (ARRAY['pendiente'::"text", 'respondida'::"text"]))),
+    CONSTRAINT "solicitudes_de_derechos_respuesta_completa" CHECK ((("estado" = 'respondida'::"text") = ("respondida_en" IS NOT NULL))),
+    CONSTRAINT "solicitudes_de_derechos_vencimiento_con_plazo" CHECK ((("plazo_id" IS NULL) = ("vence_en" IS NULL)))
+);
+
+
+ALTER TABLE "public"."solicitudes_de_derechos" OWNER TO "postgres";
+
+
+
+COMMENT ON TABLE "public"."solicitudes_de_derechos" IS 'Lo que una persona pide sobre sus datos. El vencimiento lo calcula la base con el plazo del país de la Prestadora vigente el día en que se recibió. No se edita ni se borra: se marca respondida.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."tareas_del_servicio" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
@@ -16140,6 +17134,11 @@ ALTER TABLE ONLY "interno"."cambios_de_clave_autorizados"
 
 
 
+ALTER TABLE ONLY "public"."accesos_de_emergencia"
+    ADD CONSTRAINT "accesos_de_emergencia_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."accesos_intermediacion"
     ADD CONSTRAINT "accesos_intermediacion_pkey" PRIMARY KEY ("id");
 
@@ -16312,6 +17311,16 @@ ALTER TABLE ONLY "public"."catalogo_acciones_registradas"
 
 ALTER TABLE ONLY "public"."catalogo_datos_del_registro"
     ADD CONSTRAINT "catalogo_datos_del_registro_pkey" PRIMARY KEY ("clave");
+
+
+
+ALTER TABLE ONLY "public"."catalogo_derechos_de_la_persona"
+    ADD CONSTRAINT "catalogo_derechos_de_la_persona_clave_key" UNIQUE ("clave");
+
+
+
+ALTER TABLE ONLY "public"."catalogo_derechos_de_la_persona"
+    ADD CONSTRAINT "catalogo_derechos_de_la_persona_pkey" PRIMARY KEY ("id");
 
 
 
@@ -16608,6 +17617,11 @@ ALTER TABLE ONLY "public"."consentimientos_paciente_solo"
 
 ALTER TABLE ONLY "public"."consentimientos_pagador"
     ADD CONSTRAINT "consentimientos_pagador_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."constancias_de_revision_del_registro_de_accesos"
+    ADD CONSTRAINT "constancias_de_revision_del_registro_de_accesos_pkey" PRIMARY KEY ("id");
 
 
 
@@ -16915,6 +17929,16 @@ ALTER TABLE ONLY "public"."facturas_cliente"
 
 
 
+ALTER TABLE ONLY "public"."feriados_por_pais"
+    ADD CONSTRAINT "feriados_por_pais_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."feriados_por_pais"
+    ADD CONSTRAINT "feriados_por_pais_unico" UNIQUE ("pais", "fecha");
+
+
+
 ALTER TABLE ONLY "public"."finales_turno_sin_cubrir"
     ADD CONSTRAINT "finales_turno_sin_cubrir_pkey" PRIMARY KEY ("id");
 
@@ -16993,6 +18017,16 @@ ALTER TABLE ONLY "public"."hospitalizaciones_paciente"
 
 ALTER TABLE ONLY "public"."importaciones_prestadora"
     ADD CONSTRAINT "importaciones_prestadora_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."incidentes_de_seguridad"
+    ADD CONSTRAINT "incidentes_de_seguridad_id_prestadora_unique" UNIQUE ("id", "prestadora_id");
+
+
+
+ALTER TABLE ONLY "public"."incidentes_de_seguridad"
+    ADD CONSTRAINT "incidentes_de_seguridad_pkey" PRIMARY KEY ("id");
 
 
 
@@ -17211,6 +18245,16 @@ ALTER TABLE ONLY "public"."organismos_por_tipo_documento"
 
 
 
+ALTER TABLE ONLY "public"."pacientes_de_incidentes"
+    ADD CONSTRAINT "pacientes_de_incidentes_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."pacientes_de_incidentes"
+    ADD CONSTRAINT "pacientes_de_incidentes_un_paciente_una_vez" UNIQUE ("incidente_id", "paciente_id");
+
+
+
 ALTER TABLE ONLY "public"."pacientes"
     ADD CONSTRAINT "pacientes_id_prestadora_unique" UNIQUE ("id", "prestadora_id");
 
@@ -17281,6 +18325,16 @@ ALTER TABLE ONLY "public"."personas"
 
 
 
+ALTER TABLE ONLY "public"."plantillas_de_aviso_de_brechas"
+    ADD CONSTRAINT "plantillas_de_aviso_de_brechas_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."plantillas_de_aviso_de_brechas"
+    ADD CONSTRAINT "plantillas_de_aviso_de_brechas_una_por_vigencia" UNIQUE ("jurisdiccion", "destinatario", "vigencia_desde");
+
+
+
 ALTER TABLE ONLY "public"."plantillas_whatsapp"
     ADD CONSTRAINT "plantillas_whatsapp_pkey" PRIMARY KEY ("id");
 
@@ -17288,6 +18342,26 @@ ALTER TABLE ONLY "public"."plantillas_whatsapp"
 
 ALTER TABLE ONLY "public"."plantillas_whatsapp"
     ADD CONSTRAINT "plantillas_whatsapp_prestadora_id_nombre_interno_key" UNIQUE ("prestadora_id", "nombre_interno");
+
+
+
+ALTER TABLE ONLY "public"."plazos_de_notificacion_de_brechas"
+    ADD CONSTRAINT "plazos_de_notificacion_de_brechas_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."plazos_de_notificacion_de_brechas"
+    ADD CONSTRAINT "plazos_de_notificacion_de_brechas_un_plazo_por_vigencia" UNIQUE ("jurisdiccion", "destinatario", "vigencia_desde");
+
+
+
+ALTER TABLE ONLY "public"."plazos_de_respuesta_de_derechos"
+    ADD CONSTRAINT "plazos_de_respuesta_de_derechos_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."plazos_de_respuesta_de_derechos"
+    ADD CONSTRAINT "plazos_de_respuesta_unico" UNIQUE ("pais", "tipo", "vigente_desde");
 
 
 
@@ -17473,6 +18547,11 @@ ALTER TABLE ONLY "public"."servicios"
 
 ALTER TABLE ONLY "public"."servicios"
     ADD CONSTRAINT "servicios_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."solicitudes_de_derechos"
+    ADD CONSTRAINT "solicitudes_de_derechos_pkey" PRIMARY KEY ("id");
 
 
 
@@ -17837,6 +18916,14 @@ CREATE UNIQUE INDEX "consentimientos_pagador_uno_pendiente_por_servicio" ON "pub
 
 
 
+CREATE INDEX "constancias_de_revision_por_periodo" ON "public"."constancias_de_revision_del_registro_de_accesos" USING "btree" ("prestadora_id", "desde" DESC);
+
+
+
+CREATE INDEX "consultas_a_hce_por_momento" ON "public"."consultas_a_hce" USING "btree" ("prestadora_id", "momento");
+
+
+
 CREATE INDEX "consultas_a_hce_por_paciente" ON "public"."consultas_a_hce" USING "btree" ("prestadora_id", "paciente_id", "momento");
 
 
@@ -17998,6 +19085,10 @@ CREATE INDEX "guardias_en_curso_por_fecha" ON "public"."guardias" USING "btree" 
 
 
 CREATE INDEX "guardias_servicio_id_idx" ON "public"."guardias" USING "btree" ("servicio_id") WHERE ("servicio_id" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_accesos_de_emergencia_vigentes" ON "public"."accesos_de_emergencia" USING "btree" ("prestadora_id", "usuario_id", "paciente_id", "hasta");
 
 
 
@@ -18770,6 +19861,10 @@ CREATE INDEX "idx_zona_lugares_prestadora_id" ON "public"."zona_lugares" USING "
 
 
 
+CREATE INDEX "incidentes_de_seguridad_por_prestadora" ON "public"."incidentes_de_seguridad" USING "btree" ("prestadora_id", "conocido_at" DESC);
+
+
+
 CREATE INDEX "incidentes_turno_sin_cubrir_abiertos" ON "public"."incidentes_turno_sin_cubrir" USING "btree" ("prestadora_id", "ultimo_recordatorio_at") WHERE ("resuelto_at" IS NULL);
 
 
@@ -18858,6 +19953,10 @@ CREATE UNIQUE INDEX "motivos_sustitucion_guardia_nombre_unico" ON "public"."moti
 
 
 
+CREATE INDEX "pacientes_de_incidentes_por_paciente" ON "public"."pacientes_de_incidentes" USING "btree" ("prestadora_id", "paciente_id");
+
+
+
 CREATE INDEX "pedidos_de_clave_nueva_por_cuenta" ON "public"."pedidos_de_clave_nueva" USING "btree" ("prestadora_id", "usuario_id", "pedido_en");
 
 
@@ -18943,6 +20042,14 @@ CREATE INDEX "series_guardias_servicio_id_idx" ON "public"."series_guardias" USI
 
 
 CREATE INDEX "servicios_coordinador_idx" ON "public"."servicios" USING "btree" ("coordinador_id") WHERE ("coordinador_id" IS NOT NULL);
+
+
+
+CREATE INDEX "solicitudes_de_derechos_por_persona" ON "public"."solicitudes_de_derechos" USING "btree" ("persona_id") WHERE ("persona_id" IS NOT NULL);
+
+
+
+CREATE INDEX "solicitudes_de_derechos_por_prestadora" ON "public"."solicitudes_de_derechos" USING "btree" ("prestadora_id", "estado", "vence_en");
 
 
 
@@ -19330,6 +20437,10 @@ CREATE OR REPLACE TRIGGER "sincronizar_paciente_principal" AFTER INSERT OR UPDAT
 
 
 
+CREATE OR REPLACE TRIGGER "solicitud_de_derecho_la_escribe_la_base" BEFORE INSERT OR UPDATE ON "public"."solicitudes_de_derechos" FOR EACH ROW EXECUTE FUNCTION "interno"."solicitud_de_derecho_la_escribe_la_base"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_a_la_asignacion_cambia_de_estado" BEFORE INSERT OR UPDATE ON "public"."asignaciones_de_turno" FOR EACH ROW EXECUTE FUNCTION "interno"."la_asignacion_cambia_de_estado"();
 
 
@@ -19575,6 +20686,10 @@ CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDAT
 
 
 
+CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."solicitudes_de_derechos" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."textos_autorizacion_signos_vitales" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
 
 
@@ -19680,6 +20795,26 @@ CREATE OR REPLACE TRIGGER "trg_el_domicilio_temporal_no_se_vacia" BEFORE TRUNCAT
 
 
 
+CREATE OR REPLACE TRIGGER "trg_el_incidente_de_seguridad_anota_sus_cambios" BEFORE UPDATE ON "public"."incidentes_de_seguridad" FOR EACH ROW EXECUTE FUNCTION "interno"."el_incidente_de_seguridad_anota_sus_cambios"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_el_incidente_de_seguridad_no_se_borra" BEFORE DELETE ON "public"."incidentes_de_seguridad" FOR EACH ROW EXECUTE FUNCTION "interno"."el_incidente_de_seguridad_no_se_borra"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_el_incidente_de_seguridad_no_se_vacia" BEFORE TRUNCATE ON "public"."incidentes_de_seguridad" FOR EACH STATEMENT EXECUTE FUNCTION "interno"."el_incidente_de_seguridad_no_se_borra"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_el_paciente_alcanzado_no_se_borra" BEFORE DELETE ON "public"."pacientes_de_incidentes" FOR EACH ROW EXECUTE FUNCTION "interno"."el_incidente_de_seguridad_no_se_borra"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_el_paciente_alcanzado_no_se_vacia" BEFORE TRUNCATE ON "public"."pacientes_de_incidentes" FOR EACH STATEMENT EXECUTE FUNCTION "interno"."el_incidente_de_seguridad_no_se_borra"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_el_telefono_nuevo_nace_sin_verificar" BEFORE UPDATE ON "public"."usuarios" FOR EACH ROW EXECUTE FUNCTION "interno"."el_telefono_nuevo_nace_sin_verificar"();
 
 
@@ -19705,6 +20840,10 @@ CREATE OR REPLACE TRIGGER "trg_historial_clinico_no_se_toca" BEFORE DELETE OR UP
 
 
 CREATE OR REPLACE TRIGGER "trg_historial_clinico_no_se_vacia" BEFORE TRUNCATE ON "public"."versiones_registro_clinico" FOR EACH STATEMENT EXECUTE FUNCTION "interno"."el_historial_clinico_no_se_toca"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_la_constancia_de_revision_la_firma_la_sesion" BEFORE INSERT OR DELETE OR UPDATE ON "public"."constancias_de_revision_del_registro_de_accesos" FOR EACH ROW EXECUTE FUNCTION "interno"."la_constancia_de_revision_la_firma_la_sesion"();
 
 
 
@@ -19888,6 +21027,16 @@ ALTER TABLE ONLY "interno"."cambios_de_clave_autorizados"
 
 ALTER TABLE ONLY "interno"."cambios_de_clave_autorizados"
     ADD CONSTRAINT "cambios_de_clave_autorizados_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "public"."usuarios"("id");
+
+
+
+ALTER TABLE ONLY "public"."accesos_de_emergencia"
+    ADD CONSTRAINT "accesos_de_emergencia_paciente_id_fkey" FOREIGN KEY ("paciente_id") REFERENCES "public"."pacientes"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."accesos_de_emergencia"
+    ADD CONSTRAINT "accesos_de_emergencia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
@@ -20748,6 +21897,16 @@ ALTER TABLE ONLY "public"."consentimientos_pagador"
 
 
 
+ALTER TABLE ONLY "public"."constancias_de_revision_del_registro_de_accesos"
+    ADD CONSTRAINT "constancias_de_revision_del_registro_de_acce_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+
+
+
+ALTER TABLE ONLY "public"."constancias_de_revision_del_registro_de_accesos"
+    ADD CONSTRAINT "constancias_de_revision_del_registro_de_acces_revisado_por_fkey" FOREIGN KEY ("revisado_por") REFERENCES "public"."usuarios"("id");
+
+
+
 ALTER TABLE ONLY "public"."consultas_a_hce"
     ADD CONSTRAINT "consultas_a_hce_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
@@ -21432,6 +22591,21 @@ ALTER TABLE ONLY "public"."importaciones_prestadora"
 
 
 
+ALTER TABLE ONLY "public"."incidentes_de_seguridad"
+    ADD CONSTRAINT "incidentes_de_seguridad_cargado_por_fkey" FOREIGN KEY ("cargado_por") REFERENCES "public"."usuarios"("id");
+
+
+
+ALTER TABLE ONLY "public"."incidentes_de_seguridad"
+    ADD CONSTRAINT "incidentes_de_seguridad_evaluado_por_fkey" FOREIGN KEY ("evaluado_por") REFERENCES "public"."usuarios"("id");
+
+
+
+ALTER TABLE ONLY "public"."incidentes_de_seguridad"
+    ADD CONSTRAINT "incidentes_de_seguridad_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+
+
+
 ALTER TABLE ONLY "public"."incidentes_relevo"
     ADD CONSTRAINT "incidentes_relevo_entrante_tenant_fk" FOREIGN KEY ("guardia_entrante_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
 
@@ -21762,6 +22936,26 @@ ALTER TABLE ONLY "public"."pacientes"
 
 
 
+ALTER TABLE ONLY "public"."pacientes_de_incidentes"
+    ADD CONSTRAINT "pacientes_de_incidentes_agregado_por_fkey" FOREIGN KEY ("agregado_por") REFERENCES "public"."usuarios"("id");
+
+
+
+ALTER TABLE ONLY "public"."pacientes_de_incidentes"
+    ADD CONSTRAINT "pacientes_de_incidentes_el_incidente_es_de_la_prestadora" FOREIGN KEY ("incidente_id", "prestadora_id") REFERENCES "public"."incidentes_de_seguridad"("id", "prestadora_id");
+
+
+
+ALTER TABLE ONLY "public"."pacientes_de_incidentes"
+    ADD CONSTRAINT "pacientes_de_incidentes_el_paciente_es_de_la_prestadora" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
+
+
+
+ALTER TABLE ONLY "public"."pacientes_de_incidentes"
+    ADD CONSTRAINT "pacientes_de_incidentes_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+
+
+
 ALTER TABLE ONLY "public"."pacientes"
     ADD CONSTRAINT "pacientes_importacion_id_fkey" FOREIGN KEY ("importacion_id") REFERENCES "public"."importaciones_prestadora"("id");
 
@@ -21889,6 +23083,11 @@ ALTER TABLE ONLY "public"."plantillas_whatsapp"
 
 ALTER TABLE ONLY "public"."plantillas_whatsapp"
     ADD CONSTRAINT "plantillas_whatsapp_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+
+
+
+ALTER TABLE ONLY "public"."plazos_de_respuesta_de_derechos"
+    ADD CONSTRAINT "plazos_de_respuesta_de_derechos_tipo_fkey" FOREIGN KEY ("tipo") REFERENCES "public"."catalogo_derechos_de_la_persona"("clave");
 
 
 
@@ -22202,6 +23401,36 @@ ALTER TABLE ONLY "public"."servicios"
 
 
 
+ALTER TABLE ONLY "public"."solicitudes_de_derechos"
+    ADD CONSTRAINT "solicitudes_de_derechos_cargada_por_fkey" FOREIGN KEY ("cargada_por") REFERENCES "public"."usuarios"("id");
+
+
+
+ALTER TABLE ONLY "public"."solicitudes_de_derechos"
+    ADD CONSTRAINT "solicitudes_de_derechos_de_la_misma_prestadora" FOREIGN KEY ("persona_id", "prestadora_id") REFERENCES "public"."personas"("id", "prestadora_id") ON DELETE SET NULL ("persona_id");
+
+
+
+ALTER TABLE ONLY "public"."solicitudes_de_derechos"
+    ADD CONSTRAINT "solicitudes_de_derechos_plazo_id_fkey" FOREIGN KEY ("plazo_id") REFERENCES "public"."plazos_de_respuesta_de_derechos"("id");
+
+
+
+ALTER TABLE ONLY "public"."solicitudes_de_derechos"
+    ADD CONSTRAINT "solicitudes_de_derechos_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+
+
+
+ALTER TABLE ONLY "public"."solicitudes_de_derechos"
+    ADD CONSTRAINT "solicitudes_de_derechos_respondida_por_fkey" FOREIGN KEY ("respondida_por") REFERENCES "public"."usuarios"("id");
+
+
+
+ALTER TABLE ONLY "public"."solicitudes_de_derechos"
+    ADD CONSTRAINT "solicitudes_de_derechos_tipo_fkey" FOREIGN KEY ("tipo") REFERENCES "public"."catalogo_derechos_de_la_persona"("clave");
+
+
+
 ALTER TABLE ONLY "public"."tareas_del_servicio"
     ADD CONSTRAINT "tareas_del_servicio_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
@@ -22429,6 +23658,14 @@ ALTER TABLE ONLY "public"."zonas_cobertura"
 
 
 ALTER TABLE "interno"."cambios_de_clave_autorizados" ENABLE ROW LEVEL SECURITY;
+
+
+
+ALTER TABLE "public"."accesos_de_emergencia" ENABLE ROW LEVEL SECURITY;
+
+
+
+CREATE POLICY "accesos_de_emergencia_los_ve_quien_abrio_y_la_administracion" ON "public"."accesos_de_emergencia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (("usuario_id" = "interno"."usuario_de_la_sesion"()) OR "interno"."es_la_administracion_de_la_prestadora"("prestadora_id"))));
 
 
 ALTER TABLE "public"."accesos_intermediacion" ENABLE ROW LEVEL SECURITY;
@@ -23191,6 +24428,10 @@ CREATE POLICY "catalogo_datos_del_registro_lo_lee_el_trabajo" ON "public"."catal
 
 
 
+ALTER TABLE "public"."catalogo_derechos_de_la_persona" ENABLE ROW LEVEL SECURITY;
+
+
+
 ALTER TABLE "public"."catalogo_documentos_de_identidad" ENABLE ROW LEVEL SECURITY;
 
 
@@ -23568,6 +24809,10 @@ CREATE POLICY "consentimientos_pagador_los_lee_quien_puede" ON "public"."consent
 
 
 CREATE POLICY "consentimientos_pagador_los_rehace_el_trabajo" ON "public"."consentimientos_pagador" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+
+
+
+ALTER TABLE "public"."constancias_de_revision_del_registro_de_accesos" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -24023,6 +25268,10 @@ ALTER TABLE "public"."datos_bancarios_asistente" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."datos_reservados_asistente" ENABLE ROW LEVEL SECURITY;
 
 
+
+CREATE POLICY "derechos_los_lee_quien_tiene_sesion" ON "public"."catalogo_derechos_de_la_persona" FOR SELECT TO "authenticated", "trabajo_sin_persona" USING (true);
+
+
 ALTER TABLE "public"."desafios_de_llave" ENABLE ROW LEVEL SECURITY;
 
 
@@ -24191,6 +25440,14 @@ ALTER TABLE "public"."facturas_cliente" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."facturas_cliente_items" ENABLE ROW LEVEL SECURITY;
 
 
+
+CREATE POLICY "feriados_los_lee_quien_tiene_sesion" ON "public"."feriados_por_pais" FOR SELECT TO "authenticated", "trabajo_sin_persona" USING (true);
+
+
+
+ALTER TABLE "public"."feriados_por_pais" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."finales_turno_sin_cubrir" ENABLE ROW LEVEL SECURITY;
 
 
@@ -24263,6 +25520,10 @@ CREATE POLICY "identificados_leen_textos_consentimiento" ON "public"."textos_con
 ALTER TABLE "public"."importaciones_prestadora" ENABLE ROW LEVEL SECURITY;
 
 
+
+ALTER TABLE "public"."incidentes_de_seguridad" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."incidentes_relevo" ENABLE ROW LEVEL SECURITY;
 
 
@@ -24284,11 +25545,23 @@ ALTER TABLE "public"."informes_obra_social" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."instrucciones_acceso_personas_autorizadas" ENABLE ROW LEVEL SECURITY;
 
 
+
+CREATE POLICY "la_administracion_agrega_pacientes_alcanzados_de_su_prestadora" ON "public"."pacientes_de_incidentes" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("agregado_por" = "auth"."uid"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
+
+
 CREATE POLICY "la_administracion_atiende_una_emergencia" ON "public"."emergencias_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("atendida_at" IS NULL))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("atendida_at" IS NOT NULL) AND ("atendida_por" = "auth"."uid"())));
 
 
 
+CREATE POLICY "la_administracion_carga_incidentes_de_su_prestadora" ON "public"."incidentes_de_seguridad" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("cargado_por" = "auth"."uid"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
+
+
+
 CREATE POLICY "la_administracion_carga_un_descanso" ON "public"."descansos_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("registrado_por" = "auth"."uid"()) AND ("fin_at" IS NOT NULL)));
+
+
+
+CREATE POLICY "la_administracion_evalua_y_avisa_los_incidentes_propios" ON "public"."incidentes_de_seguridad" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"()))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
 
 
 
@@ -24308,6 +25581,12 @@ CREATE POLICY "la_administracion_lee_conexiones_con_software_externo" ON "public
 
 
 
+CREATE POLICY "la_administracion_lee_las_plantillas_de_su_pais" ON "public"."plantillas_de_aviso_de_brechas" FOR SELECT TO "authenticated" USING ((("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"()) AND ("jurisdiccion" = ( SELECT "p"."pais"
+   FROM "public"."prestadoras" "p"
+  WHERE ("p"."id" = "interno"."prestadora_actual"())))));
+
+
+
 CREATE POLICY "la_administracion_lee_las_propuestas" ON "public"."propuestas_de_ajuste_por_indice" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id")));
 
 
@@ -24316,12 +25595,30 @@ CREATE POLICY "la_administracion_lee_los_cambios_habilitados" ON "public"."cambi
 
 
 
+CREATE POLICY "la_administracion_lee_los_plazos_de_su_pais" ON "public"."plazos_de_notificacion_de_brechas" FOR SELECT TO "authenticated" USING ((("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"()) AND ("jurisdiccion" = ( SELECT "p"."pais"
+   FROM "public"."prestadoras" "p"
+  WHERE ("p"."id" = "interno"."prestadora_actual"())))));
+
+
+
 
 CREATE POLICY "la_administracion_ve_las_cuentas_del_panel_de_su_prestadora" ON "public"."usuarios" FOR SELECT TO "authenticated" USING ((("rol" = ANY (ARRAY['admin_prestadora'::"text", 'coordinador'::"text"])) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND (("desactivada_en" IS NULL) OR "interno"."es_admin_prestadora"())));
 
 
 
+CREATE POLICY "la_administracion_ve_los_incidentes_de_su_prestadora" ON "public"."incidentes_de_seguridad" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
+
+
+
+CREATE POLICY "la_administracion_ve_los_pacientes_alcanzados_de_su_prestadora" ON "public"."pacientes_de_incidentes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
+
+
+
 CREATE POLICY "la_ficha_del_paciente_la_lee_quien_lee_al_paciente" ON "public"."personas" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."lee_los_datos_del_paciente"("id")));
+
+
+
+CREATE POLICY "la_firma_la_administracion_de_la_prestadora" ON "public"."constancias_de_revision_del_registro_de_accesos" FOR INSERT TO "authenticated" WITH CHECK (("interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("revisado_por" = "auth"."uid"())));
 
 
 
@@ -24403,6 +25700,10 @@ CREATE POLICY "la_informacion_de_salud_pasa_por_el_registro" ON "public"."versio
 
 
 
+CREATE POLICY "la_lee_la_administracion_de_la_prestadora" ON "public"."constancias_de_revision_del_registro_de_accesos" FOR SELECT TO "authenticated" USING ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id"));
+
+
+
 CREATE POLICY "la_prestadora_lee_sus_relaciones_laborales" ON "public"."relaciones_laborales" FOR SELECT TO "authenticated" USING (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
@@ -24412,6 +25713,18 @@ CREATE POLICY "la_prestadora_ve_sus_envios_de_correo" ON "public"."envios_de_cor
 
 
 CREATE POLICY "las_reglas_de_los_mensajes_se_leen" ON "public"."reglas_de_los_mensajes" FOR SELECT TO "authenticated" USING (("activo" AND (("prestadora_id" IS NULL) OR ("prestadora_id" = "interno"."prestadora_actual"()))));
+
+
+
+CREATE POLICY "las_solicitudes_las_carga_la_administracion" ON "public"."solicitudes_de_derechos" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id")));
+
+
+
+CREATE POLICY "las_solicitudes_las_lee_la_administracion" ON "public"."solicitudes_de_derechos" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id")));
+
+
+
+CREATE POLICY "las_solicitudes_las_responde_la_administracion" ON "public"."solicitudes_de_derechos" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id"))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id")));
 
 
 
@@ -24674,6 +25987,10 @@ ALTER TABLE "public"."organismos_por_tipo_documento" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."pacientes" ENABLE ROW LEVEL SECURITY;
+
+
+
+ALTER TABLE "public"."pacientes_de_incidentes" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "panel_edita_asistentes" ON "public"."asistentes" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"()))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
@@ -25025,7 +26342,23 @@ CREATE POLICY "personas_las_lee_su_organizacion" ON "public"."personas" FOR SELE
 
 
 
+ALTER TABLE "public"."plantillas_de_aviso_de_brechas" ENABLE ROW LEVEL SECURITY;
+
+
+
 ALTER TABLE "public"."plantillas_whatsapp" ENABLE ROW LEVEL SECURITY;
+
+
+
+ALTER TABLE "public"."plazos_de_notificacion_de_brechas" ENABLE ROW LEVEL SECURITY;
+
+
+
+ALTER TABLE "public"."plazos_de_respuesta_de_derechos" ENABLE ROW LEVEL SECURITY;
+
+
+
+CREATE POLICY "plazos_de_respuesta_los_lee_quien_tiene_sesion" ON "public"."plazos_de_respuesta_de_derechos" FOR SELECT TO "authenticated", "trabajo_sin_persona" USING (true);
 
 
 ALTER TABLE "public"."plazos_de_ubicacion_avisados" ENABLE ROW LEVEL SECURITY;
@@ -25255,6 +26588,10 @@ ALTER TABLE "public"."series_guardias_pacientes" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."servicios" ENABLE ROW LEVEL SECURITY;
+
+
+
+ALTER TABLE "public"."solicitudes_de_derechos" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -26269,6 +27606,11 @@ GRANT USAGE ON SCHEMA "public" TO "trabajo_sin_persona";
 
 
 
+REVOKE ALL ON FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") TO "service_role";
+
+
+
 
 REVOKE ALL ON FUNCTION "interno"."alarmas_a_la_vista_del_coordinador"("p_tipo" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."alarmas_a_la_vista_del_coordinador"("p_tipo" "text") TO "authenticated";
@@ -26625,6 +27967,11 @@ GRANT ALL ON FUNCTION "interno"."cumple_modulo_11"("p_numero" "text") TO "trabaj
 
 
 
+REVOKE ALL ON FUNCTION "interno"."derechos_por_vencer"("p_prestadora" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."derechos_por_vencer"("p_prestadora" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."descuento_lo_escribe_la_base"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."descuento_lo_escribe_la_base"() TO "service_role";
 
@@ -26739,6 +28086,16 @@ GRANT ALL ON FUNCTION "interno"."el_estado_se_resuelve_no_se_pisa"() TO "trabajo
 REVOKE ALL ON FUNCTION "interno"."el_historial_clinico_no_se_toca"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."el_historial_clinico_no_se_toca"() TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."el_historial_clinico_no_se_toca"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."el_incidente_de_seguridad_anota_sus_cambios"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."el_incidente_de_seguridad_anota_sus_cambios"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."el_incidente_de_seguridad_no_se_borra"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."el_incidente_de_seguridad_no_se_borra"() TO "service_role";
 
 
 
@@ -27152,6 +28509,11 @@ REVOKE ALL ON FUNCTION "interno"."la_clave_de_la_administracion_la_cambia_celtat
 
 
 
+REVOKE ALL ON FUNCTION "interno"."la_constancia_de_revision_la_firma_la_sesion"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."la_constancia_de_revision_la_firma_la_sesion"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."la_direccion_de_la_prestadora_es_suya"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."la_direccion_de_la_prestadora_es_suya"() TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."la_direccion_de_la_prestadora_es_suya"() TO "service_role";
@@ -27533,6 +28895,11 @@ REVOKE ALL ON FUNCTION "interno"."resumen_de_la_consulta"("e" "public"."consulta
 
 
 
+REVOKE ALL ON FUNCTION "interno"."resumen_del_registro_de_accesos_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."resumen_del_registro_de_accesos_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."revisar_indice_del_servicio"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."revisar_indice_del_servicio"() TO "service_role";
 GRANT ALL ON FUNCTION "interno"."revisar_indice_del_servicio"() TO "authenticated";
@@ -27559,6 +28926,18 @@ GRANT ALL ON FUNCTION "interno"."sin_coordinador_no_hay_guardias"() TO "service_
 
 
 
+REVOKE ALL ON FUNCTION "interno"."solicitud_de_derecho_la_escribe_la_base"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."solicitud_de_derecho_la_escribe_la_base"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."sumar_dias_habiles"("p_pais" "text", "p_desde" timestamp with time zone, "p_dias" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."sumar_dias_habiles"("p_pais" "text", "p_desde" timestamp with time zone, "p_dias" integer) TO "service_role";
+GRANT ALL ON FUNCTION "interno"."sumar_dias_habiles"("p_pais" "text", "p_desde" timestamp with time zone, "p_dias" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."sumar_dias_habiles"("p_pais" "text", "p_desde" timestamp with time zone, "p_dias" integer) TO "trabajo_sin_persona";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."tablas_de_salud"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."tablas_de_salud"() TO "service_role";
 GRANT ALL ON FUNCTION "interno"."tablas_de_salud"() TO "authenticated";
@@ -27576,6 +28955,12 @@ REVOKE ALL ON FUNCTION "interno"."texto_en_los_tres_idiomas"("texto" "jsonb") FR
 GRANT ALL ON FUNCTION "interno"."texto_en_los_tres_idiomas"("texto" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."texto_en_los_tres_idiomas"("texto" "jsonb") TO "service_role";
 GRANT ALL ON FUNCTION "interno"."texto_en_los_tres_idiomas"("texto" "jsonb") TO "trabajo_sin_persona";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."tiene_acceso_de_emergencia"("p_paciente" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."tiene_acceso_de_emergencia"("p_paciente" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."tiene_acceso_de_emergencia"("p_paciente" "uuid") TO "authenticated";
 
 
 
@@ -27632,11 +29017,43 @@ GRANT ALL ON FUNCTION "interno"."valor_del_indice_de_la_prestadora"("p_prestador
 
 
 
+REVOKE ALL ON FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) TO "service_role";
+GRANT ALL ON FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) TO "trabajo_sin_persona";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."verificar_cadena_de_consultas"("p_prestadora" "uuid") FROM PUBLIC;
 
 
 
 REVOKE ALL ON FUNCTION "interno"."versionar_tabla_clinica"("p_tabla" "regclass") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") TO "trabajo_sin_persona";
+
+
+
+REVOKE ALL ON FUNCTION "public"."abrir_acceso_de_emergencia"("p_paciente" "uuid", "p_motivo" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."abrir_acceso_de_emergencia"("p_paciente" "uuid", "p_motivo" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."abrir_acceso_de_emergencia"("p_paciente" "uuid", "p_motivo" "text") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."accesos_a_la_informacion_de_salud_del_paciente"("p_paciente" "uuid", "p_limite" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."accesos_a_la_informacion_de_salud_del_paciente"("p_paciente" "uuid", "p_limite" integer) TO "service_role";
+GRANT ALL ON FUNCTION "public"."accesos_a_la_informacion_de_salud_del_paciente"("p_paciente" "uuid", "p_limite" integer) TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."accesos_fuera_de_lo_normal"("p_desde" "date", "p_hasta" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."accesos_fuera_de_lo_normal"("p_desde" "date", "p_hasta" "date") TO "service_role";
+GRANT ALL ON FUNCTION "public"."accesos_fuera_de_lo_normal"("p_desde" "date", "p_hasta" "date") TO "authenticated";
 
 
 
@@ -27698,6 +29115,12 @@ GRANT ALL ON FUNCTION "public"."anotar_aviso_de_acceso_de_match"("p_acceso_id" "
 
 REVOKE ALL ON FUNCTION "public"."anotar_aviso_de_borrado_de_consultas_a_hce"("p_anio" integer, "p_aviso" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."anotar_aviso_de_borrado_de_consultas_a_hce"("p_anio" integer, "p_aviso" "text") TO "trabajo_sin_persona";
+
+
+
+REVOKE ALL ON FUNCTION "public"."anotar_aviso_de_derecho_por_vencer"("p_solicitud" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."anotar_aviso_de_derecho_por_vencer"("p_solicitud" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."anotar_aviso_de_derecho_por_vencer"("p_solicitud" "uuid") TO "trabajo_sin_persona";
 
 
 
@@ -27906,6 +29329,12 @@ GRANT ALL ON FUNCTION "public"."cuenta_desactivada"("a" "public"."asistentes") T
 
 
 
+REVOKE ALL ON FUNCTION "public"."cuenta_regresiva_del_incidente"("p_incidente" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."cuenta_regresiva_del_incidente"("p_incidente" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."cuenta_regresiva_del_incidente"("p_incidente" "uuid") TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "public"."cuentas_nunca_activadas"("p_usuarios" "uuid"[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."cuentas_nunca_activadas"("p_usuarios" "uuid"[]) TO "service_role";
 GRANT ALL ON FUNCTION "public"."cuentas_nunca_activadas"("p_usuarios" "uuid"[]) TO "trabajo_sin_persona";
@@ -27933,6 +29362,12 @@ GRANT ALL ON FUNCTION "public"."dar_de_alta_la_prestadora"("p_referencia" "text"
 REVOKE ALL ON FUNCTION "public"."dar_de_baja_el_servicio"("p_servicio" "uuid", "p_motivo" "text", "p_motivo_detalle" "text", "p_comprobaciones" "uuid"[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."dar_de_baja_el_servicio"("p_servicio" "uuid", "p_motivo" "text", "p_motivo_detalle" "text", "p_comprobaciones" "uuid"[]) TO "service_role";
 GRANT ALL ON FUNCTION "public"."dar_de_baja_el_servicio"("p_servicio" "uuid", "p_motivo" "text", "p_motivo_detalle" "text", "p_comprobaciones" "uuid"[]) TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."derechos_por_vencer"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."derechos_por_vencer"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."derechos_por_vencer"() TO "trabajo_sin_persona";
 
 
 
@@ -28105,6 +29540,12 @@ GRANT ALL ON FUNCTION "public"."hay_permiso_de_acceso_vigente"() TO "service_rol
 REVOKE ALL ON FUNCTION "public"."importar_lista_de_precios"("p_renglones" "jsonb", "p_desde" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."importar_lista_de_precios"("p_renglones" "jsonb", "p_desde" "date") TO "service_role";
 GRANT ALL ON FUNCTION "public"."importar_lista_de_precios"("p_renglones" "jsonb", "p_desde" "date") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."informar_accesos_fuera_de_lo_normal_del_dia_anterior"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."informar_accesos_fuera_de_lo_normal_del_dia_anterior"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."informar_accesos_fuera_de_lo_normal_del_dia_anterior"() TO "trabajo_sin_persona";
 
 
 
@@ -28298,6 +29739,12 @@ GRANT ALL ON FUNCTION "public"."resumen_cobros_de_factura"("p_factura_id" "uuid"
 
 
 
+REVOKE ALL ON FUNCTION "public"."resumen_del_registro_de_accesos_por_persona"("p_desde" "date", "p_hasta" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."resumen_del_registro_de_accesos_por_persona"("p_desde" "date", "p_hasta" "date") TO "service_role";
+GRANT ALL ON FUNCTION "public"."resumen_del_registro_de_accesos_por_persona"("p_desde" "date", "p_hasta" "date") TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) TO "service_role";
 GRANT ALL ON FUNCTION "public"."revisar_propuesta_de_ajuste"("p_propuesta" "uuid", "p_precio" numeric) TO "authenticated";
@@ -28405,6 +29852,11 @@ GRANT ALL ON FUNCTION "public"."valor_del_indice"("p_indice" "text", "p_periodo"
 REVOKE ALL ON FUNCTION "public"."verificar_cadena_de_consultas"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."verificar_cadena_de_consultas"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."verificar_cadena_de_consultas"() TO "trabajo_sin_persona";
+
+
+
+GRANT ALL ON TABLE "public"."accesos_de_emergencia" TO "service_role";
+GRANT SELECT ON TABLE "public"."accesos_de_emergencia" TO "authenticated";
 
 
 
@@ -28776,6 +30228,12 @@ GRANT SELECT ON TABLE "public"."catalogo_acciones_registradas" TO "authenticated
 GRANT ALL ON TABLE "public"."catalogo_datos_del_registro" TO "service_role";
 GRANT SELECT ON TABLE "public"."catalogo_datos_del_registro" TO "authenticated";
 GRANT SELECT ON TABLE "public"."catalogo_datos_del_registro" TO "trabajo_sin_persona";
+
+
+
+GRANT ALL ON TABLE "public"."catalogo_derechos_de_la_persona" TO "service_role";
+GRANT SELECT ON TABLE "public"."catalogo_derechos_de_la_persona" TO "authenticated";
+GRANT SELECT ON TABLE "public"."catalogo_derechos_de_la_persona" TO "trabajo_sin_persona";
 
 
 
@@ -29386,6 +30844,23 @@ GRANT UPDATE("firmado_con_email") ON TABLE "public"."consentimientos_pagador" TO
 
 
 
+GRANT ALL ON TABLE "public"."constancias_de_revision_del_registro_de_accesos" TO "service_role";
+GRANT SELECT ON TABLE "public"."constancias_de_revision_del_registro_de_accesos" TO "authenticated";
+
+
+
+GRANT INSERT("desde") ON TABLE "public"."constancias_de_revision_del_registro_de_accesos" TO "authenticated";
+
+
+
+GRANT INSERT("hasta") ON TABLE "public"."constancias_de_revision_del_registro_de_accesos" TO "authenticated";
+
+
+
+GRANT INSERT("observaciones") ON TABLE "public"."constancias_de_revision_del_registro_de_accesos" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."consultas_de_relevo" TO "service_role";
 GRANT SELECT ON TABLE "public"."consultas_de_relevo" TO "authenticated";
 GRANT SELECT,INSERT,UPDATE ON TABLE "public"."consultas_de_relevo" TO "trabajo_sin_persona";
@@ -29914,6 +31389,12 @@ GRANT SELECT("concepto"),INSERT("concepto"),UPDATE("concepto") ON TABLE "public"
 
 
 
+GRANT ALL ON TABLE "public"."feriados_por_pais" TO "service_role";
+GRANT SELECT ON TABLE "public"."feriados_por_pais" TO "authenticated";
+GRANT SELECT ON TABLE "public"."feriados_por_pais" TO "trabajo_sin_persona";
+
+
+
 
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."finales_turno_sin_cubrir" TO "authenticated";
 GRANT ALL ON TABLE "public"."finales_turno_sin_cubrir" TO "service_role";
@@ -30095,6 +31576,59 @@ GRANT UPDATE("revisada_en") ON TABLE "public"."importaciones_prestadora" TO "tra
 
 
 GRANT UPDATE("revisada_por") ON TABLE "public"."importaciones_prestadora" TO "trabajo_sin_persona";
+
+
+
+GRANT ALL ON TABLE "public"."incidentes_de_seguridad" TO "service_role";
+GRANT SELECT ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT INSERT("prestadora_id") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT INSERT("ocurrido_at") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT INSERT("conocido_at") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT INSERT("descripcion") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT UPDATE("autoridad_notificada_at") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT UPDATE("titulares_notificados_at") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT UPDATE("responsable_notificado_at") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT UPDATE("factor_naturaleza_y_alcance") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT UPDATE("factor_quien_recibio") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT UPDATE("factor_adquiridos_o_vistos") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT UPDATE("factor_mitigacion") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
+
+
+
+GRANT UPDATE("conclusion") ON TABLE "public"."incidentes_de_seguridad" TO "authenticated";
 
 
 
@@ -30456,6 +31990,23 @@ GRANT INSERT("persona_id") ON TABLE "public"."pacientes" TO "trabajo_sin_persona
 
 
 
+GRANT ALL ON TABLE "public"."pacientes_de_incidentes" TO "service_role";
+GRANT SELECT ON TABLE "public"."pacientes_de_incidentes" TO "authenticated";
+
+
+
+GRANT INSERT("prestadora_id") ON TABLE "public"."pacientes_de_incidentes" TO "authenticated";
+
+
+
+GRANT INSERT("incidente_id") ON TABLE "public"."pacientes_de_incidentes" TO "authenticated";
+
+
+
+GRANT INSERT("paciente_id") ON TABLE "public"."pacientes_de_incidentes" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."pedidos_de_clave_nueva" TO "service_role";
 GRANT SELECT,INSERT ON TABLE "public"."pedidos_de_clave_nueva" TO "trabajo_sin_persona";
 
@@ -30624,9 +32175,25 @@ GRANT INSERT("persona_id") ON TABLE "public"."personas_autorizadas" TO "trabajo_
 
 
 
+GRANT ALL ON TABLE "public"."plantillas_de_aviso_de_brechas" TO "service_role";
+GRANT SELECT ON TABLE "public"."plantillas_de_aviso_de_brechas" TO "authenticated";
+
+
+
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."plantillas_whatsapp" TO "authenticated";
 GRANT ALL ON TABLE "public"."plantillas_whatsapp" TO "service_role";
 GRANT SELECT,UPDATE ON TABLE "public"."plantillas_whatsapp" TO "trabajo_sin_persona";
+
+
+
+GRANT ALL ON TABLE "public"."plazos_de_notificacion_de_brechas" TO "service_role";
+GRANT SELECT ON TABLE "public"."plazos_de_notificacion_de_brechas" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."plazos_de_respuesta_de_derechos" TO "service_role";
+GRANT SELECT ON TABLE "public"."plazos_de_respuesta_de_derechos" TO "authenticated";
+GRANT SELECT ON TABLE "public"."plazos_de_respuesta_de_derechos" TO "trabajo_sin_persona";
 
 
 
@@ -30994,6 +32561,31 @@ GRANT INSERT("etiqueta") ON TABLE "public"."servicios" TO "trabajo_sin_persona";
 
 
 GRANT INSERT("cliente_id") ON TABLE "public"."servicios" TO "trabajo_sin_persona";
+
+
+
+GRANT ALL ON TABLE "public"."solicitudes_de_derechos" TO "service_role";
+GRANT SELECT ON TABLE "public"."solicitudes_de_derechos" TO "authenticated";
+
+
+
+GRANT INSERT("prestadora_id") ON TABLE "public"."solicitudes_de_derechos" TO "authenticated";
+
+
+
+GRANT INSERT("persona_id") ON TABLE "public"."solicitudes_de_derechos" TO "authenticated";
+
+
+
+GRANT INSERT("tipo") ON TABLE "public"."solicitudes_de_derechos" TO "authenticated";
+
+
+
+GRANT INSERT("recibida_en") ON TABLE "public"."solicitudes_de_derechos" TO "authenticated";
+
+
+
+GRANT UPDATE("estado") ON TABLE "public"."solicitudes_de_derechos" TO "authenticated";
 
 
 

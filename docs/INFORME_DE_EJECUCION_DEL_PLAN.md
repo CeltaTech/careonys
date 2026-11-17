@@ -73,12 +73,40 @@ ya lo hacía así. El motivo por el que un Asistente no puede tomar una guardia 
 ninguna pantalla, así que no hubo nada que cambiar ahí. Queda en el plan el nombre comercial de
 cada modalidad, que tiene que llegar desde CeltaTech: espera el paso del alta de una Prestadora.
 
+**Paso 121, la revisión del registro de accesos.** El sistema ya junta los accesos fuera de lo
+normal: fuera de horario, sin guardia con el Paciente, o sobre demasiados Pacientes en un mismo
+día. Arma el resumen por persona del personal y todos los días cuenta lo del día anterior. Guarda la
+firma de quien revisó, con fecha y nombre, y anota cada vez que alguien mira o descarga el registro.
+Falta la pantalla donde la administración lo ve y firma: quedó en el plan como suya.
+
+**Paso 123, los derechos de la persona sobre sus datos.** El sistema ya guarda cada pedido de una
+persona sobre sus datos, con su plazo contado en días hábiles del país, y avisa antes de que venza.
+Un pedido respondido ya no se puede modificar. También está lista, del lado del sistema, la descarga
+de los datos propios del Cliente y la lista de quién entró a la información de salud de su Paciente.
+Faltan las pantallas en el Panel y en la aplicación
+del Cliente: quedaron en el plan como suyas. Los plazos y los feriados de cada país se cargan con la
+configuración legal por país; hoy no hay ninguno cargado.
+
+**Paso 124, las brechas de seguridad.** El sistema ya guarda cada incidente de seguridad: cuándo
+ocurrió, cuándo se supo, qué Pacientes alcanzó, su evaluación y cuándo se avisó a quién. La cuenta
+regresiva del aviso la calcula la base con el plazo del país. Un aviso dado no se puede cambiar.
+Están cargados los plazos de Costa Rica y Panamá. Falta la pantalla: quedó en el plan como suya.
+
+**Paso 125, quién entra y cómo.** Las dos aplicaciones ahora cierran la sesión por inactividad,
+igual que el Panel, con una franja que avisa el último minuto. El registro anota cuándo alguien
+cierra la sesión, a mano o por inactividad, y cada archivo que alguien descarga. Existe el acceso de
+emergencia: quien no alcanza la información de salud de un Paciente la puede abrir por un tiempo
+acotado, con el motivo escrito, y queda anotado aparte en el registro. Quedaron en el plan como
+suyos el segundo paso de verificación obligatorio y el botón del acceso de emergencia, porque son
+pantallas nuevas.
+
 ## Cómo se comprobó
 
-Pasaron las 2449 pruebas del backend y las 884 del Panel. La prueba que lee cada tabla con cada
+Pasaron las 2515 pruebas del backend, las 888 del Panel, las 6 de la aplicación de los Clientes y las 41
+de la aplicación de los Asistentes, y las tres construyen sin error. La prueba que lee cada tabla con cada
 cuenta de las Prestadoras de demostración pasó: ninguna ve datos de otra. La base reconstruida
 desde cero coincide con el esquema escrito. Las 6 migraciones nuevas están aplicadas en la base en
-la nube.
+la nube, y también las 4 de los pasos 121, 123, 124 y 125.
 
 No se corrieron las tres comprobaciones que entran con la contraseña de las Prestadoras de
 demostración, porque esa contraseña la tiene usted.
@@ -98,6 +126,10 @@ demostración, porque esa contraseña la tiene usted.
 - Revisar si las llaves de los dos depósitos de respaldo tienen permiso de borrar.
 - Autorizar las pantallas de seguridad de la cuenta en las dos aplicaciones.
 - Autorizar los botones de compra y de baja del acceso de Match en la aplicación del Cliente.
+- Autorizar la pantalla de la revisión del registro de accesos.
+- Autorizar las pantallas de los derechos de la persona, en el Panel y en la aplicación del Cliente.
+- Autorizar la pantalla de las brechas de seguridad.
+- Autorizar la pantalla del segundo paso de verificación y el botón del acceso de emergencia.
 
 ## Los pasos que no se hicieron
 
@@ -118,10 +150,6 @@ que no saliera ninguna pantalla nueva:
 - Paso 80, el Panel instalable en el teléfono.
 - Paso 160, cuántos correos mandó cada Prestadora contra el tope del proveedor de correo.
 - Paso 164, el manual del usuario, que primero pide sacar o construir pantallas.
-- Paso 121, la revisión del registro de accesos.
-- Paso 123, los derechos de la persona sobre sus datos.
-- Paso 124, el registro de las brechas de seguridad.
-- Paso 125, el segundo paso de verificación obligatorio y el cierre por inactividad.
 
 **Los que no esperan nada, pero no se podían hacer sin usted.**
 

@@ -1,8 +1,14 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { anotarActividad } from '../lib/ultimaActividad';
+import { anotarFinDeSesion, CAUSAS_DE_FIN_DE_SESION } from '../lib/finDeSesion';
+import { llamarApiPanel } from '../lib/apiPanel';
 
 const AuthContext = createContext(null);
+
+function avisarFinDeSesion(causa) {
+  return llamarApiPanel('/cuenta-segura/fin-de-sesion', { method: 'POST', body: JSON.stringify({ causa }) });
+}
 
 // Quién está mirando, leído de la base. Está acá afuera porque lo usan dos caminos —la carga
 // inicial de la sesión y el refresco de abajo— y una sola forma de armar el usuario evita que
@@ -116,8 +122,18 @@ export function AuthProvider({ children }) {
     return { error };
   }
 
+  // Antes de cerrar queda la constancia en el registro de actividad, con la sesión que todavía
+  // vale; si no se pudo dejar, se cierra igual (`lib/finDeSesion.js`).
   async function logout() {
+    await anotarFinDeSesion(avisarFinDeSesion, CAUSAS_DE_FIN_DE_SESION.A_MANO);
     await supabase.auth.signOut();
+  }
+
+  // El cierre por inactividad es sólo de este navegador: una persona con el Panel abierto en otro
+  // equipo no pierde esa sesión porque ésta se quedó quieta.
+  async function cerrarPorInactividad() {
+    await anotarFinDeSesion(avisarFinDeSesion, CAUSAS_DE_FIN_DE_SESION.POR_INACTIVIDAD);
+    await supabase.auth.signOut({ scope: 'local' });
   }
 
   // Volver a leer al usuario sin salir y entrar. Lo pide la pantalla que cambia la moneda de la
@@ -139,7 +155,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, usuario, estado, cargando, login, logout, refrescarUsuario }}
+      value={{ session, usuario, estado, cargando, login, logout, cerrarPorInactividad, refrescarUsuario }}
     >
       {children}
     </AuthContext.Provider>

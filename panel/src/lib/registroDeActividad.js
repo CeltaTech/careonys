@@ -34,6 +34,9 @@ export function queCambio(fila, t) {
   // El borrado del registro de accesos vencido, y sus dos avisos, dicen de qué año era.
   if (ACCIONES_DEL_BORRADO.has(fila.accion) && detalle.anio) return String(detalle.anio);
 
+  // El fin de la sesión dice si se cerró a mano o por inactividad.
+  if (detalle.causa) return t.auditoria[`causa_${detalle.causa}`] || '—';
+
   const rol = detalle.rol_nuevo || detalle.rol_anterior;
   if (rol) return t.usuarios_panel[`rol_${rol}`] || '—';
 

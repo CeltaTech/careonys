@@ -30,6 +30,8 @@ async function pedido(ruta, opciones = {}) {
 
 export const api = {
   perfil: () => pedido('/perfil'),
+  // La constancia de que la sesión se cierra, a mano o por inactividad. Va antes del cierre.
+  finDeSesion: (causa) => pedido('/cuenta-segura/fin-de-sesion', { method: 'POST', body: JSON.stringify({ causa }) }),
   misPacientes: () => pedido('/pacientes'),
   paciente: (id) => pedido(`/pacientes/${id}`),
   // El día que se manda es el de este teléfono: el backend devuelve la semana que lo contiene.

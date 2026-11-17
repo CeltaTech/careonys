@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabaseClient';
 import { puntoDeLaSesion } from '../lib/cierrePorInactividad';
 import { anotarActividad, anotarCierrePorInactividad, ultimaActividad } from '../lib/ultimaActividad';
 
@@ -15,7 +14,7 @@ const REVISAR_CADA_MS = 1000;
    Cuenta el tiempo sin actividad con la configuración de la Prestadora —encendido o apagado, y
    cuántos minutos—, que llega pegada al usuario (`AuthContext.jsx`). El último minuto avisa; al
    cumplirse, cierra la sesión de este navegador y deja anotado el motivo para la pantalla de
-   ingreso.
+   ingreso. Cerrar lo hace `AuthContext.jsx`, que antes deja la constancia en el registro.
 
    La actividad se anota siempre, también con el cierre apagado: si la Prestadora lo enciende
    mientras alguien trabaja, la cuenta arranca de lo último que esa persona hizo y no de antes.
@@ -23,7 +22,10 @@ const REVISAR_CADA_MS = 1000;
    El cierre es sólo de este navegador (`scope: 'local'`): una persona con el Panel abierto en otro
    equipo no pierde esa sesión porque ésta se quedó quieta. */
 export function useCierrePorInactividad() {
-  const { usuario } = useAuth();
+  const { usuario, cerrarPorInactividad } = useAuth();
+  // Se guarda en una referencia para que el reloj no se reinicie cada vez que el proveedor se dibuja.
+  const cerrar = useRef(cerrarPorInactividad);
+  cerrar.current = cerrarPorInactividad;
   const config = usuario?.cierrePorInactividad;
   const activo = config?.activo === true;
   const minutos = config?.minutos;
@@ -53,7 +55,7 @@ export function useCierrePorInactividad() {
         if (cerrando.current) return;
         cerrando.current = true;
         anotarCierrePorInactividad();
-        supabase.auth.signOut({ scope: 'local' });
+        cerrar.current();
         return;
       }
       setPorCerrar(punto === 'por_cerrar');

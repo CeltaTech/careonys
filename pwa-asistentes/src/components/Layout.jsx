@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
+import AvisoDeInactividad from './AvisoDeInactividad';
 import { iniciarSincronizacionAutomatica } from '../lib/sincronizarCola';
 import { useMarca, useOfreceIntermediacion } from '../context/PerfilContext';
 import { con } from '../lib/textos';
@@ -68,6 +69,7 @@ export default function Layout() {
         </NavLink>
       </header>
       <main className="pwa-body">
+        <AvisoDeInactividad />
         <Outlet context={{ avisarSinResponder: setSinResponder, sinResponder }} />
 
         {/* La única mención del producto en toda la aplicación, y al pie. Va siempre: es el

@@ -16,9 +16,9 @@ import { T } from '../../i18n/translations.js';
 const dibujar = () => renderToStaticMarkup(createElement(MensajeEmergente));
 
 test('el catálogo trae la frase del enlace nuevo en los tres idiomas', () => {
-  assert.equal(T['es-AR'].auth.activar_enlace_nuevo_enviado, 'Le enviamos un nuevo enlace a su email.');
-  assert.equal(T.en.auth.activar_enlace_nuevo_enviado, 'We sent a new link to your email.');
-  assert.equal(T['pt-BR'].auth.activar_enlace_nuevo_enviado, 'Enviamos um novo link para o seu e-mail.');
+  assert.equal(T['es-AR'].auth.activar_enlace_nuevo_enviado, 'Se envió un enlace nuevo a su correo.');
+  assert.equal(T.en.auth.activar_enlace_nuevo_enviado, 'A new link was sent to your email.');
+  assert.equal(T['pt-BR'].auth.activar_enlace_nuevo_enviado, 'Um novo link foi enviado para o seu e-mail.');
 });
 
 test('la zona anunciable está puesta aunque no haya mensaje', () => {

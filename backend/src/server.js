@@ -95,6 +95,12 @@ import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosDelCierreDelServicio } from './utils/avisoAutomaticoDelCierreDelServicio.js';
 import { responderError } from './utils/errorConMotivo.js';
 import { cargarMensajesDelSistema } from './i18n/cargarMensajesDelSistema.js';
+import { informarLosAccesosFueraDeLoNormal } from './utils/revisionDelRegistroDeAccesos.js';
+import { panelDerechosDeLaPersonaRouter } from './routes/panelDerechosDeLaPersona.js';
+import { appClientesDerechosRouter } from './routes/appClientesDerechos.js';
+import { avisarLosDerechosPorVencer } from './utils/avisoDeVencimientoDeDerechos.js';
+import { panelIncidentesDeSeguridadRouter } from './routes/panelIncidentesDeSeguridad.js';
+import { panelAccesoDeEmergenciaRouter } from './routes/panelAccesoDeEmergencia.js';
 
 const app = express();
 app.use(cors());
@@ -176,6 +182,7 @@ app.use('/api/panel/informacion-de-salud', panelInformacionDeSaludRouter);
 app.use('/api/panel/vitales-autorizacion', panelVitalesAutorizacionRouter);
 app.use('/api/panel/apoderado', panelApoderadoRouter);
 app.use('/api/panel/cuenta-segura', panelCuentaSeguraRouter);
+app.use('/api/panel/acceso-de-emergencia', panelAccesoDeEmergenciaRouter);
 app.use('/api/panel/habilitar-clave', panelHabilitarClaveRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
 app.use('/api/recuperar-clave', recuperarClaveRouter);
@@ -210,6 +217,9 @@ app.use('/api/panel/respuestas-preparadas', panelRespuestasPreparadasRouter);
 app.use('/api/panel/guardias', panelGuardiasRouter);
 app.use('/api/panel/comprobaciones', panelComprobacionesRouter);
 app.use('/api/panel/avisos-en-vivo', panelAvisosEnVivoRouter);
+app.use('/api/panel/derechos-de-la-persona', panelDerechosDeLaPersonaRouter);
+app.use('/api/app-clientes/derechos', appClientesDerechosRouter);
+app.use('/api/panel/incidentes-de-seguridad', panelIncidentesDeSeguridadRouter);
 
 // Las tareas automatizadas. Cada una corre de a una Prestadora por vez, con la credencial de esa
 // sola Prestadora (db/connection.js): lo que la tarea consulta, la base se lo recorta a esa
@@ -327,6 +337,15 @@ programar(avisarElBorradoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: tru
 // El ajuste periódico de los precios de cada Servicio por el índice que rige: lo aplica, o deja la
 // propuesta para que la revise la administración, según lo que eligió cada Prestadora.
 programar(ajustarLosPreciosPorIndice, UN_DIA_MS, { conLaPrestadora: true });
+
+// El conteo diario de los accesos a la información de salud del día anterior que salen de lo
+// normal —fuera del horario, sin relación con el Paciente o con demasiados Pacientes en el día—,
+// que queda anotado en el registro de actividad.
+programar(informarLosAccesosFueraDeLoNormal, UN_DIA_MS, { conLaPrestadora: true });
+
+// El aviso a la administración de los pedidos de la persona sobre sus datos cuyo plazo de
+// respuesta está por vencer.
+programar(avisarLosDerechosPorVencer, UN_DIA_MS, { conLaPrestadora: true });
 
 // El respaldo de los datos y la copia de los archivos, cifrados, a los dos depósitos de respaldo.
 // No pasan por `programar` porque usan otra cuenta: la de la copia de respaldo de cada

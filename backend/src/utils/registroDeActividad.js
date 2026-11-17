@@ -82,6 +82,40 @@ export async function registrarActividad(usuarioPanel, accion, {
   }
 }
 
+// VER O DESCARGAR EL REGISTRO DE ACCESOS A LA INFORMACIÓN DE SALUD.
+//
+// Mirar quién leyó información de salud también es leer información de salud, y queda anotado
+// siempre: no hay configuración que lo apague. A diferencia del resto del registro, acá el
+// renglón no acompaña al trabajo, lo condiciona: si no se pudo anotar, no se entrega nada. Por eso
+// esta variante no se calla el error, lo tira, y la ruta contesta que algo falló. La descarga se
+// anota con la acción de exportación de toda descarga.
+export const ACCION_CONSULTA_DEL_REGISTRO_DE_ACCESOS = 'consulta_del_registro_de_accesos';
+// La anota la base, desde el informe diario que corre sin persona. El nombre vive acá igual,
+// para que el Panel y las pruebas lo lean del mismo lugar.
+export const ACCION_INFORME_DIARIO_DE_ACCESOS = 'informe_diario_de_accesos_fuera_de_lo_normal';
+
+export async function registrarActividadSinFalta(usuarioPanel, accion, {
+  tablaAfectada = null,
+  registroId = null,
+  camposCambiados = null,
+  detalle = null,
+} = {}) {
+  if (!usuarioPanel?.id || !usuarioPanel?.prestadoraId) {
+    throw new Error('No hay cuenta o Prestadora a la que atribuirle la acción');
+  }
+  const { error } = await enLaPrestadora(usuarioPanel.prestadoraId, 'registro de actividad', (db) =>
+    db.from('registro_actividad').insert({
+      prestadora_id: usuarioPanel.prestadoraId,
+      usuario_id: usuarioPanel.id,
+      accion,
+      tabla_afectada: tablaAfectada,
+      registro_id: registroId,
+      campos_cambiados: camposCambiados,
+      detalle,
+    }));
+  if (error) throw error;
+}
+
 // La entrada administrativa. Se anota una vez por ventana y por cuenta.
 export async function registrarEntradaAlPanel(usuarioPanel) {
   if (!usuarioPanel?.id || !usuarioPanel?.prestadoraId) return;
@@ -112,6 +146,46 @@ export function registrarBorradoDeDatos(usuarioPanel, metodo, ruta) {
   return registrarActividad(usuarioPanel, ACCION_BORRADO_DE_DATOS, {
     detalle: { metodo, ruta: String(ruta ?? '').split('?')[0] },
   });
+}
+
+// EL FIN DE LA SESION, en el Panel y en las dos aplicaciones. Lo avisa la pantalla justo antes de
+// cerrar, con la sesion que todavia vale: despues de cerrar ya no hay con que escribirlo. La causa
+// es una de dos, y cualquier otra no se anota.
+export const ACCION_FIN_DE_SESION = 'fin_de_sesion';
+export const CAUSAS_DE_FIN_DE_SESION = ['a_mano', 'por_inactividad'];
+
+export function causaDeFinDeSesionValida(causa) {
+  return CAUSAS_DE_FIN_DE_SESION.includes(causa);
+}
+
+export function registrarFinDeSesion(usuario, causa) {
+  if (!causaDeFinDeSesionValida(causa)) return Promise.resolve();
+  return registrarActividad(usuario, ACCION_FIN_DE_SESION, { detalle: { causa } });
+}
+
+// TODA DESCARGA DE DATOS, CON UNA SOLA FUNCION. Se anota que se bajo un archivo, quien y desde
+// que ruta, nunca lo que tenia adentro. La ruta va sin la parte de la consulta, por lo mismo que
+// en el borrado.
+export const ACCION_EXPORTACION = 'exportacion';
+
+export function registrarExportacion(usuario, metodo, ruta) {
+  return registrarActividad(usuario, ACCION_EXPORTACION, {
+    detalle: { metodo, ruta: String(ruta ?? '').split('?')[0] },
+  });
+}
+
+// Se monta en cada ruta que entrega una descarga, despues de la comprobacion de sesion. Anota
+// cuando la respuesta salio bien, y no antes: un pedido rechazado no se llevo nada.
+// `quienPide` dice de donde sale la persona; por defecto, la sesion del Panel.
+export function anotarExportacion(quienPide = (req) => req.usuarioPanel) {
+  return (req, res, next) => {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        registrarExportacion(quienPide(req), req.method, req.originalUrl);
+      }
+    });
+    next();
+  };
 }
 
 // Cuando una ruta ya dejo su propio renglon, con un nombre que dice mejor lo que paso —dar de baja

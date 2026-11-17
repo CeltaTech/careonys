@@ -172,44 +172,21 @@
   object-fit: contain;
 }
 
-/* Tipos de Asistente: cada tipo es una tarjeta, y lo que se abre queda adentro de la suya. */
-.molde-tipos {
-  display: grid;
-  gap: 10px;
-}
-
-.molde-tipo {
-  border: 1px solid var(--borde-card);
-  border-radius: var(--radio-card);
-  background: var(--superficie);
-  min-width: 0;
-}
-
-.molde-tipo-abierto {
-  border-color: var(--azul-medio);
-  box-shadow: var(--sombra-card);
-}
-
-.molde-tipo-cabecera {
+/* Tipos de Asistente: el molde de lista y detalle, con el elegido y todo lo suyo a la derecha. */
+.molde-renglon b.molde-renglon-con-candado {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  padding: 12px 14px;
+  gap: 6px;
 }
 
 .molde-tipo-nombre {
   min-width: 0;
 }
 
-.molde-tipo-nombre h3 {
+.molde-tipo-nombre h2 {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0;
-  font-size: 14px;
-  color: var(--texto-titulo);
 }
 
 .molde-tipo-nombre p {
@@ -235,12 +212,12 @@
 .molde-tipo-contenido {
   display: grid;
   gap: 18px;
-  padding: 14px;
-  border-top: 1px solid var(--borde-card);
 }
 
 .molde-tipo-seccion {
   min-width: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--borde-card);
 }
 
 .molde-tipo-seccion > h4 {

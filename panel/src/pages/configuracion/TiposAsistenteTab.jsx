@@ -85,80 +85,84 @@ export function TiposAsistenteTab() {
     recargar();
   }
 
+  // Como en Listas de opciones: a la izquierda los tipos, a la derecha el elegido con todo lo suyo.
+  const tipoElegido = tipos.find((x) => x.id === tipoAbierto) ?? tipos[0] ?? null;
+
   return (
     <>
-      <section className="panel-tarjeta">
-        <div className="panel-tarjeta-titulo">
-          <h2>{t.configuracion.tipos_titulo}</h2>
-          <Button onClick={() => setTipoEnModal({})}>{t.configuracion.tipos_nuevo}</Button>
-        </div>
-        {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-
-        <EstadoLista
-          estado={estado}
-          error={error}
-          vacio={estado === 'listo' && tipos.length === 0}
-          recargar={recargar}
-          mensajeVacio={t.configuracion.tipos_vacio}
-        >
-          <div className="molde-tipos">
-            {tipos.map((tipo) => {
-              const estaAbierto = tipoAbierto === tipo.id;
-              const idContenido = `tipo_${tipo.id}_contenido`;
-              return (
-                <article key={tipo.id} className={`molde-tipo${estaAbierto ? ' molde-tipo-abierto' : ''}`}>
-                  <div className="molde-tipo-cabecera">
-                    <div className="molde-tipo-nombre">
-                      <h3>
-                        {nombreTipo(tipo, t)}
-                        {esTipoGeneral(tipo) && <Candado etiqueta={t.configuracion.candado} />}
-                      </h3>
-                      {tipo.descripcion && <p className="panel-mini">{tipo.descripcion}</p>}
-                    </div>
-                    <div className="molde-tipo-acciones">
-                      {!esTipoGeneral(tipo) && (
-                        <label className="molde-tipo-en-uso">
-                          <input
-                            type="checkbox"
-                            checked={tipo.activo}
-                            onChange={() => alternarActivo(tipo)}
-                            disabled={ocupadoId === tipo.id}
-                          />
-                          {t.configuracion.tipos_col_activo}
-                        </label>
-                      )}
-                      {!esTipoGeneral(tipo) && (
-                        <>
-                          <Button variant="secondary" onClick={() => setTipoEnModal(tipo)} disabled={ocupadoId === tipo.id}>
-                            {t.comun.editar}
-                          </Button>
-                          <Button variant="secondary" onClick={() => borrar(tipo)} disabled={ocupadoId === tipo.id}>
-                            {t.comun.borrar}
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant={estaAbierto ? 'secondary' : 'primary'}
-                        onClick={() => setTipoAbierto(estaAbierto ? null : tipo.id)}
-                        aria-expanded={estaAbierto}
-                        aria-controls={idContenido}
-                      >
-                        {estaAbierto ? t.configuracion.tipos_ocultar_tareas : t.configuracion.tipos_ver_tareas}
-                      </Button>
-                    </div>
-                  </div>
-                  {estaAbierto && (
-                    <div id={idContenido} className="molde-tipo-contenido">
-                      <EspecialidadesDelTipo tipo={tipo} prestadoraId={prestadoraId} />
-                      <TareasDelTipo tipo={tipo} prestadoraId={prestadoraId} />
-                    </div>
-                  )}
-                </article>
-              );
-            })}
+      <div className="molde-detalle">
+        <section className="panel-tarjeta molde-lista">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.configuracion.tipos_titulo}</h2>
+            <Button onClick={() => setTipoEnModal({})}>{t.configuracion.tipos_nuevo}</Button>
           </div>
-        </EstadoLista>
-      </section>
+          <EstadoLista
+            estado={estado}
+            error={error}
+            vacio={estado === 'listo' && tipos.length === 0}
+            recargar={recargar}
+            mensajeVacio={t.configuracion.tipos_vacio}
+          >
+            <nav aria-label={t.configuracion.tipos_titulo}>
+              {tipos.map((tipo) => {
+                const activo = tipo.id === tipoElegido?.id;
+                return (
+                  <button
+                    key={tipo.id}
+                    type="button"
+                    className={`molde-renglon ${activo ? 'molde-renglon-activo' : ''}`}
+                    aria-pressed={activo}
+                    onClick={() => setTipoAbierto(tipo.id)}
+                  >
+                    <b className="molde-renglon-con-candado">
+                      {nombreTipo(tipo, t)}
+                      {esTipoGeneral(tipo) && <Candado etiqueta={t.configuracion.candado} />}
+                    </b>
+                  </button>
+                );
+              })}
+            </nav>
+          </EstadoLista>
+        </section>
+
+        {tipoElegido && (
+          <section className="panel-tarjeta" key={tipoElegido.id}>
+            <div className="panel-tarjeta-titulo">
+              <div className="molde-tipo-nombre">
+                <h2>
+                  {nombreTipo(tipoElegido, t)}
+                  {esTipoGeneral(tipoElegido) && <Candado etiqueta={t.configuracion.candado} />}
+                </h2>
+                {tipoElegido.descripcion && <p className="panel-mini">{tipoElegido.descripcion}</p>}
+              </div>
+              {!esTipoGeneral(tipoElegido) && (
+                <div className="molde-tipo-acciones">
+                  <label className="molde-tipo-en-uso">
+                    <input
+                      type="checkbox"
+                      checked={tipoElegido.activo}
+                      onChange={() => alternarActivo(tipoElegido)}
+                      disabled={ocupadoId === tipoElegido.id}
+                    />
+                    {t.configuracion.tipos_col_activo}
+                  </label>
+                  <Button variant="secondary" onClick={() => setTipoEnModal(tipoElegido)} disabled={ocupadoId === tipoElegido.id}>
+                    {t.comun.editar}
+                  </Button>
+                  <Button variant="secondary" onClick={() => borrar(tipoElegido)} disabled={ocupadoId === tipoElegido.id}>
+                    {t.comun.borrar}
+                  </Button>
+                </div>
+              )}
+            </div>
+            {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+            <div className="molde-tipo-contenido">
+              <EspecialidadesDelTipo tipo={tipoElegido} prestadoraId={prestadoraId} />
+              <TareasDelTipo tipo={tipoElegido} prestadoraId={prestadoraId} />
+            </div>
+          </section>
+        )}
+      </div>
 
       {tipoEnModal && (
         <TipoModal

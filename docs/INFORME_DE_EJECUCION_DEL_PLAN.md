@@ -1,7 +1,8 @@
 # Informe de la ejecución del plan hasta producción
 
 Este informe dice qué se hizo en cada paso del plan, y por qué no se hizo el resto. Los pasos
-terminados ya no están en el plan. Los que quedan dicen qué esperan.
+terminados ya no están en el plan. Los que quedan dicen qué esperan. Cada paso que se termine se
+agrega acá, hasta que el plan quede vacío.
 
 Se hicieron todos los pasos que no esperaban una decisión suya ni algo de afuera, salvo los que
 necesitaban una pantalla nueva. Ninguna pantalla nueva salió.

@@ -552,6 +552,10 @@ corresponde, cuando hay un motivo justificado para no poder hacerlo ahí —espe
 Desarrollador o algo de afuera—, y el paso dice cuál es. Un paso
 terminado se borra: no se marca como hecho, se saca.
 
+**Y lo que se hizo en ese paso se escribe en `docs/INFORME_DE_EJECUCION_DEL_PLAN.md`**, en el
+mismo commit que lo saca del plan, hasta que el plan quede vacío. El informe dice también qué le
+toca al Desarrollador y cuántos pasos quedan esperando, y eso se corrige cada vez.
+
 **Antes de cerrar una tarea:** ¿se consultaron los tres archivos de reglas? ¿aislamiento entre
 Organizaciones mantenido? ¿términos del glosario aprobados? ¿cuatro estados cubiertos?
 ¿documentación al día? Si alguna respuesta es no, la tarea no está terminada.

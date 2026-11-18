@@ -75,13 +75,12 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
 **Lo que falta:**
 
 1. **Una Prestadora nueva necesita sus tres cuentas automáticas y su clave de respaldo al darse de alta** —la del
-   trabajo, la de la copia y la de la importación—, con su contraseña en
-   `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` de Railway y en la caja fuerte de Careonys. Hoy las
-   tienen las 2 Prestadoras de la base real, y en la base local las crea
-   `scripts/cuentas_automaticas_local.mjs`. La clave de respaldo es un par: la pública va a
-   `CLAVES_PUBLICAS_DE_LOS_RESPALDOS` de Railway y la privada a la caja fuerte y al gestor de
-   contraseñas de Google. Sin la pública, el respaldo de esa Prestadora falla esa noche y lo dice
-   en el registro. El backend ya no firma pases: entra con esas cuentas y
+   trabajo, la de la copia y la de la importación—. Hoy las tienen las 2 Prestadoras de la base
+   real, con sus contraseñas en `CONTRASENAS_DE_LAS_CUENTAS_AUTOMATICAS` de Railway, y en la base
+   local las crea `scripts/cuentas_automaticas_local.mjs`. La clave de respaldo es un par: la
+   pública la lee el backend de `CLAVES_PUBLICAS_DE_LOS_RESPALDOS` de Railway, y la privada no la
+   tiene el sistema. Sin la pública, el respaldo de esa Prestadora falla esa noche y lo dice en el
+   registro. El backend ya no firma pases: entra con esas cuentas y
    el pase lo arma la base (`backend/src/db/connection.js`). **Además:** borrar de las claves de firma de
    Supabase las dos que firmaba el backend, `53b86d1f-…` desde el 25 de noviembre de 2026 y
    `8257f604-…` desde el 11 de diciembre de 2026. Ya están revocadas, y Supabase rechaza el
@@ -92,12 +91,16 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
    equivocadas, Supabase sólo las informa en el plan Teams. Espera ese cambio de plan. Para
    reactivar una cuenta cortada: contraseña nueva, `banned_until` vacío y la contraseña nueva en
    Railway y en la caja fuerte. Si la cortada es `lista@`, el correo no sale hasta reactivarla.
-3. **Usted** — Generar la clave de los secretos de terceros de cada Prestadora y cargarla en
-   `CLAVES_DE_LOS_SECRETOS_DE_TERCEROS` de Railway, con copia en la caja fuerte y en el gestor de
-   contraseñas de Google. El paso a paso está en `docs/SECRETOS.md`. Mientras falte la clave de
-   una Prestadora, esa Prestadora no manda mensajes de WhatsApp, rechaza los avisos firmados y
+3. **La clave de los secretos de terceros de cada Prestadora.** Hoy no la tiene ninguna:
+   `CLAVES_DE_LOS_SECRETOS_DE_TERCEROS` no existe en Railway. Mientras falte la clave de una
+   Prestadora, esa Prestadora no manda mensajes de WhatsApp, rechaza los avisos firmados y
    Configuración no le deja guardar esos datos. Hace falta antes de que la primera Prestadora real
    cargue alguno de ellos.
+
+**Todo esto lo genera y lo guarda el sistema solo, sin pedirle nada a nadie**: las tres cuentas
+automáticas, sus contraseñas, la clave de respaldo y la clave de los secretos de terceros nacen en
+el alta de cada Prestadora. Es un manejo interno: ni el Desarrollador ni la Prestadora generan ni
+cargan claves. Falta decidir dónde las guarda, separadas de la base y de a una Prestadora.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra; ningún secreto del
 repositorio, de GitHub ni del backend alcanza a más de una Prestadora —el backend las guarda todas,
@@ -417,17 +420,16 @@ Prestadora con la moneda de su país, guarda el código que manda CeltaTech en
 `configuracion_prestadora.dominio` (único, y con un código repetido el alta no se hace), guarda la
 referencia de CeltaTech como texto opaco en `prestadoras.referencia_celtatech` (el alta repetida
 devuelve la misma Prestadora), crea al Administrador, fija la casilla de envío a partir del código,
-abre el reenvío de las respuestas, lo deshace todo si algo falla y queda auditada. Falta:
+abre el reenvío de las respuestas, lo deshace todo si algo falla y queda auditada. Lo que falta
+del lado de CeltaTech —generar y cargar la clave compartida de la firma, firmar y mandar el alta, y
+entregarle al Administrador su primera contraseña— está en la lista de CeltaTech,
+`panel/docs/PENDIENTES.md`, `X-21` y `X-24`. Falta acá:
 
-- **Usted** — Cargar `CLAVE_DE_FIRMA_DE_CELTATECH` en Railway, la misma que use CeltaTech.
-- **Usted** — Agregar el código de la Prestadora a `datos_del_producto` en
-  `celtatech/docs/MODELO_COMERCIAL_CELTATECH.md` §6.1: la puerta lo exige y el contrato no lo nombra.
-- **Usted** — La herramienta de CeltaTech que le entrega la contraseña al Administrador: la cuenta
-  nace con una contraseña al azar que nadie conoce.
-- **Las cuentas automáticas de la Prestadora nueva.** Hoy sólo las crea un guion local
+- **Las cuentas automáticas de la Prestadora nueva, y sus claves.** El alta las genera y las
+  guarda sola, sin pedirle nada a nadie: las tres cuentas, la clave de respaldo y la clave de los
+  secretos de terceros. Hoy las cuentas sólo las crea un guion local
   (`scripts/cuentas_automaticas_local.mjs`); sin ellas, las tareas programadas, el correo y el
-  respaldo de esa Prestadora fallan. Espera la decisión de dónde se guarda la contraseña de cada
-  cuenta automática nueva en Railway, que es de usted.
+  respaldo de esa Prestadora fallan. Se construye con el paso 13, que dice dónde se guardan.
 - **La región por país.** Con una sola región alcanza; con más de una, el alta elige según el país.
 
 **Después,** recibir qué tiene habilitado cada Prestadora y que su

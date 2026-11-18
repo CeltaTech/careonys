@@ -100,6 +100,13 @@ acotado, con el motivo escrito, y queda anotado aparte en el registro. Quedaron 
 suyos el segundo paso de verificación obligatorio y el botón del acceso de emergencia, porque son
 pantallas nuevas.
 
+**El alta de una Prestadora.** La da CeltaTech. Lo que le toca a CeltaTech salió del plan de
+Careonys y pasó a la lista de CeltaTech: generar la clave compartida de la firma y cargarla en los
+dos lados, firmar y mandar el alta, y entregarle al Administrador su primera contraseña. El código
+de la Prestadora quedó escrito en el modelo comercial de CeltaTech, entre los datos que Careonys
+pide para el alta. En Careonys quedó que el alta genera y guarda sola las cuentas automáticas y las
+claves de cada Prestadora, sin pedirle nada a nadie.
+
 ## Cómo se comprobó
 
 Pasaron las 2515 pruebas del backend, las 888 del Panel, las 6 de la aplicación de los Clientes y las 41
@@ -113,12 +120,8 @@ demostración, porque esa contraseña la tiene usted.
 
 ## Lo que le toca a usted
 
-- Generar y cargar en Railway la clave de cada Prestadora para los datos de otros servicios.
-- Cargar en Railway la clave de firma de CeltaTech.
-- Agregar el código de la Prestadora al modelo comercial de CeltaTech.
-- Decidir dónde se guardan en Railway las contraseñas de las cuentas automáticas de una
-  Prestadora nueva.
-- La herramienta de CeltaTech que entrega la contraseña del Administrador de una Prestadora nueva.
+- Decidir dónde guarda el sistema, separadas de la base, las claves y las contraseñas que genera
+  solo para cada Prestadora.
 - Lo que tiene contratado cada Prestadora y la región de cada país.
 - Aprobar las 44 fichas de redacción.
 - Decidir si se sacan los 5 grupos de datos personales que nadie usa.

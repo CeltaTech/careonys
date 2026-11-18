@@ -44,7 +44,7 @@ const conProteccion = new Set(
   ),
 );
 const conPolitica = new Set(
-  [...esquema.matchAll(new RegExp(`CREATE POLICY "[^"]+" ON "?public"?\\.${NOMBRE}`, 'g'))].map((m) => m[1]),
+  [...esquema.matchAll(new RegExp(`CREATE POLICY (?:"[^"]+"|[a-z_][a-z0-9_]*)\\s+ON "?public"?\\.${NOMBRE}`, 'g'))].map((m) => m[1]),
 );
 
 const fallas = [];

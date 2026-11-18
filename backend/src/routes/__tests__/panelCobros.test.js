@@ -1294,12 +1294,28 @@ function contadores(nombrados) {
 }
 
 describe('generar las facturas de un período', () => {
-  it('si el Responsable de pagos cambia a mitad del período, salen dos facturas partidas en el día del cambio', async () => {
+  it('si el Responsable de pagos cambia a mitad del período sin recibir la factura, sale una sola a nombre del Contratante', async () => {
     baseConUnCliente({
       prestaciones: [unaPrestacion({ precio_final: '31000.00' })],
       pagadores: [
-        { servicio_id: SERVICIO, pagador_persona_id: null, pagador_tipo: null, rige_desde: null, rige_hasta: '2026-08-15' },
-        { servicio_id: SERVICIO, pagador_persona_id: OTRA_PERSONA, pagador_tipo: 'otro', rige_desde: '2026-08-16', rige_hasta: null },
+        { servicio_id: SERVICIO, pagador_persona_id: null, pagador_tipo: null, rige_desde: null, rige_hasta: '2026-08-15', responsable_que_recibe_la_factura: null },
+        { servicio_id: SERVICIO, pagador_persona_id: OTRA_PERSONA, pagador_tipo: 'otro', rige_desde: '2026-08-16', rige_hasta: null, responsable_que_recibe_la_factura: null },
+      ],
+    });
+
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.deepEqual(cuerpo, contadores({ generadas: 1 }));
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente').cuerpo;
+    assert.deepEqual([factura.periodo, factura.periodo_hasta], ['2026-08-01', '2026-08-31']);
+    assert.equal(aDosDecimales(Number(factura.monto_total)), 31000);
+  });
+
+  it('si desde la mitad del período la factura sale a nombre del Responsable de pagos, salen dos facturas partidas en el día del cambio', async () => {
+    baseConUnCliente({
+      prestaciones: [unaPrestacion({ precio_final: '31000.00' })],
+      pagadores: [
+        { servicio_id: SERVICIO, pagador_persona_id: null, pagador_tipo: null, rige_desde: null, rige_hasta: '2026-08-15', responsable_que_recibe_la_factura: null },
+        { servicio_id: SERVICIO, pagador_persona_id: OTRA_PERSONA, pagador_tipo: 'otro', rige_desde: '2026-08-16', rige_hasta: null, responsable_que_recibe_la_factura: OTRA_PERSONA },
       ],
     });
 
@@ -1629,14 +1645,39 @@ describe('cambiar el Responsable de pagos desde un día', () => {
     respuestas.set('PATCH /rest/v1/consentimientos_pagador', () => [{ id: 'anulado' }]);
   }
 
-  it('la base recibe la persona, la clase y el día, con la credencial de quien pide', async () => {
+  it('la base recibe la persona, la clase y el día, con la credencial de quien pide; sin indicación la factura sigue al Contratante', async () => {
     prepararCambio({ deHoy: { pagador_persona_id: OTRA_PERSONA } });
     const { estado, cuerpo } = await pedir('PUT', ruta, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10' });
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { ok: true, regeneradas: 0 });
     const cambio = llamadas.find((l) => l.clave === CAMBIO);
-    assert.deepEqual(cambio.cuerpo, { p_servicio: SERVICIO, p_persona: OTRA_PERSONA, p_tipo: 'otro', p_desde: '2026-09-10' });
+    assert.deepEqual(cambio.cuerpo, {
+      p_servicio: SERVICIO, p_persona: OTRA_PERSONA, p_tipo: 'otro', p_desde: '2026-09-10', p_factura_al_responsable: false,
+    });
     assert.equal(cambio.credencial, credencialEnviada);
+  });
+
+  it('la indicación de facturar a nombre del Responsable de pagos llega a la base', async () => {
+    prepararCambio({ deHoy: { pagador_persona_id: OTRA_PERSONA } });
+    const { estado } = await pedir('PUT', ruta, {
+      persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10', factura_al_responsable: true,
+    });
+    assert.equal(estado, 200);
+    const cambio = llamadas.find((l) => l.clave === CAMBIO);
+    assert.equal(cambio.cuerpo.p_factura_al_responsable, true);
+  });
+
+  it('la indicación sin Responsable de pagos, o que no es sí o no, no llega a la base', async () => {
+    prepararCambio();
+    for (const cuerpo of [
+      { persona_id: null, tipo: null, desde: '2026-09-10', factura_al_responsable: true },
+      { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10', factura_al_responsable: 'si' },
+    ]) {
+      const { estado, cuerpo: respuesta } = await pedir('PUT', ruta, cuerpo);
+      assert.equal(estado, 400, JSON.stringify(cuerpo));
+      assert.equal(respuesta.motivo, 'dato_invalido');
+    }
+    assert.ok(!llamadas.some((l) => l.clave === CAMBIO));
   });
 
   it('sin persona paga el Cliente: la clase va vacía', async () => {
@@ -1680,7 +1721,7 @@ describe('cambiar el Responsable de pagos desde un día', () => {
       prestaciones: [unaPrestacion({ precio_final: '31000.00' })],
       pagadores: [
         { servicio_id: SERVICIO, pagador_persona_id: null, pagador_tipo: null, rige_desde: null, rige_hasta: '2026-08-15' },
-        { servicio_id: SERVICIO, pagador_persona_id: OTRA_PERSONA, pagador_tipo: 'otro', rige_desde: '2026-08-16', rige_hasta: null },
+        { servicio_id: SERVICIO, pagador_persona_id: OTRA_PERSONA, pagador_tipo: 'otro', rige_desde: '2026-08-16', rige_hasta: null, responsable_que_recibe_la_factura: OTRA_PERSONA },
       ],
     });
     // La lectura del Responsable de pagos de hoy pide una sola fila; la de la factura, todos los tramos.
@@ -1689,7 +1730,9 @@ describe('cambiar el Responsable de pagos desde un día', () => {
       (llamadas.at(-1).url.includes('rige_hoy') ? [tramos().at(-1)] : tramos()));
     respuestas.set(CAMBIO, () => [{ periodo: '2026-08-01', periodo_hasta: '2026-08-31' }]);
     respuestas.set('GET /rest/v1/consentimientos_pagador', () => []);
-    const { estado, cuerpo } = await pedir('PUT', ruta, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-08-16' });
+    const { estado, cuerpo } = await pedir('PUT', ruta, {
+      persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-08-16', factura_al_responsable: true,
+    });
     assert.equal(estado, 200, JSON.stringify(cuerpo));
     assert.equal(cuerpo.regeneradas, 2);
     const facturas = llamadas.filter((l) => l.clave === 'POST /rest/v1/facturas_cliente').map((l) => l.cuerpo);
@@ -1721,5 +1764,64 @@ describe('cambiar el Responsable de pagos desde un día', () => {
     const { estado } = await pedir('PUT', ruta, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10' });
     assert.equal(estado, 403);
     assert.ok(!llamadas.some((l) => l.clave === CAMBIO));
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// A nombre de quién sale lo que se manda a facturar
+// ---------------------------------------------------------------------------------------
+
+describe('a nombre de quién sale lo que se manda a facturar', () => {
+  const CONTRATANTE = '88888888-8888-4888-8888-888888888888';
+
+  function prepararParaFacturar(tramos) {
+    respuestas.set('GET /rest/v1/saldos_cliente', () => [{
+      factura_id: FACTURA, cliente_id: CLIENTE, periodo: '2026-08-01', periodo_hasta: '2026-08-31',
+      moneda: 'ARS', monto_total: '10000.00', fecha_vencimiento: '2026-09-10',
+    }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{
+      id: CLIENTE, numero_cliente: '17', contratante_persona_id: CONTRATANTE, personas: { nombre_visible: 'Juana Pérez' },
+    }]);
+    respuestas.set('GET /rest/v1/facturas_cliente', () => [
+      { id: FACTURA, servicio_id: SERVICIO, cliente_id: CLIENTE, periodo: '2026-08-01' },
+    ]);
+    respuestas.set('GET /rest/v1/condiciones_comerciales_servicio', () => [
+      { servicio_id: SERVICIO, contratante_persona_id: CONTRATANTE },
+    ]);
+    respuestas.set('GET /rest/v1/tramos_de_pagador_del_servicio', () => tramos);
+    respuestas.set('GET /rest/v1/personas', () => [
+      { id: CONTRATANTE, nombre_visible: 'Contratante de prueba' },
+      { id: OTRA_PERSONA, nombre_visible: 'Responsable de pagos de prueba' },
+    ]);
+  }
+
+  it('con un Responsable de pagos sin indicación, la factura sale a nombre del Contratante', async () => {
+    prepararParaFacturar([
+      { servicio_id: SERVICIO, rige_desde: null, rige_hasta: null, responsable_que_recibe_la_factura: null },
+    ]);
+    const { estado, cuerpo } = await pedir('GET', '/para-facturar?periodo=2026-08');
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
+    assert.equal(cuerpo[0].facturar_a_nombre, 'Contratante de prueba');
+    const personas = llamadas.find((l) => l.clave === 'GET /rest/v1/personas');
+    assert.ok(personas.url.includes(CONTRATANTE) && !personas.url.includes(OTRA_PERSONA));
+  });
+
+  it('con la indicación de la Prestadora, la factura sale a nombre del Responsable de pagos', async () => {
+    prepararParaFacturar([
+      { servicio_id: SERVICIO, rige_desde: null, rige_hasta: null, responsable_que_recibe_la_factura: OTRA_PERSONA },
+    ]);
+    const { estado, cuerpo } = await pedir('GET', '/para-facturar?periodo=2026-08');
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
+    assert.equal(cuerpo[0].facturar_a_nombre, 'Responsable de pagos de prueba');
+  });
+
+  it('sin Contratante en el Servicio, la factura sale a nombre del Contratante del Cliente', async () => {
+    prepararParaFacturar([]);
+    respuestas.set('GET /rest/v1/condiciones_comerciales_servicio', () => [
+      { servicio_id: SERVICIO, contratante_persona_id: null },
+    ]);
+    const { estado, cuerpo } = await pedir('GET', '/para-facturar?periodo=2026-08');
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
+    assert.equal(cuerpo[0].facturar_a_nombre, 'Contratante de prueba');
   });
 });

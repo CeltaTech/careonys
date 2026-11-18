@@ -27,9 +27,9 @@ import { laCobranzaLaLlevaOtroSoftware } from '../utils/seguimientoDeLaCobranza.
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
 import {
+  aNombreDeQuienSaleLaFactura,
   descuentosDeLaParte,
   etiquetaDelPeriodo,
-  pagadorEnLaFecha,
   periodoEnteroDeLaParte,
   tramoNombrado,
   tramoPedido,
@@ -137,11 +137,11 @@ async function nombresDeClientes(db, ids) {
 /**
  * A quién se le factura cada una de estas facturas, y el número de su Cliente.
  *
- * Cada factura es de un Servicio. Se le factura a quien era Responsable de pagos de ese Servicio
- * en los días de la factura: si cambió en el medio del período, la factura ya salió partida en
- * ese día, así que el de su primer día es el de todos. Si no tiene uno aparte, paga quien contrata —el Contratante del Servicio o, si no está anotado, el del
- * Cliente—. Los datos de la persona se leen en este momento y no se copian: lo que el
- * facturador recibe es lo que esos datos dicen hoy.
+ * Cada factura es de un Servicio y sale a nombre de su Contratante —el del Servicio o, si no está
+ * anotado, el del Cliente—, salvo que la Prestadora haya indicado que esos días sale a nombre del
+ * Responsable de pagos. Si eso cambió en el medio del período, la factura ya salió partida en ese
+ * día, así que lo que rige en su primer día rige para todos. Los datos de la persona se leen en
+ * este momento y no se copian: lo que el facturador recibe es lo que esos datos dicen hoy.
  */
 async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
   const resultado = new Map();
@@ -173,7 +173,7 @@ async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
       ? enLaPrestadora(prestadoraId, 'quién paga cada día de cada Servicio', (dbTrabajo) =>
           dbTrabajo
             .from('tramos_de_pagador_del_servicio')
-            .select('servicio_id, pagador_persona_id, pagador_tipo, rige_desde, rige_hasta')
+            .select('servicio_id, rige_desde, rige_hasta, responsable_que_recibe_la_factura')
             .in('servicio_id', servicioIds),
         )
       : Promise.resolve({ data: [], error: null }),
@@ -192,12 +192,13 @@ async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
   for (const f of facturas || []) {
     const s = servicioPorId.get(f.servicio_id);
     const c = clientePorId.get(f.cliente_id);
-    const pagador = pagadorEnLaFecha((tramos || []).filter((t) => t.servicio_id === f.servicio_id), f.periodo);
-    personaDe.set(f.id, pagador?.pagador_persona_id || s?.contratante_persona_id || c?.contratante_persona_id || null);
+    const contratante = s?.contratante_persona_id || c?.contratante_persona_id || null;
+    const tramosDelServicio = (tramos || []).filter((t) => t.servicio_id === f.servicio_id);
+    personaDe.set(f.id, aNombreDeQuienSaleLaFactura(tramosDelServicio, f.periodo, contratante));
   }
 
-  // Los datos del Responsable de pagos tampoco los alcanza quien coordina sin el permiso, así que
-  // sale por el mismo camino.
+  // Los datos del Contratante y del Responsable de pagos tampoco los alcanza quien coordina sin el
+  // permiso, así que salen por el mismo camino.
   const personaIds = [...new Set([...personaDe.values()].filter(Boolean))];
   let fichas = new Map();
   if (personaIds.length) {
@@ -379,7 +380,8 @@ panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, veElEstadoDeCuenta
 // La baja de un Servicio con deuda
 //
 // La anota la base al dar la baja (`dar_de_baja_el_servicio`). Acá sólo se muestra, con el
-// Responsable de pagos y el Contratante —que responde solidariamente—, y se marca como visto.
+// Contratante, a cuyo nombre sale la factura y que responde por el Servicio, y el Responsable de
+// pagos, que es quien paga. Después se marca como visto.
 // Ni la lectura ni la marca tocan la deuda: el reclamo es de créditos y cobranzas.
 // ---------------------------------------------------------------------------------------
 
@@ -729,11 +731,14 @@ const TIPOS_DE_PAGADOR = ['cliente', 'obra_social', 'otro'];
 /**
  * Cambiar el Responsable de pagos de un Servicio desde un día.
  *
- * CADA DÍA SE LE FACTURA A QUIEN PAGABA ESE DÍA. La base guarda el cambio con el día desde el que
- * rige, y rechaza el que caería sobre días de una factura ya emitida, con comprobante o con cobros.
- * Las facturas sin emitir que el cambio parte en dos las borra la base en la misma operación, y acá
- * se vuelven a generar con la misma función que genera todas: salen partidas en el día del cambio,
- * una a nombre de cada uno.
+ * LA FACTURA SALE A NOMBRE DEL CONTRATANTE, salvo que la Prestadora indique para ese Servicio, desde
+ * ese día, que sale a nombre del Responsable de pagos (`factura_al_responsable`). La base guarda el
+ * cambio con el día desde el que rige. Si el cambio cambia la persona a nombre de quien sale la
+ * factura, la base rechaza el que caería sobre días de una factura ya emitida, con comprobante, con
+ * cobros o con correcciones, y borra en la misma operación las facturas sin emitir que quedan con
+ * días a nombre de dos personas; acá se vuelven a generar con la misma función que genera todas, y
+ * salen partidas en el día del cambio. Un cambio que deja la factura a nombre del mismo no parte
+ * ni rechaza nada.
  *
  * LA FIRMA DEL ANTERIOR SIGUE VALIENDO PARA SUS DÍAS. Lo que se anula es el documento que el
  * anterior tenía pendiente de firmar; el nuevo firma uno nuevo.
@@ -748,7 +753,13 @@ panelCobrosRouter.put(
     const desde = String(cuerpo.desde ?? '').slice(0, 10);
     const personaId = cuerpo.persona_id ? String(cuerpo.persona_id) : null;
     const tipo = cuerpo.tipo ? String(cuerpo.tipo) : null;
-    if (!tramoPedido({ desde, hasta: desde }) || (tipo && !TIPOS_DE_PAGADOR.includes(tipo))) {
+    const facturaAlResponsable = cuerpo.factura_al_responsable === true;
+    if (
+      !tramoPedido({ desde, hasta: desde })
+      || (tipo && !TIPOS_DE_PAGADOR.includes(tipo))
+      || (cuerpo.factura_al_responsable !== undefined && typeof cuerpo.factura_al_responsable !== 'boolean')
+      || (facturaAlResponsable && !personaId)
+    ) {
       return responderError(res, new ErrorConMotivo('dato_invalido'));
     }
 
@@ -759,6 +770,7 @@ panelCobrosRouter.put(
         p_persona: personaId,
         p_tipo: tipo,
         p_desde: desde,
+        p_factura_al_responsable: facturaAlResponsable,
       });
       if (error) {
         if (MOTIVOS_DEL_CAMBIO_DE_PAGADOR.includes(error.message)) throw new ErrorConMotivo(error.message, error.message);

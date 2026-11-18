@@ -410,15 +410,22 @@ Y `falta_la_firma_del_pagador`, que recibe un Servicio, resuelve la Prestadora a
 `prestadora_actual()`, sólo le contesta al personal de esa Prestadora y dice si ella pide la firma
 del Responsable de pagos para programar guardias y ese Servicio no la tiene vigente; un Servicio de otra
 Prestadora no devuelve nada.
-Y `cambiar_responsable_de_pagos`, que recibe un Servicio, la persona, el tipo y el día desde el que
-rige. Resuelve la Prestadora adentro con `prestadora_actual()` y exige el permiso de lo comercial.
-Deja escrito quién pagaba antes de ese día. Borra las facturas sin emitir que el cambio parte y
-devuelve sus períodos, para que el backend las vuelva a generar en dos partes. La base rechaza el
-cambio si toca días de una factura emitida, con comprobante, con cobros o con correcciones: una
-corrección lleva su propio comprobante, y borrar la factura la borraría con ella. Quién paga cada
-día lo dice una sola cuenta, la vista `tramos_de_pagador_del_servicio`, que leen la base, el backend
-y el Panel. Adentro de la base, `interno.pagador_del_servicio_en` contesta quién paga un Servicio en
-una fecha.
+Y `cambiar_responsable_de_pagos`, que recibe un Servicio, la persona, el tipo, el día desde el que
+rige y la indicación de facturar a nombre del Responsable de pagos, apagada si no viene. Resuelve
+la Prestadora adentro con `prestadora_actual()` y exige el permiso de lo comercial. Deja escrito
+quién pagaba antes de ese día. **La factura sale siempre a nombre del Contratante** —el del
+Servicio o, si no tiene uno, el del Cliente—, salvo los días en que la Prestadora encendió esa
+indicación para ese Servicio, que salen a nombre del Responsable de pagos; sin Responsable de pagos
+la indicación no se puede encender. Por eso el cambio parte una factura, o se rechaza, **sólo si
+cambia la persona a cuyo nombre sale**: entonces borra las facturas sin emitir que quedan con días
+a nombre de dos personas y devuelve sus períodos, para que el backend las vuelva a generar en dos
+partes, y la base lo rechaza si toca días de una factura emitida, con comprobante, con cobros o
+con correcciones: una corrección lleva su propio comprobante, y borrar la factura la borraría con
+ella. Quién paga cada día, y a nombre de quién sale la factura, lo dice una sola cuenta, la vista
+`tramos_de_pagador_del_servicio`, que leen la base, el backend y el Panel; la persona de la
+factura sale de `interno.responsable_que_recibe_la_factura`, que contesta vacío cuando es el
+Contratante. Adentro de la base, `interno.pagador_del_servicio_en` contesta quién paga un
+Servicio en una fecha.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial; `borrar_consultas_a_hce_vencidas`, que no recibe nada, borra de esa Prestadora los

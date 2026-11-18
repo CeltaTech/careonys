@@ -119,16 +119,22 @@ el Coordinador. Las guardias que ya estaban programadas siguen igual.
 
 El Responsable de pagos ahora se puede cambiar con el Servicio en curso. En la pestaña Pagos del
 Servicio, quien elige otro Responsable de pagos indica también desde qué día rige el cambio. Puede
-ser cualquier día, pasado o futuro. Cada día se le factura a quien era el Responsable de pagos ese
-día. Si el cambio cae en la mitad de un período, la factura de ese período sale partida en dos: una
-a nombre del anterior, por los días anteriores al cambio, y otra a nombre del nuevo, por los días
-siguientes. Cada una cobra sus propios días, y entre las dos suman el período entero. La firma del
-anterior sigue valiendo para sus días, y el nuevo firma su propio documento. Si el anterior tenía un
-documento sin firmar, ese documento se anula. Las facturas de esos días que todavía no se mandaron a
-facturar se vuelven a armar solas, ya partidas. Si alguno de esos días ya está en una factura
-emitida, con cobros o con correcciones, el sistema no hace el cambio y avisa que se elija un día posterior a esa
-factura. También quedó corregida una falla de la pestaña Pagos, que no dejaba abrirla. Del
-Responsable de pagos quedan en el plan el Responsable que desiste y más de un Responsable por día.
+ser cualquier día, pasado o futuro. La factura sale siempre a nombre del Contratante, que es quien
+asume la responsabilidad legal y comercial de contratar a la Prestadora. Por eso un cambio de
+Responsable de pagos no parte ninguna factura. La única excepción la pone la Prestadora, para un
+Servicio puntual: al elegir el Responsable de pagos marca la casilla «Facturar a nombre del
+Responsable de pagos», y desde ese día la factura sale a nombre de él. Sólo cuando cambia la
+persona a cuyo nombre sale la factura, y el cambio cae en la mitad de un período, la factura de ese
+período sale partida en dos: una por los días anteriores al cambio y otra por los días siguientes.
+Cada una cobra sus propios días, y entre las dos suman el período entero. Las facturas de esos días
+que todavía no se mandaron a facturar se vuelven a armar solas, ya partidas. Si alguno de esos días
+ya está en una factura emitida, con cobros o con correcciones, el sistema no hace ese cambio y
+avisa que se elija un día posterior a esa factura. La firma del anterior sigue valiendo para sus
+días, y el nuevo firma su propio documento. Si el anterior tenía un documento sin firmar, ese
+documento se anula. El Responsable de pagos que desiste se anota con el mismo cambio con fecha: el
+Servicio queda sin Responsable de pagos desde ese día, y la factura sigue saliendo a nombre del
+Contratante. También quedó corregida una falla de la pestaña Pagos, que no dejaba abrirla. Del
+Responsable de pagos queda en el plan más de un Responsable por día.
 
 ## Cómo se comprobó
 

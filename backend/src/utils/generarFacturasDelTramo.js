@@ -2,9 +2,10 @@
    ============================================================
 
    Una factura por Servicio y por cada período de su frecuencia de cobro que empiece en el tramo,
-   ya terminado, y que todavía no tenga la suya. Si en ese período cambió el Responsable de pagos,
-   el período se parte en el día del cambio y sale una factura por cada parte, cada una a nombre
-   de quien pagaba esos días (`partesDelPeriodo`).
+   ya terminado, y que todavía no tenga la suya. La factura sale a nombre del Contratante, salvo
+   los días en que la Prestadora indicó que sale a nombre del Responsable de pagos. Si en ese
+   período cambió la persona a nombre de quien sale, el período se parte en el día del cambio y
+   sale una factura por cada parte (`partesDelPeriodo`).
 
    Lo usan dos rutas: la que genera la tanda y la que cambia al Responsable de pagos, que vuelve a
    generar las facturas que el cambio dejó partidas. Por eso vive acá y no adentro de una ruta.
@@ -128,7 +129,7 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
     leerEnLaPrestadora(prestadoraId, 'quién paga cada día de cada Servicio', (dbTrabajo) =>
       dbTrabajo
         .from('tramos_de_pagador_del_servicio')
-        .select('servicio_id, pagador_persona_id, pagador_tipo, rige_desde, rige_hasta')
+        .select('servicio_id, pagador_persona_id, pagador_tipo, rige_desde, rige_hasta, responsable_que_recibe_la_factura')
         .in('servicio_id', servicioIds),
     ),
   ]);

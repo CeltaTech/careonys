@@ -15,6 +15,7 @@ import {
   PLAZO_MAXIMO_EN_DIAS,
   plazoQueSePuedeGuardar,
 } from '../../lib/facturacionDeClientes';
+import { cambiaElResponsableDePagos, facturaAlResponsable } from '../../lib/responsableDePagosDelServicio';
 import {
   CLAVES_SI_NO,
   FRECUENCIAS_DE_COBRO_POSIBLES,
@@ -47,9 +48,11 @@ import '../../styles/molde-paginas.css';
    eso un casillero que no se tocó se guarda tal como estaba, y uno que se tocó se guarda con el
    valor elegido, sin compararlo contra lo que no se pudo leer.
 
-   EL RESPONSABLE DE PAGOS. Se muestra el de hoy. Cambiarlo pide desde qué día rige: cada día se le
-   factura a quien pagaba ese día, y la firma del anterior sigue valiendo para sus días. El cambio
-   lo guarda el backend, que vuelve a generar partidas las facturas sin emitir que el cambio corta.
+   EL RESPONSABLE DE PAGOS. Se muestra el de hoy. La factura sale siempre a nombre del Contratante,
+   salvo que la Prestadora marque que, en este Servicio, sale a nombre del Responsable de pagos.
+   Cambiar la persona, el tipo o esa marca pide desde qué día rige, y la firma del anterior sigue
+   valiendo para sus días. El cambio lo guarda el backend; la factura se parte en ese día sólo si
+   cambia la persona a cuyo nombre sale.
 
    EL DESCUENTO. Un solo número: el porcentaje que rige desde hoy y sin fin. Cambiarlo termina el
    anterior y carga el nuevo (`fijar_descuento_del_servicio`); cero lo quita. */
@@ -85,6 +88,7 @@ function formDe(fila, regla, pagador) {
     dias_hasta_el_vencimiento: dias === null || dias === undefined ? '' : String(dias),
     pagador_tipo: pagador?.pagador_tipo || '',
     pagador_persona_id: pagador?.pagador_persona_id || null,
+    factura_al_responsable: pagador?.factura_al_responsable === true,
     pagador_rige_desde: '',
     contratante_persona_id: fila?.contratante_persona_id || null,
     ...condicionesVisiblesDe(fila, regla),
@@ -123,7 +127,7 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
         .maybeSingle(),
       supabase
         .from('tramos_de_pagador_del_servicio')
-        .select('pagador_persona_id, pagador_tipo')
+        .select('pagador_persona_id, pagador_tipo, factura_al_responsable')
         .eq('servicio_id', servicio.id)
         .eq('rige_hoy', true)
         .maybeSingle(),
@@ -171,14 +175,18 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
   }, [cargar]);
 
   function setCampo(campo, valor) {
-    setForm((f) => ({ ...f, [campo]: valor }));
+    setForm((f) => ({
+      ...f,
+      [campo]: valor,
+      // Sin Responsable de pagos no hay a quién facturarle: la marca se apaga con él.
+      ...(campo === 'pagador_persona_id' && !valor ? { factura_al_responsable: false } : {}),
+    }));
     if (CONDICIONES_DEL_SERVICIO.includes(campo)) setTocadas((antes) => new Set(antes).add(campo));
     if (campo === 'pagador_rige_desde' && valor) setRigeDesdeMal(false);
     setGuardado(false);
   }
 
-  const cambiaElPagador = (form.pagador_persona_id || null) !== (pagadorDeHoy?.pagador_persona_id || null)
-    || (form.pagador_tipo || '') !== (pagadorDeHoy?.pagador_tipo || '');
+  const cambiaElPagador = cambiaElResponsableDePagos(form, pagadorDeHoy);
 
   // La condición que no se tocó queda como estaba; la que se tocó pasa por la misma revisión que
   // usa el backend.
@@ -231,6 +239,7 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
             persona_id: form.pagador_persona_id || null,
             tipo: form.pagador_tipo || null,
             desde: form.pagador_rige_desde,
+            factura_al_responsable: facturaAlResponsable(form),
           }),
         });
       } catch (fallaDelCambio) {
@@ -328,6 +337,18 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
             deshabilitado={!puedeEditar}
           />
         </div>
+        {form.pagador_persona_id && (
+          <div className="molde-ancho">
+            <FormField
+              label={t.clientes.factura_al_responsable}
+              name="factura_al_responsable"
+              type="checkbox"
+              checked={form.factura_al_responsable === true}
+              onChange={(e) => setCampo('factura_al_responsable', e.target.checked)}
+              disabled={!puedeEditar}
+            />
+          </div>
+        )}
         {cambiaElPagador && (
           <FormField
             label={t.clientes.pagador_rige_desde}

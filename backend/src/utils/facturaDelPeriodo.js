@@ -12,10 +12,16 @@
    por anotar, y la medición sale de ese trabajo: facturarlo ahora cobraría de menos, y la factura
    no se puede rehacer porque la base no deja dos facturas del mismo Servicio sobre el mismo día.
 
-   CADA DÍA SE LE FACTURA A QUIEN ERA RESPONSABLE DE PAGOS ESE DÍA. El Responsable de pagos de
-   un Servicio puede cambiar desde cualquier día. El período en que cambia se parte en ese día: una
-   factura por cada parte, cada una a nombre de quien pagaba en sus días. El corte vive en una sola
-   función, `partesDelPeriodo`, y a quién va cada factura, en `pagadorEnLaFecha`.
+   LA FACTURA SALE SIEMPRE A NOMBRE DEL CONTRATANTE: el del Servicio o, si no tiene uno, el del
+   Cliente. La excepción la pone la Prestadora para un Servicio puntual: el tramo de Responsable de
+   pagos que lleva la indicación sale a nombre del Responsable de pagos. A nombre de quién sale
+   cada tramo lo dice la base, en la vista de los tramos (`responsable_que_recibe_la_factura`,
+   vacío quiere decir el Contratante); acá no se vuelve a decidir.
+
+   El período se parte sólo en el día en que cambia la persona a nombre de quien sale la factura:
+   una factura por cada parte. Un cambio de Responsable de pagos que deja la factura a nombre del
+   mismo no parte nada. El corte vive en una sola función, `partesDelPeriodo`, y a quién va cada
+   factura, en `aNombreDeQuienSaleLaFactura`.
 
    LA CUENTA NO VIVE ACÁ. Qué se cobra por cada prestación —con la medición que rija y la
    prestación vigente el día de cada guardia— lo calcula `calcularLiquidacion.js`, que es el mismo
@@ -119,7 +125,7 @@ function fechaOVacio(valor) {
 }
 
 /* Los tramos tal como los da la vista de la base: `{ rige_desde, rige_hasta, pagador_persona_id,
-   pagador_tipo }`. Qué días cubre cada uno lo decide la base —el primero no tiene comienzo, el
+   pagador_tipo, responsable_que_recibe_la_factura }`. Qué días cubre cada uno lo decide la base —el primero no tiene comienzo, el
    último no tiene fin—; acá sólo se cruzan con el período. */
 function tramosEnOrden(tramos) {
   return [...(tramos ?? [])]
@@ -138,23 +144,32 @@ function cubreElDia(tramo, dia) {
 }
 
 /**
- * Quién era el Responsable de pagos de un Servicio en una fecha, según los tramos de la vista de la
- * base. Sin ningún tramo que cubra ese día devuelve null, y paga quien contrata.
+ * El tramo de Responsable de pagos de un Servicio que cubre una fecha, según la vista de la base.
+ * Sin ningún tramo que cubra ese día devuelve null.
  */
-export function pagadorEnLaFecha(tramos, fecha) {
+function tramoEnLaFecha(tramos, fecha) {
   const dia = String(fecha ?? '').slice(0, 10);
   return tramosEnOrden(tramos).find((t) => cubreElDia(t, dia)) ?? null;
 }
 
-function mismoPagador(a, b) {
-  return (a?.pagador_persona_id ?? null) === (b?.pagador_persona_id ?? null)
-    && (a?.pagador_tipo ?? null) === (b?.pagador_tipo ?? null);
+/** La persona del Responsable de pagos que recibe la factura de un tramo, o null: el Contratante. */
+function responsableQueRecibeLaFactura(tramo) {
+  return tramo?.responsable_que_recibe_la_factura ?? null;
 }
 
 /**
- * Las partes de un período, una por cada Responsable de pagos que tuvo: `[{ desde, hasta,
- * pagador }]`. Se parte en el día en que empieza otro. Sin ningún cambio adentro, es una sola
- * parte con el período entero.
+ * A nombre de quién sale la factura de un Servicio en una fecha: el Responsable de pagos si el
+ * tramo de ese día lleva la indicación; si no, el Contratante que se pasa.
+ */
+export function aNombreDeQuienSaleLaFactura(tramos, fecha, contratante) {
+  return responsableQueRecibeLaFactura(tramoEnLaFecha(tramos, fecha)) ?? contratante ?? null;
+}
+
+/**
+ * Las partes de un período, una por cada persona a nombre de quien salió la factura en sus días:
+ * `[{ desde, hasta, pagador }]`, con el tramo del primer día de la parte. Se parte en el día en
+ * que la factura pasa a salir a nombre de otro. Sin ningún cambio así adentro, es una sola parte
+ * con el período entero.
  */
 export function partesDelPeriodo(periodo, tramos) {
   const partes = [];
@@ -163,7 +178,7 @@ export function partesDelPeriodo(periodo, tramos) {
     const hasta = tramo.rige_hasta && tramo.rige_hasta < periodo.hasta ? tramo.rige_hasta : periodo.hasta;
     if (desde > hasta) continue;
     const ultima = partes[partes.length - 1];
-    if (ultima && mismoPagador(ultima.pagador, tramo)) {
+    if (ultima && responsableQueRecibeLaFactura(ultima.pagador) === responsableQueRecibeLaFactura(tramo)) {
       ultima.hasta = hasta;
       continue;
     }

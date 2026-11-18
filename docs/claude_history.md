@@ -3,6 +3,12 @@
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§9, «Protocolo de sesión») — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
 
+## A nombre de quién sale la factura
+
+- **Antes:** la factura de cada día salía a nombre de quien era el Responsable de pagos ese día, y un cambio de Responsable de pagos en la mitad de un período partía la factura en dos.
+- **Ahora:** la factura sale siempre a nombre del Contratante. La única excepción la indica la Prestadora, para un Servicio puntual, y entonces sale a nombre del Responsable de pagos. Un cambio de Responsable de pagos parte la factura sólo si cambia la persona a cuyo nombre sale.
+- **Motivo:** el Desarrollador lo ordenó, textual: «siempre las facturas salen a nombre del contratante, salvo indicacion especifica y puntual de la prestadora y para un caso especifico y puntual. El cliente esta formado por el contratante, el paciente y el responsable de pagos (que generalmente es el contratante) pero es una unidad. SIEMPRE se factura a nombre del contratante, que es quien asume la responsabilidad legal y comercial de contratar a la prestadora».
+
 ## Quién carga cada dato de la Prestadora
 
 - **Antes:** no estaba dicho. La base tenía razón social, nombre de fantasía, número fiscal, país y logo, y ninguna parte del Panel dejaba cargar ni cambiar ninguno.

@@ -16,7 +16,8 @@ function soloLaFecha(momento, locale) {
 
    El aviso lo arma la base en la misma operación que da la baja, con lo que debía ese día y los
    días de atraso. Acá se lo muestra a créditos y cobranzas con a quién se le reclama: el
-   Responsable de pagos y el Contratante, que responde solidariamente. Quien lo vio lo marca, y
+   Contratante, a cuyo nombre sale la factura y que responde por el Servicio, y el Responsable de
+   pagos, que es quien paga. Quien lo vio lo marca, y
    deja de aparecer. Se muestra sólo si hay alguno: sin avisos, la sección no está. */
 export function AvisosBajaConDeuda() {
   const { t, locale } = useLocale();

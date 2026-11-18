@@ -152,6 +152,7 @@ export const T = {
         // El consentimiento del Pagador. Ninguno de los dos es una falla: falta elegir quién paga,
         // o alguien ya firmó lo que se estaba por anular.
         sin_pagador: 'Elija el responsable de pagos.',
+        cambio_de_pagador_con_factura_emitida: 'Ya hay una factura emitida o con cobros en los días de ese cambio. Elija un día posterior a esa factura.',
         falta_la_firma: 'Falta la firma.',
         ningun_asignado_puede_dar_la_via: 'Ningún Asistente asignado puede administrar medicación por esta vía.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni
@@ -1698,6 +1699,7 @@ export const T = {
       pagador_tipo_obra_social: 'Obra social',
       pagador_tipo_otro: 'Otro',
       pagador_legajo: 'Responsable de pagos',
+      pagador_rige_desde: 'Rige desde',
       buscar: 'Buscar por nombre, correo o teléfono',
       col_nombre: 'Nombre',
       col_telefono: 'Teléfono',
@@ -2950,6 +2952,7 @@ export const T = {
       accion_alta_de_descuento: 'Alta de descuento',
       accion_terminacion_de_descuento: 'Terminación de descuento',
       accion_cambio_de_precio_de_item_adicional: 'Cambio de precio de ítem adicional',
+      accion_cambio_de_responsable_de_pagos: 'Cambio de Responsable de pagos',
     },
     // Lo que un Asistente avisó apretando el botón de emergencia de su guardia. El aviso
     // inmediato sale por WhatsApp o por correo y no lleva el texto; acá se lee.
@@ -3250,6 +3253,7 @@ export const T = {
         entrevista_en_el_pasado: 'That date has already passed. An interview is scheduled for a later time.',
         entrevista_ya_agendada: 'This applicant already has an interview scheduled. To change the day, reschedule it instead of booking another one.',
         sin_pagador: 'Select the party responsible for payments.',
+        cambio_de_pagador_con_factura_emitida: 'An invoice has already been issued or has payments on the days of that change. Choose a day after that invoice.',
         falta_la_firma: 'Signature pending.',
         ningun_asignado_puede_dar_la_via: 'No assigned Assistant can administer medication via this route.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni
@@ -4772,6 +4776,7 @@ export const T = {
       pagador_tipo_obra_social: 'Health insurer',
       pagador_tipo_otro: 'Other',
       pagador_legajo: 'Responsible for payments',
+      pagador_rige_desde: 'Effective from',
       buscar: 'Search by name, email or phone',
       col_nombre: 'Name',
       col_telefono: 'Phone',
@@ -6018,6 +6023,7 @@ export const T = {
       accion_alta_de_descuento: 'Discount added',
       accion_terminacion_de_descuento: 'Discount ended',
       accion_cambio_de_precio_de_item_adicional: 'Additional item price changed',
+      accion_cambio_de_responsable_de_pagos: 'Party responsible for payments changed',
     },
     pagina_no_encontrada: {
       titulo: 'Page not found',
@@ -6310,6 +6316,7 @@ export const T = {
         entrevista_en_el_pasado: 'Essa data já passou. Uma entrevista se agenda para mais adiante.',
         entrevista_ya_agendada: 'Este candidato já tem uma entrevista agendada. Para mudar o dia, ela se reagenda, não se agenda outra.',
         sin_pagador: 'Escolha o responsável pelos pagamentos.',
+        cambio_de_pagador_con_factura_emitida: 'Já existe uma fatura emitida ou com pagamentos nos dias dessa alteração. Escolha um dia posterior a essa fatura.',
         falta_la_firma: 'Falta a assinatura.',
         ningun_asignado_puede_dar_la_via: 'Nenhum Assistente designado pode administrar medicação por esta via.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni
@@ -7832,6 +7839,7 @@ export const T = {
       pagador_tipo_obra_social: 'Plano de saúde',
       pagador_tipo_otro: 'Outro',
       pagador_legajo: 'Responsável pelos pagamentos',
+      pagador_rige_desde: 'Vigente a partir de',
       buscar: 'Buscar por nome, e-mail ou telefone',
       col_nombre: 'Nome',
       col_telefono: 'Telefone',
@@ -9078,6 +9086,7 @@ export const T = {
       accion_alta_de_descuento: 'Cadastro de desconto',
       accion_terminacion_de_descuento: 'Encerramento de desconto',
       accion_cambio_de_precio_de_item_adicional: 'Alteração de preço de item adicional',
+      accion_cambio_de_responsable_de_pagos: 'Alteração do responsável pelos pagamentos',
     },
     pagina_no_encontrada: {
       titulo: 'Página não encontrada',

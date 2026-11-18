@@ -115,9 +115,20 @@ Viene apagada, así que ninguna Prestadora cambia de comportamiento hasta que la
 opción encendida, el sistema no deja programar una guardia ni una serie de guardias en un Servicio
 que no tenga la firma vigente de su Responsable de pagos. Al intentarlo, la persona ve un mensaje
 que dice qué falta. El detalle del Servicio muestra el mismo tipo de aviso que muestra cuando falta
-el Coordinador. Las guardias que ya estaban programadas siguen igual. Del Responsable de pagos
-quedan en el plan el cambio de Responsable con el Servicio en curso, el Responsable que desiste y
-más de un Responsable por Servicio.
+el Coordinador. Las guardias que ya estaban programadas siguen igual.
+
+El Responsable de pagos ahora se puede cambiar con el Servicio en curso. En la pestaña Pagos del
+Servicio, quien elige otro Responsable de pagos indica también desde qué día rige el cambio. Puede
+ser cualquier día, pasado o futuro. Cada día se le factura a quien era el Responsable de pagos ese
+día. Si el cambio cae en la mitad de un período, la factura de ese período sale partida en dos: una
+a nombre del anterior, por los días anteriores al cambio, y otra a nombre del nuevo, por los días
+siguientes. Cada una cobra sus propios días, y entre las dos suman el período entero. La firma del
+anterior sigue valiendo para sus días, y el nuevo firma su propio documento. Si el anterior tenía un
+documento sin firmar, ese documento se anula. Las facturas de esos días que todavía no se mandaron a
+facturar se vuelven a armar solas, ya partidas. Si alguno de esos días ya está en una factura
+emitida o con cobros, el sistema no hace el cambio y avisa que se elija un día posterior a esa
+factura. También quedó corregida una falla de la pestaña Pagos, que no dejaba abrirla. Del
+Responsable de pagos quedan en el plan el Responsable que desiste y más de un Responsable por día.
 
 ## Cómo se comprobó
 

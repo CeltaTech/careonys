@@ -154,6 +154,10 @@ const ESTADO_POR_MOTIVO = {
   // firmar nada, y lo que ya se firmó no se anula. Si cayeran en 500 la pantalla diría "algo falló
   // de nuestro lado" cuando no falló nada de este lado.
   sin_pagador: 409,
+  // Un cambio de Responsable de pagos que caería sobre días de una factura ya emitida o con cobros.
+  // Es 409 por lo mismo: el pedido está bien armado y choca con lo que ya se facturó.
+  cambio_de_pagador_con_factura_emitida: 409,
+  dato_invalido: 400,
   // Los formularios declarados. El incompleto es 400 porque el dato vino mal cargado, y viaja con
   // la lista de lo que falta para que quien trabaja vea todo junto y no de a un renglón por vez.
   // El no declarado es 404 y contesta lo mismo cuando el formulario no existe y cuando es de otra

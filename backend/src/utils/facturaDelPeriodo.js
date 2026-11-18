@@ -12,13 +12,18 @@
    por anotar, y la medición sale de ese trabajo: facturarlo ahora cobraría de menos, y la factura
    no se puede rehacer porque la base no deja dos facturas del mismo Servicio sobre el mismo día.
 
+   CADA DÍA SE LE FACTURA A QUIEN ERA RESPONSABLE DE PAGOS ESE DÍA. El Responsable de pagos de
+   un Servicio puede cambiar desde cualquier día. El período en que cambia se parte en ese día: una
+   factura por cada parte, cada una a nombre de quien pagaba en sus días. El corte vive en una sola
+   función, `partesDelPeriodo`, y a quién va cada factura, en `pagadorEnLaFecha`.
+
    LA CUENTA NO VIVE ACÁ. Qué se cobra por cada prestación —con la medición que rija y la
    prestación vigente el día de cada guardia— lo calcula `calcularLiquidacion.js`, que es el mismo
    archivo en el Panel y en el backend. Acá sólo se arma lo que va a la base. */
 
 import { calcularLiquidacionDelCliente } from './calcularLiquidacion.js';
 import { periodosDeCobroQueTocan } from './frecuenciaDePago.js';
-import { descuentosDelPeriodo, ordenDelPeriodo, renglonesDeFactura } from './descuentosDelPeriodo.js';
+import { CLASES_DE_DESCUENTO, descuentosDelPeriodo, ordenDelPeriodo, renglonesDeFactura } from './descuentosDelPeriodo.js';
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -104,6 +109,105 @@ export function tramoNombrado(texto) {
   return tramoPedido({ periodo: texto });
 }
 
+function diasEntre(desde, hasta) {
+  return Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86400000) + 1;
+}
+
+function fechaOVacio(valor) {
+  const texto = valor ? String(valor).slice(0, 10) : null;
+  return texto && esFechaReal(texto) ? texto : null;
+}
+
+/* Los tramos tal como los da la vista de la base: `{ rige_desde, rige_hasta, pagador_persona_id,
+   pagador_tipo }`. Qué días cubre cada uno lo decide la base —el primero no tiene comienzo, el
+   último no tiene fin—; acá sólo se cruzan con el período. */
+function tramosEnOrden(tramos) {
+  return [...(tramos ?? [])]
+    .map((t) => ({ ...t, rige_desde: fechaOVacio(t.rige_desde), rige_hasta: fechaOVacio(t.rige_hasta) }))
+    .sort((a, b) => {
+      if (a.rige_desde === b.rige_desde) return 0;
+      if (a.rige_desde === null) return -1;
+      if (b.rige_desde === null) return 1;
+      return a.rige_desde < b.rige_desde ? -1 : 1;
+    });
+}
+
+function cubreElDia(tramo, dia) {
+  return (tramo.rige_desde === null || tramo.rige_desde <= dia)
+    && (tramo.rige_hasta === null || tramo.rige_hasta >= dia);
+}
+
+/**
+ * Quién era el Responsable de pagos de un Servicio en una fecha, según los tramos de la vista de la
+ * base. Sin ningún tramo que cubra ese día devuelve null, y paga quien contrata.
+ */
+export function pagadorEnLaFecha(tramos, fecha) {
+  const dia = String(fecha ?? '').slice(0, 10);
+  return tramosEnOrden(tramos).find((t) => cubreElDia(t, dia)) ?? null;
+}
+
+function mismoPagador(a, b) {
+  return (a?.pagador_persona_id ?? null) === (b?.pagador_persona_id ?? null)
+    && (a?.pagador_tipo ?? null) === (b?.pagador_tipo ?? null);
+}
+
+/**
+ * Las partes de un período, una por cada Responsable de pagos que tuvo: `[{ desde, hasta,
+ * pagador }]`. Se parte en el día en que empieza otro. Sin ningún cambio adentro, es una sola
+ * parte con el período entero.
+ */
+export function partesDelPeriodo(periodo, tramos) {
+  const partes = [];
+  for (const tramo of tramosEnOrden(tramos)) {
+    const desde = tramo.rige_desde && tramo.rige_desde > periodo.desde ? tramo.rige_desde : periodo.desde;
+    const hasta = tramo.rige_hasta && tramo.rige_hasta < periodo.hasta ? tramo.rige_hasta : periodo.hasta;
+    if (desde > hasta) continue;
+    const ultima = partes[partes.length - 1];
+    if (ultima && mismoPagador(ultima.pagador, tramo)) {
+      ultima.hasta = hasta;
+      continue;
+    }
+    partes.push({ desde, hasta, pagador: tramo });
+  }
+  if (partes.length === 0) return [{ desde: periodo.desde, hasta: periodo.hasta, pagador: null }];
+  // Un día que ningún tramo cubre queda con la parte de antes: el período no pierde días.
+  partes[0].desde = periodo.desde;
+  for (let i = 1; i < partes.length; i += 1) {
+    const esperado = new Date(Date.parse(`${partes[i - 1].hasta}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
+    if (partes[i].desde !== esperado) partes[i - 1].hasta = new Date(Date.parse(`${partes[i].desde}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
+  }
+  partes[partes.length - 1].hasta = periodo.hasta;
+  return partes;
+}
+
+/**
+ * Los descuentos para la factura de una parte del período. Si un descuento toca el período, y en
+ * qué orden, se decide con el período entero. El de importe fijo se reparte entre las partes en
+ * proporción a sus días, y lo que se redondea se acumula: las partes suman el importe entero.
+ */
+export function descuentosDeLaParte({ descuentos, periodo, parte }) {
+  if (!parte || (parte.desde === periodo.desde && parte.hasta === periodo.hasta)) return descuentos ?? [];
+  const total = diasEntre(periodo.desde, periodo.hasta);
+  const antes = diasEntre(periodo.desde, parte.desde) - 1;
+  const hastaElFin = diasEntre(periodo.desde, parte.hasta);
+  return (descuentos ?? []).map((d) => {
+    if (d.clase !== CLASES_DE_DESCUENTO.MONTO) return d;
+    const centavos = Math.round(Number(d.valor) * 100);
+    const parteEnCentavos = Math.round((centavos * hastaElFin) / total) - Math.round((centavos * antes) / total);
+    return { ...d, valor: parteEnCentavos / 100 };
+  });
+}
+
+/**
+ * El período de cobro entero, con esta frecuencia, que contiene a esta parte. Si la parte no cae
+ * adentro de un solo período, devuelve la parte misma.
+ */
+export function periodoEnteroDeLaParte(parte, frecuencia) {
+  const [periodo] = periodosDeCobroQueTocan(parte.desde, parte.desde, frecuencia);
+  if (!periodo || periodo.desde > parte.desde || periodo.hasta < parte.hasta) return { desde: parte.desde, hasta: parte.hasta };
+  return { desde: periodo.desde, hasta: periodo.hasta };
+}
+
 /** Si dos tramos de días comparten alguno. */
 export function seSuperponen(a, b) {
   return a.desde <= b.hasta && b.desde <= a.hasta;
@@ -111,7 +215,8 @@ export function seSuperponen(a, b) {
 
 /**
  * La factura de un Servicio en un período: sus renglones, su total y su moneda, o por qué no
- * se puede armar.
+ * se puede armar. Con `parte`, sólo la de esos días del período: la cuenta corre sobre el período
+ * entero y se cobra lo que cae en la parte.
  *
  * @returns {{
  *   renglones: Array<{paciente_id, servicio_id, descripcion, monto, cantidad, unidad, precio_unitario,
@@ -121,9 +226,10 @@ export function seSuperponen(a, b) {
  *   medicionDesconocida: boolean,
  * }}
  */
-export function armarLaFacturaDelPeriodo({ periodo, medicion, condiciones, prestaciones, guardias, nombresDePacientes }) {
+export function armarLaFacturaDelPeriodo({ periodo, parte = null, medicion, condiciones, prestaciones, guardias, nombresDePacientes }) {
   const liquidacion = calcularLiquidacionDelCliente({
     periodo,
+    parte,
     medicion,
     condiciones,
     prestaciones: prestaciones ?? [],
@@ -168,16 +274,16 @@ function descripcionDelDescuento(renglon) {
 /**
  * La factura con los descuentos del Servicio que tocan el período: cada uno es un renglón propio
  * en negativo, y el total queda restado. El período se cuenta desde el comienzo de cada descuento
- * con la frecuencia de cobro del Servicio.
+ * con la frecuencia de cobro del Servicio. Con `parte`, el de importe fijo va en proporción.
  *
  * @returns {{ renglones: Array, total: number, noAplicados: Array<{descuento_id, motivo}> }}
  */
-export function conLosDescuentos({ factura, descuentos, periodo, frecuencia, servicioId }) {
+export function conLosDescuentos({ factura, descuentos, periodo, parte = null, frecuencia, servicioId }) {
   if (!descuentos || descuentos.length === 0) {
     return { renglones: factura.renglones, total: factura.total, noAplicados: [] };
   }
   const resultado = descuentosDelPeriodo({
-    descuentos,
+    descuentos: descuentosDeLaParte({ descuentos, periodo, parte }),
     periodo,
     subtotal: factura.total,
     moneda: factura.moneda,

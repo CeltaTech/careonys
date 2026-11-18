@@ -463,9 +463,11 @@ BEGIN
 
   SELECT * INTO v_servicio FROM servicios WHERE id = v_baja.servicio_id;
 
-  SELECT cc.pagador_persona_id, cc.contratante_persona_id INTO v_pagador, v_contratante
+  SELECT cc.contratante_persona_id INTO v_contratante
     FROM condiciones_comerciales_servicio cc
    WHERE cc.servicio_id = v_servicio.id AND cc.prestadora_id = v_baja.prestadora_id;
+
+  v_pagador := interno.pagador_del_servicio_en(v_servicio.id, current_date);
 
   SELECT coalesce((regla ->> 'sigue_la_cobranza')::boolean, true) = false INTO v_la_lleva_otro
     FROM configuracion_facturacion_clientes
@@ -3458,14 +3460,13 @@ CREATE OR REPLACE FUNCTION "interno"."firma_del_pagador_vigente"("p_servicio" "u
     AS $$
   SELECT EXISTS (
     SELECT 1
-      FROM condiciones_comerciales_servicio c
+      FROM servicios s
       JOIN consentimientos_pagador k
-        ON k.servicio_id = c.servicio_id
-       AND k.prestadora_id = c.prestadora_id
-       AND k.pagador_persona_id = c.pagador_persona_id
-     WHERE c.servicio_id = p_servicio
-       AND c.pagador_persona_id IS NOT NULL
+        ON k.servicio_id = s.id
+       AND k.prestadora_id = s.prestadora_id
+     WHERE s.id = p_servicio
        AND k.estado = 'cerrado'
+       AND k.pagador_persona_id = interno.pagador_del_servicio_en(p_servicio, current_date)
   );
 $$;
 
@@ -4445,11 +4446,16 @@ CREATE OR REPLACE FUNCTION "interno"."la_persona_tiene_un_rol_que_el_coordinador
                   AND interno.coordinador_ve_al_cliente(c.id))
     OR ((interno.tiene_permiso('editar_condiciones_comerciales_servicio')
          OR interno.tiene_permiso('registrar_consentimiento_pagador'))
-        AND EXISTS (SELECT 1 FROM condiciones_comerciales_servicio cc
-                     JOIN servicios s ON s.id = cc.servicio_id AND s.prestadora_id = cc.prestadora_id
-                    WHERE (cc.contratante_persona_id = p_persona OR cc.pagador_persona_id = p_persona)
-                      AND cc.prestadora_id = interno.prestadora_actual()
-                      AND interno.coordinador_ve_al_cliente(s.cliente_id)))
+        AND (EXISTS (SELECT 1 FROM condiciones_comerciales_servicio cc
+                      JOIN servicios s ON s.id = cc.servicio_id AND s.prestadora_id = cc.prestadora_id
+                     WHERE cc.contratante_persona_id = p_persona
+                       AND cc.prestadora_id = interno.prestadora_actual()
+                       AND interno.coordinador_ve_al_cliente(s.cliente_id))
+          OR EXISTS (SELECT 1 FROM pagadores_del_servicio ps
+                      JOIN servicios s ON s.id = ps.servicio_id AND s.prestadora_id = ps.prestadora_id
+                     WHERE ps.pagador_persona_id = p_persona
+                       AND ps.prestadora_id = interno.prestadora_actual()
+                       AND interno.coordinador_ve_al_cliente(s.cliente_id))))
     OR EXISTS (SELECT 1 FROM apoderados a
                 WHERE a.persona_id = p_persona
                   AND a.prestadora_id = interno.prestadora_actual()
@@ -12406,8 +12412,6 @@ CREATE TABLE IF NOT EXISTS "public"."condiciones_comerciales_servicio" (
     "servicio_id" "uuid" NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "contratante_persona_id" "uuid",
-    "pagador_tipo" "text",
-    "pagador_persona_id" "uuid",
     "dias_hasta_el_vencimiento" integer,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -12422,7 +12426,6 @@ CREATE TABLE IF NOT EXISTS "public"."condiciones_comerciales_servicio" (
     "ajuste_por_indice" "text",
     CONSTRAINT "condiciones_comerciales_frecuencia_conocida" CHECK ((("frecuencia_de_cobro" IS NULL) OR ("frecuencia_de_cobro" = ANY (ARRAY['dia'::"text", 'semana'::"text", 'quincena'::"text", 'mes'::"text"])))),
     CONSTRAINT "condiciones_comerciales_medicion_conocida" CHECK ((("medicion" IS NULL) OR ("medicion" = ANY (ARRAY['pactado_mas_excedente'::"text", 'hora'::"text", 'dia_de_guardia'::"text"])))),
-    CONSTRAINT "condiciones_comerciales_pagador_conocido" CHECK ((("pagador_tipo" IS NULL) OR ("pagador_tipo" = ANY (ARRAY['cliente'::"text", 'obra_social'::"text", 'otro'::"text"])))),
     CONSTRAINT "condiciones_comerciales_plazo_razonable" CHECK ((("dias_hasta_el_vencimiento" IS NULL) OR (("dias_hasta_el_vencimiento" >= 0) AND ("dias_hasta_el_vencimiento" <= 365)))),
     CONSTRAINT "condiciones_comerciales_servi_meses_entre_actualizaciones_check" CHECK (("meses_entre_actualizaciones" = ANY (ARRAY[1, 3, 6]))),
     CONSTRAINT "condiciones_comerciales_servicio_ajuste_por_indice_check" CHECK (("ajuste_por_indice" = ANY (ARRAY['automatico'::"text", 'revision_previa'::"text"])))
@@ -21730,11 +21733,6 @@ ALTER TABLE ONLY "public"."condiciones_comerciales_servicio"
 
 
 ALTER TABLE ONLY "public"."condiciones_comerciales_servicio"
-    ADD CONSTRAINT "condiciones_comerciales_pagador_de_la_misma_prestadora" FOREIGN KEY ("pagador_persona_id", "prestadora_id") REFERENCES "public"."personas"("id", "prestadora_id");
-
-
-
-ALTER TABLE ONLY "public"."condiciones_comerciales_servicio"
     ADD CONSTRAINT "condiciones_comerciales_servicio_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
@@ -30598,14 +30596,6 @@ GRANT UPDATE("contratante_persona_id") ON TABLE "public"."condiciones_comerciale
 
 
 
-GRANT UPDATE("pagador_tipo") ON TABLE "public"."condiciones_comerciales_servicio" TO "authenticated";
-
-
-
-GRANT UPDATE("pagador_persona_id") ON TABLE "public"."condiciones_comerciales_servicio" TO "authenticated";
-
-
-
 GRANT UPDATE("dias_hasta_el_vencimiento") ON TABLE "public"."condiciones_comerciales_servicio" TO "authenticated";
 
 
@@ -33612,3 +33602,243 @@ REVOKE EXECUTE ON FUNCTION public.tablas_del_respaldo() FROM PUBLIC, anon, authe
 REVOKE EXECUTE ON FUNCTION public.filas_del_respaldo(text, integer, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.tablas_del_respaldo() TO copia_de_respaldo;
 GRANT EXECUTE ON FUNCTION public.filas_del_respaldo(text, integer, integer) TO copia_de_respaldo;
+
+-- El Responsable de pagos de cada Servicio, con el día desde el que rige. Cada día se le factura
+-- a quien pagaba ese día. Se cambia sólo con `cambiar_responsable_de_pagos`, y la base rechaza un
+-- cambio que toque los días de una factura ya emitida.
+CREATE TABLE public.pagadores_del_servicio (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  prestadora_id       uuid NOT NULL REFERENCES public.prestadoras(id),
+  servicio_id         uuid NOT NULL,
+  pagador_persona_id  uuid,
+  pagador_tipo        text,
+  vigente_desde       date NOT NULL,
+  cargado_por         uuid REFERENCES public.usuarios(id),
+  cargado_en          timestamptz NOT NULL DEFAULT now(),
+
+  CONSTRAINT pagadores_del_servicio_un_cambio_por_dia UNIQUE (servicio_id, vigente_desde),
+  CONSTRAINT pagadores_del_servicio_de_la_misma_prestadora
+    FOREIGN KEY (servicio_id, prestadora_id) REFERENCES public.servicios(id, prestadora_id) ON DELETE CASCADE,
+  CONSTRAINT pagadores_del_servicio_persona_de_la_misma_prestadora
+    FOREIGN KEY (pagador_persona_id, prestadora_id) REFERENCES public.personas(id, prestadora_id),
+  CONSTRAINT pagadores_del_servicio_tipo_conocido
+    CHECK (pagador_tipo IS NULL OR pagador_tipo IN ('cliente', 'obra_social', 'otro'))
+);
+
+CREATE INDEX pagadores_del_servicio_por_prestadora ON public.pagadores_del_servicio (prestadora_id);
+CREATE INDEX pagadores_del_servicio_por_persona
+  ON public.pagadores_del_servicio (pagador_persona_id) WHERE pagador_persona_id IS NOT NULL;
+
+COMMENT ON TABLE public.pagadores_del_servicio IS
+  'Cada Responsable de pagos de un Servicio, desde el día en que rige hasta el día antes del siguiente. Sin persona, paga quien contrata. El primero rige desde siempre. Se cambia con cambiar_responsable_de_pagos.';
+
+ALTER TABLE public.pagadores_del_servicio ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.pagadores_del_servicio FROM PUBLIC, anon, authenticated, trabajo_sin_persona;
+-- Se lee; se escribe sólo con la función pública de más abajo.
+GRANT SELECT ON public.pagadores_del_servicio TO authenticated, trabajo_sin_persona;
+
+CREATE POLICY los_responsables_de_pagos_los_lee_quien_puede ON public.pagadores_del_servicio
+  FOR SELECT TO authenticated
+  USING (prestadora_id = interno.prestadora_actual()
+         AND (interno.tiene_permiso('editar_condiciones_comerciales_servicio')
+              OR interno.tiene_permiso('registrar_consentimiento_pagador')));
+
+CREATE POLICY trabajo_sin_persona_de_esta_prestadora ON public.pagadores_del_servicio
+  FOR SELECT TO trabajo_sin_persona
+  USING (prestadora_id = interno.prestadora_actual());
+
+CREATE TRIGGER trg_auditoria_acceso
+  AFTER INSERT OR UPDATE OR DELETE ON public.pagadores_del_servicio
+  FOR EACH ROW EXECUTE FUNCTION public.fn_auditoria_de_acceso_mutacion();
+
+CREATE VIEW public.tramos_de_pagador_del_servicio WITH (security_invoker = true) AS
+SELECT p.id,
+       p.prestadora_id,
+       p.servicio_id,
+       p.pagador_persona_id,
+       p.pagador_tipo,
+       p.vigente_desde,
+       -- El primero de cada Servicio rige desde siempre.
+       CASE WHEN lag(p.vigente_desde) OVER w IS NULL THEN NULL ELSE p.vigente_desde END AS rige_desde,
+       -- Y cada uno, hasta el día antes del siguiente.
+       (lead(p.vigente_desde) OVER w - 1) AS rige_hasta,
+       (lag(p.vigente_desde) OVER w IS NULL OR p.vigente_desde <= current_date)
+         AND (lead(p.vigente_desde) OVER w IS NULL OR lead(p.vigente_desde) OVER w > current_date) AS rige_hoy
+  FROM public.pagadores_del_servicio p
+WINDOW w AS (PARTITION BY p.servicio_id ORDER BY p.vigente_desde);
+
+COMMENT ON VIEW public.tramos_de_pagador_del_servicio IS
+  'Los días que cubre cada Responsable de pagos de un Servicio. rige_desde vacío: desde siempre. rige_hasta vacío: sin fin. Es la única cuenta de quién paga cada día.';
+
+REVOKE ALL ON public.tramos_de_pagador_del_servicio FROM PUBLIC, anon, authenticated, trabajo_sin_persona;
+GRANT SELECT ON public.tramos_de_pagador_del_servicio TO authenticated, trabajo_sin_persona;
+
+CREATE FUNCTION interno.pagador_del_servicio_en(p_servicio uuid, p_fecha date) RETURNS uuid
+  LANGUAGE sql STABLE SECURITY DEFINER
+  SET search_path TO ''
+AS $$
+  SELECT t.pagador_persona_id
+    FROM public.tramos_de_pagador_del_servicio t
+   WHERE t.servicio_id = p_servicio
+     AND (t.rige_desde IS NULL OR t.rige_desde <= p_fecha)
+     AND (t.rige_hasta IS NULL OR t.rige_hasta >= p_fecha);
+$$;
+
+-- La usan sólo las funciones de la base que ya se saltean la RLS.
+REVOKE ALL ON FUNCTION interno.pagador_del_servicio_en(uuid, date) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION interno.pagador_del_servicio_en(uuid, date) TO service_role;
+
+CREATE FUNCTION interno.cambio_de_pagador_sin_factura_emitida() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO ''
+AS $$
+DECLARE
+  v_antes record;
+  v_es_el_primero boolean;
+  v_siguiente date;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    NEW.cargado_por := interno.usuario_de_la_sesion();
+    NEW.cargado_en := now();
+  ELSIF (NEW.prestadora_id, NEW.servicio_id, NEW.vigente_desde)
+        IS DISTINCT FROM (OLD.prestadora_id, OLD.servicio_id, OLD.vigente_desde) THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Quién pagaba esos días antes de este cambio.
+  IF TG_OP = 'UPDATE' THEN
+    SELECT OLD.pagador_persona_id AS persona, OLD.pagador_tipo AS tipo INTO v_antes;
+  ELSE
+    SELECT p.pagador_persona_id AS persona, p.pagador_tipo AS tipo INTO v_antes
+      FROM public.pagadores_del_servicio p
+     WHERE p.servicio_id = NEW.servicio_id
+     ORDER BY (p.vigente_desde <= NEW.vigente_desde) DESC,
+              CASE WHEN p.vigente_desde <= NEW.vigente_desde THEN p.vigente_desde END DESC,
+              p.vigente_desde ASC
+     LIMIT 1;
+    IF NOT FOUND THEN
+      SELECT NULL::uuid AS persona, NULL::text AS tipo INTO v_antes;
+    END IF;
+  END IF;
+
+  -- Si esos días siguen a nombre del mismo, no cambia ninguna factura.
+  IF v_antes.persona IS NOT DISTINCT FROM NEW.pagador_persona_id
+     AND v_antes.tipo IS NOT DISTINCT FROM NEW.pagador_tipo THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT NOT EXISTS (SELECT 1 FROM public.pagadores_del_servicio p
+                      WHERE p.servicio_id = NEW.servicio_id AND p.vigente_desde < NEW.vigente_desde)
+    INTO v_es_el_primero;
+  SELECT min(p.vigente_desde) INTO v_siguiente
+    FROM public.pagadores_del_servicio p
+   WHERE p.servicio_id = NEW.servicio_id AND p.vigente_desde > NEW.vigente_desde;
+
+  IF EXISTS (
+    SELECT 1
+      FROM public.facturas_cliente f
+     WHERE f.servicio_id = NEW.servicio_id
+       AND f.prestadora_id = NEW.prestadora_id
+       AND (v_es_el_primero OR f.periodo_hasta >= NEW.vigente_desde)
+       AND (v_siguiente IS NULL OR f.periodo < v_siguiente)
+       AND (f.facturado_at IS NOT NULL OR f.monto_facturado IS NOT NULL OR f.comprobante_subido_at IS NOT NULL
+            OR EXISTS (SELECT 1 FROM public.cobros_cliente c WHERE c.factura_id = f.id))
+  ) THEN
+    RAISE EXCEPTION 'cambio_de_pagador_con_factura_emitida' USING ERRCODE = 'P0001';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION interno.cambio_de_pagador_sin_factura_emitida() FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER cambio_de_pagador_sin_factura_emitida
+  BEFORE INSERT OR UPDATE ON public.pagadores_del_servicio
+  FOR EACH ROW EXECUTE FUNCTION interno.cambio_de_pagador_sin_factura_emitida();
+
+CREATE FUNCTION public.cambiar_responsable_de_pagos(p_servicio uuid, p_persona uuid, p_tipo text, p_desde date)
+  RETURNS TABLE (periodo date, periodo_hasta date)
+  LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO ''
+AS $$
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+  v_quien uuid := interno.usuario_de_la_sesion();
+  v_antes record;
+  v_habia_antes boolean;
+  v_id uuid;
+  v_siguiente date;
+BEGIN
+  IF v_prest IS NULL OR v_quien IS NULL OR NOT interno.es_personal_de_la_prestadora()
+     OR NOT interno.tiene_permiso('editar_condiciones_comerciales_servicio') THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_servicio IS NULL OR p_desde IS NULL OR NOT isfinite(p_desde)
+     OR (p_tipo IS NOT NULL AND p_tipo NOT IN ('cliente', 'obra_social', 'otro')) THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Un cambio por vez en cada Servicio.
+  PERFORM 1 FROM public.servicios s WHERE s.id = p_servicio AND s.prestadora_id = v_prest FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
+  END IF;
+  IF p_persona IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.personas pe WHERE pe.id = p_persona AND pe.prestadora_id = v_prest
+  ) THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Quién paga ese día hoy. Si es el mismo, no hay nada que cambiar.
+  SELECT t.pagador_persona_id AS persona, t.pagador_tipo AS tipo INTO v_antes
+    FROM public.tramos_de_pagador_del_servicio t
+   WHERE t.servicio_id = p_servicio
+     AND (t.rige_desde IS NULL OR t.rige_desde <= p_desde)
+     AND (t.rige_hasta IS NULL OR t.rige_hasta >= p_desde);
+  IF NOT FOUND THEN
+    SELECT NULL::uuid AS persona, NULL::text AS tipo INTO v_antes;
+  END IF;
+  IF v_antes.persona IS NOT DISTINCT FROM p_persona AND v_antes.tipo IS NOT DISTINCT FROM p_tipo THEN
+    RETURN;
+  END IF;
+
+  -- Los días de antes siguen a nombre de quien pagaba: si no hay nada escrito antes de ese día,
+  -- se escribe, desde siempre.
+  SELECT EXISTS (SELECT 1 FROM public.pagadores_del_servicio p
+                  WHERE p.servicio_id = p_servicio AND p.vigente_desde < p_desde)
+    INTO v_habia_antes;
+  IF NOT v_habia_antes THEN
+    INSERT INTO public.pagadores_del_servicio (prestadora_id, servicio_id, pagador_persona_id, pagador_tipo, vigente_desde)
+    VALUES (v_prest, p_servicio, v_antes.persona, v_antes.tipo, '-infinity'::date);
+  END IF;
+
+  INSERT INTO public.pagadores_del_servicio AS p (prestadora_id, servicio_id, pagador_persona_id, pagador_tipo, vigente_desde)
+  VALUES (v_prest, p_servicio, p_persona, p_tipo, p_desde)
+  ON CONFLICT (servicio_id, vigente_desde) DO UPDATE
+    SET pagador_persona_id = EXCLUDED.pagador_persona_id,
+        pagador_tipo = EXCLUDED.pagador_tipo
+  RETURNING p.id INTO v_id;
+
+  SELECT min(p.vigente_desde) INTO v_siguiente
+    FROM public.pagadores_del_servicio p
+   WHERE p.servicio_id = p_servicio AND p.vigente_desde > p_desde;
+
+  INSERT INTO public.registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
+  VALUES (v_prest, v_quien, 'cambio_de_responsable_de_pagos', 'pagadores_del_servicio', v_id,
+          jsonb_build_object('servicio_id', p_servicio, 'rige_desde', p_desde,
+                             'responsable_anterior', v_antes.persona, 'responsable_nuevo', p_persona));
+
+  -- Las facturas todavía no emitidas que el cambio deja con dos Responsables de pagos se borran:
+  -- el backend las vuelve a generar, una por cada parte. Las emitidas ya las rechazó la base.
+  RETURN QUERY
+  DELETE FROM public.facturas_cliente f
+   WHERE f.servicio_id = p_servicio
+     AND f.prestadora_id = v_prest
+     AND ((f.periodo < p_desde AND f.periodo_hasta >= p_desde)
+          OR (v_siguiente IS NOT NULL AND f.periodo < v_siguiente AND f.periodo_hasta >= v_siguiente))
+  RETURNING f.periodo, f.periodo_hasta;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.cambiar_responsable_de_pagos(uuid, uuid, text, date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cambiar_responsable_de_pagos(uuid, uuid, text, date) TO service_role, authenticated;

@@ -406,6 +406,10 @@ const porFecha = (a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
  *   cancelacion_origen }]. Entran las completadas, las ausentes y las canceladas; una sin estado
  *   cuenta como completada.
  * - nombresDePacientes: Map de paciente_id a nombre, para la descripción.
+ * - parte: { desde, hasta } optativo, adentro del período. La cuenta se hace sobre el período
+ *   entero y se cobra sólo lo que cae en la parte: lo pactado, en proporción a sus días; cada
+ *   guardia, en la parte de su fecha. Las partes de un mismo período suman lo mismo que el
+ *   período entero, así que partirlo no cobra dos veces nada.
  *
  * Cada ítem lleva `concepto` (CONCEPTOS_DEL_COBRO). El que se descuenta lleva monto negativo,
  * con cantidad y precio unitario positivos.
@@ -417,6 +421,7 @@ export function calcularLiquidacionDelCliente({
   prestaciones = [],
   guardias = [],
   nombresDePacientes = new Map(),
+  parte = null,
 }) {
   const resultado = {
     renglones: [],
@@ -430,6 +435,12 @@ export function calcularLiquidacionDelCliente({
   };
   if (!esPeriodoValido(periodo)) return resultado;
   const { desde, hasta } = bordesDelPeriodo(periodo);
+  const corte = {
+    desde: parte?.desde && parte.desde > desde ? parte.desde : desde,
+    hasta: parte?.hasta && parte.hasta < hasta ? parte.hasta : hasta,
+  };
+  if (corte.hasta < corte.desde) return resultado;
+  const enLaParte = (fecha) => fecha >= corte.desde && fecha <= corte.hasta;
   // Las condiciones que llegan ya están resueltas; pasarlas otra vez por `condicionesDe` completa
   // con las de fábrica lo que falte o no sirva, y deja la medición como llegó para que una
   // desconocida se note.
@@ -456,8 +467,10 @@ export function calcularLiquidacionDelCliente({
     const clase = claseDeLaGuardia(g);
     if (!clase) continue;
     const pacientes = [...new Set((g.pacientes || []).filter(Boolean))];
+    // Lo que no se pudo asignar se cuenta en la parte de su fecha, para no contarlo dos veces.
+    const cuentaAca = enLaParte(g.fecha);
     if (pacientes.length === 0) {
-      resultado.guardiasSinAsignar += 1;
+      if (cuentaAca) resultado.guardiasSinAsignar += 1;
       continue;
     }
     const horasDeLaGuardia = Math.max(Number(g.horas) || 0, 0);
@@ -468,11 +481,11 @@ export function calcularLiquidacionDelCliente({
         (p) => p.servicio_id === g.servicio_id && p.paciente_id === pacienteId && estaVigente(p, g.fecha)
       );
       if (candidatas.length === 0) {
-        resultado.guardiasSinAsignar += 1;
+        if (cuentaAca) resultado.guardiasSinAsignar += 1;
         continue;
       }
       if (candidatas.length > 1) {
-        resultado.guardiasAmbiguas += 1;
+        if (cuentaAca) resultado.guardiasAmbiguas += 1;
         continue;
       }
       destino[clase].get(candidatas[0].id).push({
@@ -500,12 +513,13 @@ export function calcularLiquidacionDelCliente({
     cadenas.get(raiz).push(p);
   }
   const fraccionDe = new Map();
+  const fraccionDeLaParte = new Map();
   const excedenteDe = new Map();
   const propiasDe = new Map();
   const delClienteDe = new Map();
   const cadenaSinCantidad = new Set();
   const contar = (mapa, lista) => {
-    for (const g of lista) mapa.set(g.prestacionId, (mapa.get(g.prestacionId) ?? 0) + 1);
+    for (const g of lista) if (enLaParte(g.fecha)) mapa.set(g.prestacionId, (mapa.get(g.prestacionId) ?? 0) + 1);
   };
   const juntar = (mapa, eslabones) =>
     eslabones.flatMap((p) => (mapa.get(p.id) || []).map((s) => ({ prestacionId: p.id, fecha: s.fecha }))).sort(porFecha);
@@ -513,6 +527,9 @@ export function calcularLiquidacionDelCliente({
     const dias = eslabones.map((p) => diasEnElTramo(p, desde, hasta));
     const totalDeDias = dias.reduce((a, b) => a + b, 0);
     eslabones.forEach((p, i) => fraccionDe.set(p.id, totalDeDias > 0 ? dias[i] / totalDeDias : 1));
+    eslabones.forEach((p) =>
+      fraccionDeLaParte.set(p.id, totalDeDias > 0 ? diasEnElTramo(p, corte.desde, corte.hasta) / totalDeDias : 1)
+    );
 
     if (medicion !== MEDICIONES.PACTADO_MAS_EXCEDENTE) continue;
     const cantidades = eslabones.map((p) => numeroPositivo(p.configuracion?.cantidad_guardias));
@@ -534,6 +551,8 @@ export function calcularLiquidacionDelCliente({
 
   const monedas = new Set();
   for (const p of delTramo) {
+    // La prestación que no corre en la parte no tiene nada que cobrar en ella.
+    if (!correEnElTramo(p, corte.desde, corte.hasta)) continue;
     const precio = p.precio_final === null || p.precio_final === undefined ? NaN : Number(p.precio_final);
     if (!Number.isFinite(precio) || precio < 0) {
       resultado.sinPrecio.push(p.id);
@@ -548,8 +567,9 @@ export function calcularLiquidacionDelCliente({
       moneda: p.moneda,
       descripcion,
     };
-    const suyas = trabajo.get(p.id) || [];
-    const canceladasSuyas = delCliente.get(p.id) || [];
+    const deLaParte = (mapa) => (mapa.get(p.id) || []).filter((s) => enLaParte(s.fecha));
+    const suyas = deLaParte(trabajo);
+    const canceladasSuyas = deLaParte(delCliente);
     const renglonesDeEsta = [];
     // El signo del monto lo pone `signo`: -1 en lo que se descuenta. La cantidad y el precio
     // unitario quedan siempre positivos.
@@ -574,10 +594,10 @@ export function calcularLiquidacionDelCliente({
 
     if (medicion === MEDICIONES.PACTADO_MAS_EXCEDENTE) {
       // Una fracción del período: la parte de los días que cubre este eslabón de su cadena.
-      const fraccion = fraccionDe.get(p.id) ?? 1;
+      const fraccion = fraccionDeLaParte.get(p.id) ?? 1;
       agregar(CONCEPTOS_DEL_COBRO.PACTADO, UNIDADES_DEL_COBRO.PERIODO, fraccion, precio, { monto: precio * fraccion });
       const pactadas = numeroPositivo(p.configuracion?.cantidad_guardias);
-      const tieneGuardias = suyas.length + (propias.get(p.id) || []).length + canceladasSuyas.length > 0;
+      const tieneGuardias = suyas.length + deLaParte(propias).length + canceladasSuyas.length > 0;
       if (!pactadas || cadenaSinCantidad.has(p.id)) {
         if (tieneGuardias) resultado.sinCantidadPactada.push(p.id);
       } else {

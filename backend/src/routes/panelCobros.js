@@ -14,9 +14,7 @@ import {
 import {
   loQueEstaMalEnLaCorreccion,
   loQueEstaMalEnLoFacturado,
-  plazoDePagoDe,
   sigueLaCobranza,
-  vencimientoDe,
 } from '../utils/facturacionDeClientes.js';
 import {
   TOPE_DE_FILAS,
@@ -29,19 +27,19 @@ import { laCobranzaLaLlevaOtroSoftware } from '../utils/seguimientoDeLaCobranza.
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
 import {
-  armarLaFacturaDelPeriodo,
-  conLosDescuentos,
+  descuentosDeLaParte,
   etiquetaDelPeriodo,
-  periodosDelTramo,
-  seSuperponen,
+  pagadorEnLaFecha,
+  periodoEnteroDeLaParte,
   tramoNombrado,
   tramoPedido,
 } from '../utils/facturaDelPeriodo.js';
-import { condicionDe, condicionesDe } from '../utils/condicionesDelCliente.js';
-import { descuentosDelPeriodo } from '../utils/descuentosDelPeriodo.js';
-import { horasEntre } from '../utils/horasDeGuardia.js';
+import { generarFacturasDelTramo } from '../utils/generarFacturasDelTramo.js';
+import { condicionDe } from '../utils/condicionesDelCliente.js';
+import { CLASES_DE_DESCUENTO, descuentosDelPeriodo } from '../utils/descuentosDelPeriodo.js';
 import { DATOS_PARA_FACTURAR } from '../utils/datosParaFacturar.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { anularPendiente } from '../utils/consentimientoPagador.js';
 import { requierePermiso } from '../utils/permisos.js';
 
 /* Lo que el Cliente pagó, anotado; y el saldo, que es una resta.
@@ -118,7 +116,6 @@ export {
   primerDiaDelPeriodo,
   aDosDecimales,
 } from '../utils/cobrosDeCliente.js';
-import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
 
 /**
  * Los nombres de estos Clientes, para las listas que se muestran en pantalla.
@@ -140,8 +137,9 @@ async function nombresDeClientes(db, ids) {
 /**
  * A quién se le factura cada una de estas facturas, y el número de su Cliente.
  *
- * Cada factura es de un Servicio. Se le factura al Responsable de pagos de ese Servicio; si no
- * tiene uno aparte, paga quien contrata —el Contratante del Servicio o, si no está anotado, el del
+ * Cada factura es de un Servicio. Se le factura a quien era Responsable de pagos de ese Servicio
+ * en los días de la factura: si cambió en el medio del período, la factura ya salió partida en
+ * ese día, así que el de su primer día es el de todos. Si no tiene uno aparte, paga quien contrata —el Contratante del Servicio o, si no está anotado, el del
  * Cliente—. Los datos de la persona se leen en este momento y no se copian: lo que el
  * facturador recibe es lo que esos datos dicen hoy.
  */
@@ -152,7 +150,7 @@ async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
 
   const { data: facturas, error: e1 } = await db
     .from('facturas_cliente')
-    .select('id, servicio_id, cliente_id')
+    .select('id, servicio_id, cliente_id, periodo')
     .in('id', ids);
   if (e1) throw new Error(e1.message);
 
@@ -162,12 +160,20 @@ async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
   // Quién contrata y quién paga cada Servicio, con el trabajo de la Prestadora: la base se lo abre
   // sólo a quien tiene el permiso de lo comercial, y mandar a facturar lo hace también quien
   // coordina. Sólo las facturas que la base ya le dejó ver a quien pide.
-  const [{ data: condiciones, error: e2 }, { data: clientes, error: e3 }] = await Promise.all([
+  const [{ data: condiciones, error: e2 }, { data: tramos, error: e5 }, { data: clientes, error: e3 }] = await Promise.all([
     servicioIds.length
       ? enLaPrestadora(prestadoraId, 'a quién se le factura cada Servicio', (dbTrabajo) =>
           dbTrabajo
             .from('condiciones_comerciales_servicio')
-            .select('servicio_id, pagador_persona_id, contratante_persona_id')
+            .select('servicio_id, contratante_persona_id')
+            .in('servicio_id', servicioIds),
+        )
+      : Promise.resolve({ data: [], error: null }),
+    servicioIds.length
+      ? enLaPrestadora(prestadoraId, 'quién paga cada día de cada Servicio', (dbTrabajo) =>
+          dbTrabajo
+            .from('tramos_de_pagador_del_servicio')
+            .select('servicio_id, pagador_persona_id, pagador_tipo, rige_desde, rige_hasta')
             .in('servicio_id', servicioIds),
         )
       : Promise.resolve({ data: [], error: null }),
@@ -177,6 +183,7 @@ async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
   ]);
   if (e2) throw new Error(e2.message);
   if (e3) throw new Error(e3.message);
+  if (e5) throw new Error(e5.message);
 
   const servicioPorId = new Map((condiciones || []).map((s) => [s.servicio_id, s]));
   const clientePorId = new Map((clientes || []).map((c) => [c.id, c]));
@@ -185,7 +192,8 @@ async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
   for (const f of facturas || []) {
     const s = servicioPorId.get(f.servicio_id);
     const c = clientePorId.get(f.cliente_id);
-    personaDe.set(f.id, s?.pagador_persona_id || s?.contratante_persona_id || c?.contratante_persona_id || null);
+    const pagador = pagadorEnLaFecha((tramos || []).filter((t) => t.servicio_id === f.servicio_id), f.periodo);
+    personaDe.set(f.id, pagador?.pagador_persona_id || s?.contratante_persona_id || c?.contratante_persona_id || null);
   }
 
   // Los datos del Responsable de pagos tampoco los alcanza quien coordina sin el permiso, así que
@@ -550,6 +558,24 @@ async function itemsDeLaFactura(prestadoraId, db, facturaId) {
   }));
 }
 
+/**
+ * El período de cobro entero del que esta factura es una parte, con la frecuencia de su Servicio.
+ * Se lee con el trabajo de la Prestadora, igual que al generar la factura.
+ */
+async function periodoEnteroDeLaFactura(prestadoraId, servicioId, parte) {
+  const [regla, comercial] = await Promise.all([
+    enLaPrestadora(prestadoraId, 'lectura de las condiciones de cobro', (dbTrabajo) =>
+      dbTrabajo.from('configuracion_facturacion_clientes').select('regla').eq('prestadora_id', prestadoraId).maybeSingle(),
+    ),
+    enLaPrestadora(prestadoraId, 'lectura de la frecuencia de cobro del Servicio', (dbTrabajo) =>
+      dbTrabajo.from('condiciones_comerciales_servicio').select('frecuencia_de_cobro').eq('servicio_id', servicioId).maybeSingle(),
+    ),
+  ]);
+  if (regla.error) throw new Error(regla.error.message);
+  if (comercial.error) throw new Error(comercial.error.message);
+  return periodoEnteroDeLaParte(parte, condicionDe('frecuencia_de_cobro', regla.data?.regla ?? null, comercial.data));
+}
+
 /** Los motivos con que contesta `fijar_precio_de_item_adicional`, y el código de cada uno. */
 const MOTIVOS_DEL_PRECIO_DEL_ITEM = { sin_permiso: 403, no_encontrado: 404, dato_invalido: 400 };
 
@@ -560,7 +586,9 @@ const MOTIVOS_DEL_PRECIO_DEL_ITEM = { sin_permiso: 403, no_encontrado: 404, dato
  * los descuentos de la factura se vuelven a calcular sobre el subtotal nuevo con la misma función
  * que los calculó al generarla, y la base guarda el ítem, los descuentos y el total en una sola
  * operación. Los descuentos que se recalculan son los que la factura ya tiene: el período no cambió,
- * así que no entra ni sale ninguno.
+ * así que no entra ni sale ninguno. Si la factura es una parte del período —porque en el medio
+ * cambió el Responsable de pagos—, el descuento de importe fijo vuelve a ir en proporción a sus
+ * días, igual que al generarla.
  *
  * LA BASE DECIDE SI SE PUEDE, con la sesión de quien pide: el permiso, que el ítem sea adicional y
  * de su Prestadora, y que la factura no esté emitida ni tenga comprobante. El cambio queda en el
@@ -581,7 +609,7 @@ panelCobrosRouter.put(
     try {
       const { data: factura, error: errorFactura } = await db
         .from('facturas_cliente')
-        .select('id, periodo, periodo_hasta, moneda')
+        .select('id, servicio_id, periodo, periodo_hasta, moneda')
         .eq('id', req.params.facturaId)
         .maybeSingle();
       if (errorFactura) throw new Error(errorFactura.message);
@@ -614,14 +642,21 @@ panelCobrosRouter.put(
           .in('id', descuentoIds);
         if (errorDescuentos) throw new Error(errorDescuentos.message);
         const periodo = { desde: String(factura.periodo).slice(0, 10), hasta: String(factura.periodo_hasta).slice(0, 10), orden: 1 };
+        const periodoEntero = (descuentos || []).some((d) => d.clase === CLASES_DE_DESCUENTO.MONTO)
+          ? await periodoEnteroDeLaFactura(req.usuarioPanel.prestadoraId, factura.servicio_id, periodo)
+          : periodo;
         const resultado = descuentosDelPeriodo({
-          descuentos: (descuentos || []).map((d) => ({
-            ...d,
-            vigente_desde: periodo.desde,
-            cantidad_de_periodos: null,
-            vigente_hasta: null,
-            terminado_en: null,
-          })),
+          descuentos: descuentosDeLaParte({
+            descuentos: (descuentos || []).map((d) => ({
+              ...d,
+              vigente_desde: periodo.desde,
+              cantidad_de_periodos: null,
+              vigente_hasta: null,
+              terminado_en: null,
+            })),
+            periodo: periodoEntero,
+            parte: periodo,
+          }),
           periodo,
           subtotal,
           moneda: factura.moneda,
@@ -670,296 +705,104 @@ panelCobrosRouter.put(
  * ningún cobro todavía, borrarla no pierde nada.
  */
 panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
   const tramo = tramoPedido(req.body);
   if (!tramo) {
     return res.status(400).json({ error: 'Falta el período. Indique un mes, o las fechas desde y hasta, e intente nuevamente.' });
   }
-
-  // La fecha puede venir escrita para toda la tanda —es lo que se hacía hasta ahora—, y en ese
-  // caso pisa cualquier plazo acordado. Si no viene, cada factura vence según el plazo de ese
-  // Servicio. Una factura sin vencimiento no se puede reclamar ni mostrar como vencida, así que
-  // sin ninguna de las dos cosas ese Servicio no se factura: no se le inventa una fecha.
-  const vencimientoDeLaTanda = String(req.body?.fecha_vencimiento ?? '').slice(0, 10);
-  const vencimientoEscrito = /^\d{4}-\d{2}-\d{2}$/.test(vencimientoDeLaTanda);
-
-  const db = clienteDelPedido(req);
-
-  // Con el trabajo de la Prestadora, porque la base le abre `configuracion_facturacion_clientes`
-  // sólo a la administración, y generar las facturas también lo hace quien coordina.
-  let configuracion;
   try {
-    const respuesta = await enLaPrestadora(prestadoraId, 'lectura de las condiciones de cobro', (dbTrabajo) =>
-      dbTrabajo
-        .from('configuracion_facturacion_clientes')
-        .select('regla')
-        .eq('prestadora_id', prestadoraId)
-        .maybeSingle(),
-    );
-    if (respuesta.error) return responderError(res, respuesta.error);
-    configuracion = respuesta.data;
+    const cuenta = await generarFacturasDelTramo({
+      req,
+      prestadoraId: req.usuarioPanel.prestadoraId,
+      tramo,
+      vencimientoDeLaTanda: String(req.body?.fecha_vencimiento ?? '').slice(0, 10),
+    });
+    res.json(cuenta);
   } catch (e) {
-    return responderError(res, e);
+    return responderError(res, e, e?.estado ?? 500);
   }
-  const reglaDeLaPrestadora = configuracion?.regla ?? null;
-  const plazoDeLaPrestadora = reglaDeLaPrestadora?.dias_hasta_el_vencimiento ?? null;
-
-  const hoy = new Date().toISOString().slice(0, 10);
-
-  // Los pendientes de conformidad no los devuelve la base, y no se facturan. Del Cliente salen
-  // los nombres de sus Pacientes para los renglones; la factura es de cada Servicio.
-  const { data: clientes, error: errorClientes } = await db
-    .from('clientes')
-    .select(`id, prestadora_id, pacientes(id, ${FICHA_NOMBRE})`)
-    .is('deleted_at', null);
-  if (errorClientes) return responderError(res, errorClientes);
-
-  const pacientes = conSusFichas((clientes || []).flatMap((f) => f.pacientes || []));
-  const pacienteIds = pacientes.map((p) => p.id);
-  const nombresDePacientes = new Map(pacientes.map((p) => [p.id, p.nombre]));
-  const clientesVisibles = new Set((clientes || []).map((c) => c.id));
-
-  // Una factura por Servicio y por período. Cada Servicio trae su Prestadora, que es la que se
-  // escribe en su factura. La deuda sigue siendo del Cliente.
-  const { data: servicios, error: errorServicios } = await db
-    .from('servicios')
-    .select('id, prestadora_id, cliente_id');
-  if (errorServicios) return responderError(res, errorServicios);
-  const serviciosVisibles = (servicios || []).filter((s) => clientesVisibles.has(s.cliente_id));
-
-  // El plazo de pago, la frecuencia de cobro y la medición de cada Servicio son parte de lo
-  // comercial, que la base le abre sólo a quien tiene ese permiso; generar las facturas lo hace
-  // también quien coordina.
-  const comercialDelServicio = new Map();
-  const servicioIds = (servicios || []).map((s) => s.id);
-  if (servicioIds.length > 0) {
-    try {
-      const respuesta = await enLaPrestadora(prestadoraId, 'lectura de las condiciones de cobro de cada Servicio', (dbTrabajo) =>
-        dbTrabajo
-          .from('condiciones_comerciales_servicio')
-          .select(
-            'servicio_id, dias_hasta_el_vencimiento, frecuencia_de_cobro, medicion, cobra_cancelada_por_el_cliente, '
-              + 'descuenta_lo_no_prestado, cobra_guardias_adicionales, cobra_horas_adicionales',
-          )
-          .in('servicio_id', servicioIds),
-      );
-      if (respuesta.error) return responderError(res, respuesta.error);
-      for (const c of respuesta.data || []) comercialDelServicio.set(c.servicio_id, c);
-    } catch (e) {
-      return responderError(res, e);
-    }
-  }
-
-  // Los descuentos de cada Servicio. Son parte de lo comercial, igual que las condiciones: se
-  // leen con el trabajo de la Prestadora, porque generar las facturas lo hace también quien
-  // coordina. Los terminados también vienen: un período que cerró antes de la terminación
-  // todavía lo lleva.
-  const descuentosDelServicio = new Map();
-  if (servicioIds.length > 0) {
-    try {
-      const respuesta = await enLaPrestadora(prestadoraId, 'lectura de los descuentos de cada Servicio', (dbTrabajo) =>
-        dbTrabajo
-          .from('descuentos_del_servicio')
-          .select('id, servicio_id, clase, valor, moneda, vigente_desde, cantidad_de_periodos, vigente_hasta, cargado_en, terminado_en')
-          .in('servicio_id', servicioIds),
-      );
-      if (respuesta.error) return responderError(res, respuesta.error);
-      for (const d of respuesta.data || []) {
-        if (!descuentosDelServicio.has(d.servicio_id)) descuentosDelServicio.set(d.servicio_id, []);
-        descuentosDelServicio.get(d.servicio_id).push(d);
-      }
-    } catch (e) {
-      return responderError(res, e);
-    }
-  }
-
-  // Los períodos de cada Servicio, con su propia frecuencia. Los que todavía no terminaron se
-  // cuentan y no se facturan.
-  let sinTerminar = 0;
-  const periodosDelServicio = new Map();
-  for (const servicio of serviciosVisibles) {
-    const frecuencia = condicionDe('frecuencia_de_cobro', reglaDeLaPrestadora, comercialDelServicio.get(servicio.id));
-    const { terminados, sinTerminar: abiertos } = periodosDelTramo({ tramo, frecuencia, hoy });
-    sinTerminar += abiertos.length;
-    if (terminados.length > 0) periodosDelServicio.set(servicio.id, terminados);
-  }
-  const todosLosPeriodos = [...periodosDelServicio.values()].flat();
-  const primerDia = todosLosPeriodos.reduce((min, p) => (p.desde < min ? p.desde : min), tramo.desde);
-  const ultimoDia = todosLosPeriodos.reduce((max, p) => (p.hasta > max ? p.hasta : max), tramo.hasta);
-
-  let prestaciones = [];
-  if (pacienteIds.length > 0) {
-    const { data, error } = await db
-      .from('prestaciones')
-      .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda, vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id, precio_guardia_adicional, precio_hora_adicional')
-      .eq('estado', 'vigente')
-      .in('paciente_id', pacienteIds);
-    if (error) return responderError(res, error);
-    prestaciones = data || [];
-  }
-
-  // El trabajo: las guardias de esos Servicios en esas fechas, con sus Pacientes. Entran las
-  // completadas, que se cobran, y las ausentes y las canceladas, que según las condiciones se
-  // descuentan o se cobran; la cancelación dice quién la pidió. La pausada por internación no
-  // entra, igual que antes. Las horas se cuentan con la misma regla que usa la Liquidación del
-  // Asistente.
-  let guardias = [];
-  const serviciosConPeriodos = [...periodosDelServicio.keys()];
-  if (serviciosConPeriodos.length > 0) {
-    const { data, error } = await db
-      .from('guardias')
-      .select('id, fecha, servicio_id, estado, cancelacion_origen, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, guardia_pacientes(paciente_id)')
-      .in('estado', ['completada', 'ausente', 'cancelada'])
-      .in('servicio_id', serviciosConPeriodos)
-      .gte('fecha', primerDia)
-      .lte('fecha', ultimoDia);
-    if (error) return responderError(res, error);
-    guardias = (data || []).map((g) => ({
-      id: g.id,
-      fecha: String(g.fecha).slice(0, 10),
-      servicio_id: g.servicio_id,
-      estado: g.estado,
-      cancelacion_origen: g.cancelacion_origen ?? null,
-      horas: horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin),
-      horas_extra: Number(g.horas_extra) || 0,
-      pacientes: (g.guardia_pacientes || []).map((gp) => gp.paciente_id),
-    }));
-  }
-
-  // Lo ya facturado que toca estas fechas: un período que se superpone con una factura del mismo
-  // Servicio no se vuelve a facturar. La base lo rechazaría igual; mirarlo antes evita cortar la
-  // tanda a la mitad.
-  const { data: existentes, error: errorExistentes } = await db
-    .from('facturas_cliente')
-    .select('servicio_id, periodo, periodo_hasta')
-    .lte('periodo', ultimoDia)
-    .gte('periodo_hasta', primerDia);
-  if (errorExistentes) return responderError(res, errorExistentes);
-  const yaFacturado = (servicioId, periodo) =>
-    (existentes || []).some(
-      (f) =>
-        f.servicio_id === servicioId &&
-        seSuperponen({ desde: String(f.periodo).slice(0, 10), hasta: String(f.periodo_hasta).slice(0, 10) }, periodo),
-    );
-
-  const porServicio = new Map();
-  for (const p of prestaciones) {
-    if (!p.servicio_id) continue;
-    if (!porServicio.has(p.servicio_id)) porServicio.set(p.servicio_id, []);
-    porServicio.get(p.servicio_id).push(p);
-  }
-  const guardiasPorServicio = new Map();
-  for (const g of guardias) {
-    if (!guardiasPorServicio.has(g.servicio_id)) guardiasPorServicio.set(g.servicio_id, []);
-    guardiasPorServicio.get(g.servicio_id).push(g);
-  }
-
-  let generadas = 0;
-  let sinPrestaciones = 0;
-  let sinVencimiento = 0;
-  let guardiasSinAsignar = 0;
-  let guardiasAmbiguas = 0;
-  let sinPrecio = 0;
-  let monedasMezcladas = 0;
-
-  for (const servicio of serviciosVisibles) {
-    const comercial = comercialDelServicio.get(servicio.id);
-    // Todas las condiciones que rigen para este Servicio: la medición y qué se descuenta o se
-    // cobra de más.
-    const condiciones = condicionesDe(reglaDeLaPrestadora, comercial);
-
-    for (const periodo of periodosDelServicio.get(servicio.id) || []) {
-      if (yaFacturado(servicio.id, periodo)) continue;
-
-      const factura = armarLaFacturaDelPeriodo({
-        periodo,
-        medicion: condiciones.medicion,
-        condiciones,
-        prestaciones: porServicio.get(servicio.id) || [],
-        guardias: guardiasPorServicio.get(servicio.id) || [],
-        nombresDePacientes,
-      });
-      guardiasSinAsignar += factura.guardiasSinAsignar;
-      guardiasAmbiguas += factura.guardiasAmbiguas;
-      sinPrecio += factura.sinPrecio;
-
-      if (factura.renglones.length === 0) {
-        sinPrestaciones += 1;
-        continue;
-      }
-
-      // Una factura tiene una sola moneda: con dos en el mismo Servicio no se arma.
-      if (factura.monedasMezcladas) {
-        monedasMezcladas += 1;
-        continue;
-      }
-
-      const vencimiento = vencimientoEscrito
-        ? vencimientoDeLaTanda
-        : vencimientoDe(hoy, plazoDePagoDe(plazoDeLaPrestadora, comercial?.dias_hasta_el_vencimiento ?? null));
-
-      if (!vencimiento) {
-        sinVencimiento += 1;
-        continue;
-      }
-
-      // Los descuentos se restan al final, sobre lo que suma la factura, cada uno en su renglón.
-      const conDescuentos = conLosDescuentos({
-        factura,
-        descuentos: descuentosDelServicio.get(servicio.id),
-        periodo,
-        frecuencia: condiciones.frecuencia_de_cobro,
-        servicioId: servicio.id,
-      });
-      const renglones = conDescuentos.renglones;
-      const montoTotal = aDosDecimales(conDescuentos.total);
-
-      const { data: creada, error: errorFactura } = await db
-        .from('facturas_cliente')
-        .insert({
-          prestadora_id: servicio.prestadora_id,
-          cliente_id: servicio.cliente_id,
-          servicio_id: servicio.id,
-          periodo: periodo.desde,
-          periodo_hasta: periodo.hasta,
-          monto_total: montoTotal,
-          // La moneda es la de las prestaciones que se cobran. Si no la traen, la completa la base
-          // con la de la Prestadora.
-          ...(factura.moneda ? { moneda: factura.moneda } : {}),
-          // La emisión se escribe en vez de dejarla en el valor por defecto de la base: el plazo
-          // de pago se cuenta desde este mismo día, y si uno lo pone la base y el otro el backend,
-          // un cambio de día entre los dos daría un vencimiento corrido.
-          fecha_emision: hoy,
-          fecha_vencimiento: vencimiento,
-        })
-        .select('id, prestadora_id')
-        .single();
-      if (errorFactura) return responderError(res, errorFactura, 400);
-
-      const { error: errorRenglones } = await db
-        .from('facturas_cliente_items')
-        .insert(renglones.map((r) => ({ ...r, prestadora_id: creada.prestadora_id, factura_id: creada.id })));
-
-      if (errorRenglones) {
-        await db.from('facturas_cliente').delete().eq('id', creada.id);
-        return responderError(res, errorRenglones, 400);
-      }
-
-      generadas += 1;
-    }
-  }
-
-  res.json({
-    generadas,
-    sinPrestaciones,
-    sinVencimiento,
-    sinTerminar,
-    guardiasSinAsignar,
-    guardiasAmbiguas,
-    sinPrecio,
-    monedasMezcladas,
-  });
 });
+
+/** Los motivos con que contesta `cambiar_responsable_de_pagos`. Los códigos están en `ESTADO_POR_MOTIVO`. */
+const MOTIVOS_DEL_CAMBIO_DE_PAGADOR = ['sin_permiso', 'no_encontrado', 'dato_invalido', 'cambio_de_pagador_con_factura_emitida'];
+const TIPOS_DE_PAGADOR = ['cliente', 'obra_social', 'otro'];
+
+/**
+ * Cambiar el Responsable de pagos de un Servicio desde un día.
+ *
+ * CADA DÍA SE LE FACTURA A QUIEN PAGABA ESE DÍA. La base guarda el cambio con el día desde el que
+ * rige, y rechaza el que caería sobre días de una factura ya emitida, con comprobante o con cobros.
+ * Las facturas sin emitir que el cambio parte en dos las borra la base en la misma operación, y acá
+ * se vuelven a generar con la misma función que genera todas: salen partidas en el día del cambio,
+ * una a nombre de cada uno.
+ *
+ * LA FIRMA DEL ANTERIOR SIGUE VALIENDO PARA SUS DÍAS. Lo que se anula es el documento que el
+ * anterior tenía pendiente de firmar; el nuevo firma uno nuevo.
+ */
+panelCobrosRouter.put(
+  '/servicios/:servicioId/responsable-de-pagos',
+  requiereRolPanel,
+  requierePermiso('editar_condiciones_comerciales_servicio'),
+  async (req, res) => {
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+    const cuerpo = req.body || {};
+    const desde = String(cuerpo.desde ?? '').slice(0, 10);
+    const personaId = cuerpo.persona_id ? String(cuerpo.persona_id) : null;
+    const tipo = cuerpo.tipo ? String(cuerpo.tipo) : null;
+    if (!tramoPedido({ desde, hasta: desde }) || (tipo && !TIPOS_DE_PAGADOR.includes(tipo))) {
+      return responderError(res, new ErrorConMotivo('dato_invalido'));
+    }
+
+    try {
+      const db = clienteDelPedido(req);
+      const { data: borradas, error } = await db.rpc('cambiar_responsable_de_pagos', {
+        p_servicio: req.params.servicioId,
+        p_persona: personaId,
+        p_tipo: tipo,
+        p_desde: desde,
+      });
+      if (error) {
+        if (MOTIVOS_DEL_CAMBIO_DE_PAGADOR.includes(error.message)) throw new ErrorConMotivo(error.message, error.message);
+        throw new Error(error.message);
+      }
+
+      // Las facturas que la base borró se vuelven a generar enteras, de a un período de cobro.
+      let regeneradas = 0;
+      const yaHechos = new Set();
+      for (const fila of borradas || []) {
+        const parte = { desde: String(fila.periodo).slice(0, 10), hasta: String(fila.periodo_hasta).slice(0, 10) };
+        const tramo = await periodoEnteroDeLaFactura(prestadoraId, req.params.servicioId, parte);
+        if (yaHechos.has(tramo.desde)) continue;
+        yaHechos.add(tramo.desde);
+        const cuenta = await generarFacturasDelTramo({ req, prestadoraId, tramo, servicioId: req.params.servicioId });
+        regeneradas += cuenta.generadas;
+      }
+
+      // El documento pendiente de firmar de quien ya no es hoy el Responsable de pagos no corresponde.
+      // Si el cambio rige desde un día que todavía no llegó, el de hoy sigue siendo el anterior.
+      const { data: deHoy, error: errorDeHoy } = await db
+        .from('tramos_de_pagador_del_servicio')
+        .select('pagador_persona_id')
+        .eq('servicio_id', req.params.servicioId)
+        .eq('rige_hoy', true)
+        .maybeSingle();
+      if (errorDeHoy) throw new Error(errorDeHoy.message);
+      const { data: pendientes, error: errorPendientes } = await db
+        .from('consentimientos_pagador')
+        .select('id, pagador_persona_id')
+        .eq('servicio_id', req.params.servicioId)
+        .eq('estado', 'pendiente_firma');
+      if (errorPendientes) throw new Error(errorPendientes.message);
+      for (const pendiente of pendientes || []) {
+        if (pendiente.pagador_persona_id === (deHoy?.pagador_persona_id ?? null)) continue;
+        await anularPendiente({ db, consentimientoId: pendiente.id, prestadoraId });
+      }
+
+      res.json({ ok: true, regeneradas });
+    } catch (e) {
+      return responderError(res, e, e?.estado ?? 500);
+    }
+  },
+);
 
 // ---------------------------------------------------------------------------------------
 // Lo que emitió el software de facturación

@@ -110,16 +110,16 @@ de una Prestadora no lee nada de otra.
 
 ### El acto de armar un Servicio
 
-**26. Usted** — Y una que aparece al cruzar el acto con la regla del producto: **el Pagador.** La
-regla dice que quien asume la obligación de pagar queda definido recién cuando firma, y que eso
-tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este acto.
+**26. Usted** — Y una que aparece al cruzar el acto con la regla del producto: **el Responsable de
+pagos.** La regla dice que quien asume la obligación de pagar queda definido recién cuando firma, y
+que eso tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este
+acto.
 
-Lo que falta del Pagador: **el cambio de Pagador** con el Servicio en curso, que hoy sólo muestra quién firmó;
-**el Pagador que desiste**, que no se puede anotar, porque un consentimiento firmado no se revoca;
-y **más de un Pagador**, que la regla del producto admite y la base no, porque guarda uno solo por
-Servicio.
+Lo que falta del Responsable de pagos: **el Responsable de pagos que desiste**, que no se puede
+anotar, porque un consentimiento firmado no se revoca; y **más de un Responsable de pagos**, que la
+regla del producto admite y la base no, porque guarda uno solo por día.
 
-**La prueba del enlace por correo para leer y firmar el documento del Pagador** tiene hecho el
+**La prueba del enlace por correo para leer y firmar el documento del Responsable de pagos** tiene hecho el
 primer punto, el envío del enlace: en la base hay un consentimiento cerrado con el enlace, y su
 envío figura aceptado. Los otros tres puntos esperan el «sí» del Desarrollador, uno por uno.
 

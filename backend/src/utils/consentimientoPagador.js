@@ -62,7 +62,8 @@ export async function cuerpoVigente({ db, prestadoraId, idioma = IDIOMA_DEL_DOCU
   };
 }
 
-// El Servicio con su Responsable de pagos, y de qué Cliente es.
+// El Servicio con su Responsable de pagos de hoy, y de qué Cliente es. Quién paga cada día lo dice
+// la vista de la base, que es la única que hace esa cuenta.
 export async function servicioConSuPagador({ db, servicioId, prestadoraId }) {
   const { data: servicio } = await db
     .from('servicios')
@@ -75,19 +76,20 @@ export async function servicioConSuPagador({ db, servicioId, prestadoraId }) {
     throw new ErrorConMotivo('no_encontrado', 'Servicio no encontrado');
   }
 
-  // Quién paga vive con lo comercial del Servicio, que la base abre sólo a quien tiene el permiso.
-  const { data: condiciones, error } = await db
-    .from('condiciones_comerciales_servicio')
+  // Quién paga es parte de lo comercial del Servicio, que la base abre sólo a quien tiene el permiso.
+  const { data: deHoy, error } = await db
+    .from('tramos_de_pagador_del_servicio')
     .select('pagador_persona_id, pagador_tipo')
     .eq('prestadora_id', prestadoraId)
     .eq('servicio_id', servicioId)
+    .eq('rige_hoy', true)
     .maybeSingle();
   if (error) throw new Error(error.message);
 
   return {
     ...servicio,
-    pagador_persona_id: condiciones?.pagador_persona_id ?? null,
-    pagador_tipo: condiciones?.pagador_tipo ?? null,
+    pagador_persona_id: deHoy?.pagador_persona_id ?? null,
+    pagador_tipo: deHoy?.pagador_tipo ?? null,
   };
 }
 
@@ -180,12 +182,12 @@ export async function crearConsentimiento({ db, servicioId, prestadoraId, cargad
   const servicio = await servicioConSuPagador({ db, servicioId, prestadoraId });
   const clienteId = servicio.cliente_id;
   if (!servicio.pagador_persona_id) {
-    throw new ErrorConMotivo('sin_pagador', 'Esta contratación todavía no tiene Pagador elegido');
+    throw new ErrorConMotivo('sin_pagador', 'Esta contratación todavía no tiene Responsable de pagos elegido');
   }
 
   const pagador = await persona({ db, personaId: servicio.pagador_persona_id, prestadoraId });
   if (!pagador) {
-    throw new ErrorConMotivo('no_encontrado', 'Los datos del Pagador no existen');
+    throw new ErrorConMotivo('no_encontrado', 'Los datos del Responsable de pagos no existen');
   }
 
   const [{ cuerpo, idioma }, { data: prestadora }, nombreDelCliente, apoderado] = await Promise.all([
@@ -331,15 +333,21 @@ export async function estadoDelPagador({ db, servicioId, prestadoraId, idioma, z
   ]);
 
   const pendiente = (consentimientos ?? []).find((fila) => fila.estado === 'pendiente_firma') ?? null;
-  const cerradoLeido = (consentimientos ?? []).find((fila) => fila.estado === 'cerrado') ?? null;
+  // La firma que vale es la del Responsable de pagos de hoy. La de uno anterior queda guardada y
+  // vale para sus días; sólo se muestra si el de hoy todavía no firmó.
+  const cerrados = (consentimientos ?? []).filter((fila) => fila.estado === 'cerrado');
+  const cerradoLeido = cerrados.find((fila) => servicio.pagador_persona_id && fila.pagador_persona_id === servicio.pagador_persona_id)
+    ?? cerrados[0]
+    ?? null;
   // Firmado con el enlace, el documento lleva su frase de firma en lugar del pie para firmar a mano.
   const cerrado = cerradoLeido && {
     ...cerradoLeido,
     firmadoCon: fraseDeLaFirma({ consentimiento: cerradoLeido, idioma: cerradoLeido.documento_idioma ?? idioma, zona, prestadoraId }),
   };
 
-  // Si el consentimiento firmado quedó atado a otra persona que la que hoy figura como Pagador, la
-  // firma no vale para éste: firmó otra persona, y el Panel muestra su nombre junto a la fecha.
+  // Si el único consentimiento firmado quedó atado a otra persona que la que hoy es Responsable de
+  // pagos, la firma no vale para éste: firmó otra persona, y el Panel muestra su nombre junto a la
+  // fecha. El nuevo firma un documento nuevo.
   const firmadoPorOtro = Boolean(
     cerrado && servicio.pagador_persona_id && cerrado.pagador_persona_id !== servicio.pagador_persona_id,
   );

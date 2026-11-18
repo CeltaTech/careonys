@@ -38,7 +38,7 @@ function baseCon({ consentimientos, emails }) {
           if (tabla === 'servicios') {
             return { data: { id: SERVICIO, prestadora_id: PRESTADORA, cliente_id: CLIENTE }, error: null };
           }
-          if (tabla === 'condiciones_comerciales_servicio') {
+          if (tabla === 'tramos_de_pagador_del_servicio') {
             return { data: { pagador_persona_id: QUIEN_FIRMA_AHORA, pagador_tipo: null }, error: null };
           }
           if (tabla === 'personas') {

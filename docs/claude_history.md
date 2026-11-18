@@ -3,6 +3,12 @@
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§9, «Protocolo de sesión») — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
 
+## Varios Responsables de pagos a la vez
+
+- **Antes:** cada Servicio tenía, cada día, un solo Responsable de pagos, y cambiarlo reemplazaba al anterior desde un día.
+- **Ahora:** un Servicio puede tener varios Responsables de pagos a la vez, cada uno desde un día y, cuando deja de serlo, hasta otro. Cada uno firma su propio documento, y con la opción de la Prestadora encendida tienen que haber firmado todos los que rigen hoy para programar guardias. La indicación de facturar a nombre del Responsable de pagos va en uno solo por día.
+- **Motivo:** la regla del producto dice que cada rol lo pueden tener una o más personas, y la base guardaba uno solo por día. El Desarrollador aprobó el cambio.
+
 ## A nombre de quién sale la factura
 
 - **Antes:** la factura de cada día salía a nombre de quien era el Responsable de pagos ese día, y un cambio de Responsable de pagos en la mitad de un período partía la factura en dos.

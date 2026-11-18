@@ -1252,7 +1252,7 @@ function baseConUnCliente({
   ]);
   respuestas.set('GET /rest/v1/descuentos_del_servicio', () => descuentos);
   // Sin ninguna fila, paga quien contrata desde siempre.
-  respuestas.set('GET /rest/v1/tramos_de_pagador_del_servicio', () => pagadores);
+  respuestas.set('GET /rest/v1/tramos_de_la_factura_del_servicio', () => pagadores);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
   // Las guardias terminadas del período: con la medición de fábrica —lo pactado más el
   // excedente— y sin cantidad pactada, no cambian lo que se cobra.
@@ -1507,7 +1507,7 @@ describe('generar las facturas de un período', () => {
     const LO_COMERCIAL = 'GET /rest/v1/condiciones_comerciales_servicio';
     const LOS_DESCUENTOS = 'GET /rest/v1/descuentos_del_servicio';
     // Quién pagaba cada día también es lo comercial.
-    const LOS_PAGADORES = 'GET /rest/v1/tramos_de_pagador_del_servicio';
+    const LOS_PAGADORES = 'GET /rest/v1/tramos_de_la_factura_del_servicio';
     todoConLaCredencialDeQuienPide(5, { salvo: [LO_COMERCIAL, LOS_DESCUENTOS, LOS_PAGADORES] });
     clientesConLaCredencialDeQuienPide();
     for (const clave of [LO_COMERCIAL, LOS_DESCUENTOS, LOS_PAGADORES]) {
@@ -1631,108 +1631,169 @@ describe('generar las facturas de un período', () => {
 });
 
 // ---------------------------------------------------------------------------------------
-// Cambiar el Responsable de pagos desde un día
+// Los Responsables de pagos de un Servicio
 // ---------------------------------------------------------------------------------------
 
-describe('cambiar el Responsable de pagos desde un día', () => {
-  const ruta = `/servicios/${SERVICIO}/responsable-de-pagos`;
-  const CAMBIO = 'POST /rest/v1/rpc/cambiar_responsable_de_pagos';
+describe('los Responsables de pagos de un Servicio', () => {
+  const RESPONSABLE = '99999999-9999-4999-8999-999999999999';
+  const lista = `/servicios/${SERVICIO}/responsables-de-pagos`;
+  const hasta = `${lista}/${RESPONSABLE}/hasta`;
+  const factura = `${lista}/${RESPONSABLE}/factura`;
+  const AGREGAR = 'POST /rest/v1/rpc/agregar_responsable_de_pagos';
+  const TERMINAR = 'POST /rest/v1/rpc/terminar_responsable_de_pagos';
+  const MARCAR = 'POST /rest/v1/rpc/marcar_factura_al_responsable';
+  const LAS_FUNCIONES = [AGREGAR, TERMINAR, MARCAR];
 
-  function prepararCambio({ borradas = [], deHoy = null, pendientes = [] } = {}) {
-    respuestas.set(CAMBIO, () => borradas);
-    respuestas.set('GET /rest/v1/tramos_de_pagador_del_servicio', () => (deHoy ? [deHoy] : []));
+  // Los que siguen rigiendo después de la operación. La lectura de uno solo —el de la dirección—
+  // pide por su identificador; la lista, todos los que no terminaron.
+  function prepararResponsables({ borradas = [], siguen = [], pendientes = [], esDelServicio = true } = {}) {
+    for (const clave of LAS_FUNCIONES) respuestas.set(clave, () => borradas);
+    respuestas.set('GET /rest/v1/servicios', () => [{ id: SERVICIO, prestadora_id: PRESTADORA, cliente_id: CLIENTE }]);
+    respuestas.set('GET /rest/v1/pagadores_del_servicio', () =>
+      (llamadas.at(-1).url.includes(`id=eq.${RESPONSABLE}`)
+        ? (esDelServicio ? [{ id: RESPONSABLE }] : [])
+        : siguen.map((personaId, i) => ({
+          id: `r${i}`, pagador_persona_id: personaId, pagador_tipo: 'otro',
+          vigente_desde: '2026-01-01', vigente_hasta: null, factura_al_responsable: false,
+        }))));
     respuestas.set('GET /rest/v1/consentimientos_pagador', () => pendientes);
     respuestas.set('PATCH /rest/v1/consentimientos_pagador', () => [{ id: 'anulado' }]);
   }
 
-  it('la base recibe la persona, la clase y el día, con la credencial de quien pide; sin indicación la factura sigue al Contratante', async () => {
-    prepararCambio({ deHoy: { pagador_persona_id: OTRA_PERSONA } });
-    const { estado, cuerpo } = await pedir('PUT', ruta, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10' });
-    assert.equal(estado, 200);
+  it('agregar: la base recibe la persona, la clase y el día, con la credencial de quien pide; sin marca la factura sigue al Contratante', async () => {
+    prepararResponsables({ siguen: [OTRA_PERSONA] });
+    const { estado, cuerpo } = await pedir('POST', lista, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10' });
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
     assert.deepEqual(cuerpo, { ok: true, regeneradas: 0 });
-    const cambio = llamadas.find((l) => l.clave === CAMBIO);
-    assert.deepEqual(cambio.cuerpo, {
+    const llamada = llamadas.find((l) => l.clave === AGREGAR);
+    assert.deepEqual(llamada.cuerpo, {
       p_servicio: SERVICIO, p_persona: OTRA_PERSONA, p_tipo: 'otro', p_desde: '2026-09-10', p_factura_al_responsable: false,
     });
-    assert.equal(cambio.credencial, credencialEnviada);
+    assert.equal(llamada.credencial, credencialEnviada);
   });
 
-  it('la indicación de facturar a nombre del Responsable de pagos llega a la base', async () => {
-    prepararCambio({ deHoy: { pagador_persona_id: OTRA_PERSONA } });
-    const { estado } = await pedir('PUT', ruta, {
+  it('agregar: la marca de facturarle a él llega a la base', async () => {
+    prepararResponsables({ siguen: [OTRA_PERSONA] });
+    const { estado } = await pedir('POST', lista, {
       persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10', factura_al_responsable: true,
     });
     assert.equal(estado, 200);
-    const cambio = llamadas.find((l) => l.clave === CAMBIO);
-    assert.equal(cambio.cuerpo.p_factura_al_responsable, true);
+    assert.equal(llamadas.find((l) => l.clave === AGREGAR).cuerpo.p_factura_al_responsable, true);
   });
 
-  it('la indicación sin Responsable de pagos, o que no es sí o no, no llega a la base', async () => {
-    prepararCambio();
+  it('agregar: sin persona, con un día que no existe, con una clase desconocida o con una marca que no es sí o no, no llega a la base', async () => {
+    prepararResponsables();
     for (const cuerpo of [
-      { persona_id: null, tipo: null, desde: '2026-09-10', factura_al_responsable: true },
-      { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10', factura_al_responsable: 'si' },
-    ]) {
-      const { estado, cuerpo: respuesta } = await pedir('PUT', ruta, cuerpo);
-      assert.equal(estado, 400, JSON.stringify(cuerpo));
-      assert.equal(respuesta.motivo, 'dato_invalido');
-    }
-    assert.ok(!llamadas.some((l) => l.clave === CAMBIO));
-  });
-
-  it('sin persona paga el Cliente: la clase va vacía', async () => {
-    prepararCambio();
-    const { estado } = await pedir('PUT', ruta, { persona_id: null, tipo: null, desde: '2026-09-10' });
-    assert.equal(estado, 200);
-    const cambio = llamadas.find((l) => l.clave === CAMBIO);
-    assert.equal(cambio.cuerpo.p_persona, null);
-    assert.equal(cambio.cuerpo.p_tipo, null);
-  });
-
-  it('un día que no existe, o una clase desconocida, no llega a la base', async () => {
-    prepararCambio();
-    for (const cuerpo of [
+      { persona_id: null, tipo: 'otro', desde: '2026-09-10' },
       { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-02-30' },
       { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '' },
       { persona_id: OTRA_PERSONA, tipo: 'paciente', desde: '2026-09-10' },
+      { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10', factura_al_responsable: 'si' },
     ]) {
-      const { estado, cuerpo: respuesta } = await pedir('PUT', ruta, cuerpo);
+      const { estado, cuerpo: respuesta } = await pedir('POST', lista, cuerpo);
       assert.equal(estado, 400, JSON.stringify(cuerpo));
       assert.equal(respuesta.motivo, 'dato_invalido');
     }
-    assert.ok(!llamadas.some((l) => l.clave === CAMBIO));
+    assert.ok(!llamadas.some((l) => l.clave === AGREGAR));
   });
 
-  it('un cambio sobre días de una factura emitida se rechaza con su motivo', async () => {
-    prepararCambio();
-    respuestas.set(CAMBIO, () => ({
-      __estado: 400,
-      __cuerpo: { code: 'P0001', message: 'cambio_de_pagador_con_factura_emitida' },
+  it('agregar: la misma persona dos veces en los mismos días, o la marca en dos, se rechaza con su motivo', async () => {
+    for (const motivo of ['responsable_de_pagos_repetido', 'responsable_de_pagos_con_otra_marca', 'cambio_de_pagador_con_factura_emitida']) {
+      prepararResponsables();
+      respuestas.set(AGREGAR, () => ({ __estado: 400, __cuerpo: { code: 'P0001', message: motivo } }));
+      const { estado, cuerpo } = await pedir('POST', lista, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-08-16' });
+      assert.equal(estado, 409, motivo);
+      assert.equal(cuerpo.motivo, motivo);
+    }
+  });
+
+  it('terminar: la base recibe el Responsable de pagos y el último día; vacío vuelve a dejarlo sin fin', async () => {
+    prepararResponsables();
+    const { estado } = await pedir('PUT', hasta, { hasta: '2026-09-30' });
+    assert.equal(estado, 200);
+    const llamada = llamadas.find((l) => l.clave === TERMINAR);
+    assert.deepEqual(llamada.cuerpo, { p_responsable: RESPONSABLE, p_hasta: '2026-09-30' });
+    assert.equal(llamada.credencial, credencialEnviada);
+
+    llamadas = [];
+    const sinFin = await pedir('PUT', hasta, { hasta: null });
+    assert.equal(sinFin.estado, 200);
+    assert.equal(llamadas.find((l) => l.clave === TERMINAR).cuerpo.p_hasta, null);
+  });
+
+  it('terminar: un día que no existe no llega a la base, y un hasta antes del desde vuelve con su motivo', async () => {
+    prepararResponsables();
+    const mal = await pedir('PUT', hasta, { hasta: '2026-02-30' });
+    assert.equal(mal.estado, 400);
+    assert.equal(mal.cuerpo.motivo, 'dato_invalido');
+    assert.ok(!llamadas.some((l) => l.clave === TERMINAR));
+
+    respuestas.set(TERMINAR, () => ({
+      __estado: 400, __cuerpo: { code: 'P0001', message: 'responsable_de_pagos_hasta_antes_del_desde' },
     }));
-    const { estado, cuerpo } = await pedir('PUT', ruta, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-08-16' });
-    assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'cambio_de_pagador_con_factura_emitida');
+    const antes = await pedir('PUT', hasta, { hasta: '2025-12-31' });
+    assert.equal(antes.estado, 400);
+    assert.equal(antes.cuerpo.motivo, 'responsable_de_pagos_hasta_antes_del_desde');
   });
 
-  it('las facturas sin emitir que el cambio cortó se vuelven a generar, partidas', async () => {
+  it('terminar: el documento pendiente de quien ya no es Responsable de pagos se anula, y el de quien sigue queda', async () => {
+    prepararResponsables({
+      siguen: [OTRA_PERSONA],
+      pendientes: [
+        { id: 'del-que-termino', pagador_persona_id: PACIENTE },
+        { id: 'del-que-sigue', pagador_persona_id: OTRA_PERSONA },
+      ],
+    });
+    const { estado } = await pedir('PUT', hasta, { hasta: '2026-09-30' });
+    assert.equal(estado, 200);
+    const anuladas = llamadas.filter((l) => l.clave === 'PATCH /rest/v1/consentimientos_pagador');
+    assert.equal(anuladas.length, 1);
+    assert.ok(anuladas[0].url.includes('id=eq.del-que-termino'));
+    assert.deepEqual(anuladas[0].cuerpo, { estado: 'anulado' });
+  });
+
+  it('marcar: la base recibe el Responsable de pagos y si la marca queda encendida', async () => {
+    prepararResponsables();
+    const { estado } = await pedir('PUT', factura, { encendida: true });
+    assert.equal(estado, 200);
+    const llamada = llamadas.find((l) => l.clave === MARCAR);
+    assert.deepEqual(llamada.cuerpo, { p_responsable: RESPONSABLE, p_encendida: true });
+    assert.equal(llamada.credencial, credencialEnviada);
+  });
+
+  it('marcar: algo que no es sí o no no llega a la base', async () => {
+    prepararResponsables();
+    const { estado, cuerpo } = await pedir('PUT', factura, { encendida: 'si' });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'dato_invalido');
+    assert.ok(!llamadas.some((l) => l.clave === MARCAR));
+  });
+
+  it('un Responsable de pagos que no es de este Servicio no se toca', async () => {
+    prepararResponsables({ esDelServicio: false });
+    for (const [ruta, cuerpo] of [[hasta, { hasta: '2026-09-30' }], [factura, { encendida: true }]]) {
+      const { estado, cuerpo: respuesta } = await pedir('PUT', ruta, cuerpo);
+      assert.equal(estado, 404, ruta);
+      assert.equal(respuesta.motivo, 'no_encontrado');
+    }
+    assert.ok(!llamadas.some((l) => LAS_FUNCIONES.includes(l.clave)));
+  });
+
+  it('las facturas sin emitir que la marca cortó se vuelven a generar, partidas', async () => {
     baseConUnCliente({
       // Regenerar no trae fecha escrita: vence con el plazo acordado con ese Cliente.
       plazoDelCliente: 10,
       prestaciones: [unaPrestacion({ precio_final: '31000.00' })],
       pagadores: [
-        { servicio_id: SERVICIO, pagador_persona_id: null, pagador_tipo: null, rige_desde: null, rige_hasta: '2026-08-15' },
-        { servicio_id: SERVICIO, pagador_persona_id: OTRA_PERSONA, pagador_tipo: 'otro', rige_desde: '2026-08-16', rige_hasta: null, responsable_que_recibe_la_factura: OTRA_PERSONA },
+        { servicio_id: SERVICIO, rige_desde: null, rige_hasta: '2026-08-15', responsable_que_recibe_la_factura: null },
+        { servicio_id: SERVICIO, rige_desde: '2026-08-16', rige_hasta: null, responsable_que_recibe_la_factura: OTRA_PERSONA },
       ],
     });
-    // La lectura del Responsable de pagos de hoy pide una sola fila; la de la factura, todos los tramos.
-    const tramos = respuestas.get('GET /rest/v1/tramos_de_pagador_del_servicio');
-    respuestas.set('GET /rest/v1/tramos_de_pagador_del_servicio', () =>
-      (llamadas.at(-1).url.includes('rige_hoy') ? [tramos().at(-1)] : tramos()));
-    respuestas.set(CAMBIO, () => [{ periodo: '2026-08-01', periodo_hasta: '2026-08-31' }]);
+    respuestas.set(MARCAR, () => [{ periodo: '2026-08-01', periodo_hasta: '2026-08-31' }]);
+    respuestas.set('GET /rest/v1/pagadores_del_servicio', () =>
+      (llamadas.at(-1).url.includes(`id=eq.${RESPONSABLE}`) ? [{ id: RESPONSABLE }] : []));
     respuestas.set('GET /rest/v1/consentimientos_pagador', () => []);
-    const { estado, cuerpo } = await pedir('PUT', ruta, {
-      persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-08-16', factura_al_responsable: true,
-    });
+    const { estado, cuerpo } = await pedir('PUT', factura, { encendida: true });
     assert.equal(estado, 200, JSON.stringify(cuerpo));
     assert.equal(cuerpo.regeneradas, 2);
     const facturas = llamadas.filter((l) => l.clave === 'POST /rest/v1/facturas_cliente').map((l) => l.cuerpo);
@@ -1742,28 +1803,18 @@ describe('cambiar el Responsable de pagos desde un día', () => {
     );
   });
 
-  it('el documento pendiente de quien ya no paga hoy se anula, y el del que paga hoy queda', async () => {
-    prepararCambio({
-      deHoy: { pagador_persona_id: OTRA_PERSONA },
-      pendientes: [
-        { id: 'del-anterior', pagador_persona_id: PACIENTE },
-        { id: 'del-de-hoy', pagador_persona_id: OTRA_PERSONA },
-      ],
-    });
-    const { estado } = await pedir('PUT', ruta, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10' });
-    assert.equal(estado, 200);
-    const anuladas = llamadas.filter((l) => l.clave === 'PATCH /rest/v1/consentimientos_pagador');
-    assert.equal(anuladas.length, 1);
-    assert.ok(anuladas[0].url.includes('id=eq.del-anterior'));
-    assert.deepEqual(anuladas[0].cuerpo, { estado: 'anulado' });
-  });
-
   it('sin el permiso de editar las condiciones comerciales, no entra', async () => {
-    prepararCambio();
+    prepararResponsables();
     respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => false);
-    const { estado } = await pedir('PUT', ruta, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10' });
-    assert.equal(estado, 403);
-    assert.ok(!llamadas.some((l) => l.clave === CAMBIO));
+    for (const [metodo, ruta, cuerpo] of [
+      ['POST', lista, { persona_id: OTRA_PERSONA, tipo: 'otro', desde: '2026-09-10' }],
+      ['PUT', hasta, { hasta: '2026-09-30' }],
+      ['PUT', factura, { encendida: true }],
+    ]) {
+      const { estado } = await pedir(metodo, ruta, cuerpo);
+      assert.equal(estado, 403, ruta);
+    }
+    assert.ok(!llamadas.some((l) => LAS_FUNCIONES.includes(l.clave)));
   });
 });
 
@@ -1788,7 +1839,7 @@ describe('a nombre de quién sale lo que se manda a facturar', () => {
     respuestas.set('GET /rest/v1/condiciones_comerciales_servicio', () => [
       { servicio_id: SERVICIO, contratante_persona_id: CONTRATANTE },
     ]);
-    respuestas.set('GET /rest/v1/tramos_de_pagador_del_servicio', () => tramos);
+    respuestas.set('GET /rest/v1/tramos_de_la_factura_del_servicio', () => tramos);
     respuestas.set('GET /rest/v1/personas', () => [
       { id: CONTRATANTE, nombre_visible: 'Contratante de prueba' },
       { id: OTRA_PERSONA, nombre_visible: 'Responsable de pagos de prueba' },

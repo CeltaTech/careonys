@@ -126,10 +126,10 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
         .select('id, servicio_id, clase, valor, moneda, vigente_desde, cantidad_de_periodos, vigente_hasta, cargado_en, terminado_en')
         .in('servicio_id', servicioIds),
     ),
-    leerEnLaPrestadora(prestadoraId, 'quién paga cada día de cada Servicio', (dbTrabajo) =>
+    leerEnLaPrestadora(prestadoraId, 'a nombre de quién sale la factura cada día de cada Servicio', (dbTrabajo) =>
       dbTrabajo
-        .from('tramos_de_pagador_del_servicio')
-        .select('servicio_id, pagador_persona_id, pagador_tipo, rige_desde, rige_hasta, responsable_que_recibe_la_factura')
+        .from('tramos_de_la_factura_del_servicio')
+        .select('servicio_id, rige_desde, rige_hasta, responsable_que_recibe_la_factura')
         .in('servicio_id', servicioIds),
     ),
   ]);

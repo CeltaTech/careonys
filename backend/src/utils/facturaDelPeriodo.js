@@ -13,15 +13,17 @@
    no se puede rehacer porque la base no deja dos facturas del mismo Servicio sobre el mismo día.
 
    LA FACTURA SALE SIEMPRE A NOMBRE DEL CONTRATANTE: el del Servicio o, si no tiene uno, el del
-   Cliente. La excepción la pone la Prestadora para un Servicio puntual: el tramo de Responsable de
-   pagos que lleva la indicación sale a nombre del Responsable de pagos. A nombre de quién sale
-   cada tramo lo dice la base, en la vista de los tramos (`responsable_que_recibe_la_factura`,
-   vacío quiere decir el Contratante); acá no se vuelve a decidir.
+   Cliente. La excepción la pone la Prestadora para un Servicio puntual: en los días en que uno de
+   sus Responsables de pagos lleva la indicación, la factura sale a nombre de él. La indicación la
+   lleva uno solo por día, aunque el Servicio tenga varios Responsables de pagos a la vez. A nombre
+   de quién sale cada tramo lo dice la base, en la vista de los tramos de la factura
+   (`responsable_que_recibe_la_factura`, vacío quiere decir el Contratante); acá no se vuelve a
+   decidir.
 
    El período se parte sólo en el día en que cambia la persona a nombre de quien sale la factura:
-   una factura por cada parte. Un cambio de Responsable de pagos que deja la factura a nombre del
-   mismo no parte nada. El corte vive en una sola función, `partesDelPeriodo`, y a quién va cada
-   factura, en `aNombreDeQuienSaleLaFactura`.
+   una factura por cada parte. Agregar o terminar un Responsable de pagos sin la indicación no
+   parte nada. El corte vive en una sola función, `partesDelPeriodo`, y a quién va cada factura,
+   en `aNombreDeQuienSaleLaFactura`.
 
    LA CUENTA NO VIVE ACÁ. Qué se cobra por cada prestación —con la medición que rija y la
    prestación vigente el día de cada guardia— lo calcula `calcularLiquidacion.js`, que es el mismo
@@ -124,9 +126,9 @@ function fechaOVacio(valor) {
   return texto && esFechaReal(texto) ? texto : null;
 }
 
-/* Los tramos tal como los da la vista de la base: `{ rige_desde, rige_hasta, pagador_persona_id,
-   pagador_tipo, responsable_que_recibe_la_factura }`. Qué días cubre cada uno lo decide la base —el primero no tiene comienzo, el
-   último no tiene fin—; acá sólo se cruzan con el período. */
+/* Los tramos tal como los da la vista de la base: `{ rige_desde, rige_hasta,
+   responsable_que_recibe_la_factura }`. Qué días cubre cada uno lo decide la base —el primero no
+   tiene comienzo, el último no tiene fin—; acá sólo se cruzan con el período. */
 function tramosEnOrden(tramos) {
   return [...(tramos ?? [])]
     .map((t) => ({ ...t, rige_desde: fechaOVacio(t.rige_desde), rige_hasta: fechaOVacio(t.rige_hasta) }))
@@ -144,7 +146,7 @@ function cubreElDia(tramo, dia) {
 }
 
 /**
- * El tramo de Responsable de pagos de un Servicio que cubre una fecha, según la vista de la base.
+ * El tramo de la factura de un Servicio que cubre una fecha, según la vista de la base.
  * Sin ningún tramo que cubra ese día devuelve null.
  */
 function tramoEnLaFecha(tramos, fecha) {

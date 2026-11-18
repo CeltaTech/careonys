@@ -487,20 +487,21 @@ INSERT INTO public.informacion_de_salud_del_paciente (prestadora_id, paciente_id
   ('11111111-1111-4111-8111-111111111111', '50000000-0000-4000-8000-000000000004', ARRAY['EPOC'], 'II');
 
 -- Los tres los coordina Carla: sin Coordinador un Servicio no tiene guardias. Quién paga es otra
--- persona, y `pagador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente
--- por sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al
--- Directorio: paga Ramiro Pérez, que es una persona más y no un nombre tecleado.
+-- persona, y `pagador_tipo` dice de qué clase es. El primero todavía no tiene Responsable de pagos.
+-- El tercero muestra el caso que da sentido al Directorio: paga Ramiro Pérez, que es una persona
+-- más y no un nombre tecleado.
 -- Lo comercial vive aparte, en `condiciones_comerciales_servicio`: el Servicio nace con su fila
--- (la crea un disparador, con el Contratante del Cliente). Quién paga vive en
--- `pagadores_del_servicio`, desde el día en que rige; el primero rige desde siempre.
+-- (la crea un disparador, con el Contratante del Cliente). Los Responsables de pagos viven en
+-- `pagadores_del_servicio`: un Servicio puede tener varios a la vez, cada uno desde el día en que
+-- rige y, cuando deja de serlo, hasta otro.
 INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, estado, coordinador_id) VALUES
   ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente', '20000000-0000-4000-8000-000000000003'),
   ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente', '20000000-0000-4000-8000-000000000003'),
   ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente', '20000000-0000-4000-8000-000000000003');
 
 INSERT INTO public.pagadores_del_servicio (prestadora_id, servicio_id, pagador_tipo, pagador_persona_id, vigente_desde) VALUES
-  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000002', 'obra_social', 'c0000000-0000-4000-8000-000000000003', '-infinity'),
-  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000003', 'otro',        'c0000000-0000-4000-8000-000000000001', '-infinity');
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000002', 'obra_social', 'c0000000-0000-4000-8000-000000000003', '2026-01-01'),
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000003', 'otro',        'c0000000-0000-4000-8000-000000000001', '2026-01-01');
 
 -- La Lista de Precios es el catálogo: lo que la Prestadora ofrece y a cuánto.
 -- No es lo vendido. Lo vendido son las prestaciones de más abajo, que guardan el

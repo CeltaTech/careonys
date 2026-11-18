@@ -39,7 +39,7 @@ import { condicionDe } from '../utils/condicionesDelCliente.js';
 import { CLASES_DE_DESCUENTO, descuentosDelPeriodo } from '../utils/descuentosDelPeriodo.js';
 import { DATOS_PARA_FACTURAR } from '../utils/datosParaFacturar.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
-import { anularPendiente } from '../utils/consentimientoPagador.js';
+import { anularPendientesDeQuienYaNoEs } from '../utils/consentimientoPagador.js';
 import { requierePermiso } from '../utils/permisos.js';
 
 /* Lo que el Cliente pagó, anotado; y el saldo, que es una resta.
@@ -172,7 +172,7 @@ async function aQuienSeLeFactura(db, prestadoraId, facturaIds) {
     servicioIds.length
       ? enLaPrestadora(prestadoraId, 'quién paga cada día de cada Servicio', (dbTrabajo) =>
           dbTrabajo
-            .from('tramos_de_pagador_del_servicio')
+            .from('tramos_de_la_factura_del_servicio')
             .select('servicio_id, rige_desde, rige_hasta, responsable_que_recibe_la_factura')
             .in('servicio_id', servicioIds),
         )
@@ -380,8 +380,8 @@ panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, veElEstadoDeCuenta
 // La baja de un Servicio con deuda
 //
 // La anota la base al dar la baja (`dar_de_baja_el_servicio`). Acá sólo se muestra, con el
-// Contratante, a cuyo nombre sale la factura y que responde por el Servicio, y el Responsable de
-// pagos, que es quien paga. Después se marca como visto.
+// Contratante, a cuyo nombre sale la factura y que responde por el Servicio, y los Responsables de
+// pagos que regían el día de la baja, que son quienes pagan. Después se marca como visto.
 // Ni la lectura ni la marca tocan la deuda: el reclamo es de créditos y cobranzas.
 // ---------------------------------------------------------------------------------------
 
@@ -389,13 +389,13 @@ panelCobrosRouter.get('/avisos-baja-con-deuda', requiereRolPanel, veElEstadoDeCu
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('avisos_baja_servicio_con_deuda')
-    .select('id, servicio_id, cliente_id, responsable_de_pagos_persona_id, contratante_persona_id, importe, moneda, dias_de_atraso, created_at, servicios(etiqueta)')
+    .select('id, servicio_id, cliente_id, responsables_de_pagos_persona_ids, contratante_persona_id, importe, moneda, dias_de_atraso, created_at, servicios(etiqueta)')
     .is('visto_at', null)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
 
   const personaIds = [...new Set((data || [])
-    .flatMap((a) => [a.responsable_de_pagos_persona_id, a.contratante_persona_id])
+    .flatMap((a) => [...(a.responsables_de_pagos_persona_ids ?? []), a.contratante_persona_id])
     .filter(Boolean))];
   let personas = new Map();
   if (personaIds.length) {
@@ -407,7 +407,9 @@ panelCobrosRouter.get('/avisos-baja-con-deuda', requiereRolPanel, veElEstadoDeCu
   res.json((data || []).map(({ servicios, ...a }) => ({
     ...a,
     servicio_etiqueta: servicios?.etiqueta ?? null,
-    responsable_de_pagos_nombre: personas.get(a.responsable_de_pagos_persona_id) ?? null,
+    responsables_de_pagos_nombres: (a.responsables_de_pagos_persona_ids ?? [])
+      .map((id) => personas.get(id))
+      .filter(Boolean),
     contratante_nombre: personas.get(a.contratante_persona_id) ?? null,
   })));
 });
@@ -724,95 +726,161 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   }
 });
 
-/** Los motivos con que contesta `cambiar_responsable_de_pagos`. Los códigos están en `ESTADO_POR_MOTIVO`. */
-const MOTIVOS_DEL_CAMBIO_DE_PAGADOR = ['sin_permiso', 'no_encontrado', 'dato_invalido', 'cambio_de_pagador_con_factura_emitida'];
+/** Los motivos con que contestan las funciones de los Responsables de pagos. Los códigos están en `ESTADO_POR_MOTIVO`. */
+const MOTIVOS_DEL_RESPONSABLE_DE_PAGOS = [
+  'sin_permiso',
+  'no_encontrado',
+  'dato_invalido',
+  'cambio_de_pagador_con_factura_emitida',
+  'responsable_de_pagos_repetido',
+  'responsable_de_pagos_con_otra_marca',
+  'responsable_de_pagos_hasta_antes_del_desde',
+];
 const TIPOS_DE_PAGADOR = ['cliente', 'obra_social', 'otro'];
+const UN_DIA = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Cambiar el Responsable de pagos de un Servicio desde un día.
+ * Los Responsables de pagos de un Servicio.
  *
- * LA FACTURA SALE A NOMBRE DEL CONTRATANTE, salvo que la Prestadora indique para ese Servicio, desde
- * ese día, que sale a nombre del Responsable de pagos (`factura_al_responsable`). La base guarda el
- * cambio con el día desde el que rige. Si el cambio cambia la persona a nombre de quien sale la
- * factura, la base rechaza el que caería sobre días de una factura ya emitida, con comprobante, con
- * cobros o con correcciones, y borra en la misma operación las facturas sin emitir que quedan con
- * días a nombre de dos personas; acá se vuelven a generar con la misma función que genera todas, y
- * salen partidas en el día del cambio. Un cambio que deja la factura a nombre del mismo no parte
- * ni rechaza nada.
+ * UN SERVICIO PUEDE TENER VARIOS A LA VEZ. Cada uno rige desde un día y, cuando deja de serlo,
+ * hasta otro. Cada uno firma su propio documento.
  *
- * LA FIRMA DEL ANTERIOR SIGUE VALIENDO PARA SUS DÍAS. Lo que se anula es el documento que el
- * anterior tenía pendiente de firmar; el nuevo firma uno nuevo.
+ * LA FACTURA SALE A NOMBRE DEL CONTRATANTE, salvo en los días en que un Responsable de pagos lleva
+ * la marca de que se le facture a él (`factura_al_responsable`). La marca la lleva uno solo por día,
+ * y la base lo hace cumplir. Si una operación cambia a nombre de quién sale la factura en algún día,
+ * la base rechaza la que caería sobre días de una factura ya emitida, con comprobante, con cobros o
+ * con correcciones, y borra en la misma operación las facturas sin emitir que quedan con días a
+ * nombre de dos personas; acá se vuelven a generar con la misma función que genera todas, y salen
+ * partidas en el día del cambio. Una operación que no cambia el nombre de la factura no parte ni
+ * rechaza nada.
+ *
+ * LA FIRMA DE QUIEN TERMINÓ SIGUE VALIENDO PARA SUS DÍAS. Lo que se anula es el documento que tenía
+ * pendiente de firmar.
  */
-panelCobrosRouter.put(
-  '/servicios/:servicioId/responsable-de-pagos',
+async function operarResponsableDePagos({ req, res, funcion, argumentos }) {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const servicioId = req.params.servicioId;
+  try {
+    const db = clienteDelPedido(req);
+    const { data: borradas, error } = await db.rpc(funcion, argumentos);
+    if (error) {
+      if (MOTIVOS_DEL_RESPONSABLE_DE_PAGOS.includes(error.message)) throw new ErrorConMotivo(error.message, error.message);
+      throw new Error(error.message);
+    }
+
+    // Las facturas que la base borró se vuelven a generar enteras, de a un período de cobro.
+    let regeneradas = 0;
+    const yaHechos = new Set();
+    for (const fila of borradas || []) {
+      const parte = { desde: String(fila.periodo).slice(0, 10), hasta: String(fila.periodo_hasta).slice(0, 10) };
+      const tramo = await periodoEnteroDeLaFactura(prestadoraId, servicioId, parte);
+      if (yaHechos.has(tramo.desde)) continue;
+      yaHechos.add(tramo.desde);
+      const cuenta = await generarFacturasDelTramo({ req, prestadoraId, tramo, servicioId });
+      regeneradas += cuenta.generadas;
+    }
+
+    // El documento pendiente de firmar de quien ya no es Responsable de pagos no corresponde.
+    await anularPendientesDeQuienYaNoEs({ db, servicioId, prestadoraId });
+
+    res.json({ ok: true, regeneradas });
+  } catch (e) {
+    return responderError(res, e, e?.estado ?? 500);
+  }
+}
+
+// El Responsable de pagos tiene que ser de este Servicio: la dirección dice de cuál, y la base lo
+// alcanza sólo si es de la Prestadora de quien pide.
+async function responsableDelServicio(req) {
+  const { data, error } = await clienteDelPedido(req)
+    .from('pagadores_del_servicio')
+    .select('id')
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .eq('servicio_id', req.params.servicioId)
+    .eq('id', req.params.responsableId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new ErrorConMotivo('no_encontrado');
+}
+
+// Agregar un Responsable de pagos desde un día. Sin hasta: rige hasta que se lo termine.
+panelCobrosRouter.post(
+  '/servicios/:servicioId/responsables-de-pagos',
   requiereRolPanel,
   requierePermiso('editar_condiciones_comerciales_servicio'),
   async (req, res) => {
-    const prestadoraId = req.usuarioPanel.prestadoraId;
     const cuerpo = req.body || {};
     const desde = String(cuerpo.desde ?? '').slice(0, 10);
-    const personaId = cuerpo.persona_id ? String(cuerpo.persona_id) : null;
+    const personaId = typeof cuerpo.persona_id === 'string' && cuerpo.persona_id ? cuerpo.persona_id : null;
     const tipo = cuerpo.tipo ? String(cuerpo.tipo) : null;
-    const facturaAlResponsable = cuerpo.factura_al_responsable === true;
     if (
-      !tramoPedido({ desde, hasta: desde })
+      !personaId
+      || !tramoPedido({ desde, hasta: desde })
       || (tipo && !TIPOS_DE_PAGADOR.includes(tipo))
       || (cuerpo.factura_al_responsable !== undefined && typeof cuerpo.factura_al_responsable !== 'boolean')
-      || (facturaAlResponsable && !personaId)
     ) {
       return responderError(res, new ErrorConMotivo('dato_invalido'));
     }
-
-    try {
-      const db = clienteDelPedido(req);
-      const { data: borradas, error } = await db.rpc('cambiar_responsable_de_pagos', {
+    return operarResponsableDePagos({
+      req,
+      res,
+      funcion: 'agregar_responsable_de_pagos',
+      argumentos: {
         p_servicio: req.params.servicioId,
         p_persona: personaId,
         p_tipo: tipo,
         p_desde: desde,
-        p_factura_al_responsable: facturaAlResponsable,
-      });
-      if (error) {
-        if (MOTIVOS_DEL_CAMBIO_DE_PAGADOR.includes(error.message)) throw new ErrorConMotivo(error.message, error.message);
-        throw new Error(error.message);
-      }
+        p_factura_al_responsable: cuerpo.factura_al_responsable === true,
+      },
+    });
+  },
+);
 
-      // Las facturas que la base borró se vuelven a generar enteras, de a un período de cobro.
-      let regeneradas = 0;
-      const yaHechos = new Set();
-      for (const fila of borradas || []) {
-        const parte = { desde: String(fila.periodo).slice(0, 10), hasta: String(fila.periodo_hasta).slice(0, 10) };
-        const tramo = await periodoEnteroDeLaFactura(prestadoraId, req.params.servicioId, parte);
-        if (yaHechos.has(tramo.desde)) continue;
-        yaHechos.add(tramo.desde);
-        const cuenta = await generarFacturasDelTramo({ req, prestadoraId, tramo, servicioId: req.params.servicioId });
-        regeneradas += cuenta.generadas;
-      }
-
-      // El documento pendiente de firmar de quien ya no es hoy el Responsable de pagos no corresponde.
-      // Si el cambio rige desde un día que todavía no llegó, el de hoy sigue siendo el anterior.
-      const { data: deHoy, error: errorDeHoy } = await db
-        .from('tramos_de_pagador_del_servicio')
-        .select('pagador_persona_id')
-        .eq('servicio_id', req.params.servicioId)
-        .eq('rige_hoy', true)
-        .maybeSingle();
-      if (errorDeHoy) throw new Error(errorDeHoy.message);
-      const { data: pendientes, error: errorPendientes } = await db
-        .from('consentimientos_pagador')
-        .select('id, pagador_persona_id')
-        .eq('servicio_id', req.params.servicioId)
-        .eq('estado', 'pendiente_firma');
-      if (errorPendientes) throw new Error(errorPendientes.message);
-      for (const pendiente of pendientes || []) {
-        if (pendiente.pagador_persona_id === (deHoy?.pagador_persona_id ?? null)) continue;
-        await anularPendiente({ db, consentimientoId: pendiente.id, prestadoraId });
-      }
-
-      res.json({ ok: true, regeneradas });
+// Hasta qué día rige un Responsable de pagos. Vacío quiere decir que sigue rigiendo.
+panelCobrosRouter.put(
+  '/servicios/:servicioId/responsables-de-pagos/:responsableId/hasta',
+  requiereRolPanel,
+  requierePermiso('editar_condiciones_comerciales_servicio'),
+  async (req, res) => {
+    const valor = req.body?.hasta;
+    const hasta = valor === null || valor === undefined || valor === '' ? null : String(valor).slice(0, 10);
+    if (hasta !== null && (!UN_DIA.test(hasta) || !tramoPedido({ desde: hasta, hasta }))) {
+      return responderError(res, new ErrorConMotivo('dato_invalido'));
+    }
+    try {
+      await responsableDelServicio(req);
     } catch (e) {
       return responderError(res, e, e?.estado ?? 500);
     }
+    return operarResponsableDePagos({
+      req,
+      res,
+      funcion: 'terminar_responsable_de_pagos',
+      argumentos: { p_responsable: req.params.responsableId, p_hasta: hasta },
+    });
+  },
+);
+
+// Encender o apagar la marca de que la factura salga a nombre de este Responsable de pagos.
+panelCobrosRouter.put(
+  '/servicios/:servicioId/responsables-de-pagos/:responsableId/factura',
+  requiereRolPanel,
+  requierePermiso('editar_condiciones_comerciales_servicio'),
+  async (req, res) => {
+    if (typeof req.body?.encendida !== 'boolean') {
+      return responderError(res, new ErrorConMotivo('dato_invalido'));
+    }
+    try {
+      await responsableDelServicio(req);
+    } catch (e) {
+      return responderError(res, e, e?.estado ?? 500);
+    }
+    return operarResponsableDePagos({
+      req,
+      res,
+      funcion: 'marcar_factura_al_responsable',
+      argumentos: { p_responsable: req.params.responsableId, p_encendida: req.body.encendida },
+    });
   },
 );
 

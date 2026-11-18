@@ -1416,8 +1416,7 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
 
     consultarBase(
       `INSERT INTO public.pagadores_del_servicio (prestadora_id, servicio_id, pagador_persona_id, vigente_desde)
-       VALUES ('${d.prestadora}', '${servicio}', '${pagador}', '-infinity')
-       ON CONFLICT (servicio_id, vigente_desde) DO UPDATE SET pagador_persona_id = EXCLUDED.pagador_persona_id;`,
+       VALUES ('${d.prestadora}', '${servicio}', '${pagador}', current_date - 1);`,
     );
     consultarBase(
       `INSERT INTO public.consentimientos_pagador

@@ -567,8 +567,9 @@ panelCuentasRouter.get('/servicio/:servicioId/pagador', requiereRolPanel, exigir
   }
 });
 
-// Arma el documento y lo deja esperando firma. El texto es el que la Prestadora configuró, o el
-// modelo que trae el producto si no configuró ninguno.
+// Arma el documento de un Responsable de pagos y lo deja esperando firma. Cada Responsable de pagos
+// firma el suyo, así que el pedido dice de qué persona es. El texto es el que la Prestadora
+// configuró, o el modelo que trae el producto si no configuró ninguno.
 panelCuentasRouter.post('/servicio/:servicioId/pagador/consentimiento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
   const servicio = await servicioDelPedido(req);
   if (!servicio) return res.status(404).json({ error: 'Servicio no encontrado' });
@@ -578,6 +579,7 @@ panelCuentasRouter.post('/servicio/:servicioId/pagador/consentimiento', requiere
       db: clienteDelPedido(req),
       servicioId: servicio.id,
       prestadoraId: servicio.prestadora_id,
+      personaId: typeof req.body?.persona_id === 'string' ? req.body.persona_id : null,
       cargadoPor: req.usuarioPanel.id,
     });
     res.json({ ok: true, consentimiento });

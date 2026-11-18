@@ -115,11 +115,8 @@ pagos.** La regla dice que quien asume la obligación de pagar queda definido re
 que eso tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este
 acto.
 
-El Responsable de pagos que desiste se anota con el cambio con fecha: el Servicio queda sin
-Responsable de pagos desde ese día, y la factura sigue saliendo a nombre del Contratante.
-
-Lo que falta del Responsable de pagos: **más de un Responsable de pagos**, que la regla del
-producto admite y la base no, porque guarda uno solo por día.
+El Responsable de pagos que desiste se anota con su fecha de fin, y la factura sigue saliendo a
+nombre del Contratante.
 
 **La prueba del enlace por correo para leer y firmar el documento del Responsable de pagos** tiene hecho el
 primer punto, el envío del enlace: en la base hay un consentimiento cerrado con el enlace, y su

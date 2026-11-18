@@ -9,23 +9,24 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 import { frase } from '../i18n/mensajesDelSistema.js';
 import { fraseDeLaFirma } from './fraseDeLaFirma.js';
 
-// Todo lo que le pasa al consentimiento del Pagador: se carga, se cierra con el documento firmado, o se
-// anula porque se cargó otro.
+// Todo lo que le pasa al consentimiento de cada Responsable de pagos: se carga, se cierra con el
+// documento firmado, o se anula porque se cargó otro.
 //
-// SIN ESA FIRMA NO HAY PAGADOR DEFINIDO, Y QUÉ PASA ENTONCES LO DECIDE CADA PRESTADORA. La pantalla
-// lo dice siempre, ahí donde se elige el Pagador, para que nadie se entere el día que hay que
-// cobrar. Con la opción de la Prestadora apagada, que es como viene de fábrica, no se bloquea
-// nada: la contratación sigue, el Servicio se presta y el Cliente se da de alta igual. Con la
-// opción encendida, en un Servicio sin la firma vigente de su Pagador no se programan guardias:
-// lo rechaza la base, y el detalle del Servicio lo avisa. Lo que ya estaba programado sigue igual.
+// SIN ESA FIRMA NO HAY RESPONSABLE DE PAGOS DEFINIDO, Y QUÉ PASA ENTONCES LO DECIDE CADA PRESTADORA.
+// Con la opción de la Prestadora apagada, que es como viene de fábrica, no se bloquea nada: la
+// contratación sigue, el Servicio se presta y el Cliente se da de alta igual. Con la opción
+// encendida, en un Servicio donde alguno de los Responsables de pagos que rigen hoy no firmó no se
+// programan guardias: lo rechaza la base, y el detalle del Servicio lo avisa. Lo que ya estaba
+// programado sigue igual.
 //
-// TODO ES DEL SERVICIO. El Responsable de pagos, lo que firma y sus documentos son de cada Servicio:
-// un mismo Cliente puede tener dos Servicios con distinto Responsable de pagos. El Apoderado, en
-// cambio, es del Cliente, y firma por él en todos sus Servicios.
+// TODO ES DEL SERVICIO. Los Responsables de pagos, lo que firma cada uno y sus documentos son de
+// cada Servicio: un mismo Cliente puede tener dos Servicios con distintos Responsables de pagos. El
+// Apoderado, en cambio, es del Cliente, y firma por él en todos sus Servicios.
 //
-// UNO PENDIENTE POR SERVICIO. Si se carga otro antes de que se firme el anterior, el anterior se
-// anula: lo último que se le hizo firmar es lo que vale. La base lo exige además con un índice
-// único, así que esto no es la única defensa.
+// VARIOS A LA VEZ, CADA UNO CON SU DOCUMENTO. Un Servicio puede tener varios Responsables de pagos al
+// mismo tiempo, y cada uno firma el suyo. Hay un solo documento pendiente por Servicio y por persona:
+// si se carga otro antes de que esa persona firme el anterior, el anterior se anula. La base lo
+// exige además con un índice único, así que esto no es la única defensa.
 //
 // CON LA CONEXIÓN QUE LE PASEN. Cada función recibe `db`: la de la persona del Panel que pide, o la
 // del trabajo de la Prestadora cuando el Cliente nombra o quita a su Apoderado desde la aplicación.
@@ -62,9 +63,10 @@ export async function cuerpoVigente({ db, prestadoraId, idioma = IDIOMA_DEL_DOCU
   };
 }
 
-// El Servicio con su Responsable de pagos de hoy, y de qué Cliente es. Quién paga cada día lo dice
-// la vista de la base, que es la única que hace esa cuenta.
-export async function servicioConSuPagador({ db, servicioId, prestadoraId }) {
+// El Servicio con sus Responsables de pagos que no terminaron antes de hoy —los que rigen hoy y los
+// que empiezan más adelante—, y de qué Cliente es. La tabla la abre la base sólo a quien tiene el
+// permiso de lo comercial o el de los consentimientos.
+export async function servicioConSusResponsables({ db, servicioId, prestadoraId }) {
   const { data: servicio } = await db
     .from('servicios')
     .select('id, prestadora_id, cliente_id')
@@ -76,20 +78,22 @@ export async function servicioConSuPagador({ db, servicioId, prestadoraId }) {
     throw new ErrorConMotivo('no_encontrado', 'Servicio no encontrado');
   }
 
-  // Quién paga es parte de lo comercial del Servicio, que la base abre sólo a quien tiene el permiso.
-  const { data: deHoy, error } = await db
-    .from('tramos_de_pagador_del_servicio')
-    .select('pagador_persona_id, pagador_tipo')
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data: filas, error } = await db
+    .from('pagadores_del_servicio')
+    .select('id, pagador_persona_id, pagador_tipo, vigente_desde, vigente_hasta, factura_al_responsable')
     .eq('prestadora_id', prestadoraId)
     .eq('servicio_id', servicioId)
-    .eq('rige_hoy', true)
-    .maybeSingle();
+    .or(`vigente_hasta.is.null,vigente_hasta.gte.${hoy}`)
+    .order('vigente_desde', { ascending: true });
   if (error) throw new Error(error.message);
 
   return {
     ...servicio,
-    pagador_persona_id: deHoy?.pagador_persona_id ?? null,
-    pagador_tipo: deHoy?.pagador_tipo ?? null,
+    responsables: (filas ?? []).map((fila) => ({
+      ...fila,
+      rige_hoy: String(fila.vigente_desde).slice(0, 10) <= hoy,
+    })),
   };
 }
 
@@ -144,17 +148,18 @@ export async function firmantePorApoderado({ db, clienteId, prestadoraId }) {
   return data ? persona({ db, personaId: data.persona_id, prestadoraId }) : null;
 }
 
-// Deja el consentimiento pendiente en manos de quien hoy corresponde. Se llama cada vez que cambia
-// el Apoderado o su poder: si firmaba otro, ese pendiente se anula y se arma uno nuevo. Lo cerrado
-// no se toca, porque lo que ya se firmó sigue vigente. El Apoderado es del Cliente, así que se
-// revisan todos sus Servicios.
+// Deja cada consentimiento pendiente en manos de quien hoy corresponde. Se llama cada vez que cambia
+// el Apoderado o su poder: si firmaba otro, ese pendiente se anula y se arma uno nuevo para la misma
+// persona. Si la persona ya no es Responsable de pagos del Servicio, el pendiente se anula y no se
+// arma otro. Lo cerrado no se toca, porque lo que ya se firmó sigue vigente. El Apoderado es del
+// Cliente, así que se revisan todos sus Servicios.
 export async function alinearConsentimientoPendiente({ db, clienteId, prestadoraId, cargadoPor }) {
   const servicios = await serviciosDelCliente({ db, clienteId, prestadoraId });
   if (!servicios.length) return;
 
   const { data: pendientes, error } = await db
     .from('consentimientos_pagador')
-    .select('id, servicio_id, firmante_persona_id')
+    .select('id, servicio_id, pagador_persona_id, firmante_persona_id')
     .eq('prestadora_id', prestadoraId)
     .in('servicio_id', servicios)
     .eq('estado', 'pendiente_firma');
@@ -165,27 +170,53 @@ export async function alinearConsentimientoPendiente({ db, clienteId, prestadora
   for (const pendiente of pendientes) {
     if ((pendiente.firmante_persona_id ?? null) === (firmante?.id ?? null)) continue;
 
-    const servicio = await servicioConSuPagador({ db, servicioId: pendiente.servicio_id, prestadoraId });
-    if (!servicio.pagador_persona_id) {
+    const servicio = await servicioConSusResponsables({ db, servicioId: pendiente.servicio_id, prestadoraId });
+    const sigue = servicio.responsables.some((fila) => fila.pagador_persona_id === pendiente.pagador_persona_id);
+    if (!sigue) {
       await anularPendiente({ db, consentimientoId: pendiente.id, prestadoraId });
       continue;
     }
-    await crearConsentimiento({ db, servicioId: servicio.id, prestadoraId, cargadoPor });
+    await crearConsentimiento({
+      db, servicioId: servicio.id, prestadoraId, personaId: pendiente.pagador_persona_id, cargadoPor,
+    });
   }
 }
 
-// Arma el documento con lo de esta contratación, lo guarda tal cual y lo deja esperando firma.
+// Anula los documentos pendientes de las personas que ya no son Responsables de pagos del Servicio:
+// las que terminaron antes de hoy. Lo cerrado no se toca: lo que ya se firmó vale para sus días.
+export async function anularPendientesDeQuienYaNoEs({ db, servicioId, prestadoraId }) {
+  const servicio = await servicioConSusResponsables({ db, servicioId, prestadoraId });
+  const siguen = new Set(servicio.responsables.map((fila) => fila.pagador_persona_id));
+
+  const { data: pendientes, error } = await db
+    .from('consentimientos_pagador')
+    .select('id, pagador_persona_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('servicio_id', servicioId)
+    .eq('estado', 'pendiente_firma');
+  if (error) throw new Error(error.message);
+
+  for (const pendiente of pendientes ?? []) {
+    if (siguen.has(pendiente.pagador_persona_id)) continue;
+    await anularPendiente({ db, consentimientoId: pendiente.id, prestadoraId });
+  }
+}
+
+// Arma el documento de un Responsable de pagos con lo de esta contratación, lo guarda tal cual y lo
+// deja esperando firma.
 //
 // El nombre de quien firma se guarda escrito además de apuntado a sus datos: los datos dicen con quién
 // quedó atado, y el nombre, cómo se llamaba el día que leyó el documento.
-export async function crearConsentimiento({ db, servicioId, prestadoraId, cargadoPor }) {
-  const servicio = await servicioConSuPagador({ db, servicioId, prestadoraId });
+export async function crearConsentimiento({ db, servicioId, prestadoraId, personaId, cargadoPor }) {
+  const servicio = await servicioConSusResponsables({ db, servicioId, prestadoraId });
   const clienteId = servicio.cliente_id;
-  if (!servicio.pagador_persona_id) {
-    throw new ErrorConMotivo('sin_pagador', 'Esta contratación todavía no tiene Responsable de pagos elegido');
+  const esResponsable = Boolean(personaId)
+    && servicio.responsables.some((fila) => fila.pagador_persona_id === personaId);
+  if (!esResponsable) {
+    throw new ErrorConMotivo('sin_pagador', 'Esa persona no es Responsable de pagos de esta contratación');
   }
 
-  const pagador = await persona({ db, personaId: servicio.pagador_persona_id, prestadoraId });
+  const pagador = await persona({ db, personaId, prestadoraId });
   if (!pagador) {
     throw new ErrorConMotivo('no_encontrado', 'Los datos del Responsable de pagos no existen');
   }
@@ -205,13 +236,15 @@ export async function crearConsentimiento({ db, servicioId, prestadoraId, cargad
     apoderado,
   });
 
-  // El anterior se anula antes de insertar el nuevo, o el índice único de la base rechaza la
-  // inserción. No se borra: el historial de lo que se fue firmando es lo que esta tabla guarda.
+  // El anterior de esta misma persona se anula antes de insertar el nuevo, o el índice único de la
+  // base rechaza la inserción. Los pendientes de los demás Responsables de pagos no se tocan. No se
+  // borra: el historial de lo que se fue firmando es lo que esta tabla guarda.
   const { error: errorAnular } = await db
     .from('consentimientos_pagador')
     .update({ estado: 'anulado' })
     .eq('prestadora_id', prestadoraId)
     .eq('servicio_id', servicioId)
+    .eq('pagador_persona_id', pagador.id)
     .eq('estado', 'pendiente_firma');
   if (errorAnular) throw new Error(errorAnular.message);
 
@@ -294,9 +327,9 @@ export async function cerrarConDocumentoFirmado({ db, consentimientoId, prestado
   return Boolean(data?.length);
 }
 
-// Se anula el pendiente sin reemplazarlo: se cargó por error, o cambió el Pagador y todavía no se
-// sabe cuál es el nuevo. Lo cerrado no se anula nunca: ya lo firmó alguien. Si otra persona ya lo
-// cerró o lo anuló, no queda nada por hacer y no es un error.
+// Se anula el pendiente sin reemplazarlo: se cargó por error, o la persona dejó de ser Responsable
+// de pagos. Lo cerrado no se anula nunca: ya lo firmó alguien. Si otra persona ya lo cerró o lo
+// anuló, no queda nada por hacer y no es un error.
 export async function anularPendiente({ db, consentimientoId, prestadoraId }) {
   const { data, error } = await db
     .from('consentimientos_pagador')
@@ -313,13 +346,18 @@ export async function anularPendiente({ db, consentimientoId, prestadoraId }) {
 // El punto único de verdad del estado
 // ---------------------------------------------------------------------------------------
 //
-// Contesta lo mismo a todo el que pregunte: qué firmó el Pagador y qué le falta. Lo consume la parte
-// del Panel donde se elige el Pagador, y cualquier otra que mañana necesite saberlo.
+// Contesta lo mismo a todo el que pregunte: qué firmó cada Responsable de pagos y qué falta. Lo
+// consume la tarjeta de las firmas del Servicio, y cualquier otra parte que mañana necesite saberlo.
+//
+// Trae a los Responsables de pagos que no terminaron antes de hoy: los que rigen hoy y los que
+// empiezan más adelante. `firmaCompleta` dice si firmaron todos los que rigen hoy, que es lo mismo
+// que exige la base para programar guardias con la opción de la Prestadora encendida.
 export async function estadoDelPagador({ db, servicioId, prestadoraId, idioma, zona }) {
-  const servicio = await servicioConSuPagador({ db, servicioId, prestadoraId });
+  const servicio = await servicioConSusResponsables({ db, servicioId, prestadoraId });
+  const tipos = [...new Set(servicio.responsables.map((fila) => fila.pagador_tipo).filter(Boolean))];
 
-  const [pagador, { data: consentimientos }, documentos] = await Promise.all([
-    persona({ db, personaId: servicio.pagador_persona_id, prestadoraId }),
+  const [personas, { data: consentimientos, error }, documentos] = await Promise.all([
+    Promise.all(servicio.responsables.map((fila) => persona({ db, personaId: fila.pagador_persona_id, prestadoraId }))),
     db
       .from('consentimientos_pagador')
       // El texto viene entero: la pantalla lo muestra tal como se guardó, y armarlo de nuevo para
@@ -329,44 +367,46 @@ export async function estadoDelPagador({ db, servicioId, prestadoraId, idioma, z
       .eq('servicio_id', servicioId)
       .in('estado', ['pendiente_firma', 'cerrado'])
       .order('created_at', { ascending: false }),
-    documentosDelPagador({ db, servicioId, prestadoraId, pagadorTipo: servicio.pagador_tipo }),
+    documentosDelPagador({ db, servicioId, prestadoraId, pagadorTipos: tipos }),
   ]);
-
-  const pendiente = (consentimientos ?? []).find((fila) => fila.estado === 'pendiente_firma') ?? null;
-  // La firma que vale es la del Responsable de pagos de hoy. La de uno anterior queda guardada y
-  // vale para sus días; sólo se muestra si el de hoy todavía no firmó.
-  const cerrados = (consentimientos ?? []).filter((fila) => fila.estado === 'cerrado');
-  const cerradoLeido = cerrados.find((fila) => servicio.pagador_persona_id && fila.pagador_persona_id === servicio.pagador_persona_id)
-    ?? cerrados[0]
-    ?? null;
-  // Firmado con el enlace, el documento lleva su frase de firma en lugar del pie para firmar a mano.
-  const cerrado = cerradoLeido && {
-    ...cerradoLeido,
-    firmadoCon: fraseDeLaFirma({ consentimiento: cerradoLeido, idioma: cerradoLeido.documento_idioma ?? idioma, zona, prestadoraId }),
-  };
-
-  // Si el único consentimiento firmado quedó atado a otra persona que la que hoy es Responsable de
-  // pagos, la firma no vale para éste: firmó otra persona, y el Panel muestra su nombre junto a la
-  // fecha. El nuevo firma un documento nuevo.
-  const firmadoPorOtro = Boolean(
-    cerrado && servicio.pagador_persona_id && cerrado.pagador_persona_id !== servicio.pagador_persona_id,
-  );
+  if (error) throw new Error(error.message);
 
   const conEmail = async (consentimiento) =>
     Boolean(consentimiento && (await emailDeLaFicha({ db, personaId: quienFirma(consentimiento), prestadoraId })));
 
+  const responsables = await Promise.all(servicio.responsables.map(async (fila, indice) => {
+    const suyos = (consentimientos ?? []).filter((c) => c.pagador_persona_id === fila.pagador_persona_id);
+    const pendiente = suyos.find((c) => c.estado === 'pendiente_firma') ?? null;
+    const cerradoLeido = suyos.find((c) => c.estado === 'cerrado') ?? null;
+    // Firmado con el enlace, el documento lleva su frase de firma en lugar del pie para firmar a mano.
+    const cerrado = cerradoLeido && {
+      ...cerradoLeido,
+      firmadoCon: fraseDeLaFirma({ consentimiento: cerradoLeido, idioma: cerradoLeido.documento_idioma ?? idioma, zona, prestadoraId }),
+    };
+    return {
+      id: fila.id,
+      persona: personas[indice],
+      tipo: fila.pagador_tipo,
+      vigenteDesde: fila.vigente_desde,
+      vigenteHasta: fila.vigente_hasta,
+      rigeHoy: fila.rige_hoy,
+      facturaAlResponsable: fila.factura_al_responsable,
+      consentimientoPendiente: pendiente,
+      consentimientoCerrado: cerrado,
+      // Son dos preguntas: mientras hay un documento pendiente, quien firmó el anterior puede ser
+      // otra persona, y a esa también se le manda lo que firmó.
+      pendienteConEmail: await conEmail(pendiente),
+      cerradoConEmail: await conEmail(cerrado),
+    };
+  }));
+
+  const deHoy = responsables.filter((fila) => fila.rigeHoy);
   return {
-    pagador,
-    firmadoPorOtro,
-    consentimientoPendiente: pendiente,
-    consentimientoCerrado: cerrado,
+    responsables,
+    firmaCompleta: deHoy.length > 0 && deHoy.every((fila) => Boolean(fila.consentimientoCerrado)),
     documentos,
     documentosFaltantes: documentos.filter((documento) => !documento.cargado).length,
     documentosVencidos: documentos.filter((documento) => documento.vencido).length,
-    // Son dos preguntas: mientras hay un documento pendiente, quien firmó el anterior puede ser
-    // otra persona, y a esa también se le manda lo que firmó.
-    pendienteConEmail: await conEmail(pendiente),
-    cerradoConEmail: await conEmail(cerrado),
     textos: {
       enviar: frase('documento_para_firmar.enviar', idioma, {}, prestadoraId),
       enviado: frase('documento_para_firmar.enviado', idioma, {}, prestadoraId),
@@ -407,9 +447,10 @@ export async function emailDeQuienFirma({ db, consentimientoId, servicioId, pres
   return emailDeLaFicha({ db, personaId: quienFirma(consentimiento), prestadoraId });
 }
 
-// Qué documentos exige este Pagador y cuáles están. Se devuelve el catálogo entero, tenga o no
-// archivo cargado cada uno: lo que falta sólo se ve si el renglón aparece igual.
-export async function documentosDelPagador({ db, servicioId, prestadoraId, pagadorTipo }) {
+// Qué documentos exigen los Responsables de pagos del Servicio y cuáles están. Se devuelve el
+// catálogo entero, tenga o no archivo cargado cada uno: lo que falta sólo se ve si el renglón
+// aparece igual. `pagadorTipos` son los tipos de los Responsables de pagos que no terminaron.
+export async function documentosDelPagador({ db, servicioId, prestadoraId, pagadorTipos = [] }) {
   let query = db
     .from('tipos_documento_pagador')
     .select('id, nombre, pagador_tipo, requiere_vencimiento')
@@ -417,11 +458,11 @@ export async function documentosDelPagador({ db, servicioId, prestadoraId, pagad
     .eq('activo', true)
     .order('nombre', { ascending: true });
 
-  // Nulo en el catálogo quiere decir «a todos». Cuando la contratación todavía no dice quién
+  // Nulo en el catálogo quiere decir «a todos». Cuando ningún Responsable de pagos dice quién
   // financia, se muestran nada más que esos: exigir los de una obra social sin saber si la hay
-  // sería inventar un requisito.
-  query = pagadorTipo
-    ? query.or(`pagador_tipo.is.null,pagador_tipo.eq.${pagadorTipo}`)
+  // sería inventar un requisito. Los tipos salen de la lista cerrada de la base.
+  query = pagadorTipos.length
+    ? query.or(`pagador_tipo.is.null,pagador_tipo.in.(${pagadorTipos.join(',')})`)
     : query.is('pagador_tipo', null);
 
   const { data: tipos, error } = await query;
@@ -464,7 +505,7 @@ export async function guardarDocumento({
     .maybeSingle();
   if (!tipo) throw new ErrorConMotivo('no_encontrado', 'Ese tipo de documento no existe');
 
-  const servicio = await servicioConSuPagador({ db, servicioId, prestadoraId });
+  const servicio = await servicioConSusResponsables({ db, servicioId, prestadoraId });
 
   const { error } = await db
     .from('documentos_pagador')

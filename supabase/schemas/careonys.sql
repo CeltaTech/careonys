@@ -443,7 +443,7 @@ CREATE OR REPLACE FUNCTION "interno"."anotar_deuda_de_la_baja"("p_baja" "uuid") 
 DECLARE
   v_baja bajas_de_servicio%ROWTYPE;
   v_servicio servicios%ROWTYPE;
-  v_pagador uuid;
+  v_responsables uuid[];
   v_contratante uuid;
   v_la_lleva_otro boolean;
   v_anotados integer;
@@ -472,17 +472,17 @@ BEGIN
              WHERE c.id = v_servicio.cliente_id AND c.prestadora_id = v_baja.prestadora_id))
     INTO v_contratante;
 
-  v_pagador := interno.pagador_del_servicio_en(v_servicio.id, current_date);
+  v_responsables := ARRAY(SELECT interno.responsables_de_pagos_en(v_servicio.id, current_date));
 
   SELECT coalesce((regla ->> 'sigue_la_cobranza')::boolean, true) = false INTO v_la_lleva_otro
     FROM configuracion_facturacion_clientes
    WHERE prestadora_id = v_baja.prestadora_id;
 
   INSERT INTO avisos_baja_servicio_con_deuda
-    (prestadora_id, servicio_id, baja_id, cliente_id, responsable_de_pagos_persona_id,
+    (prestadora_id, servicio_id, baja_id, cliente_id, responsables_de_pagos_persona_ids,
      contratante_persona_id, importe, moneda, dias_de_atraso)
   SELECT v_baja.prestadora_id, v_servicio.id, v_baja.id, v_servicio.cliente_id,
-         v_pagador, v_contratante,
+         v_responsables, v_contratante,
          d.importe, d.moneda, d.dias_de_atraso
     FROM (
       SELECT e.saldo AS importe, e.moneda, e.dias_de_atraso
@@ -3463,16 +3463,19 @@ CREATE OR REPLACE FUNCTION "interno"."firma_del_pagador_vigente"("p_servicio" "u
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT EXISTS (
-    SELECT 1
-      FROM servicios s
-      JOIN consentimientos_pagador k
-        ON k.servicio_id = s.id
-       AND k.prestadora_id = s.prestadora_id
-     WHERE s.id = p_servicio
-       AND k.estado = 'cerrado'
-       AND k.pagador_persona_id = interno.pagador_del_servicio_en(p_servicio, current_date)
-  );
+  SELECT EXISTS (SELECT 1 FROM interno.responsables_de_pagos_en(p_servicio, current_date))
+     AND NOT EXISTS (
+       SELECT 1
+         FROM interno.responsables_de_pagos_en(p_servicio, current_date) AS r(persona)
+        WHERE NOT EXISTS (
+          SELECT 1
+            FROM servicios s
+            JOIN consentimientos_pagador k
+              ON k.servicio_id = s.id
+             AND k.prestadora_id = s.prestadora_id
+           WHERE s.id = p_servicio
+             AND k.estado = 'cerrado'
+             AND k.pagador_persona_id = r.persona));
 $$;
 
 
@@ -11800,7 +11803,6 @@ CREATE TABLE IF NOT EXISTS "public"."avisos_baja_servicio_con_deuda" (
     "servicio_id" "uuid" NOT NULL,
     "baja_id" "uuid" NOT NULL,
     "cliente_id" "uuid" NOT NULL,
-    "responsable_de_pagos_persona_id" "uuid",
     "contratante_persona_id" "uuid",
     "importe" numeric NOT NULL,
     "moneda" "text" NOT NULL,
@@ -11808,11 +11810,15 @@ CREATE TABLE IF NOT EXISTS "public"."avisos_baja_servicio_con_deuda" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "visto_at" timestamp with time zone,
     "visto_por" "uuid",
+    "responsables_de_pagos_persona_ids" "uuid"[] DEFAULT '{}'::"uuid"[] NOT NULL,
     CONSTRAINT "avisos_baja_servicio_con_deuda_importe_check" CHECK (("importe" > (0)::numeric))
 );
 
 
 ALTER TABLE "public"."avisos_baja_servicio_con_deuda" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."avisos_baja_servicio_con_deuda"."responsables_de_pagos_persona_ids" IS 'Los Responsables de pagos del Servicio el día de la baja. Vacía: no tenía ninguno.';
 
 
 CREATE TABLE IF NOT EXISTS "public"."avisos_de_documento_enviados" (
@@ -19014,7 +19020,7 @@ CREATE INDEX "consentimientos_pagador_por_servicio" ON "public"."consentimientos
 
 
 
-CREATE UNIQUE INDEX "consentimientos_pagador_uno_pendiente_por_servicio" ON "public"."consentimientos_pagador" USING "btree" ("servicio_id") WHERE ("estado" = 'pendiente_firma'::"text");
+CREATE UNIQUE INDEX "consentimientos_pagador_uno_pendiente_por_persona" ON "public"."consentimientos_pagador" USING "btree" ("servicio_id", "pagador_persona_id") WHERE ("estado" = 'pendiente_firma'::"text");
 
 
 
@@ -33608,30 +33614,39 @@ REVOKE EXECUTE ON FUNCTION public.filas_del_respaldo(text, integer, integer) FRO
 GRANT EXECUTE ON FUNCTION public.tablas_del_respaldo() TO copia_de_respaldo;
 GRANT EXECUTE ON FUNCTION public.filas_del_respaldo(text, integer, integer) TO copia_de_respaldo;
 
--- El Responsable de pagos de cada Servicio, con el día desde el que rige. La factura sale a nombre
--- del Contratante, salvo los tramos en que la Prestadora indica que sale a nombre del Responsable
--- de pagos. Se cambia sólo con `cambiar_responsable_de_pagos`, y la base rechaza un cambio que
--- cambie a nombre de quién sale una factura ya emitida.
+-- Los Responsables de pagos de cada Servicio. Puede haber varios a la vez: cada uno rige desde un
+-- día y, cuando deja de serlo, hasta otro. La factura sale a nombre del Contratante, salvo los días
+-- en que uno de ellos lleva la indicación, que la lleva uno solo por día. Se escribe sólo con
+-- `agregar_responsable_de_pagos`, `terminar_responsable_de_pagos` y `marcar_factura_al_responsable`.
 CREATE TABLE public.pagadores_del_servicio (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   prestadora_id       uuid NOT NULL REFERENCES public.prestadoras(id),
   servicio_id         uuid NOT NULL,
-  pagador_persona_id  uuid,
+  pagador_persona_id  uuid NOT NULL,
   pagador_tipo        text,
   factura_al_responsable boolean NOT NULL DEFAULT false,
   vigente_desde       date NOT NULL,
   cargado_por         uuid REFERENCES public.usuarios(id),
   cargado_en          timestamptz NOT NULL DEFAULT now(),
+  vigente_hasta       date,
 
-  CONSTRAINT pagadores_del_servicio_un_cambio_por_dia UNIQUE (servicio_id, vigente_desde),
   CONSTRAINT pagadores_del_servicio_de_la_misma_prestadora
     FOREIGN KEY (servicio_id, prestadora_id) REFERENCES public.servicios(id, prestadora_id) ON DELETE CASCADE,
   CONSTRAINT pagadores_del_servicio_persona_de_la_misma_prestadora
     FOREIGN KEY (pagador_persona_id, prestadora_id) REFERENCES public.personas(id, prestadora_id),
   CONSTRAINT pagadores_del_servicio_tipo_conocido
     CHECK (pagador_tipo IS NULL OR pagador_tipo IN ('cliente', 'obra_social', 'otro')),
-  CONSTRAINT pagadores_del_servicio_factura_al_responsable_con_persona
-    CHECK (NOT factura_al_responsable OR pagador_persona_id IS NOT NULL)
+  CONSTRAINT pagadores_del_servicio_desde_un_dia CHECK (isfinite(vigente_desde)),
+  CONSTRAINT pagadores_del_servicio_hasta_despues_del_desde
+    CHECK (vigente_hasta IS NULL OR (isfinite(vigente_hasta) AND vigente_hasta >= vigente_desde)),
+  -- La misma persona no está dos veces en días que se superponen.
+  CONSTRAINT pagadores_del_servicio_persona_una_vez_por_dia
+    EXCLUDE USING gist (servicio_id WITH =, pagador_persona_id WITH =,
+                        daterange(vigente_desde, vigente_hasta, '[]') WITH &&),
+  -- La indicación de la factura, en uno solo por día.
+  CONSTRAINT pagadores_del_servicio_una_factura_al_responsable_por_dia
+    EXCLUDE USING gist (servicio_id WITH =, daterange(vigente_desde, vigente_hasta, '[]') WITH &&)
+    WHERE (factura_al_responsable)
 );
 
 CREATE INDEX pagadores_del_servicio_por_prestadora ON public.pagadores_del_servicio (prestadora_id);
@@ -33639,10 +33654,13 @@ CREATE INDEX pagadores_del_servicio_por_persona
   ON public.pagadores_del_servicio (pagador_persona_id) WHERE pagador_persona_id IS NOT NULL;
 
 COMMENT ON TABLE public.pagadores_del_servicio IS
-  'Cada Responsable de pagos de un Servicio, desde el día en que rige hasta el día antes del siguiente. Sin persona, paga quien contrata. El primero rige desde siempre. Se cambia con cambiar_responsable_de_pagos.';
+  'Cada Responsable de pagos de un Servicio, con el día desde el que rige y, cuando deja de serlo, el día hasta el que rigió. Puede haber varios a la vez. Se escribe sólo con agregar_responsable_de_pagos, terminar_responsable_de_pagos y marcar_factura_al_responsable.';
+
+COMMENT ON COLUMN public.pagadores_del_servicio.vigente_hasta IS
+  'El último día en que rige. Vacío: sigue rigiendo.';
 
 COMMENT ON COLUMN public.pagadores_del_servicio.factura_al_responsable IS
-  'Encendida, la factura de los días de este tramo sale a nombre del Responsable de pagos. Apagada, a nombre del Contratante.';
+  'Encendida, la factura de los días de este Responsable de pagos sale a su nombre. Apagada, a nombre del Contratante. Encendida en uno solo por día.';
 
 ALTER TABLE public.pagadores_del_servicio ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.pagadores_del_servicio FROM PUBLIC, anon, authenticated, trabajo_sin_persona;
@@ -33663,127 +33681,150 @@ CREATE TRIGGER trg_auditoria_acceso
   AFTER INSERT OR UPDATE OR DELETE ON public.pagadores_del_servicio
   FOR EACH ROW EXECUTE FUNCTION public.fn_auditoria_de_acceso_mutacion();
 
--- El punto único: la persona del Responsable de pagos si el tramo lleva la indicación, o vacío,
--- que quiere decir el Contratante.
-CREATE FUNCTION interno.responsable_que_recibe_la_factura(p_persona uuid, p_factura_al_responsable boolean)
-  RETURNS uuid
-  LANGUAGE sql IMMUTABLE
-  SET search_path TO ''
-AS $$
-  SELECT CASE WHEN coalesce(p_factura_al_responsable, false) THEN p_persona END;
-$$;
-
-REVOKE ALL ON FUNCTION interno.responsable_que_recibe_la_factura(uuid, boolean) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION interno.responsable_que_recibe_la_factura(uuid, boolean)
-  TO authenticated, trabajo_sin_persona, service_role;
-
-CREATE VIEW public.tramos_de_pagador_del_servicio WITH (security_invoker = true) AS
-SELECT p.id,
-       p.prestadora_id,
-       p.servicio_id,
-       p.pagador_persona_id,
-       p.pagador_tipo,
-       p.vigente_desde,
-       -- El primero de cada Servicio rige desde siempre.
-       CASE WHEN lag(p.vigente_desde) OVER w IS NULL THEN NULL ELSE p.vigente_desde END AS rige_desde,
-       -- Y cada uno, hasta el día antes del siguiente.
-       (lead(p.vigente_desde) OVER w - 1) AS rige_hasta,
-       (lag(p.vigente_desde) OVER w IS NULL OR p.vigente_desde <= current_date)
-         AND (lead(p.vigente_desde) OVER w IS NULL OR lead(p.vigente_desde) OVER w > current_date) AS rige_hoy,
-       p.factura_al_responsable,
-       interno.responsable_que_recibe_la_factura(p.pagador_persona_id, p.factura_al_responsable)
-         AS responsable_que_recibe_la_factura
-  FROM public.pagadores_del_servicio p
-WINDOW w AS (PARTITION BY p.servicio_id ORDER BY p.vigente_desde);
-
-COMMENT ON VIEW public.tramos_de_pagador_del_servicio IS
-  'Los días que cubre cada Responsable de pagos de un Servicio. rige_desde vacío: desde siempre. rige_hasta vacío: sin fin. Es la única cuenta de quién paga cada día.';
-
-REVOKE ALL ON public.tramos_de_pagador_del_servicio FROM PUBLIC, anon, authenticated, trabajo_sin_persona;
-GRANT SELECT ON public.tramos_de_pagador_del_servicio TO authenticated, trabajo_sin_persona;
-
-CREATE FUNCTION interno.pagador_del_servicio_en(p_servicio uuid, p_fecha date) RETURNS uuid
-  LANGUAGE sql STABLE SECURITY DEFINER
-  SET search_path TO ''
-AS $$
-  SELECT t.pagador_persona_id
-    FROM public.tramos_de_pagador_del_servicio t
-   WHERE t.servicio_id = p_servicio
-     AND (t.rige_desde IS NULL OR t.rige_desde <= p_fecha)
-     AND (t.rige_hasta IS NULL OR t.rige_hasta >= p_fecha);
-$$;
-
--- La usan sólo las funciones de la base que ya se saltean la RLS.
-REVOKE ALL ON FUNCTION interno.pagador_del_servicio_en(uuid, date) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION interno.pagador_del_servicio_en(uuid, date) TO service_role;
-
-CREATE FUNCTION interno.cambio_de_pagador_sin_factura_emitida() RETURNS trigger
+-- 4. El control de las filas: quién y cuándo cargó cada una, y que una fila cargada no cambie de
+-- Servicio, de persona, de tipo ni de día desde. Para eso se termina y se agrega otra.
+CREATE FUNCTION interno.responsable_de_pagos_no_cambia_de_persona() RETURNS trigger
   LANGUAGE plpgsql SECURITY DEFINER
   SET search_path TO ''
 AS $$
-DECLARE
-  v_antes uuid;
-  v_es_el_primero boolean;
-  v_siguiente date;
 BEGIN
   IF TG_OP = 'INSERT' THEN
     NEW.cargado_por := interno.usuario_de_la_sesion();
     NEW.cargado_en := now();
-  ELSIF (NEW.prestadora_id, NEW.servicio_id, NEW.vigente_desde)
-        IS DISTINCT FROM (OLD.prestadora_id, OLD.servicio_id, OLD.vigente_desde) THEN
-    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
-  END IF;
-
-  -- A nombre de quién salía la factura de esos días antes de este cambio.
-  IF TG_OP = 'UPDATE' THEN
-    v_antes := interno.responsable_que_recibe_la_factura(OLD.pagador_persona_id, OLD.factura_al_responsable);
-  ELSE
-    SELECT interno.responsable_que_recibe_la_factura(p.pagador_persona_id, p.factura_al_responsable) INTO v_antes
-      FROM public.pagadores_del_servicio p
-     WHERE p.servicio_id = NEW.servicio_id
-     ORDER BY (p.vigente_desde <= NEW.vigente_desde) DESC,
-              CASE WHEN p.vigente_desde <= NEW.vigente_desde THEN p.vigente_desde END DESC,
-              p.vigente_desde ASC
-     LIMIT 1;
-  END IF;
-
-  -- Si la factura de esos días sigue a nombre del mismo, ninguna factura cambia.
-  IF v_antes IS NOT DISTINCT FROM
-     interno.responsable_que_recibe_la_factura(NEW.pagador_persona_id, NEW.factura_al_responsable) THEN
     RETURN NEW;
   END IF;
+  IF (NEW.prestadora_id, NEW.servicio_id, NEW.pagador_persona_id, NEW.pagador_tipo, NEW.vigente_desde)
+     IS DISTINCT FROM (OLD.prestadora_id, OLD.servicio_id, OLD.pagador_persona_id, OLD.pagador_tipo, OLD.vigente_desde) THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+  NEW.cargado_por := OLD.cargado_por;
+  NEW.cargado_en := OLD.cargado_en;
+  RETURN NEW;
+END;
+$$;
 
-  SELECT NOT EXISTS (SELECT 1 FROM public.pagadores_del_servicio p
-                      WHERE p.servicio_id = NEW.servicio_id AND p.vigente_desde < NEW.vigente_desde)
-    INTO v_es_el_primero;
-  SELECT min(p.vigente_desde) INTO v_siguiente
+REVOKE ALL ON FUNCTION interno.responsable_de_pagos_no_cambia_de_persona() FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER responsable_de_pagos_no_cambia_de_persona
+  BEFORE INSERT OR UPDATE ON public.pagadores_del_servicio
+  FOR EACH ROW EXECUTE FUNCTION interno.responsable_de_pagos_no_cambia_de_persona();
+
+-- 5. Los Responsables de pagos de un Servicio en un día. Es la única cuenta de quién paga cada día.
+CREATE FUNCTION interno.responsables_de_pagos_en(p_servicio uuid, p_fecha date) RETURNS SETOF uuid
+  LANGUAGE sql STABLE SECURITY DEFINER
+  SET search_path TO ''
+AS $$
+  SELECT p.pagador_persona_id
     FROM public.pagadores_del_servicio p
-   WHERE p.servicio_id = NEW.servicio_id AND p.vigente_desde > NEW.vigente_desde;
+   WHERE p.servicio_id = p_servicio
+     AND p.vigente_desde <= p_fecha
+     AND (p.vigente_hasta IS NULL OR p.vigente_hasta >= p_fecha)
+   ORDER BY p.vigente_desde, p.cargado_en;
+$$;
+
+-- La usan sólo las funciones de la base que ya se saltean la RLS.
+REVOKE ALL ON FUNCTION interno.responsables_de_pagos_en(uuid, date) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION interno.responsables_de_pagos_en(uuid, date) TO service_role;
+
+-- 6. A nombre de quién sale la factura cada día: los días del Responsable de pagos con la
+-- indicación, a su nombre; los demás, con el responsable vacío, que quiere decir el Contratante.
+-- Cubre todos los días; un Servicio sin ninguna indicación no tiene filas, y entonces todo sale a
+-- nombre del Contratante.
+CREATE VIEW public.tramos_de_la_factura_del_servicio WITH (security_invoker = true) AS
+WITH marcados AS (
+  SELECT p.prestadora_id, p.servicio_id, p.vigente_desde, p.vigente_hasta, p.pagador_persona_id,
+         row_number() OVER w AS orden,
+         lead(p.vigente_desde) OVER w AS desde_del_siguiente
+    FROM public.pagadores_del_servicio p
+   WHERE p.factura_al_responsable
+  WINDOW w AS (PARTITION BY p.servicio_id ORDER BY p.vigente_desde)
+)
+SELECT m.prestadora_id, m.servicio_id,
+       m.vigente_desde AS rige_desde, m.vigente_hasta AS rige_hasta,
+       m.pagador_persona_id AS responsable_que_recibe_la_factura
+  FROM marcados m
+UNION ALL
+-- Antes del primero, desde siempre.
+SELECT m.prestadora_id, m.servicio_id, NULL::date, m.vigente_desde - 1, NULL::uuid
+  FROM marcados m
+ WHERE m.orden = 1
+UNION ALL
+-- Entre uno y el siguiente, y después del último.
+SELECT m.prestadora_id, m.servicio_id, m.vigente_hasta + 1, m.desde_del_siguiente - 1, NULL::uuid
+  FROM marcados m
+ WHERE m.vigente_hasta IS NOT NULL
+   AND (m.desde_del_siguiente IS NULL OR m.desde_del_siguiente > m.vigente_hasta + 1);
+
+COMMENT ON VIEW public.tramos_de_la_factura_del_servicio IS
+  'A nombre de quién sale la factura de un Servicio en cada tramo de días. responsable_que_recibe_la_factura vacío: el Contratante. rige_desde vacío: desde siempre. rige_hasta vacío: sin fin. Sin filas, todo sale a nombre del Contratante.';
+
+REVOKE ALL ON public.tramos_de_la_factura_del_servicio FROM PUBLIC, anon, authenticated, trabajo_sin_persona;
+GRANT SELECT ON public.tramos_de_la_factura_del_servicio TO authenticated, trabajo_sin_persona;
+
+-- 7. Lo que pasa con las facturas cuando los días de la indicación se mueven. Recibe los días que
+-- la indicación cubría antes y los que cubre después; los días que cambian de nombre son los que
+-- están en uno solo de los dos. Rechaza el cambio si toca una factura emitida, con comprobante,
+-- con cobros o con correcciones, y borra las facturas sin emitir que quedan con días a nombre de
+-- dos personas, que el backend vuelve a generar partidas. Devuelve los períodos de las borradas.
+CREATE FUNCTION interno.preparar_cambio_de_la_factura(
+  p_prestadora uuid, p_servicio uuid, p_antes daterange, p_despues daterange
+)
+  RETURNS TABLE(periodo date, periodo_hasta date)
+  LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO ''
+AS $$
+DECLARE
+  v_cambian datemultirange :=
+    (datemultirange(p_antes) - datemultirange(p_despues)) + (datemultirange(p_despues) - datemultirange(p_antes));
+BEGIN
+  IF isempty(v_cambian) THEN
+    RETURN;
+  END IF;
 
   IF EXISTS (
     SELECT 1
       FROM public.facturas_cliente f
-     WHERE f.servicio_id = NEW.servicio_id
-       AND f.prestadora_id = NEW.prestadora_id
-       AND (v_es_el_primero OR f.periodo_hasta >= NEW.vigente_desde)
-       AND (v_siguiente IS NULL OR f.periodo < v_siguiente)
+     WHERE f.servicio_id = p_servicio
+       AND f.prestadora_id = p_prestadora
+       AND v_cambian && daterange(f.periodo, f.periodo_hasta, '[]')
        AND (f.facturado_at IS NOT NULL OR f.monto_facturado IS NOT NULL OR f.comprobante_subido_at IS NOT NULL
             OR EXISTS (SELECT 1 FROM public.cobros_cliente c WHERE c.factura_id = f.id)
             OR EXISTS (SELECT 1 FROM public.correcciones_factura_cliente r WHERE r.factura_id = f.id))
   ) THEN
     RAISE EXCEPTION 'cambio_de_pagador_con_factura_emitida' USING ERRCODE = 'P0001';
   END IF;
-  RETURN NEW;
+
+  -- Una factura cuyos días cambian todos de nombre sigue entera: a nombre de quién sale se lee de
+  -- los tramos. Sólo se borra la que queda con días de los dos lados.
+  RETURN QUERY
+  DELETE FROM public.facturas_cliente f
+   WHERE f.servicio_id = p_servicio
+     AND f.prestadora_id = p_prestadora
+     AND v_cambian && daterange(f.periodo, f.periodo_hasta, '[]')
+     AND NOT v_cambian @> daterange(f.periodo, f.periodo_hasta, '[]')
+  RETURNING f.periodo, f.periodo_hasta;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION interno.cambio_de_pagador_sin_factura_emitida() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION interno.preparar_cambio_de_la_factura(uuid, uuid, daterange, daterange) FROM PUBLIC, anon, authenticated;
 
-CREATE TRIGGER cambio_de_pagador_sin_factura_emitida
-  BEFORE INSERT OR UPDATE ON public.pagadores_del_servicio
-  FOR EACH ROW EXECUTE FUNCTION interno.cambio_de_pagador_sin_factura_emitida();
+-- 8. El motivo que entiende el Panel para cada regla de la tabla. Es el punto único: lo usan las
+-- tres funciones de escritura.
+CREATE FUNCTION interno.motivo_del_responsable_de_pagos(p_restriccion text) RETURNS text
+  LANGUAGE sql IMMUTABLE
+  SET search_path TO ''
+AS $$
+  SELECT CASE p_restriccion
+    WHEN 'pagadores_del_servicio_persona_una_vez_por_dia' THEN 'responsable_de_pagos_repetido'
+    WHEN 'pagadores_del_servicio_una_factura_al_responsable_por_dia' THEN 'responsable_de_pagos_con_otra_marca'
+    WHEN 'pagadores_del_servicio_hasta_despues_del_desde' THEN 'responsable_de_pagos_hasta_antes_del_desde'
+    ELSE 'dato_invalido'
+  END;
+$$;
 
-CREATE FUNCTION public.cambiar_responsable_de_pagos(
+REVOKE ALL ON FUNCTION interno.motivo_del_responsable_de_pagos(text) FROM PUBLIC, anon, authenticated;
+
+CREATE FUNCTION public.agregar_responsable_de_pagos(
   p_servicio uuid,
   p_persona uuid,
   p_tipo text,
@@ -33798,21 +33839,15 @@ DECLARE
   v_prest uuid := interno.prestadora_actual();
   v_quien uuid := interno.usuario_de_la_sesion();
   v_indicacion boolean := coalesce(p_factura_al_responsable, false);
-  v_antes record;
-  v_habia_antes boolean;
   v_id uuid;
-  v_siguiente date;
-  v_recibe_antes uuid;
-  v_recibe_ahora uuid;
-  v_recibe_despues uuid;
+  v_restriccion text;
 BEGIN
   IF v_prest IS NULL OR v_quien IS NULL OR NOT interno.es_personal_de_la_prestadora()
      OR NOT interno.tiene_permiso('editar_condiciones_comerciales_servicio') THEN
     RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
   END IF;
-  IF p_servicio IS NULL OR p_desde IS NULL OR NOT isfinite(p_desde)
-     OR (p_tipo IS NOT NULL AND p_tipo NOT IN ('cliente', 'obra_social', 'otro'))
-     OR (v_indicacion AND p_persona IS NULL) THEN
+  IF p_servicio IS NULL OR p_persona IS NULL OR p_desde IS NULL OR NOT isfinite(p_desde)
+     OR (p_tipo IS NOT NULL AND p_tipo NOT IN ('cliente', 'obra_social', 'otro')) THEN
     RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
   END IF;
 
@@ -33821,86 +33856,139 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
   END IF;
-  IF p_persona IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.personas pe WHERE pe.id = p_persona AND pe.prestadora_id = v_prest
-  ) THEN
+  IF NOT EXISTS (SELECT 1 FROM public.personas pe WHERE pe.id = p_persona AND pe.prestadora_id = v_prest) THEN
     RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
   END IF;
 
-  -- Quién paga ese día hoy, y si recibe la factura. Si todo es igual, no hay nada que cambiar.
-  SELECT t.pagador_persona_id AS persona, t.pagador_tipo AS tipo, t.factura_al_responsable AS indicacion
-    INTO v_antes
-    FROM public.tramos_de_pagador_del_servicio t
-   WHERE t.servicio_id = p_servicio
-     AND (t.rige_desde IS NULL OR t.rige_desde <= p_desde)
-     AND (t.rige_hasta IS NULL OR t.rige_hasta >= p_desde);
-  IF NOT FOUND THEN
-    SELECT NULL::uuid AS persona, NULL::text AS tipo, false AS indicacion INTO v_antes;
-  END IF;
-  IF v_antes.persona IS NOT DISTINCT FROM p_persona AND v_antes.tipo IS NOT DISTINCT FROM p_tipo
-     AND v_antes.indicacion IS NOT DISTINCT FROM v_indicacion THEN
-    RETURN;
-  END IF;
-
-  -- Los días de antes siguen como estaban: si no hay nada escrito antes de ese día, se escribe,
-  -- desde siempre.
-  SELECT EXISTS (SELECT 1 FROM public.pagadores_del_servicio p
-                  WHERE p.servicio_id = p_servicio AND p.vigente_desde < p_desde)
-    INTO v_habia_antes;
-  IF NOT v_habia_antes THEN
+  BEGIN
     INSERT INTO public.pagadores_del_servicio
       (prestadora_id, servicio_id, pagador_persona_id, pagador_tipo, factura_al_responsable, vigente_desde)
-    VALUES (v_prest, p_servicio, v_antes.persona, v_antes.tipo, coalesce(v_antes.indicacion, false), '-infinity'::date);
-  END IF;
-
-  INSERT INTO public.pagadores_del_servicio AS p
-    (prestadora_id, servicio_id, pagador_persona_id, pagador_tipo, factura_al_responsable, vigente_desde)
-  VALUES (v_prest, p_servicio, p_persona, p_tipo, v_indicacion, p_desde)
-  ON CONFLICT (servicio_id, vigente_desde) DO UPDATE
-    SET pagador_persona_id = EXCLUDED.pagador_persona_id,
-        pagador_tipo = EXCLUDED.pagador_tipo,
-        factura_al_responsable = EXCLUDED.factura_al_responsable
-  RETURNING p.id INTO v_id;
-
-  SELECT min(p.vigente_desde) INTO v_siguiente
-    FROM public.pagadores_del_servicio p
-   WHERE p.servicio_id = p_servicio AND p.vigente_desde > p_desde;
-
-  -- A nombre de quién sale la factura el día anterior al cambio, desde el cambio, y desde el
-  -- cambio siguiente.
-  SELECT interno.responsable_que_recibe_la_factura(p.pagador_persona_id, p.factura_al_responsable)
-    INTO v_recibe_antes
-    FROM public.pagadores_del_servicio p
-   WHERE p.servicio_id = p_servicio AND p.vigente_desde < p_desde
-   ORDER BY p.vigente_desde DESC
-   LIMIT 1;
-  v_recibe_ahora := interno.responsable_que_recibe_la_factura(p_persona, v_indicacion);
-  SELECT interno.responsable_que_recibe_la_factura(p.pagador_persona_id, p.factura_al_responsable)
-    INTO v_recibe_despues
-    FROM public.pagadores_del_servicio p
-   WHERE p.servicio_id = p_servicio AND p.vigente_desde = v_siguiente;
+    VALUES (v_prest, p_servicio, p_persona, p_tipo, v_indicacion, p_desde)
+    RETURNING id INTO v_id;
+  EXCEPTION WHEN exclusion_violation OR check_violation THEN
+    GET STACKED DIAGNOSTICS v_restriccion = CONSTRAINT_NAME;
+    RAISE EXCEPTION '%', interno.motivo_del_responsable_de_pagos(v_restriccion) USING ERRCODE = 'P0001';
+  END;
 
   INSERT INTO public.registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
-  VALUES (v_prest, v_quien, 'cambio_de_responsable_de_pagos', 'pagadores_del_servicio', v_id,
-          jsonb_build_object('servicio_id', p_servicio, 'rige_desde', p_desde,
-                             'responsable_anterior', v_antes.persona, 'responsable_nuevo', p_persona,
-                             'factura_al_responsable_anterior', coalesce(v_antes.indicacion, false),
+  VALUES (v_prest, v_quien, 'alta_de_responsable_de_pagos', 'pagadores_del_servicio', v_id,
+          jsonb_build_object('servicio_id', p_servicio, 'responsable_nuevo', p_persona, 'desde', p_desde,
                              'factura_al_responsable_nuevo', v_indicacion));
 
-  -- Las facturas todavía no emitidas que quedan con días a nombre de dos personas se borran: el
-  -- backend las vuelve a generar, una por cada parte. Las emitidas ya las rechazó la base. Si la
-  -- factura sigue a nombre del mismo de los dos lados de un corte, ese corte no borra nada.
-  RETURN QUERY
-  DELETE FROM public.facturas_cliente f
-   WHERE f.servicio_id = p_servicio
-     AND f.prestadora_id = v_prest
-     AND ((v_recibe_antes IS DISTINCT FROM v_recibe_ahora
-           AND f.periodo < p_desde AND f.periodo_hasta >= p_desde)
-          OR (v_siguiente IS NOT NULL AND v_recibe_ahora IS DISTINCT FROM v_recibe_despues
-              AND f.periodo < v_siguiente AND f.periodo_hasta >= v_siguiente))
-  RETURNING f.periodo, f.periodo_hasta;
+  IF v_indicacion THEN
+    RETURN QUERY SELECT * FROM interno.preparar_cambio_de_la_factura(
+      v_prest, p_servicio, 'empty'::daterange, daterange(p_desde, NULL, '[]'));
+  END IF;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.cambiar_responsable_de_pagos(uuid, uuid, text, date, boolean) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.cambiar_responsable_de_pagos(uuid, uuid, text, date, boolean) TO service_role, authenticated;
+CREATE FUNCTION public.terminar_responsable_de_pagos(p_responsable uuid, p_hasta date)
+  RETURNS TABLE(periodo date, periodo_hasta date)
+  LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO ''
+AS $$
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+  v_quien uuid := interno.usuario_de_la_sesion();
+  v_fila public.pagadores_del_servicio%ROWTYPE;
+  v_restriccion text;
+BEGIN
+  IF v_prest IS NULL OR v_quien IS NULL OR NOT interno.es_personal_de_la_prestadora()
+     OR NOT interno.tiene_permiso('editar_condiciones_comerciales_servicio') THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_responsable IS NULL OR (p_hasta IS NOT NULL AND NOT isfinite(p_hasta)) THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT * INTO v_fila FROM public.pagadores_del_servicio p
+   WHERE p.id = p_responsable AND p.prestadora_id = v_prest;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
+  END IF;
+  PERFORM 1 FROM public.servicios s WHERE s.id = v_fila.servicio_id AND s.prestadora_id = v_prest FOR UPDATE;
+  -- Con el Servicio bloqueado, la fila no la cambia nadie más.
+  SELECT * INTO v_fila FROM public.pagadores_del_servicio p WHERE p.id = p_responsable;
+  IF v_fila.vigente_hasta IS NOT DISTINCT FROM p_hasta THEN
+    RETURN;
+  END IF;
+
+  BEGIN
+    UPDATE public.pagadores_del_servicio p SET vigente_hasta = p_hasta WHERE p.id = p_responsable;
+  EXCEPTION WHEN exclusion_violation OR check_violation THEN
+    GET STACKED DIAGNOSTICS v_restriccion = CONSTRAINT_NAME;
+    RAISE EXCEPTION '%', interno.motivo_del_responsable_de_pagos(v_restriccion) USING ERRCODE = 'P0001';
+  END;
+
+  INSERT INTO public.registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
+  VALUES (v_prest, v_quien, 'fin_de_responsable_de_pagos', 'pagadores_del_servicio', p_responsable,
+          jsonb_build_object('servicio_id', v_fila.servicio_id, 'responsable_nuevo', v_fila.pagador_persona_id,
+                             'desde', v_fila.vigente_desde, 'hasta', p_hasta));
+
+  IF v_fila.factura_al_responsable THEN
+    RETURN QUERY SELECT * FROM interno.preparar_cambio_de_la_factura(
+      v_prest, v_fila.servicio_id,
+      daterange(v_fila.vigente_desde, v_fila.vigente_hasta, '[]'),
+      daterange(v_fila.vigente_desde, p_hasta, '[]'));
+  END IF;
+END;
+$$;
+
+CREATE FUNCTION public.marcar_factura_al_responsable(p_responsable uuid, p_encendida boolean)
+  RETURNS TABLE(periodo date, periodo_hasta date)
+  LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO ''
+AS $$
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+  v_quien uuid := interno.usuario_de_la_sesion();
+  v_fila public.pagadores_del_servicio%ROWTYPE;
+  v_dias daterange;
+  v_restriccion text;
+BEGIN
+  IF v_prest IS NULL OR v_quien IS NULL OR NOT interno.es_personal_de_la_prestadora()
+     OR NOT interno.tiene_permiso('editar_condiciones_comerciales_servicio') THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_responsable IS NULL OR p_encendida IS NULL THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT * INTO v_fila FROM public.pagadores_del_servicio p
+   WHERE p.id = p_responsable AND p.prestadora_id = v_prest;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0002';
+  END IF;
+  PERFORM 1 FROM public.servicios s WHERE s.id = v_fila.servicio_id AND s.prestadora_id = v_prest FOR UPDATE;
+  SELECT * INTO v_fila FROM public.pagadores_del_servicio p WHERE p.id = p_responsable;
+  IF v_fila.factura_al_responsable = p_encendida THEN
+    RETURN;
+  END IF;
+
+  BEGIN
+    UPDATE public.pagadores_del_servicio p SET factura_al_responsable = p_encendida WHERE p.id = p_responsable;
+  EXCEPTION WHEN exclusion_violation OR check_violation THEN
+    GET STACKED DIAGNOSTICS v_restriccion = CONSTRAINT_NAME;
+    RAISE EXCEPTION '%', interno.motivo_del_responsable_de_pagos(v_restriccion) USING ERRCODE = 'P0001';
+  END;
+
+  INSERT INTO public.registro_actividad (prestadora_id, usuario_id, accion, tabla_afectada, registro_id, detalle)
+  VALUES (v_prest, v_quien, 'cambio_de_factura_al_responsable', 'pagadores_del_servicio', p_responsable,
+          jsonb_build_object('servicio_id', v_fila.servicio_id, 'responsable_nuevo', v_fila.pagador_persona_id,
+                             'factura_al_responsable_anterior', v_fila.factura_al_responsable,
+                             'factura_al_responsable_nuevo', p_encendida));
+
+  v_dias := daterange(v_fila.vigente_desde, v_fila.vigente_hasta, '[]');
+  RETURN QUERY SELECT * FROM interno.preparar_cambio_de_la_factura(
+    v_prest, v_fila.servicio_id,
+    CASE WHEN p_encendida THEN 'empty'::daterange ELSE v_dias END,
+    CASE WHEN p_encendida THEN v_dias ELSE 'empty'::daterange END);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.agregar_responsable_de_pagos(uuid, uuid, text, date, boolean) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.terminar_responsable_de_pagos(uuid, date) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.marcar_factura_al_responsable(uuid, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.agregar_responsable_de_pagos(uuid, uuid, text, date, boolean) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.terminar_responsable_de_pagos(uuid, date) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.marcar_factura_al_responsable(uuid, boolean) TO authenticated, service_role;

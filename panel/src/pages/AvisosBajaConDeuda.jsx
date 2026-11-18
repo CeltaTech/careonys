@@ -16,8 +16,8 @@ function soloLaFecha(momento, locale) {
 
    El aviso lo arma la base en la misma operación que da la baja, con lo que debía ese día y los
    días de atraso. Acá se lo muestra a créditos y cobranzas con a quién se le reclama: el
-   Contratante, a cuyo nombre sale la factura y que responde por el Servicio, y el Responsable de
-   pagos, que es quien paga. Quien lo vio lo marca, y
+   Contratante, a cuyo nombre sale la factura y que responde por el Servicio, y los Responsables de
+   pagos, que son quienes pagan. Quien lo vio lo marca, y
    deja de aparecer. Se muestra sólo si hay alguno: sin avisos, la sección no está. */
 export function AvisosBajaConDeuda() {
   const { t, locale } = useLocale();
@@ -82,7 +82,7 @@ export function AvisosBajaConDeuda() {
                 <td>{aviso.servicio_etiqueta || '—'}</td>
                 <td>{formatearImporte(aviso.importe, aviso.moneda, locale)}</td>
                 <td>{aviso.dias_de_atraso ?? '—'}</td>
-                <td>{aviso.responsable_de_pagos_nombre || '—'}</td>
+                <td>{(aviso.responsables_de_pagos_nombres ?? []).join(', ') || '—'}</td>
                 <td>{aviso.contratante_nombre || '—'}</td>
                 <td>{soloLaFecha(aviso.created_at, locale)}</td>
                 <td>

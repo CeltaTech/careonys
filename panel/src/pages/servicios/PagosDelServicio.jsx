@@ -1,21 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { traducirValor } from '../../i18n/valores';
 import { supabase } from '../../lib/supabaseClient';
 import { mensajeDeError } from '../../lib/errores';
-import { llamarApiCobros } from '../../lib/apiCobros';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
 import { EstadoDelPagador } from '../clientes/EstadoDelPagador';
-import {
-  TIPOS_DE_PAGADOR,
-  TIPOS_DE_PAGADOR_POSIBLES,
-  PLAZO_MAXIMO_EN_DIAS,
-  plazoQueSePuedeGuardar,
-} from '../../lib/facturacionDeClientes';
-import { cambiaElResponsableDePagos, facturaAlResponsable } from '../../lib/responsableDePagosDelServicio';
+import { ResponsablesDePagosDelServicio } from './ResponsablesDePagosDelServicio';
+import { PLAZO_MAXIMO_EN_DIAS, plazoQueSePuedeGuardar } from '../../lib/facturacionDeClientes';
 import {
   CLAVES_SI_NO,
   FRECUENCIAS_DE_COBRO_POSIBLES,
@@ -28,11 +21,11 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { ActualizacionDelServicio } from '../../components/ActualizacionDelServicio';
 import '../../styles/molde-paginas.css';
 
-/* Lo comercial de un Servicio: quién contrata, quién paga, en qué plazo, y si quien paga firmó.
+/* Lo comercial de un Servicio: quién contrata, quiénes pagan, en qué plazo, y si quienes pagan firmaron.
    ==========================================================================
 
-   Es del Servicio y no del Cliente: un mismo Cliente puede tener dos Servicios con distinto
-   Responsable de pagos. La deuda sigue siendo del Cliente. Las personas se eligen del Directorio
+   Es del Servicio y no del Cliente: un mismo Cliente puede tener dos Servicios con distintos
+   Responsables de pagos. La deuda sigue siendo del Cliente. Las personas se eligen del Directorio
    de Personas y no se teclean.
 
    Vive en su propia tabla, que la base le abre sólo a quien tiene el permiso de lo comercial o el
@@ -48,11 +41,10 @@ import '../../styles/molde-paginas.css';
    eso un casillero que no se tocó se guarda tal como estaba, y uno que se tocó se guarda con el
    valor elegido, sin compararlo contra lo que no se pudo leer.
 
-   EL RESPONSABLE DE PAGOS. Se muestra el de hoy. La factura sale siempre a nombre del Contratante,
-   salvo que la Prestadora marque que, en este Servicio, sale a nombre del Responsable de pagos.
-   Cambiar la persona, el tipo o esa marca pide desde qué día rige, y la firma del anterior sigue
-   valiendo para sus días. El cambio lo guarda el backend; la factura se parte en ese día sólo si
-   cambia la persona a cuyo nombre sale.
+   LOS RESPONSABLES DE PAGOS. Pueden ser varios a la vez, cada uno con su desde y su hasta, y se
+   cargan en su propia tarjeta, que guarda cada cambio en el momento. La factura sale a nombre del
+   Contratante, salvo en los días en que un Responsable de pagos lleva la marca de que se le facture
+   a él. Cada uno firma lo suyo, y la tarjeta de las firmas se vuelve a leer después de cada cambio.
 
    EL DESCUENTO. Un solo número: el porcentaje que rige desde hoy y sin fin. Cambiarlo termina el
    anterior y carga el nuevo (`fijar_descuento_del_servicio`); cero lo quita. */
@@ -82,14 +74,10 @@ function condicionesVisiblesDe(fila, regla) {
   return visibles;
 }
 
-function formDe(fila, regla, pagador) {
+function formDe(fila, regla) {
   const dias = fila?.dias_hasta_el_vencimiento;
   return {
     dias_hasta_el_vencimiento: dias === null || dias === undefined ? '' : String(dias),
-    pagador_tipo: pagador?.pagador_tipo || '',
-    pagador_persona_id: pagador?.pagador_persona_id || null,
-    factura_al_responsable: pagador?.factura_al_responsable === true,
-    pagador_rige_desde: '',
     contratante_persona_id: fila?.contratante_persona_id || null,
     ...condicionesVisiblesDe(fila, regla),
   };
@@ -99,10 +87,11 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
   const { t } = useLocale();
   const tc = t.configuracion.condiciones_cliente;
   const prestadoraId = usePrestadoraActual();
-  const [form, setForm] = useState(() => formDe(null, null, null));
+  const [form, setForm] = useState(() => formDe(null, null));
   const [fila, setFila] = useState(null);
-  const [pagadorDeHoy, setPagadorDeHoy] = useState(null);
-  const [rigeDesdeMal, setRigeDesdeMal] = useState(false);
+  // Cambia cada vez que cambian los Responsables de pagos, para que la tarjeta de las firmas vuelva
+  // a leer.
+  const [vueltaDeLasFirmas, setVueltaDeLasFirmas] = useState(0);
   const [regla, setRegla] = useState(null);
   const [reglaConocida, setReglaConocida] = useState(false);
   const [tocadas, setTocadas] = useState(() => new Set());
@@ -119,17 +108,11 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
     setEstado('cargando');
     setErrorDeCarga(null);
     const leeLaRegla = !!esAdmin && !!prestadoraId;
-    const [comercial, pagador, configuracion, descuentos] = await Promise.all([
+    const [comercial, configuracion, descuentos] = await Promise.all([
       supabase
         .from('condiciones_comerciales_servicio')
         .select(SELECT_DE_LO_COMERCIAL)
         .eq('servicio_id', servicio.id)
-        .maybeSingle(),
-      supabase
-        .from('tramos_de_pagador_del_servicio')
-        .select('pagador_persona_id, pagador_tipo, factura_al_responsable')
-        .eq('servicio_id', servicio.id)
-        .eq('rige_hoy', true)
         .maybeSingle(),
       // Sólo la administración la puede leer. Si no se pudo, se sigue sin ella.
       leeLaRegla
@@ -145,7 +128,7 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
         .eq('servicio_id', servicio.id)
         .is('terminado_en', null),
     ]);
-    const falla = comercial.error || pagador.error || descuentos.error;
+    const falla = comercial.error || descuentos.error;
     if (falla) {
       setErrorDeCarga(mensajeDeError(falla, t));
       setEstado('error');
@@ -154,12 +137,10 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
     const conocida = leeLaRegla && !configuracion.error;
     const deLaPrestadora = conocida ? configuracion.data?.regla ?? null : null;
     setFila(comercial.data);
-    setPagadorDeHoy(pagador.data);
     setRegla(deLaPrestadora);
     setReglaConocida(conocida);
     setTocadas(new Set());
-    setRigeDesdeMal(false);
-    setForm(formDe(comercial.data, deLaPrestadora, pagador.data));
+    setForm(formDe(comercial.data, deLaPrestadora));
     const abiertos = descuentos.data ?? [];
     const unico = abiertos.length === 1 && abiertos[0].clase === 'porcentaje'
       && abiertos[0].cantidad_de_periodos === null && abiertos[0].vigente_hasta === null;
@@ -175,18 +156,10 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
   }, [cargar]);
 
   function setCampo(campo, valor) {
-    setForm((f) => ({
-      ...f,
-      [campo]: valor,
-      // Sin Responsable de pagos no hay a quién facturarle: la marca se apaga con él.
-      ...(campo === 'pagador_persona_id' && !valor ? { factura_al_responsable: false } : {}),
-    }));
+    setForm((f) => ({ ...f, [campo]: valor }));
     if (CONDICIONES_DEL_SERVICIO.includes(campo)) setTocadas((antes) => new Set(antes).add(campo));
-    if (campo === 'pagador_rige_desde' && valor) setRigeDesdeMal(false);
     setGuardado(false);
   }
-
-  const cambiaElPagador = cambiaElResponsableDePagos(form, pagadorDeHoy);
 
   // La condición que no se tocó queda como estaba; la que se tocó pasa por la misma revisión que
   // usa el backend.
@@ -224,30 +197,8 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
       setError(t.formularios.falta_un_dato_obligatorio);
       return;
     }
-    if (cambiaElPagador && !form.pagador_rige_desde) {
-      setRigeDesdeMal(true);
-      document.getElementsByName('pagador_rige_desde')[0]?.focus();
-      return;
-    }
     setGuardando(true);
     setError(null);
-    if (cambiaElPagador) {
-      try {
-        await llamarApiCobros(`/servicios/${servicio.id}/responsable-de-pagos`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            persona_id: form.pagador_persona_id || null,
-            tipo: form.pagador_tipo || null,
-            desde: form.pagador_rige_desde,
-            factura_al_responsable: facturaAlResponsable(form),
-          }),
-        });
-      } catch (fallaDelCambio) {
-        setGuardando(false);
-        setError(mensajeDeError(fallaDelCambio, t));
-        return;
-      }
-    }
     const { error: falla } = await supabase
       .from('condiciones_comerciales_servicio')
       .update({
@@ -282,9 +233,6 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
     setFila(nuevaFila);
     setTocadas(new Set());
     setForm((f) => ({ ...f, ...condicionesVisiblesDe(nuevaFila, regla) }));
-    // Si el cambio rige desde un día que todavía no llegó, el de hoy sigue siendo el anterior: se
-    // vuelve a leer en lugar de suponerlo.
-    if (cambiaElPagador) await cargar();
     onGuardado?.();
   }
 
@@ -306,19 +254,6 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
           />
         </div>
         <FormField
-          label={t.clientes.pagador_tipo}
-          name="pagador_tipo"
-          type="select"
-          value={form.pagador_tipo}
-          onChange={(e) => setCampo('pagador_tipo', e.target.value)}
-          disabled={!puedeEditar}
-        >
-          <option value="">{t.clientes.pagador_tipo_cliente}</option>
-          {TIPOS_DE_PAGADOR_POSIBLES.filter((f) => f !== TIPOS_DE_PAGADOR.CLIENTE).map((f) => (
-            <option key={f} value={f}>{traducirValor(t.clientes, `pagador_tipo_${f}`)}</option>
-          ))}
-        </FormField>
-        <FormField
           label={t.clientes.plazo_de_pago}
           name="dias_hasta_el_vencimiento"
           type="number"
@@ -328,39 +263,6 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
           onChange={(e) => setCampo('dias_hasta_el_vencimiento', e.target.value)}
           disabled={!puedeEditar}
         />
-        <div className="molde-ancho">
-          <SelectorDePersona
-            name="pagador_persona_id"
-            label={t.clientes.pagador_legajo}
-            valor={form.pagador_persona_id}
-            alElegir={(personaId) => setCampo('pagador_persona_id', personaId)}
-            deshabilitado={!puedeEditar}
-          />
-        </div>
-        {form.pagador_persona_id && (
-          <div className="molde-ancho">
-            <FormField
-              label={t.clientes.factura_al_responsable}
-              name="factura_al_responsable"
-              type="checkbox"
-              checked={form.factura_al_responsable === true}
-              onChange={(e) => setCampo('factura_al_responsable', e.target.checked)}
-              disabled={!puedeEditar}
-            />
-          </div>
-        )}
-        {cambiaElPagador && (
-          <FormField
-            label={t.clientes.pagador_rige_desde}
-            name="pagador_rige_desde"
-            type="date"
-            required
-            value={form.pagador_rige_desde}
-            error={rigeDesdeMal ? t.formularios.falta_un_dato_obligatorio : undefined}
-            onChange={(e) => setCampo('pagador_rige_desde', e.target.value)}
-            disabled={!puedeEditar}
-          />
-        )}
         <FormField
           label={tc.frecuencia_de_cobro}
           name="frecuencia_de_cobro"
@@ -428,8 +330,14 @@ export function PagosDelServicio({ servicio, puedeEditar, puedeRegistrar, esAdmi
       )}
       {/* Cómo se actualiza el precio de este Servicio. Lo construye otro trabajo, en su propio archivo. */}
       <ActualizacionDelServicio servicioId={servicio.id} />
-      {/* Si el Responsable de pagos firmó y qué documentos faltan. Avisa, no bloquea. */}
+      <ResponsablesDePagosDelServicio
+        servicioId={servicio.id}
+        puedeEditar={puedeEditar}
+        alCambiar={() => setVueltaDeLasFirmas((n) => n + 1)}
+      />
+      {/* Si cada Responsable de pagos firmó y qué documentos faltan. Avisa, no bloquea. */}
       <EstadoDelPagador
+        key={vueltaDeLasFirmas}
         servicioId={servicio.id}
         clienteId={servicio.cliente_id}
         puedeRegistrar={puedeRegistrar}

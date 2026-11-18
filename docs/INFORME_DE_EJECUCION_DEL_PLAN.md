@@ -131,10 +131,17 @@ que todavía no se mandaron a facturar se vuelven a armar solas, ya partidas. Si
 ya está en una factura emitida, con cobros o con correcciones, el sistema no hace ese cambio y
 avisa que se elija un día posterior a esa factura. La firma del anterior sigue valiendo para sus
 días, y el nuevo firma su propio documento. Si el anterior tenía un documento sin firmar, ese
-documento se anula. El Responsable de pagos que desiste se anota con el mismo cambio con fecha: el
-Servicio queda sin Responsable de pagos desde ese día, y la factura sigue saliendo a nombre del
-Contratante. También quedó corregida una falla de la pestaña Pagos, que no dejaba abrirla. Del
-Responsable de pagos queda en el plan más de un Responsable por día.
+documento se anula. También quedó corregida una falla de la pestaña Pagos, que no dejaba abrirla.
+
+Un Servicio ahora puede tener varios Responsables de pagos a la vez. En la pestaña Pagos del
+Servicio están todos en una lista, cada uno con el día desde el que rige y el día hasta el que
+rige, o «Sin fecha de fin». El botón «Agregar Responsable de pagos» suma uno más sin sacar a los
+otros. El que desiste se anota con «Cambiar fecha de fin»: deja de regir después de ese día, y la
+factura sigue saliendo a nombre del Contratante. La misma persona no puede estar dos veces en los
+mismos días. Cada uno firma su propio documento. Con la opción de la Prestadora encendida, para
+programar guardias tienen que haber firmado todos los que rigen hoy. La factura sale a nombre del
+Contratante. La indicación «Facturar a su nombre» va en un solo Responsable de pagos por día, y el
+sistema no deja ponerla en dos. Con la opción apagada y sin la indicación, nada cambia.
 
 ## Cómo se comprobó
 

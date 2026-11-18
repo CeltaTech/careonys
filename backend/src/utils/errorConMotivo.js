@@ -157,6 +157,12 @@ const ESTADO_POR_MOTIVO = {
   // Un cambio de Responsable de pagos que caería sobre días de una factura ya emitida, con cobros o con correcciones.
   // Es 409 por lo mismo: el pedido está bien armado y choca con lo que ya se facturó.
   cambio_de_pagador_con_factura_emitida: 409,
+  // Los Responsables de pagos de un Servicio. La misma persona dos veces en los mismos días, o la
+  // indicación de facturarle a uno en días en que ya la lleva otro, son 409: el pedido está bien
+  // armado y choca con lo que ya está cargado. Un hasta anterior al desde es 400: el dato vino mal.
+  responsable_de_pagos_repetido: 409,
+  responsable_de_pagos_con_otra_marca: 409,
+  responsable_de_pagos_hasta_antes_del_desde: 400,
   dato_invalido: 400,
   // Los formularios declarados. El incompleto es 400 porque el dato vino mal cargado, y viaja con
   // la lista de lo que falta para que quien trabaja vea todo junto y no de a un renglón por vez.

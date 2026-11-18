@@ -12,18 +12,21 @@ import { ApoderadoDelCliente } from './ApoderadoDelCliente';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
-/* Si el Pagador de este Servicio está definido, ahí donde se lo elige.
+/* Si cada Responsable de pagos de este Servicio firmó, ahí donde se lo elige.
    ==========================================================================
 
-   POR QUÉ ACÁ Y NO EN OTRA PANTALLA. Apuntar a una persona como Pagador no la convierte
-   en Pagador: lo que la convierte es que haya asumido la obligación de pagar y lo haya firmado.
-   Quien la elige tiene que ver en ese mismo momento si la firma está y qué documentos faltan, sin ir a
-   buscarlo a ningún lado. Enterarse el día que hay que cobrar es tarde.
+   POR QUÉ ACÁ Y NO EN OTRA PANTALLA. Apuntar a una persona como Responsable de pagos no la
+   convierte en Responsable de pagos: lo que la convierte es que haya asumido la obligación de pagar
+   y lo haya firmado. Quien la elige tiene que ver en ese mismo momento si la firma está y qué
+   documentos faltan, sin ir a buscarlo a ningún lado. Enterarse el día que hay que cobrar es tarde.
+
+   UNA FILA POR RESPONSABLE DE PAGOS. Un Servicio puede tener varios a la vez, y cada uno firma lo
+   suyo: cada fila tiene su firma y sus botones. Llegan los que rigen hoy o van a regir; los que ya
+   terminaron no tienen nada pendiente de firmar.
 
    NO BLOQUEA NADA. La contratación sigue, el Servicio se presta y el Cliente se da de alta igual.
 
-   LA FIRMA SE VE POR LA FECHA. Con fecha, firmó; sin fecha, no. Si después cambió el Pagador, junto
-   a la fecha aparece quién firmó: sola, se leería como la firma del nombre que tiene al lado. */
+   LA FIRMA SE VE POR LA FECHA. Con fecha, firmó; sin fecha, no. */
 export function EstadoDelPagador({ servicioId, clienteId, puedeRegistrar, esAdmin }) {
   const { t, locale } = useLocale();
   const [estado, setEstado] = useState('cargando');
@@ -52,13 +55,13 @@ export function EstadoDelPagador({ servicioId, clienteId, puedeRegistrar, esAdmi
     recargar();
   }, [recargar]);
 
-  async function generarConsentimiento() {
+  async function generarConsentimiento(personaId) {
     setTrabajando(true);
     setError(null);
     try {
       const { consentimiento } = await llamarApiPanel(
         `/cuentas/servicio/${servicioId}/pagador/consentimiento`,
-        { method: 'POST' },
+        { method: 'POST', body: JSON.stringify({ persona_id: personaId }) },
       );
       setDocumentoAVer({ texto: consentimiento.documento_texto, idioma: consentimiento.documento_idioma });
       await recargar();
@@ -123,17 +126,87 @@ export function EstadoDelPagador({ servicioId, clienteId, puedeRegistrar, esAdmi
   }
 
   const {
-    pagador,
-    firmadoPorOtro,
-    consentimientoPendiente,
-    consentimientoCerrado,
+    responsables,
     documentos,
     documentosFaltantes,
     documentosVencidos,
-    pendienteConEmail,
-    cerradoConEmail,
     textos: textosDeLaBase,
   } = datos;
+  const hayResponsables = (responsables ?? []).length > 0;
+
+  // Los botones de una fila. Con un documento pendiente, son de ése; si no, del firmado.
+  function accionesDe(responsable) {
+    const { persona, consentimientoPendiente, consentimientoCerrado, pendienteConEmail, cerradoConEmail } = responsable;
+    if (consentimientoPendiente) {
+      return (
+        <>
+          <Button
+            variant="secondary"
+            onClick={() => setDocumentoAVer({ texto: consentimientoPendiente.documento_texto, idioma: consentimientoPendiente.documento_idioma })}
+          >
+            {textos.ver_documento}
+          </Button>{' '}
+          {puedeRegistrar && (
+            <>
+              <Button variant="secondary" onClick={() => anular(consentimientoPendiente.id)} disabled={trabajando}>
+                {textos.anular}
+              </Button>{' '}
+              {pendienteConEmail && (
+                <>
+                  <Button variant="secondary" onClick={() => enviar(consentimientoPendiente.id)} disabled={trabajando}>
+                    {textosDeLaBase.enviar}
+                  </Button>{' '}
+                </>
+              )}
+              <Button onClick={() => setFirmaARegistrar(consentimientoPendiente.id)} disabled={trabajando}>
+                {textos.registrar_firma}
+              </Button>
+            </>
+          )}
+        </>
+      );
+    }
+    return (
+      <>
+        {consentimientoCerrado && (
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setDocumentoAVer({ texto: consentimientoCerrado.documento_texto, idioma: consentimientoCerrado.documento_idioma, firmadoCon: consentimientoCerrado.firmadoCon })}
+            >
+              {textos.ver_documento}
+            </Button>{' '}
+          </>
+        )}
+        {consentimientoCerrado?.archivo_firmado_url && (
+          <>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                verArchivo(
+                  `/cuentas/servicio/${servicioId}/pagador/consentimiento/${consentimientoCerrado.id}/documento`,
+                )
+              }
+            >
+              {textos.ver_documento_firmado}
+            </Button>{' '}
+          </>
+        )}
+        {puedeRegistrar && consentimientoCerrado && cerradoConEmail && (
+          <>
+            <Button variant="secondary" onClick={() => enviar(consentimientoCerrado.id)} disabled={trabajando}>
+              {textosDeLaBase.enviar}
+            </Button>{' '}
+          </>
+        )}
+        {puedeRegistrar && (
+          <Button onClick={() => generarConsentimiento(persona.id)} disabled={trabajando}>
+            {trabajando ? t.comun.guardando : textos.generar}
+          </Button>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -143,99 +216,50 @@ export function EstadoDelPagador({ servicioId, clienteId, puedeRegistrar, esAdmi
         </div>
         {error && <Alert variant="error">{error}</Alert>}
 
-        {/* Sin persona elegida no hay a quién hacerle firmar nada. */}
-        {!pagador ? (
+        {/* Sin Responsable de pagos no hay a quién hacerle firmar nada. */}
+        {!hayResponsables ? (
           <Alert variant="info">{textos.sin_pagador}</Alert>
         ) : (
-          <>
-            <div className="panel-grilla panel-columnas-3">
-              <div className="tarjeta-dato"><b>{pagador.nombre}</b></div>
-              {consentimientoCerrado && (
-                <div className="tarjeta-dato">
-                  {firmadoPorOtro && (
-                    <div><b>{consentimientoCerrado.firmante_nombre ?? consentimientoCerrado.pagador_nombre}</b></div>
-                  )}
-                  <b>{new Date(consentimientoCerrado.cerrado_en).toLocaleDateString(locale)}</b>
-                  {/* Con un documento pendiente, los botones de abajo son de ése: éste va junto a la fecha. */}
-                  {consentimientoPendiente && puedeRegistrar && cerradoConEmail && (
-                    <div>
-                      <Button variant="secondary" onClick={() => enviar(consentimientoCerrado.id)} disabled={trabajando}>
-                        {textosDeLaBase.enviar}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="molde-acciones">
-              {consentimientoPendiente ? (
-                <>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setDocumentoAVer({ texto: consentimientoPendiente.documento_texto, idioma: consentimientoPendiente.documento_idioma })}
-                  >
-                    {textos.ver_documento}
-                  </Button>
-                  {puedeRegistrar && (
-                    <>
-                      <Button variant="secondary" onClick={() => anular(consentimientoPendiente.id)} disabled={trabajando}>
-                        {textos.anular}
-                      </Button>
-                      {pendienteConEmail && (
-                        <Button variant="secondary" onClick={() => enviar(consentimientoPendiente.id)} disabled={trabajando}>
-                          {textosDeLaBase.enviar}
-                        </Button>
+          <div className="tarjeta-desplazable">
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{textos.col_responsable}</th>
+                  <th>{textos.col_firmado_el}</th>
+                  <th>{textos.documento_acciones}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {responsables.map((responsable) => (
+                  <tr key={responsable.id}>
+                    <td><b>{responsable.persona?.nombre ?? '—'}</b></td>
+                    <td>
+                      {responsable.consentimientoCerrado
+                        ? new Date(responsable.consentimientoCerrado.cerrado_en).toLocaleDateString(locale)
+                        : '—'}
+                      {/* Con un documento pendiente, los botones de la fila son de ése: éste va junto a la fecha. */}
+                      {responsable.consentimientoPendiente && responsable.consentimientoCerrado
+                        && puedeRegistrar && responsable.cerradoConEmail && (
+                        <div>
+                          <Button variant="secondary" onClick={() => enviar(responsable.consentimientoCerrado.id)} disabled={trabajando}>
+                            {textosDeLaBase.enviar}
+                          </Button>
+                        </div>
                       )}
-                      <Button onClick={() => setFirmaARegistrar(consentimientoPendiente.id)} disabled={trabajando}>
-                        {textos.registrar_firma}
-                      </Button>
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  {consentimientoCerrado && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => setDocumentoAVer({ texto: consentimientoCerrado.documento_texto, idioma: consentimientoCerrado.documento_idioma, firmadoCon: consentimientoCerrado.firmadoCon })}
-                    >
-                      {textos.ver_documento}
-                    </Button>
-                  )}
-                  {consentimientoCerrado?.archivo_firmado_url && (
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        verArchivo(
-                          `/cuentas/servicio/${servicioId}/pagador/consentimiento/${consentimientoCerrado.id}/documento`,
-                        )
-                      }
-                    >
-                      {textos.ver_documento_firmado}
-                    </Button>
-                  )}
-                  {puedeRegistrar && cerradoConEmail && (
-                    <Button variant="secondary" onClick={() => enviar(consentimientoCerrado.id)} disabled={trabajando}>
-                      {textosDeLaBase.enviar}
-                    </Button>
-                  )}
-                  {puedeRegistrar && (
-                    <Button onClick={generarConsentimiento} disabled={trabajando}>
-                      {trabajando ? t.comun.guardando : textos.generar}
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
-          </>
+                    </td>
+                    <td>{accionesDe(responsable)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
       <ApoderadoDelCliente clienteId={clienteId} funcion="pagos" puedeRegistrar={puedeRegistrar} esAdmin={esAdmin} onCambio={recargar} />
 
       {/* Los documentos son aparte de la firma: se cuentan y se muestran por separado. */}
-      {pagador && documentos.length > 0 && (
+      {hayResponsables && documentos.length > 0 && (
         <section className="panel-tarjeta tarjeta-desplazable">
           <div className="panel-tarjeta-titulo">
             <h2>{textos.documentos_titulo}</h2>

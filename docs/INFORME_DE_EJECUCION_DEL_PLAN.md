@@ -126,7 +126,7 @@ siguientes. Cada una cobra sus propios días, y entre las dos suman el período 
 anterior sigue valiendo para sus días, y el nuevo firma su propio documento. Si el anterior tenía un
 documento sin firmar, ese documento se anula. Las facturas de esos días que todavía no se mandaron a
 facturar se vuelven a armar solas, ya partidas. Si alguno de esos días ya está en una factura
-emitida o con cobros, el sistema no hace el cambio y avisa que se elija un día posterior a esa
+emitida, con cobros o con correcciones, el sistema no hace el cambio y avisa que se elija un día posterior a esa
 factura. También quedó corregida una falla de la pestaña Pagos, que no dejaba abrirla. Del
 Responsable de pagos quedan en el plan el Responsable que desiste y más de un Responsable por día.
 

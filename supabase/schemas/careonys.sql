@@ -33742,7 +33742,8 @@ BEGIN
        AND (v_es_el_primero OR f.periodo_hasta >= NEW.vigente_desde)
        AND (v_siguiente IS NULL OR f.periodo < v_siguiente)
        AND (f.facturado_at IS NOT NULL OR f.monto_facturado IS NOT NULL OR f.comprobante_subido_at IS NOT NULL
-            OR EXISTS (SELECT 1 FROM public.cobros_cliente c WHERE c.factura_id = f.id))
+            OR EXISTS (SELECT 1 FROM public.cobros_cliente c WHERE c.factura_id = f.id)
+            OR EXISTS (SELECT 1 FROM public.correcciones_factura_cliente r WHERE r.factura_id = f.id))
   ) THEN
     RAISE EXCEPTION 'cambio_de_pagador_con_factura_emitida' USING ERRCODE = 'P0001';
   END IF;

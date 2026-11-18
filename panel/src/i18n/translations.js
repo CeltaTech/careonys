@@ -152,7 +152,7 @@ export const T = {
         // El consentimiento del Pagador. Ninguno de los dos es una falla: falta elegir quién paga,
         // o alguien ya firmó lo que se estaba por anular.
         sin_pagador: 'Elija el responsable de pagos.',
-        cambio_de_pagador_con_factura_emitida: 'Ya hay una factura emitida o con cobros en los días de ese cambio. Elija un día posterior a esa factura.',
+        cambio_de_pagador_con_factura_emitida: 'Ya hay una factura emitida, con cobros o con correcciones en los días de ese cambio. Elija un día posterior a esa factura.',
         falta_la_firma: 'Falta la firma.',
         ningun_asignado_puede_dar_la_via: 'Ningún Asistente asignado puede administrar medicación por esta vía.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni
@@ -3253,7 +3253,7 @@ export const T = {
         entrevista_en_el_pasado: 'That date has already passed. An interview is scheduled for a later time.',
         entrevista_ya_agendada: 'This applicant already has an interview scheduled. To change the day, reschedule it instead of booking another one.',
         sin_pagador: 'Select the party responsible for payments.',
-        cambio_de_pagador_con_factura_emitida: 'An invoice has already been issued or has payments on the days of that change. Choose a day after that invoice.',
+        cambio_de_pagador_con_factura_emitida: 'An invoice has already been issued or has payments or corrections on the days of that change. Choose a day after that invoice.',
         falta_la_firma: 'Signature pending.',
         ningun_asignado_puede_dar_la_via: 'No assigned Assistant can administer medication via this route.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni
@@ -6316,7 +6316,7 @@ export const T = {
         entrevista_en_el_pasado: 'Essa data já passou. Uma entrevista se agenda para mais adiante.',
         entrevista_ya_agendada: 'Este candidato já tem uma entrevista agendada. Para mudar o dia, ela se reagenda, não se agenda outra.',
         sin_pagador: 'Escolha o responsável pelos pagamentos.',
-        cambio_de_pagador_con_factura_emitida: 'Já existe uma fatura emitida ou com pagamentos nos dias dessa alteração. Escolha um dia posterior a essa fatura.',
+        cambio_de_pagador_con_factura_emitida: 'Já existe uma fatura emitida, com pagamentos ou com correções nos dias dessa alteração. Escolha um dia posterior a essa fatura.',
         falta_la_firma: 'Falta a assinatura.',
         ningun_asignado_puede_dar_la_via: 'Nenhum Assistente designado pode administrar medicação por esta via.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni

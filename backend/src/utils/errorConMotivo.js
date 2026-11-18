@@ -154,7 +154,7 @@ const ESTADO_POR_MOTIVO = {
   // firmar nada, y lo que ya se firmó no se anula. Si cayeran en 500 la pantalla diría "algo falló
   // de nuestro lado" cuando no falló nada de este lado.
   sin_pagador: 409,
-  // Un cambio de Responsable de pagos que caería sobre días de una factura ya emitida o con cobros.
+  // Un cambio de Responsable de pagos que caería sobre días de una factura ya emitida, con cobros o con correcciones.
   // Es 409 por lo mismo: el pedido está bien armado y choca con lo que ya se facturó.
   cambio_de_pagador_con_factura_emitida: 409,
   dato_invalido: 400,

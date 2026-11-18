@@ -10,6 +10,7 @@ on:
     paths:
       - 'supabase/**'
       - 'scripts/probar_aislamiento_en_la_base.mjs'
+      - 'scripts/probar_cambio_de_responsable_de_pagos.mjs'
       - 'scripts/verificar_texto_visible.mjs'
       - 'scripts/reglas_del_texto_visible.mjs'
       - '.github/workflows/probar-aislamiento-en-la-base.yml'
@@ -17,6 +18,7 @@ on:
     paths:
       - 'supabase/**'
       - 'scripts/probar_aislamiento_en_la_base.mjs'
+      - 'scripts/probar_cambio_de_responsable_de_pagos.mjs'
       - 'scripts/verificar_texto_visible.mjs'
       - 'scripts/reglas_del_texto_visible.mjs'
   workflow_dispatch:
@@ -42,6 +44,13 @@ jobs:
 
       - name: Probar el aislamiento en la base
         run: node scripts/probar_aislamiento_en_la_base.mjs
+
+      # Un cambio de Responsable de pagos no puede borrar una factura sin mandar que tiene
+      # correcciones: la base tiene que rechazarlo. Ver el encabezado de
+      # `scripts/probar_cambio_de_responsable_de_pagos.mjs`.
+      - name: Probar el cambio de Responsable de pagos
+        if: always()
+        run: node scripts/probar_cambio_de_responsable_de_pagos.mjs
 
       # Los textos que escribió la plataforma en la base —advertencias legales, consentimientos,
       # catálogos generales— no están en ningún archivo de pantalla. Se revisan acá, sobre la

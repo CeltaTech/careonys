@@ -15,6 +15,7 @@ import { con } from '../../lib/textos';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { ElCalculoDeCandidatos } from './ElCalculoDeCandidatos';
+import { LaFirmaDelResponsableDePagos } from './LaFirmaDelResponsableDePagos';
 import { TurnosSinCubrirTab } from './TurnosSinCubrirTab';
 import { AutorizacionSignosVitales } from './AutorizacionSignosVitales';
 import { ListaPropiaDeLaPrestadora } from './ListaPropiaDeLaPrestadora';
@@ -28,6 +29,7 @@ export function ConfiguracionCuidado() {
   return (
     <div className="molde-pila">
       <TabServicios />
+      <LaFirmaDelResponsableDePagos />
       <ElCalculoDeCandidatos />
       <TurnosSinCubrirTab />
       <TabVitales />

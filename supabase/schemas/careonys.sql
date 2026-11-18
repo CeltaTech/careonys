@@ -3411,6 +3411,23 @@ COMMENT ON FUNCTION "interno"."exigir_paciente_y_servicio_del_mismo_contratante"
 
 
 
+CREATE OR REPLACE FUNCTION "interno"."falta_la_firma_del_pagador"("p_servicio" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT EXISTS (
+    SELECT 1
+      FROM servicios s
+      JOIN prestadoras p ON p.id = s.prestadora_id
+     WHERE s.id = p_servicio
+       AND p.guardias_solo_con_firma_del_pagador
+  ) AND NOT interno.firma_del_pagador_vigente(p_servicio);
+$$;
+
+
+ALTER FUNCTION "interno"."falta_la_firma_del_pagador"("p_servicio" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."fila_del_pedido"("p_tabla" "text", "p_columnas" "text"[]) RETURNS "text"
     LANGUAGE "plpgsql" STABLE
     SET "search_path" TO 'public', 'interno'
@@ -3433,6 +3450,27 @@ $$;
 
 
 ALTER FUNCTION "interno"."fila_del_pedido"("p_tabla" "text", "p_columnas" "text"[]) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "interno"."firma_del_pagador_vigente"("p_servicio" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT EXISTS (
+    SELECT 1
+      FROM condiciones_comerciales_servicio c
+      JOIN consentimientos_pagador k
+        ON k.servicio_id = c.servicio_id
+       AND k.prestadora_id = c.prestadora_id
+       AND k.pagador_persona_id = c.pagador_persona_id
+     WHERE c.servicio_id = p_servicio
+       AND c.pagador_persona_id IS NOT NULL
+       AND k.estado = 'cerrado'
+  );
+$$;
+
+
+ALTER FUNCTION "interno"."firma_del_pagador_vigente"("p_servicio" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."firmante_autorizacion_signos_vitales"("p_paciente" "uuid") RETURNS "uuid"
@@ -5575,29 +5613,43 @@ $$;
 ALTER FUNCTION "interno"."se_habilita_hacia_abajo_y_nunca_a_uno_mismo"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "interno"."servicio_a_revisar_al_programar"("p_nuevo" "jsonb", "p_viejo" "jsonb", "p_operacion" "text") RETURNS "uuid"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT CASE
+    -- Una guardia que genera una serie: la serie ya se revisó al crearse.
+    WHEN p_nuevo ->> 'serie_id' IS NOT NULL THEN NULL
+    WHEN p_nuevo ->> 'servicio_id' IS NULL THEN NULL
+    -- Un cambio que no la pasa a otro Servicio.
+    WHEN p_operacion = 'UPDATE'
+         AND (p_nuevo ->> 'servicio_id') IS NOT DISTINCT FROM (p_viejo ->> 'servicio_id') THEN NULL
+    ELSE (p_nuevo ->> 'servicio_id')::uuid
+  END;
+$$;
+
+
+ALTER FUNCTION "interno"."servicio_a_revisar_al_programar"("p_nuevo" "jsonb", "p_viejo" "jsonb", "p_operacion" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."sin_coordinador_no_hay_guardias"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
+DECLARE
+  v_servicio uuid := interno.servicio_a_revisar_al_programar(
+    to_jsonb(NEW), CASE WHEN TG_OP = 'UPDATE' THEN to_jsonb(OLD) END, TG_OP);
 BEGIN
-  -- Las series no tienen `serie_id`: se pregunta por el registro entero para que la misma función
-  -- sirva a las dos tablas.
-  IF to_jsonb(NEW) ->> 'serie_id' IS NOT NULL THEN
-    RETURN NEW;
-  END IF;
-  IF NEW.servicio_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-  IF TG_OP = 'UPDATE' AND NEW.servicio_id IS NOT DISTINCT FROM OLD.servicio_id THEN
+  IF v_servicio IS NULL THEN
     RETURN NEW;
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM servicios s
-     WHERE s.id = NEW.servicio_id
+     WHERE s.id = v_servicio
        AND s.prestadora_id = NEW.prestadora_id
        AND s.coordinador_id IS NOT NULL
   ) THEN
-    RAISE EXCEPTION 'servicio_sin_coordinador:%', NEW.servicio_id;
+    RAISE EXCEPTION 'servicio_sin_coordinador:%', v_servicio;
   END IF;
   RETURN NEW;
 END;
@@ -5605,6 +5657,28 @@ $$;
 
 
 ALTER FUNCTION "interno"."sin_coordinador_no_hay_guardias"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_servicio uuid := interno.servicio_a_revisar_al_programar(
+    to_jsonb(NEW), CASE WHEN TG_OP = 'UPDATE' THEN to_jsonb(OLD) END, TG_OP);
+BEGIN
+  IF v_servicio IS NULL THEN
+    RETURN NEW;
+  END IF;
+  IF interno.falta_la_firma_del_pagador(v_servicio) THEN
+    RAISE EXCEPTION 'servicio_sin_firma_del_pagador' USING DETAIL = v_servicio::text;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"() OWNER TO "postgres";
 
 
 
@@ -8493,6 +8567,21 @@ $$;
 
 
 ALTER FUNCTION "public"."exigir_paciente_del_turno"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."falta_la_firma_del_pagador"("p_servicio" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT interno.falta_la_firma_del_pagador(s.id)
+    FROM servicios s
+   WHERE s.id = p_servicio
+     AND s.prestadora_id = interno.prestadora_actual()
+     AND interno.es_personal_de_la_prestadora();
+$$;
+
+
+ALTER FUNCTION "public"."falta_la_firma_del_pagador"("p_servicio" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."fijar_descuento_del_servicio"("p_servicio" "uuid", "p_porcentaje" numeric) RETURNS "void"
@@ -15916,6 +16005,7 @@ CREATE TABLE IF NOT EXISTS "public"."prestadoras" (
     "registro_de_accesos_hora_de_fin" time without time zone DEFAULT '20:00:00'::time without time zone NOT NULL,
     "registro_de_accesos_pacientes_por_dia" integer DEFAULT 20 NOT NULL,
     "registro_de_accesos_horas_alrededor_de_la_guardia" integer DEFAULT 12 NOT NULL,
+    "guardias_solo_con_firma_del_pagador" boolean DEFAULT false NOT NULL,
     CONSTRAINT "prestadoras_cierre_por_inactividad_minutos_check" CHECK ((("cierre_por_inactividad_minutos" >= 5) AND ("cierre_por_inactividad_minutos" <= 120))),
     CONSTRAINT "prestadoras_dias_para_aceptar_la_ubicacion_check" CHECK ((("dias_para_aceptar_la_ubicacion" >= 1) AND ("dias_para_aceptar_la_ubicacion" <= 365))),
     CONSTRAINT "prestadoras_minutos_aviso_previo_guardia_check" CHECK ((("minutos_aviso_previo_guardia" >= 5) AND ("minutos_aviso_previo_guardia" <= 1440))),
@@ -15980,6 +16070,10 @@ COMMENT ON COLUMN "public"."prestadoras"."casilla_envio" IS 'Nombre de la casill
 
 
 COMMENT ON COLUMN "public"."prestadoras"."regla_reenvio" IS 'Identificador del reenvío de las respuestas de esta Prestadora, tal como lo da el servicio de correo. Se abre al darla de alta y se corta cuando se va. Vacío: no hay reenvío y las respuestas se pierden.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."guardias_solo_con_firma_del_pagador" IS 'Verdadero: un Servicio programa guardias sólo con la firma vigente del Responsable de pagos. De fábrica, falso.';
 
 
 
@@ -20426,6 +20520,14 @@ CREATE OR REPLACE TRIGGER "sin_coordinador_no_hay_guardias" BEFORE INSERT OR UPD
 
 
 CREATE OR REPLACE TRIGGER "sin_coordinador_no_hay_guardias" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_coordinador_no_hay_guardias"();
+
+
+
+CREATE OR REPLACE TRIGGER "sin_firma_del_pagador_no_hay_guardias" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"();
+
+
+
+CREATE OR REPLACE TRIGGER "sin_firma_del_pagador_no_hay_guardias" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"();
 
 
 
@@ -28926,6 +29028,32 @@ GRANT ALL ON FUNCTION "interno"."sin_coordinador_no_hay_guardias"() TO "service_
 
 
 
+REVOKE ALL ON FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."servicio_a_revisar_al_programar"("p_nuevo" "jsonb", "p_viejo" "jsonb", "p_operacion" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."servicio_a_revisar_al_programar"("p_nuevo" "jsonb", "p_viejo" "jsonb", "p_operacion" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."firma_del_pagador_vigente"("p_servicio" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."firma_del_pagador_vigente"("p_servicio" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."falta_la_firma_del_pagador"("p_servicio" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."falta_la_firma_del_pagador"("p_servicio" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."falta_la_firma_del_pagador"("p_servicio" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."falta_la_firma_del_pagador"("p_servicio" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."falta_la_firma_del_pagador"("p_servicio" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."solicitud_de_derecho_la_escribe_la_base"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."solicitud_de_derecho_la_escribe_la_base"() TO "service_role";
 
@@ -32323,6 +32451,10 @@ GRANT UPDATE("dias_para_aceptar_la_ubicacion") ON TABLE "public"."prestadoras" T
 
 
 GRANT UPDATE("control_de_ubicacion_en_el_turno_desde") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+
+
+
+GRANT UPDATE("guardias_solo_con_firma_del_pagador") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 

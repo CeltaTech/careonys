@@ -148,6 +148,27 @@ describe('la configuración de la Prestadora', () => {
     }
   });
 
+  it('la firma del Responsable de pagos para programar guardias se guarda en su propia fila', async () => {
+    for (const valor of [true, false]) {
+      llamadas = [];
+      const { estado } = await pedir('PATCH', '/guardias/firma-del-pagador', { guardias_solo_con_firma_del_pagador: valor });
+      assert.equal(estado, 200);
+      const cambio = unaSola('PATCH /rest/v1/prestadoras');
+      conElTrabajoDeLaPrestadora(cambio);
+      assert.equal(cambio.url.searchParams.get('id'), `eq.${PRESTADORA}`);
+      assert.deepEqual(JSON.parse(cambio.cuerpo), { guardias_solo_con_firma_del_pagador: valor });
+    }
+  });
+
+  it('la firma del Responsable de pagos no se guarda con algo que no sea sí o no', async () => {
+    for (const valor of [undefined, 'true', 1, null]) {
+      llamadas = [];
+      const { estado } = await pedir('PATCH', '/guardias/firma-del-pagador', { guardias_solo_con_firma_del_pagador: valor });
+      assert.equal(estado, 400, `pasó con ${valor}`);
+      assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/prestadoras').length, 0);
+    }
+  });
+
   it('la revisión con IA de los reportes se lee con el trabajo de la Prestadora', async () => {
     const { estado } = await pedir('GET', '/alertas-ia');
     assert.equal(estado, 200);

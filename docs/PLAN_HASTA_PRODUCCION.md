@@ -112,14 +112,9 @@ de una Prestadora no lee nada de otra.
 
 **26. Usted** — Y una que aparece al cruzar el acto con la regla del producto: **el Pagador.** La
 regla dice que quien asume la obligación de pagar queda definido recién cuando firma, y que eso
-tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este acto. Pero
-la firma vive hoy en otra solapa, Pagos, dentro del Servicio, con su propio estado y sus
-botones de generar el documento y registrar la firma; y el único requisito que este acto pone
-para habilitar un Servicio es el coordinador asignado. ¿Son dos requisitos, y un Servicio sin
-Pagador firmado tampoco se habilita? ¿O el acto muestra cómo está esa firma y deja seguir?
+tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este acto.
 
-Con esa pregunta se resuelve todo lo del Pagador junto.
-Lo que falta: **el cambio de Pagador** con el Servicio en curso, que hoy sólo muestra quién firmó;
+Lo que falta del Pagador: **el cambio de Pagador** con el Servicio en curso, que hoy sólo muestra quién firmó;
 **el Pagador que desiste**, que no se puede anotar, porque un consentimiento firmado no se revoca;
 y **más de un Pagador**, que la regla del producto admite y la base no, porque guarda uno solo por
 Servicio.

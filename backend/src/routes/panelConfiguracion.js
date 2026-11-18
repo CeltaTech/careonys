@@ -2589,6 +2589,35 @@ panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res
   res.json({ ok: true });
 });
 
+// --- Si un Servicio programa guardias sólo con la firma vigente del Responsable de pagos. Lo
+//     decide cada Prestadora; de fábrica no se exige. La base lo hace cumplir al programar. Mismo
+//     patrón que /guardias/horizonte-generacion. ---
+panelConfiguracionRouter.get('/guardias/firma-del-pagador', async (req, res) => {
+  const { data, error } = await clienteDelPedido(req)
+    .from('prestadoras')
+    .select('guardias_solo_con_firma_del_pagador')
+    .single();
+  if (error) return responderError(res, error);
+  res.json({ guardias_solo_con_firma_del_pagador: data.guardias_solo_con_firma_del_pagador });
+});
+
+panelConfiguracionRouter.patch('/guardias/firma-del-pagador', async (req, res) => {
+  const { guardias_solo_con_firma_del_pagador: soloConFirma } = req.body ?? {};
+  if (typeof soloConFirma !== 'boolean') {
+    return responderError(res, new ErrorConMotivo('faltan_datos', 'firma del pagador: datos inválidos'));
+  }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  const { error } = await enLaPrestadora(prestadoraId, 'firma del pagador', (dbDelTrabajo) =>
+    dbDelTrabajo
+      .from('prestadoras')
+      .update({ guardias_solo_con_firma_del_pagador: soloConFirma })
+      .eq('id', prestadoraId)
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
 // --- Ausencia automática por falta de check-in GPS (Etapa 3, pendiente #63): antes solo
 //     editable por SQL directo contra Supabase, violando "Configuración sobre programación"
 //     (CLAUDE.md §2). Ver backend/src/routes/appAsistentes.js (uso de metros_tolerancia_checkin

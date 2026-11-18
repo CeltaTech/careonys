@@ -1318,6 +1318,131 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
 }
 
 // ---------------------------------------------------------------------------
+// Quinta comprobación: la firma del Responsable de pagos
+// ---------------------------------------------------------------------------
+// Cada Prestadora decide si un Servicio programa guardias sin la firma vigente de su Responsable
+// de pagos. Con la opción encendida la base rechaza la guardia, y la pregunta del Panel contesta
+// lo mismo que el rechazo. Con la firma cerrada, o con la opción apagada, la guardia pasa. Una
+// guardia programada antes de encender la opción sigue igual. Se prueba con la sesión de la
+// administración y de la Coordinadora, sobre un Servicio que nace para la prueba. Datos inventados.
+
+async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
+  console.log('\n== La firma del Responsable de pagos ==\n');
+  const problemas = [];
+  const bien = (que) => console.log(verde(`  ✓ ${que}`));
+  const mal = (que, por) => {
+    console.log(rojo(`  ✗ ${que}`));
+    console.log(rojo(`      ${por}`));
+    problemas.push(`firma del Responsable de pagos: ${que} — ${por}`);
+  };
+
+  const admin = await entrar(base, llavePublica, ADMINISTRADORA, d.prestadora);
+  const coordinadora = await entrar(base, llavePublica, COORDINADORA, d.prestadora);
+  const [[carla]] = consultarBase(`SELECT id FROM public.usuarios WHERE lower(email) = '${COORDINADORA}';`);
+  const [[cargadoPor]] = consultarBase(`SELECT id FROM public.usuarios WHERE lower(email) = '${ADMINISTRADORA}';`);
+  const [[cliente]] = consultarBase(`SELECT cliente_id FROM public.pacientes WHERE id = '${d.paciente}';`);
+  const [[pagador]] = consultarBase(`SELECT id FROM public.personas WHERE prestadora_id = '${d.prestadora}' ORDER BY created_at LIMIT 1;`);
+  const [[opcionAntes]] = consultarBase(`SELECT guardias_solo_con_firma_del_pagador::text FROM public.prestadoras WHERE id = '${d.prestadora}';`);
+  const opcion = (encendida) =>
+    consultarBase(`UPDATE public.prestadoras SET guardias_solo_con_firma_del_pagador = ${encendida} WHERE id = '${d.prestadora}';`);
+
+  const pedir = async (token, metodo, ruta, cuerpo) => {
+    const r = await fetch(`${base}/rest/v1/${ruta}`, {
+      method: metodo,
+      headers: {
+        apikey: llavePublica,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+    });
+    return { estado: r.status, cuerpo: await r.json().catch(() => null) };
+  };
+  const faltaLaFirma = async (token, servicio) =>
+    (await pedir(token, 'POST', 'rpc/falta_la_firma_del_pagador', { p_servicio: servicio })).cuerpo;
+
+  const alta = await pedir(admin, 'POST', 'servicios', {
+    prestadora_id: d.prestadora,
+    cliente_id: cliente,
+    etiqueta: 'Prueba de la firma del Responsable de pagos',
+  });
+  const servicio = alta.cuerpo?.[0]?.id;
+  if (!servicio) {
+    mal('la administración da de alta un Servicio', `${alta.estado} ${JSON.stringify(alta.cuerpo)}`);
+    return problemas;
+  }
+
+  const guardiaDelDia = (dias, hora) => ({
+    prestadora_id: d.prestadora,
+    paciente_id: d.paciente,
+    servicio_id: servicio,
+    fecha: new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    hora_inicio: hora,
+    hora_fin: '12:00',
+    modalidad: 'presencial',
+  });
+
+  try {
+    await pedir(admin, 'PATCH', `servicios?id=eq.${servicio}`, { coordinador_id: carla });
+
+    opcion(false);
+    const previa = await pedir(admin, 'POST', 'guardias', guardiaDelDia(41, '08:00'));
+    const idPrevia = previa.cuerpo?.[0]?.id;
+    if (idPrevia) bien('con la opción apagada, el Servicio sin firma tiene guardias');
+    else mal('con la opción apagada, el Servicio sin firma tiene guardias', `${previa.estado} ${JSON.stringify(previa.cuerpo)}`);
+    if ((await faltaLaFirma(admin, servicio)) === false) bien('con la opción apagada, el Panel no avisa nada');
+    else mal('con la opción apagada, el Panel no avisa nada', 'la pregunta contestó otra cosa que falso');
+
+    opcion(true);
+    const sinFirma = await pedir(coordinadora, 'POST', 'guardias', guardiaDelDia(42, '08:00'));
+    if (sinFirma.estado >= 400 && sinFirma.cuerpo?.message === 'servicio_sin_firma_del_pagador') {
+      bien('con la opción encendida y sin firma, no se programa la guardia');
+    } else {
+      mal('con la opción encendida y sin firma, no se programa la guardia', `${sinFirma.estado} ${JSON.stringify(sinFirma.cuerpo)}`);
+    }
+    if ((await faltaLaFirma(admin, servicio)) === true && (await faltaLaFirma(coordinadora, servicio)) === true) {
+      bien('el Panel avisa lo mismo que rechaza la base');
+    } else {
+      mal('el Panel avisa lo mismo que rechaza la base', 'la pregunta no contestó verdadero');
+    }
+
+    if (idPrevia) {
+      const [[sigue]] = consultarBase(`SELECT count(*)::text FROM public.guardias WHERE id = '${idPrevia}';`);
+      const cambio = await pedir(admin, 'PATCH', `guardias?id=eq.${idPrevia}`, { hora_inicio: '09:00' });
+      if (sigue === '1' && cambio.estado === 200) bien('la guardia programada antes sigue igual y se puede corregir');
+      else mal('la guardia programada antes sigue igual y se puede corregir', `${cambio.estado} ${JSON.stringify(cambio.cuerpo)}`);
+    }
+
+    consultarBase(
+      `INSERT INTO public.condiciones_comerciales_servicio (servicio_id, prestadora_id, pagador_persona_id)
+       VALUES ('${servicio}', '${d.prestadora}', '${pagador}')
+       ON CONFLICT (servicio_id) DO UPDATE SET pagador_persona_id = EXCLUDED.pagador_persona_id;`,
+    );
+    consultarBase(
+      `INSERT INTO public.consentimientos_pagador
+         (prestadora_id, cliente_id, servicio_id, pagador_persona_id, pagador_nombre, documento_texto,
+          documento_verificador, documento_idioma, estado, cerrado_como, cerrado_en, cargado_por)
+       VALUES ('${d.prestadora}', '${cliente}', '${servicio}', '${pagador}', 'Responsable inventado',
+               'Texto inventado', 'verificador-inventado', 'es-AR', 'cerrado', 'documento_firmado', now(), '${cargadoPor}');`,
+    );
+    const conFirma = await pedir(coordinadora, 'POST', 'guardias', guardiaDelDia(43, '08:00'));
+    if (conFirma.cuerpo?.[0]?.id) bien('con la firma cerrada, la guardia se programa');
+    else mal('con la firma cerrada, la guardia se programa', `${conFirma.estado} ${JSON.stringify(conFirma.cuerpo)}`);
+    if ((await faltaLaFirma(admin, servicio)) === false) bien('con la firma cerrada, el Panel no avisa nada');
+    else mal('con la firma cerrada, el Panel no avisa nada', 'la pregunta contestó otra cosa que falso');
+  } finally {
+    opcion(opcionAntes === 'true');
+    consultarBase(`DELETE FROM public.guardias WHERE servicio_id = '${servicio}';`);
+    consultarBase(`DELETE FROM public.consentimientos_pagador WHERE servicio_id = '${servicio}';`);
+    consultarBase(`DELETE FROM public.condiciones_comerciales_servicio WHERE servicio_id = '${servicio}';`);
+    consultarBase(`DELETE FROM public.servicios WHERE id = '${servicio}';`);
+  }
+
+  return problemas;
+}
+
+// ---------------------------------------------------------------------------
 // Quinta comprobación: lo que carga otro Coordinador queda pendiente
 // ---------------------------------------------------------------------------
 // Un Coordinador que no coordina al Paciente puede proponer un domicilio temporal, pero no queda
@@ -1803,12 +1928,13 @@ async function main() {
   const deLaClase = probarLaClaseEntera();
   const deLaConfiguracion = await probarQuienEscribeLaConfiguracion(entorno, d);
   const delCoordinador = await probarElCoordinadorDelServicio(entorno, d);
+  const deLaFirma = await probarLaFirmaDelResponsableDePagos(entorno, d);
   const deLasCargas = await probarLoQueCargaOtroCoordinador(entorno, d);
   const delRecorte = await probarCadaCoordinadorVeSoloLoSuyo(entorno, d);
   const deCadaPersona = await probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d);
   const delRegistro = await probarElRegistroDeAccesos(entorno, d);
   const problemas = [
-    ...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador, ...deLasCargas, ...delRecorte,
+    ...resultado.problemas, ...delHueco, ...deLaClase, ...deLaConfiguracion, ...delCoordinador, ...deLaFirma, ...deLasCargas, ...delRecorte,
     ...deCadaPersona, ...delRegistro,
   ];
 

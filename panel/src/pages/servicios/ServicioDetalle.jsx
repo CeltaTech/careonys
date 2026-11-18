@@ -66,6 +66,10 @@ export function ServicioDetalle() {
   const [reactivando, setReactivando] = useState(false);
   const [servicio, setServicio] = useState(null);
   const [coordinadores, setCoordinadores] = useState([]);
+  // Si al Servicio le falta la firma del Responsable de pagos para programar guardias. Lo
+  // contesta la misma función de la base que rechaza programarlas, así que el aviso y el rechazo
+  // dicen siempre lo mismo.
+  const [faltaLaFirma, setFaltaLaFirma] = useState(false);
   const [asignando, setAsignando] = useState(false);
   const [errorAsignacion, setErrorAsignacion] = useState(null);
   const [contactos, setContactos] = useState(new Map());
@@ -104,7 +108,7 @@ export function ServicioDetalle() {
     // las modalidades, y por sus ids se buscan las incidencias.
     // Quiénes pueden coordinarlo: las cuentas de coordinación activas de la Prestadora. Quien no
     // asigna recibe de la base sólo la suya, que es la del Servicio que está mirando.
-    const [pr, gu, rep, rangos, coord] = await Promise.all([
+    const [pr, gu, rep, rangos, coord, firma] = await Promise.all([
       supabase
         .from('prestaciones')
         .select('id, tipo_servicio, precio_final, moneda, estado, nota, paciente_id, created_at')
@@ -134,9 +138,10 @@ export function ServicioDetalle() {
         .eq('rol', 'coordinador')
         .is('desactivada_en', null)
         .order('apellido'),
+      supabase.rpc('falta_la_firma_del_pagador', { p_servicio: id }),
     ]);
 
-    const falla = pr.error ?? gu.error ?? rep.error ?? coord.error;
+    const falla = pr.error ?? gu.error ?? rep.error ?? coord.error ?? firma.error;
     if (falla) {
       setError(mensajeDeError(falla, t));
       setEstado('error');
@@ -212,6 +217,7 @@ export function ServicioDetalle() {
     );
     setNombresPaciente(Object.fromEntries(conSusFichas(pacientes.data).map((p) => [p.id, p.nombre])));
     setNombresAsistente(Object.fromEntries((asistentes.data ?? []).map((a) => [a.id, a.nombre])));
+    setFaltaLaFirma(firma.data === true);
     setEstado('listo');
   }, [id, prestadoraId, t]);
 
@@ -349,6 +355,7 @@ export function ServicioDetalle() {
       </span>
 
       {!servicio.coordinador_id && <Alert variant="warning">{d.no_habilitado}</Alert>}
+      {faltaLaFirma && <Alert variant="warning">{d.sin_firma_del_pagador}</Alert>}
       {errorAsignacion && <Alert variant="error">{errorAsignacion}</Alert>}
 
       <section className="panel-tarjeta servicios-tarjeta">

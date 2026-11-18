@@ -12,10 +12,12 @@ import { fraseDeLaFirma } from './fraseDeLaFirma.js';
 // Todo lo que le pasa al consentimiento del Pagador: se carga, se cierra con el documento firmado, o se
 // anula porque se cargó otro.
 //
-// SIN ESA FIRMA NO HAY PAGADOR DEFINIDO, Y AUN ASÍ NO SE BLOQUEA NADA. La contratación sigue, el
-// Servicio se presta y el Cliente se da de alta igual. Lo único que cambia es que la pantalla lo
-// dice, ahí donde se elige el Pagador, para que nadie se entere el día que hay que cobrar. Decidir
-// es de quien tiene la responsabilidad, no del sistema.
+// SIN ESA FIRMA NO HAY PAGADOR DEFINIDO, Y QUÉ PASA ENTONCES LO DECIDE CADA PRESTADORA. La pantalla
+// lo dice siempre, ahí donde se elige el Pagador, para que nadie se entere el día que hay que
+// cobrar. Con la opción de la Prestadora apagada, que es como viene de fábrica, no se bloquea
+// nada: la contratación sigue, el Servicio se presta y el Cliente se da de alta igual. Con la
+// opción encendida, en un Servicio sin la firma vigente de su Pagador no se programan guardias:
+// lo rechaza la base, y el detalle del Servicio lo avisa. Lo que ya estaba programado sigue igual.
 //
 // TODO ES DEL SERVICIO. El Responsable de pagos, lo que firma y sus documentos son de cada Servicio:
 // un mismo Cliente puede tener dos Servicios con distinto Responsable de pagos. El Apoderado, en

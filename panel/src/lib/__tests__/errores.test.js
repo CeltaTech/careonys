@@ -127,6 +127,25 @@ describe('del backend a la pantalla', () => {
     }
   });
 
+  it('la base que rechaza una guardia sin la firma del Responsable de pagos se explica en los tres idiomas', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Así llega el rechazo de la base: el código del motivo como mensaje y el Servicio en el detalle.
+    const error = {
+      code: 'P0001',
+      message: 'servicio_sin_firma_del_pagador',
+      details: '44444444-4444-4444-8444-444444444444',
+    };
+
+    for (const idioma of Object.keys(T)) {
+      const textos = T[idioma];
+      const texto = mensajeDeError(error, textos);
+      expect(texto, `${idioma}.errores.motivos.servicio_sin_firma_del_pagador`).toBe(
+        textos.errores.motivos.servicio_sin_firma_del_pagador,
+      );
+      expect(texto).not.toBe(textos.errores.dato_invalido);
+    }
+  });
+
   it('sin motivo, la explicación sale del número de la respuesta', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(mensajeDeError(errorDeLaRespuesta(respuestaConNumero(403), { error: 'permission denied' }), t)).toBe(

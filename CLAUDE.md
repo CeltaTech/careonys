@@ -406,6 +406,10 @@ El Panel llama además `la_carga_queda_pendiente`, que recibe un Paciente, corre
 quien llama y contesta si lo que esa persona guarde de él queda pendiente del Coordinador asignado;
 y `revisar_carga`, que acepta o rechaza una carga pendiente, resuelve la Prestadora adentro y sólo
 deja revisar al Coordinador asignado de ese Paciente o al Administrador, nunca a quien la cargó.
+Y `falta_la_firma_del_pagador`, que recibe un Servicio, resuelve la Prestadora adentro con
+`prestadora_actual()`, sólo le contesta al personal de esa Prestadora y dice si ella pide la firma
+del Pagador para programar guardias y ese Servicio no la tiene vigente; un Servicio de otra
+Prestadora no devuelve nada.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial; `borrar_consultas_a_hce_vencidas`, que no recibe nada, borra de esa Prestadora los

@@ -108,9 +108,20 @@ pide para el alta. En Careonys quedó que el alta genera y guarda sola las cuent
 claves de cada Prestadora, sin pedirle nada a nadie. Dónde se guardan lo administra CeltaTech para
 todos sus productos, y también pasó a su lista.
 
+**Paso 26, la firma del Responsable de pagos.** Cada Prestadora decide si un Servicio puede
+programar guardias sin la firma del Responsable de pagos. En Configuración, en la parte del
+cuidado, hay una opción nueva: «Programar guardias sólo con la firma del Responsable de pagos».
+Viene apagada, así que ninguna Prestadora cambia de comportamiento hasta que la encienda. Con la
+opción encendida, el sistema no deja programar una guardia ni una serie de guardias en un Servicio
+que no tenga la firma vigente de su Responsable de pagos. Al intentarlo, la persona ve un mensaje
+que dice qué falta. El detalle del Servicio muestra el mismo tipo de aviso que muestra cuando falta
+el Coordinador. Las guardias que ya estaban programadas siguen igual. Del Responsable de pagos
+quedan en el plan el cambio de Responsable con el Servicio en curso, el Responsable que desiste y
+más de un Responsable por Servicio.
+
 ## Cómo se comprobó
 
-Pasaron las 2515 pruebas del backend, las 888 del Panel, las 6 de la aplicación de los Clientes y las 41
+Pasaron las 2507 pruebas del backend, las 889 del Panel, las 6 de la aplicación de los Clientes y las 41
 de la aplicación de los Asistentes, y las tres construyen sin error. La prueba que lee cada tabla con cada
 cuenta de las Prestadoras de demostración pasó: ninguna ve datos de otra. La base reconstruida
 desde cero coincide con el esquema escrito. Las 6 migraciones nuevas están aplicadas en la base en

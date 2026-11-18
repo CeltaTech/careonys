@@ -648,3 +648,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** «suplente» figuraba entre las palabras que no se usan, como mal nombre del franquero.
 - **Qué dice ahora:** Suplente es el Asistente que hace las tareas de la persona que normalmente se ocupa de ellas cuando ocurre una eventualidad, fortuita o programada.
 - **Motivo:** nombra una función concreta; «otro Asistente» no dice nada.
+
+## «Responsable de pagos» es la palabra visible; «Pagador», el nombre interno
+
+- **Qué decía antes:** el glosario y los documentos llamaban «Pagador» a quien asume la obligación de pagar un Servicio.
+- **Qué dice ahora:** en todo lo que se lee —interfaz, documentos y glosario— se dice «Responsable de pagos». «Pagador» queda sólo como nombre interno en el programa y en la base, y no se renombra nada guardado.
+- **Motivo:** el Desarrollador lo decidió así: *«me gusta mas responsable de pagos que pagador»*, y *«sólo deja de verse: por dentro sigue diciendo «Pagador», y el glosario anota que es el nombre interno de «Responsable de pagos»»*.

@@ -143,7 +143,7 @@ Lo común a todos los productos —no hardcodear, i18n, cuatro estados, apagar e
 diseño, RLS, auditoría, operaciones destructivas, importe con moneda, punto único de verdad,
 módulos, commit y push, datos inventados en pruebas— está en `..\..\CLAUDE.md` y **no se repite
 acá**. Lo del cuidado de personas —glosario, riesgo legal, marca de la Prestadora, datos
-sensibles, Pagador— está en `..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`. Acá queda **cómo se cumple
+sensibles, Responsable de pagos— está en `..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`. Acá queda **cómo se cumple
 en este producto**.
 
 ### Identidad del producto y marca de la Prestadora
@@ -278,7 +278,7 @@ corresponde es que la Prestadora vea que se despegaron, no que el producto inten
 
 **Una contratación tiene tres roles, y siempre son tres.** Quien contrata el Servicio es el
 Contratante; para quién se contrata es el Paciente; y quien asume la obligación de pagar es
-el Pagador. Cada rol lo pueden tener una o más personas, físicas o jurídicas, y **una misma
+el Responsable de pagos. Cada rol lo pueden tener una o más personas, físicas o jurídicas, y **una misma
 persona puede tener varios roles**. Los tres pueden ser la misma persona, y eso es lo corriente,
 pero **se anotan aparte igual**: coincidir hoy no es coincidir siempre. Textual del Desarrollador:
 *«Pueden ser 1 o mas personas (físicas o jurídicas)»* y *«una misma persona puede tener varios
@@ -286,9 +286,9 @@ roles»*. **Se dice «rol».** Cada uno de los tres lleva todos sus datos —nom
 apellido, datos fiscales, domicilio, teléfono—, y esos datos están en la base de la Prestadora, no
 en un documento.
 
-**El Pagador firma su consentimiento a la obligación de pagar, y sin esa firma no hay Pagador
-definido.** Se establece al contratar, con todos sus datos y con la documentación que ese
-Pagador exija, completa y firmada. Eso tiene que estar listo el día que se firma con el
+**El Responsable de pagos firma su consentimiento a la obligación de pagar, y sin esa firma no
+hay Responsable de pagos definido.** Se establece al contratar, con todos sus datos y con la
+documentación que ese Responsable de pagos exija, completa y firmada. Eso tiene que estar listo el día que se firma con el
 Contratante; de ahí en más el cobro es asunto de créditos y cobranzas, que **sólo le informa a Careonys
 en qué situación están los pagos** —al día, vencido hace tantos días— y nada más.
 
@@ -310,7 +310,7 @@ datos.**
 
 **Los datos de una persona no se borran nunca, y un Legajo tampoco.** Que termine el Servicio a un
 Paciente da de baja el Servicio, no a la persona. Sus datos quedan, con el historial de cada rol que esa
-persona tuvo. Con quien dejó de ser Cliente se vuelve a cruzar: como Pagador de otra contratación,
+persona tuvo. Con quien dejó de ser Cliente se vuelve a cruzar: como Responsable de pagos de otra contratación,
 como familiar de otro Paciente o como Paciente. Ese historial es justamente lo que se pierde el
 día que alguien borra a la persona «porque ya no está activa».
 
@@ -408,7 +408,7 @@ y `revisar_carga`, que acepta o rechaza una carga pendiente, resuelve la Prestad
 deja revisar al Coordinador asignado de ese Paciente o al Administrador, nunca a quien la cargó.
 Y `falta_la_firma_del_pagador`, que recibe un Servicio, resuelve la Prestadora adentro con
 `prestadora_actual()`, sólo le contesta al personal de esa Prestadora y dice si ella pide la firma
-del Pagador para programar guardias y ese Servicio no la tiene vigente; un Servicio de otra
+del Responsable de pagos para programar guardias y ese Servicio no la tiene vigente; un Servicio de otra
 Prestadora no devuelve nada.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
 `desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa

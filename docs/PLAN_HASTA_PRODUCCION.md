@@ -100,7 +100,8 @@ Por eso no reemplaza a ninguno de los pasos anteriores.
 **Todo esto lo genera y lo guarda el sistema solo, sin pedirle nada a nadie**: las tres cuentas
 automáticas, sus contraseñas, la clave de respaldo y la clave de los secretos de terceros nacen en
 el alta de cada Prestadora. Es un manejo interno: ni el Desarrollador ni la Prestadora generan ni
-cargan claves. Falta decidir dónde las guarda, separadas de la base y de a una Prestadora.
+cargan claves. Dónde se guardan no es de Careonys: la custodia de las claves la administra CeltaTech para todos sus
+productos, y está en su lista, `panel/docs/PENDIENTES.md`, `X-25`. Esto espera esa custodia.
 
 **Comprobación:** las claves de una Prestadora no descifran nada de otra; ningún secreto del
 repositorio, de GitHub ni del backend alcanza a más de una Prestadora —el backend las guarda todas,
@@ -429,7 +430,8 @@ entregarle al Administrador su primera contraseña— está en la lista de Celta
   guarda sola, sin pedirle nada a nadie: las tres cuentas, la clave de respaldo y la clave de los
   secretos de terceros. Hoy las cuentas sólo las crea un guion local
   (`scripts/cuentas_automaticas_local.mjs`); sin ellas, las tareas programadas, el correo y el
-  respaldo de esa Prestadora fallan. Se construye con el paso 13, que dice dónde se guardan.
+  respaldo de esa Prestadora fallan. Se construye con el paso 13, y espera la custodia de claves de
+  CeltaTech (`panel/docs/PENDIENTES.md`, `X-25`).
 - **La región por país.** Con una sola región alcanza; con más de una, el alta elige según el país.
 
 **Después,** recibir qué tiene habilitado cada Prestadora y que su

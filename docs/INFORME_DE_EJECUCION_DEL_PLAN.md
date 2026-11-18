@@ -14,7 +14,7 @@ una Prestadora carga para conectar otros servicios, como WhatsApp o su software 
 ya no se guardan en la caja de Supabase. Ahora se guardan cifradas con una clave propia de cada
 Prestadora. Una Prestadora no puede leer las de otra, aunque alguien se equivoque al escribir una
 consulta. En la base en la nube no había ninguna cargada, así que no hubo nada que mudar.
-Falta que usted genere y cargue la clave de cada Prestadora en Railway.
+La clave de cada Prestadora la va a generar el sistema solo en el alta, y la va a guardar CeltaTech.
 
 **Paso 36, la confirmación del teléfono por la oficina.** Salió entera: la lista de números que
 esperaban la confirmación de la oficina, el botón «Confirmar el teléfono» y el contador del menú.
@@ -105,7 +105,8 @@ Careonys y pasó a la lista de CeltaTech: generar la clave compartida de la firm
 dos lados, firmar y mandar el alta, y entregarle al Administrador su primera contraseña. El código
 de la Prestadora quedó escrito en el modelo comercial de CeltaTech, entre los datos que Careonys
 pide para el alta. En Careonys quedó que el alta genera y guarda sola las cuentas automáticas y las
-claves de cada Prestadora, sin pedirle nada a nadie.
+claves de cada Prestadora, sin pedirle nada a nadie. Dónde se guardan lo administra CeltaTech para
+todos sus productos, y también pasó a su lista.
 
 ## Cómo se comprobó
 
@@ -120,8 +121,6 @@ demostración, porque esa contraseña la tiene usted.
 
 ## Lo que le toca a usted
 
-- Decidir dónde guarda el sistema, separadas de la base, las claves y las contraseñas que genera
-  solo para cada Prestadora.
 - Lo que tiene contratado cada Prestadora y la región de cada país.
 - Aprobar las 44 fichas de redacción.
 - Decidir si se sacan los 5 grupos de datos personales que nadie usa.

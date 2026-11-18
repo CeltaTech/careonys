@@ -46,7 +46,7 @@ respaldo tienen permiso de borrar. Si no lo tienen, el respaldo sale igual y el 
 corrida lo dice.
 
 **Paso 130, la inteligencia artificial.** Hay un control que frena la publicación si algún código
-manda datos de producción a entrenar un modelo. Queda en el plan su decisión: si la inteligencia
+manda datos de producción a entrenar un modelo. Su decisión pasó al Legajo para el futuro: si la inteligencia
 artificial puntúa Asistentes. Si los puntúa, la ley europea pide una autoevaluación antes del 2 de
 diciembre de 2027.
 
@@ -122,7 +122,6 @@ demostración, porque esa contraseña la tiene usted.
 - Lo que tiene contratado cada Prestadora y la región de cada país.
 - Aprobar las 44 fichas de redacción.
 - Decidir si se sacan los 5 grupos de datos personales que nadie usa.
-- Decidir si la inteligencia artificial puntúa Asistentes.
 - Revisar si las llaves de los dos depósitos de respaldo tienen permiso de borrar.
 - Autorizar las pantallas de seguridad de la cuenta en las dos aplicaciones.
 - Autorizar los botones de compra y de baja del acceso de Match en la aplicación del Cliente.
@@ -133,11 +132,11 @@ demostración, porque esa contraseña la tiene usted.
 
 ## Los pasos que no se hicieron
 
-**Esperan una decisión suya.** Son 69 pasos. Cada uno dice en el plan qué pregunta espera.
+**Esperan una decisión suya.** Son 67 pasos. Cada uno dice en el plan qué pregunta espera.
 
-**Dependen de un paso suyo o de algo de afuera.** Son 36. Por ejemplo, los contratos con los
-proveedores esperan que CeltaTech esté constituida, y el registro de accesos holandés espera un
-Cliente en Países Bajos.
+**Dependen de un paso suyo o de algo de afuera.** Son 35. Por ejemplo, los contratos con los
+proveedores esperan que CeltaTech esté constituida. El registro de accesos holandés pasó al Legajo
+para el futuro.
 
 **Los que no esperan nada, pero necesitan pantallas nuevas.** No se hicieron, porque usted pidió
 que no saliera ninguna pantalla nueva:

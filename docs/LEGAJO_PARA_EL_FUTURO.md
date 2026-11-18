@@ -150,3 +150,31 @@ Lo que hay que resolver antes:
   la tarea que la ley prohíbe no se asigna. Si la Prestadora pudiera borrar una prohibida, podría
   asignársela a un Cuidador. Hay que decidir si las Prohibidas entran o si se quedan como las trae
   el producto.
+
+## El registro de accesos para Países Bajos
+
+La norma holandesa NEN 7513:2018 se leyó
+completa y se comparó con el registro: lo que falta, con su sección, está en
+`docs/legal/paises_bajos.md`. **Espera a que haya un cliente en Países Bajos.**
+
+**Comprobación:** cada campo que pide la norma está en `consultas_a_hce`, o se agregó.
+
+## Las designaciones que no son programación
+
+Representante legal en Perú y en
+Ecuador, y delegado de protección de datos en Ecuador y en Uruguay. Son designaciones de CeltaTech
+y condición para vender en esos países.
+
+## Nada de riesgo alto del AI Act sin saberlo
+
+Que no se entrenen modelos con
+datos de las Prestadoras ya lo hace cumplir un control que corta la publicación si aparece una
+llamada de entrenamiento (`scripts/verificar_entrenamiento_con_datos.mjs`). Queda esto, que no se
+puede comprobar con un control automático y espera su decisión sobre qué hace la IA con los
+Asistentes. La exposición no está en la vía clínica sino en el Anexo III punto 4(b): la IA que
+asigna tareas según comportamiento o rasgos personales o evalúa desempeño. Un emparejamiento o una
+planificación de Asistentes que los puntúa **es alto riesgo**, y la salida del art. 6(3) queda
+cerrada por el perfilado. Rige desde el 2 de diciembre de 2027, con autoevaluación, pero no hay
+norma armonizada y tampoco presunción de conformidad. **La transparencia del art. 50 no se aplazó
+y rige desde el 2 de agosto de 2026.** Se cierra cuando usted decide si la IA puntúa Asistentes;
+si los puntúa, la autoevaluación se hace antes de esa fecha.

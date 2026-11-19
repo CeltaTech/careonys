@@ -210,7 +210,7 @@ describe('pasosValidos', () => {
   it('acepta las consultas que arma el Panel', () => {
     assert.ok(pasosValidos([
       { m: 'select', a: ['id'] }, { m: 'eq', a: ['prestadora_id', 'x'] }, { m: 'is', a: ['atendida_at', null] },
-      { m: 'in', a: ['paciente_id', ['a', 'b']] }, { m: 'gte', a: ['guardias.fecha', '2026-01-01'] },
+      { m: 'in', a: ['paciente_id', ['a', 'b']] }, { m: 'gte', a: ['turnos_guardia.fecha', '2026-01-01'] },
       { m: 'not', a: ['x', 'is', null] }, { m: 'maybeSingle' },
     ]));
   });

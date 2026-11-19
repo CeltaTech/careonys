@@ -1,6 +1,6 @@
 import { llamadorDe } from './apiPanel';
 
-/* Las emergencias avisadas desde una guardia.
+/* Las emergencias avisadas desde un turno de guardia.
    ==========================================================================
 
    Lo que va después de `/api/panel/emergencias`. El `fetch`, la sesión, los encabezados y el

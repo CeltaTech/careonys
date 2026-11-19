@@ -7,7 +7,7 @@
  * encenderla no rompe nada: si el mensaje no tiene a quién mandárselo, simplemente no sale
  * y el correo llega igual. O sea que la casilla puede quedar encendida durante meses sin que
  * nadie note que no hizo nada. Eso es justo lo que pasaba con los mensajes que nacen de un proceso
- * —una guardia sin cubrir, un documento por vencer—: ninguno tenía un número de destino.
+ * —un turno de guardia sin cubrir, un documento por vencer—: ninguno tenía un número de destino.
  *
  * Acá se mira que, con el canal encendido y una plantilla aprobada, el mensaje efectivamente salga
  * al WhatsApp de contacto de la Prestadora; y que con el canal apagado no se le pregunte nada a la

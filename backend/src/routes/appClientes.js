@@ -28,7 +28,7 @@ import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { ARCHIVOS_DE_LA_PIEZA, conArchivosEnOrden, enlaceDelArchivo } from '../utils/archivosDeContenidos.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
-import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
+import { llegadaEstimadaDeTurnoGuardia } from '../utils/estimarLlegadaDeTurnoGuardia.js';
 import { estadoDocumentalParaElCliente } from '../utils/estadoDocumentalParaElCliente.js';
 import { laCobranzaLaLlevaOtroSoftware, sinLoQueSeCalculaAca } from '../utils/seguimientoDeLaCobranza.js';
 import {
@@ -72,7 +72,7 @@ export const appClientesRouter = Router();
 // lo dice en su renglón. Son de dos clases: lo que la base no le deja ver a un Cliente y la
 // pantalla sí muestra —la vidriera del Match, que es gente que todavía no lo atendió, y el estado
 // documental agregado—, y lo que la base no le da al Cliente porque no sabe qué le dio el titular a
-// cada persona —las guardias, los datos del Paciente, su información de salud y su
+// cada persona —los turnos de guardia, los datos del Paciente, su información de salud y su
 // domicilio temporal—, que acá se piden con las columnas que corresponden a quien pide. La base las
 // acota a la Prestadora; lo que las acota al Cliente es el Paciente ya comprobado con la credencial
 // de la persona, o el filtro por el Cliente que llevan.
@@ -399,7 +399,7 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
 });
 
 // ============================================================================
-// Pantalla del Paciente — guardia actual (con Asistente asignado, para que el frontend
+// Pantalla del Paciente — turno de guardia actual (con Asistente asignado, para que el frontend
 // abra la suscripción Realtime a esa fila) o, si no hay ninguna activa, la próxima
 // programada. Incluye alertas activas (nivel != verde, sin resolver) para el resumen.
 // ============================================================================
@@ -412,8 +412,8 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  // Las guardias y las alertas de esta pantalla van con el trabajo de la Prestadora: la ruta no
-  // pide `persona_autorizada_guardias` ni `persona_autorizada_alertas` y la base sí, así que con
+  // Los turnos de guardia y las alertas de esta pantalla van con el trabajo de la Prestadora: la ruta no
+  // pide `persona_autorizada_turnos_guardia` ni `persona_autorizada_alertas` y la base sí, así que con
   // la credencial de la persona, una persona autorizada sin esos accesos dejaría de ver quién
   // está en la casa. El Paciente ya salió comprobado contra el Cliente, con su propio acceso.
   // Las alertas son información de salud y el trabajo de la Prestadora no pasa por la regla de
@@ -429,7 +429,7 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
   } catch (e) {
     return responderError(res, e);
   }
-  const { guardiaActiva, guardiaProxima, llegadaEstimadaAt, alertasActivas } = resumen;
+  const { turnoGuardiaActivo, turnoGuardiaProximo, llegadaEstimadaAt, alertasActivas } = resumen;
 
   // Las alertas son dato de salud: queda anotado quién las leyó antes de responder; si no se
   // puede anotar, no se entregan.
@@ -450,21 +450,21 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
   // dato de salud saliendo al teléfono para que nadie lo leyera.
   res.json({
     paciente,
-    guardiaActiva: guardiaActiva || null,
-    guardiaProxima: guardiaProxima && { ...guardiaProxima, llegada_estimada_at: llegadaEstimadaAt },
+    turnoGuardiaActivo: turnoGuardiaActivo || null,
+    turnoGuardiaProximo: turnoGuardiaProximo && { ...turnoGuardiaProximo, llegada_estimada_at: llegadaEstimadaAt },
     alertasActivas,
   });
 });
 
-/** La guardia de ahora o la que sigue, cuándo llega quien ya salió, y las alertas sin resolver. */
+/** El turno de guardia de ahora o la que sigue, cuándo llega quien ya salió, y las alertas sin resolver. */
 async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
-  // Con la guardia empezada el mapa ya no va: el punto del viaje se borra al llegar, y del turno
+  // Con el turno de guardia empezado el mapa ya no va: el punto del viaje se borra al llegar, y del turno
   // no se guardan coordenadas. El Cliente ve que llegó (`checkin_at`) y quién es.
-  const columnasGuardiaActiva = 'id, fecha, hora_inicio, hora_fin, estado, checkin_at, asistente_id, asistentes(nombre, foto_url)';
+  const columnasTurnoGuardiaActivo = 'id, fecha, hora_inicio, hora_fin, estado, checkin_at, asistente_id, asistentes(nombre, foto_url)';
 
-  const { data: guardiaActiva, error: errorActiva } = await dbTrabajo
-    .from('guardias')
-    .select(columnasGuardiaActiva)
+  const { data: turnoGuardiaActivo, error: errorActiva } = await dbTrabajo
+    .from('turnos_guardia')
+    .select(columnasTurnoGuardiaActivo)
     .eq('paciente_id', paciente.id)
     .eq('estado', 'activa')
     .order('fecha', { ascending: false })
@@ -475,7 +475,7 @@ async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
   // salida_checkin_at es lo que permite decirle al Cliente "en camino": el Asistente ya salió
   // de su casa pero todavía no llegó al domicilio. Y por dónde va en el viaje sólo se pide si la
   // Prestadora tiene prendido el mapa en vivo; apagado, el dato ni siquiera sale de la base.
-  const columnasGuardiaProxima = columnasSegunVisibilidad([
+  const columnasTurnoGuardiaProximo = columnasSegunVisibilidad([
     'id', 'fecha', 'hora_inicio', 'hora_fin', 'dias_hasta_el_fin', 'estado', 'salida_checkin_at',
     ['ubicacion_actual_lat', 'cliente_ubicacion_en_vivo'],
     ['ubicacion_actual_lng', 'cliente_ubicacion_en_vivo'],
@@ -483,11 +483,11 @@ async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
     'asistente_id', 'asistentes(nombre, foto_url)',
   ], visibilidad);
 
-  let guardiaProxima = null;
-  if (!guardiaActiva) {
+  let turnoGuardiaProximo = null;
+  if (!turnoGuardiaActivo) {
     const { data, error } = await dbTrabajo
-      .from('guardias')
-      .select(columnasGuardiaProxima)
+      .from('turnos_guardia')
+      .select(columnasTurnoGuardiaProximo)
       .eq('paciente_id', paciente.id)
       .eq('estado', 'programada')
       .gte('fecha', new Date().toISOString().slice(0, 10))
@@ -496,7 +496,7 @@ async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
       .limit(1)
       .maybeSingle();
     if (error) throw error;
-    guardiaProxima = data || null;
+    turnoGuardiaProximo = data || null;
   }
 
   // A qué hora se estima que llega quien ya salió.
@@ -511,14 +511,14 @@ async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
   // —salida sin GPS, domicilio sin coordenadas— viaja `null`, que la pantalla trata como «no se
   // sabe»: una hora inventada parece confiable y nadie la vuelve a mirar.
   let llegadaEstimadaAt = null;
-  if (guardiaProxima?.salida_checkin_at) {
+  if (turnoGuardiaProximo?.salida_checkin_at) {
     const { data: conSuPuntoDeSalida, error } = await dbTrabajo
-      .from('guardias')
+      .from('turnos_guardia')
       .select('id, fecha, paciente_id, salida_checkin_at, salida_lat, salida_lng')
-      .eq('id', guardiaProxima.id)
+      .eq('id', turnoGuardiaProximo.id)
       .maybeSingle();
     if (error) throw error;
-    const estimada = await llegadaEstimadaDeGuardia(dbTrabajo, paciente.prestadora_id, conSuPuntoDeSalida);
+    const estimada = await llegadaEstimadaDeTurnoGuardia(dbTrabajo, paciente.prestadora_id, conSuPuntoDeSalida);
     llegadaEstimadaAt = estimada ? estimada.toISOString() : null;
   }
 
@@ -537,14 +537,14 @@ async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
     alertasActivas = data || [];
   }
 
-  return { guardiaActiva, guardiaProxima, llegadaEstimadaAt, alertasActivas };
+  return { turnoGuardiaActivo, turnoGuardiaProximo, llegadaEstimadaAt, alertasActivas };
 }
 
 // ============================================================================
-// Las guardias de la semana — la pregunta "¿quién viene el jueves?"
+// Los turnos de guardia de la semana — la pregunta "¿quién viene el jueves?"
 //
 // Esta dirección devuelve la semana entera: los siete días, con quién viene en cada uno y cómo
-// terminó cada guardia. Con la guardia de ahora y la que sigue no alcanza: todo lo demás —el
+// terminó cada turno de guardia. Con el turno de guardia de ahora y la que sigue no alcanza: todo lo demás —el
 // resto de la semana, y lo que pasó con las que ya fueron— termina preguntándose por teléfono,
 // y esa llamada la atiende la Coordinadora.
 //
@@ -567,7 +567,7 @@ async function nombresDeAsistentes(prestadoraId, asistenteIds) {
   return new Map((filas ?? []).map((a) => [a.id, a.nombre]));
 }
 
-appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_guardias'), async (req, res) => {
+appClientesRouter.get('/pacientes/:id/turnos-guardia', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_turnos_guardia'), async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
   const paciente = await pacienteDelCliente(db, req.params.id, req);
@@ -581,29 +581,29 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
   const dia = esFechaISO(req.query.dia) ? req.query.dia : new Date().toISOString().slice(0, 10);
   const semana = semanaQueContiene(dia);
 
-  // Se pregunta por `guardia_pacientes` y no por `guardias.paciente_id`: la tabla del medio es
-  // la que dice a quiénes cubre cada guardia, y una guardia puede cubrir a más de una persona
-  // —el matrimonio que vive en la misma casa— (ver utils/pacientesDeGuardia.js). Buscando por
+  // Se pregunta por `turno_guardia_pacientes` y no por `turnos_guardia.paciente_id`: la tabla del medio es
+  // la que dice a quiénes cubre cada turno de guardia, y un turno de guardia puede cubrir a más de una persona
+  // —el matrimonio que vive en la misma casa— (ver utils/pacientesDeTurnoGuardia.js). Buscando por
   // la columna vieja, ese Cliente vería media semana.
   //
   // Con el trabajo de la Prestadora y columnas contadas: la base no le deja al Cliente leer
-  // guardias, porque la protección por fila no recorta columnas y ahí están los puntos de salida y
+  // turnos de guardia, porque la protección por fila no recorta columnas y ahí están los puntos de salida y
   // de llegada. `paciente_id` ya salió comprobado contra el Cliente por `pacienteDelCliente`, y el
   // permiso de la persona autorizada lo exige la ruta.
   let filas;
   try {
     filas = await enLaPrestadora(paciente.prestadora_id, 'la semana de guardias', async (dbTrabajo) => {
       const { data, error } = await dbTrabajo
-        .from('guardia_pacientes')
+        .from('turno_guardia_pacientes')
         .select(`
-          guardias!inner(
+          turnos_guardia!inner(
             id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, cancelacion_origen,
             checkin_at, checkout_at, prestadora_id, asistente_id
           )
         `)
         .eq('paciente_id', paciente.id)
-        .gte('guardias.fecha', semana.desde)
-        .lte('guardias.fecha', semana.hasta);
+        .gte('turnos_guardia.fecha', semana.desde)
+        .lte('turnos_guardia.fecha', semana.hasta);
       if (error) throw error;
       return data;
     });
@@ -615,7 +615,7 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
   // leer Asistentes, porque la protección por fila no recorta columnas. Se pide el nombre y nada más.
   let nombres;
   try {
-    nombres = await nombresDeAsistentes(paciente.prestadora_id, (filas ?? []).map(({ guardias: g }) => g.asistente_id));
+    nombres = await nombresDeAsistentes(paciente.prestadora_id, (filas ?? []).map(({ turnos_guardia: g }) => g.asistente_id));
   } catch (e) {
     return responderError(res, e);
   }
@@ -623,7 +623,7 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
   // Qué viaja al teléfono: lo que la pantalla dibuja y nada más. El identificador del Asistente
   // y su foto no se mandan —la pantalla muestra el nombre— y la ubicación tampoco entra acá:
   // dónde está el Asistente ahora es la pantalla del Paciente, con su propio interruptor.
-  const guardias = (filas ?? []).map(({ guardias: g }) => ({
+  const turnos_guardia = (filas ?? []).map(({ turnos_guardia: g }) => ({
     id: g.id,
     fecha: g.fecha,
     hora_inicio: g.hora_inicio,
@@ -638,13 +638,13 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
   }));
 
   // El orden se arma acá y no en la consulta porque el pedido ordena la tabla del medio, no la
-  // guardia de adentro: pedirle a la base que ordene por una columna prestada no ordena las
-  // filas de arriba. Son las guardias de una semana, así que ordenarlas cuesta nada.
-  guardias.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora_inicio.localeCompare(b.hora_inicio));
+  // turno de guardia de adentro: pedirle a la base que ordene por una columna prestada no ordena las
+  // filas de arriba. Son los turnos de guardia de una semana, así que ordenarlas cuesta nada.
+  turnos_guardia.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora_inicio.localeCompare(b.hora_inicio));
 
-  // La semana sale con los siete días escritos, incluidos los que no tienen ninguna guardia.
+  // La semana sale con los siete días escritos, incluidos los que no tienen ningún turno de guardia.
   // "El jueves no viene nadie" también es una respuesta, y es de las que evitan la llamada.
-  // Una guardia de noche que empieza a las 22:00 y termina a las 06:00 se muestra en el día en
+  // Un turno de guardia de noche que empieza a las 22:00 y termina a las 06:00 se muestra en el día en
   // que empieza, que es el día en que el Cliente la espera.
   res.json({
     desde: semana.desde,
@@ -655,7 +655,7 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
     semanaSiguiente: semana.semanaSiguiente,
     dias: semana.dias.map((fecha) => ({
       fecha,
-      guardias: guardias.filter((g) => g.fecha === fecha),
+      turnos_guardia: turnos_guardia.filter((g) => g.fecha === fecha),
     })),
   });
 });
@@ -680,7 +680,7 @@ function columnasDelReporte(visibilidad) {
     ['medicacion', 'cliente_medicacion_del_paciente'],
     ['signos_vitales', 'cliente_signos_vitales'],
     'estado_animo', 'incidentes', 'observaciones', 'foto_url', 'created_at',
-    'guardias!inner(fecha, asistente_id, asistentes(nombre))',
+    'turnos_guardia!inner(fecha, asistente_id, asistentes(nombre))',
   ], visibilidad);
 }
 
@@ -709,9 +709,9 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
   // turno: el Cliente vería en la historia de su padre lo que se escribió sobre el vecino de
   // cuarto.
   //
-  // Con el trabajo de la Prestadora, porque cada reporte trae su guardia pegada (`guardias!inner`)
-  // y la base sólo muestra guardias a quien tiene `persona_autorizada_guardias`. Con la credencial
-  // de la persona, una persona autorizada con los reportes y sin las guardias vería la lista vacía.
+  // Con el trabajo de la Prestadora, porque cada reporte trae su turno de guardia pegado (`turnos_guardia!inner`)
+  // y la base sólo muestra turnos de guardia a quien tiene `persona_autorizada_turnos_guardia`. Con la credencial
+  // de la persona, una persona autorizada con los reportes y sin los turnos de guardia vería la lista vacía.
   // El acceso a los reportes ya lo pidió la ruta, y el Paciente salió comprobado contra el Cliente.
   const columnas = columnasDelReporte(visibilidad);
 
@@ -768,7 +768,7 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
 
   // El filtro por Paciente no sobra aunque el reporte se pida por su id: sin él, quien conozca
   // el id de un reporte de otro Paciente lo leería pidiéndolo por esta dirección. Con el trabajo
-  // de la Prestadora por el mismo motivo que la lista: la guardia pegada al reporte.
+  // de la Prestadora por el mismo motivo que la lista: el turno de guardia pegado al reporte.
   let data;
   try {
     data = await enLaPrestadora(paciente.prestadora_id, 'un reporte del Paciente', async (dbTrabajo) => {
@@ -834,8 +834,8 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 });
 
 // ============================================================================
-// Asistente Asignado — datos del Asistente que tuvo o tiene alguna guardia con este
-// Paciente (las políticas de asistentes y certificados ya lo acotan a eso), estado del Certificado de Aptitud, evaluaciones anteriores, y el id de la guardia
+// Asistente Asignado — datos del Asistente que tuvo o tiene algún turno de guardia con este
+// Paciente (las políticas de asistentes y certificados ya lo acotan a eso), estado del Certificado de Aptitud, evaluaciones anteriores, y el id del turno de guardia
 // activa/última (para el botón de calificar).
 //
 // Además devuelve el tipo del Asistente con sus tres listas de tareas: qué le
@@ -848,10 +848,10 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 // el nombre de ningún tipo de documento ni su número.
 // ============================================================================
 
-/** La guardia que tiene a alguien en la casa ahora, o si no hay ninguna, la próxima con Asistente. */
-async function guardiaEnCursoOProxima(dbTrabajo, pacienteId) {
+/** El turno de guardia que tiene a alguien en la casa ahora, o si no hay ninguna, la próxima con Asistente. */
+async function turnoGuardiaEnCursoOProximo(dbTrabajo, pacienteId) {
   const { data: enCurso, error } = await dbTrabajo
-    .from('guardias')
+    .from('turnos_guardia')
     .select('id, estado, asistente_id')
     .eq('paciente_id', pacienteId)
     .eq('estado', 'activa')
@@ -863,7 +863,7 @@ async function guardiaEnCursoOProxima(dbTrabajo, pacienteId) {
   if (enCurso) return enCurso;
 
   const { data: proxima, error: errorProxima } = await dbTrabajo
-    .from('guardias')
+    .from('turnos_guardia')
     .select('id, estado, asistente_id')
     .eq('paciente_id', pacienteId)
     .eq('estado', 'programada')
@@ -890,17 +890,17 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
   // teléfono y el domicilio de quien trabaja. Lo que viaja es nombre, foto, tipo, si tiene el
   // certificado vigente y la cuenta de su documentación —nunca qué documento es cuál—.
   //
-  // Y sólo del Asistente de la guardia en curso o de la próxima. El que atendió hace un mes ya no
+  // Y sólo del Asistente del turno de guardia en curso o de la próxima. El que atendió hace un mes ya no
   // está en esa casa, y su ficha no es de este Cliente.
-  let guardia;
+  let turno_guardia;
   let asistente;
   let certificado;
   let documentos;
   let diasAviso;
   try {
-    ({ guardia, asistente, certificado, documentos, diasAviso } = await enLaPrestadora(paciente.prestadora_id, 'el Asistente del Paciente', async (dbTrabajo) => {
-      const vigente = await guardiaEnCursoOProxima(dbTrabajo, paciente.id);
-      if (!vigente?.asistente_id) return { guardia: vigente };
+    ({ turno_guardia, asistente, certificado, documentos, diasAviso } = await enLaPrestadora(paciente.prestadora_id, 'el Asistente del Paciente', async (dbTrabajo) => {
+      const vigente = await turnoGuardiaEnCursoOProximo(dbTrabajo, paciente.id);
+      if (!vigente?.asistente_id) return { turno_guardia: vigente };
       const [
         { data: ficha, error: errorFicha },
         { data: cert, error: errorCert },
@@ -935,7 +935,7 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
       if (errorDocs) throw errorDocs;
       if (errorPrestadora) throw errorPrestadora;
       return {
-        guardia: vigente,
+        turno_guardia: vigente,
         asistente: ficha,
         certificado: cert,
         documentos: docs,
@@ -946,8 +946,8 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
     return responderError(res, e);
   }
 
-  if (!guardia?.asistente_id || !asistente) {
-    return res.json({ asistente: null, certificado: null, documentacion: null, evaluaciones: [], guardiaId: null });
+  if (!turno_guardia?.asistente_id || !asistente) {
+    return res.json({ asistente: null, certificado: null, documentacion: null, evaluaciones: [], turnoGuardiaId: null });
   }
 
   // Qué es esta persona y qué le toca hacer. Sale del catálogo, que se lee desde un solo
@@ -973,7 +973,7 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
     const { data } = await db
       .from('calificaciones_asistente')
       .select('id, estrellas, comentario, created_at')
-      .eq('asistente_id', guardia.asistente_id)
+      .eq('asistente_id', turno_guardia.asistente_id)
       .eq('paciente_id', paciente.id)
       .order('created_at', { ascending: false });
     evaluaciones = data || [];
@@ -986,12 +986,12 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
     certificado: certificado || null,
     documentacion,
     evaluaciones,
-    guardiaId: guardia.id,
+    turnoGuardiaId: turno_guardia.id,
   });
 });
 
 // ============================================================================
-// Calificación del Asistente al cierre de una guardia (tabla calificaciones_asistente).
+// Calificación del Asistente al cierre de un turno de guardia (tabla calificaciones_asistente).
 // ============================================================================
 
 // Calificar es una de las dos acciones de escritura que tiene el Cliente, y viene negada de
@@ -999,7 +999,7 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
 // acto del titular. Lo decide la instrucción que el titular firmó, y no la columna `rol` del
 // miembro: «solo lectura o no» no distingue entre las dos acciones de escritura ni permite dar
 // una sin la otra.
-appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exigeVisible('cliente_califica_al_asistente'), exigeDePersonasAutorizadas('persona_autorizada_califica_al_asistente'), async (req, res) => {
+appClientesRouter.post('/turnos-guardia/:turnoGuardiaId/calificar', requiereRolCliente, exigeVisible('cliente_califica_al_asistente'), exigeDePersonasAutorizadas('persona_autorizada_califica_al_asistente'), async (req, res) => {
   const { estrellas, comentario } = req.body || {};
   if (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5) {
     return res.status(400).json({ error: 'La calificación debe ser un número entero de 1 a 5' });
@@ -1011,8 +1011,8 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
   // nombre cuando son varios, para que dos calificaciones del mismo turno no queden colgadas de
   // Pacientes distintos según el orden en que la base devuelva las filas.
   //
-  // Esta búsqueda va con el trabajo de la Prestadora, porque trae la guardia pegada y la base sólo
-  // muestra guardias a quien tiene `persona_autorizada_guardias`, que esta ruta no pide. Con la
+  // Esta búsqueda va con el trabajo de la Prestadora, porque trae el turno de guardia pegado y la base sólo
+  // muestra turnos de guardia a quien tiene `persona_autorizada_turnos_guardia`, que esta ruta no pide. Con la
   // credencial de la persona, una persona autorizada que puede calificar y no ver la agenda no
   // encontraría el turno. El filtro por el Cliente no sobra: el trabajo ve todos los turnos de la
   // Prestadora, y la calificación sólo se ofrece sobre los de sus Pacientes.
@@ -1020,9 +1020,9 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
   try {
     filas = await enLaPrestadora(req.usuarioCliente.prestadoraId, 'el turno a calificar', async (dbTrabajo) => {
       const { data, error } = await dbTrabajo
-        .from('guardia_pacientes')
-        .select(`paciente_id, pacientes!inner(cliente_id, ${FICHA_NOMBRE}), guardias!inner(id, asistente_id, prestadora_id)`)
-        .eq('guardia_id', req.params.guardiaId)
+        .from('turno_guardia_pacientes')
+        .select(`paciente_id, pacientes!inner(cliente_id, ${FICHA_NOMBRE}), turnos_guardia!inner(id, asistente_id, prestadora_id)`)
+        .eq('turno_guardia_id', req.params.turnoGuardiaId)
         .eq('pacientes.cliente_id', req.usuarioCliente.clienteId);
       if (error) throw error;
       return data;
@@ -1034,14 +1034,14 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
     .slice()
     .sort((a, b) => (a.pacientes?.persona?.nombre_visible ?? '').localeCompare(b.pacientes?.persona?.nombre_visible ?? ''))[0];
   if (!fila) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
-  const guardia = { ...fila.guardias, paciente_id: fila.paciente_id };
-  // Una guardia que quedó sin cubrir no tiene a quién calificar. Sin este corte, el INSERT
+  const turno_guardia = { ...fila.turnos_guardia, paciente_id: fila.paciente_id };
+  // Un turno de guardia que quedó sin cubrir no tiene a quién calificar. Sin este corte, el INSERT
   // manda asistente_id en NULL contra una columna obligatoria y devuelve un 500 sin
   // explicación.
-  if (!guardia.asistente_id) {
-    return res.status(400).json({ error: 'guardia_sin_asistente' });
+  if (!turno_guardia.asistente_id) {
+    return res.status(400).json({ error: 'turno_guardia_sin_asistente' });
   }
 
   // La calificación se escribe con la credencial de la persona: la base comprueba que sea de su
@@ -1051,18 +1051,18 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
   const { data: paciente } = await db
     .from('pacientes')
     .select('id, prestadora_id')
-    .eq('id', guardia.paciente_id)
+    .eq('id', turno_guardia.paciente_id)
     .eq('cliente_id', req.usuarioCliente.clienteId)
     .maybeSingle();
   if (!paciente) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
 
   const { error } = await db.from('calificaciones_asistente').insert({
-    asistente_id: guardia.asistente_id,
+    asistente_id: turno_guardia.asistente_id,
     paciente_id: paciente.id,
     cliente_id: req.usuarioCliente.clienteId,
-    guardia_id: guardia.id,
+    turno_guardia_id: turno_guardia.id,
     prestadora_id: paciente.prestadora_id,
     estrellas,
     comentario: comentario || null,
@@ -1360,7 +1360,7 @@ appClientesRouter.get('/facturas/:facturaId/comprobante', requiereRolCliente, ex
 // permanente a la vista de cualquiera que pase.
 //
 // Lo muestra cualquiera de las personas autorizadas, sin acceso especial: no revela ningún dato del
-// Paciente ni de la Prestadora, y su único efecto es dejar entrar a quien ya tenía la guardia
+// Paciente ni de la Prestadora, y su único efecto es dejar entrar a quien ya tenía el turno de guardia
 // asignada. El código vale para todas las personas autorizadas —sujeto_tipo 'cliente'—, así que da lo mismo
 // cuál de sus miembros esté en la casa ese día.
 // ============================================================================

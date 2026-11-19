@@ -61,7 +61,7 @@ export function esDeLaSesion(item, duenoId) {
  * Lo que se manda: lo de esta sesión que todavía tiene intentos.
  *
  * El orden de creación es el orden de envío, y ese orden es una garantía: los actos de una
- * guardia dependen del anterior.
+ * turno de guardia dependen del anterior.
  */
 export function loQueSeManda(cola, duenoId) {
   return (cola ?? [])

@@ -19,14 +19,14 @@ import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '44444444-4444-4444-4444-444444444444';
-const GUARDIA = '11111111-1111-1111-1111-111111111111';
+const TURNO_GUARDIA = '11111111-1111-1111-1111-111111111111';
 const RELEVO = '22222222-2222-2222-2222-222222222222';
 const INCIDENTE = '33333333-3333-3333-3333-333333333333';
 
-const EXTENSIONES = 'GET /rest/v1/extensiones_de_turno';
-const GUARDIAS = 'GET /rest/v1/guardias';
+const EXTENSIONES = 'GET /rest/v1/extensiones_de_turno_guardia';
+const TURNOS_GUARDIA = 'GET /rest/v1/turnos_guardia';
 const INCIDENTES_RELEVO = 'GET /rest/v1/incidentes_relevo';
-const SIN_CUBRIR = 'GET /rest/v1/incidentes_turno_sin_cubrir';
+const SIN_CUBRIR = 'GET /rest/v1/incidentes_turno_guardia_sin_cubrir';
 const ESCALONES = 'GET /rest/v1/escalones_de_alarma_avisados';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba pisa lo que necesita cambiar. */
@@ -90,9 +90,9 @@ beforeEach(() => {
 /** Una extensión abierta, esperando a `RELEVO`. */
 function prepararExtensionAbierta() {
   respuestas.set(EXTENSIONES, [
-    { id: 'ext-1', desde_at: '2026-01-10T08:00:00Z', relevo_guardia_id: RELEVO },
+    { id: 'ext-1', desde_at: '2026-01-10T08:00:00Z', relevo_turno_guardia_id: RELEVO },
   ]);
-  respuestas.set(GUARDIAS, [{ id: RELEVO, asistente_id: 'asis-1', checkin_at: null }]);
+  respuestas.set(TURNOS_GUARDIA, [{ id: RELEVO, asistente_id: 'asis-1', checkin_at: null }]);
   respuestas.set(INCIDENTES_RELEVO, [{ id: INCIDENTE, ultima_notificacion_at: '2026-01-10T08:05:00Z' }]);
   respuestas.set(SIN_CUBRIR, []);
   respuestas.set(ESCALONES, []);
@@ -104,11 +104,11 @@ describe('el estado de la extensión de un turno', () => {
   it('las cinco tablas se leen con la credencial del trabajo de la Prestadora', async () => {
     prepararExtensionAbierta();
 
-    await estadoDeLaExtension({ guardiaId: GUARDIA, prestadoraId: PRESTADORA });
+    await estadoDeLaExtension({ turnoGuardiaId: TURNO_GUARDIA, prestadoraId: PRESTADORA });
 
     assert.deepEqual(
       [...new Set(llamadas.map((l) => l.clave))].sort(),
-      [ESCALONES, EXTENSIONES, GUARDIAS, INCIDENTES_RELEVO, SIN_CUBRIR].sort(),
+      [ESCALONES, EXTENSIONES, TURNOS_GUARDIA, INCIDENTES_RELEVO, SIN_CUBRIR].sort(),
     );
     for (const llamada of llamadas) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
@@ -119,7 +119,7 @@ describe('el estado de la extensión de un turno', () => {
   it('con la extensión abierta, devuelve desde cuándo y los pasos de la búsqueda', async () => {
     prepararExtensionAbierta();
 
-    const estado = await estadoDeLaExtension({ guardiaId: GUARDIA, prestadoraId: PRESTADORA });
+    const estado = await estadoDeLaExtension({ turnoGuardiaId: TURNO_GUARDIA, prestadoraId: PRESTADORA });
 
     assert.equal(estado.desdeAt, '2026-01-10T08:00:00Z');
     assert.deepEqual(Object.keys(estado).sort(), ['desdeAt', 'pasos']);
@@ -129,17 +129,17 @@ describe('el estado de la extensión de un turno', () => {
   it('sin extensión abierta devuelve null y no sigue consultando', async () => {
     respuestas.set(EXTENSIONES, []);
 
-    assert.equal(await estadoDeLaExtension({ guardiaId: GUARDIA, prestadoraId: PRESTADORA }), null);
+    assert.equal(await estadoDeLaExtension({ turnoGuardiaId: TURNO_GUARDIA, prestadoraId: PRESTADORA }), null);
     assert.deepEqual(llamadas.map((l) => l.clave), [EXTENSIONES]);
   });
 
   it('sin Prestadora no consulta', async () => {
-    assert.equal(await estadoDeLaExtension({ guardiaId: GUARDIA, prestadoraId: null }), null);
+    assert.equal(await estadoDeLaExtension({ turnoGuardiaId: TURNO_GUARDIA, prestadoraId: null }), null);
     assert.equal(llamadas.length, 0);
   });
 
   it('si la base falla, devuelve null', async () => {
-    assert.equal(await estadoDeLaExtension({ guardiaId: GUARDIA, prestadoraId: PRESTADORA }), null);
+    assert.equal(await estadoDeLaExtension({ turnoGuardiaId: TURNO_GUARDIA, prestadoraId: PRESTADORA }), null);
     assert.equal(anotados.length, 1);
   });
 });

@@ -55,7 +55,7 @@ const SELECT_DE_LO_COMERCIAL = [
   'medicion',
   'cobra_cancelada_por_el_cliente',
   'descuenta_lo_no_prestado',
-  'cobra_guardias_adicionales',
+  'cobra_turnos_guardia_adicionales',
   'cobra_horas_adicionales',
 ].join(', ');
 

@@ -4,7 +4,7 @@
  *   npx vitest run src/lib/__tests__/frecuenciaDePago.test.js
  *
  * POR QUÉ EXISTE. De acá salen los bordes de cada liquidación. Un borde mal puesto no se ve
- * en la pantalla: se ve un mes después, cuando alguien cobra dos veces la misma guardia o no
+ * en la pantalla: se ve un mes después, cuando alguien cobra dos veces el mismo turno de guardia o no
  * cobra una que hizo. Por eso la prueba que más importa no es ninguna de las obvias sino la
  * última: que recorriendo un año entero, día por día, cada día caiga en exactamente un
  * período. Eso es lo que nadie puede verificar a ojo.
@@ -213,7 +213,7 @@ describe('recorrer los períodos', () => {
 
 describe('que ningún día quede sin período ni en dos', () => {
   // Ésta es la prueba que no se puede hacer a ojo, y la única que atrapa un borde corrido por
-  // un día: una guardia en un día que cae en dos períodos se paga dos veces.
+  // un día: un turno de guardia en un día que cae en dos períodos se paga dos veces.
   const recorrerElAnio = (frecuencia) => {
     const vistos = new Map();
     for (let dia = new Date(Date.UTC(2026, 0, 1)); dia < new Date(Date.UTC(2027, 0, 1)); dia.setUTCDate(dia.getUTCDate() + 1)) {

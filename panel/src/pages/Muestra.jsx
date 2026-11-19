@@ -41,9 +41,9 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 // Filas inventadas. Ningún dato real de ninguna Prestadora, Cliente, Paciente ni Asistente
 // (`CLAUDE.md` §6). Los nombres son de fantasía y los tonos cubren los cinco casos.
 const FILAS_DE_MENTIRA = [
-  { id: 1, nombre: 'Ana Ficticia', detalle: 'Guardia de mañana', tono: TONO.EXITO, estado: 'Al día' },
-  { id: 2, nombre: 'Bruno Inventado', detalle: 'Guardia de tarde', tono: TONO.ATENCION, estado: 'Falta el documento' },
-  { id: 3, nombre: 'Carla Imaginaria', detalle: 'Guardia de noche', tono: TONO.CRITICO, estado: 'Vencido' },
+  { id: 1, nombre: 'Ana Ficticia', detalle: 'Turno de guardia de mañana', tono: TONO.EXITO, estado: 'Al día' },
+  { id: 2, nombre: 'Bruno Inventado', detalle: 'Turno de guardia de tarde', tono: TONO.ATENCION, estado: 'Falta el documento' },
+  { id: 3, nombre: 'Carla Imaginaria', detalle: 'Turno de guardia de noche', tono: TONO.CRITICO, estado: 'Vencido' },
   { id: 4, nombre: 'Darío Supuesto', detalle: 'Sin asignar', tono: TONO.INFO, estado: 'Mensaje enviado' },
   { id: 5, nombre: 'Elena Hipotética', detalle: '—', tono: TONO.NEUTRO, estado: 'Sin datos' },
 ];
@@ -214,12 +214,12 @@ export function Muestra() {
 
       <Bloque
         titulo="Tarjetas de número"
-        ayuda="Borde de un pixel, nunca una barra gruesa de color al costado: esa barra queda reservada para los estados de guardia."
+        ayuda="Borde de un pixel, nunca una barra gruesa de color al costado: esa barra queda reservada para los estados del turno de guardia."
       >
         <div className="panel-kpis">
           <div className="panel-kpi-card">
             <div className="panel-kpi-valor">128</div>
-            <div className="panel-kpi-etiqueta">Guardias del mes</div>
+            <div className="panel-kpi-etiqueta">Turnos de guardia del mes</div>
           </div>
           <div className="panel-kpi-card">
             <div className="panel-kpi-valor">3</div>

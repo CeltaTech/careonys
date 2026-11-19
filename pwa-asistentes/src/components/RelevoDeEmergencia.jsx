@@ -12,11 +12,11 @@ const MANTENER_MS = 3000;
 const CUENTA_SEGUNDOS = 10;
 
 /**
- * El Relevo de emergencia: a mitad del turno, el Asistente tiene una emergencia y necesita irse.
+ * El Relevo de emergencia: a mitad del turno de guardia, el Asistente tiene una emergencia y necesita irse.
  *
- * NO ES EL RELEVO QUE NO LLEGA. Aquel es el turno que terminó sin que apareciera el siguiente, y lo
- * cuenta `ExtensionDeTurno.jsx`. Éste se pide en cualquier momento de la guardia en curso, más de
- * una vez si hace falta, no cierra la guardia y le hace sonar la alarma al Coordinador.
+ * NO ES EL RELEVO QUE NO LLEGA. Aquel es el turno de guardia que terminó sin que apareciera el siguiente, y lo
+ * cuenta `ExtensionDeTurnoGuardia.jsx`. Éste se pide en cualquier momento del turno de guardia en curso, más de
+ * una vez si hace falta, no cierra el turno de guardia y le hace sonar la alarma al Coordinador.
  *
  * CÓMO SE EVITA QUE SE APRIETE SOLO. Va aparte de los botones de todos los días, hay que mantenerlo
  * apretado tres segundos y después corre una cuenta de diez con «Cancelar» a la vista, con sonido,
@@ -30,7 +30,7 @@ const CUENTA_SEGUNDOS = 10;
  * SIN SEÑAL SE DICE CON TODAS LAS LETRAS, igual que la emergencia: mientras la cola no salga no se
  * enteró nadie, y al lado queda el botón para llamar a la Prestadora si cargó un teléfono.
  */
-export default function RelevoDeEmergencia({ t, locale, guardiaId, alPedir }) {
+export default function RelevoDeEmergencia({ t, locale, turnoGuardiaId, alPedir }) {
   const tr = t.relevo_emergencia;
   // reposo → apretando → cuenta → enviando → reposo.
   const [fase, setFase] = useState('reposo');
@@ -146,7 +146,7 @@ export default function RelevoDeEmergencia({ t, locale, guardiaId, alPedir }) {
     const clienteUuid = nuevoId();
     const datos = { ocurrido_at: new Date().toISOString(), clienteUuid };
     try {
-      const resultado = await api.relevoDeEmergencia(guardiaId, datos);
+      const resultado = await api.relevoDeEmergencia(turnoGuardiaId, datos);
       setPedido({ at: resultado.avisadoAt, enviado: true });
       alPedir?.();
     } catch (e) {
@@ -155,7 +155,7 @@ export default function RelevoDeEmergencia({ t, locale, guardiaId, alPedir }) {
       if (!(e instanceof TypeError) && situacionDelError(e) !== 'falla_del_sistema') {
         setError(mensajeDeError(e, t, 'pedir el relevo de emergencia'));
       } else {
-        await agregarACola({ id: clienteUuid, tipo: 'relevo_de_emergencia', guardiaId, payload: datos });
+        await agregarACola({ id: clienteUuid, tipo: 'relevo_de_emergencia', turnoGuardiaId, payload: datos });
         setPedido({ at: datos.ocurrido_at, enviado: false });
         alPedir?.();
         sincronizarCola();

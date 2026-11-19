@@ -52,12 +52,12 @@ export default function Mensajes() {
             ? (c.sin_leer === 1 ? t.chat.sin_leer_uno : t.chat.sin_leer.replace('{n}', c.sin_leer))
             : '';
           return (
-            <Link key={c.id} to={`/mensajes/${c.id}`} className="guardia-card">
-              <div className="guardia-card-paciente">{otro.nombre}</div>
+            <Link key={c.id} to={`/mensajes/${c.id}`} className="tarjeta">
+              <div className="tarjeta-paciente">{otro.nombre}</div>
               {c.ultimo_mensaje_at && (
-                <div className="guardia-card-detalle">{new Date(c.ultimo_mensaje_at).toLocaleString(locale)}</div>
+                <div className="tarjeta-detalle">{new Date(c.ultimo_mensaje_at).toLocaleString(locale)}</div>
               )}
-              {sinLeer && <div className="guardia-card-detalle">{sinLeer}</div>}
+              {sinLeer && <div className="tarjeta-detalle">{sinLeer}</div>}
             </Link>
           );
         })

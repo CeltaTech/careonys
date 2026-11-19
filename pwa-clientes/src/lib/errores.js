@@ -129,7 +129,7 @@ export function errorDeLaRespuesta(respuesta, datos) {
   // Cuando el rechazo trae más de un motivo y los casos de cada uno —los turnos que traban una
   // desactivación—, la pantalla los necesita para decir qué hacer con cada uno.
   if (Array.isArray(datos?.motivos)) error.motivos = datos.motivos;
-  if (Array.isArray(datos?.turnos)) error.turnos = datos.turnos;
+  if (Array.isArray(datos?.turnos_guardia)) error.turnos_guardia = datos.turnos_guardia;
   // Los documentos que frenaron una asignación, para nombrarlos y ofrecer asignar igual.
   if (Array.isArray(datos?.documentos)) error.documentos = datos.documentos;
   // Cuánto hay que esperar antes de volver a probar, cuando el backend lo sabe.
@@ -162,7 +162,7 @@ export function errorDeLaRespuesta(respuesta, datos) {
  */
 export function mensajeDeError(error, t, donde = '') {
   // La base también dice el motivo: una función que rechaza algo lo levanta como mensaje del
-  // error —`asistente_en_otro_turno`—. Se lo toma sólo si tiene forma de código, para no
+  // error —`asistente_en_otro_turno_guardia`—. Se lo toma sólo si tiene forma de código, para no
   // confundir un texto crudo de Postgres con un motivo.
   const delMensaje = error && typeof error === 'object' && /^[a-z_]+$/.test(String(error.message ?? '')) ? error.message : '';
   const motivo = error && typeof error === 'object' ? String(error.motivo ?? delMensaje) : '';

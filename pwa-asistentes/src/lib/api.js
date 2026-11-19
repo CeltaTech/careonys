@@ -25,11 +25,11 @@ async function pedido(ruta, opciones = {}) {
     // motivo, que es lo que después le permite a la pantalla explicar por qué no se pudo.
     const error = errorDeLaRespuesta(respuesta, datos);
     if (datos.yaRegistrado) error.yaRegistrado = true;
-    // Cuando falta un reporte, el backend dice de quiénes falta. Con un turno que cubre a
+    // Cuando falta un reporte, el backend dice de quiénes falta. Con un turno de guardia que cubre a
     // tres personas, "falta un reporte" no le dice al Asistente cuál le quedó pendiente.
     if (datos.pacientesSinReporte) error.pacientesSinReporte = datos.pacientesSinReporte;
     // Un documento ya vencido trae la fecha después de la cual tiene que estar emitido el nuevo,
-    // y un turno que no se puede aceptar trae qué documentos lo impiden.
+    // y un turno de guardia que no se puede aceptar trae qué documentos lo impiden.
     if (datos.fecha) error.fecha = datos.fecha;
     if (datos.documentos) error.documentos = datos.documentos;
     throw error;
@@ -38,7 +38,7 @@ async function pedido(ruta, opciones = {}) {
 }
 
 /**
- * Los datos de un acto del turno, con la hora del hecho y el identificador del envío puestos por
+ * Los datos de un acto del turno de guardia, con la hora del hecho y el identificador del envío puestos por
  * el teléfono.
  *
  * LA HORA DEL HECHO LA PONE EL TELÉFONO, y el backend la guarda en su propia columna, aparte de la
@@ -96,30 +96,30 @@ export const api = {
   // Lo que la Prestadora publicó para los Asistentes. Sólo lo publicado: lo decide la base.
   contenidos: () => pedido('/contenidos'),
   enlaceDeArchivoDeContenido: (id) => pedido(`/contenidos/archivos/${encodeURIComponent(id)}/enlace`),
-  misGuardias: () => pedido('/guardias'),
+  misTurnosGuardia: () => pedido('/turnos-guardia'),
   misCoberturas: () => pedido('/coberturas'),
   objetarCobertura: (id) => pedido(`/coberturas/${id}/objecion`, { method: 'POST' }),
-  guardia: (id) => pedido(`/guardias/${id}`),
-  checkin: (id, datos) => pedido(`/guardias/${id}/checkin`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
-  checkout: (id, datos) => pedido(`/guardias/${id}/checkout`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  turno_guardia: (id) => pedido(`/turnos-guardia/${id}`),
+  checkin: (id, datos) => pedido(`/turnos-guardia/${id}/checkin`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  checkout: (id, datos) => pedido(`/turnos-guardia/${id}/checkout`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // Los dos actos de antes de llegar (pendiente #101). Son deliberados: los aprieta la persona,
   // y por eso quedan guardados como acto suyo y no como una cuenta del sistema. Ninguno de los
   // dos exige ubicación: sin GPS se manda igual y lo único que se pierde es la estimación.
-  registrarSalida: (id, datos) => pedido(`/guardias/${id}/salida`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
-  avisarDemora: (id, datos) => pedido(`/guardias/${id}/aviso-demora`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  registrarSalida: (id, datos) => pedido(`/turnos-guardia/${id}/salida`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  avisarDemora: (id, datos) => pedido(`/turnos-guardia/${id}/aviso-demora`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // El último punto del viaje al domicilio, para el mapa del Cliente. No es un acto de la persona
   // y no va a la cola: un punto viejo no le sirve a nadie, lo reemplaza el siguiente.
-  ubicacionDelViaje: (id, punto) => pedido(`/guardias/${id}/ubicacion`, { method: 'PATCH', body: JSON.stringify(punto) }),
-  // Lo que pasa durante la guardia y no admite esperar al cierre. Manda el momento en que pasó,
+  ubicacionDelViaje: (id, punto) => pedido(`/turnos-guardia/${id}/ubicacion`, { method: 'PATCH', body: JSON.stringify(punto) }),
+  // Lo que pasa durante el turno de guardia y no admite esperar al cierre. Manda el momento en que pasó,
   // porque si el aviso queda en la cola sin conexión lo que importa es esa hora y no la de la
   // sincronización.
-  avisarEmergencia: (id, datos) => pedido(`/guardias/${id}/emergencia`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
-  // El «no puedo continuar» de quien se quedó esperando el relevo. No la libera del turno: avisa
+  avisarEmergencia: (id, datos) => pedido(`/turnos-guardia/${id}/emergencia`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  // El «no puedo continuar» de quien se quedó esperando el relevo. No la libera del turno de guardia: avisa
   // con la máxima urgencia. Manda el momento por lo mismo que la emergencia.
-  relevoDeEmergencia: (id, datos) => pedido(`/guardias/${id}/relevo-de-emergencia`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
-  // El descanso adentro de una guardia larga. No cierra nada ni descuenta nada: deja constancia.
-  empezarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/empezar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
-  terminarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/terminar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  relevoDeEmergencia: (id, datos) => pedido(`/turnos-guardia/${id}/relevo-de-emergencia`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  // El descanso adentro de un turno de guardia largo. No cierra nada ni descuenta nada: deja constancia.
+  empezarDescanso: (id, datos) => pedido(`/turnos-guardia/${id}/descanso/empezar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  terminarDescanso: (id, datos) => pedido(`/turnos-guardia/${id}/descanso/terminar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // El pase de guardia (pendiente #113). Tres pedidos y ninguno más:
   //   - el código que este Asistente muestra cuando es él el que se va y llega el relevo;
   //   - el pedido de autorización, que aparece en el Panel con desde dónde y cuándo se pidió;
@@ -128,23 +128,23 @@ export const api = {
   // la ubicación, porque comprobar la presencia y marcar la llegada son un solo acto.
   codigoDePresencia: () => pedido('/codigo-de-presencia'),
   pedirAutorizacion: (id, { momento, lat, lng, motivo, detalle }) =>
-    pedido(`/guardias/${id}/comprobacion/pedido`, { method: 'POST', body: JSON.stringify({ momento, lat, lng, motivo, detalle }) }),
-  estadoDeComprobacion: (id, momento) => pedido(`/guardias/${id}/comprobacion/${momento}`),
+    pedido(`/turnos-guardia/${id}/comprobacion/pedido`, { method: 'POST', body: JSON.stringify({ momento, lat, lng, motivo, detalle }) }),
+  estadoDeComprobacion: (id, momento) => pedido(`/turnos-guardia/${id}/comprobacion/${momento}`),
   estructurarReporte: (id, textoLibre) =>
-    pedido(`/guardias/${id}/reporte/estructurar`, { method: 'POST', body: JSON.stringify({ textoLibre }) }),
+    pedido(`/turnos-guardia/${id}/reporte/estructurar`, { method: 'POST', body: JSON.stringify({ textoLibre }) }),
   subirFotoReporte: (id, archivo) => {
     const formData = new FormData();
     formData.append('foto', archivo);
-    return pedido(`/guardias/${id}/reporte/foto`, { method: 'POST', body: formData });
+    return pedido(`/turnos-guardia/${id}/reporte/foto`, { method: 'POST', body: formData });
   },
-  confirmarReporte: (id, datos) => pedido(`/guardias/${id}/reporte/confirmar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
+  confirmarReporte: (id, datos) => pedido(`/turnos-guardia/${id}/reporte/confirmar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   reportesDelPaciente: (pacienteId) => pedido(`/pacientes/${pacienteId}/reportes`),
   medicacionDelPaciente: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
   // El enlace a la receta se pide al tocar el botón: preparado de antemano se vence antes de usarlo.
   recetaDeLaOrden: (pacienteId, indicacionId) => pedido(`/medicacion/${pacienteId}/receta/${indicacionId}`),
   // Lo que el Asistente firmó, tal como lo firmó.
   consentimientos: () => pedido('/consentimientos'),
-  // Los turnos que se le asignaron y todavía no respondió, con la lista de motivos de rechazo de
+  // Los turnos de guardia que se le asignaron y todavía no respondió, con la lista de motivos de rechazo de
   // su Prestadora. Rechazar pide uno de esos motivos, y el detalle cuando el motivo lo pide.
   asignaciones: () => pedido('/asignaciones'),
   responderAsignacion: (id, respuesta, { motivoId, detalle } = {}) =>

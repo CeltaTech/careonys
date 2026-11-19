@@ -10,8 +10,8 @@ import { vitalesDelAsistente, filtrarSignos } from '../utils/vitalesReferencia.j
 import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import {
   conPacientes,
-  pacientesDeGuardia,
-} from '../utils/pacientesDeGuardia.js';
+  pacientesDeTurnoGuardia,
+} from '../utils/pacientesDeTurnoGuardia.js';
 import { conDomicilioDelDia, pacientesConDomicilioDelDia } from '../utils/domicilioDelDia.js';
 import { FICHA_DOMICILIO, FICHA_NOMBRE, FICHA_UBICACION, saludCon } from '../utils/fichaDelPaciente.js';
 import { llegoAlDomicilio } from '../utils/toleranciaCheckin.js';
@@ -48,7 +48,7 @@ import {
 } from '../utils/conversacionIntermediacion.js';
 import { direccionDeVideollamada } from '../utils/videollamada.js';
 import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
-import { guardiasEnLicencia } from '../utils/guardiaDeLicencia.js';
+import { turnosGuardiaEnLicencia } from '../utils/turnoGuardiaDeLicencia.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
 import { horaDelHecho } from '../utils/horaDelHecho.js';
@@ -84,7 +84,7 @@ export const appAsistentesRouter = Router();
 // recién al confirmar el turno, y hay quien no manda datos clínicos al teléfono de nadie.
 // Lo que está apagado no se pide, así que tampoco viaja (tarea 65).
 //
-// Las patologías se piden solamente en la pantalla de una guardia, que es donde el Asistente
+// Las patologías se piden solamente en la pantalla de un turno de guardia, que es donde el Asistente
 // las necesita para trabajar. En la lista de sus turnos no van ni aunque estén prendidas: ahí
 // alcanza con saber a quién y a qué hora.
 function camposDePacienteParaElAsistente(visibilidad, { conPatologias = false } = {}) {
@@ -116,22 +116,22 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
-// La guardia, si es de este Asistente. Si la base no la deja ver, para quien pide no existe: es de
+// El turno de guardia, si es de este Asistente. Si la base no la deja ver, para quien pide no existe: es de
 // otra persona o de otra Prestadora. La Prestadora de la fila es la que usa todo lo que sigue.
 //
 // Tampoco existe la que cae en una licencia y todavía no empezó: durante la licencia el Asistente
-// no tiene guardias, y la única forma de recuperarlas es que el Coordinador anote la vuelta
-// (`utils/guardiaDeLicencia.js`). Como todas las rutas que tocan una guardia pasan por acá, no
+// no tiene turnos de guardia, y la única forma de recuperarlas es que el Coordinador anote la vuelta
+// (`utils/turnoGuardiaDeLicencia.js`). Como todas las rutas que tocan un turno de guardia pasan por acá, no
 // queda ningún otro camino para marcar la llegada a una de esas.
-async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
+async function turnoGuardiaDelAsistente(db, turnoGuardiaId, usuarioAsistente) {
   const { data } = await db
-    .from('guardias')
+    .from('turnos_guardia')
     .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
-    .eq('id', guardiaId)
+    .eq('id', turnoGuardiaId)
     .eq('asistente_id', usuarioAsistente.asistenteId)
     .maybeSingle();
   if (!data) return null;
-  return (await guardiasEnLicencia(data.prestadora_id, [data])).has(data.id) ? null : data;
+  return (await turnosGuardiaEnLicencia(data.prestadora_id, [data])).has(data.id) ? null : data;
 }
 
 // ============================================================================
@@ -144,13 +144,13 @@ async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
 //      código QR. Toda la mecánica está en `utils/comprobacionDePresencia.js`.
 //   2. El código QR viaja siempre junto con el GPS, nunca en lugar de él: por eso esto se valida
 //      además de lat/lng, no en cambio de lat/lng.
-//   3. La guardia nunca se traba. Si nadie puede mostrar el código QR y quien coordina tampoco
+//   3. El turno de guardia nunca se traba. Si nadie puede mostrar el código QR y quien coordina tampoco
 //      contesta, el Asistente elige un motivo de una lista corta, marca igual y esa llegada
 //      queda anotada como SIN COMPROBAR, con ese motivo. Lo único que sí se rechaza es
 //      un código equivocado —ahí la pantalla ofrece reintentar, pedir autorización, o entrar con
 //      un motivo—, porque aceptar un código que no es sería no comprobar nada y decir que sí.
 //   4. Un relevo son dos actos, no uno: el que se va ficha su salida y el que llega ficha su
-//      entrada. Cada guardia anota su propia comprobación por su cuenta, así que quedan dos
+//      entrada. Cada turno de guardia anota su propia comprobación por su cuenta, así que quedan dos
 //      filas, una contra la que termina y otra contra la que empieza.
 //   5. Al Cliente se le avisa una sola vez, y lo dispara fichar la entrada. El mensaje lleva el
 //      nombre de quién llegó y nada más: con qué se comprobó es funcionamiento interno y no se le
@@ -164,7 +164,7 @@ async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
 //
 // Un motivo que no está en la lista cae en «otro» en vez de rechazar el pedido, por lo mismo: la
 // lista puede haber cambiado y el teléfono todavía tener la anterior, y eso es un desajuste de
-// versiones, no una razón para trabar una guardia. Lo que mandó se guarda en el detalle, así el
+// versiones, no una razón para trabar un turno de guardia. Lo que mandó se guarda en el detalle, así el
 // Coordinador ve qué quiso decir.
 function datosDeComprobacion(body) {
   const { comprobacion } = body || {};
@@ -204,30 +204,30 @@ async function nombreDeAsistente(db, asistenteId) {
   }
 }
 
-// Punto único de verdad de "qué reportes tiene ya cargados esta guardia" (regla 12 de §7):
-// lo consultan el guard de reporte repetido, el guard de cierre sin reporte y la pantalla de
-// la guardia.
+// Punto único de verdad de "qué reportes tiene ya cargados este turno de guardia" (regla 12 de §7):
+// lo consultan el guard de reporte repetido, el guard de cierre sin reporte y la pantalla del
+// turno de guardia.
 //
 // Devuelve una lista y no uno solo porque un turno que cubre a varios Pacientes lleva un
 // reporte por cada uno: el de la señora de la casa no es el del marido, y darlos por
 // equivalentes era escribir la comida, la medicación y la presión de los dos en el mismo reporte.
 //
-// Con la credencial de quien pide: la base le deja ver los reportes de sus propias guardias.
-async function reportesDeLaGuardia(db, guardiaId) {
+// Con la credencial de quien pide: la base le deja ver los reportes de sus propios turnos de guardia.
+async function reportesDelTurnoGuardia(db, turnoGuardiaId) {
   const { data, error } = await db
     .from('reportes')
     .select('id, paciente_id')
-    .eq('guardia_id', guardiaId);
+    .eq('turno_guardia_id', turnoGuardiaId);
   if (error) throw error;
   return data ?? [];
 }
 
-// A quiénes del turno todavía les falta el reporte. Es lo que decide si la guardia se puede
+// A quiénes del turno todavía les falta el reporte. Es lo que decide si el turno de guardia se puede
 // cerrar, y lo que la pantalla del Asistente muestra como lo que le queda por hacer.
-async function pacientesSinReporte(db, guardia) {
+async function pacientesSinReporte(db, turno_guardia) {
   const [pacientes, reportes] = await Promise.all([
-    pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`),
-    reportesDeLaGuardia(db, guardia.id),
+    pacientesDeTurnoGuardia(db, turno_guardia.prestadora_id, turno_guardia, `id, ${FICHA_NOMBRE}`),
+    reportesDelTurnoGuardia(db, turno_guardia.id),
   ]);
   const conReporte = new Set(reportes.map((r) => r.paciente_id));
   return pacientes.filter((p) => !conReporte.has(p.id));
@@ -562,7 +562,7 @@ appAsistentesRouter.delete('/perfil/datos-bancarios/:clase', requiereRolAsistent
 // `asistentes.estado` lo decide la Prestadora; esto lo decide él, y son dos cosas distintas a
 // propósito (ver la columna `asistentes.disponible`).
 // Apagarlo lo saca de lo que sale a buscarlo solo —la fase automática de la escalada de relevo—
-// y no toca ninguna guardia ya asignada: lo que ya se comprometió sigue siendo suyo.
+// y no toca ningún turno de guardia ya asignado: lo que ya se comprometió sigue siendo suyo.
 //
 // La sesión decide sobre qué fila se escribe. El identificador no viaja en el pedido, así que no
 // hay forma de pedir que se apague a otra persona.
@@ -602,7 +602,7 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
 });
 
 // En qué horarios suele estar disponible. La cambia él cuando quiere: no es algo fijo en el tiempo.
-// Es un dato que ve quien coordina al asignar guardias; el sistema no decide nada con él.
+// Es un dato que ve quien coordina al asignar turnos de guardia; el sistema no decide nada con él.
 //
 // Lo elegido se comprueba contra la lista que la base le deja ver con su propia sesión —las
 // opciones del producto y las de su Prestadora—, y se guarda con el trabajo de la Prestadora por
@@ -635,7 +635,7 @@ appAsistentesRouter.patch('/perfil/horarios-disponibles', requiereRolAsistente, 
 });
 
 // ============================================================================
-// Mis Guardias
+// Mis Turnos de guardia
 // ============================================================================
 
 // Lo que la Prestadora publicó para sus Asistentes (`routes/panelContenidos.js`). Sale solamente
@@ -663,16 +663,16 @@ appAsistentesRouter.get('/contenidos/archivos/:id/enlace', requiereRolAsistente,
   }
 });
 
-// `guardia.pacientes` es una LISTA, no una persona: un mismo turno puede cubrir a más de un
-// Paciente (ver `utils/pacientesDeGuardia.js`). La lista ya no la engancha PostgREST por la
-// columna vieja `guardias.paciente_id` — sale de la tabla `guardia_pacientes`.
+// `turno_guardia.pacientes` es una LISTA, no una persona: un mismo turno puede cubrir a más de un
+// Paciente (ver `utils/pacientesDeTurnoGuardia.js`). La lista ya no la engancha PostgREST por la
+// columna vieja `turnos_guardia.paciente_id` — sale de la tabla `turno_guardia_pacientes`.
 //
-// Y la dirección de cada Paciente es la que rige **el día de esa guardia**, no la del Legajo del Paciente:
+// Y la dirección de cada Paciente es la que rige **el día de ese turno de guardia**, no la del Legajo del Paciente:
 // un turno de enero puede caer en la temporada en que el Paciente está en la casa de un hijo
 // (`utils/domicilioDelDia.js`).
-appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.get('/turnos-guardia', requiereRolAsistente, async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
-    .from('guardias')
+    .from('turnos_guardia')
     .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('fecha', { ascending: false })
@@ -684,10 +684,10 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
   }
 
   try {
-    // Las que caen en una licencia no se muestran: durante la licencia no tiene guardias.
+    // Las que caen en una licencia no se muestran: durante la licencia no tiene turnos de guardia.
     const { asistenteId, prestadoraId } = req.usuarioAsistente;
     const propias = (data ?? []).map((g) => ({ ...g, asistente_id: asistenteId }));
-    const deLicencia = await guardiasEnLicencia(prestadoraId, propias);
+    const deLicencia = await turnosGuardiaEnLicencia(prestadoraId, propias);
     const db = clienteDelPedido(req);
     // De las pasadas quedan sólo las que todavía no se le pagaron: las que cubre el período de
     // una liquidación pagada ya no tiene nada que reclamar. Una que sigue en curso queda siempre,
@@ -699,41 +699,41 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
     const visibles = (data ?? []).filter((g) => !deLicencia.has(g.id) && !yaPagada(g));
 
     const visibilidad = await visibilidadDelPedido(req);
-    const guardias = await conPacientes(db, prestadoraId, visibles, camposDePacienteParaElAsistente(visibilidad));
-    res.json({ guardias: await conDomicilioDelDia(db, guardias) });
+    const turnos_guardia = await conPacientes(db, prestadoraId, visibles, camposDePacienteParaElAsistente(visibilidad));
+    res.json({ turnos_guardia: await conDomicilioDelDia(db, turnos_guardia) });
   } catch (e) {
     responderError(res, e);
   }
 });
 
-appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.get('/turnos-guardia/:id', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
   const { data, error } = await db
-    .from('guardias')
+    .from('turnos_guardia')
     .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
 
   if (error || !data) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
-  const deLicencia = await guardiasEnLicencia(req.usuarioAsistente.prestadoraId, [
+  const deLicencia = await turnosGuardiaEnLicencia(req.usuarioAsistente.prestadoraId, [
     { ...data, asistente_id: req.usuarioAsistente.asistenteId },
   ]);
   if (deLicencia.has(data.id)) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
 
   const visibilidad = await visibilidadDelPedido(req);
 
-  let guardia;
+  let turno_guardia;
   try {
     const [conSuGente] = await conPacientes(db, req.usuarioAsistente.prestadoraId, [data], camposDePacienteParaElAsistente(visibilidad, { conPatologias: true }));
-    // La dirección que se muestra es la del día de la guardia. Si es una temporal, cada
+    // La dirección que se muestra es la del día del turno de guardia. Si es una temporal, cada
     // Paciente viaja además con `domicilio_es_temporal` y `domicilio_motivo`, que es lo que le
     // permite a la pantalla avisar que hoy no se lo atiende en su casa.
-    [guardia] = await conDomicilioDelDia(db, [conSuGente]);
+    [turno_guardia] = await conDomicilioDelDia(db, [conSuGente]);
   } catch (e) {
     return responderError(res, e);
   }
@@ -742,7 +742,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   // salen del mismo catálogo que ve el Cliente, así que las dos partes leen lo mismo y nadie
   // discute en la puerta con una lista distinta en la mano.
   //
-  // El tipo se pide acá y no se guarda con la guardia: si la Prestadora corrige el catálogo,
+  // El tipo se pide acá y no se guarda con el turno de guardia: si la Prestadora corrige el catálogo,
   // el cambio tiene que llegar al próximo turno sin arrastrar la copia vieja.
   const { data: quienEs } = await db
     .from('asistentes')
@@ -766,14 +766,14 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   const vitalesPorPaciente = {};
   if (visibilidad.asistente_signos_vitales) {
     // Los rangos se leen con el trabajo de la Prestadora: la regla de salud se pregunta antes.
-    for (const p of guardia.pacientes ?? []) {
+    for (const p of turno_guardia.pacientes ?? []) {
       vitalesPorPaciente[p.id] = (await alcanzaLaInformacionDeSalud(db, p.id))
         ? await vitalesDelAsistente(p.id, req.usuarioAsistente.prestadoraId, tareas)
         : { habilitados: false, signos: [], rangos: {} };
     }
   }
 
-  // La obra social y el número de afiliado de cada Paciente van sólo mientras la guardia está en
+  // La obra social y el número de afiliado de cada Paciente van sólo mientras el turno de guardia está en
   // curso: es cuando el Asistente puede necesitarlos, si hay que llamar a una ambulancia. El
   // nombre de la obra social está en el Directorio de Personas, donde el Asistente no lee: se
   // busca con el trabajo de la Prestadora y sólo las personas que nombran sus Pacientes.
@@ -783,7 +783,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
       coberturaPorPaciente = await coberturaDeLosPacientes(
         db,
         req.usuarioAsistente.prestadoraId,
-        (guardia.pacientes ?? []).map((p) => p.id),
+        (turno_guardia.pacientes ?? []).map((p) => p.id),
       );
     } catch (e) {
       return responderError(res, e);
@@ -794,18 +794,18 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   // no queda ninguno, en vez de dejar apretar un botón que el backend va a rechazar.
   let reportes;
   try {
-    reportes = await reportesDeLaGuardia(db, data.id);
+    reportes = await reportesDelTurnoGuardia(db, data.id);
   } catch (e) {
     return responderError(res, e);
   }
   const conReporte = reportes.map((r) => r.paciente_id);
 
   // Si quedó un descanso abierto, la pantalla tiene que ofrecer terminarlo y no empezar otro. Es
-  // una sola fila como máximo: la base no admite dos abiertos en la misma guardia.
+  // una sola fila como máximo: la base no admite dos abiertos en el mismo turno de guardia.
   const { data: descansoAbierto } = await db
-    .from('descansos_guardia')
+    .from('descansos_turno_guardia')
     .select('id, inicio_at')
-    .eq('guardia_id', data.id)
+    .eq('turno_guardia_id', data.id)
     .is('fin_at', null)
     .maybeSingle();
 
@@ -813,7 +813,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   // decírselo y mostrarle cómo va la búsqueda.
   // Viene en blanco en la enorme mayoría de los turnos, que es lo normal.
   const extension = await estadoDeLaExtension({
-    guardiaId: data.id,
+    turnoGuardiaId: data.id,
     prestadoraId: req.usuarioAsistente.prestadoraId,
   });
 
@@ -826,7 +826,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   ];
   if (categorias.length) {
     try {
-      for (const p of guardia.pacientes ?? []) {
+      for (const p of turno_guardia.pacientes ?? []) {
         await anotarConsultaAHce(
           req.usuarioAsistente,
           { pacienteId: p.id, categorias, origen: origenDelPedido(req) },
@@ -839,7 +839,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   }
 
   res.json({
-    guardia,
+    turno_guardia,
     tipo,
     tareas,
     extension,
@@ -847,7 +847,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     pacientesConReporte: conReporte,
     // Se sigue mandando para las versiones de la aplicación que todavía no saben de la lista:
     // significa "ya está todo el trabajo del turno", que es lo que preguntaban.
-    reporteCargado: (guardia.pacientes ?? []).every((p) => conReporte.includes(p.id)),
+    reporteCargado: (turno_guardia.pacientes ?? []).every((p) => conReporte.includes(p.id)),
     vitalesPorPaciente,
     coberturaPorPaciente,
   });
@@ -880,12 +880,12 @@ async function coberturaDeLosPacientes(db, prestadoraId, pacienteIds) {
 // ============================================================================
 
 // El tope de pedidos por minuto (pendiente #177) cuenta SÓLO los pedidos que traen un código: el
-// piso queda intacto, así que entrar o salir eligiendo un motivo nunca se frena y la guardia
+// piso queda intacto, así que entrar o salir eligiendo un motivo nunca se frena y el turno de guardia
 // nunca se traba. Sin esto, el código que alguien muestra en su pantalla —que no lleva cuenta de
 // intentos, sólo se renueva cada pocos segundos— se podía probar sin freno.
 const trajoUnCodigo = (req) => Boolean(req.body?.comprobacion?.codigo);
 
-appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/checkin', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
   const { lat, lng } = req.body;
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
@@ -895,20 +895,20 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   const comprobacionPedida = datosDeComprobacion(req.body);
 
   const db = clienteDelPedido(req);
-  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
-  if (guardia.checkin_at) {
+  if (turno_guardia.checkin_at) {
     // yaRegistrado: true — permite que el cliente offline (Fase 9) distinga "ya se había
     // sincronizado antes" de un error real, y dé la acción encolada por sincronizada.
-    return res.status(400).json({ error: 'Esta guardia ya tiene check-in registrado', yaRegistrado: true });
+    return res.status(400).json({ error: 'Este turno de guardia ya tiene check-in registrado', yaRegistrado: true });
   }
 
   // Un solo check-in para todo el turno, aunque el turno cubra a varias personas: el Asistente
   // llega una vez a la casa y marca una vez.
   //
-  // Las coordenadas contra las que se mide son las del DÍA DE ESTA GUARDIA, no las del Legajo del Paciente:
+  // Las coordenadas contra las que se mide son las del DÍA DE ESTE TURNO DE GUARDIA, no las del Legajo del Paciente:
   // si el Paciente está pasando una temporada en otro lado, el Asistente fue a donde le
   // dijeron, y medir contra la casa de siempre lo daba fuera de rango y le mandaba al
   // Coordinador una alerta que era un falso positivo (pendiente #153).
@@ -918,8 +918,8 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // ve el Asistente en el teléfono, no contra qué mide el backend de este lado.
   let pacientes;
   try {
-    pacientes = await pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, cliente_id, ${FICHA_UBICACION}`);
-    pacientes = await pacientesConDomicilioDelDia(db, guardia, pacientes);
+    pacientes = await pacientesDeTurnoGuardia(db, turno_guardia.prestadora_id, turno_guardia, `id, cliente_id, ${FICHA_UBICACION}`);
+    pacientes = await pacientesConDomicilioDelDia(db, turno_guardia, pacientes);
   } catch (e) {
     return responderError(res, e);
   }
@@ -946,12 +946,12 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
 
   // La comprobación se resuelve ANTES de marcar el check-in, y es lo único que puede rechazar el
   // pedido: un código equivocado no marca la llegada, porque darlo por bueno sería no comprobar
-  // nada y decir que sí. No traba la guardia igual — la pantalla ofrece reintentar, pedirle un
+  // nada y decir que sí. No traba el turno de guardia igual — la pantalla ofrece reintentar, pedirle un
   // código a la Prestadora, o entrar con un motivo, y ese último camino nunca falla.
   let comprobacion;
   try {
     comprobacion = await registrarComprobacion({
-      guardia, momento: 'checkin', lat, lng, comprobacion: comprobacionPedida,
+      turno_guardia, momento: 'checkin', lat, lng, comprobacion: comprobacionPedida,
     });
   } catch (e) {
     return responderError(res, e);
@@ -960,10 +960,10 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // La llegada se marca siempre; la coordenada, sólo si el consentimiento de seguimiento está
   // vigente. Quien lo retiró sigue pudiendo trabajar con normalidad — lo único que no queda
   // guardado es dónde estaba.
-  const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id, guardia.prestadora_id);
+  const registraUbicacion = await puedeRegistrarUbicacion(turno_guardia.asistente_id, turno_guardia.prestadora_id);
 
   const { error } = await db
-    .from('guardias')
+    .from('turnos_guardia')
     .update({
       checkin_at: new Date().toISOString(),
       checkin_lat: registraUbicacion ? lat : null,
@@ -974,25 +974,25 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
       ubicacion_actual_lng: null,
       ubicacion_actual_at: null,
     })
-    .eq('id', guardia.id);
+    .eq('id', turno_guardia.id);
   if (error) {
     return responderError(res, error);
   }
 
-  // El titular llegó sobre una guardia ya marcada ausente: la base la anota como llegada tarde, y el
-  // pedido de relevo de esa guardia se cierra como resuelto por él, para que deje de insistirse.
+  // El titular llegó sobre un turno de guardia ya marcado ausente: la base la anota como llegada tarde, y el
+  // pedido de relevo de ese turno de guardia se cierra como resuelto por él, para que deje de insistirse.
   // El Asistente no puede tocar el incidente, así que va con el trabajo de la Prestadora. Si falla,
   // la llegada ya quedó marcada y el cierre del turno lo cierra igual.
-  if (guardia.estado === 'ausente') {
-    await enLaPrestadora(guardia.prestadora_id, 'cierre del pedido de relevo por llegada tarde', (dbPrestadora) => dbPrestadora
+  if (turno_guardia.estado === 'ausente') {
+    await enLaPrestadora(turno_guardia.prestadora_id, 'cierre del pedido de relevo por llegada tarde', (dbPrestadora) => dbPrestadora
       .from('incidentes_relevo')
       .update({
         resuelto_at: new Date().toISOString(),
         resuelto_por_tipo: 'titular',
-        resuelto_por_id: guardia.asistente_id,
+        resuelto_por_id: turno_guardia.asistente_id,
       })
-      .eq('prestadora_id', guardia.prestadora_id)
-      .eq('guardia_entrante_id', guardia.id)
+      .eq('prestadora_id', turno_guardia.prestadora_id)
+      .eq('turno_guardia_entrante_id', turno_guardia.id)
       .is('resuelto_at', null))
       .then(({ error: errorCierre }) => {
         if (errorCierre) console.error('Error cerrando el pedido de relevo por llegada tarde:', errorCierre.message);
@@ -1001,7 +1001,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   }
 
   // UN SOLO MENSAJE, Y LO DISPARA FICHAR LA ENTRADA. Antes salían dos que decían casi lo mismo: éste
-  // sin ninguna condición, y otro —«la guardia quedó cubierta»— sólo cuando el Cliente no había
+  // sin ninguna condición, y otro —«el turno de guardia quedó cubierto»— sólo cuando el Cliente no había
   // participado de la comprobación. Con un relevo salían los dos juntos. El Asistente fichó: el
   // Cliente se entera, y con el nombre de quién llegó. Cómo se comprobó no se le cuenta, porque es
   // funcionamiento interno.
@@ -1015,20 +1015,20 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // Se envía una sola vez porque checkin_at ya se validó arriba como no seteado antes de este
   // UPDATE.
   const conCliente = pacientes.filter((p) => p.cliente_id);
-  const nombreDelAsistente = await nombreDeAsistente(db, guardia.asistente_id);
+  const nombreDelAsistente = await nombreDeAsistente(db, turno_guardia.asistente_id);
   //
   // Sigue corriendo después de contestar, así que entra con la credencial de esta Prestadora.
   for (const p of conCliente) {
-    enLaPrestadora(guardia.prestadora_id, 'aviso de llegada', async (dbTrabajo) => enviarPushCliente(guardia.prestadora_id, p.cliente_id, {
-      ...mensajeDelSistema('llegada_del_asistente', await idiomaDeLaPrestadora(dbTrabajo, guardia.prestadora_id), {
+    enLaPrestadora(turno_guardia.prestadora_id, 'aviso de llegada', async (dbTrabajo) => enviarPushCliente(turno_guardia.prestadora_id, p.cliente_id, {
+      ...mensajeDelSistema('llegada_del_asistente', await idiomaDeLaPrestadora(dbTrabajo, turno_guardia.prestadora_id), {
         asistente: nombreDelAsistente,
         paciente: p.nombre,
-      }, guardia.prestadora_id),
+      }, turno_guardia.prestadora_id),
       url: `/pacientes/${p.id}`,
     })).catch((err) => console.error('Error enviando push de llegada a Cliente:', err.message));
   }
   if (conCliente.length > 0) {
-    await db.from('guardias').update({ push_llegada_enviado_at: new Date().toISOString() }).eq('id', guardia.id);
+    await db.from('turnos_guardia').update({ push_llegada_enviado_at: new Date().toISOString() }).eq('id', turno_guardia.id);
   }
 
   if (!dentroDeRango && req.usuarioAsistente.prestadoraId) {
@@ -1048,10 +1048,10 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
       : 'del domicilio del Paciente';
 
     await db.from('mensajes_asistente').insert({
-      asistente_id: guardia.asistente_id,
-      prestadora_id: guardia.prestadora_id,
-      usuario_id: guardia.asistente_id,
-      mensaje: `Mensaje automático: check-in fuera de rango (${distancia} m ${contraQueSeMidio}) en la guardia del ${guardia.fecha}.`,
+      asistente_id: turno_guardia.asistente_id,
+      prestadora_id: turno_guardia.prestadora_id,
+      usuario_id: turno_guardia.asistente_id,
+      mensaje: `Mensaje automático: check-in fuera de rango (${distancia} m ${contraQueSeMidio}) en el turno de guardia del ${turno_guardia.fecha}.`,
     }).then(({ error: errorNota }) => {
       if (errorNota) console.error('Error registrando nota de check-in fuera de rango:', errorNota.message);
     });
@@ -1070,7 +1070,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
 // Lo que el sistema calcula solo es un hecho, no un mérito de nadie, y por eso se guarda con
 // otro código de origen y no se mezcla nunca con el aviso que dio la persona.
 //
-// LA MEDIDA DE ESTO SON LOS MINUTOS DE PREAVISO que le da a la Prestadora para cubrir la guardia.
+// LA MEDIDA DE ESTO SON LOS MINUTOS DE PREAVISO que le da a la Prestadora para cubrir el turno de guardia.
 // De ahí salen dos decisiones: ninguno de los dos botones se traba —ni por GPS, ni por hora, ni
 // por conexión: van a la cola de la aplicación como el check-in—, y el aviso de demora sale
 // hacia el Coordinador en el momento, sin esperar la vuelta del proceso de fondo.
@@ -1087,7 +1087,7 @@ function medioDeTransporteDelPedido(body) {
   return limpio || null;
 }
 
-appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/salida', requiereRolAsistente, async (req, res) => {
   const { lat, lng } = req.body || {};
 
   // El punto de salida es opcional a propósito. Sin él la hora de salida se guarda igual y lo
@@ -1100,9 +1100,9 @@ appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (re
     return res.status(400).json({ error: 'Ubicación inválida' });
   }
 
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
 
   // NINGUNO DE ESTOS DOS CASOS CONTESTA UN ERROR, y no es una comodidad: un pedido de la cola
@@ -1111,26 +1111,26 @@ appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (re
   // check-in que viene atrás. Los dos son situaciones normales, no pedidos mal armados.
   //
   // Ya registrada: el mismo pedido llegó dos veces. Se contesta con la hora que ya estaba.
-  if (guardia.salida_checkin_at) {
-    return res.json({ ok: true, yaRegistrado: true, salidaAt: guardia.salida_checkin_at });
+  if (turno_guardia.salida_checkin_at) {
+    return res.json({ ok: true, yaRegistrado: true, salidaAt: turno_guardia.salida_checkin_at });
   }
   // Ya llegó: la salida quedó en la cola y se sincroniza recién ahora, con la persona adentro
   // de la casa. Guardarla con la hora de este momento sería escribir que salió después de
   // llegar. No se guarda nada y se dice por qué.
-  if (guardia.checkin_at) {
+  if (turno_guardia.checkin_at) {
     return res.json({ ok: true, yaLlego: true });
   }
 
   const salidaAt = new Date().toISOString();
   const { error } = await clienteDelPedido(req)
-    .from('guardias')
+    .from('turnos_guardia')
     .update({
       salida_checkin_at: salidaAt,
       salida_lat: hayPunto ? lat : null,
       salida_lng: hayPunto ? lng : null,
       medio_transporte: medioDeTransporteDelPedido(req.body),
     })
-    .eq('id', guardia.id);
+    .eq('id', turno_guardia.id);
 
   if (error) {
     return responderError(res, error);
@@ -1139,7 +1139,7 @@ appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (re
   res.json({ ok: true, salidaAt });
 });
 
-appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/aviso-demora', requiereRolAsistente, async (req, res) => {
   // Un motivo que no está en la lista se guarda como `otro` en vez de rechazar el aviso, por lo
   // mismo que ya hace `datosDeComprobacion` unos renglones más arriba: la lista puede haber
   // cambiado y el teléfono tener todavía la anterior, y eso es un desajuste de versiones, no una
@@ -1147,27 +1147,27 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   const pedido = typeof req.body?.motivo === 'string' ? req.body.motivo.trim() : '';
   const motivo = MOTIVOS_DEMORA.includes(pedido) ? pedido : 'otro';
 
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
   // Igual que en la salida: no es un error, es un aviso que llegó tarde desde la cola sin
   // conexión y ya no describe nada. Contestar con error trabaría el resto de la cola.
-  if (guardia.checkin_at) {
+  if (turno_guardia.checkin_at) {
     return res.json({ ok: true, yaLlego: true });
   }
 
-  // Un aviso por guardia mientras el anterior siga abierto. Sin esto, la cola sin conexión
+  // Un aviso por turno de guardia mientras el anterior siga abierto. Sin esto, la cola sin conexión
   // podría dejar tres filas iguales y el Coordinador vería tres alertas de la misma persona por
   // el mismo viaje.
   //
   // Las tres consultas van con la credencial del Asistente: la base le deja ver, dar y anotar el
-  // envío sólo de sus propios avisos de demora, en guardias suyas.
+  // envío sólo de sus propios avisos de demora, en turnos de guardia suyos.
   const db = clienteDelPedido(req);
   const { data: yaAbierta } = await db
-    .from('alertas_tempranas_guardia')
+    .from('alertas_tempranas_turno_guardia')
     .select('id, motivo, detectado_at')
-    .eq('guardia_id', guardia.id)
+    .eq('turno_guardia_id', turno_guardia.id)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('fuente', FUENTE_AVISO_DEMORA_ASISTENTE)
     .is('resuelto_at', null)
@@ -1179,10 +1179,10 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
 
   const detectadoAt = new Date().toISOString();
   const { data: alerta, error } = await db
-    .from('alertas_tempranas_guardia')
+    .from('alertas_tempranas_turno_guardia')
     .insert({
-      prestadora_id: guardia.prestadora_id,
-      guardia_id: guardia.id,
+      prestadora_id: turno_guardia.prestadora_id,
+      turno_guardia_id: turno_guardia.id,
       fuente: FUENTE_AVISO_DEMORA_ASISTENTE,
       motivo,
       reportado_por: req.usuarioAsistente.id,
@@ -1206,23 +1206,23 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   try {
     // Lo lee el Coordinador, así que sale en el idioma de la Prestadora y no en el del teléfono
     // del Asistente que dio el aviso.
-    const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), guardia.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), turno_guardia.prestadora_id);
     await notificarCoordinador({
-      evento: 'alerta_temprana_guardia',
-      prestadoraId: guardia.prestadora_id,
+      evento: 'alerta_temprana_turno_guardia',
+      prestadoraId: turno_guardia.prestadora_id,
       ...mensajeDelSistema('aviso_demora_asistente', idioma, {
-        fecha: guardia.fecha,
-        horaInicio: guardia.hora_inicio,
+        fecha: turno_guardia.fecha,
+        horaInicio: turno_guardia.hora_inicio,
         origen: mensajeDelSistema('origen_de_alerta', idioma, { fuente: FUENTE_AVISO_DEMORA_ASISTENTE }).texto,
         motivo,
       }),
     });
     if (alerta?.id) {
       await db
-        .from('alertas_tempranas_guardia')
+        .from('alertas_tempranas_turno_guardia')
         .update({ ultima_notificacion_at: detectadoAt, veces_notificado: 1 })
         .eq('id', alerta.id)
-        .eq('prestadora_id', guardia.prestadora_id);
+        .eq('prestadora_id', turno_guardia.prestadora_id);
     }
   } catch (e) {
     console.error('Error avisando al Coordinador del aviso de demora:', e.message);
@@ -1231,60 +1231,60 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   res.json({ ok: true, avisoAt: detectadoAt, motivo });
 });
 
-/* El botón de emergencia de la Guardia Activa.
+/* El botón de emergencia del Turno de guardia Activo.
    --------------------------------------------------------------------------
-   Es lo que se aprieta cuando pasa algo que no admite esperar al cierre de la guardia. No tiene
+   Es lo que se aprieta cuando pasa algo que no admite esperar al cierre del turno de guardia. No tiene
    lista de tipos para elegir: se escribe qué está pasando y se manda. Quien está en el medio de
    una emergencia no tiene que buscar su caso en un desplegable, y clasificarlas es una decisión
    de negocio de la Prestadora que no se inventa acá.
 
    LO QUE ESCRIBIÓ NO SALE HACIA AFUERA. El aviso inmediato dice que hay una emergencia, de qué
-   guardia y de cuándo; el texto se lee entrando al Panel (`celtatech/CLAUDE.md` §6).
+   turno de guardia y de cuándo; el texto se lee entrando al Panel (`celtatech/CLAUDE.md` §6).
 
    Y NO SE PUEDE APAGAR. El evento está en el catálogo con `se_puede_apagar: false`: la Prestadora
    elige por qué canal sale y a qué dirección, nunca si sale. */
-appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/emergencia', requiereRolAsistente, async (req, res) => {
   const detalle = typeof req.body?.detalle === 'string' ? req.body.detalle.trim() : '';
   if (!detalle) {
     return responderError(res, new ErrorConMotivo('faltan_datos', 'emergencia sin detalle'));
   }
 
   // Todo el aviso va con la credencial de quien lo manda: la base le deja escribir, leer y marcar
-  // sólo las emergencias de sus propias guardias.
+  // sólo las emergencias de sus propios turnos de guardia.
   const db = clienteDelPedido(req);
-  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
 
   /* Cuándo pasó, no cuándo se pudo enviar: acá esa media hora que el aviso estuvo en la cola es el
      dato. El criterio es uno solo para todas las rutas y vive en `utils/horaDelHecho.js`. */
   const reportadoAt = horaDelHecho(req.body?.ocurrido_at);
 
-  /* SÓLO DE LA GUARDIA EN CURSO. La aplicación ofrece el botón únicamente ahí, y esto es el candado
-     de atrás: sin él entraba la emergencia de cualquier guardia de esta persona, aunque fuera de
+  /* SÓLO Del TURNO DE GUARDIA EN CURSO. La aplicación ofrece el botón únicamente ahí, y esto es el candado
+     de atrás: sin él entraba la emergencia de cualquier turno de guardia de esta persona, aunque fuera de
      otro día. En curso es que la llegada ya está marcada y la salida todavía no lo estaba cuando
      pasó la cosa.
      La llegada se exige y no se compara su hora: `checkin_at` es cuándo llegó el aviso al servidor,
      no cuándo se marcó, y con las dos cosas guardadas sin señal la emergencia podría parecer
      anterior a una llegada que en el teléfono fue antes. El orden lo garantiza la cola, que manda
      la llegada primero. La salida sí se compara, por lo mismo al revés: lo guardado es igual o
-     posterior a la salida real, así que una emergencia de adentro de la guardia nunca queda
-     después. Lo que no está en curso contesta lo mismo que la guardia que no existe. */
-  const enCurso = guardia.checkin_at && (!guardia.checkout_at || new Date(reportadoAt) <= new Date(guardia.checkout_at));
+     posterior a la salida real, así que una emergencia de adentro del turno de guardia nunca queda
+     después. Lo que no está en curso contesta lo mismo que el turno de guardia que no existe. */
+  const enCurso = turno_guardia.checkin_at && (!turno_guardia.checkout_at || new Date(reportadoAt) <= new Date(turno_guardia.checkout_at));
   if (!enCurso) {
-    return responderError(res, new ErrorConMotivo('no_encontrado', 'emergencia fuera de la guardia en curso'));
+    return responderError(res, new ErrorConMotivo('no_encontrado', 'emergencia fuera del turno de guardia en curso'));
   }
 
   /* Y si este mismo aviso ya llegó, no se escribe una segunda emergencia. Una emergencia puede
-     pasar dos veces en la misma guardia, así que acá el estado no alcanza para reconocer un
+     pasar dos veces en el mismo turno de guardia, así que acá el estado no alcanza para reconocer un
      reenvío: lo reconoce el identificador que el teléfono puso antes del primer intento. */
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaEstaba = await filaDeEsteMensaje({
     db,
-    tabla: 'emergencias_guardia',
-    prestadoraId: guardia.prestadora_id,
-    guardiaId: guardia.id,
+    tabla: 'emergencias_turno_guardia',
+    prestadoraId: turno_guardia.prestadora_id,
+    turnoGuardiaId: turno_guardia.id,
     clienteUuid,
     campos: 'id, reportado_at',
   });
@@ -1293,10 +1293,10 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   }
 
   const { data: emergencia, error } = await db
-    .from('emergencias_guardia')
+    .from('emergencias_turno_guardia')
     .insert({
-      prestadora_id: guardia.prestadora_id,
-      guardia_id: guardia.id,
+      prestadora_id: turno_guardia.prestadora_id,
+      turno_guardia_id: turno_guardia.id,
       reportado_por: req.usuarioAsistente.id,
       reportado_at: reportadoAt,
       cliente_uuid: clienteUuid,
@@ -1313,27 +1313,27 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
 
   // El Panel la cuenta en el menú y la muestra en Situación operativa y en Comunicación: que
   // aparezca en el momento, sin esperar a que la pantalla vuelva a preguntar.
-  empujar(guardia.prestadora_id, ASUNTOS.EMERGENCIAS_SIN_ATENDER);
+  empujar(turno_guardia.prestadora_id, ASUNTOS.EMERGENCIAS_SIN_ATENDER);
 
   // Igual que el aviso de demora: se guarda primero y se avisa después, adentro de un `try`. Si el
   // envío falla, la fila queda con `ultima_notificacion_at` en blanco y nunca se le devuelve un
   // error a quien avisó — su acto ya está guardado, que es lo que lo protege.
   try {
-    const idioma = await idiomaDeLaPrestadora(db, guardia.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(db, turno_guardia.prestadora_id);
     await notificarCoordinador({
-      evento: 'emergencia_en_guardia',
-      prestadoraId: guardia.prestadora_id,
-      ...mensajeDelSistema('emergencia_en_guardia', idioma, {
-        fecha: guardia.fecha,
-        horaInicio: guardia.hora_inicio,
+      evento: 'emergencia_en_turno_guardia',
+      prestadoraId: turno_guardia.prestadora_id,
+      ...mensajeDelSistema('emergencia_en_turno_guardia', idioma, {
+        fecha: turno_guardia.fecha,
+        horaInicio: turno_guardia.hora_inicio,
       }),
     });
     if (emergencia?.id) {
       await db
-        .from('emergencias_guardia')
+        .from('emergencias_turno_guardia')
         .update({ ultima_notificacion_at: new Date().toISOString(), veces_notificado: 1 })
         .eq('id', emergencia.id)
-        .eq('prestadora_id', guardia.prestadora_id);
+        .eq('prestadora_id', turno_guardia.prestadora_id);
     }
   } catch (e) {
     console.error('Error avisando al Coordinador de una emergencia en guardia:', e.message);
@@ -1344,27 +1344,27 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
 
 /* El Relevo de emergencia.
    --------------------------------------------------------------------------
-   Se puede apretar en cualquier momento de la guardia en curso, también en el rato de más en que
+   Se puede apretar en cualquier momento del turno de guardia en curso, también en el rato de más en que
    se quedó esperando el relevo, y más de una vez: cada vez es un hecho con su hora. No es lo mismo
    que el relevo que no llega al terminar el turno, y no cuelga de esa extensión.
 
    NO LA LIBERA, Y ESO NO ES UN DESCUIDO. Irse deja al Paciente solo, y eso la expone a ella: el
-   producto no puede ofrecerle un botón que la meta en un problema. La guardia no se cierra: queda
+   producto no puede ofrecerle un botón que la meta en un problema. El turno de guardia no se cierra: queda
    con el relevo pedido y le suena al Coordinador la misma alarma que una emergencia, con la misma
    insistencia y la misma escalera (`utils/revisarNotificacionesCoordinador.js`). De ahí en
    adelante decide quien coordina, que es quien puede ir, mandar a alguien o hablar con el cliente.
 
    Todo con la credencial de quien lo aprieta: la base le deja escribir y leer sólo las emergencias
-   de sus propias guardias.
+   de sus propios turnos de guardia.
 
-   LO QUE ESCRIBIÓ NO SALE HACIA AFUERA. El aviso dice que pasó y de qué guardia; el texto se lee
+   LO QUE ESCRIBIÓ NO SALE HACIA AFUERA. El aviso dice que pasó y de qué turno de guardia; el texto se lee
    entrando al Panel (`celtatech/CLAUDE.md` §6). Y el detalle es opcional: quien está en el medio
    de algo puede no estar en condiciones de escribir nada. */
-appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/relevo-de-emergencia', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
-  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
 
   // Cuándo pasó, no cuándo se pudo enviar, con el mismo criterio que el aviso de emergencia.
@@ -1372,9 +1372,9 @@ appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsiste
 
   // En curso, con el mismo criterio y por los mismos motivos que el aviso de emergencia. El rato de
   // más esperando el relevo también lo está: la salida no se marcó.
-  const enCurso = guardia.checkin_at && (!guardia.checkout_at || new Date(avisadoAt) <= new Date(guardia.checkout_at));
+  const enCurso = turno_guardia.checkin_at && (!turno_guardia.checkout_at || new Date(avisadoAt) <= new Date(turno_guardia.checkout_at));
   if (!enCurso) {
-    return responderError(res, new ErrorConMotivo('no_encontrado', 'relevo de emergencia fuera de la guardia en curso'));
+    return responderError(res, new ErrorConMotivo('no_encontrado', 'relevo de emergencia fuera del turno de guardia en curso'));
   }
 
   // Un reenvío de la cola no escribe un segundo pedido: lo reconoce el identificador que el
@@ -1382,9 +1382,9 @@ appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsiste
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaEstaba = await filaDeEsteMensaje({
     db,
-    tabla: 'emergencias_guardia',
-    prestadoraId: guardia.prestadora_id,
-    guardiaId: guardia.id,
+    tabla: 'emergencias_turno_guardia',
+    prestadoraId: turno_guardia.prestadora_id,
+    turnoGuardiaId: turno_guardia.id,
     clienteUuid,
     campos: 'id, reportado_at',
   });
@@ -1395,10 +1395,10 @@ appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsiste
   const detalle = typeof req.body?.detalle === 'string' ? req.body.detalle.trim() : '';
 
   const { data: salida, error } = await db
-    .from('emergencias_guardia')
+    .from('emergencias_turno_guardia')
     .insert({
-      prestadora_id: guardia.prestadora_id,
-      guardia_id: guardia.id,
+      prestadora_id: turno_guardia.prestadora_id,
+      turno_guardia_id: turno_guardia.id,
       reportado_por: req.usuarioAsistente.id,
       reportado_at: avisadoAt,
       cliente_uuid: clienteUuid,
@@ -1414,28 +1414,28 @@ appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsiste
     return responderError(res, error);
   }
 
-  empujar(guardia.prestadora_id, ASUNTOS.EMERGENCIAS_SIN_ATENDER);
+  empujar(turno_guardia.prestadora_id, ASUNTOS.EMERGENCIAS_SIN_ATENDER);
 
   // Se guarda primero y se avisa después, adentro de un `try`. Si el envío falla, la fila queda con
   // `ultima_notificacion_at` en blanco y nunca se le devuelve un error a quien avisó: su acto ya
   // está guardado, que es lo que la protege.
   try {
-    const idioma = await idiomaDeLaPrestadora(db, guardia.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(db, turno_guardia.prestadora_id);
     await notificarCoordinador({
       evento: 'relevo_de_emergencia',
-      prestadoraId: guardia.prestadora_id,
+      prestadoraId: turno_guardia.prestadora_id,
       ...mensajeDelSistema('relevo_de_emergencia', idioma, {
-        fecha: guardia.fecha,
-        horaInicio: guardia.hora_inicio,
-        horaFin: guardia.hora_fin,
+        fecha: turno_guardia.fecha,
+        horaInicio: turno_guardia.hora_inicio,
+        horaFin: turno_guardia.hora_fin,
       }),
     });
     if (salida?.id) {
       await db
-        .from('emergencias_guardia')
+        .from('emergencias_turno_guardia')
         .update({ ultima_notificacion_at: new Date().toISOString(), veces_notificado: 1 })
         .eq('id', salida.id)
-        .eq('prestadora_id', guardia.prestadora_id);
+        .eq('prestadora_id', turno_guardia.prestadora_id);
     }
   } catch (e) {
     console.error('Error avisando al Coordinador de un Relevo de emergencia:', e.message);
@@ -1446,13 +1446,13 @@ appAsistentesRouter.post('/guardias/:id/relevo-de-emergencia', requiereRolAsiste
 
 /* Las consultas por un relevo que este Asistente tiene sin contestar.
    --------------------------------------------------------------------------
-   Cuando nadie cubre una guardia, el sistema les pregunta a varios a la vez quién puede
+   Cuando nadie cubre un turno de guardia, el sistema les pregunta a varios a la vez quién puede
    (`utils/faseAutomaticaRelevo.js`) y anota a cada uno en `consultas_de_relevo`. Acá cada uno ve
    las suyas, mientras el pedido siga abierto, y contesta si puede y en cuánto llega.
 
-   La lista va con el trabajo de la Prestadora, porque el consultado no está en esa guardia y la
+   La lista va con el trabajo de la Prestadora, porque el consultado no está en ese turno de guardia y la
    base no le deja verla; a sus propias consultas la acota el filtro por el Asistente, que sale de
-   la sesión ya verificada. Se le muestra cuándo es la guardia y nada del Paciente: quién es y
+   la sesión ya verificada. Se le muestra cuándo es el turno de guardia y nada del Paciente: quién es y
    dónde vive lo sabe recién quien queda asignado. */
 appAsistentesRouter.get('/consultas-de-relevo', requiereRolAsistente, async (req, res) => {
   const { prestadoraId, asistenteId } = req.usuarioAsistente;
@@ -1470,31 +1470,31 @@ appAsistentesRouter.get('/consultas-de-relevo', requiereRolAsistente, async (req
 
       const { data: abiertos, error: errorIncidentes } = await db
         .from('incidentes_relevo')
-        .select('id, guardia_entrante_id')
+        .select('id, turno_guardia_entrante_id')
         .eq('prestadora_id', prestadoraId)
         .in('id', [...new Set(filas.map((f) => f.incidente_id))])
         .is('resuelto_at', null);
       if (errorIncidentes) throw errorIncidentes;
       if (!abiertos?.length) return [];
 
-      const { data: guardias, error: errorGuardias } = await db
-        .from('guardias')
+      const { data: turnos_guardia, error: errorTurnosGuardia } = await db
+        .from('turnos_guardia')
         .select('id, fecha, hora_inicio, hora_fin')
         .eq('prestadora_id', prestadoraId)
-        .in('id', abiertos.map((i) => i.guardia_entrante_id));
-      if (errorGuardias) throw errorGuardias;
+        .in('id', abiertos.map((i) => i.turno_guardia_entrante_id));
+      if (errorTurnosGuardia) throw errorTurnosGuardia;
 
-      const guardiaDelIncidente = new Map(abiertos.map((i) => [i.id, i.guardia_entrante_id]));
-      const guardiaPorId = new Map((guardias ?? []).map((g) => [g.id, g]));
+      const turnoGuardiaDelIncidente = new Map(abiertos.map((i) => [i.id, i.turno_guardia_entrante_id]));
+      const turnoGuardiaPorId = new Map((turnos_guardia ?? []).map((g) => [g.id, g]));
       return filas
-        .map((f) => ({ fila: f, guardia: guardiaPorId.get(guardiaDelIncidente.get(f.incidente_id)) }))
-        .filter(({ guardia }) => guardia)
-        .map(({ fila, guardia }) => ({
+        .map((f) => ({ fila: f, turno_guardia: turnoGuardiaPorId.get(turnoGuardiaDelIncidente.get(f.incidente_id)) }))
+        .filter(({ turno_guardia }) => turno_guardia)
+        .map(({ fila, turno_guardia }) => ({
           id: fila.id,
           consultado_at: fila.consultado_at,
-          fecha: guardia.fecha,
-          hora_inicio: guardia.hora_inicio,
-          hora_fin: guardia.hora_fin,
+          fecha: turno_guardia.fecha,
+          hora_inicio: turno_guardia.hora_inicio,
+          hora_fin: turno_guardia.hora_fin,
         }));
     });
   } catch (e) {
@@ -1548,21 +1548,21 @@ appAsistentesRouter.post('/consultas-de-relevo/:id/respuesta', requiereRolAsiste
       await enLaPrestadora(prestadoraId, 'minutos por GPS de la respuesta al relevo', async (dbTrabajo) => {
         const { data: incidente, error: errorIncidente } = await dbTrabajo
           .from('incidentes_relevo')
-          .select('guardia_entrante_id')
+          .select('turno_guardia_entrante_id')
           .eq('prestadora_id', prestadoraId)
           .eq('id', consulta.incidente_id)
           .maybeSingle();
         if (errorIncidente) throw errorIncidente;
         if (!incidente) return;
-        const { data: guardia, error: errorGuardia } = await dbTrabajo
-          .from('guardias')
+        const { data: turno_guardia, error: errorTurnoGuardia } = await dbTrabajo
+          .from('turnos_guardia')
           .select('id, fecha, paciente_id')
           .eq('prestadora_id', prestadoraId)
-          .eq('id', incidente.guardia_entrante_id)
+          .eq('id', incidente.turno_guardia_entrante_id)
           .maybeSingle();
-        if (errorGuardia) throw errorGuardia;
-        if (!guardia) return;
-        const porGps = await minutosPorGps(dbTrabajo, prestadoraId, guardia, lat, lng);
+        if (errorTurnoGuardia) throw errorTurnoGuardia;
+        if (!turno_guardia) return;
+        const porGps = await minutosPorGps(dbTrabajo, prestadoraId, turno_guardia, lat, lng);
         if (porGps == null) return;
         const { error: errorGps } = await dbTrabajo
           .from('consultas_de_relevo')
@@ -1582,7 +1582,7 @@ appAsistentesRouter.post('/consultas-de-relevo/:id/respuesta', requiereRolAsiste
 /* Los turnos fijos que este Asistente cubre por la ausencia de otro.
    --------------------------------------------------------------------------
    Quien coordina le asigna a alguien el turno fijo de un ausente por toda la ausencia
-   (`utils/coberturaDeAusencia.js`), y una vez que la aceptó, acá lo ve, y si no puede hacerlo lo dice: esas guardias
+   (`utils/coberturaDeAusencia.js`), y una vez que la aceptó, acá lo ve, y si no puede hacerlo lo dice: esos turnos de guardia
    vuelven a quedar sin sustituto desde hoy y a quien coordina le llega el aviso. Lo que ya hizo o
    ya empezó no se toca.
 
@@ -1596,7 +1596,7 @@ appAsistentesRouter.get('/coberturas', requiereRolAsistente, async (req, res) =>
     data = await enLaPrestadora(prestadoraId, 'ver las coberturas del Asistente', async (db) => {
       const { data: filas, error } = await db
         .from('coberturas_de_ausencia')
-        .select('id, series_guardias(dias_semana, hora_inicio, hora_fin), ausencias(fecha_inicio, fecha_fin, fecha_vuelta_real)')
+        .select('id, series_turnos_guardia(dias_semana, hora_inicio, hora_fin), ausencias(fecha_inicio, fecha_fin, fecha_vuelta_real)')
         .eq('asistente_sustituto_id', asistenteId)
         .is('objetada_at', null)
         .not('aceptada_at', 'is', null);
@@ -1614,9 +1614,9 @@ appAsistentesRouter.get('/coberturas', requiereRolAsistente, async (req, res) =>
       id: c.id,
       desde: c.ausencias.fecha_inicio,
       hasta: c.ausencias.fecha_fin,
-      dias_semana: c.series_guardias?.dias_semana ?? [],
-      hora_inicio: c.series_guardias?.hora_inicio ?? null,
-      hora_fin: c.series_guardias?.hora_fin ?? null,
+      dias_semana: c.series_turnos_guardia?.dias_semana ?? [],
+      hora_inicio: c.series_turnos_guardia?.hora_inicio ?? null,
+      hora_fin: c.series_turnos_guardia?.hora_fin ?? null,
     }));
   res.json({ coberturas });
 });
@@ -1672,14 +1672,14 @@ appAsistentesRouter.post('/coberturas/:id/objecion', requiereRolAsistente, async
   res.json({ ok: true });
 });
 
-/* El descanso adentro de la guardia.
+/* El descanso adentro del turno de guardia.
    --------------------------------------------------------------------------
-   En una guardia de 24, 48 o 72 horas la Asistente descansa en el domicilio, generalmente de
+   En un turno de guardia de 24, 48 o 72 horas la Asistente descansa en el domicilio, generalmente de
    noche, cuando el Paciente duerme, SIN DEJAR DE ESTAR DISPONIBLE. Estas dos rutas son las que
    dejan constancia de ese rato.
 
-   LO QUE ESTO NO HACE, Y NO ES UN OLVIDO. No descuenta horas —la guardia se paga por lo que dura
-   y ninguna cuenta mira esta tabla—, no cierra ni interrumpe la guardia, y no marca ninguna
+   LO QUE ESTO NO HACE, Y NO ES UN OLVIDO. No descuenta horas —el turno de guardia se paga por lo que dura
+   y ninguna cuenta mira esta tabla—, no cierra ni interrumpe el turno de guardia, y no marca ninguna
    ausencia. Quien está disponible está trabajando.
 
    NO SE LE AVISA A NADIE. Descansar de noche en un turno largo es lo normal, no un incidente. Un
@@ -1690,26 +1690,26 @@ appAsistentesRouter.post('/coberturas/:id/objecion', requiereRolAsistente, async
    un número fijado de antemano (decisión del Desarrollador).
 
    Las dos van enteras con la credencial de quien pide: la base le deja empezar, ver y terminar
-   sólo los descansos de sus propias guardias. */
-appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente, async (req, res) => {
+   sólo los descansos de sus propios turnos de guardia. */
+appAsistentesRouter.post('/turnos-guardia/:id/descanso/empezar', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
-  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
 
   // Mismo criterio que el aviso de emergencia: se acepta el momento del teléfono, sólo hacia atrás.
   const inicioAt = horaDelHecho(req.body?.ocurrido_at);
 
-  // Y el mismo reconocimiento del reenvío: en una guardia de 72 horas se descansa más de una vez,
+  // Y el mismo reconocimiento del reenvío: en un turno de guardia de 72 horas se descansa más de una vez,
   // así que dos filas iguales pueden ser dos descansos de verdad. Lo que dice que es el mismo es
   // el identificador que puso el teléfono.
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaEstaba = await filaDeEsteMensaje({
     db,
-    tabla: 'descansos_guardia',
-    prestadoraId: guardia.prestadora_id,
-    guardiaId: guardia.id,
+    tabla: 'descansos_turno_guardia',
+    prestadoraId: turno_guardia.prestadora_id,
+    turnoGuardiaId: turno_guardia.id,
     clienteUuid,
     campos: 'id, inicio_at',
   });
@@ -1718,10 +1718,10 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
   }
 
   const { data: descanso, error } = await db
-    .from('descansos_guardia')
+    .from('descansos_turno_guardia')
     .insert({
-      prestadora_id: guardia.prestadora_id,
-      guardia_id: guardia.id,
+      prestadora_id: turno_guardia.prestadora_id,
+      turno_guardia_id: turno_guardia.id,
       registrado_por: req.usuarioAsistente.id,
       inicio_at: inicioAt,
       cliente_uuid: clienteUuid,
@@ -1737,11 +1737,11 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
   res.json({ ok: true, descanso });
 });
 
-appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/descanso/terminar', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
-  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
 
   const finAt = horaDelHecho(req.body?.ocurrido_at);
@@ -1752,9 +1752,9 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaCerrado = await filaDeEsteMensaje({
     db,
-    tabla: 'descansos_guardia',
-    prestadoraId: guardia.prestadora_id,
-    guardiaId: guardia.id,
+    tabla: 'descansos_turno_guardia',
+    prestadoraId: turno_guardia.prestadora_id,
+    turnoGuardiaId: turno_guardia.id,
     clienteUuid,
     columna: 'cliente_uuid_fin',
     campos: 'id, fin_at',
@@ -1764,10 +1764,10 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
   }
 
   const { data: abierto } = await db
-    .from('descansos_guardia')
+    .from('descansos_turno_guardia')
     .select('id, inicio_at')
-    .eq('prestadora_id', guardia.prestadora_id)
-    .eq('guardia_id', guardia.id)
+    .eq('prestadora_id', turno_guardia.prestadora_id)
+    .eq('turno_guardia_id', turno_guardia.id)
     .is('fin_at', null)
     .maybeSingle();
 
@@ -1780,10 +1780,10 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
   const fin = finAt > abierto.inicio_at ? finAt : new Date().toISOString();
 
   const { error } = await db
-    .from('descansos_guardia')
+    .from('descansos_turno_guardia')
     .update({ fin_at: fin, cliente_uuid_fin: clienteUuid })
     .eq('id', abierto.id)
-    .eq('prestadora_id', guardia.prestadora_id);
+    .eq('prestadora_id', turno_guardia.prestadora_id);
 
   if (error) {
     return responderError(res, error);
@@ -1796,15 +1796,15 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
 // Reporte Diario — estructurar (IA Nivel 1, no persiste todavía)
 // ============================================================================
 
-appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsistente, exigeVisible('asistente_relato_con_ia'), async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/reporte/estructurar', requiereRolAsistente, exigeVisible('asistente_relato_con_ia'), async (req, res) => {
   const { textoLibre } = req.body;
   if (!textoLibre || typeof textoLibre !== 'string') {
     return res.status(400).json({ error: 'Falta el texto del reporte' });
   }
 
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
 
   try {
@@ -1820,7 +1820,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsisten
 
 // Foto opcional del reporte, subida antes de confirmar.
 appAsistentesRouter.post(
-  '/guardias/:id/reporte/foto',
+  '/turnos-guardia/:id/reporte/foto',
   requiereRolAsistente,
   exigeVisible('asistente_foto_en_el_reporte'),
   upload.single('foto'),
@@ -1829,13 +1829,13 @@ appAsistentesRouter.post(
     if (!req.file) {
       return res.status(400).json({ error: 'Falta la foto' });
     }
-    const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
-    if (!guardia) {
-      return res.status(404).json({ error: 'Guardia no encontrada' });
+    const turno_guardia = await turnoGuardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+    if (!turno_guardia) {
+      return res.status(404).json({ error: 'Turno de guardia no encontrado' });
     }
 
     const extension = req.file.mimetype === 'image/png' ? 'png' : 'jpg';
-    const ruta = `${guardia.prestadora_id}/${guardia.id}/${Date.now()}.${extension}`;
+    const ruta = `${turno_guardia.prestadora_id}/${turno_guardia.id}/${Date.now()}.${extension}`;
 
     // La ruta ya lleva el momento, así que nunca pisa una foto anterior.
     const { error } = await clienteDelPedido(req).storage
@@ -1851,21 +1851,21 @@ appAsistentesRouter.post(
 
 // Confirmar y enviar: persiste el reporte (ya revisado por el Asistente) y avisa al Cliente.
 //
-// Hasta el 2026-08-06 este mismo endpoint hacía además el check-out y pasaba la guardia a
+// Hasta el 2026-08-06 este mismo endpoint hacía además el check-out y pasaba el turno de guardia a
 // 'completada'. Se separó (tarea 66a, pendiente #113) porque el cierre de guardia no tenía
 // botón propio en ningún lado: terminaba siendo un efecto secundario invisible de mandar el
 // reporte, y el pase de guardia por QR necesita que cerrar sea un acto con entidad propia.
-// El orden de negocio no cambió: sigue sin poder cerrarse una guardia sin reporte — eso ahora
-// lo valida POST /guardias/:id/checkout.
-appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente, async (req, res) => {
+// El orden de negocio no cambió: sigue sin poder cerrarse un turno de guardia sin reporte — eso ahora
+// lo valida POST /turnos-guardia/:id/checkout.
+appAsistentesRouter.post('/turnos-guardia/:id/reporte/confirmar', requiereRolAsistente, async (req, res) => {
   const { pacienteId, textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl, pasoPorLaIa } = req.body;
 
   const db = clienteDelPedido(req);
-  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
-  if (!guardia.checkin_at) {
+  if (!turno_guardia.checkin_at) {
     return res.status(400).json({ error: 'No se puede cargar el reporte sin check-in previo' });
   }
 
@@ -1875,12 +1875,12 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // el reporte de la persona equivocada es un daño que después nadie encuentra.
   let pacientes;
   try {
-    pacientes = await pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`);
+    pacientes = await pacientesDeTurnoGuardia(db, turno_guardia.prestadora_id, turno_guardia, `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     return responderError(res, e);
   }
   const paciente = pacienteId ? pacientes.find((p) => p.id === pacienteId) : pacientes.length === 1 ? pacientes[0] : null;
-  // La base no deja sacar un Paciente de una guardia con check-in, y la aplicación entra al reporte
+  // La base no deja sacar un Paciente de un turno de guardia con check-in, y la aplicación entra al reporte
   // por el Paciente. Llegar acá sin uno es un defecto, y se contesta como falla del sistema.
   if (!paciente) {
     return responderError(
@@ -1891,7 +1891,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
 
   let reportes;
   try {
-    reportes = await reportesDeLaGuardia(db, guardia.id);
+    reportes = await reportesDelTurnoGuardia(db, turno_guardia.id);
   } catch (e) {
     return responderError(res, e);
   }
@@ -1916,16 +1916,16 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
       .select('tipo_asistente_id')
       .eq('id', req.usuarioAsistente.asistenteId)
       .maybeSingle();
-    const { tareas } = await tipoConSusTareas(quienEs?.tipo_asistente_id, guardia.prestadora_id);
-    const { signos } = await vitalesDelAsistente(paciente.id, guardia.prestadora_id, tareas);
+    const { tareas } = await tipoConSusTareas(quienEs?.tipo_asistente_id, turno_guardia.prestadora_id);
+    const { signos } = await vitalesDelAsistente(paciente.id, turno_guardia.prestadora_id, tareas);
     signosQueGuarda = filtrarSignos(signosVitales, signos);
   }
 
   const { data: reporte, error: errorReporte } = await db
     .from('reportes')
     .insert({
-      prestadora_id: guardia.prestadora_id,
-      guardia_id: guardia.id,
+      prestadora_id: turno_guardia.prestadora_id,
+      turno_guardia_id: turno_guardia.id,
       paciente_id: paciente.id,
       texto_libre: textoLibre || null,
       alimentacion: alimentacion || null,
@@ -1946,12 +1946,12 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     return responderError(res, errorReporte);
   }
 
-  const { error: errorGuardia } = await db
-    .from('guardias')
+  const { error: errorTurnoGuardia } = await db
+    .from('turnos_guardia')
     .update({ push_reporte_enviado_at: new Date().toISOString() })
-    .eq('id', guardia.id);
-  if (errorGuardia) {
-    return responderError(res, errorGuardia);
+    .eq('id', turno_guardia.id);
+  if (errorTurnoGuardia) {
+    return responderError(res, errorTurnoGuardia);
   }
 
   // El mensaje va al Cliente de este Paciente y a ningún otro: el reporte habla de él. Si el
@@ -1963,10 +1963,10 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     .maybeSingle();
   // Lo que sigue corre después de contestar, así que entra con la credencial de esta Prestadora.
   if (datosPaciente?.cliente_id) {
-    enLaPrestadora(guardia.prestadora_id, 'aviso de reporte', async (dbTrabajo) => enviarPushCliente(guardia.prestadora_id, datosPaciente.cliente_id, {
-      ...mensajeDelSistema('reporte_disponible', await idiomaDeLaPrestadora(dbTrabajo, guardia.prestadora_id), {
+    enLaPrestadora(turno_guardia.prestadora_id, 'aviso de reporte', async (dbTrabajo) => enviarPushCliente(turno_guardia.prestadora_id, datosPaciente.cliente_id, {
+      ...mensajeDelSistema('reporte_disponible', await idiomaDeLaPrestadora(dbTrabajo, turno_guardia.prestadora_id), {
         paciente: paciente.nombre,
-      }, guardia.prestadora_id),
+      }, turno_guardia.prestadora_id),
       url: `/pacientes/${paciente.id}/reportes/${reporte.id}`,
     })).catch((err) => console.error('Error enviando push de reporte a Cliente:', err.message));
   }
@@ -1975,7 +1975,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // configurada por la Prestadora (docs/AI_PROMPTS.md:43-45 — nunca hardcodeada). Sin fila
   // configurada, no se dispara nada acá; el análisis nocturno sigue corriendo igual.
   if (textoLibre) {
-    enLaPrestadora(guardia.prestadora_id, 'análisis inmediato', async (dbTrabajo) => {
+    enLaPrestadora(turno_guardia.prestadora_id, 'análisis inmediato', async (dbTrabajo) => {
       const { data: config } = await dbTrabajo
         .from('configuracion_alertas_ia')
         .select('palabras_clave')
@@ -1988,7 +1988,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
         // revisar a todos los del turno porque el texto no decía de quién hablaba; ahora lo
         // dice, y levantar una alerta sobre alguien que no era es ruido que le hace perder
         // confianza al Cliente en las alertas que sí importan.
-        await analizarPaciente(paciente.id, guardia.prestadora_id);
+        await analizarPaciente(paciente.id, turno_guardia.prestadora_id);
       }
     }).catch((err) => console.error('Error en análisis inmediato de IA Nivel 2:', err.message));
   }
@@ -1997,7 +1997,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
 });
 
 // ============================================================================
-// Check-out — cerrar la guardia. Acto con entidad propia desde el 2026-08-06 (tarea 66a):
+// Check-out — cerrar el turno de guardia. Acto con entidad propia desde el 2026-08-06 (tarea 66a):
 // antes ocurría solo como efecto secundario de confirmar el Reporte Diario.
 //
 // Tres condiciones, en este orden, porque cada una dice algo distinto al Asistente:
@@ -2009,11 +2009,11 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
 //   3. si checkout_bloqueado está puesto, rige el protocolo de continuidad de guardia (no
 //      retirarse sin relevo) y el cierre solo lo libera el Panel con excepción documentada.
 //      Sin este guard la base rechazaría el UPDATE por el CHECK
-//      guardias_checkout_bloqueado_requiere_excepcion (schema_modulo6_guardias_02.sql) y el
+//      turnos_guardia_checkout_bloqueado_requiere_excepcion (schema_modulo6_turnos_guardia_02.sql) y el
 //      Asistente vería un error genérico sin saber por qué no puede irse.
 // ============================================================================
 
-appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
   const { lat, lng } = req.body || {};
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
@@ -2023,41 +2023,41 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   const comprobacionPedida = datosDeComprobacion(req.body);
 
   const db = clienteDelPedido(req);
-  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia) {
-    return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) {
+    return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
-  if (!guardia.checkin_at) {
-    return res.status(400).json({ error: 'No se puede cerrar una guardia sin check-in previo', motivo: 'falta_checkin' });
+  if (!turno_guardia.checkin_at) {
+    return res.status(400).json({ error: 'No se puede cerrar un turno de guardia sin check-in previo', motivo: 'falta_checkin' });
   }
-  if (guardia.checkout_at) {
+  if (turno_guardia.checkout_at) {
     // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline).
-    return res.status(400).json({ error: 'Esta guardia ya tiene check-out registrado', yaRegistrado: true });
+    return res.status(400).json({ error: 'Este turno de guardia ya tiene check-out registrado', yaRegistrado: true });
   }
   let faltan;
   try {
-    faltan = await pacientesSinReporte(db, guardia);
+    faltan = await pacientesSinReporte(db, turno_guardia);
   } catch (e) {
     return responderError(res, e);
   }
   if (faltan.length > 0) {
     return res.status(400).json({
-      error: `Falta cargar el Reporte Diario de ${faltan.map((p) => p.nombre).join(' y ')} antes de cerrar la guardia`,
+      error: `Falta cargar el Reporte Diario de ${faltan.map((p) => p.nombre).join(' y ')} antes de cerrar el turno de guardia`,
       motivo: 'falta_reporte',
       pacientesSinReporte: faltan.map((p) => ({ id: p.id, nombre: p.nombre })),
     });
   }
-  if (guardia.checkout_bloqueado) {
+  if (turno_guardia.checkout_bloqueado) {
     return res.status(409).json({ error: 'Check-out bloqueado por el protocolo de continuidad de guardia', motivo: 'continuidad' });
   }
 
   // La comprobación de la salida se resuelve antes de cerrar, por el mismo motivo que en el
-  // check-in: un código equivocado no cierra la guardia, y el camino de «entro/salgo igual con
+  // check-in: un código equivocado no cierra el turno de guardia, y el camino de «entro/salgo igual con
   // un motivo» está siempre disponible.
   let comprobacion;
   try {
     comprobacion = await registrarComprobacion({
-      guardia, momento: 'checkout', lat, lng, comprobacion: comprobacionPedida,
+      turno_guardia, momento: 'checkout', lat, lng, comprobacion: comprobacionPedida,
     });
   } catch (e) {
     return responderError(res, e);
@@ -2066,21 +2066,21 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   // Se cierra solamente si sigue activa, y se comprueba que se haya cerrado de verdad. Los
   // controles de arriba se hicieron sobre una lectura anterior: si en el medio entró otro
   // check-out —dos toques seguidos al botón, la aplicación reintentando— acá no queda nada por
-  // cambiar, y contestar que sí sin haber cambiado nada es lo que hace que dos guardias
+  // cambiar, y contestar que sí sin haber cambiado nada es lo que hace que dos turnos de guardia
   // superpuestas parezcan cerradas cuando solo se cerró una.
   // Misma regla que en el check-in: la salida se marca siempre, la coordenada solamente con el
   // consentimiento de seguimiento vigente.
-  const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id, guardia.prestadora_id);
+  const registraUbicacion = await puedeRegistrarUbicacion(turno_guardia.asistente_id, turno_guardia.prestadora_id);
 
   const { data: cerrada, error } = await db
-    .from('guardias')
+    .from('turnos_guardia')
     .update({
       checkout_at: new Date().toISOString(),
       checkout_lat: registraUbicacion ? lat : null,
       checkout_lng: registraUbicacion ? lng : null,
       estado: 'completada',
     })
-    .eq('id', guardia.id)
+    .eq('id', turno_guardia.id)
     .eq('estado', 'activa')
     .select('id');
   if (error) {
@@ -2089,7 +2089,7 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   if (!cerrada?.length) {
     // Misma respuesta que el control de arriba: para quien está del otro lado es el mismo caso,
     // y el cliente sin conexión ya sabe qué hacer con `yaRegistrado`.
-    return res.status(400).json({ error: 'Esta guardia ya tiene check-out registrado', yaRegistrado: true });
+    return res.status(400).json({ error: 'Este turno de guardia ya tiene check-out registrado', yaRegistrado: true });
   }
 
   res.json({ ok: true, comprobacion: comprobacion.estado });
@@ -2107,7 +2107,7 @@ appAsistentesRouter.get('/codigo-de-presencia', requiereRolAsistente, async (req
     const { codigo, segundos, expiraEn } = await codigoParaMostrar({
       prestadoraId: req.usuarioAsistente.prestadoraId,
       sujetoTipo: 'asistente',
-      // El Legajo, porque del otro lado se lo compara contra `guardias.asistente_id`.
+      // El Legajo, porque del otro lado se lo compara contra `turnos_guardia.asistente_id`.
       sujetoId: req.usuarioAsistente.asistenteId,
     });
     res.json({ codigo, segundos, expiraEn });
@@ -2118,18 +2118,18 @@ appAsistentesRouter.get('/codigo-de-presencia', requiereRolAsistente, async (req
 
 // «No puedo leer el código QR.» El Asistente pide autorización y el pedido aparece en el Panel,
 // con el lugar, la hora y el motivo. No marca nada: queda esperando a quien coordina.
-appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_pedir_autorizacion' }), async (req, res) => {
+appAsistentesRouter.post('/turnos-guardia/:id/comprobacion/pedido', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_pedir_autorizacion' }), async (req, res) => {
   const { momento, lat, lng, motivo, detalle } = req.body || {};
   if (momento !== 'checkin' && momento !== 'checkout') {
     return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });
   }
 
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
-  if (!guardia) return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) return res.status(404).json({ error: 'Turno de guardia no encontrado' });
 
   try {
     const pedido = await pedirAutorizacion({
-      guardia,
+      turno_guardia,
       momento,
       lat: typeof lat === 'number' ? lat : null,
       lng: typeof lng === 'number' ? lng : null,
@@ -2144,18 +2144,18 @@ appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsisten
 
 // En qué quedó ese pedido. La pantalla lo consulta mientras espera: cuando dice «comprobada», ya
 // lo autorizaron y el teléfono marca solo.
-appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.get('/turnos-guardia/:id/comprobacion/:momento', requiereRolAsistente, async (req, res) => {
   const { momento } = req.params;
   if (momento !== 'checkin' && momento !== 'checkout') {
     return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });
   }
 
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
-  if (!guardia) return res.status(404).json({ error: 'Guardia no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  if (!turno_guardia) return res.status(404).json({ error: 'Turno de guardia no encontrado' });
 
   const fila = await comprobacionDe({
-    prestadoraId: guardia.prestadora_id,
-    guardiaId: guardia.id,
+    prestadoraId: turno_guardia.prestadora_id,
+    turnoGuardiaId: turno_guardia.id,
     momento,
   });
   res.json({ estado: fila?.estado ?? null });
@@ -2163,33 +2163,33 @@ appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsiste
 
 // El último punto del viaje al domicilio: desde «Salgo ahora» hasta escanear la entrada. Se
 // guarda uno solo, que pisa al anterior, y el check-in lo borra. El Cliente lo lee vía Supabase
-// Realtime, nunca por HTTP. Durante la guardia esta ruta no escribe: lo del turno es otro
+// Realtime, nunca por HTTP. Durante el turno de guardia esta ruta no escribe: lo del turno es otro
 // registro, sin coordenadas.
-appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.patch('/turnos-guardia/:id/ubicacion', requiereRolAsistente, async (req, res) => {
   const { lat, lng } = req.body || {};
   if (typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
   }
 
   const db = clienteDelPedido(req);
-  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
-  if (!guardia || !guardia.salida_checkin_at || guardia.checkin_at) {
-    return res.status(404).json({ error: 'Guardia en viaje no encontrada' });
+  const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
+  if (!turno_guardia || !turno_guardia.salida_checkin_at || turno_guardia.checkin_at) {
+    return res.status(404).json({ error: 'Turno de guardia en viaje no encontrado' });
   }
 
   // El mapa en vivo es, literalmente, la ubicación de una persona: sin consentimiento vigente no
-  // se guarda nada. No es un error —la guardia sigue su curso y la aplicación no se traba—, así
+  // se guarda nada. No es un error —el turno de guardia sigue su curso y la aplicación no se traba—, así
   // que se contesta que sí y se avisa que la posición no quedó registrada.
-  if (!(await puedeRegistrarUbicacion(guardia.asistente_id, guardia.prestadora_id))) {
+  if (!(await puedeRegistrarUbicacion(turno_guardia.asistente_id, turno_guardia.prestadora_id))) {
     return res.json({ ok: true, ubicacion_registrada: false });
   }
 
   // Sólo mientras siga en viaje: si escaneó la entrada entre la lectura de arriba y esta línea,
   // el punto que el check-in acaba de borrar no tiene que volver. Y si no se escribió nada, se dice.
   const { data: marcada, error } = await db
-    .from('guardias')
+    .from('turnos_guardia')
     .update({ ubicacion_actual_lat: lat, ubicacion_actual_lng: lng, ubicacion_actual_at: new Date().toISOString() })
-    .eq('id', guardia.id)
+    .eq('id', turno_guardia.id)
     .not('salida_checkin_at', 'is', null)
     .is('checkin_at', null)
     .select('id');
@@ -2197,30 +2197,30 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, async
     return responderError(res, error);
   }
   if (!marcada?.length) {
-    return res.status(404).json({ error: 'Guardia en viaje no encontrada' });
+    return res.status(404).json({ error: 'Turno de guardia en viaje no encontrado' });
   }
 
   res.json({ ok: true, ubicacion_registrada: true });
 });
 
-// Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Guardia Activa).
+// Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Turno de guardia Activo).
 appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVisible('asistente_reportes_anteriores'), async (req, res) => {
-  // Los reportes de otros Asistentes se leen sólo mientras tiene una guardia en curso con este
-  // Paciente, y sólo los del Servicio de esa guardia: lo que anotaron en otro Servicio, o cuando
+  // Los reportes de otros Asistentes se leen sólo mientras tiene un turno de guardia en curso con este
+  // Paciente, y sólo los del Servicio de ese turno de guardia: lo que anotaron en otro Servicio, o cuando
   // él ya no está ahí, no le hace falta para trabajar.
   const { data: enCurso, error: errorEnCurso } = await clienteDelPedido(req)
-    .from('guardia_pacientes')
-    .select('guardias!inner(servicio_id)')
+    .from('turno_guardia_pacientes')
+    .select('turnos_guardia!inner(servicio_id)')
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('paciente_id', req.params.id)
-    .eq('guardias.asistente_id', req.usuarioAsistente.asistenteId)
-    .eq('guardias.estado', 'activa')
+    .eq('turnos_guardia.asistente_id', req.usuarioAsistente.asistenteId)
+    .eq('turnos_guardia.estado', 'activa')
     .limit(1)
     .maybeSingle();
   if (errorEnCurso) return responderError(res, errorEnCurso);
-  const servicioId = enCurso?.guardias?.servicio_id;
+  const servicioId = enCurso?.turnos_guardia?.servicio_id;
   if (!servicioId) {
-    return res.status(403).json({ error: 'No tiene una guardia en curso con este Paciente' });
+    return res.status(403).json({ error: 'No tiene un turno de guardia en curso con este Paciente' });
   }
   // Los reportes se leen abajo con el trabajo de la Prestadora, que no pasa por la regla de salud:
   // se le pregunta antes, con su credencial.
@@ -2238,7 +2238,7 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
   // ninguna pantalla dibujaba. Si alguna vez hace falta mostrar alguno, se agrega acá con su
   // interruptor, no se deja "por las dudas" (tarea 65).
   //
-  // Con el trabajo de la Prestadora, porque de las guardias de otros Asistentes la base no le deja
+  // Con el trabajo de la Prestadora, porque de los turnos de guardia de otros Asistentes la base no le deja
   // ver ninguna, y con su acceso se perderían los reportes de los turnos que no fueron suyos. Que
   // atiende a este Paciente ya lo comprobó la base arriba, con su acceso.
   let data;
@@ -2246,9 +2246,9 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
     data = await enLaPrestadora(req.usuarioAsistente.prestadoraId, 'reportes anteriores', async (dbTrabajo) => {
       const { data: filas, error } = await dbTrabajo
         .from('reportes')
-        .select('id, observaciones, created_at, guardias!inner(fecha, servicio_id)')
+        .select('id, observaciones, created_at, turnos_guardia!inner(fecha, servicio_id)')
         .eq('paciente_id', req.params.id)
-        .eq('guardias.servicio_id', servicioId)
+        .eq('turnos_guardia.servicio_id', servicioId)
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw error;

@@ -1,7 +1,7 @@
 import { supabase } from '../db/connection.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { necesitaNotificar } from './insistencia.js';
-import { pacientesDeGuardias } from './pacientesDeGuardia.js';
+import { pacientesDeTurnosGuardia } from './pacientesDeTurnoGuardia.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
@@ -109,8 +109,8 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   if (!ausencias.length) return;
 
   const asistentes = [...new Set(ausencias.map((a) => a.asistente_id))];
-  const { data: guardias, error: errorGuardias } = await supabase
-    .from('guardias')
+  const { data: turnos_guardia, error: errorTurnosGuardia } = await supabase
+    .from('turnos_guardia')
     .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
     .eq('prestadora_id', prestadoraId)
     .in('asistente_id', asistentes)
@@ -118,22 +118,22 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
     .gte('fecha', desde)
     .lte('fecha', hasta);
 
-  if (errorGuardias) {
-    console.error(`Error consultando las guardias de los ausentes (prestadora ${prestadoraId}):`, errorGuardias.message);
+  if (errorTurnosGuardia) {
+    console.error(`Error consultando las guardias de los ausentes (prestadora ${prestadoraId}):`, errorTurnosGuardia.message);
     return;
   }
 
-  const guardiasPorAsistente = new Map();
-  for (const guardia of guardias ?? []) {
-    if (!guardiasPorAsistente.has(guardia.asistente_id)) guardiasPorAsistente.set(guardia.asistente_id, []);
-    guardiasPorAsistente.get(guardia.asistente_id).push(guardia);
+  const turnosGuardiaPorAsistente = new Map();
+  for (const turno_guardia of turnos_guardia ?? []) {
+    if (!turnosGuardiaPorAsistente.has(turno_guardia.asistente_id)) turnosGuardiaPorAsistente.set(turno_guardia.asistente_id, []);
+    turnosGuardiaPorAsistente.get(turno_guardia.asistente_id).push(turno_guardia);
   }
 
   // Los nombres de los Pacientes que se quedan sin atender. Se piden todos los del turno y no uno:
   // de ese tamaño depende con qué urgencia sale la Coordinadora a taparlo.
-  let pacientesPorGuardia;
+  let pacientesPorTurnoGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(supabase, prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
+    pacientesPorTurnoGuardia = await pacientesDeTurnosGuardia(supabase, prestadoraId, turnos_guardia ?? [], `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias de los ausentes (prestadora ${prestadoraId}):`, e.message);
     return;
@@ -142,17 +142,17 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   const nombres = await nombresDeAsistentes(asistentes, prestadoraId);
 
   for (const ausencia of ausencias) {
-    const { como, horas, primerTurno, turnos } = comoLlegoLaAusencia({
+    const { como, horas, primerTurnoGuardia, turnos_guardia: turnosSinNadie } = comoLlegoLaAusencia({
       ausencia,
-      guardias: guardiasPorAsistente.get(ausencia.asistente_id) ?? [],
+      turnos_guardia: turnosGuardiaPorAsistente.get(ausencia.asistente_id) ?? [],
       regla,
     });
 
     // No deja ningún turno sin nadie: no hay nada que resolver y avisar sería llenar la pantalla
     // de tareas que no son tareas.
-    if (como === COMO_LLEGO.SIN_TURNOS) continue;
+    if (como === COMO_LLEGO.SIN_TURNOS_GUARDIA) continue;
 
-    const inicio = new Date(`${primerTurno.fecha}T${primerTurno.hora_inicio}`);
+    const inicio = new Date(`${primerTurnoGuardia.fecha}T${primerTurnoGuardia.hora_inicio}`);
     // Ya pasó el plazo en que taparlo servía de algo.
     if (inicio.getTime() < ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA) continue;
 
@@ -168,11 +168,11 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
         asistente: nombres.get(ausencia.asistente_id) ?? null,
         fechaInicio: ausencia.fecha_inicio,
         fechaFin: ausencia.fecha_fin,
-        fecha: primerTurno.fecha,
-        horaInicio: primerTurno.hora_inicio,
-        horaFin: primerTurno.hora_fin,
-        pacientes: (pacientesPorGuardia.get(primerTurno.id) ?? []).map((p) => p.nombre),
-        turnos: turnos.length,
+        fecha: primerTurnoGuardia.fecha,
+        horaInicio: primerTurnoGuardia.hora_inicio,
+        horaFin: primerTurnoGuardia.hora_fin,
+        pacientes: (pacientesPorTurnoGuardia.get(primerTurnoGuardia.id) ?? []).map((p) => p.nombre),
+        turnos_guardia: turnosSinNadie.length,
         yaEmpezo,
         horas: Math.round(Math.abs(horas ?? 0)),
         veces,

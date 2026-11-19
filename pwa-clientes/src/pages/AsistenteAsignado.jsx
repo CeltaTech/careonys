@@ -50,7 +50,7 @@ export default function AsistenteAsignado() {
     setEnviando(true);
     setError('');
     try {
-      await api.calificar(datos.guardiaId, { estrellas, comentario: comentario || null });
+      await api.calificar(datos.turnoGuardiaId, { estrellas, comentario: comentario || null });
       setEnviado(true);
       avisar(t.asistente.calificacion_enviada);
     } catch (e) {
@@ -64,7 +64,7 @@ export default function AsistenteAsignado() {
   if (datos === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
   if (!datos.asistente) return <div className="estado-vacio" role="status">{t.comun.vacio}</div>;
 
-  const { asistente, tipo, tareas, certificado, documentacion, evaluaciones, guardiaId } = datos;
+  const { asistente, tipo, tareas, certificado, documentacion, evaluaciones, turnoGuardiaId } = datos;
 
   return (
     <>
@@ -109,20 +109,20 @@ export default function AsistenteAsignado() {
               <div className="estado-vacio" role="status">{t.asistente.sin_evaluaciones}</div>
             ) : (
               evaluaciones.map((e) => (
-                <div key={e.id} className="guardia-card">
+                <div key={e.id} className="tarjeta">
                   {/* Las estrellas dibujadas no se leen: un lector de pantalla las nombraría una
                       por una, o directamente las saltearía. Al lado va el mismo dato escrito,
                       que no se ve pero sí se escucha. */}
-                  <div className="guardia-card-paciente">
+                  <div className="tarjeta-paciente">
                     <span aria-hidden="true">{'★'.repeat(e.estrellas)}{'☆'.repeat(Math.max(0, 5 - e.estrellas))}</span>
                     <span className="solo-lectores-pantalla">{t.comun.puntaje_estrellas.replace('{n}', e.estrellas)}</span>
                   </div>
-                  {e.comentario && <div className="guardia-card-detalle">{e.comentario}</div>}
+                  {e.comentario && <div className="tarjeta-detalle">{e.comentario}</div>}
                 </div>
               ))
             )}
 
-            {guardiaId && !enviado && !puedeCalificar && (
+            {turnoGuardiaId && !enviado && !puedeCalificar && (
               <div className="pwa-card-pie">
                 <div className="alert">
                   {t.asistente.calificar_sin_acceso}
@@ -130,7 +130,7 @@ export default function AsistenteAsignado() {
               </div>
             )}
           </section>
-          {guardiaId && !enviado && puedeCalificar && (
+          {turnoGuardiaId && !enviado && puedeCalificar && (
             <section className="pwa-card">
               <h2>{t.asistente.calificar_titulo}</h2>
               {/* Los cinco botones son un grupo con nombre, y cada uno dice en palabras cuánto

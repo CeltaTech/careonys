@@ -1,4 +1,4 @@
-// De dónde salió cada alerta temprana de guardia (`alertas_tempranas_guardia.fuente`).
+// De dónde salió cada alerta temprana de guardia (`alertas_tempranas_turno_guardia.fuente`).
 //
 // POR QUÉ ESTA LISTA EXISTE. Un aviso que dio una persona y una cuenta que hizo la máquina no
 // son lo mismo y no se pueden mezclar nunca. Quien apretó «voy demorado» hizo algo, y eso lo
@@ -7,11 +7,11 @@
 // suelto. Por eso cada origen tiene su código, y la pantalla dice cuál fue.
 //
 // LO QUE NO HAY es un código para «no pasó nada». La ausencia de aviso y de marca de salida
-// también es un registro, pero se muestra donde se muestran los momentos de la guardia —con su
-// hora, o diciendo que no hubo—, no como una alerta más: una alerta por cada guardia en la que
+// también es un registro, pero se muestra donde se muestran los momentos del turno de guardia —con su
+// hora, o diciendo que no hubo—, no como una alerta más: una alerta por cada turno de guardia en la que
 // nadie apretó nada sería ruido, y el ruido termina en un filtro de la casilla de correo.
 // La única excepción es `sin_aviso_ni_salida`, que se anota recién cuando llegó la hora de
-// inicio y no hay nada: ahí ya no es una ausencia, es una guardia que puede quedar sin cubrir.
+// inicio y no hay nada: ahí ya no es una ausencia, es un turno de guardia que puede quedar sin cubrir.
 //
 // Los códigos se guardan en la base y no se renombran (regla del §8 de `celtatech/CLAUDE.md`).
 // Lo que se lee en pantalla sale de i18n, en los tres idiomas.

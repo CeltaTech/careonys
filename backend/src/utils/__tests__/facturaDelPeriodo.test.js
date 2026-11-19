@@ -53,8 +53,8 @@ function prestacion(cambios = {}) {
 
 const AGOSTO = { desde: '2026-08-01', hasta: '2026-08-31' };
 
-function armar({ prestaciones = [], guardias = [], medicion = 'pactado_mas_excedente', periodo = AGOSTO } = {}) {
-  return armarLaFacturaDelPeriodo({ periodo, medicion, prestaciones, guardias, nombresDePacientes: NOMBRES });
+function armar({ prestaciones = [], turnos_guardia = [], medicion = 'pactado_mas_excedente', periodo = AGOSTO } = {}) {
+  return armarLaFacturaDelPeriodo({ periodo, medicion, prestaciones, turnos_guardia, nombresDePacientes: NOMBRES });
 }
 
 describe('el último día del período', () => {
@@ -194,7 +194,7 @@ describe('la factura del período', () => {
         prestacion({ precio_final: '100', vigente_hasta: '2026-08-10' }),
         prestacion({ id: 'pre-2', precio_final: '200', vigente_desde: '2026-08-11', prestacion_anterior_id: 'pre-1' }),
       ],
-      guardias: [
+      turnos_guardia: [
         { id: 'g1', fecha: '2026-08-05', servicio_id: SERVICIO, horas: 8, horas_extra: 0, pacientes: [PACIENTE] },
         { id: 'g2', fecha: '2026-08-20', servicio_id: SERVICIO, horas: 8, horas_extra: 0, pacientes: [PACIENTE] },
       ],
@@ -216,9 +216,9 @@ describe('la factura del período', () => {
 });
 
 describe('lo que se descuenta y lo que se cobra de más, según las condiciones', () => {
-  // Cuatro guardias pactadas a 10.000 el período: cada una vale 2.500.
-  const pactadas = () => [prestacion({ configuracion: { cantidad_guardias: 4 } })];
-  const guardia = (fecha, cambios = {}) => ({
+  // Cuatro turnos de guardia pactados a 10.000 el período: cada una vale 2.500.
+  const pactadas = () => [prestacion({ configuracion: { cantidad_turnos_guardia: 4 } })];
+  const turno_guardia = (fecha, cambios = {}) => ({
     id: `g-${fecha}`, fecha, servicio_id: SERVICIO, horas: 8, horas_extra: 0, pacientes: [PACIENTE], ...cambios,
   });
 
@@ -227,12 +227,12 @@ describe('lo que se descuenta y lo que se cobra de más, según las condiciones'
       periodo: AGOSTO,
       condiciones: { medicion: 'pactado_mas_excedente' },
       prestaciones: pactadas(),
-      guardias: [guardia('2026-08-03'), guardia('2026-08-10'), guardia('2026-08-17'), guardia('2026-08-24', { estado: 'ausente' })],
+      turnos_guardia: [turno_guardia('2026-08-03'), turno_guardia('2026-08-10'), turno_guardia('2026-08-17'), turno_guardia('2026-08-24', { estado: 'ausente' })],
       nombresDePacientes: NOMBRES,
     });
     assert.deepEqual(f.renglones.map((r) => [r.concepto, r.unidad, r.monto]), [
       ['pactado', 'periodo', 10000],
-      ['no_prestado', 'guardia', -2500],
+      ['no_prestado', 'turno_guardia', -2500],
     ]);
     assert.equal(f.moneda, 'ARS');
     assert.equal(f.total, 7500);
@@ -243,7 +243,7 @@ describe('lo que se descuenta y lo que se cobra de más, según las condiciones'
       periodo: AGOSTO,
       condiciones: { medicion: 'pactado_mas_excedente' },
       prestaciones: pactadas(),
-      guardias: ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31'].map((d) => guardia(d)),
+      turnos_guardia: ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31'].map((d) => turno_guardia(d)),
       nombresDePacientes: NOMBRES,
     });
     const adicional = f.renglones.find((r) => r.concepto === 'adicional');
@@ -256,8 +256,8 @@ describe('lo que se descuenta y lo que se cobra de más, según las condiciones'
     const f = armarLaFacturaDelPeriodo({
       periodo: AGOSTO,
       condiciones: { medicion: 'pactado_mas_excedente' },
-      prestaciones: [prestacion({ configuracion: { cantidad_guardias: 4 }, precio_guardia_adicional: '4000.00' })],
-      guardias: ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31'].map((d) => guardia(d)),
+      prestaciones: [prestacion({ configuracion: { cantidad_turnos_guardia: 4 }, precio_turno_guardia_adicional: '4000.00' })],
+      turnos_guardia: ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31'].map((d) => turno_guardia(d)),
       nombresDePacientes: NOMBRES,
     });
     const adicional = f.renglones.find((r) => r.concepto === 'adicional');

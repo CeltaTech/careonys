@@ -68,7 +68,7 @@ describe('las tres capas, y la última manda', () => {
 describe('lo guardado que ya no sirve se ignora, no rompe', () => {
   it('una clave que no se puede tocar no entra', () => {
     // `ocupado` manda al fondo lo que ya está bloqueado. Si entrara, se podría subir a la cabeza
-    // de la lista a alguien que no puede tomar la guardia.
+    // de la lista a alguien que no puede tomar el turno de guardia.
     const { pesos } = pesosYTopesDe({ perfil: 'continuidad', pesos: { ocupado: 500 }, topes: {} });
     expect(pesos.ocupado).toBe(PESOS.ocupado);
   });
@@ -154,7 +154,7 @@ describe('lo que llega de afuera se revisa antes de guardarlo', () => {
 
   it('ningún borde deja llegar al número con el que el sistema bloquea', () => {
     // Es el motivo por el que hay bordes: −1000 es lo que el sistema usa para mandar al fondo a
-    // quien no puede tomar la guardia. Que nadie lo alcance desde la configuración.
+    // quien no puede tomar el turno de guardia. Que nadie lo alcance desde la configuración.
     for (const borde of Object.values(PESOS_QUE_SE_PUEDEN_TOCAR)) {
       expect(borde.minimo).toBeGreaterThan(-1000);
       expect(borde.maximo).toBeLessThan(1000);

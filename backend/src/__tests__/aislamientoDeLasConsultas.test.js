@@ -165,7 +165,7 @@ function consultasDe(texto) {
     // La consulta puede venir envuelta en un ayudante que la ata, y entonces el nombre del
     // ayudante queda en un renglón anterior:
     //   acotarAPrestadora(
-    //     supabase.from('emergencias_guardia')…
+    //     supabase.from('emergencias_turno_guardia')…
     // Sin leer hacia arriba, no sólo se pierde el nombre: el paréntesis que quedó abierto ahí es
     // el que mantiene viva la cadena hasta el argumento que está más abajo.
     let arranque = i;

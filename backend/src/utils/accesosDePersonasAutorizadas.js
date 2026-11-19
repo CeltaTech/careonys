@@ -95,8 +95,8 @@ export function soloElTitular(req, res, next) {
 // Lo que esta Prestadora muestra, recortado por lo que le dieron a esta persona.
 //
 // Hay accesos de las personas autorizadas que no son una pantalla entera sino una columna adentro de una que sí se
-// muestra: la posición del Asistente vive adentro de la guardia, y la medicación de ese día, adentro
-// del reporte. Cortar la ruta ahí sería sacarle la guardia entera a quien sí puede ver la agenda.
+// muestra: la posición del Asistente vive adentro del turno de guardia, y la medicación de ese día, adentro
+// del reporte. Cortar la ruta ahí sería sacarle el turno de guardia entero a quien sí puede ver la agenda.
 //
 // Los dos topes son la misma decisión —qué de esto se muestra— aplicada uno arriba del otro:
 // primero lo que la Prestadora ofrece y encima lo que el titular pidió para esta persona. Como la

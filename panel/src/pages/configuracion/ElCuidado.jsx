@@ -16,14 +16,14 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { ElCalculoDeCandidatos } from './ElCalculoDeCandidatos';
 import { LaFirmaDelResponsableDePagos } from './LaFirmaDelResponsableDePagos';
-import { TurnosSinCubrirTab } from './TurnosSinCubrirTab';
+import { TurnosGuardiaSinCubrirTab } from './TurnosGuardiaSinCubrirTab';
 import { AutorizacionSignosVitales } from './AutorizacionSignosVitales';
 import { ListaPropiaDeLaPrestadora } from './ListaPropiaDeLaPrestadora';
 import { informacionDeSalud } from '../../lib/informacionDeSalud';
 import '../../styles/molde-paginas.css';
 import './elcuidado.css';
 
-/* Las reglas del cuidado en sí: cómo se arman los Servicios y sus guardias, qué
+/* Las reglas del cuidado en sí: cómo se arman los Servicios y sus turnos de guardia, qué
    signos vitales se toman. */
 export function ConfiguracionCuidado() {
   return (
@@ -31,7 +31,7 @@ export function ConfiguracionCuidado() {
       <TabServicios />
       <LaFirmaDelResponsableDePagos />
       <ElCalculoDeCandidatos />
-      <TurnosSinCubrirTab />
+      <TurnosGuardiaSinCubrirTab />
       <TabVitales />
     </div>
   );
@@ -69,13 +69,13 @@ function TabServicios() {
     setEstado('cargando');
     setError(null);
     try {
-      const [{ niveles: filas }, { dias_generacion_series_guardia }, { configuracion }] = await Promise.all([
+      const [{ niveles: filas }, { dias_generacion_series_turno_guardia }, { configuracion }] = await Promise.all([
         llamarApi('/escalada-relevo'),
-        llamarApi('/guardias/horizonte-generacion'),
+        llamarApi('/turnos-guardia/horizonte-generacion'),
         llamarApi('/ausencia-automatica'),
       ]);
       setNiveles(filas);
-      setDiasGeneracion(String(dias_generacion_series_guardia));
+      setDiasGeneracion(String(dias_generacion_series_turno_guardia));
       setAusenciaActiva(configuracion.activo);
       setMinutosTolerancia(String(configuracion.minutos_tolerancia_checkin));
       setMetrosTolerancia(String(configuracion.metros_tolerancia_checkin));
@@ -96,7 +96,7 @@ function TabServicios() {
     setError(null);
     setHorizonteGuardado(false);
     try {
-      await llamarApi('/guardias/horizonte-generacion', {
+      await llamarApi('/turnos-guardia/horizonte-generacion', {
         method: 'PATCH',
         body: JSON.stringify({ dias: Number(diasGeneracion) }),
       });
@@ -615,7 +615,7 @@ function TabServiciosPersonalEmergencia() {
       const [{ personal: filas }, { data: asistentesData, error: errorAsistentes }] = await Promise.all([
         llamarApi('/personal-emergencia'),
         /* Anotar a alguien como personal de emergencia es ponerlo en la lista de a quién llamar
-           cuando se cae una guardia, o sea repartir trabajo: quien ya no está en la Prestadora no
+           cuando se cae un turno de guardia, o sea repartir trabajo: quien ya no está en la Prestadora no
            puede entrar ahí. Acá sí se filtra en la consulta, y no en el desplegable como en las
            otras puertas, porque esta lista no se usa para mostrar a nadie —los nombres de la
            tabla de arriba salen de `/personal-emergencia`, no de esto—, así que no hay ningún

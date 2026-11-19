@@ -5,7 +5,7 @@
 // coordina ese día sería entregar el dato de contacto de alguien que trabaja ahí —y que además
 // rota, se toma vacaciones y cambia—, así que lo que se entrega es el contacto que la propia
 // Prestadora cargó en Configuración › La Prestadora. Dónde suena ese número lo decide ella: puede
-// ser el escritorio del Coordinador de turno, la guardia, o una central.
+// ser el escritorio del Coordinador de turno, el turno de guardia, o una central.
 //
 // LO QUE ACÁ NO PUEDE APARECER NUNCA es el teléfono ni el correo de un Asistente. Cómo llegar a
 // una persona del Padrón es justamente lo que la modalidad Match abre a pedido y con el

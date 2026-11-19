@@ -2,7 +2,7 @@
 //
 // Antes cada pantalla dibujaba la dirección como texto suelto: el Asistente que está por salir
 // hacia una casa tenía que copiarla a mano a su aplicación de mapas, parado en la calle y con el
-// turno por empezar. Ahora se toca y se abre, y el que decide con qué aplicación es el teléfono.
+// turno de guardia por empezar. Ahora se toca y se abre, y el que decide con qué aplicación es el teléfono.
 //
 // CUANDO NO HAY ADÓNDE IR SE DIBUJA EL TEXTO Y NADA MÁS. Un enlace que no lleva a ningún lado es
 // peor que ninguno: se toca, no pasa nada, y quien lo tocó no sabe si falló el teléfono o si el

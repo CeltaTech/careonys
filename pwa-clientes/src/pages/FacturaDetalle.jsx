@@ -133,9 +133,9 @@ export default function FacturaDetalle() {
           <div className="estado-vacio" role="status">{t.facturas.sin_renglones}</div>
         ) : (
           renglones.map((r) => (
-            <div key={r.id} className="guardia-card">
-              <div className="guardia-card-paciente">{r.descripcion}</div>
-              <div className="guardia-card-detalle">{formatearImporte(r.monto, r.moneda, locale)}</div>
+            <div key={r.id} className="tarjeta">
+              <div className="tarjeta-paciente">{r.descripcion}</div>
+              <div className="tarjeta-detalle">{formatearImporte(r.monto, r.moneda, locale)}</div>
             </div>
           ))
         )}
@@ -147,12 +147,12 @@ export default function FacturaDetalle() {
           <div className="estado-vacio" role="status">{t.facturas.sin_cobros}</div>
         ) : (
           cobros.map((c) => (
-            <div key={c.id} className="guardia-card">
-              <div className="guardia-card-paciente">
+            <div key={c.id} className="tarjeta">
+              <div className="tarjeta-paciente">
                 {formatearImporte(c.monto, c.moneda, locale)}
                 {c.estado === 'anulado' && <> · {t.facturas.cobro_anulado}</>}
               </div>
-              <div className="guardia-card-detalle">
+              <div className="tarjeta-detalle">
                 {diaEnPalabras(c.fecha_cobro, locale)} · {traducirValor(t.facturas, `medio_${c.medio}`)}
               </div>
             </div>

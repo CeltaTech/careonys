@@ -163,7 +163,7 @@ appClientesMedicacionRouter.get('/indicacion/:indicacionId/documento-firmado', r
 
 appClientesMedicacionRouter.post(
   '/:pacienteId',
-  // Mismo criterio que calificar una guardia (appClientes.js): cargar una indicación de
+  // Mismo criterio que calificar un turno de guardia (appClientes.js): cargar una indicación de
   // medicación viene negada de fábrica para las personas autorizadas, y sólo la habilita una instrucción
   // firmada por el titular. El corte va antes de recibir el archivo: no tiene sentido subir una
   // prescripción para después contestar que no.

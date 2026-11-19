@@ -23,7 +23,7 @@ const UN_MENSAJE_QUE_NO_LA_USA = { admite_whatsapp: false };
 describe('la vía del mensaje de texto existe', () => {
   it('la admite todo aviso que sale por la misma cascada que WhatsApp', () => {
     assert.equal(admiteMensajeDeTexto(UN_MENSAJE), true);
-    assert.equal(admiteMensajeDeTexto(mensajeDelCatalogo('guardia_sin_cubrir')), true);
+    assert.equal(admiteMensajeDeTexto(mensajeDelCatalogo('turno_guardia_sin_cubrir')), true);
   });
 
   it('el aviso que no usa esa cascada tampoco usa esta vía', () => {
@@ -71,13 +71,13 @@ describe('la vía del mensaje de texto no se puede elegir sin proveedor', () => 
   });
 
   it('una elección guardada de antes no enciende la vía si el proveedor ya no está', () => {
-    const guardadas = [{ evento: 'guardia_sin_cubrir', emails: [], activo: true, mensaje_de_texto_activo: true }];
+    const guardadas = [{ evento: 'turno_guardia_sin_cubrir', emails: [], activo: true, mensaje_de_texto_activo: true }];
 
     const conProveedor = mezclarMensajesConCatalogo(guardadas, { hayProveedorDeMensajeDeTexto: true });
-    assert.equal(conProveedor.find((a) => a.evento === 'guardia_sin_cubrir').mensaje_de_texto_activo, true);
+    assert.equal(conProveedor.find((a) => a.evento === 'turno_guardia_sin_cubrir').mensaje_de_texto_activo, true);
 
     const sinProveedor = mezclarMensajesConCatalogo(guardadas, { hayProveedorDeMensajeDeTexto: false });
-    assert.equal(sinProveedor.find((a) => a.evento === 'guardia_sin_cubrir').mensaje_de_texto_activo, false);
+    assert.equal(sinProveedor.find((a) => a.evento === 'turno_guardia_sin_cubrir').mensaje_de_texto_activo, false);
   });
 });
 

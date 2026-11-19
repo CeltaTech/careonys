@@ -57,7 +57,7 @@ async function comoSeVeEnElCelular(prestadoraId, titulo, cuerpo) {
 // CON QUÉ CREDENCIAL. La del trabajo de la Prestadora, y no la de quien pidió el envío: la
 // suscripción es del aparato de otra persona, y quien la avisa no tiene por qué poder leerla.
 async function enviarPush(prestadoraId, columna, id, { titulo, cuerpo, url }) {
-  // Sin destinatario no hay push. Pasa cuando la guardia está sin cubrir: no hay Asistente
+  // Sin destinatario no hay push. Pasa cuando el turno de guardia está sin cubrir: no hay Asistente
   // a quien avisarle. Se corta acá y no en cada llamador, para no repetir la misma
   // verificación en todos lados.
   if (!id) return false;

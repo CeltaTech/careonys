@@ -23,7 +23,7 @@
 //      credencial de quien pide, o con la del trabajo sin persona de a una
 //      Prestadora por vez. Las políticas rigen igual que en el Panel, y además
 //      cada consulta nombra la Prestadora. La prueba intenta a propósito alcanzar
-//      datos ajenos por ese camino —pedirle el identificador de una guardia
+//      datos ajenos por ese camino —pedirle el identificador de un turno de guardia
 //      de la otra Prestadora, fichar entrada en ella, modificarle una zona— y
 //      espera que todo rebote.
 //
@@ -269,8 +269,8 @@ async function probarLaBase({ base, llavePublica }, idA, idB, sesiones) {
 // `{p}` es el identificador de la persona que consulta.
 const PACIENTES_DEL_ASISTENTE = `
   SELECT gp.paciente_id
-    FROM guardia_pacientes gp
-    JOIN guardias g ON g.id = gp.guardia_id
+    FROM turno_guardia_pacientes gp
+    JOIN turnos_guardia g ON g.id = gp.turno_guardia_id
    WHERE g.asistente_id = '{p}'`;
 
 // `NOT pendiente_conformidad` aparece en las dos consultas de Pacientes y en la
@@ -649,36 +649,36 @@ async function probarElBackend({ backend }, sesiones, piezas) {
     ['admin B', 'modificar un usuario de A',      'PATCH',  `/api/panel/usuarios/${piezas.usuarioA}`,         sesiones.adminB, { nombre: 'INTRUSO' }, usuarioAjeno],
     ['admin B', 'dar de baja un usuario de A',    'DELETE', `/api/panel/usuarios/${piezas.usuarioA}`,         sesiones.adminB, null, usuarioAjeno],
     ['cliente B', 'ver un paciente de A',         'GET',    `/api/app-clientes/pacientes/${piezas.pacienteA}`,           sesiones.clienteB],
-    ['cliente B', 'ver sus guardias',             'GET',    `/api/app-clientes/pacientes/${piezas.pacienteA}/guardias`,  sesiones.clienteB],
+    ['cliente B', 'ver sus guardias',             'GET',    `/api/app-clientes/pacientes/${piezas.pacienteA}/turnos-guardia`,  sesiones.clienteB],
     ['cliente B', 'ver sus reportes',             'GET',    `/api/app-clientes/pacientes/${piezas.pacienteA}/reportes`,  sesiones.clienteB],
     ['cliente B', 'ver sus alertas',              'GET',    `/api/app-clientes/pacientes/${piezas.pacienteA}/alertas`,   sesiones.clienteB],
     ['cliente B', 'ver quién lo asiste',          'GET',    `/api/app-clientes/pacientes/${piezas.pacienteA}/asistente`, sesiones.clienteB],
-    ['asistente B', 'ver una guardia de A',       'GET',    `/api/app-asistentes/guardias/${piezas.guardiaA}`,           sesiones.asistenteB],
-    ['asistente B', 'fichar entrada en ella',     'POST',   `/api/app-asistentes/guardias/${piezas.guardiaA}/checkin`,   sesiones.asistenteB, { lat: -34.6, lng: -58.4 },
-      `SELECT md5(t::text) FROM public.guardias t WHERE id = '${piezas.guardiaA}';`],
+    ['asistente B', 'ver una guardia de A',       'GET',    `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaA}`,           sesiones.asistenteB],
+    ['asistente B', 'fichar entrada en ella',     'POST',   `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaA}/checkin`,   sesiones.asistenteB, { lat: -34.6, lng: -58.4 },
+      `SELECT md5(t::text) FROM public.turnos_guardia t WHERE id = '${piezas.turnoGuardiaA}';`],
     ['asistente B', 'ver reportes de un paciente de A', 'GET', `/api/app-asistentes/pacientes/${piezas.pacienteA}/reportes`, sesiones.asistenteB],
     // El pase de guardia (pendiente #113). Las dos rutas nuevas del Asistente reciben el
-    // identificador de una guardia, así que son la misma clase de puerta que el check-in: si la
-    // guardia no es suya, no existe.
-    ['asistente B', 'pedirle un código a la Prestadora de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/comprobacion/pedido`, sesiones.asistenteB, { momento: 'checkin', texto: 'INTRUSO' },
-      `SELECT count(*) FROM public.guardia_comprobaciones WHERE guardia_id = '${piezas.guardiaA}';`],
-    ['asistente B', 'ver la comprobación de una guardia de A', 'GET', `/api/app-asistentes/guardias/${piezas.guardiaA}/comprobacion/checkin`, sesiones.asistenteB],
+    // identificador de un turno de guardia, así que son la misma clase de puerta que el check-in: si la
+    // turno de guardia no es suya, no existe.
+    ['asistente B', 'pedirle un código a la Prestadora de A', 'POST', `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaA}/comprobacion/pedido`, sesiones.asistenteB, { momento: 'checkin', texto: 'INTRUSO' },
+      `SELECT count(*) FROM public.turno_guardia_comprobaciones WHERE turno_guardia_id = '${piezas.turnoGuardiaA}';`],
+    ['asistente B', 'ver la comprobación de una guardia de A', 'GET', `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaA}/comprobacion/checkin`, sesiones.asistenteB],
     // Los dos actos deliberados de antes de llegar (pendiente #101). Reciben el identificador de
-    // una guardia igual que el check-in, así que son la misma puerta: si la guardia no es suya,
+    // un turno de guardia igual que el check-in, así que son la misma puerta: si el turno de guardia no es suya,
     // no existe. El aviso de demora se mira contra la tabla de alertas, que es donde escribe.
-    ['asistente B', 'marcar salida en una guardia de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/salida`, sesiones.asistenteB, { lat: -34.6, lng: -58.4 },
-      `SELECT md5(t::text) FROM public.guardias t WHERE id = '${piezas.guardiaA}';`],
-    ['asistente B', 'avisar demora en una guardia de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/aviso-demora`, sesiones.asistenteB, { motivo: 'transporte' },
-      `SELECT count(*) FROM public.alertas_tempranas_guardia WHERE guardia_id = '${piezas.guardiaA}';`],
-    // El Relevo de emergencia se pide sobre el identificador de la guardia: misma puerta otra vez.
-    // Se mira contra la tabla donde escribe, que es la de las emergencias de la guardia.
-    ['asistente B', 'pedir el Relevo de emergencia en una guardia de A', 'POST', `/api/app-asistentes/guardias/${piezas.guardiaA}/relevo-de-emergencia`, sesiones.asistenteB, { detalle: 'INTRUSO' },
-      `SELECT count(*) FROM public.emergencias_guardia WHERE guardia_id = '${piezas.guardiaA}' AND relevo_de_emergencia;`],
+    ['asistente B', 'marcar salida en una guardia de A', 'POST', `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaA}/salida`, sesiones.asistenteB, { lat: -34.6, lng: -58.4 },
+      `SELECT md5(t::text) FROM public.turnos_guardia t WHERE id = '${piezas.turnoGuardiaA}';`],
+    ['asistente B', 'avisar demora en una guardia de A', 'POST', `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaA}/aviso-demora`, sesiones.asistenteB, { motivo: 'transporte' },
+      `SELECT count(*) FROM public.alertas_tempranas_turno_guardia WHERE turno_guardia_id = '${piezas.turnoGuardiaA}';`],
+    // El Relevo de emergencia se pide sobre el identificador del turno de guardia: misma puerta otra vez.
+    // Se mira contra la tabla donde escribe, que es la de las emergencias del turno de guardia.
+    ['asistente B', 'pedir el Relevo de emergencia en una guardia de A', 'POST', `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaA}/relevo-de-emergencia`, sesiones.asistenteB, { detalle: 'INTRUSO' },
+      `SELECT count(*) FROM public.emergencias_turno_guardia WHERE turno_guardia_id = '${piezas.turnoGuardiaA}' AND relevo_de_emergencia;`],
     // Y la dirección contraria, porque el aislamiento no es simétrico por sí solo.
     ['cliente A', 'ver un paciente de B',         'GET',    `/api/app-clientes/pacientes/${piezas.pacienteB}`,           sesiones.clienteA],
-    ['asistente A', 'ver una guardia de B',       'GET',    `/api/app-asistentes/guardias/${piezas.guardiaB}`,           sesiones.asistenteA],
-    ['asistente A', 'fichar entrada en ella',     'POST',   `/api/app-asistentes/guardias/${piezas.guardiaB}/checkin`,   sesiones.asistenteA, { lat: -34.6, lng: -58.4 },
-      `SELECT md5(t::text) FROM public.guardias t WHERE id = '${piezas.guardiaB}';`],
+    ['asistente A', 'ver una guardia de B',       'GET',    `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaB}`,           sesiones.asistenteA],
+    ['asistente A', 'fichar entrada en ella',     'POST',   `/api/app-asistentes/turnos-guardia/${piezas.turnoGuardiaB}/checkin`,   sesiones.asistenteA, { lat: -34.6, lng: -58.4 },
+      `SELECT md5(t::text) FROM public.turnos_guardia t WHERE id = '${piezas.turnoGuardiaB}';`],
   ];
 
   const problemas = [];
@@ -722,7 +722,7 @@ async function probarElBackend({ backend }, sesiones, piezas) {
     ['admin A', 'ver sus zonas',       `/api/panel/configuracion/zonas`, sesiones.adminA],
     ['admin B', 'ver sus zonas',       `/api/panel/configuracion/zonas`, sesiones.adminB],
     ['cliente A', 'ver sus pacientes', `/api/app-clientes/pacientes`,    sesiones.clienteA],
-    ['asistente A', 'ver sus guardias', `/api/app-asistentes/guardias`,  sesiones.asistenteA],
+    ['asistente A', 'ver sus guardias', `/api/app-asistentes/turnos-guardia`,  sesiones.asistenteA],
   ];
   for (const [quien, que, ruta, token] of controles) {
     const r = await fetch(`${backend}${ruta}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -768,9 +768,9 @@ async function principal() {
         zonaA: uno(`SELECT id FROM public.zonas_cobertura WHERE prestadora_id='${idA}' ORDER BY orden LIMIT 1;`),
         usuarioA: uno(`SELECT id FROM public.usuarios WHERE prestadora_id='${idA}' AND rol='coordinador' LIMIT 1;`),
         pacienteA: uno(`SELECT id FROM public.pacientes WHERE prestadora_id='${idA}' ORDER BY id LIMIT 1;`),
-        guardiaA: uno(`SELECT id FROM public.guardias WHERE prestadora_id='${idA}' ORDER BY id LIMIT 1;`),
+        turnoGuardiaA: uno(`SELECT id FROM public.turnos_guardia WHERE prestadora_id='${idA}' ORDER BY id LIMIT 1;`),
         pacienteB: uno(`SELECT id FROM public.pacientes WHERE prestadora_id='${idB}' ORDER BY id LIMIT 1;`),
-        guardiaB: uno(`SELECT id FROM public.guardias WHERE prestadora_id='${idB}' ORDER BY id LIMIT 1;`),
+        turnoGuardiaB: uno(`SELECT id FROM public.turnos_guardia WHERE prestadora_id='${idB}' ORDER BY id LIMIT 1;`),
       };
     })(),
   ]);

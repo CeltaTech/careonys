@@ -10,7 +10,7 @@ import { estadoDelCertificado, estadoVisible, ordenarDocumentos } from '../lib/d
 // Los documentos que le pide su Prestadora, la Matrícula entre ellos.
 //
 // POR QUÉ ESTA PANTALLA EXISTE
-// Un documento que falta o que venció puede dejarlo sin guardias. Si él no lo
+// Un documento que falta o que venció puede dejarlo sin turnos de guardia. Si él no lo
 // ve venir, lo único que nota es que dejaron de llamarlo. Acá ve cuántos mandó,
 // y cuál está en qué estado, con lo que hay que atender arriba.
 //
@@ -120,9 +120,9 @@ export default function Documentos() {
               <Link
                 key={documento.tipo_documento_id}
                 to={`/documentos/${documento.tipo_documento_id}`}
-                className="guardia-card"
+                className="tarjeta"
               >
-                <div className="guardia-card-paciente">{documento.nombre}</div>
+                <div className="tarjeta-paciente">{documento.nombre}</div>
                 <EstadoDelDocumento estado={estadoVisible(documento)} t={t} />
               </Link>
             ))}

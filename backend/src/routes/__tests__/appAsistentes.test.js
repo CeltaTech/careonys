@@ -7,7 +7,7 @@
  * POR QUÉ EXISTE ESTA PRUEBA. Lo que hay que garantizar no es que la ruta conteste 200. Son
  * cuatro cosas, y ninguna se ve mirando el código:
  *
- *   1. EL PISO. La guardia nunca se traba. Si no hay quién muestre el código y en la Prestadora
+ *   1. EL PISO. El turno de guardia nunca se traba. Si no hay quién muestre el código y en la Prestadora
  *      tampoco atiende nadie, el Asistente entra igual eligiendo un motivo, y esa llegada queda
  *      anotada como SIN COMPROBAR, con el motivo elegido.
  *   2. UN CÓDIGO EQUIVOCADO NO MARCA NADA. Es lo único que se rechaza, porque darlo por bueno
@@ -33,13 +33,13 @@ const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
 // El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
 const LEGAJO = 'bbbbbbbb-bbbb-bbbb-bbbb-b0000000000b';
-const GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const TURNO_GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const PACIENTE = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 const CLIENTE = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
 const COMPROBACION = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
-// El relevo: la guardia que todavía no cerró, sobre el mismo Paciente, y el Asistente que la está
+// El relevo: el turno de guardia que todavía no cerró, sobre el mismo Paciente, y el Asistente que la está
 // haciendo. Es quien puede mostrar el código cuando el Cliente no está.
-const GUARDIA_SALIENTE = '11111111-1111-1111-1111-111111111111';
+const TURNO_GUARDIA_SALIENTE = '11111111-1111-1111-1111-111111111111';
 const ASISTENTE_SALIENTE = '22222222-2222-2222-2222-222222222222';
 const OTRO_CLIENTE = '33333333-3333-3333-3333-333333333333';
 const LAT = -34.6;
@@ -119,35 +119,35 @@ function haceUnRato(minutos) {
   return new Date(Date.now() - minutos * 60 * 1000).toISOString();
 }
 
-/** La guardia contra la que se prueba, con los campos que lee `guardiaDelAsistente`. */
-let guardiaActual;
-/** Lo que la base tendría anotado en `guardia_comprobaciones` para esta guardia, o `null`. */
+/** El turno de guardia contra la que se prueba, con los campos que lee `turnoGuardiaDelAsistente`. */
+let turnoGuardiaActual;
+/** Lo que la base tendría anotado en `turno_guardia_comprobaciones` para este turno de guardia, o `null`. */
 let comprobacionGuardada;
 /** Los códigos que hay ahora mismo en la pantalla de alguien (`codigos_de_presencia`). */
 let codigosEnPantalla;
-/** ¿Hay otra guardia abierta sobre el mismo Paciente? Eso es lo que significa «hay relevo». */
+/** ¿Hay otro turno de guardia abierto sobre el mismo Paciente? Eso es lo que significa «hay relevo». */
 let hayRelevo;
 
 // La misma tabla se consulta de tres formas distintas y la base falsa sólo distingue por ruta,
 // así que se reparte por el `select`, que es lo que las diferencia de verdad.
-function guardiaPacientesRespuesta({ url }) {
+function turnoGuardiaPacientesRespuesta({ url }) {
   const select = new URL(url, 'http://interno').searchParams.get('select') ?? '';
 
-  // `pacientesDeGuardias`: a quién atiende este turno.
+  // `pacientesDeTurnosGuardia`: a quién atiende este turno.
   if (select.includes('pacientes(')) {
     // El nombre y las coordenadas viven en los datos de la persona, no en la fila del Paciente.
     return [{
-      guardia_id: GUARDIA,
+      turno_guardia_id: TURNO_GUARDIA,
       pacientes: { id: PACIENTE, cliente_id: CLIENTE, persona: { nombre_visible: 'Paciente de prueba', lat: LAT, lng: LNG } },
     }];
   }
 
   // `sujetosQuePuedenMostrar`, segunda consulta: el Asistente que todavía no cerró.
-  if (select.includes('guardias!inner')) {
+  if (select.includes('turnos_guardia!inner')) {
     if (!hayRelevo) return [];
     return [{
-      guardia_id: GUARDIA_SALIENTE,
-      guardias: { id: GUARDIA_SALIENTE, asistente_id: ASISTENTE_SALIENTE, estado: 'activa', checkout_at: null },
+      turno_guardia_id: TURNO_GUARDIA_SALIENTE,
+      turnos_guardia: { id: TURNO_GUARDIA_SALIENTE, asistente_id: ASISTENTE_SALIENTE, estado: 'activa', checkout_at: null },
     }];
   }
 
@@ -165,12 +165,12 @@ function codigosDePresenciaRespuesta({ url }) {
 
 function comprobacionesGuardadas() {
   return llamadas
-    .filter((l) => l.clave === 'POST /rest/v1/guardia_comprobaciones')
+    .filter((l) => l.clave === 'POST /rest/v1/turno_guardia_comprobaciones')
     .map((l) => (Array.isArray(l.cuerpo) ? l.cuerpo[0] : l.cuerpo));
 }
 
-function guardiaMarcada() {
-  return llamadas.some((l) => l.clave === 'PATCH /rest/v1/guardias');
+function turnoGuardiaMarcado() {
+  return llamadas.some((l) => l.clave === 'PATCH /rest/v1/turnos_guardia');
 }
 
 // Cómo se ve desde afuera que salió el mensaje de llegada: para armarlo, el backend va a buscar el
@@ -200,12 +200,12 @@ beforeEach(() => {
   comprobacionGuardada = null;
   codigosEnPantalla = [];
   hayRelevo = false;
-  guardiaActual = {
-    id: GUARDIA,
+  turnoGuardiaActual = {
+    id: TURNO_GUARDIA,
     prestadora_id: PRESTADORA,
     asistente_id: LEGAJO,
     paciente_id: PACIENTE,
-    // El código QR vale sólo para la guardia de hoy.
+    // El código QR vale sólo para el turno de guardia de hoy.
     fecha: new Date().toISOString().slice(0, 10),
     hora_inicio: '08:00',
     hora_fin: '20:00',
@@ -218,9 +218,9 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/guardias', () => [guardiaActual]);
-  respuestas.set('PATCH /rest/v1/guardias', () => [{ id: GUARDIA }]);
-  respuestas.set('GET /rest/v1/guardia_pacientes', guardiaPacientesRespuesta);
+  respuestas.set('GET /rest/v1/turnos_guardia', () => [turnoGuardiaActual]);
+  respuestas.set('PATCH /rest/v1/turnos_guardia', () => [{ id: TURNO_GUARDIA }]);
+  respuestas.set('GET /rest/v1/turno_guardia_pacientes', turnoGuardiaPacientesRespuesta);
   respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, cliente_id: CLIENTE }]);
   // Dos consultas distintas a la misma tabla: la del middleware, que busca el Legajo por la
   // cuenta, y la del nombre, que arma el mensaje. Se reparten por el `select`.
@@ -232,10 +232,10 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/configuracion_ausencia_automatica', () => []);
   respuestas.set('POST /rest/v1/rpc/domicilios_de_pacientes_en', () => []);
   respuestas.set('POST /rest/v1/mensajes_asistente', () => []);
-  // La comprobación de esta guardia, y el alta o pisada de esa misma fila. El alta devuelve lo
+  // La comprobación de este turno de guardia, y el alta o pisada de esa misma fila. El alta devuelve lo
   // que le mandaron porque el backend la vuelve a leer con `.select().single()`.
-  respuestas.set('GET /rest/v1/guardia_comprobaciones', () => (comprobacionGuardada ? [comprobacionGuardada] : []));
-  respuestas.set('POST /rest/v1/guardia_comprobaciones', ({ cuerpo }) => {
+  respuestas.set('GET /rest/v1/turno_guardia_comprobaciones', () => (comprobacionGuardada ? [comprobacionGuardada] : []));
+  respuestas.set('POST /rest/v1/turno_guardia_comprobaciones', ({ cuerpo }) => {
     const fila = Array.isArray(cuerpo) ? cuerpo[0] : cuerpo;
     // La base pisa sólo las columnas que le mandan y deja como estaban las que no viajaron. Acá se
     // imita eso: si el alta se quedara con la fila entera, la prueba de «pedir otro código no
@@ -243,7 +243,7 @@ beforeEach(() => {
     comprobacionGuardada = { ...(comprobacionGuardada ?? {}), ...fila, id: COMPROBACION };
     return [comprobacionGuardada];
   });
-  respuestas.set('PATCH /rest/v1/guardia_comprobaciones', () => []);
+  respuestas.set('PATCH /rest/v1/turno_guardia_comprobaciones', () => []);
   respuestas.set('GET /rest/v1/codigos_de_presencia', codigosDePresenciaRespuesta);
   respuestas.set('POST /rest/v1/codigos_de_presencia', () => []);
   respuestas.set('DELETE /rest/v1/codigos_de_presencia', () => []);
@@ -253,13 +253,13 @@ beforeEach(() => {
 });
 
 // ============================================================================
-// El piso: la guardia nunca se traba
+// El piso: el turno de guardia nunca se traba
 // ============================================================================
 
 describe('check-in — el piso, que no se negocia: la guardia nunca se traba', () => {
   for (const motivo of ['nadie_para_mostrar', 'prestadora_no_responde', 'sin_camara', 'sin_conexion', 'otro']) {
     it(`se entra igual eligiendo «${motivo}», y la llegada queda sin comprobar`, async () => {
-      const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
         lat: LAT,
         lng: LNG,
         comprobacion: { motivoSinComprobar: motivo, detalle: 'No contestó nadie' },
@@ -267,12 +267,12 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
       assert.equal(estado, 200);
       assert.equal(cuerpo.ok, true);
       assert.equal(cuerpo.comprobacion, 'sin_comprobar');
-      assert.equal(guardiaMarcada(), true);
+      assert.equal(turnoGuardiaMarcado(), true);
       // Se midió contra las coordenadas de los datos del Paciente: llegó justo a la puerta.
       assert.equal(cuerpo.distanciaMetros, 0);
 
       const [fila] = comprobacionesGuardadas();
-      assert.equal(fila.guardia_id, GUARDIA);
+      assert.equal(fila.turno_guardia_id, TURNO_GUARDIA);
       assert.equal(fila.prestadora_id, PRESTADORA);
       assert.equal(fila.asistente_id, LEGAJO);
       assert.equal(fila.momento, 'checkin');
@@ -302,10 +302,10 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
 
   for (const [caso, cuerpoDelPedido] of pedidosViejos) {
     it(`${caso}, el check-in se marca igual y queda sin comprobar por «otro»`, async () => {
-      const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, cuerpoDelPedido);
+      const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, cuerpoDelPedido);
       assert.equal(estado, 200);
       assert.equal(cuerpo.ok, true);
-      assert.equal(guardiaMarcada(), true);
+      assert.equal(turnoGuardiaMarcado(), true);
 
       const [fila] = comprobacionesGuardadas();
       assert.equal(fila.estado, 'sin_comprobar');
@@ -314,12 +314,12 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
   }
 
   it('al llegar se borra el punto del viaje: del viaje no queda nada guardado', async () => {
-    await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
     });
-    const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/guardias');
+    const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/turnos_guardia');
     assert.ok(escritura, 'la llegada tiene que quedar marcada');
     assert.equal(escritura.cuerpo.ubicacion_actual_lat, null);
     assert.equal(escritura.cuerpo.ubicacion_actual_lng, null);
@@ -327,7 +327,7 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
   });
 
   it('el motivo que el teléfono mandó de más queda en el detalle, no se pierde', async () => {
-    await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'se_lo_comio_el_perro' },
@@ -337,17 +337,17 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
   });
 
   it('sin GPS no se marca nada, ni siquiera con un motivo: el código va junto al GPS, no en su lugar', async () => {
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
     });
     assert.equal(estado, 400);
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
   });
 });
 
 // ============================================================================
-// La llegada tarde: el titular marca sobre una guardia ya marcada ausente
+// La llegada tarde: el titular marca sobre un turno de guardia ya marcado ausente
 // ============================================================================
 
 describe('check-in — la llegada tarde cierra el pedido de relevo', () => {
@@ -356,10 +356,10 @@ describe('check-in — la llegada tarde cierra el pedido de relevo', () => {
   }
 
   it('sobre una guardia ausente, el pedido abierto se cierra como resuelto por el titular', async () => {
-    guardiaActual = { ...guardiaActual, estado: 'ausente' };
+    turnoGuardiaActual = { ...turnoGuardiaActual, estado: 'ausente' };
     respuestas.set('PATCH /rest/v1/incidentes_relevo', () => []);
 
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
@@ -371,15 +371,15 @@ describe('check-in — la llegada tarde cierra el pedido de relevo', () => {
     assert.equal(cierre.cuerpo.resuelto_por_tipo, 'titular');
     assert.equal(cierre.cuerpo.resuelto_por_id, LEGAJO);
     assert.ok(cierre.cuerpo.resuelto_at);
-    // Sólo el pedido de esta guardia, de esta Prestadora, y sólo si sigue abierto.
+    // Sólo el pedido de este turno de guardia, de esta Prestadora, y sólo si sigue abierto.
     const filtros = new URL(cierre.url, 'http://interno').searchParams;
-    assert.equal(filtros.get('guardia_entrante_id'), `eq.${GUARDIA}`);
+    assert.equal(filtros.get('turno_guardia_entrante_id'), `eq.${TURNO_GUARDIA}`);
     assert.equal(filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
     assert.equal(filtros.get('resuelto_at'), 'is.null');
   });
 
   it('sobre una guardia programada no se toca ningún pedido', async () => {
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
@@ -389,16 +389,16 @@ describe('check-in — la llegada tarde cierra el pedido de relevo', () => {
   });
 
   it('si el cierre falla, la llegada queda marcada igual', async () => {
-    guardiaActual = { ...guardiaActual, estado: 'ausente' };
+    turnoGuardiaActual = { ...turnoGuardiaActual, estado: 'ausente' };
     // Sin respuesta preparada, la base falsa contesta con error.
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
     });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
-    assert.equal(guardiaMarcada(), true);
+    assert.equal(turnoGuardiaMarcado(), true);
   });
 });
 
@@ -412,7 +412,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '123456' },
@@ -420,7 +420,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     assert.equal(cuerpo.comprobacion, 'comprobada');
-    assert.equal(guardiaMarcada(), true);
+    assert.equal(turnoGuardiaMarcado(), true);
 
     const [fila] = comprobacionesGuardadas();
     assert.equal(fila.estado, 'comprobada');
@@ -440,7 +440,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
       { sujeto_tipo: 'asistente', sujeto_id: ASISTENTE_SALIENTE, codigo_verificador: verificadorDelCodigo('654321'), expira_en: enUnRato(1) },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '654321' },
@@ -453,25 +453,25 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     assert.equal(fila.sujeto_tipo, 'asistente');
     assert.equal(fila.sujeto_id, ASISTENTE_SALIENTE);
 
-    // El Cliente no participó de esta comprobación: tiene que enterarse de que la guardia quedó
+    // El Cliente no participó de esta comprobación: tiene que enterarse de que el turno de guardia quedó
     // cubierta y por quién.
     assert.equal(mensajeDeLlegadaArmado(), true);
   });
 
   it('el código vale sólo para la guardia de hoy, aunque sea el que el Cliente muestra ahora', async () => {
-    guardiaActual.fecha = '2020-01-01';
+    turnoGuardiaActual.fecha = '2020-01-01';
     codigosEnPantalla = [
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '123456' },
     });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'codigo_incorrecto');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
   });
 
@@ -480,14 +480,14 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: haceUnRato(1) },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '123456' },
     });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'codigo_incorrecto');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
     // No fichó: no hay nada que avisarle al Cliente.
     assert.equal(mensajeDeLlegadaArmado(), false);
@@ -499,13 +499,13 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('222222'), expira_en: enUnRato(1) },
     ];
 
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '111111' },
     });
     assert.equal(estado, 200);
-    assert.equal(guardiaMarcada(), true);
+    assert.equal(turnoGuardiaMarcado(), true);
   });
 
   it('un código vigente de otra casa no marca nada: se compara sólo contra quien podría estar en ésta', async () => {
@@ -513,14 +513,14 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
       { sujeto_tipo: 'cliente', sujeto_id: OTRO_CLIENTE, codigo_verificador: verificadorDelCodigo('999999'), expira_en: enUnRato(1) },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '999999' },
     });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'codigo_incorrecto');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
   });
 
   it('un código equivocado no marca la llegada, y eso no traba nada: el motivo sigue disponible', async () => {
@@ -528,24 +528,24 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
-    const primero = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const primero = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '000000' },
     });
     assert.equal(primero.estado, 400);
     assert.equal(primero.cuerpo.motivo, 'codigo_incorrecto');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
 
     llamadas = [];
-    const segundo = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const segundo = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
     });
     assert.equal(segundo.estado, 200);
     assert.equal(segundo.cuerpo.comprobacion, 'sin_comprobar');
-    assert.equal(guardiaMarcada(), true);
+    assert.equal(turnoGuardiaMarcado(), true);
   });
 });
 
@@ -594,7 +594,7 @@ describe('el código que se muestra en pantalla', () => {
 
 describe('Plan B — «no puedo leer el código QR»', () => {
   it('el pedido queda esperando en el Panel, con desde dónde, cuándo y por qué se pidió, y no marca ninguna llegada', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/comprobacion/pedido`, {
       momento: 'checkin',
       lat: LAT,
       lng: LNG,
@@ -613,12 +613,12 @@ describe('Plan B — «no puedo leer el código QR»', () => {
     assert.equal(fila.motivo_del_pedido, 'otro');
     assert.equal(fila.detalle_del_pedido, 'El Cliente está dormido');
     assert.equal(fila.autorizada_por, null);
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
   });
 
   it('un pedido sin motivo, o con uno que no es de la lista del pedido, se rechaza', async () => {
     for (const motivo of [undefined, 'sin_conexion', 'cualquiera']) {
-      const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, { momento: 'checkin', motivo });
+      const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/comprobacion/pedido`, { momento: 'checkin', motivo });
       assert.equal(estado, 400, `motivo ${motivo}`);
       assert.equal(cuerpo.motivo, 'faltan_datos');
     }
@@ -626,7 +626,7 @@ describe('Plan B — «no puedo leer el código QR»', () => {
   });
 
   it('un momento que no es ni llegada ni salida se rechaza', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, { momento: 'a_mitad' });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/comprobacion/pedido`, { momento: 'a_mitad' });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'faltan_datos');
     assert.equal(comprobacionesGuardadas().length, 0);
@@ -634,7 +634,7 @@ describe('Plan B — «no puedo leer el código QR»', () => {
 
   it('si ya está autorizada, pedir otra vez no la vuelve a poner en espera', async () => {
     comprobacionGuardada = { id: COMPROBACION, estado: 'comprobada', momento: 'checkin', medio: 'autorizacion_prestadora' };
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, { momento: 'checkin' });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/comprobacion/pedido`, { momento: 'checkin' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.estado, 'comprobada');
     assert.equal(comprobacionesGuardadas().length, 0);
@@ -642,13 +642,13 @@ describe('Plan B — «no puedo leer el código QR»', () => {
 
   it('mientras espera, la pantalla pregunta cómo viene y recibe sólo el estado', async () => {
     comprobacionGuardada = { id: COMPROBACION, estado: 'pendiente_de_autorizacion', momento: 'checkin', pedido_en: haceUnRato(1) };
-    const { estado, cuerpo } = await pedir('GET', `/guardias/${GUARDIA}/comprobacion/checkin`);
+    const { estado, cuerpo } = await pedir('GET', `/turnos-guardia/${TURNO_GUARDIA}/comprobacion/checkin`);
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { estado: 'pendiente_de_autorizacion' });
   });
 
   it('sin pedido abierto, la pantalla no ve nada y no se inventa un estado', async () => {
-    const { estado, cuerpo } = await pedir('GET', `/guardias/${GUARDIA}/comprobacion/checkin`);
+    const { estado, cuerpo } = await pedir('GET', `/turnos-guardia/${TURNO_GUARDIA}/comprobacion/checkin`);
     assert.equal(estado, 200);
     assert.equal(cuerpo.estado, null);
   });
@@ -662,14 +662,14 @@ describe('Plan B — «no puedo leer el código QR»', () => {
       autorizada_por: USUARIO,
     };
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { autorizada: true },
     });
     assert.equal(estado, 200);
     assert.equal(cuerpo.comprobacion, 'comprobada');
-    assert.equal(guardiaMarcada(), true);
+    assert.equal(turnoGuardiaMarcado(), true);
     assert.equal(comprobacionesGuardadas().length, 0, 'la autorización queda como la dejó quien coordina');
     assert.equal(mensajeDeLlegadaArmado(), true);
   });
@@ -677,31 +677,31 @@ describe('Plan B — «no puedo leer el código QR»', () => {
   it('el teléfono que dice «autorizada» sin que nadie haya autorizado no marca nada', async () => {
     comprobacionGuardada = { id: COMPROBACION, estado: 'pendiente_de_autorizacion', momento: 'checkin', pedido_en: haceUnRato(1) };
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { autorizada: true },
     });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'faltan_datos');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
   });
 
   it('si nadie autoriza, el piso sigue estando: se entra igual con el motivo', async () => {
     comprobacionGuardada = { id: COMPROBACION, estado: 'pendiente_de_autorizacion', momento: 'checkin', pedido_en: haceUnRato(5) };
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'prestadora_no_responde' },
     });
     assert.equal(estado, 200);
     assert.equal(cuerpo.comprobacion, 'sin_comprobar');
-    assert.equal(guardiaMarcada(), true);
+    assert.equal(turnoGuardiaMarcado(), true);
   });
 
   it('una salida autorizada se cierra sin código QR', async () => {
-    guardiaActual = { ...guardiaActual, estado: 'activa', checkin_at: haceUnRato(600) };
+    turnoGuardiaActual = { ...turnoGuardiaActual, estado: 'activa', checkin_at: haceUnRato(600) };
     comprobacionGuardada = {
       id: COMPROBACION,
       estado: 'comprobada',
@@ -710,14 +710,14 @@ describe('Plan B — «no puedo leer el código QR»', () => {
       autorizada_por: USUARIO,
     };
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { autorizada: true },
     });
     assert.equal(estado, 200);
     assert.equal(cuerpo.comprobacion, 'comprobada');
-    assert.equal(guardiaMarcada(), true);
+    assert.equal(turnoGuardiaMarcado(), true);
   });
 });
 
@@ -736,7 +736,7 @@ describe('el tope de pedidos por minuto en la llegada y la salida', () => {
     ];
 
     for (let vuelta = 1; vuelta <= 3; vuelta += 1) {
-      const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
         lat: LAT,
         lng: LNG,
         comprobacion: { codigo: '000000' },
@@ -745,17 +745,17 @@ describe('el tope de pedidos por minuto en la llegada y la salida', () => {
       assert.equal(cuerpo.motivo, 'codigo_incorrecto');
     }
 
-    const pasado = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const pasado = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '000000' },
     });
     assert.equal(pasado.estado, 429);
     assert.equal(pasado.cuerpo.motivo, 'demasiados_pedidos');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
 
     // Y con el tope alcanzado el Asistente entra igual eligiendo un motivo: el piso no se cuenta.
-    const conMotivo = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+    const conMotivo = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'nadie_para_mostrar' },
@@ -768,14 +768,14 @@ describe('el tope de pedidos por minuto en la llegada y la salida', () => {
     process.env.TOPE_PEDIDOS_POR_MINUTO = '2';
 
     for (let vuelta = 1; vuelta <= 2; vuelta += 1) {
-      const { estado } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
+      const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/comprobacion/pedido`, {
         momento: 'checkin',
         motivo: 'nadie_para_mostrar',
       });
       assert.equal(estado, 200, `el pedido ${vuelta} tenía que pasar`);
     }
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/comprobacion/pedido`, {
       momento: 'checkin',
       motivo: 'nadie_para_mostrar',
     });
@@ -785,19 +785,19 @@ describe('el tope de pedidos por minuto en la llegada y la salida', () => {
 });
 
 // ============================================================================
-// La salida: lo mismo, contra el acto que cierra la guardia
+// La salida: lo mismo, contra el acto que cierra el turno de guardia
 // ============================================================================
 
 describe('check-out — la misma comprobación, contra el acto que cierra la guardia', () => {
   beforeEach(() => {
-    // Para probar el check-out hace falta una guardia ya en curso, con el Reporte Diario de su
+    // Para probar el check-out hace falta un turno de guardia ya en curso, con el Reporte Diario de su
     // única Paciente ya cargado (default de arriba) y sin el protocolo de continuidad puesto.
-    guardiaActual.checkin_at = '2026-09-09T11:00:00.000Z';
-    guardiaActual.estado = 'activa';
+    turnoGuardiaActual.checkin_at = '2026-09-09T11:00:00.000Z';
+    turnoGuardiaActual.estado = 'activa';
   });
 
   it('se sale igual con un motivo, y la salida queda sin comprobar', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { motivoSinComprobar: 'prestadora_no_responde' },
@@ -805,7 +805,7 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     assert.equal(cuerpo.comprobacion, 'sin_comprobar');
-    assert.equal(guardiaMarcada(), true);
+    assert.equal(turnoGuardiaMarcado(), true);
 
     const [fila] = comprobacionesGuardadas();
     assert.equal(fila.momento, 'checkout');
@@ -814,7 +814,7 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
   });
 
   it('un pedido sin datos de comprobación cierra igual y queda sin comprobar por «otro»', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, { lat: LAT, lng: LNG });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, { lat: LAT, lng: LNG });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
 
@@ -829,7 +829,7 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '123456' },
@@ -843,49 +843,49 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
   });
 
   it('un código equivocado no cierra la guardia', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '000000' },
     });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'codigo_incorrecto');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
   });
 
   // Regresión: separar la comprobación del check-out no puede aflojar ninguna de las dos reglas
-  // que ya existían para cerrar una guardia.
+  // que ya existían para cerrar un turno de guardia.
   it('sigue sin poder cerrarse sin el Reporte Diario, aunque el código sea correcto', async () => {
     respuestas.set('GET /rest/v1/reportes', () => []);
     codigosEnPantalla = [
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '123456' },
     });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'falta_reporte');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
   });
 
   it('el protocolo de continuidad de guardia sigue vigente, aunque el código sea correcto', async () => {
-    guardiaActual.checkout_bloqueado = true;
+    turnoGuardiaActual.checkout_bloqueado = true;
     codigosEnPantalla = [
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
       lat: LAT,
       lng: LNG,
       comprobacion: { codigo: '123456' },
     });
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'continuidad');
-    assert.equal(guardiaMarcada(), false);
+    assert.equal(turnoGuardiaMarcado(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
   });
 });

@@ -6,7 +6,7 @@ import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 
-/* Las emergencias avisadas desde una guardia, del lado del Panel.
+/* Las emergencias avisadas desde un turno de guardia, del lado del Panel.
    ==============================================================
 
    QUÉ ES ESTO Y QUÉ NO. Son avisos que apretó una persona mientras estaba trabajando, no señales
@@ -15,7 +15,7 @@ import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
    un aviso de alguien que está adentro de una casa se lea con el mismo peso que una estadística.
 
    EL DETALLE SE LEE ACÁ Y EN NINGÚN OTRO LADO. El mensaje inmediato que sale por WhatsApp o por
-   correo dice que hay una emergencia y de qué guardia; el texto que escribió el Asistente es
+   correo dice que hay una emergencia y de qué turno de guardia; el texto que escribió el Asistente es
    información sensible y no viaja por un canal público (`celtatech/CLAUDE.md` §6). Esta ruta es
    la puerta donde el permiso se comprueba.
 
@@ -31,23 +31,23 @@ import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 export const panelEmergenciasRouter = Router();
 
 /* Quién y dónde se buscan aparte, en vez de pedirlos anidados en la misma consulta. Entre
-   `guardias` y `asistentes` la clave foránea es compuesta —el identificador y la Prestadora
+   `turnos_guardia` y `asistentes` la clave foránea es compuesta —el identificador y la Prestadora
    juntos—, y una consulta anidada sobre una clave así depende de que PostgREST la resuelva; dos
    consultas más no cuestan nada acá, donde el tope es de doscientas filas, y no se rompen el día
    que alguien agregue otra relación entre esas dos tablas. */
 async function conNombres(emergencias, db) {
-  const guardiaIds = [...new Set(emergencias.map((e) => e.guardia_id))];
-  if (guardiaIds.length === 0) return [];
+  const turnoGuardiaIds = [...new Set(emergencias.map((e) => e.turno_guardia_id))];
+  if (turnoGuardiaIds.length === 0) return [];
 
-  const { data: guardias } = await db
-    .from('guardias')
+  const { data: turnos_guardia } = await db
+    .from('turnos_guardia')
     .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, asistente_id, paciente_id')
-    .in('id', guardiaIds);
+    .in('id', turnoGuardiaIds);
 
-  const porGuardia = new Map((guardias ?? []).map((g) => [g.id, g]));
+  const porTurnoGuardia = new Map((turnos_guardia ?? []).map((g) => [g.id, g]));
 
-  const asistenteIds = [...new Set((guardias ?? []).map((g) => g.asistente_id).filter(Boolean))];
-  const pacienteIds = [...new Set((guardias ?? []).map((g) => g.paciente_id).filter(Boolean))];
+  const asistenteIds = [...new Set((turnos_guardia ?? []).map((g) => g.asistente_id).filter(Boolean))];
+  const pacienteIds = [...new Set((turnos_guardia ?? []).map((g) => g.paciente_id).filter(Boolean))];
 
   // Lo que está pendiente de conformidad la base no lo muestra, y entonces sale sin nombre.
   const [{ data: asistentes }, { data: pacientes }] = await Promise.all([
@@ -65,16 +65,16 @@ async function conNombres(emergencias, db) {
   const contratantes = await contratantesDeLosClientes(db, [...new Set(clienteDelPaciente.values())].filter(Boolean));
 
   return emergencias.map((emergencia) => {
-    const guardia = porGuardia.get(emergencia.guardia_id) ?? null;
+    const turno_guardia = porTurnoGuardia.get(emergencia.turno_guardia_id) ?? null;
     return {
       ...emergencia,
-      guardia: guardia && {
-        fecha: guardia.fecha,
-        hora_inicio: guardia.hora_inicio,
-        hora_fin: guardia.hora_fin,
-        asistente: nombreAsistente.get(guardia.asistente_id) ?? null,
-        paciente: nombrePaciente.get(guardia.paciente_id) ?? null,
-        contratante: contratantes.get(clienteDelPaciente.get(guardia.paciente_id)) ?? null,
+      turno_guardia: turno_guardia && {
+        fecha: turno_guardia.fecha,
+        hora_inicio: turno_guardia.hora_inicio,
+        hora_fin: turno_guardia.hora_fin,
+        asistente: nombreAsistente.get(turno_guardia.asistente_id) ?? null,
+        paciente: nombrePaciente.get(turno_guardia.paciente_id) ?? null,
+        contratante: contratantes.get(clienteDelPaciente.get(turno_guardia.paciente_id)) ?? null,
       },
     };
   });
@@ -122,8 +122,8 @@ async function contratantesDeLosClientes(db, clienteIds) {
 panelEmergenciasRouter.get('/', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const db = clienteDelPedido(req);
   let consulta = db
-    .from('emergencias_guardia')
-    .select('id, guardia_id, reportado_por, reportado_at, detalle, atendida_at, atendida_por, atendida_nota')
+    .from('emergencias_turno_guardia')
+    .select('id, turno_guardia_id, reportado_por, reportado_at, detalle, atendida_at, atendida_por, atendida_nota')
     .order('reportado_at', { ascending: false })
     .limit(200);
 
@@ -154,7 +154,7 @@ panelEmergenciasRouter.post('/:id/atencion', requiereRolPanel, exigirOrganizacio
   const nota = typeof req.body?.nota === 'string' ? req.body.nota.trim() : '';
 
   const { data: emergencia } = await db
-    .from('emergencias_guardia')
+    .from('emergencias_turno_guardia')
     .select('id, atendida_at')
     .eq('id', req.params.id)
     .maybeSingle();
@@ -169,7 +169,7 @@ panelEmergenciasRouter.post('/:id/atencion', requiereRolPanel, exigirOrganizacio
   }
 
   const { data: atendidas, error } = await db
-    .from('emergencias_guardia')
+    .from('emergencias_turno_guardia')
     .update({
       atendida_at: new Date().toISOString(),
       atendida_por: req.usuarioPanel.id,

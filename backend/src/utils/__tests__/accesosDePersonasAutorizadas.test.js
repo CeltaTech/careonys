@@ -116,7 +116,7 @@ describe('visibilidadDeLaPersona', () => {
   });
 
   it('apaga el interruptor de la columna que esta persona no tiene', async () => {
-    // El mapa vive adentro de la guardia: cortar la ruta le sacaría la agenda entera a quien sí
+    // El mapa vive adentro del turno de guardia: cortar la ruta le sacaría la agenda entera a quien sí
     // puede verla. Lo que se apaga es la columna, y entonces el dato ni sale de la base.
     const pedido = unPedido({ accesos: { ...accesosDeFabrica(), persona_autorizada_ubicacion_en_vivo: false } });
     const recortada = await visibilidadDeLaPersona(pedido);
@@ -201,6 +201,6 @@ describe('accesosDeLaPersona: ante la duda, niega', () => {
   it('rige lo que se firmó', async () => {
     const accesos = await pedir({ data: [{ clave: 'persona_autorizada_reportes', permitido: true }], error: null });
     assert.equal(accesos.persona_autorizada_reportes, true);
-    assert.equal(accesos.persona_autorizada_guardias, false);
+    assert.equal(accesos.persona_autorizada_turnos_guardia, false);
   });
 });

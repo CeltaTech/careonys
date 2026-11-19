@@ -5,11 +5,11 @@ import assert from 'node:assert/strict';
 // Acá no se consulta nada —las dos funciones probadas son puras—, pero el import la trae igual.
 // Mismo recurso que en `accesosDePersonasAutorizadas.test.js`.
 process.env.SUPABASE_URL = 'http://127.0.0.1:1';
-const { turnosDelMensaje, turnosPorCliente } = await import('../avisoCambioDeAsistente.js');
+const { turnosGuardiaDelMensaje, turnosGuardiaPorCliente } = await import('../avisoCambioDeAsistente.js');
 
 // Las dos armadas del mensaje son puras, así que se prueban sin base de datos. Los datos son
 // inventados (CLAUDE.md §6).
-const GUARDIAS = [
+const TURNOS_GUARDIA = [
   { id: 'g-2', fecha: '2026-10-08', hora_inicio: '08:00', hora_fin: '16:00' },
   { id: 'g-1', fecha: '2026-10-07', hora_inicio: '22:00', hora_fin: '06:00' },
 ];
@@ -23,26 +23,26 @@ const PACIENTES = new Map([
 ]);
 
 test('los turnos del Coordinador salen ordenados por cuándo ocurren', () => {
-  const turnos = turnosDelMensaje(GUARDIAS, PACIENTES);
-  assert.deepEqual(turnos.map((t) => t.fecha), ['2026-10-07', '2026-10-08']);
-  assert.deepEqual(turnos[0], {
+  const turnos_guardia = turnosGuardiaDelMensaje(TURNOS_GUARDIA, PACIENTES);
+  assert.deepEqual(turnos_guardia.map((t) => t.fecha), ['2026-10-07', '2026-10-08']);
+  assert.deepEqual(turnos_guardia[0], {
     fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00', pacientes: ['Elena'],
   });
-  assert.deepEqual(turnos[1].pacientes, ['Elena', 'Aníbal']);
+  assert.deepEqual(turnos_guardia[1].pacientes, ['Elena', 'Aníbal']);
 });
 
 test('sin guardias no hay turnos', () => {
-  assert.deepEqual(turnosDelMensaje([], new Map()), []);
-  assert.deepEqual(turnosDelMensaje(null, null), []);
+  assert.deepEqual(turnosGuardiaDelMensaje([], new Map()), []);
+  assert.deepEqual(turnosGuardiaDelMensaje(null, null), []);
 });
 
 test('un turno sin Pacientes cargados no rompe el aviso', () => {
-  const turnos = turnosDelMensaje([{ id: 'g-9', fecha: '2026-10-07', hora_inicio: '08:00', hora_fin: '16:00' }], new Map());
-  assert.deepEqual(turnos[0].pacientes, []);
+  const turnos_guardia = turnosGuardiaDelMensaje([{ id: 'g-9', fecha: '2026-10-07', hora_inicio: '08:00', hora_fin: '16:00' }], new Map());
+  assert.deepEqual(turnos_guardia[0].pacientes, []);
 });
 
 test('cada Cliente ve solamente sus turnos y sus Pacientes', () => {
-  const porCliente = turnosPorCliente(GUARDIAS, PACIENTES);
+  const porCliente = turnosGuardiaPorCliente(TURNOS_GUARDIA, PACIENTES);
 
   assert.deepEqual([...porCliente.keys()].sort(), ['f-1', 'f-2']);
   assert.deepEqual(porCliente.get('f-1').map((t) => t.fecha), ['2026-10-07', '2026-10-08']);
@@ -56,13 +56,13 @@ test('un turno que cubre a dos Pacientes del mismo Cliente se cuenta una sola ve
     { id: 'p-1', nombre: 'Elena', cliente_id: 'f-1' },
     { id: 'p-3', nombre: 'Rosa', cliente_id: 'f-1' },
   ]]]);
-  const turnos = turnosPorCliente([GUARDIAS[1]], pacientes).get('f-1');
+  const turnos_guardia = turnosGuardiaPorCliente([TURNOS_GUARDIA[1]], pacientes).get('f-1');
 
-  assert.equal(turnos.length, 1);
-  assert.deepEqual(turnos[0].pacientes, ['Elena', 'Rosa']);
+  assert.equal(turnos_guardia.length, 1);
+  assert.deepEqual(turnos_guardia[0].pacientes, ['Elena', 'Rosa']);
 });
 
 test('un Paciente sin Cliente cargado no arma un destinatario vacío', () => {
   const pacientes = new Map([['g-1', [{ id: 'p-4', nombre: 'Sin cliente', cliente_id: null }]]]);
-  assert.equal(turnosPorCliente([GUARDIAS[1]], pacientes).size, 0);
+  assert.equal(turnosGuardiaPorCliente([TURNOS_GUARDIA[1]], pacientes).size, 0);
 });

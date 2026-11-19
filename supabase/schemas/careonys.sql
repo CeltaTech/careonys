@@ -131,8 +131,8 @@ CREATE OR REPLACE FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestado
            p.registro_de_accesos_hora_de_inicio AS inicio,
            p.registro_de_accesos_hora_de_fin AS fin,
            p.registro_de_accesos_pacientes_por_dia AS tope,
-           make_interval(hours => p.registro_de_accesos_horas_alrededor_de_la_guardia) AS margen,
-           p.registro_de_accesos_horas_alrededor_de_la_guardia / 24 + 2 AS dias_de_margen
+           make_interval(hours => p.registro_de_accesos_horas_alrededor_del_turno_guardia) AS margen,
+           p.registro_de_accesos_horas_alrededor_del_turno_guardia / 24 + 2 AS dias_de_margen
       FROM prestadoras p
      WHERE p.id = p_prestadora
   ),
@@ -150,12 +150,12 @@ CREATE OR REPLACE FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestado
   ),
   -- Las guardias que rodean el período, con su comienzo y su fin en hora del lugar. La que
   -- termina a una hora menor que la de comienzo cruza la medianoche.
-  guardias_del_periodo AS (
+  turnos_guardia_del_periodo AS (
     SELECT g.paciente_id, g.coordinador_id, a.usuario_id AS asistente_usuario_id,
            (g.fecha + g.hora_inicio) AS empieza,
            (g.fecha + g.hora_fin
              + CASE WHEN g.hora_fin <= g.hora_inicio THEN interval '1 day' ELSE interval '0' END) AS termina
-      FROM guardias g
+      FROM turnos_guardia g
       CROSS JOIN configuracion k
       LEFT JOIN asistentes a ON a.id = g.asistente_id AND a.prestadora_id = g.prestadora_id
      WHERE g.prestadora_id = p_prestadora
@@ -176,12 +176,12 @@ CREATE OR REPLACE FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestado
                                  THEN l.hora_local::time >= l.inicio AND l.hora_local::time < l.fin
                                  ELSE l.hora_local::time >= l.inicio OR l.hora_local::time < l.fin END)
                    AND NOT EXISTS (
-                     SELECT 1 FROM guardias_del_periodo g
+                     SELECT 1 FROM turnos_guardia_del_periodo g
                       WHERE g.asistente_usuario_id = l.usuario_id
                         AND l.hora_local >= g.empieza AND l.hora_local < g.termina)
                   THEN 'fuera_del_horario' END,
              CASE WHEN NOT EXISTS (
-                     SELECT 1 FROM guardias_del_periodo g
+                     SELECT 1 FROM turnos_guardia_del_periodo g
                       WHERE g.paciente_id = l.paciente_id
                         AND (g.asistente_usuario_id = l.usuario_id OR g.coordinador_id = l.usuario_id)
                         AND l.hora_local >= g.empieza - l.margen
@@ -236,20 +236,20 @@ BEGIN
      AND e.tipo = p_tipo
      AND e.escalon = 'todos_los_coordinadores';
 
-  IF p_tipo = 'alerta_temprana_guardia' THEN
-    SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM alertas_tempranas_guardia x
+  IF p_tipo = 'alerta_temprana_turno_guardia' THEN
+    SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM alertas_tempranas_turno_guardia x
      WHERE x.id = ANY (v_llegaron) AND x.resuelto_at IS NULL;
   ELSIF p_tipo = 'incidente_relevo' THEN
     SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM incidentes_relevo x
      WHERE x.id = ANY (v_llegaron) AND x.resuelto_at IS NULL;
-  ELSIF p_tipo = 'incidente_turno_sin_cubrir' THEN
-    SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM incidentes_turno_sin_cubrir x
+  ELSIF p_tipo = 'incidente_turno_guardia_sin_cubrir' THEN
+    SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM incidentes_turno_guardia_sin_cubrir x
      WHERE x.id = ANY (v_llegaron) AND x.resuelto_at IS NULL;
-  ELSIF p_tipo = 'emergencia_guardia' THEN
-    SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM emergencias_guardia x
+  ELSIF p_tipo = 'emergencia_turno_guardia' THEN
+    SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM emergencias_turno_guardia x
      WHERE x.id = ANY (v_llegaron) AND x.atendida_at IS NULL;
-  ELSIF p_tipo = 'guardia_sin_cerrar' THEN
-    SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM guardias x
+  ELSIF p_tipo = 'turno_guardia_sin_cerrar' THEN
+    SELECT coalesce(array_agg(x.id), '{}') INTO v_abiertas FROM turnos_guardia x
      WHERE x.id = ANY (v_llegaron) AND x.estado = 'activa';
   ELSE
     v_abiertas := '{}';
@@ -416,24 +416,24 @@ $$;
 ALTER FUNCTION "interno"."anotar_precio_de_item_adicional"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno_guardia"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public'
     AS $$
 BEGIN
-  IF NOT NEW.control_de_ubicacion_en_el_turno THEN
-    NEW.control_de_ubicacion_en_el_turno_desde := NULL;
-  ELSIF TG_OP = 'INSERT' OR NOT OLD.control_de_ubicacion_en_el_turno THEN
-    NEW.control_de_ubicacion_en_el_turno_desde := now();
+  IF NOT NEW.control_de_ubicacion_en_el_turno_guardia THEN
+    NEW.control_de_ubicacion_en_el_turno_guardia_desde := NULL;
+  ELSIF TG_OP = 'INSERT' OR NOT OLD.control_de_ubicacion_en_el_turno_guardia THEN
+    NEW.control_de_ubicacion_en_el_turno_guardia_desde := now();
   ELSE
-    NEW.control_de_ubicacion_en_el_turno_desde := OLD.control_de_ubicacion_en_el_turno_desde;
+    NEW.control_de_ubicacion_en_el_turno_guardia_desde := OLD.control_de_ubicacion_en_el_turno_guardia_desde;
   END IF;
   RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno_guardia"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."anotar_deuda_de_la_baja"("p_baja" "uuid") RETURNS integer
@@ -631,16 +631,16 @@ $$;
 ALTER FUNCTION "interno"."asignar_numero_de_legajo"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."asistente_de_la_guardia"("p_guardia" "uuid") RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "interno"."asistente_del_turno_guardia"("p_turno_guardia" "uuid") RETURNS "uuid"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT g.asistente_id FROM public.guardias g
-   WHERE g.id = p_guardia AND g.prestadora_id = interno.prestadora_actual();
+  SELECT g.asistente_id FROM public.turnos_guardia g
+   WHERE g.id = p_turno_guardia AND g.prestadora_id = interno.prestadora_actual();
 $$;
 
 
-ALTER FUNCTION "interno"."asistente_de_la_guardia"("p_guardia" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."asistente_del_turno_guardia"("p_turno_guardia" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."asistente_de_la_sesion"() RETURNS "uuid"
@@ -678,24 +678,24 @@ $$;
 ALTER FUNCTION "interno"."asistente_desactivado"("p_asistente" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_guardia_excluida" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) RETURNS boolean
+CREATE OR REPLACE FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_turno_guardia_excluido" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
   SELECT EXISTS (
     SELECT 1
-      FROM guardias g
+      FROM turnos_guardia g
      WHERE g.prestadora_id = interno.prestadora_actual()
        AND g.asistente_id = p_asistente
-       AND g.id <> p_guardia_excluida
+       AND g.id <> p_turno_guardia_excluido
        AND g.estado NOT IN ('cancelada', 'ausente')
        AND (g.fecha + g.hora_inicio) < p_hasta
-       AND (interno.dia_en_que_termina_guardia(g.fecha, g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin) + g.hora_fin) > p_desde
+       AND (interno.dia_en_que_termina_turno_guardia(g.fecha, g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin) + g.hora_fin) > p_desde
   );
 $$;
 
 
-ALTER FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_guardia_excluida" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) OWNER TO "postgres";
+ALTER FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_turno_guardia_excluido" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") RETURNS boolean
@@ -711,7 +711,7 @@ $$;
 ALTER FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") IS 'Si este Asistente trabaja en esa modalidad. La usan las tres puertas por las que un Asistente queda a cargo: la guardia, la asignación y la serie (regla 12).';
+COMMENT ON FUNCTION "interno"."asistente_trabaja_en_modalidad"("p_asistente_id" "uuid", "p_modalidad" "text") IS 'Si este Asistente trabaja en esa modalidad. La usan las tres puertas por las que un Asistente queda a cargo: el turno de guardia, la asignación y la serie (regla 12).';
 
 
 
@@ -734,21 +734,21 @@ BEGIN
    WHERE s.prestadora_id = v_prestadora
      AND s.coordinador_id = ANY (interno.coordinadores_que_represento());
 
-  v_tomadas := interno.guardias_a_la_vista_por_una_alarma(true);
+  v_tomadas := interno.turnos_guardia_a_la_vista_por_una_alarma(true);
 
   SELECT coalesce(array_agg(DISTINCT x.asistente_id), '{}') INTO v_asistentes
     FROM (
       SELECT g.asistente_id
-        FROM guardias g
+        FROM turnos_guardia g
        WHERE g.prestadora_id = v_prestadora
          AND g.asistente_id IS NOT NULL
          AND (g.servicio_id = ANY (v_servicios)
               OR g.id = ANY (v_tomadas)
               OR (g.servicio_id IS NULL
-                  AND interno.coordinador_alcanza_la_guardia_de(NULL, g.paciente_id, g.id)))
+                  AND interno.coordinador_alcanza_el_turno_guardia_de(NULL, g.paciente_id, g.id)))
       UNION
       SELECT sg.asistente_id
-        FROM series_guardias sg
+        FROM series_turnos_guardia sg
        WHERE sg.prestadora_id = v_prestadora
          AND sg.asistente_id IS NOT NULL
          AND (sg.servicio_id = ANY (v_servicios)
@@ -756,13 +756,13 @@ BEGIN
                   AND interno.coordinador_alcanza_la_serie_de(NULL, sg.paciente_id, sg.id)))
       UNION
       SELECT t.asistente_id
-        FROM asignaciones_de_turno t
-        JOIN guardias g ON g.id = t.guardia_id AND g.prestadora_id = t.prestadora_id
+        FROM asignaciones_de_turno_guardia t
+        JOIN turnos_guardia g ON g.id = t.turno_guardia_id AND g.prestadora_id = t.prestadora_id
        WHERE t.prestadora_id = v_prestadora
          AND (g.servicio_id = ANY (v_servicios)
               OR g.id = ANY (v_tomadas)
               OR (g.servicio_id IS NULL
-                  AND interno.coordinador_alcanza_la_guardia_de(NULL, g.paciente_id, g.id)))
+                  AND interno.coordinador_alcanza_el_turno_guardia_de(NULL, g.paciente_id, g.id)))
     ) x;
 
   RETURN v_asistentes;
@@ -818,7 +818,7 @@ CREATE OR REPLACE FUNCTION "interno"."atiende_al_paciente"("p_paciente" "uuid") 
          -- Quien lo presta, guardia por guardia.
          OR EXISTS (
            SELECT 1
-             FROM guardias g
+             FROM turnos_guardia g
              JOIN servicios s ON s.id = g.servicio_id
                              AND s.prestadora_id = g.prestadora_id
                              AND s.estado = 'vigente'
@@ -827,14 +827,14 @@ CREATE OR REPLACE FUNCTION "interno"."atiende_al_paciente"("p_paciente" "uuid") 
               AND yo.asistente IS NOT NULL
               AND g.asistente_id = yo.asistente
               AND (g.paciente_id = pac.id
-                   OR EXISTS (SELECT 1 FROM guardia_pacientes gp
-                               WHERE gp.guardia_id = g.id AND gp.paciente_id = pac.id))
+                   OR EXISTS (SELECT 1 FROM turno_guardia_pacientes gp
+                               WHERE gp.turno_guardia_id = g.id AND gp.paciente_id = pac.id))
          )
 
          -- Quien lo presta por una serie que sigue en pie.
          OR EXISTS (
            SELECT 1
-             FROM series_guardias sg
+             FROM series_turnos_guardia sg
              JOIN servicios s ON s.id = sg.servicio_id
                              AND s.prestadora_id = sg.prestadora_id
                              AND s.estado = 'vigente'
@@ -843,19 +843,19 @@ CREATE OR REPLACE FUNCTION "interno"."atiende_al_paciente"("p_paciente" "uuid") 
               AND yo.asistente IS NOT NULL
               AND sg.asistente_id = yo.asistente
               AND (sg.paciente_id = pac.id
-                   OR EXISTS (SELECT 1 FROM series_guardias_pacientes sp
+                   OR EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
                                WHERE sp.serie_id = sg.id AND sp.paciente_id = pac.id))
          )
 
          -- Quien tiene tomada una alarma de una de sus guardias, mientras la tenga.
          OR EXISTS (
            SELECT 1
-             FROM guardias g
+             FROM turnos_guardia g
             WHERE g.prestadora_id = yo.tenant
-              AND g.id = ANY (interno.guardias_a_la_vista_por_una_alarma(true))
+              AND g.id = ANY (interno.turnos_guardia_a_la_vista_por_una_alarma(true))
               AND (g.paciente_id = pac.id
-                   OR EXISTS (SELECT 1 FROM guardia_pacientes gp
-                               WHERE gp.guardia_id = g.id AND gp.paciente_id = pac.id))
+                   OR EXISTS (SELECT 1 FROM turno_guardia_pacientes gp
+                               WHERE gp.turno_guardia_id = g.id AND gp.paciente_id = pac.id))
          )
        )
   )
@@ -1175,16 +1175,16 @@ BEGIN
       v_partes := v_partes || ('(' || interno.condicion_del_pedido(p_tabla, p_alias, e -> 'o', 'OR') || ')');
     ELSIF e ? 'y' THEN
       v_partes := v_partes || ('(' || interno.condicion_del_pedido(p_tabla, p_alias, e -> 'y', 'AND') || ')');
-    ELSIF e ? 'guardia' THEN
+    ELSIF e ? 'turno_guardia' THEN
       -- Una condición sobre la guardia de la fila. La guardia se lee con los permisos de quien
       -- pide, como cualquier otra lectura suya.
       IF p_alias <> 't' THEN
         RAISE EXCEPTION 'pedido_invalido' USING ERRCODE = '22023';
       END IF;
-      PERFORM interno.columna_del_pedido(p_tabla, 'guardia_id');
+      PERFORM interno.columna_del_pedido(p_tabla, 'turno_guardia_id');
       v_partes := v_partes || format(
-        'EXISTS (SELECT 1 FROM public.guardias g WHERE g.id = t.guardia_id AND %s)',
-        interno.condicion_del_pedido('guardias', 'g', e -> 'guardia', 'AND'));
+        'EXISTS (SELECT 1 FROM public.turnos_guardia g WHERE g.id = t.turno_guardia_id AND %s)',
+        interno.condicion_del_pedido('turnos_guardia', 'g', e -> 'turno_guardia', 'AND'));
     ELSE
       v_col := interno.columna_del_pedido(p_tabla, e ->> 'columna');
       v_op := e ->> 'op';
@@ -1435,7 +1435,7 @@ $$;
 ALTER FUNCTION "interno"."coordinador_alcanza_asistente_de"("p_usuario" "uuid", "p_asistente_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."coordinador_alcanza_guardia"("p_asistente_id" "uuid") RETURNS boolean
+CREATE OR REPLACE FUNCTION "interno"."coordinador_alcanza_turno_guardia"("p_asistente_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -1444,28 +1444,28 @@ CREATE OR REPLACE FUNCTION "interno"."coordinador_alcanza_guardia"("p_asistente_
 $$;
 
 
-ALTER FUNCTION "interno"."coordinador_alcanza_guardia"("p_asistente_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."coordinador_alcanza_turno_guardia"("p_asistente_id" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "interno"."coordinador_alcanza_guardia"("p_asistente_id" "uuid") IS 'Si un Coordinador alcanza lo que pasa por ese Asistente: comparte zona con él, o no hay Asistente todavía. La usan las políticas de guardias y de series_guardias, y es el único lugar donde está escrita esa regla.';
+COMMENT ON FUNCTION "interno"."coordinador_alcanza_turno_guardia"("p_asistente_id" "uuid") IS 'Si un Coordinador alcanza lo que pasa por ese Asistente: comparte zona con él, o no hay Asistente todavía. La usan las políticas de turnos de guardia y de series_turnos_guardia, y es el único lugar donde está escrita esa regla.';
 
 
 
-CREATE OR REPLACE FUNCTION "interno"."coordinador_alcanza_la_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_guardia" "uuid") RETURNS boolean
+CREATE OR REPLACE FUNCTION "interno"."coordinador_alcanza_el_turno_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_turno_guardia" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
   SELECT CASE
     WHEN p_servicio IS NOT NULL THEN interno.coordina_el_servicio(p_servicio)
     ELSE (p_paciente IS NOT NULL AND interno.coordinador_ve_al_paciente(p_paciente))
-      OR EXISTS (SELECT 1 FROM guardia_pacientes gp
-                  WHERE gp.guardia_id = p_guardia
+      OR EXISTS (SELECT 1 FROM turno_guardia_pacientes gp
+                  WHERE gp.turno_guardia_id = p_turno_guardia
                     AND interno.coordinador_ve_al_paciente(gp.paciente_id))
   END;
 $$;
 
 
-ALTER FUNCTION "interno"."coordinador_alcanza_la_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_guardia" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."coordinador_alcanza_el_turno_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_turno_guardia" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."coordinador_alcanza_la_serie_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_serie" "uuid") RETURNS boolean
@@ -1475,7 +1475,7 @@ CREATE OR REPLACE FUNCTION "interno"."coordinador_alcanza_la_serie_de"("p_servic
   SELECT CASE
     WHEN p_servicio IS NOT NULL THEN interno.coordina_el_servicio(p_servicio)
     ELSE (p_paciente IS NOT NULL AND interno.coordinador_ve_al_paciente(p_paciente))
-      OR EXISTS (SELECT 1 FROM series_guardias_pacientes sp
+      OR EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
                   WHERE sp.serie_id = p_serie
                     AND interno.coordinador_ve_al_paciente(sp.paciente_id))
   END;
@@ -1498,26 +1498,26 @@ BEGIN
   END IF;
 
   RETURN EXISTS (
-           SELECT 1 FROM emergencias_guardia e
-             JOIN guardias g ON g.id = e.guardia_id AND g.prestadora_id = e.prestadora_id
+           SELECT 1 FROM emergencias_turno_guardia e
+             JOIN turnos_guardia g ON g.id = e.turno_guardia_id AND g.prestadora_id = e.prestadora_id
             WHERE e.prestadora_id = v_prestadora
               AND e.atendida_at IS NULL
-              AND (e.id = ANY (interno.alarmas_a_la_vista_del_coordinador('emergencia_guardia'))
-                   OR interno.coordinador_alcanza_la_guardia_de(g.servicio_id, g.paciente_id, g.id)))
+              AND (e.id = ANY (interno.alarmas_a_la_vista_del_coordinador('emergencia_turno_guardia'))
+                   OR interno.coordinador_alcanza_el_turno_guardia_de(g.servicio_id, g.paciente_id, g.id)))
       OR EXISTS (
-           SELECT 1 FROM incidentes_turno_sin_cubrir i
-             JOIN guardias g ON g.id = i.guardia_id AND g.prestadora_id = i.prestadora_id
+           SELECT 1 FROM incidentes_turno_guardia_sin_cubrir i
+             JOIN turnos_guardia g ON g.id = i.turno_guardia_id AND g.prestadora_id = i.prestadora_id
             WHERE i.prestadora_id = v_prestadora
               AND i.resuelto_at IS NULL
-              AND (i.id = ANY (interno.alarmas_a_la_vista_del_coordinador('incidente_turno_sin_cubrir'))
-                   OR interno.coordinador_alcanza_la_guardia_de(g.servicio_id, g.paciente_id, g.id)))
+              AND (i.id = ANY (interno.alarmas_a_la_vista_del_coordinador('incidente_turno_guardia_sin_cubrir'))
+                   OR interno.coordinador_alcanza_el_turno_guardia_de(g.servicio_id, g.paciente_id, g.id)))
       OR EXISTS (
-           SELECT 1 FROM alertas_tempranas_guardia a
-             JOIN guardias g ON g.id = a.guardia_id AND g.prestadora_id = a.prestadora_id
+           SELECT 1 FROM alertas_tempranas_turno_guardia a
+             JOIN turnos_guardia g ON g.id = a.turno_guardia_id AND g.prestadora_id = a.prestadora_id
             WHERE a.prestadora_id = v_prestadora
               AND a.resuelto_at IS NULL
-              AND (a.id = ANY (interno.alarmas_a_la_vista_del_coordinador('alerta_temprana_guardia'))
-                   OR interno.coordinador_alcanza_la_guardia_de(g.servicio_id, g.paciente_id, g.id)));
+              AND (a.id = ANY (interno.alarmas_a_la_vista_del_coordinador('alerta_temprana_turno_guardia'))
+                   OR interno.coordinador_alcanza_el_turno_guardia_de(g.servicio_id, g.paciente_id, g.id)));
 END;
 $$;
 
@@ -1592,23 +1592,23 @@ $$;
 ALTER FUNCTION "interno"."coordinador_ve_la_conversacion"("p_conversacion" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."coordinador_ve_la_guardia"("p_guardia" "uuid") RETURNS boolean
+CREATE OR REPLACE FUNCTION "interno"."coordinador_ve_el_turno_guardia"("p_turno_guardia" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT p_guardia IS NOT NULL
+  SELECT p_turno_guardia IS NOT NULL
      AND interno.es_coordinador()
      AND (EXISTS (
-            SELECT 1 FROM guardias g
-             WHERE g.id = p_guardia
+            SELECT 1 FROM turnos_guardia g
+             WHERE g.id = p_turno_guardia
                AND g.prestadora_id = interno.prestadora_actual()
-               AND interno.coordinador_alcanza_la_guardia_de(g.servicio_id, g.paciente_id, g.id)
+               AND interno.coordinador_alcanza_el_turno_guardia_de(g.servicio_id, g.paciente_id, g.id)
           )
-          OR p_guardia = ANY (interno.guardias_a_la_vista_por_una_alarma(true)));
+          OR p_turno_guardia = ANY (interno.turnos_guardia_a_la_vista_por_una_alarma(true)));
 $$;
 
 
-ALTER FUNCTION "interno"."coordinador_ve_la_guardia"("p_guardia" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."coordinador_ve_el_turno_guardia"("p_turno_guardia" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."coordinador_ve_la_indicacion"("p_indicacion" "uuid") RETURNS boolean
@@ -1634,7 +1634,7 @@ CREATE OR REPLACE FUNCTION "interno"."coordinador_ve_la_serie"("p_serie" "uuid")
   SELECT p_serie IS NOT NULL
      AND interno.es_coordinador()
      AND EXISTS (
-       SELECT 1 FROM series_guardias sg
+       SELECT 1 FROM series_turnos_guardia sg
         WHERE sg.id = p_serie
           AND sg.prestadora_id = interno.prestadora_actual()
           AND interno.coordinador_alcanza_la_serie_de(sg.servicio_id, sg.paciente_id, sg.id)
@@ -1727,8 +1727,8 @@ BEGIN
   END IF;
 
   IF v_cambia_estado AND NEW.estado = 'de_baja'
-     AND interno.guardias_asignadas_del_servicio(NEW.id) > 0 THEN
-    RAISE EXCEPTION 'el_servicio_tiene_guardias_asignadas';
+     AND interno.turnos_guardia_asignados_del_servicio(NEW.id) > 0 THEN
+    RAISE EXCEPTION 'el_servicio_tiene_turnos_guardia_asignados';
   END IF;
 
   RETURN NEW;
@@ -1823,7 +1823,7 @@ $$;
 ALTER FUNCTION "interno"."descuento_lo_escribe_la_base"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint DEFAULT NULL::smallint) RETURNS "date"
+CREATE OR REPLACE FUNCTION "interno"."dia_en_que_termina_turno_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint DEFAULT NULL::smallint) RETURNS "date"
     LANGUAGE "sql" IMMUTABLE
     AS $$
   SELECT CASE
@@ -1837,7 +1837,7 @@ CREATE OR REPLACE FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "dat
 $$;
 
 
-ALTER FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) OWNER TO "postgres";
+ALTER FUNCTION "interno"."dia_en_que_termina_turno_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) OWNER TO "postgres";
 
 
 
@@ -1967,13 +1967,13 @@ BEGIN
          AND d.fecha_vencimiento < p_dia;
 
       CONTINUE WHEN EXISTS (
-        SELECT 1 FROM public.guardias g
+        SELECT 1 FROM public.turnos_guardia g
          WHERE g.asistente_id = p_asistente_id
            AND g.fecha <= v_vencio
            AND g.estado <> 'cancelada'
            AND (g.paciente_id = p_paciente_id OR g.servicio_id = p_servicio_id))
       OR EXISTS (
-        SELECT 1 FROM public.series_guardias s
+        SELECT 1 FROM public.series_turnos_guardia s
          WHERE s.asistente_id = p_asistente_id
            AND s.estado = 'activa'
            AND s.paciente_id = p_paciente_id);
@@ -2011,7 +2011,7 @@ $$;
 ALTER FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."el_asistente_marca_solo_su_guardia"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -2087,7 +2087,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "interno"."el_asistente_marca_solo_su_guardia"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."el_contratante_lo_fija_la_administracion"() RETURNS "trigger"
@@ -2583,7 +2583,7 @@ CREATE OR REPLACE FUNCTION "interno"."el_relevo_se_resuelve_como_paso"() RETURNS
     SET "search_path" TO 'public', 'interno'
     AS $$
 DECLARE
-  v_asistente_del_turno uuid;
+  v_asistente_del_turno_guardia uuid;
   v_llego_tarde boolean;
 BEGIN
   -- Ya resuelto: queda como quedó.
@@ -2605,11 +2605,11 @@ BEGIN
   NEW.resuelto_por_usuario := interno.usuario_de_la_sesion();
 
   IF NEW.resuelto_por_id IS NOT NULL THEN
-    SELECT g.asistente_id, g.llegada_tarde INTO v_asistente_del_turno, v_llego_tarde
-      FROM guardias g
-     WHERE g.id = NEW.guardia_entrante_id
+    SELECT g.asistente_id, g.llegada_tarde INTO v_asistente_del_turno_guardia, v_llego_tarde
+      FROM turnos_guardia g
+     WHERE g.id = NEW.turno_guardia_entrante_id
        AND g.prestadora_id = NEW.prestadora_id;
-    IF v_asistente_del_turno IS DISTINCT FROM NEW.resuelto_por_id THEN
+    IF v_asistente_del_turno_guardia IS DISTINCT FROM NEW.resuelto_por_id THEN
       RAISE EXCEPTION 'relevo_con_otro_asistente' USING ERRCODE = '23514';
     END IF;
 
@@ -3093,7 +3093,7 @@ COMMENT ON FUNCTION "interno"."escribe_el_catalogo"("p_prestadora" "uuid") IS 'E
 
 
 
-CREATE OR REPLACE FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") RETURNS "void"
+CREATE OR REPLACE FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") RETURNS "void"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -3111,13 +3111,13 @@ BEGIN
     RAISE EXCEPTION 'sin_permiso_para_asignar_con_documentos_pendientes' USING ERRCODE = '42501';
   END IF;
 
-  INSERT INTO excepciones_por_documentos (prestadora_id, guardia_id, asistente_id, usuario_id, motivo, documentos)
-  VALUES (p_prestadora_id, p_guardia_id, p_asistente_id, interno.usuario_de_la_sesion(), btrim(p_motivo), p_bloquean);
+  INSERT INTO excepciones_por_documentos (prestadora_id, turno_guardia_id, asistente_id, usuario_id, motivo, documentos)
+  VALUES (p_prestadora_id, p_turno_guardia_id, p_asistente_id, interno.usuario_de_la_sesion(), btrim(p_motivo), p_bloquean);
 END;
 $$;
 
 
-ALTER FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") OWNER TO "postgres";
+ALTER FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."exigir_contratante_del_servicio"() RETURNS "trigger"
@@ -3165,20 +3165,20 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF NEW.guardia_id IS NOT NULL THEN
-    IF interno.hay_excepcion_por_documentos(NEW.guardia_id, NEW.asistente_id) THEN
+  IF NEW.turno_guardia_id IS NOT NULL THEN
+    IF interno.hay_excepcion_por_documentos(NEW.turno_guardia_id, NEW.asistente_id) THEN
       RETURN NEW;
     END IF;
 
-    SELECT interno.dia_en_que_termina_guardia(g.fecha, g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin),
+    SELECT interno.dia_en_que_termina_turno_guardia(g.fecha, g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin),
            g.paciente_id, g.servicio_id
       INTO v_dia, v_paciente, v_servicio
-      FROM public.guardias g
-     WHERE g.id = NEW.guardia_id;
+      FROM public.turnos_guardia g
+     WHERE g.id = NEW.turno_guardia_id;
   ELSIF NEW.serie_id IS NOT NULL THEN
     SELECT GREATEST(s.vigente_desde, CURRENT_DATE), s.paciente_id, s.servicio_id
       INTO v_dia, v_paciente, v_servicio
-      FROM public.series_guardias s
+      FROM public.series_turnos_guardia s
      WHERE s.id = NEW.serie_id;
   END IF;
 
@@ -3197,7 +3197,7 @@ $$;
 ALTER FUNCTION "interno"."exigir_documentos_en_asignacion"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."exigir_documentos_en_guardia"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."exigir_documentos_en_turno_guardia"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -3215,7 +3215,7 @@ BEGIN
 
   v_bloquean := interno.documentos_que_bloquean(
     NEW.asistente_id,
-    interno.dia_en_que_termina_guardia(NEW.fecha, NEW.hora_inicio, NEW.hora_fin, NEW.dias_hasta_el_fin),
+    interno.dia_en_que_termina_turno_guardia(NEW.fecha, NEW.hora_inicio, NEW.hora_fin, NEW.dias_hasta_el_fin),
     NEW.paciente_id,
     NEW.servicio_id
   );
@@ -3230,7 +3230,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "interno"."exigir_documentos_en_guardia"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."exigir_documentos_en_turno_guardia"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."exigir_familiar_del_relevo"() RETURNS "trigger"
@@ -3281,18 +3281,18 @@ BEGIN
   END IF;
 
   SELECT f.pide_detalle INTO v_pide_detalle
-  FROM finales_turno_sin_cubrir f
+  FROM finales_turno_guardia_sin_cubrir f
   WHERE f.prestadora_id = NEW.prestadora_id
     AND f.activo
     AND coalesce(f.clave, f.nombre) = NEW.resuelto_como
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'final_de_turno_inexistente:%', NEW.resuelto_como;
+    RAISE EXCEPTION 'final_de_turno_guardia_inexistente:%', NEW.resuelto_como;
   END IF;
 
   IF v_pide_detalle AND coalesce(btrim(NEW.resuelto_detalle), '') = '' THEN
-    RAISE EXCEPTION 'final_de_turno_pide_detalle:%', NEW.resuelto_como;
+    RAISE EXCEPTION 'final_de_turno_guardia_pide_detalle:%', NEW.resuelto_como;
   END IF;
 
   RETURN NEW;
@@ -3347,7 +3347,7 @@ BEGIN
   END IF;
 
   SELECT m.pide_detalle INTO v_pide_detalle
-  FROM motivos_sustitucion_guardia m
+  FROM motivos_sustitucion_turno_guardia m
   WHERE m.prestadora_id = NEW.prestadora_id
     AND m.activo
     AND coalesce(m.clave, m.nombre) = NEW.motivo
@@ -3414,7 +3414,7 @@ $$;
 ALTER FUNCTION "interno"."exigir_paciente_y_servicio_del_mismo_contratante"("p_paciente_id" "uuid", "p_servicio_id" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "interno"."exigir_paciente_y_servicio_del_mismo_contratante"("p_paciente_id" "uuid", "p_servicio_id" "uuid") IS 'La regla de que un Servicio sólo factura Pacientes que le corresponden, escrita una sola vez. La llaman los disparadores de guardias, prestaciones y guardia_pacientes.';
+COMMENT ON FUNCTION "interno"."exigir_paciente_y_servicio_del_mismo_contratante"("p_paciente_id" "uuid", "p_servicio_id" "uuid") IS 'La regla de que un Servicio sólo factura Pacientes que le corresponden, escrita una sola vez. La llaman los disparadores de turnos de guardia, prestaciones y turno_guardia_pacientes.';
 
 
 
@@ -3427,7 +3427,7 @@ CREATE OR REPLACE FUNCTION "interno"."falta_la_firma_del_pagador"("p_servicio" "
       FROM servicios s
       JOIN prestadoras p ON p.id = s.prestadora_id
      WHERE s.id = p_servicio
-       AND p.guardias_solo_con_firma_del_pagador
+       AND p.turnos_guardia_solo_con_firma_del_pagador
   ) AND NOT interno.firma_del_pagador_vigente(p_servicio);
 $$;
 
@@ -3514,13 +3514,13 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF NEW.guardia_id IS NOT NULL THEN
+  IF NEW.turno_guardia_id IS NOT NULL THEN
     SELECT g.canal_modalidad INTO v_modalidad
-      FROM public.guardias g
-     WHERE g.id = NEW.guardia_id;
+      FROM public.turnos_guardia g
+     WHERE g.id = NEW.turno_guardia_id;
   ELSIF NEW.serie_id IS NOT NULL THEN
     SELECT s.canal_modalidad INTO v_modalidad
-      FROM public.series_guardias s
+      FROM public.series_turnos_guardia s
      WHERE s.id = NEW.serie_id;
   END IF;
 
@@ -3611,7 +3611,7 @@ $$;
 ALTER FUNCTION "interno"."gracia_hasta"("p_asistente_id" "uuid", "p_tipo_documento_id" "uuid", "p_dia" "date") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."guardia_empezada_no_cambia_de_asistente"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_asistente"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -3641,15 +3641,15 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  RAISE EXCEPTION 'guardia_empezada_no_cambia_de_asistente' USING ERRCODE = '23514';
+  RAISE EXCEPTION 'turno_guardia_empezado_no_cambia_de_asistente' USING ERRCODE = '23514';
 END;
 $$;
 
 
-ALTER FUNCTION "interno"."guardia_empezada_no_cambia_de_asistente"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_asistente"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."guardia_empezada_no_cambia_de_paciente"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_paciente"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -3657,17 +3657,17 @@ BEGIN
   IF OLD.paciente_id IS NOT NULL
      AND NEW.paciente_id IS DISTINCT FROM OLD.paciente_id
      AND COALESCE(OLD.checkin_at, NEW.checkin_at) IS NOT NULL THEN
-    RAISE EXCEPTION 'guardia_empezada_no_cambia_de_paciente' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'turno_guardia_empezado_no_cambia_de_paciente' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION "interno"."guardia_empezada_no_cambia_de_paciente"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_paciente"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."guardia_empezada_no_pierde_pacientes"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."turno_guardia_empezado_no_pierde_pacientes"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -3676,15 +3676,15 @@ DECLARE
   v_existe boolean;
 BEGIN
   IF TG_OP = 'UPDATE'
-     AND NEW.guardia_id = OLD.guardia_id
+     AND NEW.turno_guardia_id = OLD.turno_guardia_id
      AND NEW.paciente_id = OLD.paciente_id THEN
     RETURN NEW;
   END IF;
 
   SELECT true, g.checkin_at
     INTO v_existe, v_checkin
-    FROM guardias g
-   WHERE g.id = OLD.guardia_id;
+    FROM turnos_guardia g
+   WHERE g.id = OLD.turno_guardia_id;
 
   IF v_existe IS NULL THEN
     -- La guardia ya no está: es el borrado en cascada de la guardia entera.
@@ -3692,11 +3692,11 @@ BEGIN
       RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
     END IF;
     -- Una guardia que no se pudo leer no se da por no empezada.
-    RAISE EXCEPTION 'guardia_empezada_no_cambia_de_paciente' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'turno_guardia_empezado_no_cambia_de_paciente' USING ERRCODE = '23514';
   END IF;
 
   IF v_checkin IS NOT NULL THEN
-    RAISE EXCEPTION 'guardia_empezada_no_cambia_de_paciente' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'turno_guardia_empezado_no_cambia_de_paciente' USING ERRCODE = '23514';
   END IF;
 
   RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
@@ -3704,49 +3704,49 @@ END;
 $$;
 
 
-ALTER FUNCTION "interno"."guardia_empezada_no_pierde_pacientes"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."turno_guardia_empezado_no_pierde_pacientes"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."guardias_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) RETURNS "uuid"[]
+CREATE OR REPLACE FUNCTION "interno"."turnos_guardia_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) RETURNS "uuid"[]
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
 DECLARE
   v_tipo text;
-  v_guardias uuid[] := '{}';
+  v_turnos_guardia uuid[] := '{}';
   v_referencias uuid[];
 BEGIN
   IF NOT interno.es_coordinador() THEN
     RETURN '{}';
   END IF;
-  FOREACH v_tipo IN ARRAY ARRAY['alerta_temprana_guardia', 'incidente_relevo', 'guardia_sin_cerrar',
-                                'incidente_turno_sin_cubrir', 'emergencia_guardia'] LOOP
+  FOREACH v_tipo IN ARRAY ARRAY['alerta_temprana_turno_guardia', 'incidente_relevo', 'turno_guardia_sin_cerrar',
+                                'incidente_turno_guardia_sin_cubrir', 'emergencia_turno_guardia'] LOOP
     v_referencias := CASE WHEN p_solo_las_tomadas THEN interno.alarmas_que_tengo_tomadas(v_tipo)
                           ELSE interno.alarmas_a_la_vista_del_coordinador(v_tipo) END;
     IF cardinality(v_referencias) > 0 THEN
-      v_guardias := v_guardias || ARRAY(SELECT interno.guardias_de_las_alarmas(v_tipo, v_referencias));
+      v_turnos_guardia := v_turnos_guardia || ARRAY(SELECT interno.turnos_guardia_de_las_alarmas(v_tipo, v_referencias));
     END IF;
   END LOOP;
-  RETURN v_guardias;
+  RETURN v_turnos_guardia;
 END;
 $$;
 
 
-ALTER FUNCTION "interno"."guardias_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) OWNER TO "postgres";
+ALTER FUNCTION "interno"."turnos_guardia_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."guardias_asignadas_del_servicio"("p_servicio" "uuid") RETURNS integer
+CREATE OR REPLACE FUNCTION "interno"."turnos_guardia_asignados_del_servicio"("p_servicio" "uuid") RETURNS integer
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
   SELECT (
-    (SELECT count(*) FROM guardias g
+    (SELECT count(*) FROM turnos_guardia g
       WHERE g.servicio_id = p_servicio
         AND g.prestadora_id = interno.prestadora_actual()
         AND g.asistente_id IS NOT NULL
         AND g.estado IN ('programada', 'activa', 'pausada'))
     +
-    (SELECT count(*) FROM series_guardias sg
+    (SELECT count(*) FROM series_turnos_guardia sg
       WHERE sg.servicio_id = p_servicio
         AND sg.prestadora_id = interno.prestadora_actual()
         AND sg.asistente_id IS NOT NULL
@@ -3755,64 +3755,64 @@ CREATE OR REPLACE FUNCTION "interno"."guardias_asignadas_del_servicio"("p_servic
 $$;
 
 
-ALTER FUNCTION "interno"."guardias_asignadas_del_servicio"("p_servicio" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."turnos_guardia_asignados_del_servicio"("p_servicio" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."guardias_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) RETURNS SETOF "uuid"
+CREATE OR REPLACE FUNCTION "interno"."turnos_guardia_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) RETURNS SETOF "uuid"
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
 BEGIN
-  IF p_tipo = 'alerta_temprana_guardia' THEN
-    RETURN QUERY SELECT x.guardia_id FROM alertas_tempranas_guardia x WHERE x.id = ANY (p_referencias);
+  IF p_tipo = 'alerta_temprana_turno_guardia' THEN
+    RETURN QUERY SELECT x.turno_guardia_id FROM alertas_tempranas_turno_guardia x WHERE x.id = ANY (p_referencias);
   ELSIF p_tipo = 'incidente_relevo' THEN
-    RETURN QUERY SELECT x.guardia_entrante_id FROM incidentes_relevo x
-                  WHERE x.id = ANY (p_referencias) AND x.guardia_entrante_id IS NOT NULL
+    RETURN QUERY SELECT x.turno_guardia_entrante_id FROM incidentes_relevo x
+                  WHERE x.id = ANY (p_referencias) AND x.turno_guardia_entrante_id IS NOT NULL
                  UNION
-                 SELECT x.guardia_saliente_id FROM incidentes_relevo x
-                  WHERE x.id = ANY (p_referencias) AND x.guardia_saliente_id IS NOT NULL;
-  ELSIF p_tipo = 'incidente_turno_sin_cubrir' THEN
-    RETURN QUERY SELECT x.guardia_id FROM incidentes_turno_sin_cubrir x WHERE x.id = ANY (p_referencias);
-  ELSIF p_tipo = 'emergencia_guardia' THEN
-    RETURN QUERY SELECT x.guardia_id FROM emergencias_guardia x WHERE x.id = ANY (p_referencias);
-  ELSIF p_tipo = 'guardia_sin_cerrar' THEN
+                 SELECT x.turno_guardia_saliente_id FROM incidentes_relevo x
+                  WHERE x.id = ANY (p_referencias) AND x.turno_guardia_saliente_id IS NOT NULL;
+  ELSIF p_tipo = 'incidente_turno_guardia_sin_cubrir' THEN
+    RETURN QUERY SELECT x.turno_guardia_id FROM incidentes_turno_guardia_sin_cubrir x WHERE x.id = ANY (p_referencias);
+  ELSIF p_tipo = 'emergencia_turno_guardia' THEN
+    RETURN QUERY SELECT x.turno_guardia_id FROM emergencias_turno_guardia x WHERE x.id = ANY (p_referencias);
+  ELSIF p_tipo = 'turno_guardia_sin_cerrar' THEN
     RETURN QUERY SELECT unnest(p_referencias);
   END IF;
 END;
 $$;
 
 
-ALTER FUNCTION "interno"."guardias_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) OWNER TO "postgres";
+ALTER FUNCTION "interno"."turnos_guardia_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."guardias_del_paciente"("p_paciente_id" "uuid") RETURNS SETOF "uuid"
+CREATE OR REPLACE FUNCTION "interno"."turnos_guardia_del_paciente"("p_paciente_id" "uuid") RETURNS SETOF "uuid"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT guardia_id FROM guardia_pacientes WHERE paciente_id = p_paciente_id
+  SELECT turno_guardia_id FROM turno_guardia_pacientes WHERE paciente_id = p_paciente_id
 $$;
 
 
-ALTER FUNCTION "interno"."guardias_del_paciente"("p_paciente_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."turnos_guardia_del_paciente"("p_paciente_id" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "interno"."guardias_del_paciente"("p_paciente_id" "uuid") IS 'En qué guardias aparece un Paciente. Punto único de verdad de las reglas de acceso.';
+COMMENT ON FUNCTION "interno"."turnos_guardia_del_paciente"("p_paciente_id" "uuid") IS 'En qué turnos de guardia aparece un Paciente. Punto único de verdad de las reglas de acceso.';
 
 
 
-CREATE OR REPLACE FUNCTION "interno"."hay_excepcion_por_documentos"("p_guardia_id" "uuid", "p_asistente_id" "uuid") RETURNS boolean
+CREATE OR REPLACE FUNCTION "interno"."hay_excepcion_por_documentos"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.excepciones_por_documentos e
-      JOIN public.guardias g ON g.id = e.guardia_id AND g.prestadora_id = e.prestadora_id
-     WHERE e.guardia_id = p_guardia_id
+      JOIN public.turnos_guardia g ON g.id = e.turno_guardia_id AND g.prestadora_id = e.prestadora_id
+     WHERE e.turno_guardia_id = p_turno_guardia_id
        AND e.asistente_id = p_asistente_id);
 $$;
 
 
-ALTER FUNCTION "interno"."hay_excepcion_por_documentos"("p_guardia_id" "uuid", "p_asistente_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."hay_excepcion_por_documentos"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."i18n_completo"("p_texto" "jsonb") RETURNS boolean
@@ -3917,11 +3917,11 @@ CREATE OR REPLACE FUNCTION "interno"."la_alarma_esta_a_la_vista"("p_tipo" "text"
     AS $_$
 DECLARE
   v_tabla text := CASE p_tipo
-    WHEN 'alerta_temprana_guardia' THEN 'alertas_tempranas_guardia'
+    WHEN 'alerta_temprana_turno_guardia' THEN 'alertas_tempranas_turno_guardia'
     WHEN 'incidente_relevo' THEN 'incidentes_relevo'
-    WHEN 'incidente_turno_sin_cubrir' THEN 'incidentes_turno_sin_cubrir'
-    WHEN 'emergencia_guardia' THEN 'emergencias_guardia'
-    WHEN 'guardia_sin_cerrar' THEN 'guardias'
+    WHEN 'incidente_turno_guardia_sin_cubrir' THEN 'incidentes_turno_guardia_sin_cubrir'
+    WHEN 'emergencia_turno_guardia' THEN 'emergencias_turno_guardia'
+    WHEN 'turno_guardia_sin_cerrar' THEN 'turnos_guardia'
   END;
   v_antes text := coalesce(current_setting('careonys.lectura_de_salud', true), '');
   v_la_ve boolean;
@@ -3929,11 +3929,11 @@ BEGIN
   IF v_tabla IS NULL OR p_referencia IS NULL THEN
     RETURN false;
   END IF;
-  IF v_tabla = 'emergencias_guardia' THEN
+  IF v_tabla = 'emergencias_turno_guardia' THEN
     PERFORM set_config('careonys.lectura_de_salud', 'anotada', true);
   END IF;
   EXECUTE format('SELECT EXISTS (SELECT 1 FROM %I WHERE id = $1)', v_tabla) INTO v_la_ve USING p_referencia;
-  IF v_tabla = 'emergencias_guardia' THEN
+  IF v_tabla = 'emergencias_turno_guardia' THEN
     PERFORM set_config('careonys.lectura_de_salud', v_antes, true);
   END IF;
   RETURN coalesce(v_la_ve, false);
@@ -3955,21 +3955,21 @@ DECLARE
   v_quien uuid;
   v_asistente uuid;
 BEGIN
-  IF TG_TABLE_NAME = 'alertas_tempranas_guardia' THEN
-    v_tipo := 'alerta_temprana_guardia';
+  IF TG_TABLE_NAME = 'alertas_tempranas_turno_guardia' THEN
+    v_tipo := 'alerta_temprana_turno_guardia';
     v_resuelve := OLD.resuelto_at IS NULL AND NEW.resuelto_at IS NOT NULL;
   ELSIF TG_TABLE_NAME = 'incidentes_relevo' THEN
     v_tipo := 'incidente_relevo';
     v_resuelve := OLD.resuelto_at IS NULL AND NEW.resuelto_at IS NOT NULL;
-  ELSIF TG_TABLE_NAME = 'incidentes_turno_sin_cubrir' THEN
-    v_tipo := 'incidente_turno_sin_cubrir';
+  ELSIF TG_TABLE_NAME = 'incidentes_turno_guardia_sin_cubrir' THEN
+    v_tipo := 'incidente_turno_guardia_sin_cubrir';
     v_resuelve := OLD.resuelto_at IS NULL AND NEW.resuelto_at IS NOT NULL;
-  ELSIF TG_TABLE_NAME = 'emergencias_guardia' THEN
-    v_tipo := 'emergencia_guardia';
+  ELSIF TG_TABLE_NAME = 'emergencias_turno_guardia' THEN
+    v_tipo := 'emergencia_turno_guardia';
     v_resuelve := OLD.atendida_at IS NULL AND NEW.atendida_at IS NOT NULL;
     v_actor := coalesce(v_actor, NEW.atendida_por);
-  ELSIF TG_TABLE_NAME = 'guardias' THEN
-    v_tipo := 'guardia_sin_cerrar';
+  ELSIF TG_TABLE_NAME = 'turnos_guardia' THEN
+    v_tipo := 'turno_guardia_sin_cerrar';
     v_resuelve := OLD.estado = 'activa' AND NEW.estado IS DISTINCT FROM 'activa';
   END IF;
 
@@ -3984,8 +3984,8 @@ BEGIN
 
   -- Fuera de su zona, el Coordinador atiende la emergencia sólo si la tomó. Con sesión lo exige
   -- también la política; acá queda para lo que entra sin persona, que la política no mira.
-  IF TG_TABLE_NAME = 'emergencias_guardia' AND v_quien IS NULL AND interno.es_coordinador_de(v_actor) THEN
-    SELECT g.asistente_id INTO v_asistente FROM guardias g WHERE g.id = NEW.guardia_id;
+  IF TG_TABLE_NAME = 'emergencias_turno_guardia' AND v_quien IS NULL AND interno.es_coordinador_de(v_actor) THEN
+    SELECT g.asistente_id INTO v_asistente FROM turnos_guardia g WHERE g.id = NEW.turno_guardia_id;
     IF NOT interno.coordinador_alcanza_asistente_de(v_actor, v_asistente) THEN
       RAISE EXCEPTION 'alarma_fuera_de_la_zona' USING ERRCODE = '42501';
     END IF;
@@ -4016,7 +4016,7 @@ BEGIN
   END IF;
 
   IF NEW.prestadora_id IS DISTINCT FROM OLD.prestadora_id
-     OR NEW.guardia_id IS DISTINCT FROM OLD.guardia_id
+     OR NEW.turno_guardia_id IS DISTINCT FROM OLD.turno_guardia_id
      OR NEW.serie_id IS DISTINCT FROM OLD.serie_id
      OR NEW.ausencia_id IS DISTINCT FROM OLD.ausencia_id
      OR NEW.asistente_id IS DISTINCT FROM OLD.asistente_id
@@ -4488,7 +4488,7 @@ CREATE OR REPLACE FUNCTION "interno"."la_persona_tiene_un_rol_que_el_coordinador
     OR EXISTS (SELECT 1 FROM excepciones_familiar_relevo e
                 WHERE e.familiar_persona_id = p_persona
                   AND e.prestadora_id = interno.prestadora_actual()
-                  AND interno.coordinador_ve_la_guardia(e.guardia_id))
+                  AND interno.coordinador_ve_el_turno_guardia(e.turno_guardia_id))
   );
 $$;
 
@@ -5128,7 +5128,7 @@ CREATE OR REPLACE FUNCTION "interno"."pacientes_de_la_fila"("p_tabla" "text") RE
     LANGUAGE "sql" IMMUTABLE
     AS $$
   SELECT CASE p_tabla
-    WHEN 'emergencias_guardia' THEN 'ARRAY(SELECT interno.pacientes_de_la_guardia(t.guardia_id))'
+    WHEN 'emergencias_turno_guardia' THEN 'ARRAY(SELECT interno.pacientes_del_turno_guardia(t.turno_guardia_id))'
     WHEN 'cargas_sujetas_a_aprobacion' THEN
       'CASE WHEN t.tabla = ''informacion_de_salud_del_paciente'' THEN ARRAY[t.paciente_id] ELSE ''{}''::uuid[] END'
     ELSE 'ARRAY[t.paciente_id]'
@@ -5139,18 +5139,18 @@ $$;
 ALTER FUNCTION "interno"."pacientes_de_la_fila"("p_tabla" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."pacientes_de_la_guardia"("p_guardia_id" "uuid") RETURNS SETOF "uuid"
+CREATE OR REPLACE FUNCTION "interno"."pacientes_del_turno_guardia"("p_turno_guardia_id" "uuid") RETURNS SETOF "uuid"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT paciente_id FROM guardia_pacientes WHERE guardia_id = p_guardia_id
+  SELECT paciente_id FROM turno_guardia_pacientes WHERE turno_guardia_id = p_turno_guardia_id
 $$;
 
 
-ALTER FUNCTION "interno"."pacientes_de_la_guardia"("p_guardia_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."pacientes_del_turno_guardia"("p_turno_guardia_id" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "interno"."pacientes_de_la_guardia"("p_guardia_id" "uuid") IS 'A quiénes atiende una guardia. Punto único de verdad de las reglas de acceso (CLAUDE.md §7 regla 12).';
+COMMENT ON FUNCTION "interno"."pacientes_del_turno_guardia"("p_turno_guardia_id" "uuid") IS 'A quiénes atiende un turno de guardia. Punto único de verdad de las reglas de acceso (CLAUDE.md §7 regla 12).';
 
 
 
@@ -5158,14 +5158,14 @@ CREATE OR REPLACE FUNCTION "interno"."pacientes_de_la_serie"("p_serie_id" "uuid"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT paciente_id FROM series_guardias_pacientes WHERE serie_id = p_serie_id
+  SELECT paciente_id FROM series_turnos_guardia_pacientes WHERE serie_id = p_serie_id
 $$;
 
 
 ALTER FUNCTION "interno"."pacientes_de_la_serie"("p_serie_id" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "interno"."pacientes_de_la_serie"("p_serie_id" "uuid") IS 'A quiénes atiende una serie de guardias. Punto único de verdad de las reglas de acceso.';
+COMMENT ON FUNCTION "interno"."pacientes_de_la_serie"("p_serie_id" "uuid") IS 'A quiénes atiende una serie de turnos de guardia. Punto único de verdad de las reglas de acceso.';
 
 
 
@@ -5174,8 +5174,8 @@ CREATE OR REPLACE FUNCTION "interno"."pacientes_del_asistente"() RETURNS SETOF "
     SET "search_path" TO 'public', 'interno'
     AS $$
   SELECT gp.paciente_id
-    FROM guardia_pacientes gp
-    JOIN guardias g ON g.id = gp.guardia_id
+    FROM turno_guardia_pacientes gp
+    JOIN turnos_guardia g ON g.id = gp.turno_guardia_id
    WHERE g.asistente_id = interno.asistente_de_la_sesion()
      AND g.prestadora_id = interno.prestadora_actual()
 $$;
@@ -5271,7 +5271,7 @@ ALTER FUNCTION "interno"."persona_autorizada_puede"("p_usuario" "uuid", "p_clave
 
 
 
-CREATE OR REPLACE FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") RETURNS boolean
+CREATE OR REPLACE FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_turno_guardia" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -5279,12 +5279,12 @@ CREATE OR REPLACE FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente"
       OR interno.es_admin_prestadora()
       OR (interno.es_coordinador()
           AND ((p_asistente IS NOT NULL AND interno.coordinador_alcanza_asistente(p_asistente))
-               OR (p_guardia IS NOT NULL AND interno.coordinador_ve_la_guardia(p_guardia))));
+               OR (p_turno_guardia IS NOT NULL AND interno.coordinador_ve_el_turno_guardia(p_turno_guardia))));
 $$;
 
 
 
-ALTER FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_turno_guardia" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."prestadora_actual"() RETURNS "uuid"
@@ -5646,7 +5646,7 @@ $$;
 ALTER FUNCTION "interno"."servicio_a_revisar_al_programar"("p_nuevo" "jsonb", "p_viejo" "jsonb", "p_operacion" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."sin_coordinador_no_hay_guardias"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."sin_coordinador_no_hay_turnos_guardia"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -5670,10 +5670,10 @@ END;
 $$;
 
 
-ALTER FUNCTION "interno"."sin_coordinador_no_hay_guardias"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."sin_coordinador_no_hay_turnos_guardia"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."sin_firma_del_pagador_no_hay_turnos_guardia"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -5692,7 +5692,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."sin_firma_del_pagador_no_hay_turnos_guardia"() OWNER TO "postgres";
 
 
 
@@ -5814,7 +5814,7 @@ CREATE OR REPLACE FUNCTION "interno"."tablas_de_salud"() RETURNS "text"[]
     LANGUAGE "sql" IMMUTABLE
     AS $$
   SELECT ARRAY[
-    'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_guardia', 'hospitalizaciones_paciente',
+    'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_turno_guardia', 'hospitalizaciones_paciente',
     'indicaciones_medicacion', 'informacion_de_salud_del_paciente', 'informes_obra_social',
     'rangos_referencia_vitales', 'reportes', 'versiones_registro_clinico'
   ]::text[];
@@ -5923,14 +5923,14 @@ $$;
 ALTER FUNCTION "interno"."tiene_permiso"("p_accion" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") RETURNS TABLE("tipo" "text", "id" "uuid", "fecha" "date", "hora_inicio" time without time zone, "hora_fin" time without time zone, "dias_hasta_el_fin" smallint, "checkin_at" timestamp with time zone, "cliente" "text")
+CREATE OR REPLACE FUNCTION "interno"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") RETURNS TABLE("tipo" "text", "id" "uuid", "fecha" "date", "hora_inicio" time without time zone, "hora_fin" time without time zone, "dias_hasta_el_fin" smallint, "checkin_at" timestamp with time zone, "cliente" "text")
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT 'guardia'::text, g.id, g.fecha, g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin,
+  SELECT 'turno_guardia'::text, g.id, g.fecha, g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin,
          g.checkin_at, pe.nombre_visible
     FROM asistentes a
-    JOIN guardias g ON g.asistente_id = a.id AND g.prestadora_id = p_prestadora
+    JOIN turnos_guardia g ON g.asistente_id = a.id AND g.prestadora_id = p_prestadora
     LEFT JOIN pacientes p ON p.id = g.paciente_id
     LEFT JOIN personas pe ON pe.id = p.persona_id
    WHERE a.usuario_id = p_usuario
@@ -5942,7 +5942,7 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_que_traban_la_desactivacion"("p_usu
   SELECT 'serie'::text, s.id, s.vigente_desde, s.hora_inicio, s.hora_fin, s.dias_hasta_el_fin,
          NULL::timestamptz, pe.nombre_visible
     FROM asistentes a
-    JOIN series_guardias s ON s.asistente_id = a.id AND s.prestadora_id = p_prestadora
+    JOIN series_turnos_guardia s ON s.asistente_id = a.id AND s.prestadora_id = p_prestadora
     LEFT JOIN pacientes p ON p.id = s.paciente_id
     LEFT JOIN personas pe ON pe.id = p.persona_id
    WHERE a.usuario_id = p_usuario
@@ -5953,7 +5953,7 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_que_traban_la_desactivacion"("p_usu
 $$;
 
 
-ALTER FUNCTION "interno"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "interno"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."una_sola_toma_por_alarma"() RETURNS "trigger"
@@ -6008,21 +6008,21 @@ $_$;
 ALTER FUNCTION "interno"."usuario_elegido_bien_escrito"("p_usuario" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "interno"."validar_paciente_de_guardia_del_contratante"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "interno"."validar_paciente_de_turno_guardia_del_contratante"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
 DECLARE
   servicio uuid;
 BEGIN
-  SELECT servicio_id INTO servicio FROM guardias WHERE id = NEW.guardia_id;
+  SELECT servicio_id INTO servicio FROM turnos_guardia WHERE id = NEW.turno_guardia_id;
   PERFORM interno.exigir_paciente_y_servicio_del_mismo_contratante(NEW.paciente_id, servicio);
   RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION "interno"."validar_paciente_de_guardia_del_contratante"() OWNER TO "postgres";
+ALTER FUNCTION "interno"."validar_paciente_de_turno_guardia_del_contratante"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."validar_servicio_del_contratante"() RETURNS "trigger"
@@ -6329,7 +6329,7 @@ CREATE OR REPLACE FUNCTION "public"."aceptar_asignacion"("p_asignacion_id" "uuid
 DECLARE
   v_prestadora uuid := interno.prestadora_actual();
   v_asistente  uuid := interno.asistente_de_la_sesion();
-  v_asignacion public.asignaciones_de_turno;
+  v_asignacion public.asignaciones_de_turno_guardia;
   v_tomadas    integer;
 BEGIN
   IF v_prestadora IS NULL OR v_asistente IS NULL THEN
@@ -6337,7 +6337,7 @@ BEGIN
   END IF;
 
   SELECT * INTO v_asignacion
-    FROM asignaciones_de_turno
+    FROM asignaciones_de_turno_guardia
    WHERE id = p_asignacion_id
      AND prestadora_id = v_prestadora
      AND asistente_id = v_asistente
@@ -6351,21 +6351,21 @@ BEGIN
     RAISE EXCEPTION 'asignacion_ya_respondida';
   END IF;
 
-  IF v_asignacion.guardia_id IS NOT NULL THEN
-    UPDATE guardias
+  IF v_asignacion.turno_guardia_id IS NOT NULL THEN
+    UPDATE turnos_guardia
        SET asistente_id = v_asistente
-     WHERE id = v_asignacion.guardia_id
+     WHERE id = v_asignacion.turno_guardia_id
        AND prestadora_id = v_prestadora
        AND estado = 'programada'
        AND asistente_id IS NULL;
 
     GET DIAGNOSTICS v_tomadas = ROW_COUNT;
     IF v_tomadas = 0 THEN
-      RAISE EXCEPTION 'guardia_ya_cubierta';
+      RAISE EXCEPTION 'turno_guardia_ya_cubierto';
     END IF;
 
   ELSIF v_asignacion.serie_id IS NOT NULL THEN
-    UPDATE series_guardias
+    UPDATE series_turnos_guardia
        SET asistente_id = v_asistente
      WHERE id = v_asignacion.serie_id
        AND prestadora_id = v_prestadora
@@ -6374,13 +6374,13 @@ BEGIN
 
     GET DIAGNOSTICS v_tomadas = ROW_COUNT;
     IF v_tomadas = 0 THEN
-      RAISE EXCEPTION 'guardia_ya_cubierta';
+      RAISE EXCEPTION 'turno_guardia_ya_cubierto';
     END IF;
 
     -- Los turnos que vienen pasan a ser suyos: los que no tienen a nadie y los que seguía haciendo
     -- quien tenía el turno fijo antes. Los que esperan la respuesta de otro por ese día quedan como
     -- están. Ya contestó que sí: no le llega un aviso por cada día.
-    UPDATE guardias g
+    UPDATE turnos_guardia g
        SET asistente_id = v_asistente,
            push_asignacion_enviado_at = now()
      WHERE g.serie_id = v_asignacion.serie_id
@@ -6389,8 +6389,8 @@ BEGIN
        AND (g.asistente_id IS NULL OR g.asistente_id = v_asignacion.asistente_anterior_id)
        AND g.fecha >= CURRENT_DATE
        AND NOT EXISTS (
-         SELECT 1 FROM asignaciones_de_turno o
-          WHERE o.guardia_id = g.id
+         SELECT 1 FROM asignaciones_de_turno_guardia o
+          WHERE o.turno_guardia_id = g.id
             AND o.estado = 'sin_responder'
        );
 
@@ -6404,11 +6404,11 @@ BEGIN
        AND objetada_at IS NULL;
   END IF;
 
-  UPDATE asignaciones_de_turno
+  UPDATE asignaciones_de_turno_guardia
      SET estado = 'aceptada'
    WHERE id = v_asignacion.id;
 
-  RETURN v_asignacion.guardia_id;
+  RETURN v_asignacion.turno_guardia_id;
 END;
 $$;
 
@@ -6508,7 +6508,7 @@ BEGIN
            'id', p.id, 'servicio_id', p.servicio_id, 'tipo_servicio', p.tipo_servicio,
            'precio_final', p.precio_final, 'precio_lista_snapshot', p.precio_lista_snapshot,
            'precio_lista_id', p.precio_lista_id, 'requiere_revision', p.requiere_revision,
-           'precio_guardia_adicional', p.precio_guardia_adicional,
+           'precio_turno_guardia_adicional', p.precio_turno_guardia_adicional,
            'precio_hora_adicional', p.precio_hora_adicional,
            'moneda', p.moneda, 'indice', x.indice)), '[]'::jsonb)
     INTO v_pendientes
@@ -6575,8 +6575,8 @@ BEGIN
         'precio_final', precio_nuevo,
         'precio_lista_snapshot', CASE WHEN v_elemento ->> 'precio_lista_snapshot' IS NULL THEN NULL
                                       ELSE round((v_elemento ->> 'precio_lista_snapshot')::numeric * v_factor, 2) END,
-        'precio_guardia_adicional', CASE WHEN v_elemento ->> 'precio_guardia_adicional' IS NULL THEN NULL
-                                         ELSE round((v_elemento ->> 'precio_guardia_adicional')::numeric * v_factor, 2) END,
+        'precio_turno_guardia_adicional', CASE WHEN v_elemento ->> 'precio_turno_guardia_adicional' IS NULL THEN NULL
+                                         ELSE round((v_elemento ->> 'precio_turno_guardia_adicional')::numeric * v_factor, 2) END,
         'precio_hora_adicional', CASE WHEN v_elemento ->> 'precio_hora_adicional' IS NULL THEN NULL
                                       ELSE round((v_elemento ->> 'precio_hora_adicional')::numeric * v_factor, 2) END,
         'precio_lista_id', coalesce(v_reemplazo, NULLIF(v_elemento ->> 'precio_lista_id', '')::bigint),
@@ -6702,7 +6702,7 @@ BEGIN
 
   FOR v IN
     SELECT p.id, p.servicio_id, p.vigente_desde, p.precio_final, p.precio_lista_snapshot, p.moneda,
-           p.precio_guardia_adicional, p.precio_hora_adicional,
+           p.precio_turno_guardia_adicional, p.precio_hora_adicional,
            x.indice, x.meses, x.ajuste
       FROM public.prestaciones p
       LEFT JOIN public.condiciones_comerciales_servicio c ON c.servicio_id = p.servicio_id
@@ -6747,8 +6747,8 @@ BEGIN
         'precio_final', v_precio,
         'precio_lista_snapshot', CASE WHEN v.precio_lista_snapshot IS NULL THEN NULL
                                       ELSE round(v.precio_lista_snapshot * v_factor, 2) END,
-        'precio_guardia_adicional', CASE WHEN v.precio_guardia_adicional IS NULL THEN NULL
-                                         ELSE round(v.precio_guardia_adicional * v_factor, 2) END,
+        'precio_turno_guardia_adicional', CASE WHEN v.precio_turno_guardia_adicional IS NULL THEN NULL
+                                         ELSE round(v.precio_turno_guardia_adicional * v_factor, 2) END,
         'precio_hora_adicional', CASE WHEN v.precio_hora_adicional IS NULL THEN NULL
                                       ELSE round(v.precio_hora_adicional * v_factor, 2) END,
         'vigente_desde', v_rige,
@@ -7077,8 +7077,8 @@ CREATE OR REPLACE FUNCTION "public"."asignar_serie"("p_serie_id" "uuid", "p_asis
     AS $$
 DECLARE
   v_prestadora uuid := interno.prestadora_actual();
-  v_serie      public.series_guardias;
-  v_pendiente  public.asignaciones_de_turno;
+  v_serie      public.series_turnos_guardia;
+  v_pendiente  public.asignaciones_de_turno_guardia;
   v_anterior   uuid;
   v_nueva      uuid;
   v_bloquean   text[];
@@ -7088,14 +7088,14 @@ BEGIN
   END IF;
 
   SELECT * INTO v_pendiente
-    FROM asignaciones_de_turno
+    FROM asignaciones_de_turno_guardia
    WHERE serie_id = p_serie_id
      AND prestadora_id = v_prestadora
      AND estado = 'sin_responder'
    FOR UPDATE;
 
   SELECT * INTO v_serie
-    FROM series_guardias
+    FROM series_turnos_guardia
    WHERE id = p_serie_id
      AND prestadora_id = v_prestadora
    FOR UPDATE;
@@ -7143,15 +7143,15 @@ BEGIN
   END IF;
 
   IF v_pendiente.id IS NOT NULL THEN
-    UPDATE asignaciones_de_turno SET estado = 'retirada' WHERE id = v_pendiente.id;
+    UPDATE asignaciones_de_turno_guardia SET estado = 'retirada' WHERE id = v_pendiente.id;
   END IF;
 
   IF v_serie.asistente_id IS NOT NULL THEN
-    UPDATE series_guardias SET asistente_id = NULL WHERE id = v_serie.id;
+    UPDATE series_turnos_guardia SET asistente_id = NULL WHERE id = v_serie.id;
   END IF;
 
   IF p_asistente_id IS NOT NULL THEN
-    INSERT INTO asignaciones_de_turno (prestadora_id, serie_id, asistente_id, asistente_anterior_id)
+    INSERT INTO asignaciones_de_turno_guardia (prestadora_id, serie_id, asistente_id, asistente_anterior_id)
     VALUES (v_prestadora, v_serie.id, p_asistente_id, v_anterior)
     RETURNING id INTO v_nueva;
   END IF;
@@ -7170,53 +7170,53 @@ $$;
 ALTER FUNCTION "public"."asignar_serie"("p_serie_id" "uuid", "p_asistente_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."asignar_turno"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+CREATE OR REPLACE FUNCTION "public"."asignar_turno_guardia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text" DEFAULT NULL::"text") RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
 DECLARE
   v_prestadora uuid := interno.prestadora_actual();
-  v_guardia    public.guardias;
-  v_pendiente  public.asignaciones_de_turno;
+  v_turno_guardia    public.turnos_guardia;
+  v_pendiente  public.asignaciones_de_turno_guardia;
   v_anterior   uuid;
   v_nueva      uuid;
 BEGIN
   IF v_prestadora IS NULL THEN
-    RAISE EXCEPTION 'guardia_no_encontrada';
+    RAISE EXCEPTION 'turno_guardia_no_encontrado';
   END IF;
 
   -- Primero la asignación pendiente y después el turno: es el mismo orden en que los toma
   -- `aceptar_asignacion`, así las dos nunca se esperan una a la otra.
   SELECT * INTO v_pendiente
-    FROM asignaciones_de_turno
-   WHERE guardia_id = p_guardia_id
+    FROM asignaciones_de_turno_guardia
+   WHERE turno_guardia_id = p_turno_guardia_id
      AND prestadora_id = v_prestadora
      AND estado = 'sin_responder'
    FOR UPDATE;
 
-  SELECT * INTO v_guardia
-    FROM guardias
-   WHERE id = p_guardia_id
+  SELECT * INTO v_turno_guardia
+    FROM turnos_guardia
+   WHERE id = p_turno_guardia_id
      AND prestadora_id = v_prestadora
    FOR UPDATE;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'guardia_no_encontrada';
+    RAISE EXCEPTION 'turno_guardia_no_encontrado';
   END IF;
 
-  IF v_guardia.estado <> 'programada' THEN
-    RAISE EXCEPTION 'guardia_no_se_asigna' USING ERRCODE = '23514';
+  IF v_turno_guardia.estado <> 'programada' THEN
+    RAISE EXCEPTION 'turno_guardia_no_se_asigna' USING ERRCODE = '23514';
   END IF;
 
   -- Lo que ya está como se pide no se toca: ni se retira ni se vuelve a avisar.
   IF p_asistente_id IS NOT NULL AND v_pendiente.asistente_id = p_asistente_id THEN
     RETURN jsonb_build_object('sin_cambios', true);
   END IF;
-  IF p_asistente_id IS NULL AND v_pendiente.id IS NULL AND v_guardia.asistente_id IS NULL THEN
+  IF p_asistente_id IS NULL AND v_pendiente.id IS NULL AND v_turno_guardia.asistente_id IS NULL THEN
     RETURN jsonb_build_object('sin_cambios', true);
   END IF;
 
-  v_anterior := COALESCE(v_guardia.asistente_id, v_pendiente.asistente_anterior_id);
+  v_anterior := COALESCE(v_turno_guardia.asistente_id, v_pendiente.asistente_anterior_id);
 
   -- Las mismas paredes que pone la base cuando el turno pasa a ser de alguien, puestas ahora,
   -- para que el Coordinador se entere al asignar y no el Asistente al aceptar.
@@ -7234,48 +7234,48 @@ BEGIN
 
     PERFORM interno.excepcion_por_documentos(
       v_prestadora,
-      v_guardia.id,
+      v_turno_guardia.id,
       p_asistente_id,
       interno.documentos_que_bloquean(
         p_asistente_id,
-        interno.dia_en_que_termina_guardia(v_guardia.fecha, v_guardia.hora_inicio, v_guardia.hora_fin, v_guardia.dias_hasta_el_fin),
-        v_guardia.paciente_id,
-        v_guardia.servicio_id
+        interno.dia_en_que_termina_turno_guardia(v_turno_guardia.fecha, v_turno_guardia.hora_inicio, v_turno_guardia.hora_fin, v_turno_guardia.dias_hasta_el_fin),
+        v_turno_guardia.paciente_id,
+        v_turno_guardia.servicio_id
       ),
       p_motivo_excepcion
     );
 
-    IF v_guardia.canal_modalidad IS NOT NULL
-       AND NOT interno.asistente_trabaja_en_modalidad(p_asistente_id, v_guardia.canal_modalidad) THEN
-      RAISE EXCEPTION 'modalidad_bloquea:%:', v_guardia.canal_modalidad USING ERRCODE = '23514';
+    IF v_turno_guardia.canal_modalidad IS NOT NULL
+       AND NOT interno.asistente_trabaja_en_modalidad(p_asistente_id, v_turno_guardia.canal_modalidad) THEN
+      RAISE EXCEPTION 'modalidad_bloquea:%:', v_turno_guardia.canal_modalidad USING ERRCODE = '23514';
     END IF;
   END IF;
 
   IF v_pendiente.id IS NOT NULL THEN
-    UPDATE asignaciones_de_turno SET estado = 'retirada' WHERE id = v_pendiente.id;
+    UPDATE asignaciones_de_turno_guardia SET estado = 'retirada' WHERE id = v_pendiente.id;
   END IF;
 
-  IF v_guardia.asistente_id IS NOT NULL THEN
-    UPDATE guardias SET asistente_id = NULL WHERE id = v_guardia.id;
+  IF v_turno_guardia.asistente_id IS NOT NULL THEN
+    UPDATE turnos_guardia SET asistente_id = NULL WHERE id = v_turno_guardia.id;
   END IF;
 
   IF p_asistente_id IS NOT NULL THEN
-    INSERT INTO asignaciones_de_turno (prestadora_id, guardia_id, asistente_id, asistente_anterior_id)
-    VALUES (v_prestadora, v_guardia.id, p_asistente_id, v_anterior)
+    INSERT INTO asignaciones_de_turno_guardia (prestadora_id, turno_guardia_id, asistente_id, asistente_anterior_id)
+    VALUES (v_prestadora, v_turno_guardia.id, p_asistente_id, v_anterior)
     RETURNING id INTO v_nueva;
   END IF;
 
   -- Alguien perdió el turno: la alarma se abre ya. Si había una abierta, sigue la misma.
-  IF v_guardia.asistente_id IS NOT NULL OR v_pendiente.id IS NOT NULL THEN
-    INSERT INTO incidentes_turno_sin_cubrir (prestadora_id, guardia_id)
-    VALUES (v_prestadora, v_guardia.id)
-    ON CONFLICT (guardia_id) WHERE resuelto_at IS NULL DO NOTHING;
+  IF v_turno_guardia.asistente_id IS NOT NULL OR v_pendiente.id IS NOT NULL THEN
+    INSERT INTO incidentes_turno_guardia_sin_cubrir (prestadora_id, turno_guardia_id)
+    VALUES (v_prestadora, v_turno_guardia.id)
+    ON CONFLICT (turno_guardia_id) WHERE resuelto_at IS NULL DO NOTHING;
   END IF;
 
   RETURN jsonb_build_object(
     'sin_cambios', false,
     'asignacion_id', v_nueva,
-    'titular_retirado', v_guardia.asistente_id,
+    'titular_retirado', v_turno_guardia.asistente_id,
     'pendiente_retirado', v_pendiente.asistente_id,
     'asistente_anterior_id', v_anterior
   );
@@ -7283,7 +7283,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."asignar_turno"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."asignar_turno_guardia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."asistente_asignado_a_cliente"("p_asistente_id" "uuid") RETURNS boolean
@@ -7292,7 +7292,7 @@ CREATE OR REPLACE FUNCTION "public"."asistente_asignado_a_cliente"("p_asistente_
     AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM guardias g
+    FROM turnos_guardia g
     JOIN pacientes p ON p.id = g.paciente_id
     WHERE g.asistente_id = p_asistente_id
       AND p.cliente_id = cliente_id_de_usuario(auth.uid())
@@ -7303,7 +7303,7 @@ $$;
 ALTER FUNCTION "public"."asistente_asignado_a_cliente"("p_asistente_id" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."asistente_asignado_a_cliente"("p_asistente_id" "uuid") IS 'Única fuente de verdad para saber si un Asistente atiende a un Paciente del Cliente de la sesión. Va por función y no dentro de la política para no armar una referencia circular entre asistentes y guardias.';
+COMMENT ON FUNCTION "public"."asistente_asignado_a_cliente"("p_asistente_id" "uuid") IS 'Única fuente de verdad para saber si un Asistente atiende a un Paciente del Cliente de la sesión. Va por función y no dentro de la política para no armar una referencia circular entre asistentes y turnos de guardia.';
 
 
 
@@ -7312,8 +7312,8 @@ CREATE OR REPLACE FUNCTION "public"."asistentes_asignados_al_paciente"("p_pacien
     SET "search_path" TO 'public', 'interno'
     AS $$
   SELECT DISTINCT g.asistente_id
-    FROM guardia_pacientes gp
-    JOIN guardias g ON g.id = gp.guardia_id AND g.prestadora_id = gp.prestadora_id
+    FROM turno_guardia_pacientes gp
+    JOIN turnos_guardia g ON g.id = gp.turno_guardia_id AND g.prestadora_id = gp.prestadora_id
    WHERE gp.paciente_id = p_paciente
      AND gp.prestadora_id = interno.prestadora_actual()
      AND interno.es_personal_de_la_prestadora()
@@ -7618,8 +7618,8 @@ BEGIN
      WHERE d.hospitalizacion_id = p_hospitalizacion
        AND (d.fecha_fin IS NULL OR d.fecha_fin > greatest(p_fecha, d.fecha_inicio));
   ELSE
-    UPDATE guardias SET estado = 'programada' WHERE paciente_id = v_paciente AND estado = 'pausada';
-    UPDATE series_guardias SET estado = 'activa' WHERE paciente_id = v_paciente AND estado = 'pausada';
+    UPDATE turnos_guardia SET estado = 'programada' WHERE paciente_id = v_paciente AND estado = 'pausada';
+    UPDATE series_turnos_guardia SET estado = 'activa' WHERE paciente_id = v_paciente AND estado = 'pausada';
   END IF;
 END;
 $$;
@@ -7868,7 +7868,7 @@ COMMENT ON COLUMN "public"."asistentes"."tipo_asistente_id" IS 'Que ES este Asis
 
 
 
-COMMENT ON COLUMN "public"."asistentes"."disponible" IS 'Lo decide el Asistente desde su aplicacion, no la Prestadora. En false, el aviso automatico de relevo no le escribe y en la lista de candidatos queda con su motivo. No cambia ningun turno ya asignado. Distinto de asistentes.estado, que es la decision administrativa de la Prestadora.';
+COMMENT ON COLUMN "public"."asistentes"."disponible" IS 'Lo decide el Asistente desde su aplicacion, no la Prestadora. En false, el aviso automatico de relevo no le escribe y en la lista de candidatos queda con su motivo. No cambia ningun turno de guardia ya asignado. Distinto de asistentes.estado, que es la decision administrativa de la Prestadora.';
 
 
 
@@ -8238,8 +8238,8 @@ BEGIN
     RAISE EXCEPTION 'el_servicio_ya_esta_de_baja';
   END IF;
 
-  IF interno.guardias_asignadas_del_servicio(p_servicio) > 0 THEN
-    RAISE EXCEPTION 'el_servicio_tiene_guardias_asignadas';
+  IF interno.turnos_guardia_asignados_del_servicio(p_servicio) > 0 THEN
+    RAISE EXCEPTION 'el_servicio_tiene_turnos_guardia_asignados';
   END IF;
 
   SELECT m.pide_detalle INTO v_pide_detalle
@@ -8279,10 +8279,10 @@ BEGIN
   -- La fecha de fin de cada prestación la pone la base al ver la baja.
   UPDATE prestaciones SET estado = 'de_baja'
    WHERE servicio_id = p_servicio AND estado = 'vigente';
-  UPDATE series_guardias
+  UPDATE series_turnos_guardia
      SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelado_at = now()
    WHERE servicio_id = p_servicio AND estado = 'activa';
-  UPDATE guardias
+  UPDATE turnos_guardia
      SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelacion_alcance = 'total'
    WHERE servicio_id = p_servicio AND estado = 'programada' AND asistente_id IS NULL;
 
@@ -8332,8 +8332,8 @@ BEGIN
   IF v_prestadora IS NULL OR p_usuario IS NULL OR v_motivo = '' THEN RETURN false; END IF;
 
   -- Turnos sin terminar: se reasignan o se cierran antes, y la cuenta queda como estaba.
-  IF EXISTS (SELECT 1 FROM interno.turnos_que_traban_la_desactivacion(p_usuario, v_prestadora)) THEN
-    RAISE EXCEPTION 'desactivacion_con_turnos_por_delante';
+  IF EXISTS (SELECT 1 FROM interno.turnos_guardia_que_traban_la_desactivacion(p_usuario, v_prestadora)) THEN
+    RAISE EXCEPTION 'desactivacion_con_turnos_guardia_por_delante';
   END IF;
 
   UPDATE usuarios
@@ -8564,23 +8564,23 @@ COMMENT ON FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_cob
 
 
 
-CREATE OR REPLACE FUNCTION "public"."exigir_paciente_del_turno"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "public"."exigir_paciente_del_turno_guardia"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM guardia_pacientes gp
-    WHERE gp.guardia_id = NEW.guardia_id AND gp.paciente_id = NEW.paciente_id
+    SELECT 1 FROM turno_guardia_pacientes gp
+    WHERE gp.turno_guardia_id = NEW.turno_guardia_id AND gp.paciente_id = NEW.paciente_id
   ) THEN
-    RAISE EXCEPTION 'El reporte habla de un Paciente que este turno no atiende';
+    RAISE EXCEPTION 'El reporte habla de un Paciente que este turno de guardia no atiende';
   END IF;
   RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION "public"."exigir_paciente_del_turno"() OWNER TO "postgres";
+ALTER FUNCTION "public"."exigir_paciente_del_turno_guardia"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."falta_la_firma_del_pagador"("p_servicio" "uuid") RETURNS boolean
@@ -8850,7 +8850,7 @@ $$;
 ALTER FUNCTION "public"."fn_estado_factura_segun_cobros"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."fn_modalidad_de_la_guardia"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "public"."fn_modalidad_del_turno_guardia"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -8875,7 +8875,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."fn_modalidad_de_la_guardia"() OWNER TO "postgres";
+ALTER FUNCTION "public"."fn_modalidad_del_turno_guardia"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."fn_modalidades_de_asistente_nuevo"() RETURNS "trigger"
@@ -8998,7 +8998,7 @@ $$;
 ALTER FUNCTION "public"."fn_rastro_del_cierre_por_el_asistente"() OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."fn_rastro_del_cierre_por_el_asistente"() IS 'Le pone la etiqueta al cierre que hace el Asistente cuando marca su salida. No cierra guardias: solo escribe quién, cuándo y desde dónde, sobre un cierre que ya está ocurriendo en esa misma operación.';
+COMMENT ON FUNCTION "public"."fn_rastro_del_cierre_por_el_asistente"() IS 'Le pone la etiqueta al cierre que hace el Asistente cuando marca su salida. No cierra turnos de guardia: solo escribe quién, cuándo y desde dónde, sobre un cierre que ya está ocurriendo en esa misma operación.';
 
 
 
@@ -9065,7 +9065,7 @@ CREATE OR REPLACE FUNCTION "public"."fn_servicio_de_la_serie"() RETURNS "trigger
 BEGIN
   IF NEW.servicio_id IS NULL AND NEW.serie_id IS NOT NULL THEN
     SELECT s.servicio_id INTO NEW.servicio_id
-      FROM series_guardias s WHERE s.id = NEW.serie_id;
+      FROM series_turnos_guardia s WHERE s.id = NEW.serie_id;
   END IF;
   RETURN NEW;
 END;
@@ -9075,7 +9075,7 @@ $$;
 ALTER FUNCTION "public"."fn_servicio_de_la_serie"() OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."fn_servicio_de_la_serie"() IS 'Copia el Servicio de la serie a la guardia que nace de ella. Está en la base y no en el motor porque por esta puerta entran las guardias que genera el motor de noche y las que genera el Panel al crear la serie.';
+COMMENT ON FUNCTION "public"."fn_servicio_de_la_serie"() IS 'Copia el Servicio de la serie al turno de guardia que nace de ella. Está en la base y no en el motor porque por esta puerta entran los turnos de guardia que genera el motor de noche y los que genera el Panel al crear la serie.';
 
 
 
@@ -9442,45 +9442,45 @@ COMMENT ON FUNCTION "public"."monto_a_cobrar_de_factura"("p_monto_total" numeric
 
 
 
-CREATE OR REPLACE FUNCTION "public"."mover_turno_a_otro_paciente"("p_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) RETURNS "jsonb"
+CREATE OR REPLACE FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
 DECLARE
   v_prestadora uuid := interno.prestadora_actual();
-  v_guardia    public.guardias;
+  v_turno_guardia    public.turnos_guardia;
   v_asistente  uuid;
   v_nueva      uuid;
   v_quitar     jsonb;
   v_asignar    jsonb;
 BEGIN
   IF v_prestadora IS NULL THEN
-    RAISE EXCEPTION 'guardia_no_encontrada';
+    RAISE EXCEPTION 'turno_guardia_no_encontrado';
   END IF;
 
-  SELECT * INTO v_guardia
-    FROM guardias
-   WHERE id = p_guardia_id
+  SELECT * INTO v_turno_guardia
+    FROM turnos_guardia
+   WHERE id = p_turno_guardia_id
      AND prestadora_id = v_prestadora;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'guardia_no_encontrada';
+    RAISE EXCEPTION 'turno_guardia_no_encontrado';
   END IF;
 
-  IF v_guardia.estado <> 'programada' THEN
-    RAISE EXCEPTION 'guardia_no_se_asigna' USING ERRCODE = '23514';
+  IF v_turno_guardia.estado <> 'programada' THEN
+    RAISE EXCEPTION 'turno_guardia_no_se_asigna' USING ERRCODE = '23514';
   END IF;
 
   -- El que esperaba respuesta manda sobre el que figura: es a quien se le asignó por última vez.
   SELECT asistente_id INTO v_asistente
-    FROM asignaciones_de_turno
-   WHERE guardia_id = p_guardia_id
+    FROM asignaciones_de_turno_guardia
+   WHERE turno_guardia_id = p_turno_guardia_id
      AND prestadora_id = v_prestadora
      AND estado = 'sin_responder';
-  v_asistente := COALESCE(v_asistente, v_guardia.asistente_id);
+  v_asistente := COALESCE(v_asistente, v_turno_guardia.asistente_id);
 
   IF v_asistente IS NULL THEN
-    RAISE EXCEPTION 'guardia_sin_asistente' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'turno_guardia_sin_asistente' USING ERRCODE = '23514';
   END IF;
 
   -- El Paciente de destino tiene que ser de la misma Prestadora. Un identificador de otra no se
@@ -9489,25 +9489,25 @@ BEGIN
     RAISE EXCEPTION 'paciente_no_encontrado';
   END IF;
 
-  INSERT INTO guardias (
+  INSERT INTO turnos_guardia (
     prestadora_id, paciente_id, servicio_id, coordinador_id, fecha, hora_inicio, hora_fin,
     dias_hasta_el_fin, modalidad, canal_modalidad
   )
   VALUES (
-    v_prestadora, p_paciente_id, v_guardia.servicio_id, v_guardia.coordinador_id,
-    COALESCE(p_fecha, v_guardia.fecha),
-    COALESCE(p_hora_inicio, v_guardia.hora_inicio),
-    COALESCE(p_hora_fin, v_guardia.hora_fin),
-    v_guardia.dias_hasta_el_fin, v_guardia.modalidad, v_guardia.canal_modalidad
+    v_prestadora, p_paciente_id, v_turno_guardia.servicio_id, v_turno_guardia.coordinador_id,
+    COALESCE(p_fecha, v_turno_guardia.fecha),
+    COALESCE(p_hora_inicio, v_turno_guardia.hora_inicio),
+    COALESCE(p_hora_fin, v_turno_guardia.hora_fin),
+    v_turno_guardia.dias_hasta_el_fin, v_turno_guardia.modalidad, v_turno_guardia.canal_modalidad
   )
   RETURNING id INTO v_nueva;
 
   -- Primero se lo saca del original —que abre la alarma— y después se le ofrece el nuevo.
-  v_quitar  := public.asignar_turno(p_guardia_id, NULL);
-  v_asignar := public.asignar_turno(v_nueva, v_asistente);
+  v_quitar  := public.asignar_turno_guardia(p_turno_guardia_id, NULL);
+  v_asignar := public.asignar_turno_guardia(v_nueva, v_asistente);
 
   RETURN jsonb_build_object(
-    'guardia_nueva_id', v_nueva,
+    'turno_guardia_nuevo_id', v_nueva,
     'asistente_id', v_asistente,
     'titular_retirado', v_quitar->'titular_retirado',
     'pendiente_retirado', v_quitar->'pendiente_retirado'
@@ -9516,7 +9516,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."mover_turno_a_otro_paciente"("p_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) OWNER TO "postgres";
+ALTER FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."nombrar_apoderado"("p_cliente" "uuid", "p_funcion" "text", "p_nombre" "text", "p_apellido" "text", "p_cuil" "text", "p_archivo" "text", "p_usuario" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
@@ -9973,7 +9973,7 @@ $$;
 ALTER FUNCTION "public"."reactivar_la_cuenta"("p_usuario" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text" DEFAULT NULL::"text") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."reasignar_turno_guardia_por_emergencia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text" DEFAULT NULL::"text") RETURNS "void"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -9981,7 +9981,7 @@ DECLARE
   v_prestadora uuid;
   v_usuario    uuid;
   v_motivo     text := btrim(COALESCE(p_motivo, ''));
-  v_guardia    record;
+  v_turno_guardia    record;
   v_tocadas    integer;
 BEGIN
   -- La Prestadora y la persona salen de la sesión, nunca del pedido. Sin persona no hay a quién
@@ -9992,75 +9992,75 @@ BEGIN
     RAISE EXCEPTION 'reasignacion_sin_sesion' USING ERRCODE = '42501';
   END IF;
 
-  IF p_guardia_id IS NULL OR p_asistente_id IS NULL OR v_motivo = '' THEN
+  IF p_turno_guardia_id IS NULL OR p_asistente_id IS NULL OR v_motivo = '' THEN
     RAISE EXCEPTION 'reasignacion_incompleta' USING ERRCODE = '23514';
   END IF;
 
   -- La lectura pasa por la RLS de quien pide.
   SELECT g.id, g.asistente_id, g.estado, g.checkin_at, g.fecha, g.hora_inicio, g.hora_fin,
          g.dias_hasta_el_fin, g.paciente_id, g.servicio_id
-    INTO v_guardia
-    FROM public.guardias g
-   WHERE g.id = p_guardia_id
+    INTO v_turno_guardia
+    FROM public.turnos_guardia g
+   WHERE g.id = p_turno_guardia_id
      AND g.prestadora_id = v_prestadora
      FOR UPDATE;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'reasignacion_sin_guardia' USING ERRCODE = '42501';
+    RAISE EXCEPTION 'reasignacion_sin_turno_guardia' USING ERRCODE = '42501';
   END IF;
 
-  IF v_guardia.estado <> 'ausente' OR v_guardia.checkin_at IS NOT NULL
-     OR v_guardia.asistente_id IS NOT DISTINCT FROM p_asistente_id THEN
-    RAISE EXCEPTION 'guardia_empezada_no_cambia_de_asistente' USING ERRCODE = '23514';
+  IF v_turno_guardia.estado <> 'ausente' OR v_turno_guardia.checkin_at IS NOT NULL
+     OR v_turno_guardia.asistente_id IS NOT DISTINCT FROM p_asistente_id THEN
+    RAISE EXCEPTION 'turno_guardia_empezado_no_cambia_de_asistente' USING ERRCODE = '23514';
   END IF;
 
   IF interno.asistente_ocupado_entre(
        p_asistente_id,
-       p_guardia_id,
-       v_guardia.fecha + v_guardia.hora_inicio,
-       interno.dia_en_que_termina_guardia(v_guardia.fecha, v_guardia.hora_inicio, v_guardia.hora_fin, v_guardia.dias_hasta_el_fin) + v_guardia.hora_fin
+       p_turno_guardia_id,
+       v_turno_guardia.fecha + v_turno_guardia.hora_inicio,
+       interno.dia_en_que_termina_turno_guardia(v_turno_guardia.fecha, v_turno_guardia.hora_inicio, v_turno_guardia.hora_fin, v_turno_guardia.dias_hasta_el_fin) + v_turno_guardia.hora_fin
      ) THEN
-    RAISE EXCEPTION 'asistente_en_otro_turno' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'asistente_en_otro_turno_guardia' USING ERRCODE = '23514';
   END IF;
 
   PERFORM interno.excepcion_por_documentos(
     v_prestadora,
-    p_guardia_id,
+    p_turno_guardia_id,
     p_asistente_id,
     interno.documentos_que_bloquean(
       p_asistente_id,
-      interno.dia_en_que_termina_guardia(v_guardia.fecha, v_guardia.hora_inicio, v_guardia.hora_fin, v_guardia.dias_hasta_el_fin),
-      v_guardia.paciente_id,
-      v_guardia.servicio_id
+      interno.dia_en_que_termina_turno_guardia(v_turno_guardia.fecha, v_turno_guardia.hora_inicio, v_turno_guardia.hora_fin, v_turno_guardia.dias_hasta_el_fin),
+      v_turno_guardia.paciente_id,
+      v_turno_guardia.servicio_id
     ),
     p_motivo_excepcion
   );
 
-  PERFORM set_config('careonys.reasignacion_por_emergencia', p_guardia_id::text, true);
+  PERFORM set_config('careonys.reasignacion_por_emergencia', p_turno_guardia_id::text, true);
 
   INSERT INTO public.auditoria_reasignaciones_por_emergencia
-    (prestadora_id, guardia_id, usuario_id, asistente_anterior_id, asistente_nuevo_id, motivo)
+    (prestadora_id, turno_guardia_id, usuario_id, asistente_anterior_id, asistente_nuevo_id, motivo)
   VALUES
-    (v_prestadora, p_guardia_id, v_usuario, v_guardia.asistente_id, p_asistente_id, v_motivo);
+    (v_prestadora, p_turno_guardia_id, v_usuario, v_turno_guardia.asistente_id, p_asistente_id, v_motivo);
 
   -- Quien la cubre entra ahora: el turno vuelve a esperar su check-in.
-  UPDATE public.guardias
+  UPDATE public.turnos_guardia
      SET asistente_id = p_asistente_id,
          estado = 'programada'
-   WHERE id = p_guardia_id
+   WHERE id = p_turno_guardia_id
      AND prestadora_id = v_prestadora;
   GET DIAGNOSTICS v_tocadas = ROW_COUNT;
 
   PERFORM set_config('careonys.reasignacion_por_emergencia', '', true);
 
   IF v_tocadas = 0 THEN
-    RAISE EXCEPTION 'reasignacion_sin_guardia' USING ERRCODE = '42501';
+    RAISE EXCEPTION 'reasignacion_sin_turno_guardia' USING ERRCODE = '42501';
   END IF;
 END;
 $$;
 
 
-ALTER FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."reasignar_turno_guardia_por_emergencia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."reemplazar_poder_del_apoderado"("p_cliente" "uuid", "p_funcion" "text", "p_archivo" "text", "p_usuario" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
@@ -10241,9 +10241,9 @@ BEGIN
   PERFORM interno.anotar_lo_que_se_leyo('hospitalizaciones_paciente', ARRAY[p_paciente], 'registrar_hospitalizacion');
 
   IF p_domicilio IS NULL THEN
-    UPDATE guardias SET estado = 'pausada'
+    UPDATE turnos_guardia SET estado = 'pausada'
      WHERE paciente_id = p_paciente AND estado = 'programada' AND fecha >= p_fecha_inicio;
-    UPDATE series_guardias SET estado = 'pausada'
+    UPDATE series_turnos_guardia SET estado = 'pausada'
      WHERE paciente_id = p_paciente AND estado = 'activa';
   ELSE
     v_d := jsonb_populate_record(NULL::domicilios_temporales_paciente, p_domicilio);
@@ -10483,8 +10483,8 @@ BEGIN
     'precio_final', v_precio,
     'precio_lista_snapshot', CASE WHEN p.precio_lista_snapshot IS NULL THEN NULL
                                   ELSE round(p.precio_lista_snapshot * v_precio / pr.precio_actual, 2) END,
-    'precio_guardia_adicional', CASE WHEN p.precio_guardia_adicional IS NULL THEN NULL
-                                     ELSE round(p.precio_guardia_adicional * v_precio / pr.precio_actual, 2) END,
+    'precio_turno_guardia_adicional', CASE WHEN p.precio_turno_guardia_adicional IS NULL THEN NULL
+                                     ELSE round(p.precio_turno_guardia_adicional * v_precio / pr.precio_actual, 2) END,
     'precio_hora_adicional', CASE WHEN p.precio_hora_adicional IS NULL THEN NULL
                                   ELSE round(p.precio_hora_adicional * v_precio / pr.precio_actual, 2) END,
     'vigente_desde', pr.rige_desde,
@@ -10755,7 +10755,7 @@ BEGIN
   ON CONFLICT DO NOTHING;
 
   -- Y las causas de sustitución, con el mismo criterio.
-  INSERT INTO motivos_sustitucion_guardia (prestadora_id, clave, pide_detalle, orden)
+  INSERT INTO motivos_sustitucion_turno_guardia (prestadora_id, clave, pide_detalle, orden)
   VALUES
     (p_prestadora_id, 'emergencia', false, 10),
     (p_prestadora_id, 'otro',       true,  99)
@@ -10763,13 +10763,13 @@ BEGIN
 
   -- Y cómo puede terminar un turno que quedó sin nadie. Los dos primeros los escribe el motor
   -- cuando la base ya lo dice; los demás los elige quien coordina.
-  INSERT INTO finales_turno_sin_cubrir
+  INSERT INTO finales_turno_guardia_sin_cubrir
     (prestadora_id, clave, es_defecto_grave, pide_detalle, lo_escribe_el_sistema, orden)
   VALUES
     (p_prestadora_id, 'llego_un_relevo',               false, false, true,  10),
     (p_prestadora_id, 'ya_no_hacia_falta',             false, false, true,  20),
     (p_prestadora_id, 'lo_cubrio_la_coordinadora',     false, false, false, 30),
-    (p_prestadora_id, 'se_extendio_el_turno',          false, false, false, 40),
+    (p_prestadora_id, 'se_extendio_el_turno_guardia',          false, false, false, 40),
     (p_prestadora_id, 'quedo_solo_con_consentimiento', true,  false, false, 50),
     (p_prestadora_id, 'no_fue_nadie',                  true,  false, false, 60),
     (p_prestadora_id, 'se_resolvio_de_otra_manera',    false, true,  false, 99)
@@ -10811,28 +10811,28 @@ begin
     -- Guardias. Por ahora sólo las canceladas: es la decisión que se toma mirando la Guardia y que
     -- hasta hoy no dejaba rastro. La llegada y la salida las escribe el motor cuando pasan, y no
     -- se resuelven con un motivo porque no son una decisión sino un hecho.
-    (p_prestadora_id, 'guardias', 'cancelada',
+    (p_prestadora_id, 'turnos_guardia', 'cancelada',
      'El Cliente la dio de baja', 'The Client cancelled it', 'O Cliente cancelou', false, 10),
-    (p_prestadora_id, 'guardias', 'cancelada',
+    (p_prestadora_id, 'turnos_guardia', 'cancelada',
      'El Paciente quedó internado', 'The Patient was admitted to hospital', 'O Paciente ficou internado', false, 20),
-    (p_prestadora_id, 'guardias', 'cancelada',
+    (p_prestadora_id, 'turnos_guardia', 'cancelada',
      'No se consiguió quién la cubriera', 'Nobody could be found to cover it', 'Não foi possível encontrar quem cobrisse', false, 30),
-    (p_prestadora_id, 'guardias', 'cancelada',
+    (p_prestadora_id, 'turnos_guardia', 'cancelada',
      'Terminó el Servicio', 'The Service ended', 'O Serviço terminou', false, 40),
-    (p_prestadora_id, 'guardias', 'cancelada',
+    (p_prestadora_id, 'turnos_guardia', 'cancelada',
      'Se había cargado por error', 'It had been entered by mistake', 'Tinha sido cadastrado por engano', false, 50),
-    (p_prestadora_id, 'guardias', 'cancelada',
+    (p_prestadora_id, 'turnos_guardia', 'cancelada',
      'Otro motivo', 'Other reason', 'Outro motivo', true, 99),
     -- Por qué un Asistente rechaza el turno que se le asignó.
-    (p_prestadora_id, 'asignaciones_de_turno', 'rechazada',
+    (p_prestadora_id, 'asignaciones_de_turno_guardia', 'rechazada',
      'Problema de salud', 'Health problem', 'Problema de saúde', false, 10),
-    (p_prestadora_id, 'asignaciones_de_turno', 'rechazada',
+    (p_prestadora_id, 'asignaciones_de_turno_guardia', 'rechazada',
      'Compromiso personal o familiar', 'Personal or family commitment', 'Compromisso pessoal ou familiar', false, 20),
-    (p_prestadora_id, 'asignaciones_de_turno', 'rechazada',
+    (p_prestadora_id, 'asignaciones_de_turno_guardia', 'rechazada',
      'Viaje o ausencia', 'Travel or absence', 'Viagem ou ausência', false, 30),
-    (p_prestadora_id, 'asignaciones_de_turno', 'rechazada',
+    (p_prestadora_id, 'asignaciones_de_turno_guardia', 'rechazada',
      'Distancia al domicilio', 'Distance to the home', 'Distância até o domicílio', false, 40),
-    (p_prestadora_id, 'asignaciones_de_turno', 'rechazada',
+    (p_prestadora_id, 'asignaciones_de_turno_guardia', 'rechazada',
      'Otro', 'Other', 'Outro', true, 99)
   on conflict do nothing;
 end;
@@ -10860,20 +10860,20 @@ $$;
 ALTER FUNCTION "public"."servicios_que_coordino"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."sincronizar_paciente_principal_de_guardia"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "public"."sincronizar_paciente_principal_de_turno_guardia"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
 BEGIN
   IF TG_OP = 'UPDATE' AND OLD.paciente_id IS DISTINCT FROM NEW.paciente_id THEN
-    DELETE FROM guardia_pacientes
-    WHERE guardia_id = NEW.id AND paciente_id = OLD.paciente_id;
+    DELETE FROM turno_guardia_pacientes
+    WHERE turno_guardia_id = NEW.id AND paciente_id = OLD.paciente_id;
   END IF;
 
   IF NEW.paciente_id IS NOT NULL THEN
-    INSERT INTO guardia_pacientes (guardia_id, paciente_id, prestadora_id)
+    INSERT INTO turno_guardia_pacientes (turno_guardia_id, paciente_id, prestadora_id)
     VALUES (NEW.id, NEW.paciente_id, NEW.prestadora_id)
-    ON CONFLICT (guardia_id, paciente_id) DO NOTHING;
+    ON CONFLICT (turno_guardia_id, paciente_id) DO NOTHING;
   END IF;
 
   RETURN NEW;
@@ -10881,10 +10881,10 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."sincronizar_paciente_principal_de_guardia"() OWNER TO "postgres";
+ALTER FUNCTION "public"."sincronizar_paciente_principal_de_turno_guardia"() OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."sincronizar_paciente_principal_de_guardia"() IS 'Puente temporal: mantiene en guardia_pacientes al Paciente escrito en la columna vieja guardias.paciente_id. Se borra junto con esa columna.';
+COMMENT ON FUNCTION "public"."sincronizar_paciente_principal_de_turno_guardia"() IS 'Puente temporal: mantiene en turno_guardia_pacientes al Paciente escrito en la columna vieja turnos_guardia.paciente_id. Se borra junto con esa columna.';
 
 
 
@@ -10894,12 +10894,12 @@ CREATE OR REPLACE FUNCTION "public"."sincronizar_paciente_principal_de_serie"() 
     AS $$
 BEGIN
   IF TG_OP = 'UPDATE' AND OLD.paciente_id IS DISTINCT FROM NEW.paciente_id THEN
-    DELETE FROM series_guardias_pacientes
+    DELETE FROM series_turnos_guardia_pacientes
     WHERE serie_id = NEW.id AND paciente_id = OLD.paciente_id;
   END IF;
 
   IF NEW.paciente_id IS NOT NULL THEN
-    INSERT INTO series_guardias_pacientes (serie_id, paciente_id, prestadora_id)
+    INSERT INTO series_turnos_guardia_pacientes (serie_id, paciente_id, prestadora_id)
     VALUES (NEW.id, NEW.paciente_id, NEW.prestadora_id)
     ON CONFLICT (serie_id, paciente_id) DO NOTHING;
   END IF;
@@ -10912,7 +10912,7 @@ $$;
 ALTER FUNCTION "public"."sincronizar_paciente_principal_de_serie"() OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."sincronizar_paciente_principal_de_serie"() IS 'Puente temporal: mantiene en series_guardias_pacientes al Paciente escrito en la columna vieja series_guardias.paciente_id. Se borra junto con esa columna.';
+COMMENT ON FUNCTION "public"."sincronizar_paciente_principal_de_serie"() IS 'Puente temporal: mantiene en series_turnos_guardia_pacientes al Paciente escrito en la columna vieja series_turnos_guardia.paciente_id. Se borra junto con esa columna.';
 
 
 
@@ -11045,7 +11045,7 @@ $$;
 ALTER FUNCTION "public"."tiene_permiso_la_sesion"("p_accion" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."turnos_asignados_sin_responder"() RETURNS TABLE("asignacion_id" "uuid", "asignado_at" timestamp with time zone, "tipo" "text", "guardia_id" "uuid", "serie_id" "uuid", "ausencia_id" "uuid", "fecha" "date", "hora_inicio" time without time zone, "hora_fin" time without time zone, "dias_hasta_el_fin" smallint, "modalidad" "text", "dias_semana" "text"[], "desde" "date", "hasta" "date", "cantidad" integer, "barrios" "text"[], "niveles_de_complejidad" "text"[], "distancia_m" integer, "tareas" "jsonb")
+CREATE OR REPLACE FUNCTION "public"."turnos_guardia_asignados_sin_responder"() RETURNS TABLE("asignacion_id" "uuid", "asignado_at" timestamp with time zone, "tipo" "text", "turno_guardia_id" "uuid", "serie_id" "uuid", "ausencia_id" "uuid", "fecha" "date", "hora_inicio" time without time zone, "hora_fin" time without time zone, "dias_hasta_el_fin" smallint, "modalidad" "text", "dias_semana" "text"[], "desde" "date", "hasta" "date", "cantidad" integer, "barrios" "text"[], "niveles_de_complejidad" "text"[], "distancia_m" integer, "tareas" "jsonb")
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -11058,29 +11058,29 @@ CREATE OR REPLACE FUNCTION "public"."turnos_asignados_sin_responder"() RETURNS T
   ),
   mias AS (
     SELECT a.*
-      FROM asignaciones_de_turno a
+      FROM asignaciones_de_turno_guardia a
      WHERE a.prestadora_id = interno.prestadora_actual()
        AND a.asistente_id = interno.asistente_de_la_sesion()
        AND a.estado = 'sin_responder'
   ),
   -- Un turno suelto.
-  turnos AS (
-    SELECT a.id, a.asignado_at, 'turno'::text AS tipo, g.id AS guardia_id, NULL::uuid AS serie_id,
+  turnos_guardia_sueltos AS (
+    SELECT a.id, a.asignado_at, 'turno_guardia'::text AS tipo, g.id AS turno_guardia_id, NULL::uuid AS serie_id,
            NULL::uuid AS ausencia_id, g.fecha, g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin,
            g.modalidad, NULL::text[] AS dias_semana, g.fecha AS desde, g.fecha AS hasta,
            1 AS cantidad, quienes.ids, g.fecha AS dia_del_domicilio, g.prestadora_id,
            ARRAY[g.servicio_id] AS servicios
       FROM mias a
-      JOIN guardias g
-        ON g.id = a.guardia_id
+      JOIN turnos_guardia g
+        ON g.id = a.turno_guardia_id
        AND g.prestadora_id = a.prestadora_id
      CROSS JOIN LATERAL (
        SELECT CASE WHEN count(gp.paciente_id) > 0
                    THEN array_agg(gp.paciente_id)
                    ELSE array_remove(ARRAY[g.paciente_id], NULL)
               END AS ids
-         FROM guardia_pacientes gp
-        WHERE gp.guardia_id = g.id
+         FROM turno_guardia_pacientes gp
+        WHERE gp.turno_guardia_id = g.id
           AND gp.prestadora_id = g.prestadora_id
      ) quienes
      WHERE g.estado = 'programada'
@@ -11092,12 +11092,12 @@ CREATE OR REPLACE FUNCTION "public"."turnos_asignados_sin_responder"() RETURNS T
            NULL::date, s.hora_inicio, s.hora_fin, s.dias_hasta_el_fin, s.modalidad, s.dias_semana,
            GREATEST(s.vigente_desde, CURRENT_DATE), s.vigente_hasta, NULL::integer,
            array_remove(ARRAY[s.paciente_id], NULL)
-             || ARRAY(SELECT sp.paciente_id FROM series_guardias_pacientes sp
+             || ARRAY(SELECT sp.paciente_id FROM series_turnos_guardia_pacientes sp
                        WHERE sp.serie_id = s.id AND sp.prestadora_id = s.prestadora_id),
            GREATEST(s.vigente_desde, CURRENT_DATE), s.prestadora_id,
            ARRAY[s.servicio_id]
       FROM mias a
-      JOIN series_guardias s
+      JOIN series_turnos_guardia s
         ON s.id = a.serie_id
        AND s.prestadora_id = a.prestadora_id
      WHERE s.estado = 'activa'
@@ -11117,11 +11117,11 @@ CREATE OR REPLACE FUNCTION "public"."turnos_asignados_sin_responder"() RETURNS T
         ON au.id = a.ausencia_id
        AND au.prestadora_id = a.prestadora_id
   ),
-  turnos_del_ausente AS (
-    SELECT am.id AS asignacion_id, g.id AS guardia_id, g.fecha, g.paciente_id, g.prestadora_id,
+  turnos_guardia_del_ausente AS (
+    SELECT am.id AS asignacion_id, g.id AS turno_guardia_id, g.fecha, g.paciente_id, g.prestadora_id,
            g.servicio_id
       FROM ausencias_mias am
-      JOIN guardias g
+      JOIN turnos_guardia g
         ON g.prestadora_id = am.prestadora_id
        AND g.asistente_id = am.titular_id
        AND g.estado = 'programada'
@@ -11140,31 +11140,31 @@ CREATE OR REPLACE FUNCTION "public"."turnos_asignados_sin_responder"() RETURNS T
     SELECT am.id, am.asignado_at, 'ausencia'::text, NULL::uuid, NULL::uuid, am.ausencia_id,
            NULL::date, NULL::time, NULL::time, NULL::smallint, NULL::text, NULL::text[],
            am.desde, am.hasta,
-           (SELECT count(*)::integer FROM turnos_del_ausente t WHERE t.asignacion_id = am.id),
+           (SELECT count(*)::integer FROM turnos_guardia_del_ausente t WHERE t.asignacion_id = am.id),
            ARRAY(
              SELECT DISTINCT p.id
-               FROM turnos_del_ausente t
+               FROM turnos_guardia_del_ausente t
                CROSS JOIN LATERAL (
-                 SELECT gp.paciente_id AS id FROM guardia_pacientes gp
-                  WHERE gp.guardia_id = t.guardia_id AND gp.prestadora_id = t.prestadora_id
+                 SELECT gp.paciente_id AS id FROM turno_guardia_pacientes gp
+                  WHERE gp.turno_guardia_id = t.turno_guardia_id AND gp.prestadora_id = t.prestadora_id
                  UNION
                  SELECT t.paciente_id WHERE t.paciente_id IS NOT NULL
                ) p
               WHERE t.asignacion_id = am.id
            ),
            am.desde, am.prestadora_id,
-           ARRAY(SELECT DISTINCT t.servicio_id FROM turnos_del_ausente t WHERE t.asignacion_id = am.id)
+           ARRAY(SELECT DISTINCT t.servicio_id FROM turnos_guardia_del_ausente t WHERE t.asignacion_id = am.id)
       FROM ausencias_mias am
   ),
   todo AS (
-    SELECT * FROM turnos
+    SELECT * FROM turnos_guardia_sueltos
     UNION ALL SELECT * FROM fijos
     UNION ALL SELECT * FROM reemplazos
   )
   SELECT x.id,
          x.asignado_at,
          x.tipo,
-         x.guardia_id,
+         x.turno_guardia_id,
          x.serie_id,
          x.ausencia_id,
          x.fecha,
@@ -11217,10 +11217,10 @@ CREATE OR REPLACE FUNCTION "public"."turnos_asignados_sin_responder"() RETURNS T
 $$;
 
 
-ALTER FUNCTION "public"."turnos_asignados_sin_responder"() OWNER TO "postgres";
+ALTER FUNCTION "public"."turnos_guardia_asignados_sin_responder"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid") RETURNS TABLE("tipo" "text", "id" "uuid", "fecha" "date", "hora_inicio" time without time zone, "hora_fin" time without time zone, "dias_hasta_el_fin" smallint, "checkin_at" timestamp with time zone, "cliente" "text")
+CREATE OR REPLACE FUNCTION "public"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid") RETURNS TABLE("tipo" "text", "id" "uuid", "fecha" "date", "hora_inicio" time without time zone, "hora_fin" time without time zone, "dias_hasta_el_fin" smallint, "checkin_at" timestamp with time zone, "cliente" "text")
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -11230,12 +11230,12 @@ BEGIN
   IF auth.jwt() ->> 'role' IS DISTINCT FROM 'trabajo_sin_persona' THEN RETURN; END IF;
   v_prestadora := interno.prestadora_actual();
   IF v_prestadora IS NULL OR p_usuario IS NULL THEN RETURN; END IF;
-  RETURN QUERY SELECT * FROM interno.turnos_que_traban_la_desactivacion(p_usuario, v_prestadora);
+  RETURN QUERY SELECT * FROM interno.turnos_guardia_que_traban_la_desactivacion(p_usuario, v_prestadora);
 END;
 $$;
 
 
-ALTER FUNCTION "public"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."validar_paciente_de_serie_mismo_cliente"() RETURNS "trigger"
@@ -11247,7 +11247,7 @@ DECLARE
   cliente_del_paciente UUID;
 BEGIN
   SELECT p.cliente_id INTO cliente_de_la_serie
-    FROM series_guardias s JOIN pacientes p ON p.id = s.paciente_id
+    FROM series_turnos_guardia s JOIN pacientes p ON p.id = s.paciente_id
    WHERE s.id = NEW.serie_id;
 
   SELECT cliente_id INTO cliente_del_paciente FROM pacientes WHERE id = NEW.paciente_id;
@@ -11398,7 +11398,7 @@ CREATE TABLE IF NOT EXISTS "public"."alarmas_tomadas" (
     "vence_at" timestamp with time zone NOT NULL,
     "soltada_at" timestamp with time zone,
     "nota" "text",
-    CONSTRAINT "alarmas_tomadas_tipo_conocido" CHECK (("tipo" = ANY (ARRAY['alerta_temprana_guardia'::"text", 'incidente_relevo'::"text", 'guardia_sin_cerrar'::"text", 'incidente_turno_sin_cubrir'::"text", 'emergencia_guardia'::"text"]))),
+    CONSTRAINT "alarmas_tomadas_tipo_conocido" CHECK (("tipo" = ANY (ARRAY['alerta_temprana_turno_guardia'::"text", 'incidente_relevo'::"text", 'turno_guardia_sin_cerrar'::"text", 'incidente_turno_guardia_sin_cubrir'::"text", 'emergencia_turno_guardia'::"text"]))),
     CONSTRAINT "alarmas_tomadas_vence_despues_de_tomarse" CHECK (("vence_at" > "tomada_at"))
 );
 
@@ -11463,10 +11463,10 @@ CREATE TABLE IF NOT EXISTS "public"."alertas" (
 ALTER TABLE "public"."alertas" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."alertas_tempranas_guardia" (
+CREATE TABLE IF NOT EXISTS "public"."alertas_tempranas_turno_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "fuente" "text" NOT NULL,
     "motivo" "text",
     "reportado_por" "uuid",
@@ -11479,7 +11479,7 @@ CREATE TABLE IF NOT EXISTS "public"."alertas_tempranas_guardia" (
 );
 
 
-ALTER TABLE "public"."alertas_tempranas_guardia" OWNER TO "postgres";
+ALTER TABLE "public"."alertas_tempranas_turno_guardia" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."apoderados" (
@@ -11507,10 +11507,10 @@ CREATE TABLE IF NOT EXISTS "public"."apoderados" (
 ALTER TABLE "public"."apoderados" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."asignaciones_de_turno" (
+CREATE TABLE IF NOT EXISTS "public"."asignaciones_de_turno_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid",
+    "turno_guardia_id" "uuid",
     "asistente_id" "uuid" NOT NULL,
     "asignado_por" "uuid",
     "asignado_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -11521,29 +11521,29 @@ CREATE TABLE IF NOT EXISTS "public"."asignaciones_de_turno" (
     "asistente_anterior_id" "uuid",
     "serie_id" "uuid",
     "ausencia_id" "uuid",
-    CONSTRAINT "asignaciones_de_turno_apunta_a_una_sola_cosa" CHECK (("num_nonnulls"("guardia_id", "serie_id", "ausencia_id") = 1)),
-    CONSTRAINT "asignaciones_de_turno_estado_check" CHECK (("estado" = ANY (ARRAY['sin_responder'::"text", 'aceptada'::"text", 'rechazada'::"text", 'retirada'::"text"]))),
-    CONSTRAINT "asignaciones_de_turno_respondida_check" CHECK ((("respondida_at" IS NOT NULL) = ("estado" = ANY (ARRAY['aceptada'::"text", 'rechazada'::"text"])))),
-    CONSTRAINT "asignaciones_de_turno_retirada_check" CHECK ((("retirada_at" IS NOT NULL) = ("estado" = 'retirada'::"text")))
+    CONSTRAINT "asignaciones_de_turno_guardia_apunta_a_una_sola_cosa" CHECK (("num_nonnulls"("turno_guardia_id", "serie_id", "ausencia_id") = 1)),
+    CONSTRAINT "asignaciones_de_turno_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['sin_responder'::"text", 'aceptada'::"text", 'rechazada'::"text", 'retirada'::"text"]))),
+    CONSTRAINT "asignaciones_de_turno_guardia_respondida_check" CHECK ((("respondida_at" IS NOT NULL) = ("estado" = ANY (ARRAY['aceptada'::"text", 'rechazada'::"text"])))),
+    CONSTRAINT "asignaciones_de_turno_guardia_retirada_check" CHECK ((("retirada_at" IS NOT NULL) = ("estado" = 'retirada'::"text")))
 );
 
 
-ALTER TABLE "public"."asignaciones_de_turno" OWNER TO "postgres";
+ALTER TABLE "public"."asignaciones_de_turno_guardia" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."asignaciones_de_turno" IS 'Cada vez que un turno de guardia se le asigna a un Asistente, y lo que paso despues: si lo acepto, lo rechazo o se le retiro. El motivo de un rechazo vive en resoluciones.';
-
-
-
-COMMENT ON COLUMN "public"."asignaciones_de_turno"."estado" IS 'sin_responder al asignarse; de ahi pasa una sola vez a aceptada, rechazada o retirada.';
+COMMENT ON TABLE "public"."asignaciones_de_turno_guardia" IS 'Cada vez que un turno de guardia se le asigna a un Asistente, y lo que paso despues: si lo acepto, lo rechazo o se le retiro. El motivo de un rechazo vive en resoluciones.';
 
 
 
-COMMENT ON COLUMN "public"."asignaciones_de_turno"."serie_id" IS 'El turno fijo asignado entero. Se acepta o se rechaza una vez por todos sus días.';
+COMMENT ON COLUMN "public"."asignaciones_de_turno_guardia"."estado" IS 'sin_responder al asignarse; de ahi pasa una sola vez a aceptada, rechazada o retirada.';
 
 
 
-COMMENT ON COLUMN "public"."asignaciones_de_turno"."ausencia_id" IS 'La ausencia que el Asistente cubre. Se acepta o se rechaza una vez por todas sus coberturas pendientes.';
+COMMENT ON COLUMN "public"."asignaciones_de_turno_guardia"."serie_id" IS 'El turno de guardia fijo asignado entero. Se acepta o se rechaza una vez por todos sus días.';
+
+
+
+COMMENT ON COLUMN "public"."asignaciones_de_turno_guardia"."ausencia_id" IS 'La ausencia que el Asistente cubre. Se acepta o se rechaza una vez por todas sus coberturas pendientes.';
 
 
 
@@ -11611,7 +11611,7 @@ CREATE TABLE IF NOT EXISTS "public"."auditoria_asignaciones_con_aviso" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "usuario_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "asistente_id" "uuid" NOT NULL,
     "avisos" "jsonb" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -11622,7 +11622,7 @@ CREATE TABLE IF NOT EXISTS "public"."auditoria_asignaciones_con_aviso" (
 ALTER TABLE "public"."auditoria_asignaciones_con_aviso" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."auditoria_asignaciones_con_aviso" IS 'Quien asigno un turno teniendo avisos delante, y cuales eran. Registra la decision, no el resultado: se escribe antes de asignar.';
+COMMENT ON TABLE "public"."auditoria_asignaciones_con_aviso" IS 'Quien asigno un turno de guardia teniendo avisos delante, y cuales eran. Registra la decision, no el resultado: se escribe antes de asignar.';
 
 
 
@@ -11673,7 +11673,7 @@ COMMENT ON TABLE "public"."auditoria_de_accesos" IS 'Todo lo que se hizo con un 
 CREATE TABLE IF NOT EXISTS "public"."auditoria_reasignaciones_por_emergencia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "usuario_id" "uuid" NOT NULL,
     "asistente_anterior_id" "uuid",
     "asistente_nuevo_id" "uuid" NOT NULL,
@@ -11717,7 +11717,7 @@ CREATE TABLE IF NOT EXISTS "public"."ausencias" (
     "fecha_fin" "date" NOT NULL,
     "certificado_url" "text",
     "dias_computados" numeric(5,1),
-    "guardias_afectadas" "uuid"[],
+    "turnos_guardia_afectados" "uuid"[],
     "observaciones" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "prestadora_id" "uuid" NOT NULL,
@@ -11870,7 +11870,7 @@ CREATE TABLE IF NOT EXISTS "public"."calificaciones_asistente" (
     "asistente_id" "uuid" NOT NULL,
     "paciente_id" "uuid" NOT NULL,
     "cliente_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "estrellas" integer NOT NULL,
     "comentario" "text",
@@ -12266,7 +12266,7 @@ CREATE TABLE IF NOT EXISTS "public"."coberturas_de_ausencia" (
 ALTER TABLE "public"."coberturas_de_ausencia" OWNER TO "postgres";
 
 
-COMMENT ON COLUMN "public"."coberturas_de_ausencia"."aceptada_at" IS 'Cuándo la aceptó el sustituto. Hasta entonces no cubre ninguna guardia.';
+COMMENT ON COLUMN "public"."coberturas_de_ausencia"."aceptada_at" IS 'Cuándo la aceptó el sustituto. Hasta entonces no cubre ningún turno de guardia.';
 
 
 
@@ -12431,7 +12431,7 @@ CREATE TABLE IF NOT EXISTS "public"."condiciones_comerciales_servicio" (
     "indice_de_actualizacion" "text",
     "cobra_cancelada_por_el_cliente" boolean,
     "descuenta_lo_no_prestado" boolean,
-    "cobra_guardias_adicionales" boolean,
+    "cobra_turnos_guardia_adicionales" boolean,
     "cobra_horas_adicionales" boolean,
     "meses_entre_actualizaciones" integer,
     "ajuste_por_indice" "text",
@@ -12556,7 +12556,7 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_ausencias" (
 ALTER TABLE "public"."configuracion_ausencias" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."configuracion_ausencias" IS 'Con cuanta anticipacion sobre el primer turno afectado una ausencia se considera avisada con tiempo, y cada cuanto se insiste. Solo lo que esta Prestadora corrio; los valores de fabrica y los bordes viven en panel/src/lib/avisoDeAusencia.js.';
+COMMENT ON TABLE "public"."configuracion_ausencias" IS 'Con cuanta anticipacion sobre el primer turno de guardia afectado una ausencia se considera avisada con tiempo, y cada cuanto se insiste. Solo lo que esta Prestadora corrio; los valores de fabrica y los bordes viven en panel/src/lib/avisoDeAusencia.js.';
 
 
 
@@ -12571,30 +12571,30 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_aviso_cierre_del_servicio" (
 ALTER TABLE "public"."configuracion_aviso_cierre_del_servicio" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."configuracion_aviso_guardia_sin_cubrir" (
+CREATE TABLE IF NOT EXISTS "public"."configuracion_aviso_turno_guardia_sin_cubrir" (
     "prestadora_id" "uuid" NOT NULL,
     "activo" boolean DEFAULT true NOT NULL,
     "horas_antes" smallint DEFAULT 48 NOT NULL,
     "horas_entre_avisos" smallint DEFAULT 12 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "configuracion_aviso_guardia_sin_cubrir_horas_antes_check" CHECK ((("horas_antes" > 0) AND ("horas_antes" <= 720))),
-    CONSTRAINT "configuracion_aviso_guardia_sin_cubrir_horas_entre_avisos_check" CHECK ((("horas_entre_avisos" > 0) AND ("horas_entre_avisos" <= 720)))
+    CONSTRAINT "configuracion_aviso_turno_guardia_sin_cubrir_horas_antes_check" CHECK ((("horas_antes" > 0) AND ("horas_antes" <= 720))),
+    CONSTRAINT "config_aviso_turno_guardia_sin_cubrir_horas_entre_avisos_check" CHECK ((("horas_entre_avisos" > 0) AND ("horas_entre_avisos" <= 720)))
 );
 
 
-ALTER TABLE "public"."configuracion_aviso_guardia_sin_cubrir" OWNER TO "postgres";
+ALTER TABLE "public"."configuracion_aviso_turno_guardia_sin_cubrir" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."configuracion_aviso_guardia_sin_cubrir" IS 'Cuándo avisarle al Coordinador que una guardia próxima sigue sin Asistente. Una fila por Prestadora; sin fila no se manda ningún aviso.';
-
-
-
-COMMENT ON COLUMN "public"."configuracion_aviso_guardia_sin_cubrir"."horas_antes" IS 'Con cuánta anticipación avisar. El aviso arranca cuando faltan estas horas para que empiece la guardia.';
+COMMENT ON TABLE "public"."configuracion_aviso_turno_guardia_sin_cubrir" IS 'Cuándo avisarle al Coordinador que un turno de guardia próximo sigue sin Asistente. Una fila por Prestadora; sin fila no se manda ningún aviso.';
 
 
 
-COMMENT ON COLUMN "public"."configuracion_aviso_guardia_sin_cubrir"."horas_entre_avisos" IS 'Cada cuánto repetir el aviso mientras el hueco siga abierto. Evita que el proceso, que corre cada 5 minutos, mande el mismo correo doce veces por hora.';
+COMMENT ON COLUMN "public"."configuracion_aviso_turno_guardia_sin_cubrir"."horas_antes" IS 'Con cuánta anticipación avisar. El aviso arranca cuando faltan estas horas para que empiece el turno de guardia.';
+
+
+
+COMMENT ON COLUMN "public"."configuracion_aviso_turno_guardia_sin_cubrir"."horas_entre_avisos" IS 'Cada cuánto repetir el aviso mientras el hueco siga abierto. Evita que el proceso, que corre cada 5 minutos, mande el mismo correo doce veces por hora.';
 
 
 
@@ -12652,7 +12652,7 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_equipo_paciente" (
 ALTER TABLE "public"."configuracion_equipo_paciente" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."configuracion_equipo_paciente" IS 'Con cuantos turnos y en que ventana de dias se entra solo al equipo de un Paciente. Solo lo que esta Prestadora corrio; los valores de fabrica y los bordes viven en panel/src/lib/equipoDelPaciente.js.';
+COMMENT ON TABLE "public"."configuracion_equipo_paciente" IS 'Con cuantos turnos de guardia y en que ventana de dias se entra solo al equipo de un Paciente. Solo lo que esta Prestadora corrio; los valores de fabrica y los bordes viven en panel/src/lib/equipoDelPaciente.js.';
 
 
 
@@ -12665,13 +12665,13 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_escalada_coordinador" (
     "minutos_antes_fase_automatica" integer DEFAULT 120 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "minutos_gracia_cierre_guardia" integer DEFAULT 15 NOT NULL,
+    "minutos_gracia_cierre_turno_guardia" integer DEFAULT 15 NOT NULL,
     "horas_antes_aviso_grave_sin_cerrar" integer DEFAULT 4 NOT NULL,
     "minutos_antes_todos_los_coordinadores" integer DEFAULT 45,
     "minutos_antes_administracion" integer DEFAULT 90,
     "minutos_insistencia_emergencia" integer DEFAULT 1 NOT NULL,
     CONSTRAINT "horas_antes_aviso_grave_sin_cerrar_razonable" CHECK ((("horas_antes_aviso_grave_sin_cerrar" > 0) AND ("horas_antes_aviso_grave_sin_cerrar" <= 72))),
-    CONSTRAINT "minutos_gracia_cierre_guardia_razonable" CHECK ((("minutos_gracia_cierre_guardia" > 0) AND ("minutos_gracia_cierre_guardia" <= 1440))),
+    CONSTRAINT "minutos_gracia_cierre_turno_guardia_razonable" CHECK ((("minutos_gracia_cierre_turno_guardia" > 0) AND ("minutos_gracia_cierre_turno_guardia" <= 1440))),
     CONSTRAINT "minutos_insistencia_emergencia_razonable" CHECK ((("minutos_insistencia_emergencia" >= 1) AND ("minutos_insistencia_emergencia" <= 10)))
 );
 
@@ -12679,7 +12679,7 @@ CREATE TABLE IF NOT EXISTS "public"."configuracion_escalada_coordinador" (
 ALTER TABLE "public"."configuracion_escalada_coordinador" OWNER TO "postgres";
 
 
-COMMENT ON COLUMN "public"."configuracion_escalada_coordinador"."horas_antes_aviso_grave_sin_cerrar" IS 'Cuántas horas después de vencido el plazo de cierre el aviso escala al evento guardia_sin_cerrar_grave, que tiene su propia lista de destinatarios. Sale una sola vez por guardia.';
+COMMENT ON COLUMN "public"."configuracion_escalada_coordinador"."horas_antes_aviso_grave_sin_cerrar" IS 'Cuántas horas después de vencido el plazo de cierre el aviso escala al evento turno_guardia_sin_cerrar_grave, que tiene su propia lista de destinatarios. Sale una sola vez por turno de guardia.';
 
 
 
@@ -12744,18 +12744,18 @@ COMMENT ON COLUMN "public"."configuracion_funciones_intermediacion"."advertida_e
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."configuracion_incidentes_turno_sin_cubrir" (
+CREATE TABLE IF NOT EXISTS "public"."configuracion_incidentes_turno_guardia_sin_cubrir" (
     "prestadora_id" "uuid" NOT NULL,
     "regla" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "configuracion_incidentes_turno_sin_cubrir_regla_es_objeto" CHECK (("jsonb_typeof"("regla") = 'object'::"text"))
+    CONSTRAINT "config_incidentes_turno_guardia_sin_cubrir_regla_es_objeto" CHECK (("jsonb_typeof"("regla") = 'object'::"text"))
 );
 
 
-ALTER TABLE "public"."configuracion_incidentes_turno_sin_cubrir" OWNER TO "postgres";
+ALTER TABLE "public"."configuracion_incidentes_turno_guardia_sin_cubrir" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."configuracion_incidentes_turno_sin_cubrir" IS 'A cuantas horas de empezar un turno sin nadie abre un incidente, y cada cuanto se insiste. Solo lo que esta Prestadora corrio; los valores de fabrica y los bordes viven en panel/src/lib/incidenteTurnoSinCubrir.js.';
+COMMENT ON TABLE "public"."configuracion_incidentes_turno_guardia_sin_cubrir" IS 'A cuantas horas de empezar un turno de guardia sin nadie abre un incidente, y cada cuanto se insiste. Solo lo que esta Prestadora corrio; los valores de fabrica y los bordes viven en panel/src/lib/incidenteTurnoGuardiaSinCubrir.js.';
 
 
 
@@ -13002,7 +13002,7 @@ ALTER TABLE "public"."consentimientos_medicacion" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."consentimientos_paciente_solo" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "paciente_id" "uuid" NOT NULL,
     "quien_consintio" "text" NOT NULL,
     "cliente_id" "uuid",
@@ -13021,7 +13021,7 @@ CREATE TABLE IF NOT EXISTS "public"."consentimientos_paciente_solo" (
 ALTER TABLE "public"."consentimientos_paciente_solo" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."consentimientos_paciente_solo" IS 'El Cliente supo y acepto que la persona atendida quedara sola durante un rato de este turno. Registra una conversacion que ya ocurrio; no cubre el turno ni lo cierra.';
+COMMENT ON TABLE "public"."consentimientos_paciente_solo" IS 'El Cliente supo y acepto que la persona atendida quedara sola durante un rato de este turno de guardia. Registra una conversacion que ya ocurrio; no cubre el turno de guardia ni lo cierra.';
 
 
 
@@ -13405,10 +13405,10 @@ COMMENT ON COLUMN "public"."desafios_de_llave"."usado_en" IS 'Cuando se gasto. U
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."descansos_guardia" (
+CREATE TABLE IF NOT EXISTS "public"."descansos_turno_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "inicio_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "fin_at" timestamp with time zone,
     "registrado_por" "uuid" NOT NULL,
@@ -13416,30 +13416,30 @@ CREATE TABLE IF NOT EXISTS "public"."descansos_guardia" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "cliente_uuid" "uuid",
     "cliente_uuid_fin" "uuid",
-    CONSTRAINT "descansos_guardia_fin_despues_del_inicio" CHECK ((("fin_at" IS NULL) OR ("fin_at" > "inicio_at")))
+    CONSTRAINT "descansos_turno_guardia_fin_despues_del_inicio" CHECK ((("fin_at" IS NULL) OR ("fin_at" > "inicio_at")))
 );
 
 
-ALTER TABLE "public"."descansos_guardia" OWNER TO "postgres";
+ALTER TABLE "public"."descansos_turno_guardia" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."descansos_guardia" IS 'Los ratos de descanso que la Asistente toma adentro de una guardia larga, sin dejar de estar disponible. No se descuenta de lo que se le paga, no interrumpe el turno y no la saca de la guardia: no es una ausencia.';
-
-
-
-COMMENT ON COLUMN "public"."descansos_guardia"."inicio_at" IS 'Cuando paso, no cuando se pudo enviar. Un aviso guardado en la cola sin conexion conserva el momento del telefono.';
+COMMENT ON TABLE "public"."descansos_turno_guardia" IS 'Los ratos de descanso que la Asistente toma adentro de un turno de guardia largo, sin dejar de estar disponible. No se descuenta de lo que se le paga, no interrumpe el turno de guardia y no la saca del turno de guardia: no es una ausencia.';
 
 
 
-COMMENT ON COLUMN "public"."descansos_guardia"."fin_at" IS 'En blanco mientras el descanso sigue abierto.';
+COMMENT ON COLUMN "public"."descansos_turno_guardia"."inicio_at" IS 'Cuando paso, no cuando se pudo enviar. Un aviso guardado en la cola sin conexion conserva el momento del telefono.';
 
 
 
-COMMENT ON COLUMN "public"."descansos_guardia"."cliente_uuid" IS 'El identificador que pone el telefono antes del primer intento, para el que abre el descanso. Dos llegadas con el mismo identificador son el mismo hecho.';
+COMMENT ON COLUMN "public"."descansos_turno_guardia"."fin_at" IS 'En blanco mientras el descanso sigue abierto.';
 
 
 
-COMMENT ON COLUMN "public"."descansos_guardia"."cliente_uuid_fin" IS 'El identificador del aviso que cerro el descanso. Un reenvio del cierre se reconoce por aca y no vuelve a escribir la hora de fin.';
+COMMENT ON COLUMN "public"."descansos_turno_guardia"."cliente_uuid" IS 'El identificador que pone el telefono antes del primer intento, para el que abre el descanso. Dos llegadas con el mismo identificador son el mismo hecho.';
+
+
+
+COMMENT ON COLUMN "public"."descansos_turno_guardia"."cliente_uuid_fin" IS 'El identificador del aviso que cerro el descanso. Un reenvio del cierre se reconoce por aca y no vuelve a escribir la hora de fin.';
 
 
 
@@ -13603,7 +13603,7 @@ COMMENT ON COLUMN "public"."tipos_documento_asistente"."enlace_para_obtenerlo" I
 
 
 
-COMMENT ON COLUMN "public"."tipos_documento_asistente"."impide_trabajar" IS 'Si falta o no vale, el Asistente no recibe turnos, salvo los días de gracia y la excepción de a una guardia.';
+COMMENT ON COLUMN "public"."tipos_documento_asistente"."impide_trabajar" IS 'Si falta o no vale, el Asistente no recibe turnos de guardia, salvo los días de gracia y la excepción de a un turno de guardia.';
 
 
 
@@ -13708,10 +13708,10 @@ COMMENT ON COLUMN "public"."domicilios_temporales_paciente"."lugar_id" IS 'La lo
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."emergencias_guardia" (
+CREATE TABLE IF NOT EXISTS "public"."emergencias_turno_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "reportado_por" "uuid" NOT NULL,
     "reportado_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "detalle" "text",
@@ -13723,27 +13723,27 @@ CREATE TABLE IF NOT EXISTS "public"."emergencias_guardia" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "cliente_uuid" "uuid",
     "relevo_de_emergencia" boolean DEFAULT false NOT NULL,
-    CONSTRAINT "emergencias_guardia_detalle_check" CHECK (("length"("btrim"("detalle")) > 0)),
-    CONSTRAINT "emergencias_guardia_detalle_salvo_en_el_relevo" CHECK (("relevo_de_emergencia" OR ("detalle" IS NOT NULL)))
+    CONSTRAINT "emergencias_turno_guardia_detalle_check" CHECK (("length"("btrim"("detalle")) > 0)),
+    CONSTRAINT "emergencias_turno_guardia_detalle_salvo_en_el_relevo" CHECK (("relevo_de_emergencia" OR ("detalle" IS NOT NULL)))
 );
 
 
-ALTER TABLE "public"."emergencias_guardia" OWNER TO "postgres";
+ALTER TABLE "public"."emergencias_turno_guardia" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."emergencias_guardia" IS 'Lo que el Asistente avisa desde la Guardia Activa cuando pasa algo que no admite esperar. No es la revision automatica de reportes ni la alerta de guardia sin cubrir: es un aviso de una persona, en el momento, que alguien tiene que atender.';
-
-
-
-COMMENT ON COLUMN "public"."emergencias_guardia"."reportado_at" IS 'Cuando paso, no cuando se pudo enviar. Un aviso guardado en la cola sin conexion conserva el momento del telefono.';
+COMMENT ON TABLE "public"."emergencias_turno_guardia" IS 'Lo que el Asistente avisa desde la Guardia Activa cuando pasa algo que no admite esperar. No es la revision automatica de reportes ni la alerta de turno de guardia sin cubrir: es un aviso de una persona, en el momento, que alguien tiene que atender.';
 
 
 
-COMMENT ON COLUMN "public"."emergencias_guardia"."detalle" IS 'Texto libre escrito por quien esta ahi. Es informacion sensible: no viaja en el aviso que sale por WhatsApp ni por correo, se lee entrando al Panel.';
+COMMENT ON COLUMN "public"."emergencias_turno_guardia"."reportado_at" IS 'Cuando paso, no cuando se pudo enviar. Un aviso guardado en la cola sin conexion conserva el momento del telefono.';
 
 
 
-COMMENT ON COLUMN "public"."emergencias_guardia"."cliente_uuid" IS 'El identificador que pone el telefono antes del primer intento. Dos llegadas con el mismo identificador son el mismo hecho: la segunda no escribe nada.';
+COMMENT ON COLUMN "public"."emergencias_turno_guardia"."detalle" IS 'Texto libre escrito por quien esta ahi. Es informacion sensible: no viaja en el aviso que sale por WhatsApp ni por correo, se lee entrando al Panel.';
+
+
+
+COMMENT ON COLUMN "public"."emergencias_turno_guardia"."cliente_uuid" IS 'El identificador que pone el telefono antes del primer intento. Dos llegadas con el mismo identificador son el mismo hecho: la segunda no escribe nada.';
 
 
 
@@ -13883,7 +13883,7 @@ CREATE TABLE IF NOT EXISTS "public"."escalones_de_alarma_avisados" (
     "avisado_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "destinatarios" integer DEFAULT 0 NOT NULL,
     CONSTRAINT "escalones_de_alarma_avisados_escalon_conocido" CHECK (("escalon" = ANY (ARRAY['coordinador_respaldo'::"text", 'todos_los_coordinadores'::"text", 'administracion'::"text"]))),
-    CONSTRAINT "escalones_de_alarma_avisados_tipo_conocido" CHECK (("tipo" = ANY (ARRAY['alerta_temprana_guardia'::"text", 'incidente_relevo'::"text", 'guardia_sin_cerrar'::"text", 'incidente_turno_sin_cubrir'::"text", 'emergencia_guardia'::"text"])))
+    CONSTRAINT "escalones_de_alarma_avisados_tipo_conocido" CHECK (("tipo" = ANY (ARRAY['alerta_temprana_turno_guardia'::"text", 'incidente_relevo'::"text", 'turno_guardia_sin_cerrar'::"text", 'incidente_turno_guardia_sin_cubrir'::"text", 'emergencia_turno_guardia'::"text"])))
 );
 
 
@@ -14028,10 +14028,10 @@ CREATE TABLE IF NOT EXISTS "public"."excepciones_familiar_relevo" (
     "desde_at" timestamp with time zone NOT NULL,
     "hasta_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "origen" "text" NOT NULL,
     "familiar_persona_id" "uuid",
-    CONSTRAINT "excepciones_familiar_relevo_origen_conocido" CHECK (("origen" = ANY (ARRAY['relevo'::"text", 'turno_sin_cubrir'::"text", 'extension'::"text"]))),
+    CONSTRAINT "excepciones_familiar_relevo_origen_conocido" CHECK (("origen" = ANY (ARRAY['relevo'::"text", 'turno_guardia_sin_cubrir'::"text", 'extension'::"text"]))),
     CONSTRAINT "excepciones_familiar_relevo_termina_despues" CHECK ((("hasta_at" IS NULL) OR ("hasta_at" >= "desde_at")))
 );
 
@@ -14039,7 +14039,7 @@ CREATE TABLE IF NOT EXISTS "public"."excepciones_familiar_relevo" (
 ALTER TABLE "public"."excepciones_familiar_relevo" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."excepciones_familiar_relevo" IS 'Un familiar termino cuidando porque la Prestadora no mando a nadie. Es un defecto grave del servicio que no se pudo solucionar, nunca un turno cubierto: no cierra la guardia ni la cuenta como prestada.';
+COMMENT ON TABLE "public"."excepciones_familiar_relevo" IS 'Un familiar termino cuidando porque la Prestadora no mando a nadie. Es un defecto grave del servicio que no se pudo solucionar, nunca un turno de guardia cubierto: no cierra el turno de guardia ni lo cuenta como prestado.';
 
 
 
@@ -14051,7 +14051,7 @@ COMMENT ON COLUMN "public"."excepciones_familiar_relevo"."hasta_at" IS 'Cuando v
 
 
 
-COMMENT ON COLUMN "public"."excepciones_familiar_relevo"."origen" IS 'Por cual de los tres caminos el turno quedo sin nadie: relevo, turno_sin_cubrir o extension.';
+COMMENT ON COLUMN "public"."excepciones_familiar_relevo"."origen" IS 'Por cual de los tres caminos el turno de guardia quedo sin nadie: relevo, turno_guardia_sin_cubrir o extension.';
 
 
 
@@ -14062,7 +14062,7 @@ COMMENT ON COLUMN "public"."excepciones_familiar_relevo"."familiar_persona_id" I
 CREATE TABLE IF NOT EXISTS "public"."excepciones_por_documentos" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "asistente_id" "uuid" NOT NULL,
     "usuario_id" "uuid" NOT NULL,
     "motivo" "text" NOT NULL,
@@ -14075,32 +14075,32 @@ CREATE TABLE IF NOT EXISTS "public"."excepciones_por_documentos" (
 ALTER TABLE "public"."excepciones_por_documentos" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."excepciones_por_documentos" IS 'Turnos de guardia asignados con documentos pendientes: quién, a quién, por qué y qué documentos faltaban. Vale sólo para esa guardia y ese Asistente. No se borra.';
+COMMENT ON TABLE "public"."excepciones_por_documentos" IS 'Turnos de guardia asignados con documentos pendientes: quién, a quién, por qué y qué documentos faltaban. Vale sólo para ese turno de guardia y ese Asistente. No se borra.';
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."extensiones_de_turno" (
+CREATE TABLE IF NOT EXISTS "public"."extensiones_de_turno_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
-    "relevo_guardia_id" "uuid",
+    "turno_guardia_id" "uuid" NOT NULL,
+    "relevo_turno_guardia_id" "uuid",
     "desde_at" timestamp with time zone NOT NULL,
     "hasta_at" timestamp with time zone,
     "ultima_notificacion_at" timestamp with time zone,
     "veces_notificado" integer DEFAULT 0 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "extensiones_de_turno_termina_despues" CHECK ((("hasta_at" IS NULL) OR ("hasta_at" >= "desde_at")))
+    CONSTRAINT "extensiones_de_turno_guardia_termina_despues" CHECK ((("hasta_at" IS NULL) OR ("hasta_at" >= "desde_at")))
 );
 
 
-ALTER TABLE "public"."extensiones_de_turno" OWNER TO "postgres";
+ALTER TABLE "public"."extensiones_de_turno_guardia" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."extensiones_de_turno" IS 'El rato que una Asistente se queda adentro despues de que termino su turno porque el relevo no llego. Se abre sola y se cierra cuando llega el relevo o cuando ella cierra el turno. De aca salen las horas de mas.';
+COMMENT ON TABLE "public"."extensiones_de_turno_guardia" IS 'El rato que una Asistente se queda adentro despues de que termino su turno de guardia porque el relevo no llego. Se abre sola y se cierra cuando llega el relevo o cuando ella cierra el turno de guardia. De aca salen las horas de mas.';
 
 
 
-COMMENT ON COLUMN "public"."extensiones_de_turno"."desde_at" IS 'La hora de fin de su propio turno, no cuando el sistema se dio cuenta.';
+COMMENT ON COLUMN "public"."extensiones_de_turno_guardia"."desde_at" IS 'La hora de fin de su propio turno de guardia, no cuando el sistema se dio cuenta.';
 
 
 
@@ -14178,7 +14178,7 @@ CREATE TABLE IF NOT EXISTS "public"."facturas_cliente_items" (
     "concepto" "text",
     CONSTRAINT "facturas_cliente_items_cantidad_no_negativa" CHECK ((("cantidad" IS NULL) OR ("cantidad" >= (0)::numeric))),
     CONSTRAINT "facturas_cliente_items_concepto_conocido" CHECK ((("concepto" IS NULL) OR ("concepto" = ANY (ARRAY['pactado'::"text", 'medido'::"text", 'adicional'::"text", 'no_prestado'::"text", 'cancelado_por_el_cliente'::"text", 'descuento'::"text"])))),
-    CONSTRAINT "facturas_cliente_items_unidad_conocida" CHECK ((("unidad" IS NULL) OR ("unidad" = ANY (ARRAY['periodo'::"text", 'guardia'::"text", 'hora'::"text", 'hora_extra'::"text", 'dia_de_guardia'::"text"]))))
+    CONSTRAINT "facturas_cliente_items_unidad_conocida" CHECK ((("unidad" IS NULL) OR ("unidad" = ANY (ARRAY['periodo'::"text", 'turno_guardia'::"text", 'hora'::"text", 'hora_extra'::"text", 'dia_de_guardia'::"text"]))))
 );
 
 
@@ -14205,7 +14205,7 @@ COMMENT ON TABLE "public"."feriados_por_pais" IS 'Los feriados de cada país. Es
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."finales_turno_sin_cubrir" (
+CREATE TABLE IF NOT EXISTS "public"."finales_turno_guardia_sin_cubrir" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "clave" "text",
@@ -14217,36 +14217,36 @@ CREATE TABLE IF NOT EXISTS "public"."finales_turno_sin_cubrir" (
     "orden" integer DEFAULT 100 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "finales_turno_sin_cubrir_los_del_sistema_no_se_apagan" CHECK (((NOT "lo_escribe_el_sistema") OR "activo")),
-    CONSTRAINT "finales_turno_sin_cubrir_los_del_sistema_son_del_producto" CHECK (((NOT "lo_escribe_el_sistema") OR ("clave" IS NOT NULL))),
-    CONSTRAINT "finales_turno_sin_cubrir_nombre_segun_nivel" CHECK (((("clave" IS NOT NULL) AND ("nombre" IS NULL)) OR (("clave" IS NULL) AND ("nombre" IS NOT NULL))))
+    CONSTRAINT "finales_turno_guardia_sin_cubrir_los_del_sistema_no_se_apagan" CHECK (((NOT "lo_escribe_el_sistema") OR "activo")),
+    CONSTRAINT "finales_turno_guardia_sin_cubrir_del_sistema_son_del_producto" CHECK (((NOT "lo_escribe_el_sistema") OR ("clave" IS NOT NULL))),
+    CONSTRAINT "finales_turno_guardia_sin_cubrir_nombre_segun_nivel" CHECK (((("clave" IS NOT NULL) AND ("nombre" IS NULL)) OR (("clave" IS NULL) AND ("nombre" IS NOT NULL))))
 );
 
 
-ALTER TABLE "public"."finales_turno_sin_cubrir" OWNER TO "postgres";
+ALTER TABLE "public"."finales_turno_guardia_sin_cubrir" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."finales_turno_sin_cubrir" IS 'Como puede terminar el expediente de un turno que quedo sin nadie. Cada Prestadora arma su lista: nace con los que trae el producto y a partir de ahi agrega y saca los que quiera.';
-
-
-
-COMMENT ON COLUMN "public"."finales_turno_sin_cubrir"."clave" IS 'Final que trajo el producto. El texto visible sale de las traducciones, buscandolo por esta clave; es tambien lo que se guarda en el expediente.';
+COMMENT ON TABLE "public"."finales_turno_guardia_sin_cubrir" IS 'Como puede terminar el expediente de un turno de guardia que quedo sin nadie. Cada Prestadora arma su lista: nace con los que trae el producto y a partir de ahi agrega y saca los que quiera.';
 
 
 
-COMMENT ON COLUMN "public"."finales_turno_sin_cubrir"."nombre" IS 'Final que escribio la Prestadora. Se muestra tal cual, sin traducir, y es lo que se guarda en el expediente.';
+COMMENT ON COLUMN "public"."finales_turno_guardia_sin_cubrir"."clave" IS 'Final que trajo el producto. El texto visible sale de las traducciones, buscandolo por esta clave; es tambien lo que se guarda en el expediente.';
 
 
 
-COMMENT ON COLUMN "public"."finales_turno_sin_cubrir"."es_defecto_grave" IS 'Terminar asi deja escrito que el servicio fallo y no se pudo arreglar. Lo decide la Prestadora, porque solo ella sabe que es una falla en su forma de trabajar.';
+COMMENT ON COLUMN "public"."finales_turno_guardia_sin_cubrir"."nombre" IS 'Final que escribio la Prestadora. Se muestra tal cual, sin traducir, y es lo que se guarda en el expediente.';
 
 
 
-COMMENT ON COLUMN "public"."finales_turno_sin_cubrir"."pide_detalle" IS 'Cerrar con este final obliga a escribir que se hizo.';
+COMMENT ON COLUMN "public"."finales_turno_guardia_sin_cubrir"."es_defecto_grave" IS 'Terminar asi deja escrito que el servicio fallo y no se pudo arreglar. Lo decide la Prestadora, porque solo ella sabe que es una falla en su forma de trabajar.';
 
 
 
-COMMENT ON COLUMN "public"."finales_turno_sin_cubrir"."lo_escribe_el_sistema" IS 'El final no se elige: lo escribe el motor cuando la base ya dice que el turno termino asi. No se ofrece para elegir y no se puede apagar.';
+COMMENT ON COLUMN "public"."finales_turno_guardia_sin_cubrir"."pide_detalle" IS 'Cerrar con este final obliga a escribir que se hizo.';
+
+
+
+COMMENT ON COLUMN "public"."finales_turno_guardia_sin_cubrir"."lo_escribe_el_sistema" IS 'El final no se elige: lo escribe el motor cuando la base ya dice que el turno de guardia termino asi. No se ofrece para elegir y no se puede apagar.';
 
 
 
@@ -14378,10 +14378,10 @@ COMMENT ON COLUMN "public"."formularios_declarados"."titulo" IS 'El título visi
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."guardia_comprobaciones" (
+CREATE TABLE IF NOT EXISTS "public"."turno_guardia_comprobaciones" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "asistente_id" "uuid" NOT NULL,
     "momento" "text" NOT NULL,
     "estado" "text" NOT NULL,
@@ -14399,53 +14399,53 @@ CREATE TABLE IF NOT EXISTS "public"."guardia_comprobaciones" (
     "autorizada_por" "uuid",
     "motivo_del_pedido" "text",
     "detalle_del_pedido" "text",
-    CONSTRAINT "guardia_comprobaciones_autorizacion_check" CHECK ((("medio" = 'autorizacion_prestadora'::"text") = ("autorizada_por" IS NOT NULL))),
-    CONSTRAINT "guardia_comprobaciones_coherencia_check" CHECK (((("estado" = 'comprobada'::"text") AND ("medio" IS NOT NULL) AND ("comprobada_en" IS NOT NULL) AND ("motivo_sin_comprobar" IS NULL)) OR (("estado" = 'sin_comprobar'::"text") AND ("motivo_sin_comprobar" IS NOT NULL) AND ("medio" IS NULL)) OR (("estado" = 'pendiente_de_autorizacion'::"text") AND ("medio" IS NULL) AND ("motivo_sin_comprobar" IS NULL) AND ("pedido_en" IS NOT NULL)))),
-    CONSTRAINT "guardia_comprobaciones_estado_check" CHECK (("estado" = ANY (ARRAY['pendiente_de_autorizacion'::"text", 'comprobada'::"text", 'sin_comprobar'::"text"]))),
-    CONSTRAINT "guardia_comprobaciones_medio_check" CHECK ((("medio" IS NULL) OR ("medio" = ANY (ARRAY['codigo_cliente'::"text", 'codigo_asistente_saliente'::"text", 'autorizacion_prestadora'::"text"])))),
-    CONSTRAINT "guardia_comprobaciones_momento_check" CHECK (("momento" = ANY (ARRAY['checkin'::"text", 'checkout'::"text"]))),
-    CONSTRAINT "guardia_comprobaciones_motivo_check" CHECK ((("motivo_sin_comprobar" IS NULL) OR ("motivo_sin_comprobar" = ANY (ARRAY['nadie_para_mostrar'::"text", 'prestadora_no_responde'::"text", 'sin_camara'::"text", 'sin_conexion'::"text", 'otro'::"text"])))),
-    CONSTRAINT "guardia_comprobaciones_motivo_del_pedido_check" CHECK ((("motivo_del_pedido" IS NULL) OR ("motivo_del_pedido" = ANY (ARRAY['nadie_para_mostrar'::"text", 'sin_camara'::"text", 'otro'::"text"])))),
-    CONSTRAINT "guardia_comprobaciones_sujeto_coherencia_check" CHECK (((("medio" = ANY (ARRAY['codigo_cliente'::"text", 'codigo_asistente_saliente'::"text"])) AND ("sujeto_tipo" IS NOT NULL) AND ("sujeto_id" IS NOT NULL)) OR (("medio" = 'autorizacion_prestadora'::"text") AND ("sujeto_tipo" IS NULL) AND ("sujeto_id" IS NULL)) OR ("medio" IS NULL))),
-    CONSTRAINT "guardia_comprobaciones_sujeto_tipo_check" CHECK ((("sujeto_tipo" IS NULL) OR ("sujeto_tipo" = ANY (ARRAY['cliente'::"text", 'asistente'::"text"]))))
+    CONSTRAINT "turno_guardia_comprobaciones_autorizacion_check" CHECK ((("medio" = 'autorizacion_prestadora'::"text") = ("autorizada_por" IS NOT NULL))),
+    CONSTRAINT "turno_guardia_comprobaciones_coherencia_check" CHECK (((("estado" = 'comprobada'::"text") AND ("medio" IS NOT NULL) AND ("comprobada_en" IS NOT NULL) AND ("motivo_sin_comprobar" IS NULL)) OR (("estado" = 'sin_comprobar'::"text") AND ("motivo_sin_comprobar" IS NOT NULL) AND ("medio" IS NULL)) OR (("estado" = 'pendiente_de_autorizacion'::"text") AND ("medio" IS NULL) AND ("motivo_sin_comprobar" IS NULL) AND ("pedido_en" IS NOT NULL)))),
+    CONSTRAINT "turno_guardia_comprobaciones_estado_check" CHECK (("estado" = ANY (ARRAY['pendiente_de_autorizacion'::"text", 'comprobada'::"text", 'sin_comprobar'::"text"]))),
+    CONSTRAINT "turno_guardia_comprobaciones_medio_check" CHECK ((("medio" IS NULL) OR ("medio" = ANY (ARRAY['codigo_cliente'::"text", 'codigo_asistente_saliente'::"text", 'autorizacion_prestadora'::"text"])))),
+    CONSTRAINT "turno_guardia_comprobaciones_momento_check" CHECK (("momento" = ANY (ARRAY['checkin'::"text", 'checkout'::"text"]))),
+    CONSTRAINT "turno_guardia_comprobaciones_motivo_check" CHECK ((("motivo_sin_comprobar" IS NULL) OR ("motivo_sin_comprobar" = ANY (ARRAY['nadie_para_mostrar'::"text", 'prestadora_no_responde'::"text", 'sin_camara'::"text", 'sin_conexion'::"text", 'otro'::"text"])))),
+    CONSTRAINT "turno_guardia_comprobaciones_motivo_del_pedido_check" CHECK ((("motivo_del_pedido" IS NULL) OR ("motivo_del_pedido" = ANY (ARRAY['nadie_para_mostrar'::"text", 'sin_camara'::"text", 'otro'::"text"])))),
+    CONSTRAINT "turno_guardia_comprobaciones_sujeto_coherencia_check" CHECK (((("medio" = ANY (ARRAY['codigo_cliente'::"text", 'codigo_asistente_saliente'::"text"])) AND ("sujeto_tipo" IS NOT NULL) AND ("sujeto_id" IS NOT NULL)) OR (("medio" = 'autorizacion_prestadora'::"text") AND ("sujeto_tipo" IS NULL) AND ("sujeto_id" IS NULL)) OR ("medio" IS NULL))),
+    CONSTRAINT "turno_guardia_comprobaciones_sujeto_tipo_check" CHECK ((("sujeto_tipo" IS NULL) OR ("sujeto_tipo" = ANY (ARRAY['cliente'::"text", 'asistente'::"text"]))))
 );
 
 
-ALTER TABLE "public"."guardia_comprobaciones" OWNER TO "postgres";
+ALTER TABLE "public"."turno_guardia_comprobaciones" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."guardia_comprobaciones" IS 'Cómo se comprobó que el Asistente estaba realmente en el domicilio al llegar y al irse (pendiente #113). Una fila por acto: cuando hay relevo, la guardia que termina y la que empieza tienen cada una la suya.';
-
-
-
-COMMENT ON COLUMN "public"."guardia_comprobaciones"."estado" IS 'comprobada (alguien mostró el código, o lo soltó la Prestadora), pendiente_de_codigo (el Asistente avisó que no hay quién se lo muestre y espera), sin_comprobar (se entró igual, con un motivo, y el Coordinador lo tiene que cerrar).';
+COMMENT ON TABLE "public"."turno_guardia_comprobaciones" IS 'Cómo se comprobó que el Asistente estaba realmente en el domicilio al llegar y al irse (pendiente #113). Una fila por acto: cuando hay relevo, el turno de guardia que termina y el que empieza tienen cada uno el suyo.';
 
 
 
-COMMENT ON COLUMN "public"."guardia_comprobaciones"."medio" IS 'Con qué se comprobó: el código del Cliente, el del Asistente que se iba, o el que soltó la Prestadora. Es lo que decide si al Cliente se le avisa: se le avisa cuando él no participó de la comprobación.';
+COMMENT ON COLUMN "public"."turno_guardia_comprobaciones"."estado" IS 'comprobada (alguien mostró el código, o lo soltó la Prestadora), pendiente_de_codigo (el Asistente avisó que no hay quién se lo muestre y espera), sin_comprobar (se entró igual, con un motivo, y el Coordinador lo tiene que cerrar).';
 
 
 
-COMMENT ON COLUMN "public"."guardia_comprobaciones"."motivo_sin_comprobar" IS 'Por qué se entró sin comprobar. La guardia nunca se traba: si en la Prestadora no atiende nadie, el Asistente elige un motivo, entra a trabajar, y esto queda en la lista del Coordinador.';
+COMMENT ON COLUMN "public"."turno_guardia_comprobaciones"."medio" IS 'Con qué se comprobó: el código del Cliente, el del Asistente que se iba, o el que soltó la Prestadora. Es lo que decide si al Cliente se le avisa: se le avisa cuando él no participó de la comprobación.';
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."guardia_pacientes" (
-    "guardia_id" "uuid" NOT NULL,
+COMMENT ON COLUMN "public"."turno_guardia_comprobaciones"."motivo_sin_comprobar" IS 'Por qué se entró sin comprobar. El turno de guardia nunca se traba: si en la Prestadora no atiende nadie, el Asistente elige un motivo, entra a trabajar, y esto queda en la lista del Coordinador.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."turno_guardia_pacientes" (
+    "turno_guardia_id" "uuid" NOT NULL,
     "paciente_id" "uuid" NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
-ALTER TABLE "public"."guardia_pacientes" OWNER TO "postgres";
+ALTER TABLE "public"."turno_guardia_pacientes" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."guardia_pacientes" IS 'A quiénes atiende una guardia. Una fila por Paciente. Una guardia puede tener varias: un matrimonio en su casa, o todo un piso de un asilo.';
+COMMENT ON TABLE "public"."turno_guardia_pacientes" IS 'A quiénes atiende un turno de guardia. Una fila por Paciente. Un turno de guardia puede tener varias: un matrimonio en su casa, o todo un piso de un asilo.';
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."guardias" (
+CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "asistente_id" "uuid",
@@ -14497,74 +14497,74 @@ CREATE TABLE IF NOT EXISTS "public"."guardias" (
     "horas_extra" numeric(5,2) DEFAULT 0 NOT NULL,
     "horas_extra_motivo" "text",
     "llegada_tarde" boolean DEFAULT false NOT NULL,
-    CONSTRAINT "guardias_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
-    CONSTRAINT "guardias_cancelacion_alcance_check" CHECK (("cancelacion_alcance" = ANY (ARRAY['parcial'::"text", 'total'::"text"]))),
-    CONSTRAINT "guardias_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelacion_alcance" IS NULL)))),
-    CONSTRAINT "guardias_cancelacion_origen_check" CHECK (("cancelacion_origen" = ANY (ARRAY['cliente'::"text", 'prestadora'::"text"]))),
-    CONSTRAINT "guardias_cerrada_origen_check" CHECK (("cerrada_origen" = ANY (ARRAY['asistente'::"text", 'panel'::"text"]))),
-    CONSTRAINT "guardias_checkout_bloqueado_requiere_excepcion" CHECK ((("checkout_at" IS NULL) OR (NOT "checkout_bloqueado") OR (("checkout_excepcion_motivo" IS NOT NULL) AND ("checkout_excepcion_autorizado_por" IS NOT NULL) AND ("checkout_excepcion_at" IS NOT NULL)))),
-    CONSTRAINT "guardias_cierre_por_el_asistente_sin_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'asistente'::"text") OR ("cerrada_motivo" IS NULL))),
-    CONSTRAINT "guardias_cierre_por_el_panel_exige_persona_y_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'panel'::"text") OR (("cerrada_por" IS NOT NULL) AND ("cerrada_motivo" IS NOT NULL) AND ("btrim"("cerrada_motivo") <> ''::"text")))),
-    CONSTRAINT "guardias_cierre_rastro_completo" CHECK (((("cerrada_at" IS NULL) AND ("cerrada_origen" IS NULL) AND ("cerrada_por" IS NULL) AND ("cerrada_motivo" IS NULL)) OR (("cerrada_at" IS NOT NULL) AND ("cerrada_origen" IS NOT NULL)))),
-    CONSTRAINT "guardias_dias_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
-    CONSTRAINT "guardias_estado_check" CHECK (("estado" = ANY (ARRAY['programada'::"text", 'activa'::"text", 'completada'::"text", 'cancelada'::"text", 'ausente'::"text", 'pausada'::"text"]))),
-    CONSTRAINT "guardias_horas_extra_con_motivo" CHECK ((("horas_extra" = (0)::numeric) OR (("horas_extra_motivo" IS NOT NULL) AND ("btrim"("horas_extra_motivo") <> ''::"text")))),
-    CONSTRAINT "guardias_horas_extra_no_negativas" CHECK (("horas_extra" >= (0)::numeric)),
-    CONSTRAINT "guardias_sin_cubrir_estado_check" CHECK ((("asistente_id" IS NOT NULL) OR ("estado" = ANY (ARRAY['programada'::"text", 'cancelada'::"text"])))),
-    CONSTRAINT "guardias_sin_cubrir_sin_marcas_check" CHECK ((("asistente_id" IS NOT NULL) OR (("checkin_at" IS NULL) AND ("checkout_at" IS NULL) AND ("salida_checkin_at" IS NULL))))
+    CONSTRAINT "turnos_guardia_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
+    CONSTRAINT "turnos_guardia_cancelacion_alcance_check" CHECK (("cancelacion_alcance" = ANY (ARRAY['parcial'::"text", 'total'::"text"]))),
+    CONSTRAINT "turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelacion_alcance" IS NULL)))),
+    CONSTRAINT "turnos_guardia_cancelacion_origen_check" CHECK (("cancelacion_origen" = ANY (ARRAY['cliente'::"text", 'prestadora'::"text"]))),
+    CONSTRAINT "turnos_guardia_cerrado_origen_check" CHECK (("cerrada_origen" = ANY (ARRAY['asistente'::"text", 'panel'::"text"]))),
+    CONSTRAINT "turnos_guardia_checkout_bloqueado_requiere_excepcion" CHECK ((("checkout_at" IS NULL) OR (NOT "checkout_bloqueado") OR (("checkout_excepcion_motivo" IS NOT NULL) AND ("checkout_excepcion_autorizado_por" IS NOT NULL) AND ("checkout_excepcion_at" IS NOT NULL)))),
+    CONSTRAINT "turnos_guardia_cierre_por_el_asistente_sin_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'asistente'::"text") OR ("cerrada_motivo" IS NULL))),
+    CONSTRAINT "turnos_guardia_cierre_por_el_panel_exige_persona_y_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'panel'::"text") OR (("cerrada_por" IS NOT NULL) AND ("cerrada_motivo" IS NOT NULL) AND ("btrim"("cerrada_motivo") <> ''::"text")))),
+    CONSTRAINT "turnos_guardia_cierre_rastro_completo" CHECK (((("cerrada_at" IS NULL) AND ("cerrada_origen" IS NULL) AND ("cerrada_por" IS NULL) AND ("cerrada_motivo" IS NULL)) OR (("cerrada_at" IS NOT NULL) AND ("cerrada_origen" IS NOT NULL)))),
+    CONSTRAINT "turnos_guardia_dios_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
+    CONSTRAINT "turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['programada'::"text", 'activa'::"text", 'completada'::"text", 'cancelada'::"text", 'ausente'::"text", 'pausada'::"text"]))),
+    CONSTRAINT "turnos_guardia_horos_extra_con_motivo" CHECK ((("horas_extra" = (0)::numeric) OR (("horas_extra_motivo" IS NOT NULL) AND ("btrim"("horas_extra_motivo") <> ''::"text")))),
+    CONSTRAINT "turnos_guardia_horos_extra_no_negativas" CHECK (("horas_extra" >= (0)::numeric)),
+    CONSTRAINT "turnos_guardia_sin_cubrir_estado_check" CHECK ((("asistente_id" IS NOT NULL) OR ("estado" = ANY (ARRAY['programada'::"text", 'cancelada'::"text"])))),
+    CONSTRAINT "turnos_guardia_sin_cubrir_sin_marcas_check" CHECK ((("asistente_id" IS NOT NULL) OR (("checkin_at" IS NULL) AND ("checkout_at" IS NULL) AND ("salida_checkin_at" IS NULL))))
 );
 
 
-ALTER TABLE "public"."guardias" OWNER TO "postgres";
+ALTER TABLE "public"."turnos_guardia" OWNER TO "postgres";
 
 
-COMMENT ON COLUMN "public"."guardias"."asistente_id" IS 'NULL = guardia sin cubrir. Es un estado normal y esperado, no un dato faltante.';
-
-
-
-COMMENT ON COLUMN "public"."guardias"."paciente_id" IS 'EN RETIRO. Guarda a uno solo de los Pacientes de la guardia, el primero. La lista completa vive en guardia_pacientes. Sigue acá únicamente para que las pantallas todavía sin actualizar no se rompan; se elimina cuando ninguna la lea.';
+COMMENT ON COLUMN "public"."turnos_guardia"."asistente_id" IS 'NULL = turno de guardia sin cubrir. Es un estado normal y esperado, no un dato faltante.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."aviso_sin_cubrir_at" IS 'Última vez que se le avisó al Coordinador que esta guardia sigue sin cubrir. NULL = nunca se avisó.';
+COMMENT ON COLUMN "public"."turnos_guardia"."paciente_id" IS 'EN RETIRO. Guarda a uno solo de los Pacientes del turno de guardia, el primero. La lista completa vive en turno_guardia_pacientes. Sigue acá únicamente para que las pantallas todavía sin actualizar no se rompan; se elimina cuando ninguna la lea.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."aviso_sin_cubrir_veces" IS 'Cuántas veces se avisó. Sirve para que el aviso repetido diga que ya es la tercera vez, no para decidir si mandarlo.';
+COMMENT ON COLUMN "public"."turnos_guardia"."aviso_sin_cubrir_at" IS 'Última vez que se le avisó al Coordinador que este turno de guardia sigue sin cubrir. NULL = nunca se avisó.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."cerrada_at" IS 'Cuándo se dio por terminada la guardia. Es distinto de checkout_at: esa es la hora en que el Asistente marcó que se iba de la casa, y esta es la hora en que alguien confirmó que la guardia quedó cerrada.';
+COMMENT ON COLUMN "public"."turnos_guardia"."aviso_sin_cubrir_veces" IS 'Cuántas veces se avisó. Sirve para que el aviso repetido diga que ya es la tercera vez, no para decidir si mandarlo.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."cerrada_por" IS 'Quién la cerró. Si la cerró el Asistente, es él mismo (todo Asistente es también una fila de usuarios). Si la cerró alguien desde el Panel, es el Coordinador o el Admin de la Prestadora que apretó el botón.';
+COMMENT ON COLUMN "public"."turnos_guardia"."cerrada_at" IS 'Cuándo se dio por terminado el turno de guardia. Es distinto de checkout_at: esa es la hora en que el Asistente marcó que se iba de la casa, y esta es la hora en que alguien confirmó que el turno de guardia quedó cerrado.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."cerrada_origen" IS 'Desde dónde se cerró: asistente (marcó la salida en su teléfono) o panel (la cerró una persona de la Prestadora porque quedó sin cerrar). Cuando dice panel, la guardia NO tiene hora ni lugar de salida, y el informe a la Obra Social tiene que leerlo así.';
+COMMENT ON COLUMN "public"."turnos_guardia"."cerrada_por" IS 'Quién la cerró. Si la cerró el Asistente, es él mismo (todo Asistente es también una fila de usuarios). Si la cerró alguien desde el Panel, es el Coordinador o el Admin de la Prestadora que apretó el botón.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."cerrada_motivo" IS 'Por qué se cerró desde el Panel, escrito por la persona que la cerró. Solo se llena cuando el origen es panel: el Asistente que marca su salida no explica nada.';
+COMMENT ON COLUMN "public"."turnos_guardia"."cerrada_origen" IS 'Desde dónde se cerró: asistente (marcó la salida en su teléfono) o panel (lo cerró una persona de la Prestadora porque quedó sin cerrar). Cuando dice panel, el turno de guardia NO tiene hora ni lugar de salida, y el informe a la Obra Social tiene que leerlo así.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."aviso_sin_cerrar_grave_at" IS 'Cuándo se avisó por el evento guardia_sin_cerrar_grave. Nulo mientras no se haya escalado.';
+COMMENT ON COLUMN "public"."turnos_guardia"."cerrada_motivo" IS 'Por qué se cerró desde el Panel, escrito por la persona que la cerró. Solo se llena cuando el origen es panel: el Asistente que marca su salida no explica nada.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."dias_hasta_el_fin" IS 'Cuantos dias despues de fecha termina el turno: 0 el mismo dia, 1 al siguiente, 2 dos dias despues. Permite las guardias de 24, 48 y 72 horas.';
+COMMENT ON COLUMN "public"."turnos_guardia"."aviso_sin_cerrar_grave_at" IS 'Cuándo se avisó por el evento turno_guardia_sin_cerrar_grave. Nulo mientras no se haya escalado.';
 
 
 
-COMMENT ON COLUMN "public"."guardias"."horas_extra" IS 'Horas de mas autorizadas en esta guardia, anotadas cuando pasaron. No se deducen de la diferencia entre la marca de salida y la hora de fin planificada: irse tarde no es una hora extra autorizada.';
+COMMENT ON COLUMN "public"."turnos_guardia"."dias_hasta_el_fin" IS 'Cuantos dias despues de fecha termina el turno de guardia: 0 el mismo dia, 1 al siguiente, 2 dos dias despues. Permite los turnos de guardia de 24, 48 y 72 horas.';
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."guardias_cobertura" (
+COMMENT ON COLUMN "public"."turnos_guardia"."horas_extra" IS 'Horas de mas autorizadas en este turno de guardia, anotadas cuando pasaron. No se deducen de la diferencia entre la marca de salida y la hora de fin planificada: irse tarde no es una hora extra autorizada.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."turnos_guardia_cobertura" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "guardia_original_id" "uuid",
+    "turno_guardia_original_id" "uuid",
     "ausencia_id" "uuid",
     "asistente_sustituto_id" "uuid" NOT NULL,
     "costo_adicional" numeric(12,2),
@@ -14575,36 +14575,36 @@ CREATE TABLE IF NOT EXISTS "public"."guardias_cobertura" (
     "motivo" "text",
     "motivo_detalle" "text",
     "cobertura_de_ausencia_id" "uuid",
-    CONSTRAINT "guardias_cobertura_titular_distinto_del_sustituto" CHECK ((("asistente_titular_id" IS NULL) OR ("asistente_titular_id" <> "asistente_sustituto_id")))
+    CONSTRAINT "turnos_guardia_cobertura_titular_distinto_del_sustituto" CHECK ((("asistente_titular_id" IS NULL) OR ("asistente_titular_id" <> "asistente_sustituto_id")))
 );
 
 
-ALTER TABLE "public"."guardias_cobertura" OWNER TO "postgres";
+ALTER TABLE "public"."turnos_guardia_cobertura" OWNER TO "postgres";
 
 
-COMMENT ON COLUMN "public"."guardias_cobertura"."costo_adicional" IS 'Lo que la sustitución le cuesta de más a la Prestadora, aparte de lo que se le paga al sustituto por la guardia. La remuneración del sustituto no se escribe acá: la guardia quedó a su nombre, así que se liquida con su propio valor, como la de cualquiera.';
-
-
-
-COMMENT ON COLUMN "public"."guardias_cobertura"."asistente_titular_id" IS 'A quién le tocaba ese turno antes de la sustitución. La guardia en sí pasa a nombre de quien la hace, que es el sustituto; que el titular haya faltado se ve en su ausencia, no acá. Vacío en las coberturas anotadas antes de que existiera esta columna.';
+COMMENT ON COLUMN "public"."turnos_guardia_cobertura"."costo_adicional" IS 'Lo que la sustitución le cuesta de más a la Prestadora, aparte de lo que se le paga al sustituto por el turno de guardia. La remuneración del sustituto no se escribe acá: el turno de guardia quedó a su nombre, así que se liquida con su propio valor, como la de cualquiera.';
 
 
 
-COMMENT ON COLUMN "public"."guardias_cobertura"."motivo" IS 'Causa de la sustitución: la clave o el nombre de una fila de motivos_sustitucion_guardia. Vacío en las coberturas anotadas antes de que existiera el catálogo.';
+COMMENT ON COLUMN "public"."turnos_guardia_cobertura"."asistente_titular_id" IS 'A quién le tocaba ese turno de guardia antes de la sustitución. El turno de guardia en sí pasa a nombre de quien lo hace, que es el sustituto; que el titular haya faltado se ve en su ausencia, no acá. Vacío en las coberturas anotadas antes de que existiera esta columna.';
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."guardias_tracking_gps" (
+COMMENT ON COLUMN "public"."turnos_guardia_cobertura"."motivo" IS 'Causa de la sustitución: la clave o el nombre de una fila de motivos_sustitucion_turno_guardia. Vacío en las coberturas anotadas antes de que existiera el catálogo.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."turnos_guardia_tracking_gps" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "lat" double precision NOT NULL,
     "lng" double precision NOT NULL,
     "registrado_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
-ALTER TABLE "public"."guardias_tracking_gps" OWNER TO "postgres";
+ALTER TABLE "public"."turnos_guardia_tracking_gps" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."hospitalizaciones_paciente" (
@@ -14682,8 +14682,8 @@ COMMENT ON TABLE "public"."incidentes_de_seguridad" IS 'Cada incidente de seguri
 CREATE TABLE IF NOT EXISTS "public"."incidentes_relevo" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_saliente_id" "uuid",
-    "guardia_entrante_id" "uuid" NOT NULL,
+    "turno_guardia_saliente_id" "uuid",
+    "turno_guardia_entrante_id" "uuid" NOT NULL,
     "nivel_actual" integer DEFAULT 1 NOT NULL,
     "iniciado_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "resuelto_at" timestamp with time zone,
@@ -14702,10 +14702,10 @@ CREATE TABLE IF NOT EXISTS "public"."incidentes_relevo" (
 ALTER TABLE "public"."incidentes_relevo" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."incidentes_turno_sin_cubrir" (
+CREATE TABLE IF NOT EXISTS "public"."incidentes_turno_guardia_sin_cubrir" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "abierto_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "ultimo_recordatorio_at" timestamp with time zone,
     "veces_recordado" integer DEFAULT 0 NOT NULL,
@@ -14714,26 +14714,26 @@ CREATE TABLE IF NOT EXISTS "public"."incidentes_turno_sin_cubrir" (
     "resuelto_por" "uuid",
     "nota" "text",
     "resuelto_detalle" "text",
-    CONSTRAINT "incidentes_turno_sin_cubrir_cerrar_es_decir_como" CHECK ((("resuelto_at" IS NULL) = ("resuelto_como" IS NULL)))
+    CONSTRAINT "incidentes_turno_guardia_sin_cubrir_cerrar_es_decir_como" CHECK ((("resuelto_at" IS NULL) = ("resuelto_como" IS NULL)))
 );
 
 
-ALTER TABLE "public"."incidentes_turno_sin_cubrir" OWNER TO "postgres";
+ALTER TABLE "public"."incidentes_turno_guardia_sin_cubrir" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."incidentes_turno_sin_cubrir" IS 'Un turno que llego a pocas horas de empezar sin nadie asignado. Queda abierto hasta que alguien elija como termino, de la lista que arma cada Prestadora en finales_turno_sin_cubrir.';
-
-
-
-COMMENT ON COLUMN "public"."incidentes_turno_sin_cubrir"."resuelto_como" IS 'Como termino el turno: la clave o el nombre de una fila de finales_turno_sin_cubrir. Si eso fue un defecto grave lo dice esa fila, no esta tabla. Los expedientes cerrados antes del catalogo guardan uno de los tres finales viejos.';
+COMMENT ON TABLE "public"."incidentes_turno_guardia_sin_cubrir" IS 'Un turno de guardia que llego a pocas horas de empezar sin nadie asignado. Queda abierto hasta que alguien elija como termino, de la lista que arma cada Prestadora en finales_turno_guardia_sin_cubrir.';
 
 
 
-COMMENT ON COLUMN "public"."incidentes_turno_sin_cubrir"."nota" IS 'Lo que la Coordinadora dejo escrito al cerrar. Nunca datos de salud ni de la persona atendida.';
+COMMENT ON COLUMN "public"."incidentes_turno_guardia_sin_cubrir"."resuelto_como" IS 'Como termino el turno de guardia: la clave o el nombre de una fila de finales_turno_guardia_sin_cubrir. Si eso fue un defecto grave lo dice esa fila, no esta tabla. Los expedientes cerrados antes del catalogo guardan uno de los tres finales viejos.';
 
 
 
-COMMENT ON COLUMN "public"."incidentes_turno_sin_cubrir"."resuelto_detalle" IS 'Que se hizo, cuando el final elegido lo exige. Nunca datos de salud ni de la persona atendida.';
+COMMENT ON COLUMN "public"."incidentes_turno_guardia_sin_cubrir"."nota" IS 'Lo que la Coordinadora dejo escrito al cerrar. Nunca datos de salud ni de la persona atendida.';
+
+
+
+COMMENT ON COLUMN "public"."incidentes_turno_guardia_sin_cubrir"."resuelto_detalle" IS 'Que se hizo, cuando el final elegido lo exige. Nunca datos de salud ni de la persona atendida.';
 
 
 
@@ -14869,7 +14869,7 @@ CREATE TABLE IF NOT EXISTS "public"."liquidaciones_asistente" (
     "base_unidad" "text" NOT NULL,
     "base_valor" numeric(12,2) NOT NULL,
     "horas" numeric(10,2) DEFAULT 0 NOT NULL,
-    "guardias_contadas" integer DEFAULT 0 NOT NULL,
+    "turnos_guardia_contados" integer DEFAULT 0 NOT NULL,
     "bruto" numeric(12,2) NOT NULL,
     "total_sumas" numeric(12,2) DEFAULT 0 NOT NULL,
     "total_restas" numeric(12,2) DEFAULT 0 NOT NULL,
@@ -14888,7 +14888,7 @@ CREATE TABLE IF NOT EXISTS "public"."liquidaciones_asistente" (
     "importe_horas_extra" numeric(12,2) DEFAULT 0 NOT NULL,
     "periodo_desde" "date" NOT NULL,
     "periodo_hasta" "date" NOT NULL,
-    CONSTRAINT "liquidaciones_asistente_base_unidad_check" CHECK (("base_unidad" = ANY (ARRAY['valor_hora'::"text", 'valor_guardia'::"text", 'valor_semana'::"text"]))),
+    CONSTRAINT "liquidaciones_asistente_base_unidad_check" CHECK (("base_unidad" = ANY (ARRAY['valor_hora'::"text", 'valor_turno_guardia'::"text", 'valor_semana'::"text"]))),
     CONSTRAINT "liquidaciones_asistente_bordes_en_orden" CHECK ((("periodo_desde" <= "periodo_hasta") AND ("periodo" = "periodo_desde"))),
     CONSTRAINT "liquidaciones_asistente_estado_check" CHECK (("estado" = ANY (ARRAY['pendiente'::"text", 'pagada'::"text"]))),
     CONSTRAINT "liquidaciones_asistente_horas_extra_con_valor" CHECK (((("importe_horas_extra" = (0)::numeric) AND ("valor_hora_extra" IS NULL)) OR (("importe_horas_extra" > (0)::numeric) AND ("valor_hora_extra" IS NOT NULL)))),
@@ -14911,7 +14911,7 @@ COMMENT ON COLUMN "public"."liquidaciones_asistente"."forma_pago" IS 'Con que me
 
 
 
-COMMENT ON COLUMN "public"."liquidaciones_asistente"."horas_extra" IS 'Horas de mas pagadas en este periodo, sumadas de las guardias. Se copian al generar y no se vuelven a mirar de donde salieron.';
+COMMENT ON COLUMN "public"."liquidaciones_asistente"."horas_extra" IS 'Horas de mas pagadas en este periodo, sumadas de los turnos de guardia. Se copian al generar y no se vuelven a mirar de donde salieron.';
 
 
 
@@ -15196,7 +15196,7 @@ COMMENT ON TABLE "public"."monedas_por_pais" IS 'Catálogo de plataforma: qué m
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."motivos_aviso_previo_guardia" (
+CREATE TABLE IF NOT EXISTS "public"."motivos_aviso_previo_turno_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "nombre" "text" NOT NULL,
@@ -15205,7 +15205,7 @@ CREATE TABLE IF NOT EXISTS "public"."motivos_aviso_previo_guardia" (
 );
 
 
-ALTER TABLE "public"."motivos_aviso_previo_guardia" OWNER TO "postgres";
+ALTER TABLE "public"."motivos_aviso_previo_turno_guardia" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."motivos_cierre_servicio" (
@@ -15307,7 +15307,7 @@ COMMENT ON COLUMN "public"."motivos_resolucion"."pide_detalle" IS 'Elegir este m
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."motivos_sustitucion_guardia" (
+CREATE TABLE IF NOT EXISTS "public"."motivos_sustitucion_turno_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "clave" "text",
@@ -15317,26 +15317,26 @@ CREATE TABLE IF NOT EXISTS "public"."motivos_sustitucion_guardia" (
     "orden" integer DEFAULT 100 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "motivos_sustitucion_guardia_nombre_segun_nivel" CHECK (((("clave" IS NOT NULL) AND ("nombre" IS NULL)) OR (("clave" IS NULL) AND ("nombre" IS NOT NULL))))
+    CONSTRAINT "motivos_sustitucion_turno_guardia_nombre_segun_nivel" CHECK (((("clave" IS NOT NULL) AND ("nombre" IS NULL)) OR (("clave" IS NULL) AND ("nombre" IS NOT NULL))))
 );
 
 
-ALTER TABLE "public"."motivos_sustitucion_guardia" OWNER TO "postgres";
+ALTER TABLE "public"."motivos_sustitucion_turno_guardia" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."motivos_sustitucion_guardia" IS 'Por qué una guardia la termina haciendo otra persona. Cada Prestadora arma su lista: nace con dos que trae el producto y a partir de ahí agrega y saca las que quiera.';
-
-
-
-COMMENT ON COLUMN "public"."motivos_sustitucion_guardia"."clave" IS 'Causa que trajo el producto. El texto visible sale de las traducciones, buscándolo por esta clave; es también lo que se guarda en la cobertura.';
+COMMENT ON TABLE "public"."motivos_sustitucion_turno_guardia" IS 'Por qué un turno de guardia lo termina haciendo otra persona. Cada Prestadora arma su lista: nace con dos que trae el producto y a partir de ahí agrega y saca las que quiera.';
 
 
 
-COMMENT ON COLUMN "public"."motivos_sustitucion_guardia"."nombre" IS 'Causa que escribió la Prestadora. Se muestra tal cual, sin traducir, y es lo que se guarda en la cobertura.';
+COMMENT ON COLUMN "public"."motivos_sustitucion_turno_guardia"."clave" IS 'Causa que trajo el producto. El texto visible sale de las traducciones, buscándolo por esta clave; es también lo que se guarda en la cobertura.';
 
 
 
-COMMENT ON COLUMN "public"."motivos_sustitucion_guardia"."pide_detalle" IS 'Sustituir con esta causa obliga a escribir el detalle.';
+COMMENT ON COLUMN "public"."motivos_sustitucion_turno_guardia"."nombre" IS 'Causa que escribió la Prestadora. Se muestra tal cual, sin traducir, y es lo que se guarda en la cobertura.';
+
+
+
+COMMENT ON COLUMN "public"."motivos_sustitucion_turno_guardia"."pide_detalle" IS 'Sustituir con esta causa obliga a escribir el detalle.';
 
 
 
@@ -15792,7 +15792,7 @@ CREATE TABLE IF NOT EXISTS "public"."plazos_de_ubicacion_avisados" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "asistente_id" "uuid" NOT NULL,
-    "control_en_el_turno_desde" timestamp with time zone NOT NULL,
+    "control_en_el_turno_guardia_desde" timestamp with time zone NOT NULL,
     "avisado_en" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
@@ -15800,7 +15800,7 @@ CREATE TABLE IF NOT EXISTS "public"."plazos_de_ubicacion_avisados" (
 ALTER TABLE "public"."plazos_de_ubicacion_avisados" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."plazos_de_ubicacion_avisados" IS 'Asistentes cuyo plazo para aceptar la ubicación durante el turno venció y ya se le avisó a la Prestadora.';
+COMMENT ON TABLE "public"."plazos_de_ubicacion_avisados" IS 'Asistentes cuyo plazo para aceptar la ubicación durante el turno de guardia venció y ya se le avisó a la Prestadora.';
 
 
 
@@ -15904,9 +15904,9 @@ CREATE TABLE IF NOT EXISTS "public"."prestaciones" (
     "forma_de_precio" "text" DEFAULT 'directo'::"text" NOT NULL,
     "sentido_del_ajuste" "text",
     "prestacion_anterior_id" bigint,
-    "precio_guardia_adicional" numeric(12,2),
+    "precio_turno_guardia_adicional" numeric(12,2),
     "precio_hora_adicional" numeric(12,2),
-    CONSTRAINT "prestaciones_adicionales_no_negativos" CHECK (((("precio_guardia_adicional" IS NULL) OR ("precio_guardia_adicional" >= (0)::numeric)) AND (("precio_hora_adicional" IS NULL) OR ("precio_hora_adicional" >= (0)::numeric)))),
+    CONSTRAINT "prestaciones_adicionales_no_negativos" CHECK (((("precio_turno_guardia_adicional" IS NULL) OR ("precio_turno_guardia_adicional" >= (0)::numeric)) AND (("precio_hora_adicional" IS NULL) OR ("precio_hora_adicional" >= (0)::numeric)))),
     CONSTRAINT "prestaciones_ajuste_completo" CHECK (((("tipo_descuento" IS NULL) AND ("valor_descuento" IS NULL) AND ("sentido_del_ajuste" IS NULL)) OR (("tipo_descuento" IS NOT NULL) AND ("valor_descuento" IS NOT NULL) AND ("sentido_del_ajuste" IS NOT NULL)))),
     CONSTRAINT "prestaciones_ajuste_no_negativo" CHECK ((("valor_descuento" IS NULL) OR ("valor_descuento" >= (0)::numeric))),
     CONSTRAINT "prestaciones_estado_check" CHECK (("estado" = ANY (ARRAY['vigente'::"text", 'de_baja'::"text"]))),
@@ -15951,7 +15951,7 @@ COMMENT ON COLUMN "public"."prestaciones"."prestacion_anterior_id" IS 'La Presta
 
 
 
-COMMENT ON COLUMN "public"."prestaciones"."precio_guardia_adicional" IS 'Precio pactado de cada guardia adicional, en la moneda de la prestación. Vacío: la factura la valúa en proporción al precio pactado. Cambia con el precio cuando se ajusta.';
+COMMENT ON COLUMN "public"."prestaciones"."precio_turno_guardia_adicional" IS 'Precio pactado de cada turno de guardia adicional, en la moneda de la prestación. Vacío: la factura la valúa en proporción al precio pactado. Cambia con el precio cuando se ajusta.';
 
 
 
@@ -15998,35 +15998,35 @@ CREATE TABLE IF NOT EXISTS "public"."prestadoras" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "dias_aviso_vencimiento_documentos" smallint DEFAULT 30 NOT NULL,
-    "dias_generacion_series_guardia" smallint DEFAULT 90 NOT NULL,
+    "dias_generacion_series_turno_guardia" smallint DEFAULT 90 NOT NULL,
     "politica_verificacion_alta_manual" "text" DEFAULT 'omitir'::"text" NOT NULL,
     "logo_url" "text",
-    "minutos_aviso_previo_guardia" integer DEFAULT 60 NOT NULL,
+    "minutos_aviso_previo_turno_guardia" integer DEFAULT 60 NOT NULL,
     "moneda" "public"."moneda_iso" NOT NULL,
     "videollamada_base_url" "text",
     "casilla_envio" "text",
     "regla_reenvio" "text",
     "cierre_por_inactividad_activo" boolean DEFAULT true NOT NULL,
     "cierre_por_inactividad_minutos" integer DEFAULT 15 NOT NULL,
-    "control_de_ubicacion_en_el_turno" boolean DEFAULT true NOT NULL,
+    "control_de_ubicacion_en_el_turno_guardia" boolean DEFAULT true NOT NULL,
     "minutos_entre_controles_de_ubicacion" integer DEFAULT 5 NOT NULL,
     "dias_para_aceptar_la_ubicacion" integer DEFAULT 30 NOT NULL,
-    "control_de_ubicacion_en_el_turno_desde" timestamp with time zone,
+    "control_de_ubicacion_en_el_turno_guardia_desde" timestamp with time zone,
     "logo_impresion_ruta" "text",
     "referencia_celtatech" "text",
     "zona_horaria" "text" DEFAULT 'America/Argentina/Buenos_Aires'::"text" NOT NULL,
     "registro_de_accesos_hora_de_inicio" time without time zone DEFAULT '07:00:00'::time without time zone NOT NULL,
     "registro_de_accesos_hora_de_fin" time without time zone DEFAULT '20:00:00'::time without time zone NOT NULL,
     "registro_de_accesos_pacientes_por_dia" integer DEFAULT 20 NOT NULL,
-    "registro_de_accesos_horas_alrededor_de_la_guardia" integer DEFAULT 12 NOT NULL,
-    "guardias_solo_con_firma_del_pagador" boolean DEFAULT false NOT NULL,
+    "registro_de_accesos_horas_alrededor_del_turno_guardia" integer DEFAULT 12 NOT NULL,
+    "turnos_guardia_solo_con_firma_del_pagador" boolean DEFAULT false NOT NULL,
     CONSTRAINT "prestadoras_cierre_por_inactividad_minutos_check" CHECK ((("cierre_por_inactividad_minutos" >= 5) AND ("cierre_por_inactividad_minutos" <= 120))),
     CONSTRAINT "prestadoras_dias_para_aceptar_la_ubicacion_check" CHECK ((("dias_para_aceptar_la_ubicacion" >= 1) AND ("dias_para_aceptar_la_ubicacion" <= 365))),
-    CONSTRAINT "prestadoras_minutos_aviso_previo_guardia_check" CHECK ((("minutos_aviso_previo_guardia" >= 5) AND ("minutos_aviso_previo_guardia" <= 1440))),
+    CONSTRAINT "prestadoras_minutos_aviso_previo_turno_guardia_check" CHECK ((("minutos_aviso_previo_turno_guardia" >= 5) AND ("minutos_aviso_previo_turno_guardia" <= 1440))),
     CONSTRAINT "prestadoras_minutos_entre_controles_de_ubicacion_check" CHECK ((("minutos_entre_controles_de_ubicacion" >= 1) AND ("minutos_entre_controles_de_ubicacion" <= 60))),
     CONSTRAINT "prestadoras_politica_verificacion_alta_manual_check" CHECK (("politica_verificacion_alta_manual" = ANY (ARRAY['omitir'::"text", 'pendiente'::"text", 'aprobado'::"text"]))),
     CONSTRAINT "prestadoras_registro_de_accesos_horario_valido" CHECK (("registro_de_accesos_hora_de_inicio" <> "registro_de_accesos_hora_de_fin")),
-    CONSTRAINT "prestadoras_registro_de_accesos_horas_alrededor_valido" CHECK ((("registro_de_accesos_horas_alrededor_de_la_guardia" >= 0) AND ("registro_de_accesos_horas_alrededor_de_la_guardia" <= 72))),
+    CONSTRAINT "prestadoras_registro_de_accesos_horas_alrededor_valido" CHECK ((("registro_de_accesos_horas_alrededor_del_turno_guardia" >= 0) AND ("registro_de_accesos_horas_alrededor_del_turno_guardia" <= 72))),
     CONSTRAINT "prestadoras_registro_de_accesos_pacientes_por_dia_valido" CHECK (("registro_de_accesos_pacientes_por_dia" > 0)),
     CONSTRAINT "prestadoras_zona_horaria_conocida" CHECK ((('2000-01-01 00:00:00+00'::timestamp with time zone AT TIME ZONE "zona_horaria") IS NOT NULL))
 );
@@ -16063,11 +16063,11 @@ COMMENT ON COLUMN "public"."prestadoras"."registro_de_accesos_pacientes_por_dia"
 
 
 
-COMMENT ON COLUMN "public"."prestadoras"."registro_de_accesos_horas_alrededor_de_la_guardia" IS 'Horas antes y después de una guardia en las que el Asistente todavía atiende a ese Paciente.';
+COMMENT ON COLUMN "public"."prestadoras"."registro_de_accesos_horas_alrededor_del_turno_guardia" IS 'Horas antes y después de un turno de guardia en las que el Asistente todavía atiende a ese Paciente.';
 
 
 
-COMMENT ON COLUMN "public"."prestadoras"."minutos_aviso_previo_guardia" IS 'Cuántos minutos antes de que empiece la guardia se le manda el recordatorio al Asistente. De fábrica, 60. El tope es un día entero; menos de cinco minutos no llegaría a tiempo de servir para nada.';
+COMMENT ON COLUMN "public"."prestadoras"."minutos_aviso_previo_turno_guardia" IS 'Cuántos minutos antes de que empiece el turno de guardia se le manda el recordatorio al Asistente. De fábrica, 60. El tope es un día entero; menos de cinco minutos no llegaría a tiempo de servir para nada.';
 
 
 
@@ -16087,23 +16087,23 @@ COMMENT ON COLUMN "public"."prestadoras"."regla_reenvio" IS 'Identificador del r
 
 
 
-COMMENT ON COLUMN "public"."prestadoras"."guardias_solo_con_firma_del_pagador" IS 'Verdadero: un Servicio programa guardias sólo con la firma vigente del Responsable de pagos. De fábrica, falso.';
+COMMENT ON COLUMN "public"."prestadoras"."turnos_guardia_solo_con_firma_del_pagador" IS 'Verdadero: un Servicio programa turnos de guardia sólo con la firma vigente del Responsable de pagos. De fábrica, falso.';
 
 
 
-COMMENT ON COLUMN "public"."prestadoras"."control_de_ubicacion_en_el_turno" IS 'Verdadero: viaje y turno. Falso: sólo viaje. De fábrica, viaje y turno.';
+COMMENT ON COLUMN "public"."prestadoras"."control_de_ubicacion_en_el_turno_guardia" IS 'Verdadero: viaje y turno de guardia. Falso: sólo viaje. De fábrica, viaje y turno de guardia.';
 
 
 
-COMMENT ON COLUMN "public"."prestadoras"."minutos_entre_controles_de_ubicacion" IS 'Cada cuántos minutos se controla la ubicación durante la guardia, cuando la Prestadora eligió viaje y turno. De fábrica, 5.';
+COMMENT ON COLUMN "public"."prestadoras"."minutos_entre_controles_de_ubicacion" IS 'Cada cuántos minutos se controla la ubicación durante el turno de guardia, cuando la Prestadora eligió viaje y turno de guardia. De fábrica, 5.';
 
 
 
-COMMENT ON COLUMN "public"."prestadoras"."dias_para_aceptar_la_ubicacion" IS 'Días que tiene el Asistente para aceptar el registro de su ubicación durante el turno, desde que la Prestadora eligió viaje y turno. De fábrica, 30.';
+COMMENT ON COLUMN "public"."prestadoras"."dias_para_aceptar_la_ubicacion" IS 'Días que tiene el Asistente para aceptar el registro de su ubicación durante el turno de guardia, desde que la Prestadora eligió viaje y turno de guardia. De fábrica, 30.';
 
 
 
-COMMENT ON COLUMN "public"."prestadoras"."control_de_ubicacion_en_el_turno_desde" IS 'Desde cuándo la Prestadora tiene viaje y turno. Vacía con sólo viaje. La pone la base.';
+COMMENT ON COLUMN "public"."prestadoras"."control_de_ubicacion_en_el_turno_guardia_desde" IS 'Desde cuándo la Prestadora tiene viaje y turno de guardia. Vacía con sólo viaje. La pone la base.';
 
 
 
@@ -16402,13 +16402,13 @@ CREATE TABLE IF NOT EXISTS "public"."remuneraciones_asistente" (
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "moneda" "public"."moneda_iso" NOT NULL,
     "unidad_medicion" "text" DEFAULT 'hora'::"text" NOT NULL,
-    "valor_guardia" numeric(12,2),
+    "valor_turno_guardia" numeric(12,2),
     "valor_semana" numeric(12,2),
     "valor_hora_extra" numeric(12,2),
     "frecuencia_pago" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     CONSTRAINT "remuneraciones_asistente_frecuencia_es_objeto" CHECK (("jsonb_typeof"("frecuencia_pago") = 'object'::"text")),
-    CONSTRAINT "remuneraciones_asistente_unidad_conocida" CHECK (("unidad_medicion" = ANY (ARRAY['hora'::"text", 'guardia'::"text", 'semana'::"text", 'mes'::"text"]))),
-    CONSTRAINT "remuneraciones_asistente_valores_no_negativos" CHECK (((COALESCE("valor_hora", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_guardia", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_semana", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_hora_extra", (0)::numeric) >= (0)::numeric)))
+    CONSTRAINT "remuneraciones_asistente_unidad_conocida" CHECK (("unidad_medicion" = ANY (ARRAY['hora'::"text", 'turno_guardia'::"text", 'semana'::"text", 'mes'::"text"]))),
+    CONSTRAINT "remuneraciones_asistente_valores_no_negativos" CHECK (((COALESCE("valor_hora", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_turno_guardia", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_semana", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_hora_extra", (0)::numeric) >= (0)::numeric)))
 );
 
 
@@ -16419,7 +16419,7 @@ COMMENT ON TABLE "public"."remuneraciones_asistente" IS 'Lo que cobra cada Asist
 
 
 
-COMMENT ON COLUMN "public"."remuneraciones_asistente"."unidad_medicion" IS 'Con que se mide el trabajo de esta persona: hora, guardia, semana o mes. No es cada cuanto se le paga, que es otra cosa y se arregla aparte.';
+COMMENT ON COLUMN "public"."remuneraciones_asistente"."unidad_medicion" IS 'Con que se mide el trabajo de esta persona: hora, turno de guardia, semana o mes. No es cada cuanto se le paga, que es otra cosa y se arregla aparte.';
 
 
 
@@ -16434,7 +16434,7 @@ COMMENT ON COLUMN "public"."remuneraciones_asistente"."frecuencia_pago" IS 'Cada
 CREATE TABLE IF NOT EXISTS "public"."reportes" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
-    "guardia_id" "uuid" NOT NULL,
+    "turno_guardia_id" "uuid" NOT NULL,
     "texto_libre" "text",
     "alimentacion" "jsonb",
     "medicacion" "jsonb",
@@ -16453,7 +16453,7 @@ CREATE TABLE IF NOT EXISTS "public"."reportes" (
 ALTER TABLE "public"."reportes" OWNER TO "postgres";
 
 
-COMMENT ON COLUMN "public"."reportes"."paciente_id" IS 'De qué Paciente habla este reporte. Un turno que cubre a varios tiene un reporte por cada uno.';
+COMMENT ON COLUMN "public"."reportes"."paciente_id" IS 'De qué Paciente habla este reporte. Un turno de guardia que cubre a varios tiene un reporte por cada uno.';
 
 
 
@@ -16647,7 +16647,7 @@ COMMENT ON COLUMN "public"."secretos_de_terceros"."version_de_clave" IS 'Con qu�
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."series_guardias" (
+CREATE TABLE IF NOT EXISTS "public"."series_turnos_guardia" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
     "asistente_id" "uuid",
@@ -16665,34 +16665,34 @@ CREATE TABLE IF NOT EXISTS "public"."series_guardias" (
     "canal_modalidad" "text" DEFAULT 'directa'::"text" NOT NULL,
     "servicio_id" "uuid" NOT NULL,
     "dias_hasta_el_fin" smallint DEFAULT 0 NOT NULL,
-    CONSTRAINT "series_guardias_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
-    CONSTRAINT "series_guardias_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelado_at" IS NULL)))),
-    CONSTRAINT "series_guardias_cancelacion_origen_check" CHECK (("cancelacion_origen" = ANY (ARRAY['cliente'::"text", 'prestadora'::"text"]))),
-    CONSTRAINT "series_guardias_dias_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
-    CONSTRAINT "series_guardias_estado_check" CHECK (("estado" = ANY (ARRAY['activa'::"text", 'cancelada'::"text", 'pausada'::"text"])))
+    CONSTRAINT "series_turnos_guardia_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
+    CONSTRAINT "series_turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelado_at" IS NULL)))),
+    CONSTRAINT "series_turnos_guardia_cancelacion_origen_check" CHECK (("cancelacion_origen" = ANY (ARRAY['cliente'::"text", 'prestadora'::"text"]))),
+    CONSTRAINT "series_turnos_guardia_dias_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
+    CONSTRAINT "series_turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['activa'::"text", 'cancelada'::"text", 'pausada'::"text"])))
 );
 
 
-ALTER TABLE "public"."series_guardias" OWNER TO "postgres";
+ALTER TABLE "public"."series_turnos_guardia" OWNER TO "postgres";
 
 
-COMMENT ON COLUMN "public"."series_guardias"."asistente_id" IS 'NULL = serie sin Asistente fijo. Las guardias que genera nacen sin cubrir.';
-
-
-
-COMMENT ON COLUMN "public"."series_guardias"."paciente_id" IS 'EN RETIRO. Guarda a uno solo de los Pacientes de la serie, el primero. La lista completa vive en series_guardias_pacientes. Sigue acá únicamente para que las pantallas todavía sin actualizar no se rompan.';
+COMMENT ON COLUMN "public"."series_turnos_guardia"."asistente_id" IS 'NULL = serie sin Asistente fijo. Los turnos de guardia que genera nacen sin cubrir.';
 
 
 
-COMMENT ON COLUMN "public"."series_guardias"."servicio_id" IS 'De qué Servicio son las guardias de esta serie. Vacío mientras la serie no cuelgue de ninguno: hay trabajo que se hace y se factura sin Servicio armado.';
+COMMENT ON COLUMN "public"."series_turnos_guardia"."paciente_id" IS 'EN RETIRO. Guarda a uno solo de los Pacientes de la serie, el primero. La lista completa vive en series_turnos_guardia_pacientes. Sigue acá únicamente para que las pantallas todavía sin actualizar no se rompan.';
 
 
 
-COMMENT ON COLUMN "public"."series_guardias"."dias_hasta_el_fin" IS 'Cuantos dias despues del dia de inicio termina cada turno de la serie.';
+COMMENT ON COLUMN "public"."series_turnos_guardia"."servicio_id" IS 'De qué Servicio son los turnos de guardia de esta serie. Vacío mientras la serie no cuelgue de ninguno: hay trabajo que se hace y se factura sin Servicio armado.';
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."series_guardias_pacientes" (
+COMMENT ON COLUMN "public"."series_turnos_guardia"."dias_hasta_el_fin" IS 'Cuantos dias despues del dia de inicio termina cada turno de guardia de la serie.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."series_turnos_guardia_pacientes" (
     "serie_id" "uuid" NOT NULL,
     "paciente_id" "uuid" NOT NULL,
     "prestadora_id" "uuid" NOT NULL,
@@ -16700,10 +16700,10 @@ CREATE TABLE IF NOT EXISTS "public"."series_guardias_pacientes" (
 );
 
 
-ALTER TABLE "public"."series_guardias_pacientes" OWNER TO "postgres";
+ALTER TABLE "public"."series_turnos_guardia_pacientes" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."series_guardias_pacientes" IS 'A quiénes cubre una serie de guardias. Cada guardia que la serie genera nace con esta misma lista de Pacientes.';
+COMMENT ON TABLE "public"."series_turnos_guardia_pacientes" IS 'A quiénes cubre una serie de turnos de guardia. Cada turno de guardia que la serie genera nace con esta misma lista de Pacientes.';
 
 
 
@@ -16925,7 +16925,7 @@ CREATE TABLE IF NOT EXISTS "public"."textos_consentimiento" (
     "vigente_hasta" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "control_de_ubicacion_en_el_turno" boolean,
+    "control_de_ubicacion_en_el_turno_guardia" boolean,
     CONSTRAINT "textos_consentimiento_idioma_check" CHECK (("idioma" = ANY (ARRAY['es-AR'::"text", 'en'::"text", 'pt-BR'::"text"]))),
     CONSTRAINT "textos_consentimiento_modalidad_check" CHECK (("modalidad" = ANY (ARRAY['dependencia'::"text", 'autonomo'::"text"]))),
     CONSTRAINT "textos_consentimiento_version_check" CHECK (("version" > 0))
@@ -17277,8 +17277,8 @@ ALTER TABLE ONLY "public"."alertas"
 
 
 
-ALTER TABLE ONLY "public"."alertas_tempranas_guardia"
-    ADD CONSTRAINT "alertas_tempranas_guardia_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."alertas_tempranas_turno_guardia"
+    ADD CONSTRAINT "alertas_tempranas_turno_guardia_pkey" PRIMARY KEY ("id");
 
 
 
@@ -17287,8 +17287,8 @@ ALTER TABLE ONLY "public"."apoderados"
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_pkey" PRIMARY KEY ("id");
 
 
 
@@ -17598,8 +17598,8 @@ ALTER TABLE ONLY "public"."configuracion_aviso_cierre_del_servicio"
 
 
 
-ALTER TABLE ONLY "public"."configuracion_aviso_guardia_sin_cubrir"
-    ADD CONSTRAINT "configuracion_aviso_guardia_sin_cubrir_pkey" PRIMARY KEY ("prestadora_id");
+ALTER TABLE ONLY "public"."configuracion_aviso_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "configuracion_aviso_turno_guardia_sin_cubrir_pkey" PRIMARY KEY ("prestadora_id");
 
 
 
@@ -17648,8 +17648,8 @@ ALTER TABLE ONLY "public"."configuracion_funciones_intermediacion"
 
 
 
-ALTER TABLE ONLY "public"."configuracion_incidentes_turno_sin_cubrir"
-    ADD CONSTRAINT "configuracion_incidentes_turno_sin_cubrir_pkey" PRIMARY KEY ("prestadora_id");
+ALTER TABLE ONLY "public"."configuracion_incidentes_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "configuracion_incidentes_turno_guardia_sin_cubrir_pkey" PRIMARY KEY ("prestadora_id");
 
 
 
@@ -17848,8 +17848,8 @@ ALTER TABLE ONLY "public"."desafios_de_llave"
 
 
 
-ALTER TABLE ONLY "public"."descansos_guardia"
-    ADD CONSTRAINT "descansos_guardia_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."descansos_turno_guardia"
+    ADD CONSTRAINT "descansos_turno_guardia_pkey" PRIMARY KEY ("id");
 
 
 
@@ -17902,8 +17902,8 @@ ALTER TABLE ONLY "public"."domicilios_temporales_paciente"
 
 
 
-ALTER TABLE ONLY "public"."emergencias_guardia"
-    ADD CONSTRAINT "emergencias_guardia_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."emergencias_turno_guardia"
+    ADD CONSTRAINT "emergencias_turno_guardia_pkey" PRIMARY KEY ("id");
 
 
 
@@ -18007,8 +18007,8 @@ ALTER TABLE ONLY "public"."excepciones_por_documentos"
 
 
 
-ALTER TABLE ONLY "public"."extensiones_de_turno"
-    ADD CONSTRAINT "extensiones_de_turno_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."extensiones_de_turno_guardia"
+    ADD CONSTRAINT "extensiones_de_turno_guardia_pkey" PRIMARY KEY ("id");
 
 
 
@@ -18047,8 +18047,8 @@ ALTER TABLE ONLY "public"."feriados_por_pais"
 
 
 
-ALTER TABLE ONLY "public"."finales_turno_sin_cubrir"
-    ADD CONSTRAINT "finales_turno_sin_cubrir_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."finales_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "finales_turno_guardia_sin_cubrir_pkey" PRIMARY KEY ("id");
 
 
 
@@ -18078,38 +18078,38 @@ ALTER TABLE ONLY "public"."formularios_declarados"
 
 
 
-ALTER TABLE ONLY "public"."guardia_comprobaciones"
-    ADD CONSTRAINT "guardia_comprobaciones_momento_unico_por_guardia" UNIQUE ("guardia_id", "momento");
+ALTER TABLE ONLY "public"."turno_guardia_comprobaciones"
+    ADD CONSTRAINT "turno_guardia_comprobaciones_momento_unico_por_turno_guardia" UNIQUE ("turno_guardia_id", "momento");
 
 
 
-ALTER TABLE ONLY "public"."guardia_comprobaciones"
-    ADD CONSTRAINT "guardia_comprobaciones_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."turno_guardia_comprobaciones"
+    ADD CONSTRAINT "turno_guardia_comprobaciones_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."guardia_pacientes"
-    ADD CONSTRAINT "guardia_pacientes_pkey" PRIMARY KEY ("guardia_id", "paciente_id");
+ALTER TABLE ONLY "public"."turno_guardia_pacientes"
+    ADD CONSTRAINT "turno_guardia_pacientes_pkey" PRIMARY KEY ("turno_guardia_id", "paciente_id");
 
 
 
-ALTER TABLE ONLY "public"."guardias_cobertura"
-    ADD CONSTRAINT "guardias_cobertura_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."turnos_guardia_cobertura"
+    ADD CONSTRAINT "turnos_guardia_cobertura_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_id_prestadora_unique" UNIQUE ("id", "prestadora_id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_id_prestadora_unique" UNIQUE ("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias_tracking_gps"
-    ADD CONSTRAINT "guardias_tracking_gps_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."turnos_guardia_tracking_gps"
+    ADD CONSTRAINT "turnos_guardia_tracking_gps_pkey" PRIMARY KEY ("id");
 
 
 
@@ -18148,8 +18148,8 @@ ALTER TABLE ONLY "public"."incidentes_relevo"
 
 
 
-ALTER TABLE ONLY "public"."incidentes_turno_sin_cubrir"
-    ADD CONSTRAINT "incidentes_turno_sin_cubrir_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."incidentes_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "incidentes_turno_guardia_sin_cubrir_pkey" PRIMARY KEY ("id");
 
 
 
@@ -18268,18 +18268,18 @@ ALTER TABLE ONLY "public"."monedas_por_pais"
 
 
 
-ALTER TABLE ONLY "public"."motivos_aviso_previo_guardia"
-    ADD CONSTRAINT "motivos_aviso_previo_guardia_id_prestadora_id_key" UNIQUE ("id", "prestadora_id");
+ALTER TABLE ONLY "public"."motivos_aviso_previo_turno_guardia"
+    ADD CONSTRAINT "motivos_aviso_previo_turno_guardia_id_prestadora_id_key" UNIQUE ("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."motivos_aviso_previo_guardia"
-    ADD CONSTRAINT "motivos_aviso_previo_guardia_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."motivos_aviso_previo_turno_guardia"
+    ADD CONSTRAINT "motivos_aviso_previo_turno_guardia_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."motivos_aviso_previo_guardia"
-    ADD CONSTRAINT "motivos_aviso_previo_guardia_prestadora_id_nombre_key" UNIQUE ("prestadora_id", "nombre");
+ALTER TABLE ONLY "public"."motivos_aviso_previo_turno_guardia"
+    ADD CONSTRAINT "motivos_aviso_previo_turno_guardia_prestadora_id_nombre_key" UNIQUE ("prestadora_id", "nombre");
 
 
 
@@ -18308,13 +18308,13 @@ ALTER TABLE ONLY "public"."motivos_resolucion"
 
 
 
-ALTER TABLE ONLY "public"."motivos_sustitucion_guardia"
-    ADD CONSTRAINT "motivos_sustitucion_guardia_id_prestadora_id_key" UNIQUE ("id", "prestadora_id");
+ALTER TABLE ONLY "public"."motivos_sustitucion_turno_guardia"
+    ADD CONSTRAINT "motivos_sustitucion_turno_guardia_id_prestadora_id_key" UNIQUE ("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."motivos_sustitucion_guardia"
-    ADD CONSTRAINT "motivos_sustitucion_guardia_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."motivos_sustitucion_turno_guardia"
+    ADD CONSTRAINT "motivos_sustitucion_turno_guardia_pkey" PRIMARY KEY ("id");
 
 
 
@@ -18474,7 +18474,7 @@ ALTER TABLE ONLY "public"."plazos_de_respuesta_de_derechos"
 
 
 ALTER TABLE ONLY "public"."plazos_de_ubicacion_avisados"
-    ADD CONSTRAINT "plazos_de_ubicacion_avisados_asistente_id_control_en_el_tur_key" UNIQUE ("asistente_id", "control_en_el_turno_desde");
+    ADD CONSTRAINT "plazos_de_ubicacion_avisados_asistente_id_control_en_el_tur_key" UNIQUE ("asistente_id", "control_en_el_turno_guardia_desde");
 
 
 
@@ -18633,18 +18633,18 @@ ALTER TABLE ONLY "public"."secretos_de_terceros"
 
 
 
-ALTER TABLE ONLY "public"."series_guardias"
-    ADD CONSTRAINT "series_guardias_id_prestadora_unique" UNIQUE ("id", "prestadora_id");
+ALTER TABLE ONLY "public"."series_turnos_guardia"
+    ADD CONSTRAINT "series_turnos_guardia_id_prestadora_unique" UNIQUE ("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."series_guardias_pacientes"
-    ADD CONSTRAINT "series_guardias_pacientes_pkey" PRIMARY KEY ("serie_id", "paciente_id");
+ALTER TABLE ONLY "public"."series_turnos_guardia_pacientes"
+    ADD CONSTRAINT "series_turnos_guardia_pacientes_pkey" PRIMARY KEY ("serie_id", "paciente_id");
 
 
 
-ALTER TABLE ONLY "public"."series_guardias"
-    ADD CONSTRAINT "series_guardias_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."series_turnos_guardia"
+    ADD CONSTRAINT "series_turnos_guardia_pkey" PRIMARY KEY ("id");
 
 
 
@@ -18735,7 +18735,7 @@ ALTER TABLE ONLY "public"."textos_consentimiento"
 
 
 ALTER TABLE ONLY "public"."textos_consentimiento"
-    ADD CONSTRAINT "textos_consentimiento_unico_por_forma" UNIQUE NULLS NOT DISTINCT ("jurisdiccion", "clave", "modalidad", "version", "idioma", "control_de_ubicacion_en_el_turno");
+    ADD CONSTRAINT "textos_consentimiento_unico_por_forma" UNIQUE NULLS NOT DISTINCT ("jurisdiccion", "clave", "modalidad", "version", "idioma", "control_de_ubicacion_en_el_turno_guardia");
 
 
 
@@ -18900,15 +18900,15 @@ CREATE UNIQUE INDEX "apoderados_uno_vigente_por_funcion" ON "public"."apoderados
 
 
 
-CREATE UNIQUE INDEX "asignaciones_de_turno_una_sin_responder_por_ausencia" ON "public"."asignaciones_de_turno" USING "btree" ("ausencia_id", "asistente_id") WHERE (("estado" = 'sin_responder'::"text") AND ("ausencia_id" IS NOT NULL));
+CREATE UNIQUE INDEX "asignaciones_de_turno_guardia_una_sin_responder_por_ausencia" ON "public"."asignaciones_de_turno_guardia" USING "btree" ("ausencia_id", "asistente_id") WHERE (("estado" = 'sin_responder'::"text") AND ("ausencia_id" IS NOT NULL));
 
 
 
-CREATE UNIQUE INDEX "asignaciones_de_turno_una_sin_responder_por_serie" ON "public"."asignaciones_de_turno" USING "btree" ("serie_id") WHERE (("estado" = 'sin_responder'::"text") AND ("serie_id" IS NOT NULL));
+CREATE UNIQUE INDEX "asignaciones_de_turno_guardia_una_sin_responder_por_serie" ON "public"."asignaciones_de_turno_guardia" USING "btree" ("serie_id") WHERE (("estado" = 'sin_responder'::"text") AND ("serie_id" IS NOT NULL));
 
 
 
-CREATE UNIQUE INDEX "asignaciones_de_turno_una_sin_responder_por_turno" ON "public"."asignaciones_de_turno" USING "btree" ("guardia_id") WHERE ("estado" = 'sin_responder'::"text");
+CREATE UNIQUE INDEX "asignaciones_de_turno_guardia_una_sin_responder_por_cada_uno" ON "public"."asignaciones_de_turno_guardia" USING "btree" ("turno_guardia_id") WHERE ("estado" = 'sin_responder'::"text");
 
 
 
@@ -18928,7 +18928,7 @@ CREATE INDEX "auditoria_asignaciones_con_aviso_por_fecha" ON "public"."auditoria
 
 
 
-CREATE INDEX "auditoria_reasignaciones_por_emergencia_guardia_idx" ON "public"."auditoria_reasignaciones_por_emergencia" USING "btree" ("prestadora_id", "guardia_id");
+CREATE INDEX "auditoria_reasignaciones_por_emergencia_turno_guardia_idx" ON "public"."auditoria_reasignaciones_por_emergencia" USING "btree" ("prestadora_id", "turno_guardia_id");
 
 
 
@@ -18992,7 +18992,7 @@ CREATE UNIQUE INDEX "coberturas_de_ausencia_una_para_los_sueltos" ON "public"."c
 
 
 
-CREATE UNIQUE INDEX "coberturas_de_ausencia_una_por_turno" ON "public"."coberturas_de_ausencia" USING "btree" ("ausencia_id", "serie_id") WHERE ("objetada_at" IS NULL);
+CREATE UNIQUE INDEX "coberturas_de_ausencia_una_por_turno_guardia" ON "public"."coberturas_de_ausencia" USING "btree" ("ausencia_id", "serie_id") WHERE ("objetada_at" IS NULL);
 
 
 
@@ -19004,7 +19004,7 @@ CREATE UNIQUE INDEX "configuracion_prestadora_dominio_unico" ON "public"."config
 
 
 
-CREATE INDEX "consentimientos_paciente_solo_por_turno" ON "public"."consentimientos_paciente_solo" USING "btree" ("guardia_id");
+CREATE INDEX "consentimientos_paciente_solo_por_turno_guardia" ON "public"."consentimientos_paciente_solo" USING "btree" ("turno_guardia_id");
 
 
 
@@ -19128,19 +19128,19 @@ CREATE INDEX "excepciones_familiar_relevo_abiertas" ON "public"."excepciones_fam
 
 
 
-CREATE INDEX "excepciones_familiar_relevo_por_turno" ON "public"."excepciones_familiar_relevo" USING "btree" ("guardia_id");
+CREATE INDEX "excepciones_familiar_relevo_por_turno_guardia" ON "public"."excepciones_familiar_relevo" USING "btree" ("turno_guardia_id");
 
 
 
-CREATE INDEX "excepciones_por_documentos_guardia_idx" ON "public"."excepciones_por_documentos" USING "btree" ("guardia_id", "asistente_id");
+CREATE INDEX "excepciones_por_documentos_turno_guardia_idx" ON "public"."excepciones_por_documentos" USING "btree" ("turno_guardia_id", "asistente_id");
 
 
 
-CREATE INDEX "extensiones_de_turno_abiertas" ON "public"."extensiones_de_turno" USING "btree" ("prestadora_id", "desde_at") WHERE ("hasta_at" IS NULL);
+CREATE INDEX "extensiones_de_turno_guardia_abiertas" ON "public"."extensiones_de_turno_guardia" USING "btree" ("prestadora_id", "desde_at") WHERE ("hasta_at" IS NULL);
 
 
 
-CREATE UNIQUE INDEX "extensiones_de_turno_una_abierta_por_guardia" ON "public"."extensiones_de_turno" USING "btree" ("guardia_id") WHERE ("hasta_at" IS NULL);
+CREATE UNIQUE INDEX "extensiones_de_turno_guardia_una_abierta_por_turno_guardia" ON "public"."extensiones_de_turno_guardia" USING "btree" ("turno_guardia_id") WHERE ("hasta_at" IS NULL);
 
 
 
@@ -19148,15 +19148,15 @@ CREATE INDEX "facturas_cliente_items_por_descuento" ON "public"."facturas_client
 
 
 
-CREATE INDEX "finales_turno_sin_cubrir_activos" ON "public"."finales_turno_sin_cubrir" USING "btree" ("prestadora_id", "orden") WHERE "activo";
+CREATE INDEX "finales_turno_guardia_sin_cubrir_activos" ON "public"."finales_turno_guardia_sin_cubrir" USING "btree" ("prestadora_id", "orden") WHERE "activo";
 
 
 
-CREATE UNIQUE INDEX "finales_turno_sin_cubrir_clave_unica" ON "public"."finales_turno_sin_cubrir" USING "btree" ("prestadora_id", "clave") WHERE ("clave" IS NOT NULL);
+CREATE UNIQUE INDEX "finales_turno_guardia_sin_cubrir_clave_unica" ON "public"."finales_turno_guardia_sin_cubrir" USING "btree" ("prestadora_id", "clave") WHERE ("clave" IS NOT NULL);
 
 
 
-CREATE UNIQUE INDEX "finales_turno_sin_cubrir_nombre_unico" ON "public"."finales_turno_sin_cubrir" USING "btree" ("prestadora_id", "lower"("nombre")) WHERE ("nombre" IS NOT NULL);
+CREATE UNIQUE INDEX "finales_turno_guardia_sin_cubrir_nombre_unico" ON "public"."finales_turno_guardia_sin_cubrir" USING "btree" ("prestadora_id", "lower"("nombre")) WHERE ("nombre" IS NOT NULL);
 
 
 
@@ -19184,15 +19184,15 @@ CREATE UNIQUE INDEX "formularios_declarados_id_prestadora" ON "public"."formular
 
 
 
-CREATE INDEX "guardias_cobertura_de_ausencia_idx" ON "public"."guardias_cobertura" USING "btree" ("cobertura_de_ausencia_id") WHERE ("cobertura_de_ausencia_id" IS NOT NULL);
+CREATE INDEX "turnos_guardia_cobertura_de_ausencia_idx" ON "public"."turnos_guardia_cobertura" USING "btree" ("cobertura_de_ausencia_id") WHERE ("cobertura_de_ausencia_id" IS NOT NULL);
 
 
 
-CREATE INDEX "guardias_en_curso_por_fecha" ON "public"."guardias" USING "btree" ("prestadora_id", "fecha") WHERE (("estado" = 'activa'::"text") AND ("cerrada_at" IS NULL));
+CREATE INDEX "turnos_guardia_en_curso_por_fecha" ON "public"."turnos_guardia" USING "btree" ("prestadora_id", "fecha") WHERE (("estado" = 'activa'::"text") AND ("cerrada_at" IS NULL));
 
 
 
-CREATE INDEX "guardias_servicio_id_idx" ON "public"."guardias" USING "btree" ("servicio_id") WHERE ("servicio_id" IS NOT NULL);
+CREATE INDEX "turnos_guardia_servicio_id_idx" ON "public"."turnos_guardia" USING "btree" ("servicio_id") WHERE ("servicio_id" IS NOT NULL);
 
 
 
@@ -19220,11 +19220,11 @@ CREATE INDEX "idx_alertas_prestadora_id" ON "public"."alertas" USING "btree" ("p
 
 
 
-CREATE INDEX "idx_alertas_tempranas_guardia_guardia" ON "public"."alertas_tempranas_guardia" USING "btree" ("guardia_id");
+CREATE INDEX "idx_alertas_tempranas_turno_guardia_turno_guardia" ON "public"."alertas_tempranas_turno_guardia" USING "btree" ("turno_guardia_id");
 
 
 
-CREATE INDEX "idx_alertas_tempranas_guardia_prestadora_id" ON "public"."alertas_tempranas_guardia" USING "btree" ("prestadora_id");
+CREATE INDEX "idx_alertas_tempranas_turno_guardia_prestadora_id" ON "public"."alertas_tempranas_turno_guardia" USING "btree" ("prestadora_id");
 
 
 
@@ -19236,7 +19236,7 @@ CREATE INDEX "idx_apoderados_prestadora" ON "public"."apoderados" USING "btree" 
 
 
 
-CREATE INDEX "idx_asignaciones_de_turno_por_asistente" ON "public"."asignaciones_de_turno" USING "btree" ("asistente_id", "asignado_at" DESC);
+CREATE INDEX "idx_asignaciones_de_turno_guardia_por_asistente" ON "public"."asignaciones_de_turno_guardia" USING "btree" ("asistente_id", "asignado_at" DESC);
 
 
 
@@ -19419,23 +19419,23 @@ CREATE INDEX "idx_desafios_de_llave_prestadora_id" ON "public"."desafios_de_llav
 
 
 
-CREATE UNIQUE INDEX "idx_descansos_guardia_cierre_sin_repetir" ON "public"."descansos_guardia" USING "btree" ("guardia_id", "cliente_uuid_fin") WHERE ("cliente_uuid_fin" IS NOT NULL);
+CREATE UNIQUE INDEX "idx_descansos_turno_guardia_cierre_sin_repetir" ON "public"."descansos_turno_guardia" USING "btree" ("turno_guardia_id", "cliente_uuid_fin") WHERE ("cliente_uuid_fin" IS NOT NULL);
 
 
 
-CREATE INDEX "idx_descansos_guardia_por_guardia" ON "public"."descansos_guardia" USING "btree" ("guardia_id", "inicio_at" DESC);
+CREATE INDEX "idx_descansos_turno_guardia_por_turno_guardia" ON "public"."descansos_turno_guardia" USING "btree" ("turno_guardia_id", "inicio_at" DESC);
 
 
 
-CREATE INDEX "idx_descansos_guardia_prestadora_id" ON "public"."descansos_guardia" USING "btree" ("prestadora_id");
+CREATE INDEX "idx_descansos_turno_guardia_prestadora_id" ON "public"."descansos_turno_guardia" USING "btree" ("prestadora_id");
 
 
 
-CREATE UNIQUE INDEX "idx_descansos_guardia_sin_repetir" ON "public"."descansos_guardia" USING "btree" ("guardia_id", "cliente_uuid") WHERE ("cliente_uuid" IS NOT NULL);
+CREATE UNIQUE INDEX "idx_descansos_turno_guardia_sin_repetir" ON "public"."descansos_turno_guardia" USING "btree" ("turno_guardia_id", "cliente_uuid") WHERE ("cliente_uuid" IS NOT NULL);
 
 
 
-CREATE UNIQUE INDEX "idx_descansos_guardia_uno_abierto_por_guardia" ON "public"."descansos_guardia" USING "btree" ("guardia_id") WHERE ("fin_at" IS NULL);
+CREATE UNIQUE INDEX "idx_descansos_turno_guardia_uno_abierto_por_turno_guardia" ON "public"."descansos_turno_guardia" USING "btree" ("turno_guardia_id") WHERE ("fin_at" IS NULL);
 
 
 
@@ -19455,15 +19455,15 @@ CREATE INDEX "idx_domicilios_temporales_por_lugar" ON "public"."domicilios_tempo
 
 
 
-CREATE INDEX "idx_emergencias_guardia_por_guardia" ON "public"."emergencias_guardia" USING "btree" ("guardia_id");
+CREATE INDEX "idx_emergencias_turno_guardia_por_turno_guardia" ON "public"."emergencias_turno_guardia" USING "btree" ("turno_guardia_id");
 
 
 
-CREATE INDEX "idx_emergencias_guardia_sin_atender" ON "public"."emergencias_guardia" USING "btree" ("prestadora_id", "reportado_at" DESC) WHERE ("atendida_at" IS NULL);
+CREATE INDEX "idx_emergencias_turno_guardia_sin_atender" ON "public"."emergencias_turno_guardia" USING "btree" ("prestadora_id", "reportado_at" DESC) WHERE ("atendida_at" IS NULL);
 
 
 
-CREATE UNIQUE INDEX "idx_emergencias_guardia_sin_repetir" ON "public"."emergencias_guardia" USING "btree" ("guardia_id", "cliente_uuid") WHERE ("cliente_uuid" IS NOT NULL);
+CREATE UNIQUE INDEX "idx_emergencias_turno_guardia_sin_repetir" ON "public"."emergencias_turno_guardia" USING "btree" ("turno_guardia_id", "cliente_uuid") WHERE ("cliente_uuid" IS NOT NULL);
 
 
 
@@ -19540,59 +19540,59 @@ CREATE INDEX "idx_formulario_secciones_prestadora_id" ON "public"."formulario_se
 
 
 
-CREATE INDEX "idx_guardia_comprobaciones_guardia" ON "public"."guardia_comprobaciones" USING "btree" ("guardia_id");
+CREATE INDEX "idx_turno_guardia_comprobaciones_turno_guardia" ON "public"."turno_guardia_comprobaciones" USING "btree" ("turno_guardia_id");
 
 
 
-CREATE INDEX "idx_guardia_comprobaciones_pendientes" ON "public"."guardia_comprobaciones" USING "btree" ("prestadora_id", "pedido_en") WHERE ("estado" = 'pendiente_de_autorizacion'::"text");
+CREATE INDEX "idx_turno_guardia_comprobaciones_pendientes" ON "public"."turno_guardia_comprobaciones" USING "btree" ("prestadora_id", "pedido_en") WHERE ("estado" = 'pendiente_de_autorizacion'::"text");
 
 
 
-CREATE INDEX "idx_guardia_pacientes_paciente" ON "public"."guardia_pacientes" USING "btree" ("paciente_id");
+CREATE INDEX "idx_turno_guardia_pacientes_paciente" ON "public"."turno_guardia_pacientes" USING "btree" ("paciente_id");
 
 
 
-CREATE INDEX "idx_guardia_pacientes_prestadora_id" ON "public"."guardia_pacientes" USING "btree" ("prestadora_id");
+CREATE INDEX "idx_turno_guardia_pacientes_prestadora_id" ON "public"."turno_guardia_pacientes" USING "btree" ("prestadora_id");
 
 
 
-CREATE INDEX "idx_guardias_asistente" ON "public"."guardias" USING "btree" ("asistente_id");
+CREATE INDEX "idx_turnos_guardia_asistente" ON "public"."turnos_guardia" USING "btree" ("asistente_id");
 
 
 
-CREATE INDEX "idx_guardias_canal_modalidad" ON "public"."guardias" USING "btree" ("prestadora_id", "canal_modalidad");
+CREATE INDEX "idx_turnos_guardia_canal_modalidad" ON "public"."turnos_guardia" USING "btree" ("prestadora_id", "canal_modalidad");
 
 
 
-CREATE INDEX "idx_guardias_cobertura_prestadora_id" ON "public"."guardias_cobertura" USING "btree" ("prestadora_id");
+CREATE INDEX "idx_turnos_guardia_cobertura_prestadora_id" ON "public"."turnos_guardia_cobertura" USING "btree" ("prestadora_id");
 
 
 
-CREATE INDEX "idx_guardias_fecha" ON "public"."guardias" USING "btree" ("fecha");
+CREATE INDEX "idx_turnos_guardia_fecha" ON "public"."turnos_guardia" USING "btree" ("fecha");
 
 
 
-CREATE INDEX "idx_guardias_paciente" ON "public"."guardias" USING "btree" ("paciente_id");
+CREATE INDEX "idx_turnos_guardia_paciente" ON "public"."turnos_guardia" USING "btree" ("paciente_id");
 
 
 
-CREATE INDEX "idx_guardias_serie" ON "public"."guardias" USING "btree" ("serie_id");
+CREATE INDEX "idx_turnos_guardia_serie" ON "public"."turnos_guardia" USING "btree" ("serie_id");
 
 
 
-CREATE INDEX "idx_guardias_sin_cerrar" ON "public"."guardias" USING "btree" ("prestadora_id", "fecha") WHERE (("estado" = 'activa'::"text") AND ("checkout_at" IS NULL));
+CREATE INDEX "idx_turnos_guardia_sin_cerrar" ON "public"."turnos_guardia" USING "btree" ("prestadora_id", "fecha") WHERE (("estado" = 'activa'::"text") AND ("checkout_at" IS NULL));
 
 
 
-CREATE INDEX "idx_guardias_sin_cubrir" ON "public"."guardias" USING "btree" ("prestadora_id", "fecha") WHERE ("asistente_id" IS NULL);
+CREATE INDEX "idx_turnos_guardia_sin_cubrir" ON "public"."turnos_guardia" USING "btree" ("prestadora_id", "fecha") WHERE ("asistente_id" IS NULL);
 
 
 
-CREATE INDEX "idx_guardias_tracking_gps_guardia" ON "public"."guardias_tracking_gps" USING "btree" ("guardia_id");
+CREATE INDEX "idx_turnos_guardia_tracking_gps_turno_guardia" ON "public"."turnos_guardia_tracking_gps" USING "btree" ("turno_guardia_id");
 
 
 
-CREATE INDEX "idx_guardias_tracking_gps_prestadora_id" ON "public"."guardias_tracking_gps" USING "btree" ("prestadora_id");
+CREATE INDEX "idx_turnos_guardia_tracking_gps_prestadora_id" ON "public"."turnos_guardia_tracking_gps" USING "btree" ("prestadora_id");
 
 
 
@@ -19612,7 +19612,7 @@ CREATE INDEX "idx_importaciones_prestadora_prestadora_id" ON "public"."importaci
 
 
 
-CREATE INDEX "idx_incidentes_relevo_entrante" ON "public"."incidentes_relevo" USING "btree" ("guardia_entrante_id");
+CREATE INDEX "idx_incidentes_relevo_entrante" ON "public"."incidentes_relevo" USING "btree" ("turno_guardia_entrante_id");
 
 
 
@@ -19620,7 +19620,7 @@ CREATE INDEX "idx_incidentes_relevo_prestadora_id" ON "public"."incidentes_relev
 
 
 
-CREATE INDEX "idx_incidentes_relevo_saliente" ON "public"."incidentes_relevo" USING "btree" ("guardia_saliente_id");
+CREATE INDEX "idx_incidentes_relevo_saliente" ON "public"."incidentes_relevo" USING "btree" ("turno_guardia_saliente_id");
 
 
 
@@ -19828,7 +19828,7 @@ CREATE INDEX "idx_remuneraciones_asistente_prestadora" ON "public"."remuneracion
 
 
 
-CREATE INDEX "idx_reportes_guardia" ON "public"."reportes" USING "btree" ("guardia_id");
+CREATE INDEX "idx_reportes_turno_guardia" ON "public"."reportes" USING "btree" ("turno_guardia_id");
 
 
 
@@ -19852,23 +19852,23 @@ CREATE INDEX "idx_restricciones_de_cobranza_prestadora" ON "public"."restriccion
 
 
 
-CREATE INDEX "idx_series_guardias_asistente" ON "public"."series_guardias" USING "btree" ("asistente_id");
+CREATE INDEX "idx_series_turnos_guardia_asistente" ON "public"."series_turnos_guardia" USING "btree" ("asistente_id");
 
 
 
-CREATE INDEX "idx_series_guardias_paciente" ON "public"."series_guardias" USING "btree" ("paciente_id");
+CREATE INDEX "idx_series_turnos_guardia_paciente" ON "public"."series_turnos_guardia" USING "btree" ("paciente_id");
 
 
 
-CREATE INDEX "idx_series_guardias_pacientes_paciente" ON "public"."series_guardias_pacientes" USING "btree" ("paciente_id");
+CREATE INDEX "idx_series_turnos_guardia_pacientes_paciente" ON "public"."series_turnos_guardia_pacientes" USING "btree" ("paciente_id");
 
 
 
-CREATE INDEX "idx_series_guardias_pacientes_prestadora_id" ON "public"."series_guardias_pacientes" USING "btree" ("prestadora_id");
+CREATE INDEX "idx_series_turnos_guardia_pacientes_prestadora_id" ON "public"."series_turnos_guardia_pacientes" USING "btree" ("prestadora_id");
 
 
 
-CREATE INDEX "idx_series_guardias_prestadora_id" ON "public"."series_guardias" USING "btree" ("prestadora_id");
+CREATE INDEX "idx_series_turnos_guardia_prestadora_id" ON "public"."series_turnos_guardia" USING "btree" ("prestadora_id");
 
 
 
@@ -19973,11 +19973,11 @@ CREATE INDEX "incidentes_de_seguridad_por_prestadora" ON "public"."incidentes_de
 
 
 
-CREATE INDEX "incidentes_turno_sin_cubrir_abiertos" ON "public"."incidentes_turno_sin_cubrir" USING "btree" ("prestadora_id", "ultimo_recordatorio_at") WHERE ("resuelto_at" IS NULL);
+CREATE INDEX "incidentes_turno_guardia_sin_cubrir_abiertos" ON "public"."incidentes_turno_guardia_sin_cubrir" USING "btree" ("prestadora_id", "ultimo_recordatorio_at") WHERE ("resuelto_at" IS NULL);
 
 
 
-CREATE UNIQUE INDEX "incidentes_turno_sin_cubrir_uno_abierto_por_turno" ON "public"."incidentes_turno_sin_cubrir" USING "btree" ("guardia_id") WHERE ("resuelto_at" IS NULL);
+CREATE UNIQUE INDEX "incidentes_turno_guardia_sin_cubrir_uno_abierto_por_cada_uno" ON "public"."incidentes_turno_guardia_sin_cubrir" USING "btree" ("turno_guardia_id") WHERE ("resuelto_at" IS NULL);
 
 
 
@@ -20049,15 +20049,15 @@ CREATE UNIQUE INDEX "motivos_resolucion_nombre_unico" ON "public"."motivos_resol
 
 
 
-CREATE INDEX "motivos_sustitucion_guardia_activos" ON "public"."motivos_sustitucion_guardia" USING "btree" ("prestadora_id", "orden") WHERE "activo";
+CREATE INDEX "motivos_sustitucion_turno_guardia_activos" ON "public"."motivos_sustitucion_turno_guardia" USING "btree" ("prestadora_id", "orden") WHERE "activo";
 
 
 
-CREATE UNIQUE INDEX "motivos_sustitucion_guardia_clave_unica" ON "public"."motivos_sustitucion_guardia" USING "btree" ("prestadora_id", "clave") WHERE ("clave" IS NOT NULL);
+CREATE UNIQUE INDEX "motivos_sustitucion_turno_guardia_clave_unica" ON "public"."motivos_sustitucion_turno_guardia" USING "btree" ("prestadora_id", "clave") WHERE ("clave" IS NOT NULL);
 
 
 
-CREATE UNIQUE INDEX "motivos_sustitucion_guardia_nombre_unico" ON "public"."motivos_sustitucion_guardia" USING "btree" ("prestadora_id", "lower"("nombre")) WHERE ("nombre" IS NOT NULL);
+CREATE UNIQUE INDEX "motivos_sustitucion_turno_guardia_nombre_unico" ON "public"."motivos_sustitucion_turno_guardia" USING "btree" ("prestadora_id", "lower"("nombre")) WHERE ("nombre" IS NOT NULL);
 
 
 
@@ -20129,7 +20129,7 @@ CREATE INDEX "relaciones_laborales_prestadora" ON "public"."relaciones_laborales
 
 
 
-CREATE UNIQUE INDEX "reportes_uno_por_paciente_y_guardia" ON "public"."reportes" USING "btree" ("guardia_id", "paciente_id");
+CREATE UNIQUE INDEX "reportes_uno_por_paciente_y_turno_guardia" ON "public"."reportes" USING "btree" ("turno_guardia_id", "paciente_id");
 
 
 
@@ -20145,7 +20145,7 @@ CREATE INDEX "respuestas_preparadas_aprobadas_por_prestadora" ON "public"."respu
 
 
 
-CREATE INDEX "series_guardias_servicio_id_idx" ON "public"."series_guardias" USING "btree" ("servicio_id") WHERE ("servicio_id" IS NOT NULL);
+CREATE INDEX "series_turnos_guardia_servicio_id_idx" ON "public"."series_turnos_guardia" USING "btree" ("servicio_id") WHERE ("servicio_id" IS NOT NULL);
 
 
 
@@ -20261,7 +20261,7 @@ CREATE OR REPLACE TRIGGER "anotar_precio_de_item_adicional" AFTER UPDATE OF "pre
 
 
 
-CREATE OR REPLACE TRIGGER "anotar_desde_cuando_se_controla_en_el_turno" BEFORE INSERT OR UPDATE ON "public"."prestadoras" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"();
+CREATE OR REPLACE TRIGGER "anotar_desde_cuando_se_controla_en_el_turno_guardia" BEFORE INSERT OR UPDATE ON "public"."prestadoras" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno_guardia"();
 
 
 
@@ -20277,15 +20277,15 @@ CREATE OR REPLACE TRIGGER "asistente_carga_solo_su_descargo" BEFORE UPDATE ON "p
 
 
 
-CREATE OR REPLACE TRIGGER "asistente_marca_solo_su_guardia" BEFORE UPDATE ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."el_asistente_marca_solo_su_guardia"();
+CREATE OR REPLACE TRIGGER "asistente_marca_solo_su_turno_guardia" BEFORE UPDATE ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"();
 
 
 
-CREATE OR REPLACE TRIGGER "asistente_responde_solo_el_estado" BEFORE UPDATE ON "public"."asignaciones_de_turno" FOR EACH ROW EXECUTE FUNCTION "interno"."la_persona_cambia_solo_estas_columnas"('estado');
+CREATE OR REPLACE TRIGGER "asistente_responde_solo_el_estado" BEFORE UPDATE ON "public"."asignaciones_de_turno_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_persona_cambia_solo_estas_columnas"('estado');
 
 
 
-CREATE OR REPLACE TRIGGER "borrar_el_punto_del_viaje" BEFORE INSERT OR UPDATE ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."borrar_el_punto_del_viaje"();
+CREATE OR REPLACE TRIGGER "borrar_el_punto_del_viaje" BEFORE INSERT OR UPDATE ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."borrar_el_punto_del_viaje"();
 
 
 
@@ -20401,27 +20401,27 @@ CREATE OR REPLACE TRIGGER "exigir_familiar_del_relevo" BEFORE INSERT ON "public"
 
 
 
-CREATE OR REPLACE TRIGGER "guardia_empezada_no_cambia_de_asistente" BEFORE UPDATE OF "asistente_id", "fecha", "hora_inicio", "hora_fin" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."guardia_empezada_no_cambia_de_asistente"();
+CREATE OR REPLACE TRIGGER "turno_guardia_empezado_no_cambia_de_asistente" BEFORE UPDATE OF "asistente_id", "fecha", "hora_inicio", "hora_fin" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_asistente"();
 
 
 
-CREATE OR REPLACE TRIGGER "guardia_empezada_no_cambia_de_paciente" BEFORE UPDATE OF "paciente_id" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."guardia_empezada_no_cambia_de_paciente"();
+CREATE OR REPLACE TRIGGER "turno_guardia_empezado_no_cambia_de_paciente" BEFORE UPDATE OF "paciente_id" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_paciente"();
 
 
 
-CREATE OR REPLACE TRIGGER "guardia_empezada_no_pierde_pacientes" BEFORE DELETE OR UPDATE ON "public"."guardia_pacientes" FOR EACH ROW EXECUTE FUNCTION "interno"."guardia_empezada_no_pierde_pacientes"();
+CREATE OR REPLACE TRIGGER "turno_guardia_empezado_no_pierde_pacientes" BEFORE DELETE OR UPDATE ON "public"."turno_guardia_pacientes" FOR EACH ROW EXECUTE FUNCTION "interno"."turno_guardia_empezado_no_pierde_pacientes"();
 
 
 
-CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE ON "public"."alertas_tempranas_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_alarma_la_resuelve_quien_la_tomo"();
+CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE ON "public"."alertas_tempranas_turno_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_alarma_la_resuelve_quien_la_tomo"();
 
 
 
-CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE ON "public"."emergencias_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_alarma_la_resuelve_quien_la_tomo"();
+CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE ON "public"."emergencias_turno_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_alarma_la_resuelve_quien_la_tomo"();
 
 
 
-CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE OF "estado" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."la_alarma_la_resuelve_quien_la_tomo"();
+CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE OF "estado" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_alarma_la_resuelve_quien_la_tomo"();
 
 
 
@@ -20429,7 +20429,7 @@ CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE ON
 
 
 
-CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE ON "public"."incidentes_turno_sin_cubrir" FOR EACH ROW EXECUTE FUNCTION "interno"."la_alarma_la_resuelve_quien_la_tomo"();
+CREATE OR REPLACE TRIGGER "la_alarma_la_resuelve_quien_la_tomo" BEFORE UPDATE ON "public"."incidentes_turno_guardia_sin_cubrir" FOR EACH ROW EXECUTE FUNCTION "interno"."la_alarma_la_resuelve_quien_la_tomo"();
 
 
 
@@ -20497,7 +20497,7 @@ CREATE OR REPLACE TRIGGER "la_toma_la_suelta_quien_la_tomo" BEFORE UPDATE ON "pu
 
 
 
-CREATE OR REPLACE TRIGGER "llegada_tarde_la_anota_la_base" BEFORE INSERT OR UPDATE ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."la_llegada_tarde_la_anota_la_base"();
+CREATE OR REPLACE TRIGGER "llegada_tarde_la_anota_la_base" BEFORE INSERT OR UPDATE ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_llegada_tarde_la_anota_la_base"();
 
 
 
@@ -20505,7 +20505,7 @@ CREATE OR REPLACE TRIGGER "los_datos_bancarios_son_del_mismo_asistente" BEFORE I
 
 
 
-CREATE OR REPLACE TRIGGER "no_se_asigna_un_asistente_desactivado" BEFORE INSERT OR UPDATE OF "asistente_id" ON "public"."asignaciones_de_turno" FOR EACH ROW EXECUTE FUNCTION "interno"."no_se_asigna_un_asistente_desactivado"();
+CREATE OR REPLACE TRIGGER "no_se_asigna_un_asistente_desactivado" BEFORE INSERT OR UPDATE OF "asistente_id" ON "public"."asignaciones_de_turno_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."no_se_asigna_un_asistente_desactivado"();
 
 
 
@@ -20513,7 +20513,7 @@ CREATE OR REPLACE TRIGGER "no_se_asigna_un_asistente_desactivado" BEFORE INSERT 
 
 
 
-CREATE OR REPLACE TRIGGER "no_se_asigna_un_asistente_desactivado" BEFORE INSERT OR UPDATE OF "asistente_id" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."no_se_asigna_un_asistente_desactivado"();
+CREATE OR REPLACE TRIGGER "no_se_asigna_un_asistente_desactivado" BEFORE INSERT OR UPDATE OF "asistente_id" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."no_se_asigna_un_asistente_desactivado"();
 
 
 
@@ -20521,7 +20521,7 @@ CREATE OR REPLACE TRIGGER "no_se_asigna_un_asistente_desactivado" BEFORE INSERT 
 
 
 
-CREATE OR REPLACE TRIGGER "no_se_asigna_un_asistente_desactivado" BEFORE INSERT OR UPDATE OF "asistente_id" ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."no_se_asigna_un_asistente_desactivado"();
+CREATE OR REPLACE TRIGGER "no_se_asigna_un_asistente_desactivado" BEFORE INSERT OR UPDATE OF "asistente_id" ON "public"."series_turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."no_se_asigna_un_asistente_desactivado"();
 
 
 
@@ -20529,27 +20529,27 @@ CREATE OR REPLACE TRIGGER "revisar_indice_del_servicio" BEFORE INSERT OR UPDATE 
 
 
 
-CREATE OR REPLACE TRIGGER "sin_coordinador_no_hay_guardias" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_coordinador_no_hay_guardias"();
+CREATE OR REPLACE TRIGGER "sin_coordinador_no_hay_turnos_guardia" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_coordinador_no_hay_turnos_guardia"();
 
 
 
-CREATE OR REPLACE TRIGGER "sin_coordinador_no_hay_guardias" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_coordinador_no_hay_guardias"();
+CREATE OR REPLACE TRIGGER "sin_coordinador_no_hay_turnos_guardia" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."series_turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_coordinador_no_hay_turnos_guardia"();
 
 
 
-CREATE OR REPLACE TRIGGER "sin_firma_del_pagador_no_hay_guardias" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"();
+CREATE OR REPLACE TRIGGER "sin_firma_del_pagador_no_hay_turnos_guardia" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_firma_del_pagador_no_hay_turnos_guardia"();
 
 
 
-CREATE OR REPLACE TRIGGER "sin_firma_del_pagador_no_hay_guardias" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"();
+CREATE OR REPLACE TRIGGER "sin_firma_del_pagador_no_hay_turnos_guardia" BEFORE INSERT OR UPDATE OF "servicio_id" ON "public"."series_turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."sin_firma_del_pagador_no_hay_turnos_guardia"();
 
 
 
-CREATE OR REPLACE TRIGGER "sincronizar_paciente_principal" AFTER INSERT OR UPDATE OF "paciente_id" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "public"."sincronizar_paciente_principal_de_guardia"();
+CREATE OR REPLACE TRIGGER "sincronizar_paciente_principal" AFTER INSERT OR UPDATE OF "paciente_id" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."sincronizar_paciente_principal_de_turno_guardia"();
 
 
 
-CREATE OR REPLACE TRIGGER "sincronizar_paciente_principal" AFTER INSERT OR UPDATE OF "paciente_id" ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "public"."sincronizar_paciente_principal_de_serie"();
+CREATE OR REPLACE TRIGGER "sincronizar_paciente_principal" AFTER INSERT OR UPDATE OF "paciente_id" ON "public"."series_turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."sincronizar_paciente_principal_de_serie"();
 
 
 
@@ -20557,7 +20557,7 @@ CREATE OR REPLACE TRIGGER "solicitud_de_derecho_la_escribe_la_base" BEFORE INSER
 
 
 
-CREATE OR REPLACE TRIGGER "trg_a_la_asignacion_cambia_de_estado" BEFORE INSERT OR UPDATE ON "public"."asignaciones_de_turno" FOR EACH ROW EXECUTE FUNCTION "interno"."la_asignacion_cambia_de_estado"();
+CREATE OR REPLACE TRIGGER "trg_a_la_asignacion_cambia_de_estado" BEFORE INSERT OR UPDATE ON "public"."asignaciones_de_turno_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_asignacion_cambia_de_estado"();
 
 
 
@@ -20565,7 +20565,7 @@ CREATE OR REPLACE TRIGGER "trg_anotar_cambio_de_la_restriccion_de_hce" AFTER INS
 
 
 
-CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."alertas_tempranas_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
+CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."alertas_tempranas_turno_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
 
 
 
@@ -20706,15 +20706,15 @@ CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDAT
 
 
 
-CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
+CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
 
 
 
-CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."guardias_cobertura" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
+CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."turnos_guardia_cobertura" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
 
 
 
-CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."guardias_tracking_gps" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
+CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."turnos_guardia_tracking_gps" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
 
 
 
@@ -20794,7 +20794,7 @@ CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDAT
 
 
 
-CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
+CREATE OR REPLACE TRIGGER "trg_auditoria_acceso" AFTER INSERT OR DELETE OR UPDATE ON "public"."series_turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_auditoria_de_acceso_mutacion"();
 
 
 
@@ -20871,7 +20871,7 @@ CREATE OR REPLACE TRIGGER "trg_completar_moneda" BEFORE INSERT ON "public"."form
 
 
 
-CREATE OR REPLACE TRIGGER "trg_completar_moneda" BEFORE INSERT ON "public"."guardias_cobertura" FOR EACH ROW EXECUTE FUNCTION "public"."fn_completar_moneda"();
+CREATE OR REPLACE TRIGGER "trg_completar_moneda" BEFORE INSERT ON "public"."turnos_guardia_cobertura" FOR EACH ROW EXECUTE FUNCTION "public"."fn_completar_moneda"();
 
 
 
@@ -20943,11 +20943,11 @@ CREATE OR REPLACE TRIGGER "trg_estado_segun_cobros" BEFORE INSERT OR UPDATE ON "
 
 
 
-CREATE OR REPLACE TRIGGER "trg_exigir_documentos_en_asignacion" BEFORE INSERT OR UPDATE ON "public"."asignaciones_de_turno" FOR EACH ROW EXECUTE FUNCTION "interno"."exigir_documentos_en_asignacion"();
+CREATE OR REPLACE TRIGGER "trg_exigir_documentos_en_asignacion" BEFORE INSERT OR UPDATE ON "public"."asignaciones_de_turno_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."exigir_documentos_en_asignacion"();
 
 
 
-CREATE OR REPLACE TRIGGER "trg_exigir_documentos_en_guardia" BEFORE INSERT OR UPDATE ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."exigir_documentos_en_guardia"();
+CREATE OR REPLACE TRIGGER "trg_exigir_documentos_en_turno_guardia" BEFORE INSERT OR UPDATE ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."exigir_documentos_en_turno_guardia"();
 
 
 
@@ -21003,15 +21003,15 @@ CREATE OR REPLACE TRIGGER "trg_los_cortes_de_consultas_a_hce_no_se_vacian" BEFOR
 
 
 
-CREATE OR REPLACE TRIGGER "trg_modalidad_en_asignacion" BEFORE INSERT OR UPDATE ON "public"."asignaciones_de_turno" FOR EACH ROW EXECUTE FUNCTION "interno"."fn_modalidad_en_asignacion"();
+CREATE OR REPLACE TRIGGER "trg_modalidad_en_asignacion" BEFORE INSERT OR UPDATE ON "public"."asignaciones_de_turno_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."fn_modalidad_en_asignacion"();
 
 
 
-CREATE OR REPLACE TRIGGER "trg_modalidad_en_guardia" BEFORE INSERT OR UPDATE ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "public"."fn_modalidad_de_la_guardia"();
+CREATE OR REPLACE TRIGGER "trg_modalidad_en_turno_guardia" BEFORE INSERT OR UPDATE ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_modalidad_del_turno_guardia"();
 
 
 
-CREATE OR REPLACE TRIGGER "trg_modalidad_en_serie" BEFORE INSERT OR UPDATE ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "public"."fn_modalidad_de_la_guardia"();
+CREATE OR REPLACE TRIGGER "trg_modalidad_en_serie" BEFORE INSERT OR UPDATE ON "public"."series_turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_modalidad_del_turno_guardia"();
 
 
 
@@ -21035,7 +21035,7 @@ CREATE OR REPLACE TRIGGER "trg_prestadora_del_estado_de_cuenta" BEFORE INSERT ON
 
 
 
-CREATE OR REPLACE TRIGGER "trg_rastro_del_cierre_por_el_asistente" BEFORE UPDATE OF "checkout_at", "estado" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "public"."fn_rastro_del_cierre_por_el_asistente"();
+CREATE OR REPLACE TRIGGER "trg_rastro_del_cierre_por_el_asistente" BEFORE UPDATE OF "checkout_at", "estado" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_rastro_del_cierre_por_el_asistente"();
 
 
 
@@ -21055,7 +21055,7 @@ CREATE OR REPLACE TRIGGER "trg_registro_actividad_solo_lo_permitido" BEFORE INSE
 
 
 
-CREATE OR REPLACE TRIGGER "trg_reporte_paciente_del_turno" BEFORE INSERT OR UPDATE OF "guardia_id", "paciente_id" ON "public"."reportes" FOR EACH ROW EXECUTE FUNCTION "public"."exigir_paciente_del_turno"();
+CREATE OR REPLACE TRIGGER "trg_reporte_paciente_del_turno_guardia" BEFORE INSERT OR UPDATE OF "turno_guardia_id", "paciente_id" ON "public"."reportes" FOR EACH ROW EXECUTE FUNCTION "public"."exigir_paciente_del_turno_guardia"();
 
 
 
@@ -21068,7 +21068,7 @@ CREATE OR REPLACE TRIGGER "trg_sembrar_configuracion_prestadora" AFTER INSERT ON
 
 
 
-CREATE OR REPLACE TRIGGER "trg_servicio_de_la_serie" BEFORE INSERT ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "public"."fn_servicio_de_la_serie"();
+CREATE OR REPLACE TRIGGER "trg_servicio_de_la_serie" BEFORE INSERT ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "public"."fn_servicio_de_la_serie"();
 
 
 
@@ -21100,15 +21100,15 @@ CREATE OR REPLACE TRIGGER "una_sola_toma_por_alarma" BEFORE INSERT ON "public"."
 
 
 
-CREATE OR REPLACE TRIGGER "validar_cliente_series_guardias_pacientes" BEFORE INSERT OR UPDATE ON "public"."series_guardias_pacientes" FOR EACH ROW EXECUTE FUNCTION "public"."validar_paciente_de_serie_mismo_cliente"();
+CREATE OR REPLACE TRIGGER "validar_cliente_series_turnos_guardia_pacientes" BEFORE INSERT OR UPDATE ON "public"."series_turnos_guardia_pacientes" FOR EACH ROW EXECUTE FUNCTION "public"."validar_paciente_de_serie_mismo_cliente"();
 
 
 
-CREATE OR REPLACE TRIGGER "validar_contratante_guardia_pacientes" BEFORE INSERT OR UPDATE ON "public"."guardia_pacientes" FOR EACH ROW EXECUTE FUNCTION "interno"."validar_paciente_de_guardia_del_contratante"();
+CREATE OR REPLACE TRIGGER "validar_contratante_turno_guardia_pacientes" BEFORE INSERT OR UPDATE ON "public"."turno_guardia_pacientes" FOR EACH ROW EXECUTE FUNCTION "interno"."validar_paciente_de_turno_guardia_del_contratante"();
 
 
 
-CREATE OR REPLACE TRIGGER "validar_final_incidente_turno_sin_cubrir" BEFORE INSERT OR UPDATE ON "public"."incidentes_turno_sin_cubrir" FOR EACH ROW EXECUTE FUNCTION "interno"."exigir_final_del_catalogo"();
+CREATE OR REPLACE TRIGGER "validar_final_incidente_turno_guardia_sin_cubrir" BEFORE INSERT OR UPDATE ON "public"."incidentes_turno_guardia_sin_cubrir" FOR EACH ROW EXECUTE FUNCTION "interno"."exigir_final_del_catalogo"();
 
 
 
@@ -21116,7 +21116,7 @@ CREATE OR REPLACE TRIGGER "validar_motivo_cierres_servicio_paciente" BEFORE INSE
 
 
 
-CREATE OR REPLACE TRIGGER "validar_motivo_guardias_cobertura" BEFORE INSERT OR UPDATE ON "public"."guardias_cobertura" FOR EACH ROW EXECUTE FUNCTION "interno"."exigir_motivo_de_sustitucion_del_catalogo"();
+CREATE OR REPLACE TRIGGER "validar_motivo_turnos_guardia_cobertura" BEFORE INSERT OR UPDATE ON "public"."turnos_guardia_cobertura" FOR EACH ROW EXECUTE FUNCTION "interno"."exigir_motivo_de_sustitucion_del_catalogo"();
 
 
 
@@ -21124,7 +21124,7 @@ CREATE OR REPLACE TRIGGER "validar_servicio_cierres_servicio_paciente" BEFORE IN
 
 
 
-CREATE OR REPLACE TRIGGER "validar_servicio_guardias" BEFORE INSERT OR UPDATE OF "servicio_id", "paciente_id" ON "public"."guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."validar_servicio_del_contratante"();
+CREATE OR REPLACE TRIGGER "validar_servicio_turnos_guardia" BEFORE INSERT OR UPDATE OF "servicio_id", "paciente_id" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."validar_servicio_del_contratante"();
 
 
 
@@ -21132,7 +21132,7 @@ CREATE OR REPLACE TRIGGER "validar_servicio_prestaciones" BEFORE INSERT OR UPDAT
 
 
 
-CREATE OR REPLACE TRIGGER "validar_servicio_series_guardias" BEFORE INSERT OR UPDATE OF "servicio_id", "paciente_id" ON "public"."series_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."validar_servicio_del_contratante"();
+CREATE OR REPLACE TRIGGER "validar_servicio_series_turnos_guardia" BEFORE INSERT OR UPDATE OF "servicio_id", "paciente_id" ON "public"."series_turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."validar_servicio_del_contratante"();
 
 
 
@@ -21206,18 +21206,18 @@ ALTER TABLE ONLY "public"."alertas"
 
 
 
-ALTER TABLE ONLY "public"."alertas_tempranas_guardia"
-    ADD CONSTRAINT "alertas_tempranas_guardia_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."alertas_tempranas_turno_guardia"
+    ADD CONSTRAINT "alertas_tempranas_turno_guardia_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."alertas_tempranas_guardia"
-    ADD CONSTRAINT "alertas_tempranas_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."alertas_tempranas_turno_guardia"
+    ADD CONSTRAINT "alertas_tempranas_turno_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."alertas_tempranas_guardia"
-    ADD CONSTRAINT "alertas_tempranas_guardia_reportado_por_fkey" FOREIGN KEY ("reportado_por") REFERENCES "public"."usuarios"("id");
+ALTER TABLE ONLY "public"."alertas_tempranas_turno_guardia"
+    ADD CONSTRAINT "alertas_tempranas_turno_guardia_reportado_por_fkey" FOREIGN KEY ("reportado_por") REFERENCES "public"."usuarios"("id");
 
 
 
@@ -21251,43 +21251,43 @@ ALTER TABLE ONLY "public"."apoderados"
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_asignado_por_fkey" FOREIGN KEY ("asignado_por") REFERENCES "public"."usuarios"("id");
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_asignado_por_fkey" FOREIGN KEY ("asignado_por") REFERENCES "public"."usuarios"("id");
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_asistente_anterior_id_fkey" FOREIGN KEY ("asistente_anterior_id") REFERENCES "public"."asistentes"("id");
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_asistente_anterior_id_fkey" FOREIGN KEY ("asistente_anterior_id") REFERENCES "public"."asistentes"("id");
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_asistente_id_fkey" FOREIGN KEY ("asistente_id") REFERENCES "public"."asistentes"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_asistente_id_fkey" FOREIGN KEY ("asistente_id") REFERENCES "public"."asistentes"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_ausencia_id_fkey" FOREIGN KEY ("ausencia_id") REFERENCES "public"."ausencias"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_ausencia_id_fkey" FOREIGN KEY ("ausencia_id") REFERENCES "public"."ausencias"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_guardia_id_fkey" FOREIGN KEY ("guardia_id") REFERENCES "public"."guardias"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_id_fkey" FOREIGN KEY ("turno_guardia_id") REFERENCES "public"."turnos_guardia"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_retirada_por_fkey" FOREIGN KEY ("retirada_por") REFERENCES "public"."usuarios"("id");
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_retirada_por_fkey" FOREIGN KEY ("retirada_por") REFERENCES "public"."usuarios"("id");
 
 
 
-ALTER TABLE ONLY "public"."asignaciones_de_turno"
-    ADD CONSTRAINT "asignaciones_de_turno_serie_id_fkey" FOREIGN KEY ("serie_id") REFERENCES "public"."series_guardias"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."asignaciones_de_turno_guardia"
+    ADD CONSTRAINT "asignaciones_de_turno_guardia_serie_id_fkey" FOREIGN KEY ("serie_id") REFERENCES "public"."series_turnos_guardia"("id") ON DELETE CASCADE;
 
 
 
@@ -21347,7 +21347,7 @@ ALTER TABLE ONLY "public"."auditoria_asignaciones_con_aviso"
 
 
 ALTER TABLE ONLY "public"."auditoria_asignaciones_con_aviso"
-    ADD CONSTRAINT "auditoria_asignaciones_con_aviso_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+    ADD CONSTRAINT "auditoria_asignaciones_con_aviso_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
@@ -21528,7 +21528,7 @@ ALTER TABLE ONLY "public"."calificaciones_asistente"
 
 
 ALTER TABLE ONLY "public"."calificaciones_asistente"
-    ADD CONSTRAINT "calificaciones_asistente_guardia_id_fkey" FOREIGN KEY ("guardia_id") REFERENCES "public"."guardias"("id");
+    ADD CONSTRAINT "calificaciones_asistente_turno_guardia_id_fkey" FOREIGN KEY ("turno_guardia_id") REFERENCES "public"."turnos_guardia"("id");
 
 
 
@@ -21669,7 +21669,7 @@ ALTER TABLE ONLY "public"."coberturas_de_ausencia"
 
 
 ALTER TABLE ONLY "public"."coberturas_de_ausencia"
-    ADD CONSTRAINT "coberturas_de_ausencia_serie_id_fkey" FOREIGN KEY ("serie_id") REFERENCES "public"."series_guardias"("id");
+    ADD CONSTRAINT "coberturas_de_ausencia_serie_id_fkey" FOREIGN KEY ("serie_id") REFERENCES "public"."series_turnos_guardia"("id");
 
 
 
@@ -21783,8 +21783,8 @@ ALTER TABLE ONLY "public"."configuracion_aviso_cierre_del_servicio"
 
 
 
-ALTER TABLE ONLY "public"."configuracion_aviso_guardia_sin_cubrir"
-    ADD CONSTRAINT "configuracion_aviso_guardia_sin_cubrir_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."configuracion_aviso_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "configuracion_aviso_turno_guardia_sin_cubrir_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
 
@@ -21838,8 +21838,8 @@ ALTER TABLE ONLY "public"."configuracion_funciones_intermediacion"
 
 
 
-ALTER TABLE ONLY "public"."configuracion_incidentes_turno_sin_cubrir"
-    ADD CONSTRAINT "configuracion_incidentes_turno_sin_cubrir_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."configuracion_incidentes_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "config_incidentes_turno_guardia_sin_cubrir_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
 
@@ -21954,7 +21954,7 @@ ALTER TABLE ONLY "public"."consentimientos_paciente_solo"
 
 
 ALTER TABLE ONLY "public"."consentimientos_paciente_solo"
-    ADD CONSTRAINT "consentimientos_paciente_solo_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+    ADD CONSTRAINT "consentimientos_paciente_solo_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
@@ -22161,13 +22161,13 @@ ALTER TABLE ONLY "public"."desafios_de_llave"
 
 
 
-ALTER TABLE ONLY "public"."descansos_guardia"
-    ADD CONSTRAINT "descansos_guardia_guardia_fkey" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."descansos_turno_guardia"
+    ADD CONSTRAINT "descansos_turno_guardia_turno_guardia_fkey" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."descansos_guardia"
-    ADD CONSTRAINT "descansos_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."descansos_turno_guardia"
+    ADD CONSTRAINT "descansos_turno_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
@@ -22296,13 +22296,13 @@ ALTER TABLE ONLY "public"."telefonos_de_la_persona"
 
 
 
-ALTER TABLE ONLY "public"."emergencias_guardia"
-    ADD CONSTRAINT "emergencias_guardia_guardia_fkey" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."emergencias_turno_guardia"
+    ADD CONSTRAINT "emergencias_turno_guardia_turno_guardia_fkey" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."emergencias_guardia"
-    ADD CONSTRAINT "emergencias_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."emergencias_turno_guardia"
+    ADD CONSTRAINT "emergencias_turno_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
@@ -22432,7 +22432,7 @@ ALTER TABLE ONLY "public"."excepciones_familiar_relevo"
 
 
 ALTER TABLE ONLY "public"."excepciones_familiar_relevo"
-    ADD CONSTRAINT "excepciones_familiar_relevo_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+    ADD CONSTRAINT "excepciones_familiar_relevo_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
@@ -22452,7 +22452,7 @@ ALTER TABLE ONLY "public"."excepciones_por_documentos"
 
 
 ALTER TABLE ONLY "public"."excepciones_por_documentos"
-    ADD CONSTRAINT "excepciones_por_documentos_guardia_id_fkey" FOREIGN KEY ("guardia_id") REFERENCES "public"."guardias"("id");
+    ADD CONSTRAINT "excepciones_por_documentos_turno_guardia_id_fkey" FOREIGN KEY ("turno_guardia_id") REFERENCES "public"."turnos_guardia"("id");
 
 
 
@@ -22466,18 +22466,18 @@ ALTER TABLE ONLY "public"."excepciones_por_documentos"
 
 
 
-ALTER TABLE ONLY "public"."extensiones_de_turno"
-    ADD CONSTRAINT "extensiones_de_turno_guardia_fkey" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."extensiones_de_turno_guardia"
+    ADD CONSTRAINT "extensiones_de_turno_guardia_fkey" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."extensiones_de_turno"
-    ADD CONSTRAINT "extensiones_de_turno_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."extensiones_de_turno_guardia"
+    ADD CONSTRAINT "extensiones_de_turno_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."extensiones_de_turno"
-    ADD CONSTRAINT "extensiones_de_turno_relevo_fkey" FOREIGN KEY ("relevo_guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id") ON DELETE SET NULL;
+ALTER TABLE ONLY "public"."extensiones_de_turno_guardia"
+    ADD CONSTRAINT "extensiones_de_turno_guardia_relevo_fkey" FOREIGN KEY ("relevo_turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id") ON DELETE SET NULL;
 
 
 
@@ -22521,8 +22521,8 @@ ALTER TABLE ONLY "public"."facturas_cliente"
 
 
 
-ALTER TABLE ONLY "public"."finales_turno_sin_cubrir"
-    ADD CONSTRAINT "finales_turno_sin_cubrir_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."finales_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "finales_turno_guardia_sin_cubrir_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
 
@@ -22562,113 +22562,113 @@ ALTER TABLE ONLY "public"."formularios_declarados"
 
 
 
-ALTER TABLE ONLY "public"."guardia_comprobaciones"
-    ADD CONSTRAINT "guardia_comprobaciones_asistente_tenant_fk" FOREIGN KEY ("asistente_id", "prestadora_id") REFERENCES "public"."asistentes"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."turno_guardia_comprobaciones"
+    ADD CONSTRAINT "turno_guardia_comprobaciones_asistente_tenant_fk" FOREIGN KEY ("asistente_id", "prestadora_id") REFERENCES "public"."asistentes"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."guardia_comprobaciones"
-    ADD CONSTRAINT "guardia_comprobaciones_autorizada_por_fkey" FOREIGN KEY ("autorizada_por") REFERENCES "public"."usuarios"("id");
+ALTER TABLE ONLY "public"."turno_guardia_comprobaciones"
+    ADD CONSTRAINT "turno_guardia_comprobaciones_autorizada_por_fkey" FOREIGN KEY ("autorizada_por") REFERENCES "public"."usuarios"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardia_comprobaciones"
-    ADD CONSTRAINT "guardia_comprobaciones_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."turno_guardia_comprobaciones"
+    ADD CONSTRAINT "turno_guardia_comprobaciones_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."guardia_comprobaciones"
-    ADD CONSTRAINT "guardia_comprobaciones_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."turno_guardia_comprobaciones"
+    ADD CONSTRAINT "turno_guardia_comprobaciones_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardia_pacientes"
-    ADD CONSTRAINT "guardia_pacientes_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."turno_guardia_pacientes"
+    ADD CONSTRAINT "turno_guardia_pacientes_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."guardia_pacientes"
-    ADD CONSTRAINT "guardia_pacientes_paciente_tenant_fk" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."turno_guardia_pacientes"
+    ADD CONSTRAINT "turno_guardia_pacientes_paciente_tenant_fk" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."guardia_pacientes"
-    ADD CONSTRAINT "guardia_pacientes_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."turno_guardia_pacientes"
+    ADD CONSTRAINT "turno_guardia_pacientes_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_asistente_tenant_fk" FOREIGN KEY ("asistente_id", "prestadora_id") REFERENCES "public"."asistentes"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_asistente_tenant_fk" FOREIGN KEY ("asistente_id", "prestadora_id") REFERENCES "public"."asistentes"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_cerrada_por_fkey" FOREIGN KEY ("cerrada_por") REFERENCES "public"."usuarios"("id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_cerrado_por_fkey" FOREIGN KEY ("cerrada_por") REFERENCES "public"."usuarios"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_checkout_excepcion_autorizado_por_fkey" FOREIGN KEY ("checkout_excepcion_autorizado_por") REFERENCES "public"."usuarios"("id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_checkout_excepcion_autorizado_por_fkey" FOREIGN KEY ("checkout_excepcion_autorizado_por") REFERENCES "public"."usuarios"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias_cobertura"
-    ADD CONSTRAINT "guardias_cobertura_asistente_sustituto_id_fkey" FOREIGN KEY ("asistente_sustituto_id") REFERENCES "public"."asistentes"("id");
+ALTER TABLE ONLY "public"."turnos_guardia_cobertura"
+    ADD CONSTRAINT "turnos_guardia_cobertura_asistente_sustituto_id_fkey" FOREIGN KEY ("asistente_sustituto_id") REFERENCES "public"."asistentes"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias_cobertura"
-    ADD CONSTRAINT "guardias_cobertura_asistente_titular_id_fkey" FOREIGN KEY ("asistente_titular_id") REFERENCES "public"."asistentes"("id") ON DELETE SET NULL;
+ALTER TABLE ONLY "public"."turnos_guardia_cobertura"
+    ADD CONSTRAINT "turnos_guardia_cobertura_asistente_titular_id_fkey" FOREIGN KEY ("asistente_titular_id") REFERENCES "public"."asistentes"("id") ON DELETE SET NULL;
 
 
 
-ALTER TABLE ONLY "public"."guardias_cobertura"
-    ADD CONSTRAINT "guardias_cobertura_ausencia_id_fkey" FOREIGN KEY ("ausencia_id") REFERENCES "public"."ausencias"("id");
+ALTER TABLE ONLY "public"."turnos_guardia_cobertura"
+    ADD CONSTRAINT "turnos_guardia_cobertura_ausencia_id_fkey" FOREIGN KEY ("ausencia_id") REFERENCES "public"."ausencias"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias_cobertura"
-    ADD CONSTRAINT "guardias_cobertura_cobertura_de_ausencia_id_fkey" FOREIGN KEY ("cobertura_de_ausencia_id") REFERENCES "public"."coberturas_de_ausencia"("id");
+ALTER TABLE ONLY "public"."turnos_guardia_cobertura"
+    ADD CONSTRAINT "turnos_guardia_cobertura_cobertura_de_ausencia_id_fkey" FOREIGN KEY ("cobertura_de_ausencia_id") REFERENCES "public"."coberturas_de_ausencia"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias_cobertura"
-    ADD CONSTRAINT "guardias_cobertura_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."turnos_guardia_cobertura"
+    ADD CONSTRAINT "turnos_guardia_cobertura_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_coordinador_id_fkey" FOREIGN KEY ("coordinador_id") REFERENCES "public"."usuarios"("id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_coordinador_id_fkey" FOREIGN KEY ("coordinador_id") REFERENCES "public"."usuarios"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_paciente_tenant_fk" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_paciente_tenant_fk" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_serie_tenant_fk" FOREIGN KEY ("serie_id", "prestadora_id") REFERENCES "public"."series_guardias"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_serie_tenant_fk" FOREIGN KEY ("serie_id", "prestadora_id") REFERENCES "public"."series_turnos_guardia"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."guardias"
-    ADD CONSTRAINT "guardias_servicio_de_la_misma_prestadora" FOREIGN KEY ("servicio_id", "prestadora_id") REFERENCES "public"."servicios"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_servicio_de_la_misma_prestadora" FOREIGN KEY ("servicio_id", "prestadora_id") REFERENCES "public"."servicios"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."guardias_tracking_gps"
-    ADD CONSTRAINT "guardias_tracking_gps_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."turnos_guardia_tracking_gps"
+    ADD CONSTRAINT "turnos_guardia_tracking_gps_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."guardias_tracking_gps"
-    ADD CONSTRAINT "guardias_tracking_gps_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."turnos_guardia_tracking_gps"
+    ADD CONSTRAINT "turnos_guardia_tracking_gps_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
@@ -22718,7 +22718,7 @@ ALTER TABLE ONLY "public"."incidentes_de_seguridad"
 
 
 ALTER TABLE ONLY "public"."incidentes_relevo"
-    ADD CONSTRAINT "incidentes_relevo_entrante_tenant_fk" FOREIGN KEY ("guardia_entrante_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+    ADD CONSTRAINT "incidentes_relevo_entrante_tenant_fk" FOREIGN KEY ("turno_guardia_entrante_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
@@ -22738,22 +22738,22 @@ ALTER TABLE ONLY "public"."incidentes_relevo"
 
 
 ALTER TABLE ONLY "public"."incidentes_relevo"
-    ADD CONSTRAINT "incidentes_relevo_saliente_tenant_fk" FOREIGN KEY ("guardia_saliente_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+    ADD CONSTRAINT "incidentes_relevo_saliente_tenant_fk" FOREIGN KEY ("turno_guardia_saliente_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."incidentes_turno_sin_cubrir"
-    ADD CONSTRAINT "incidentes_turno_sin_cubrir_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."incidentes_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "incidentes_turno_guardia_sin_cubrir_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."incidentes_turno_sin_cubrir"
-    ADD CONSTRAINT "incidentes_turno_sin_cubrir_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."incidentes_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "incidentes_turno_guardia_sin_cubrir_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."incidentes_turno_sin_cubrir"
-    ADD CONSTRAINT "incidentes_turno_sin_cubrir_resuelto_por_fkey" FOREIGN KEY ("resuelto_por") REFERENCES "public"."usuarios"("id");
+ALTER TABLE ONLY "public"."incidentes_turno_guardia_sin_cubrir"
+    ADD CONSTRAINT "incidentes_turno_guardia_sin_cubrir_resuelto_por_fkey" FOREIGN KEY ("resuelto_por") REFERENCES "public"."usuarios"("id");
 
 
 
@@ -22957,8 +22957,8 @@ ALTER TABLE ONLY "public"."mensajes_whatsapp"
 
 
 
-ALTER TABLE ONLY "public"."motivos_aviso_previo_guardia"
-    ADD CONSTRAINT "motivos_aviso_previo_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."motivos_aviso_previo_turno_guardia"
+    ADD CONSTRAINT "motivos_aviso_previo_turno_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
@@ -22977,8 +22977,8 @@ ALTER TABLE ONLY "public"."motivos_resolucion"
 
 
 
-ALTER TABLE ONLY "public"."motivos_sustitucion_guardia"
-    ADD CONSTRAINT "motivos_sustitucion_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."motivos_sustitucion_turno_guardia"
+    ADD CONSTRAINT "motivos_sustitucion_turno_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
 
 
@@ -23408,7 +23408,7 @@ ALTER TABLE ONLY "public"."remuneraciones_asistente"
 
 
 ALTER TABLE ONLY "public"."reportes"
-    ADD CONSTRAINT "reportes_guardia_tenant_fk" FOREIGN KEY ("guardia_id", "prestadora_id") REFERENCES "public"."guardias"("id", "prestadora_id");
+    ADD CONSTRAINT "reportes_turno_guardia_tenant_fk" FOREIGN KEY ("turno_guardia_id", "prestadora_id") REFERENCES "public"."turnos_guardia"("id", "prestadora_id");
 
 
 
@@ -23467,38 +23467,38 @@ ALTER TABLE ONLY "public"."secretos_de_terceros"
 
 
 
-ALTER TABLE ONLY "public"."series_guardias"
-    ADD CONSTRAINT "series_guardias_asistente_tenant_fk" FOREIGN KEY ("asistente_id", "prestadora_id") REFERENCES "public"."asistentes"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."series_turnos_guardia"
+    ADD CONSTRAINT "series_turnos_guardia_asistente_tenant_fk" FOREIGN KEY ("asistente_id", "prestadora_id") REFERENCES "public"."asistentes"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."series_guardias"
-    ADD CONSTRAINT "series_guardias_paciente_tenant_fk" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."series_turnos_guardia"
+    ADD CONSTRAINT "series_turnos_guardia_paciente_tenant_fk" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."series_guardias_pacientes"
-    ADD CONSTRAINT "series_guardias_pacientes_paciente_tenant_fk" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."series_turnos_guardia_pacientes"
+    ADD CONSTRAINT "series_turnos_guardia_pacientes_paciente_tenant_fk" FOREIGN KEY ("paciente_id", "prestadora_id") REFERENCES "public"."pacientes"("id", "prestadora_id");
 
 
 
-ALTER TABLE ONLY "public"."series_guardias_pacientes"
-    ADD CONSTRAINT "series_guardias_pacientes_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."series_turnos_guardia_pacientes"
+    ADD CONSTRAINT "series_turnos_guardia_pacientes_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."series_guardias_pacientes"
-    ADD CONSTRAINT "series_guardias_pacientes_serie_tenant_fk" FOREIGN KEY ("serie_id", "prestadora_id") REFERENCES "public"."series_guardias"("id", "prestadora_id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."series_turnos_guardia_pacientes"
+    ADD CONSTRAINT "series_turnos_guardia_pacientes_serie_tenant_fk" FOREIGN KEY ("serie_id", "prestadora_id") REFERENCES "public"."series_turnos_guardia"("id", "prestadora_id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."series_guardias"
-    ADD CONSTRAINT "series_guardias_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+ALTER TABLE ONLY "public"."series_turnos_guardia"
+    ADD CONSTRAINT "series_turnos_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
 
 
 
-ALTER TABLE ONLY "public"."series_guardias"
-    ADD CONSTRAINT "series_guardias_servicio_tenant_fk" FOREIGN KEY ("servicio_id", "prestadora_id") REFERENCES "public"."servicios"("id", "prestadora_id");
+ALTER TABLE ONLY "public"."series_turnos_guardia"
+    ADD CONSTRAINT "series_turnos_guardia_servicio_tenant_fk" FOREIGN KEY ("servicio_id", "prestadora_id") REFERENCES "public"."servicios"("id", "prestadora_id");
 
 
 
@@ -23837,7 +23837,7 @@ CREATE POLICY "admin_gestiona_configuracion_aviso_cierre_del_servicio" ON "publi
 
 
 
-CREATE POLICY "admin_gestiona_configuracion_aviso_guardia_sin_cubrir" ON "public"."configuracion_aviso_guardia_sin_cubrir" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
+CREATE POLICY "admin_gestiona_configuracion_aviso_turno_guardia_sin_cubrir" ON "public"."configuracion_aviso_turno_guardia_sin_cubrir" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text"))))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
@@ -23883,7 +23883,7 @@ CREATE POLICY "admin_gestiona_conversaciones_whatsapp" ON "public"."conversacion
 
 
 
-CREATE POLICY "admin_gestiona_guardias_cobertura" ON "public"."guardias_cobertura" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "admin_gestiona_turnos_guardia_cobertura" ON "public"."turnos_guardia_cobertura" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -23960,7 +23960,7 @@ CREATE POLICY "admin_lee_importaciones_de_su_prestadora" ON "public"."importacio
 
 
 
-CREATE POLICY "admin_prestadora_actualiza_visibilidad" ON "public"."calificaciones_asistente" FOR UPDATE USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."personal_ve_la_calificacion"("asistente_id", "guardia_id")));
+CREATE POLICY "admin_prestadora_actualiza_visibilidad" ON "public"."calificaciones_asistente" FOR UPDATE USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."personal_ve_la_calificacion"("asistente_id", "turno_guardia_id")));
 
 
 
@@ -23980,7 +23980,7 @@ CREATE POLICY "admin_prestadora_gestiona_etapas_incorporacion" ON "public"."etap
 
 
 
-CREATE POLICY "admin_prestadora_gestiona_finales_turno_sin_cubrir" ON "public"."finales_turno_sin_cubrir" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "admin_prestadora_gestiona_finales_turno_guardia_sin_cubrir" ON "public"."finales_turno_guardia_sin_cubrir" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -24010,7 +24010,7 @@ CREATE POLICY "admin_prestadora_gestiona_mensajes_asistente" ON "public"."mensaj
 
 
 
-CREATE POLICY "admin_prestadora_gestiona_motivos_aviso_previo" ON "public"."motivos_aviso_previo_guardia" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "admin_prestadora_gestiona_motivos_aviso_previo" ON "public"."motivos_aviso_previo_turno_guardia" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -24028,7 +24028,7 @@ CREATE POLICY "admin_prestadora_gestiona_motivos_resolucion" ON "public"."motivo
 
 
 
-CREATE POLICY "admin_prestadora_gestiona_motivos_sustitucion" ON "public"."motivos_sustitucion_guardia" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "admin_prestadora_gestiona_motivos_sustitucion" ON "public"."motivos_sustitucion_turno_guardia" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -24145,7 +24145,7 @@ ALTER TABLE "public"."alarmas_tomadas" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."alertas" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."alertas_tempranas_guardia" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."alertas_tempranas_turno_guardia" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."apoderados" ENABLE ROW LEVEL SECURITY;
@@ -24159,38 +24159,38 @@ CREATE POLICY "apoderados_los_lee_el_trabajo" ON "public"."apoderados" FOR SELEC
 
 
 
-ALTER TABLE "public"."asignaciones_de_turno" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."asignaciones_de_turno_guardia" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "asistente_actualiza_su_guardia" ON "public"."guardias" FOR UPDATE USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"())));
-
-
-
-CREATE POLICY "asistente_anota_el_envio_de_su_aviso_de_demora" ON "public"."alertas_tempranas_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fuente" = 'aviso_demora_asistente'::"text") AND ("reportado_por" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "alertas_tempranas_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"())))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fuente" = 'aviso_demora_asistente'::"text") AND ("reportado_por" = "auth"."uid"()) AND ("resuelto_at" IS NULL) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "alertas_tempranas_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_actualiza_su_turno_guardia" ON "public"."turnos_guardia" FOR UPDATE USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"())));
 
 
 
-CREATE POLICY "asistente_anota_el_envio_de_su_emergencia" ON "public"."emergencias_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("reportado_por" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "emergencias_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"())))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("reportado_por" = "auth"."uid"()) AND ("atendida_at" IS NULL) AND ("atendida_por" IS NULL) AND ("atendida_nota" IS NULL) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "emergencias_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_anota_el_envio_de_su_aviso_de_demora" ON "public"."alertas_tempranas_turno_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fuente" = 'aviso_demora_asistente'::"text") AND ("reportado_por" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "alertas_tempranas_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"())))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fuente" = 'aviso_demora_asistente'::"text") AND ("reportado_por" = "auth"."uid"()) AND ("resuelto_at" IS NULL) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "alertas_tempranas_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
-CREATE POLICY "asistente_avisa_demora_en_su_guardia" ON "public"."alertas_tempranas_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fuente" = 'aviso_demora_asistente'::"text") AND ("reportado_por" = "auth"."uid"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "alertas_tempranas_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_anota_el_envio_de_su_emergencia" ON "public"."emergencias_turno_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("reportado_por" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "emergencias_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"())))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("reportado_por" = "auth"."uid"()) AND ("atendida_at" IS NULL) AND ("atendida_por" IS NULL) AND ("atendida_nota" IS NULL) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "emergencias_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
-CREATE POLICY "asistente_avisa_emergencia_en_su_guardia" ON "public"."emergencias_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("reportado_por" = "auth"."uid"()) AND ("atendida_at" IS NULL) AND ("atendida_por" IS NULL) AND ("atendida_nota" IS NULL) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "emergencias_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_avisa_demora_en_su_turno_guardia" ON "public"."alertas_tempranas_turno_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fuente" = 'aviso_demora_asistente'::"text") AND ("reportado_por" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "alertas_tempranas_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+
+
+
+CREATE POLICY "asistente_avisa_emergencia_en_su_turno_guardia" ON "public"."emergencias_turno_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("reportado_por" = "auth"."uid"()) AND ("atendida_at" IS NULL) AND ("atendida_por" IS NULL) AND ("atendida_nota" IS NULL) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "emergencias_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
@@ -24198,9 +24198,9 @@ CREATE POLICY "asistente_borra_sus_push_subscriptions" ON "public"."push_subscri
 
 
 
-CREATE POLICY "asistente_carga_reportes_de_su_guardia" ON "public"."reportes" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "reportes"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_carga_reportes_de_su_turno_guardia" ON "public"."reportes" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "reportes"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
@@ -24226,9 +24226,9 @@ CREATE POLICY "asistente_corrige_sus_datos_bancarios" ON "public"."datos_bancari
 
 
 
-CREATE POLICY "asistente_empieza_descanso_en_su_guardia" ON "public"."descansos_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("registrado_por" = "auth"."uid"()) AND ("fin_at" IS NULL) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "descansos_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_empieza_descanso_en_su_turno_guardia" ON "public"."descansos_turno_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("registrado_por" = "auth"."uid"()) AND ("fin_at" IS NULL) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "descansos_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
@@ -24256,11 +24256,11 @@ CREATE POLICY "asistente_lee_informacion_de_salud_de_sus_pacientes" ON "public".
 
 
 
-CREATE POLICY "asistente_lee_motivos_de_rechazo" ON "public"."motivos_resolucion" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("tabla" = 'asignaciones_de_turno'::"text") AND "interno"."es_asistente"()));
+CREATE POLICY "asistente_lee_motivos_de_rechazo" ON "public"."motivos_resolucion" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("tabla" = 'asignaciones_de_turno_guardia'::"text") AND "interno"."es_asistente"()));
 
 
 
-CREATE POLICY "asistente_lee_pacientes_de_sus_guardias" ON "public"."pacientes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" IN ( SELECT "interno"."pacientes_del_asistente"() AS "pacientes_del_asistente"))));
+CREATE POLICY "asistente_lee_pacientes_de_sus_turnos_guardia" ON "public"."pacientes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" IN ( SELECT "interno"."pacientes_del_asistente"() AS "pacientes_del_asistente"))));
 
 
 
@@ -24268,9 +24268,9 @@ CREATE POLICY "asistente_lee_rangos_de_sus_pacientes" ON "public"."rangos_refere
 
 
 
-CREATE POLICY "asistente_lee_reportes_de_su_guardia" ON "public"."reportes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "reportes"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_lee_reportes_de_su_turno_guardia" ON "public"."reportes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "reportes"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
@@ -24298,8 +24298,8 @@ CREATE POLICY "asistente_lee_sus_mensajes" ON "public"."mensajes_asistente" FOR 
 
 
 
-CREATE POLICY "asistente_lee_sus_resoluciones" ON "public"."resoluciones" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("tabla" = 'asignaciones_de_turno'::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."asignaciones_de_turno" "a"
+CREATE POLICY "asistente_lee_sus_resoluciones" ON "public"."resoluciones" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("tabla" = 'asignaciones_de_turno_guardia'::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."asignaciones_de_turno_guardia" "a"
   WHERE ((("a"."id")::"text" = "resoluciones"."fila_id") AND ("a"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
@@ -24327,7 +24327,7 @@ CREATE POLICY "asistente_o_cliente_lee_visibilidad_app" ON "public"."configuraci
 
 
 
-CREATE POLICY "asistente_rechaza_su_asignacion" ON "public"."asignaciones_de_turno" FOR UPDATE USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"()) AND ("estado" = 'sin_responder'::"text"))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"()) AND ("estado" = 'rechazada'::"text")));
+CREATE POLICY "asistente_rechaza_su_asignacion" ON "public"."asignaciones_de_turno_guardia" FOR UPDATE USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"()) AND ("estado" = 'sin_responder'::"text"))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"()) AND ("estado" = 'rechazada'::"text")));
 
 
 
@@ -24341,8 +24341,8 @@ CREATE POLICY "asistente_registra_su_consentimiento" ON "public"."consentimiento
 
 
 
-CREATE POLICY "asistente_resuelve_su_asignacion" ON "public"."resoluciones" FOR INSERT WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("tabla" = 'asignaciones_de_turno'::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."asignaciones_de_turno" "a"
+CREATE POLICY "asistente_resuelve_su_asignacion" ON "public"."resoluciones" FOR INSERT WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("tabla" = 'asignaciones_de_turno_guardia'::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."asignaciones_de_turno_guardia" "a"
   WHERE ((("a"."id")::"text" = "resoluciones"."fila_id") AND ("a"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
@@ -24355,45 +24355,45 @@ CREATE POLICY "asistente_saca_sus_datos_bancarios" ON "public"."datos_bancarios_
 
 
 
-CREATE POLICY "asistente_termina_su_descanso" ON "public"."descansos_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fin_at" IS NULL) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "descansos_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"())))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "descansos_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_termina_su_descanso" ON "public"."descansos_turno_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fin_at" IS NULL) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "descansos_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"())))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "descansos_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
-CREATE POLICY "asistente_ve_descansos_de_su_guardia" ON "public"."descansos_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "descansos_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_ve_descansos_de_su_turno_guardia" ON "public"."descansos_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "descansos_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
-CREATE POLICY "asistente_ve_emergencias_de_su_guardia" ON "public"."emergencias_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "emergencias_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_ve_emergencias_de_su_turno_guardia" ON "public"."emergencias_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "emergencias_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
-CREATE POLICY "asistente_ve_la_extension_de_su_turno" ON "public"."extensiones_de_turno" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "extensiones_de_turno"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_ve_la_extension_de_su_turno_guardia" ON "public"."extensiones_de_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "extensiones_de_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
-CREATE POLICY "asistente_ve_su_aviso_de_demora" ON "public"."alertas_tempranas_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fuente" = 'aviso_demora_asistente'::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "alertas_tempranas_guardia"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_ve_su_aviso_de_demora" ON "public"."alertas_tempranas_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("fuente" = 'aviso_demora_asistente'::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "alertas_tempranas_turno_guardia"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
-CREATE POLICY "asistente_ve_sus_asignaciones" ON "public"."asignaciones_de_turno" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"())));
+CREATE POLICY "asistente_ve_sus_asignaciones" ON "public"."asignaciones_de_turno_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"())));
 
 
 
-CREATE POLICY "asistente_ve_sus_comprobaciones" ON "public"."guardia_comprobaciones" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE (("g"."id" = "guardia_comprobaciones"."guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
+CREATE POLICY "asistente_ve_sus_comprobaciones" ON "public"."turno_guardia_comprobaciones" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE (("g"."id" = "turno_guardia_comprobaciones"."turno_guardia_id") AND ("g"."asistente_id" = "interno"."asistente_de_la_sesion"()))))));
 
 
 
@@ -24401,7 +24401,7 @@ CREATE POLICY "asistente_ve_sus_consultas_de_relevo" ON "public"."consultas_de_r
 
 
 
-CREATE POLICY "asistente_ve_sus_guardias" ON "public"."guardias" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"())));
+CREATE POLICY "asistente_ve_sus_turnos_guardia" ON "public"."turnos_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("asistente_id" = "interno"."asistente_de_la_sesion"())));
 
 
 
@@ -24607,7 +24607,7 @@ CREATE POLICY "cliente_borra_sus_push_subscriptions" ON "public"."push_subscript
 
 
 
-CREATE POLICY "cliente_califica_al_asistente" ON "public"."calificaciones_asistente" FOR INSERT TO "authenticated" WITH CHECK ((("cliente_id" = "interno"."cliente_id_de_usuario"("auth"."uid"())) AND "interno"."persona_autorizada_puede"("auth"."uid"(), 'persona_autorizada_califica_al_asistente'::"text") AND ("prestadora_id" = "interno"."prestadora_actual"()) AND ("paciente_id" IN ( SELECT "interno"."pacientes_del_cliente"() AS "pacientes_del_cliente")) AND ("paciente_id" IN ( SELECT "interno"."pacientes_de_la_guardia"("calificaciones_asistente"."guardia_id") AS "pacientes_de_la_guardia")) AND ("asistente_id" = "interno"."asistente_de_la_guardia"("guardia_id"))));
+CREATE POLICY "cliente_califica_al_asistente" ON "public"."calificaciones_asistente" FOR INSERT TO "authenticated" WITH CHECK ((("cliente_id" = "interno"."cliente_id_de_usuario"("auth"."uid"())) AND "interno"."persona_autorizada_puede"("auth"."uid"(), 'persona_autorizada_califica_al_asistente'::"text") AND ("prestadora_id" = "interno"."prestadora_actual"()) AND ("paciente_id" IN ( SELECT "interno"."pacientes_del_cliente"() AS "pacientes_del_cliente")) AND ("paciente_id" IN ( SELECT "interno"."pacientes_del_turno_guardia"("calificaciones_asistente"."turno_guardia_id") AS "pacientes_del_turno_guardia")) AND ("asistente_id" = "interno"."asistente_del_turno_guardia"("turno_guardia_id"))));
 
 
 
@@ -24767,7 +24767,7 @@ CREATE POLICY "configuracion_ausencias_la_lee_su_prestadora" ON "public"."config
 ALTER TABLE "public"."configuracion_aviso_cierre_del_servicio" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."configuracion_aviso_guardia_sin_cubrir" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."configuracion_aviso_turno_guardia_sin_cubrir" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."configuracion_calculo_candidatos" ENABLE ROW LEVEL SECURITY;
@@ -24822,14 +24822,14 @@ CREATE POLICY "configuracion_facturacion_clientes_la_lee_la_administracion" ON "
 ALTER TABLE "public"."configuracion_funciones_intermediacion" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."configuracion_incidentes_turno_sin_cubrir" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."configuracion_incidentes_turno_guardia_sin_cubrir" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "configuracion_incidentes_turno_sin_cubrir_la_escribe_la_adminis" ON "public"."configuracion_incidentes_turno_sin_cubrir" TO "authenticated" USING ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id")) WITH CHECK ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id"));
+CREATE POLICY "config_incidentes_turno_guardia_sin_cubrir_la_escribe_la_admin" ON "public"."configuracion_incidentes_turno_guardia_sin_cubrir" TO "authenticated" USING ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id")) WITH CHECK ("interno"."es_la_administracion_de_la_prestadora"("prestadora_id"));
 
 
 
-CREATE POLICY "configuracion_incidentes_turno_sin_cubrir_la_lee_su_prestadora" ON "public"."configuracion_incidentes_turno_sin_cubrir" FOR SELECT TO "authenticated" USING ("interno"."lee_la_configuracion"("prestadora_id"));
+CREATE POLICY "config_incidentes_turno_guardia_sin_cubrir_la_lee_su_prestadora" ON "public"."configuracion_incidentes_turno_guardia_sin_cubrir" FOR SELECT TO "authenticated" USING ("interno"."lee_la_configuracion"("prestadora_id"));
 
 
 
@@ -24962,7 +24962,7 @@ CREATE POLICY "coordinador_agrega_pacientes" ON "public"."pacientes" FOR INSERT 
 
 
 
-CREATE POLICY "coordinador_atiende_una_emergencia_de_sus_servicios_o_tomada" ON "public"."emergencias_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND ("atendida_at" IS NULL) AND ("interno"."coordinador_ve_la_guardia"("guardia_id") OR ("id" = ANY (( SELECT "interno"."alarmas_que_tengo_tomadas"('emergencia_guardia'::"text") AS "alarmas_que_tengo_tomadas")::"uuid"[]))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND ("atendida_at" IS NOT NULL) AND ("atendida_por" = "auth"."uid"())));
+CREATE POLICY "coordinador_atiende_una_emergencia_de_sus_servicios_o_tomada" ON "public"."emergencias_turno_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND ("atendida_at" IS NULL) AND ("interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id") OR ("id" = ANY (( SELECT "interno"."alarmas_que_tengo_tomadas"('emergencia_turno_guardia'::"text") AS "alarmas_que_tengo_tomadas")::"uuid"[]))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND ("atendida_at" IS NOT NULL) AND ("atendida_por" = "auth"."uid"())));
 
 
 
@@ -24970,19 +24970,19 @@ CREATE POLICY "coordinador_carga_documentos_asistente_de_su_zona" ON "public"."d
 
 
 
-CREATE POLICY "coordinador_cierra_servicio_guardias" ON "public"."guardias" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordina_el_servicio"("servicio_id") AND (EXISTS ( SELECT 1
+CREATE POLICY "coordinador_cierra_servicio_turnos_guardia" ON "public"."turnos_guardia" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordina_el_servicio"("servicio_id") AND (EXISTS ( SELECT 1
    FROM "public"."cierres_servicio_paciente" "c"
-  WHERE (("c"."servicio_id" = "guardias"."servicio_id") AND ("c"."prestadora_id" = "guardias"."prestadora_id")))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordina_el_servicio"("servicio_id") AND (EXISTS ( SELECT 1
+  WHERE (("c"."servicio_id" = "turnos_guardia"."servicio_id") AND ("c"."prestadora_id" = "turnos_guardia"."prestadora_id")))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordina_el_servicio"("servicio_id") AND (EXISTS ( SELECT 1
    FROM "public"."cierres_servicio_paciente" "c"
-  WHERE (("c"."servicio_id" = "guardias"."servicio_id") AND ("c"."prestadora_id" = "guardias"."prestadora_id"))))));
+  WHERE (("c"."servicio_id" = "turnos_guardia"."servicio_id") AND ("c"."prestadora_id" = "turnos_guardia"."prestadora_id"))))));
 
 
 
-CREATE POLICY "coordinador_cierra_servicio_series_guardias" ON "public"."series_guardias" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordina_el_servicio"("servicio_id") AND (EXISTS ( SELECT 1
+CREATE POLICY "coordinador_cierra_servicio_series_turnos_guardia" ON "public"."series_turnos_guardia" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordina_el_servicio"("servicio_id") AND (EXISTS ( SELECT 1
    FROM "public"."cierres_servicio_paciente" "c"
-  WHERE (("c"."servicio_id" = "series_guardias"."servicio_id") AND ("c"."prestadora_id" = "series_guardias"."prestadora_id")))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordina_el_servicio"("servicio_id") AND (EXISTS ( SELECT 1
+  WHERE (("c"."servicio_id" = "series_turnos_guardia"."servicio_id") AND ("c"."prestadora_id" = "series_turnos_guardia"."prestadora_id")))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordina_el_servicio"("servicio_id") AND (EXISTS ( SELECT 1
    FROM "public"."cierres_servicio_paciente" "c"
-  WHERE (("c"."servicio_id" = "series_guardias"."servicio_id") AND ("c"."prestadora_id" = "series_guardias"."prestadora_id"))))));
+  WHERE (("c"."servicio_id" = "series_turnos_guardia"."servicio_id") AND ("c"."prestadora_id" = "series_turnos_guardia"."prestadora_id"))))));
 
 
 
@@ -25010,11 +25010,11 @@ CREATE POLICY "coordinador_gestiona_alertas" ON "public"."alertas" TO "authentic
 
 
 
-CREATE POLICY "coordinador_gestiona_alertas_tempranas_guardia_de_sus_servicios" ON "public"."alertas_tempranas_guardia" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_gestiona_alertas_turno_guardia_de_sus_servicios" ON "public"."alertas_tempranas_turno_guardia" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
-CREATE POLICY "coordinador_gestiona_asignaciones_de_su_zona" ON "public"."asignaciones_de_turno" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "coordinador_gestiona_asignaciones_de_su_zona" ON "public"."asignaciones_de_turno_guardia" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'coordinador'::"text")))) AND "interno"."coordinador_alcanza_asistente"("asistente_id"))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
@@ -25030,11 +25030,11 @@ CREATE POLICY "coordinador_gestiona_certificados_de_su_zona" ON "public"."certif
 
 
 
-CREATE POLICY "coordinador_gestiona_comprobaciones_de_sus_servicios" ON "public"."guardia_comprobaciones" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_gestiona_comprobaciones_de_sus_servicios" ON "public"."turno_guardia_comprobaciones" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
-CREATE POLICY "coordinador_gestiona_consentimientos_paciente_solo" ON "public"."consentimientos_paciente_solo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_gestiona_consentimientos_paciente_solo" ON "public"."consentimientos_paciente_solo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
@@ -25042,27 +25042,27 @@ CREATE POLICY "coordinador_gestiona_conversaciones_whatsapp_de_su_zona" ON "publ
 
 
 
-CREATE POLICY "coordinador_gestiona_excepciones_de_relevo_de_sus_servicios" ON "public"."excepciones_familiar_relevo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_gestiona_excepciones_de_relevo_de_sus_servicios" ON "public"."excepciones_familiar_relevo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
-CREATE POLICY "coordinador_gestiona_guardias_cobertura_de_su_zona" ON "public"."guardias_cobertura" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_alcanza_asistente"("asistente_sustituto_id")));
+CREATE POLICY "coordinador_gestiona_turnos_guardia_cobertura_de_su_zona" ON "public"."turnos_guardia_cobertura" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_alcanza_asistente"("asistente_sustituto_id")));
 
 
 
-CREATE POLICY "coordinador_gestiona_guardias_de_sus_servicios" ON "public"."guardias" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordinador_alcanza_la_guardia_de"("servicio_id", "paciente_id", "id")));
+CREATE POLICY "coordinador_gestiona_turnos_guardia_de_sus_servicios" ON "public"."turnos_guardia" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordinador_alcanza_el_turno_guardia_de"("servicio_id", "paciente_id", "id")));
 
 
 
-CREATE POLICY "coordinador_gestiona_guardias_tracking_gps_de_sus_servicios" ON "public"."guardias_tracking_gps" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_gestiona_turnos_guardia_gps_de_sus_servicios" ON "public"."turnos_guardia_tracking_gps" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
-CREATE POLICY "coordinador_gestiona_incidentes_relevo_de_sus_servicios" ON "public"."incidentes_relevo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."coordinador_ve_la_guardia"("guardia_entrante_id") OR "interno"."coordinador_ve_la_guardia"("guardia_saliente_id"))));
+CREATE POLICY "coordinador_gestiona_incidentes_relevo_de_sus_servicios" ON "public"."incidentes_relevo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."coordinador_ve_el_turno_guardia"("turno_guardia_entrante_id") OR "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_saliente_id"))));
 
 
 
-CREATE POLICY "coordinador_gestiona_incidentes_turno_sin_cubrir" ON "public"."incidentes_turno_sin_cubrir" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_gestiona_incidentes_turno_guardia_sin_cubrir" ON "public"."incidentes_turno_guardia_sin_cubrir" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
@@ -25080,11 +25080,11 @@ CREATE POLICY "coordinador_gestiona_personas_autorizadas" ON "public"."personas_
 
 
 
-CREATE POLICY "coordinador_gestiona_reportes_de_sus_servicios" ON "public"."reportes" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_gestiona_reportes_de_sus_servicios" ON "public"."reportes" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
-CREATE POLICY "coordinador_gestiona_series_guardias_de_sus_servicios" ON "public"."series_guardias" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordinador_alcanza_la_serie_de"("servicio_id", "paciente_id", "id")));
+CREATE POLICY "coordinador_gestiona_series_turnos_guardia_de_sus_servicios" ON "public"."series_turnos_guardia" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordinador_alcanza_la_serie_de"("servicio_id", "paciente_id", "id")));
 
 
 
@@ -25132,7 +25132,7 @@ CREATE POLICY "coordinador_lee_configuracion_aviso_cierre_del_servicio" ON "publ
 
 
 
-CREATE POLICY "coordinador_lee_configuracion_aviso_guardia_sin_cubrir" ON "public"."configuracion_aviso_guardia_sin_cubrir" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "coordinador_lee_configuracion_aviso_turno_guardia_sin_cubrir" ON "public"."configuracion_aviso_turno_guardia_sin_cubrir" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'coordinador'::"text"))))));
 
@@ -25162,7 +25162,7 @@ CREATE POLICY "coordinador_lee_configuracion_respuesta_automatica_whatsapp" ON "
 
 
 
-CREATE POLICY "coordinador_lee_descansos_de_sus_servicios" ON "public"."descansos_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_lee_descansos_de_sus_servicios" ON "public"."descansos_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
@@ -25171,7 +25171,7 @@ CREATE POLICY "coordinador_lee_documentos_asistente_de_su_zona" ON "public"."doc
 
 
 
-CREATE POLICY "coordinador_lee_emergencias_de_sus_servicios" ON "public"."emergencias_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_lee_emergencias_de_sus_servicios" ON "public"."emergencias_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
@@ -25181,11 +25181,11 @@ CREATE POLICY "coordinador_lee_etapas_incorporacion" ON "public"."etapas_incorpo
 
 
 
-CREATE POLICY "coordinador_lee_extensiones_de_turno" ON "public"."extensiones_de_turno" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_lee_extensiones_de_turno_guardia" ON "public"."extensiones_de_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
-CREATE POLICY "coordinador_lee_finales_turno_sin_cubrir" ON "public"."finales_turno_sin_cubrir" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "coordinador_lee_finales_turno_guardia_sin_cubrir" ON "public"."finales_turno_guardia_sin_cubrir" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'coordinador'::"text"))))));
 
@@ -25213,7 +25213,7 @@ CREATE POLICY "coordinador_lee_lista_de_comprobacion" ON "public"."lista_de_comp
 
 
 
-CREATE POLICY "coordinador_lee_motivos_aviso_previo" ON "public"."motivos_aviso_previo_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "coordinador_lee_motivos_aviso_previo" ON "public"."motivos_aviso_previo_turno_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'coordinador'::"text"))))));
 
@@ -25235,7 +25235,7 @@ CREATE POLICY "coordinador_lee_motivos_resolucion" ON "public"."motivos_resoluci
 
 
 
-CREATE POLICY "coordinador_lee_motivos_sustitucion" ON "public"."motivos_sustitucion_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "coordinador_lee_motivos_sustitucion" ON "public"."motivos_sustitucion_turno_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'coordinador'::"text"))))));
 
@@ -25261,7 +25261,7 @@ CREATE POLICY "coordinador_lee_rangos_vitales" ON "public"."rangos_referencia_vi
 
 
 
-CREATE POLICY "coordinador_lee_reasignaciones_de_lo_que_ve" ON "public"."auditoria_reasignaciones_por_emergencia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordinador_ve_la_guardia"("guardia_id")));
+CREATE POLICY "coordinador_lee_reasignaciones_de_lo_que_ve" ON "public"."auditoria_reasignaciones_por_emergencia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
@@ -25283,11 +25283,11 @@ CREATE POLICY "coordinador_lee_visibilidad_app" ON "public"."configuracion_visib
 
 
 
-CREATE POLICY "coordinador_registra_lo_que_paso_en_la_alarma_que_tomo" ON "public"."excepciones_familiar_relevo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("guardia_id" = ANY (( SELECT "interno"."guardias_a_la_vista_por_una_alarma"(true) AS "guardias_a_la_vista_por_una_alarma")::"uuid"[])))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("guardia_id" = ANY (( SELECT "interno"."guardias_a_la_vista_por_una_alarma"(true) AS "guardias_a_la_vista_por_una_alarma")::"uuid"[]))));
+CREATE POLICY "coordinador_registra_lo_que_paso_en_la_alarma_que_tomo" ON "public"."excepciones_familiar_relevo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("turno_guardia_id" = ANY (( SELECT "interno"."turnos_guardia_a_la_vista_por_una_alarma"(true) AS "turnos_guardia_a_la_vista_por_una_alarma")::"uuid"[])))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("turno_guardia_id" = ANY (( SELECT "interno"."turnos_guardia_a_la_vista_por_una_alarma"(true) AS "turnos_guardia_a_la_vista_por_una_alarma")::"uuid"[]))));
 
 
 
-CREATE POLICY "coordinador_resuelve_la_alarma_que_tomo" ON "public"."alertas_tempranas_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND ("id" = ANY (( SELECT "interno"."alarmas_que_tengo_tomadas"('alerta_temprana_guardia'::"text") AS "alarmas_que_tengo_tomadas")::"uuid"[])))) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "coordinador_resuelve_la_alarma_que_tomo" ON "public"."alertas_tempranas_turno_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND ("id" = ANY (( SELECT "interno"."alarmas_que_tengo_tomadas"('alerta_temprana_turno_guardia'::"text") AS "alarmas_que_tengo_tomadas")::"uuid"[])))) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -25295,11 +25295,11 @@ CREATE POLICY "coordinador_resuelve_la_alarma_que_tomo" ON "public"."incidentes_
 
 
 
-CREATE POLICY "coordinador_resuelve_la_alarma_que_tomo" ON "public"."incidentes_turno_sin_cubrir" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND ("id" = ANY (( SELECT "interno"."alarmas_que_tengo_tomadas"('incidente_turno_sin_cubrir'::"text") AS "alarmas_que_tengo_tomadas")::"uuid"[])))) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "coordinador_resuelve_la_alarma_que_tomo" ON "public"."incidentes_turno_guardia_sin_cubrir" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_coordinador"() AND ("id" = ANY (( SELECT "interno"."alarmas_que_tengo_tomadas"('incidente_turno_guardia_sin_cubrir'::"text") AS "alarmas_que_tengo_tomadas")::"uuid"[])))) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
-CREATE POLICY "coordinador_resuelve_la_guardia_de_una_alarma_que_tomo" ON "public"."guardias" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."guardias_a_la_vista_por_una_alarma"(true) AS "guardias_a_la_vista_por_una_alarma")::"uuid"[])))) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "coordinador_resuelve_el_turno_guardia_de_una_alarma_que_tomo" ON "public"."turnos_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."turnos_guardia_a_la_vista_por_una_alarma"(true) AS "turnos_guardia_a_la_vista_por_una_alarma")::"uuid"[])))) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -25313,15 +25313,15 @@ CREATE POLICY "coordinador_toma_una_alarma" ON "public"."alarmas_tomadas" FOR IN
 
 CREATE POLICY "coordinador_ve_consultas_de_relevo_de_sus_servicios" ON "public"."consultas_de_relevo" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."incidentes_relevo" "i"
-  WHERE (("i"."id" = "consultas_de_relevo"."incidente_id") AND ("interno"."coordinador_ve_la_guardia"("i"."guardia_entrante_id") OR "interno"."coordinador_ve_la_guardia"("i"."guardia_saliente_id")))))));
+  WHERE (("i"."id" = "consultas_de_relevo"."incidente_id") AND ("interno"."coordinador_ve_el_turno_guardia"("i"."turno_guardia_entrante_id") OR "interno"."coordinador_ve_el_turno_guardia"("i"."turno_guardia_saliente_id")))))));
 
 
 
-CREATE POLICY "coordinador_ve_la_alarma_que_llego_a_todos" ON "public"."alertas_tempranas_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."alarmas_a_la_vista_del_coordinador"('alerta_temprana_guardia'::"text") AS "alarmas_a_la_vista_del_coordinador")::"uuid"[]))));
+CREATE POLICY "coordinador_ve_la_alarma_que_llego_a_todos" ON "public"."alertas_tempranas_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."alarmas_a_la_vista_del_coordinador"('alerta_temprana_turno_guardia'::"text") AS "alarmas_a_la_vista_del_coordinador")::"uuid"[]))));
 
 
 
-CREATE POLICY "coordinador_ve_la_alarma_que_llego_a_todos" ON "public"."emergencias_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."alarmas_a_la_vista_del_coordinador"('emergencia_guardia'::"text") AS "alarmas_a_la_vista_del_coordinador")::"uuid"[]))));
+CREATE POLICY "coordinador_ve_la_alarma_que_llego_a_todos" ON "public"."emergencias_turno_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."alarmas_a_la_vista_del_coordinador"('emergencia_turno_guardia'::"text") AS "alarmas_a_la_vista_del_coordinador")::"uuid"[]))));
 
 
 
@@ -25329,11 +25329,11 @@ CREATE POLICY "coordinador_ve_la_alarma_que_llego_a_todos" ON "public"."incident
 
 
 
-CREATE POLICY "coordinador_ve_la_alarma_que_llego_a_todos" ON "public"."incidentes_turno_sin_cubrir" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."alarmas_a_la_vista_del_coordinador"('incidente_turno_sin_cubrir'::"text") AS "alarmas_a_la_vista_del_coordinador")::"uuid"[]))));
+CREATE POLICY "coordinador_ve_la_alarma_que_llego_a_todos" ON "public"."incidentes_turno_guardia_sin_cubrir" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."alarmas_a_la_vista_del_coordinador"('incidente_turno_guardia_sin_cubrir'::"text") AS "alarmas_a_la_vista_del_coordinador")::"uuid"[]))));
 
 
 
-CREATE POLICY "coordinador_ve_la_guardia_de_una_alarma_que_llego_a_todos" ON "public"."guardias" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."guardias_a_la_vista_por_una_alarma"(false) AS "guardias_a_la_vista_por_una_alarma")::"uuid"[]))));
+CREATE POLICY "coordinador_ve_el_turno_guardia_de_una_alarma_que_llego_a_todos" ON "public"."turnos_guardia" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("id" = ANY (( SELECT "interno"."turnos_guardia_a_la_vista_por_una_alarma"(false) AS "turnos_guardia_a_la_vista_por_una_alarma")::"uuid"[]))));
 
 
 
@@ -25386,7 +25386,7 @@ CREATE POLICY "derechos_los_lee_quien_tiene_sesion" ON "public"."catalogo_derech
 ALTER TABLE "public"."desafios_de_llave" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."descansos_guardia" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."descansos_turno_guardia" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."descuentos_del_servicio" ENABLE ROW LEVEL SECURITY;
@@ -25458,11 +25458,11 @@ CREATE POLICY "el_hilo_propio_se_lee" ON "public"."conversaciones_intermediacion
 
 
 
-CREATE POLICY "el_panel_arma_la_lista_de_pacientes" ON "public"."guardia_pacientes" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_la_guardia"("guardia_id")))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_la_guardia"("guardia_id"))));
+CREATE POLICY "el_panel_arma_la_lista_de_pacientes" ON "public"."turno_guardia_pacientes" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id"))));
 
 
 
-CREATE POLICY "el_panel_arma_la_lista_de_pacientes_de_la_serie" ON "public"."series_guardias_pacientes" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_la_serie"("serie_id")))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_la_serie"("serie_id"))));
+CREATE POLICY "el_panel_arma_la_lista_de_pacientes_de_la_serie" ON "public"."series_turnos_guardia_pacientes" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_la_serie"("serie_id")))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_la_serie"("serie_id"))));
 
 
 
@@ -25484,7 +25484,7 @@ CREATE POLICY "el_trabajo_sin_persona_lee_los_cortes_de_su_prestadora" ON "publi
 
 
 
-ALTER TABLE "public"."emergencias_guardia" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."emergencias_turno_guardia" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."enlaces_consentimiento_pagador" ENABLE ROW LEVEL SECURITY;
@@ -25542,7 +25542,7 @@ ALTER TABLE "public"."excepciones_familiar_relevo" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."excepciones_por_documentos" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."extensiones_de_turno" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."extensiones_de_turno_guardia" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."facturas_cliente" ENABLE ROW LEVEL SECURITY;
@@ -25559,7 +25559,7 @@ CREATE POLICY "feriados_los_lee_quien_tiene_sesion" ON "public"."feriados_por_pa
 ALTER TABLE "public"."feriados_por_pais" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."finales_turno_sin_cubrir" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."finales_turno_guardia_sin_cubrir" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."formas_de_cobro_intermediacion" ENABLE ROW LEVEL SECURITY;
@@ -25606,19 +25606,19 @@ CREATE POLICY "gestiona_relacion_laboral_solo_la_administracion" ON "public"."re
 
 
 
-ALTER TABLE "public"."guardia_comprobaciones" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."turno_guardia_comprobaciones" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."guardia_pacientes" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."turno_guardia_pacientes" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."guardias" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."turnos_guardia" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."guardias_cobertura" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."turnos_guardia_cobertura" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."guardias_tracking_gps" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."turnos_guardia_tracking_gps" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."hospitalizaciones_paciente" ENABLE ROW LEVEL SECURITY;
@@ -25638,7 +25638,7 @@ ALTER TABLE "public"."incidentes_de_seguridad" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."incidentes_relevo" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."incidentes_turno_sin_cubrir" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."incidentes_turno_guardia_sin_cubrir" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."indicaciones_medicacion" ENABLE ROW LEVEL SECURITY;
@@ -25660,7 +25660,7 @@ ALTER TABLE "public"."instrucciones_acceso_personas_autorizadas" ENABLE ROW LEVE
 CREATE POLICY "la_administracion_agrega_pacientes_alcanzados_de_su_prestadora" ON "public"."pacientes_de_incidentes" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("agregado_por" = "auth"."uid"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
 
 
-CREATE POLICY "la_administracion_atiende_una_emergencia" ON "public"."emergencias_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("atendida_at" IS NULL))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("atendida_at" IS NOT NULL) AND ("atendida_por" = "auth"."uid"())));
+CREATE POLICY "la_administracion_atiende_una_emergencia" ON "public"."emergencias_turno_guardia" FOR UPDATE TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("atendida_at" IS NULL))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("atendida_at" IS NOT NULL) AND ("atendida_por" = "auth"."uid"())));
 
 
 
@@ -25668,7 +25668,7 @@ CREATE POLICY "la_administracion_carga_incidentes_de_su_prestadora" ON "public".
 
 
 
-CREATE POLICY "la_administracion_carga_un_descanso" ON "public"."descansos_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("registrado_por" = "auth"."uid"()) AND ("fin_at" IS NOT NULL)));
+CREATE POLICY "la_administracion_carga_un_descanso" ON "public"."descansos_turno_guardia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_la_administracion_de_la_prestadora"("prestadora_id") AND ("registrado_por" = "auth"."uid"()) AND ("fin_at" IS NOT NULL)));
 
 
 
@@ -25737,9 +25737,9 @@ CREATE POLICY "la_informacion_de_salud_la_ve_quien_atiende" ON "public"."alertas
 
 
 
-CREATE POLICY "la_informacion_de_salud_la_ve_quien_atiende" ON "public"."emergencias_guardia" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((EXISTS ( SELECT 1
-   FROM "interno"."pacientes_de_la_guardia"("emergencias_guardia"."guardia_id") "pg"("paciente_id")
-  WHERE "interno"."alcanza_la_informacion_de_salud"("pg"."paciente_id"))) OR ("id" = ANY (( SELECT "interno"."alarmas_a_la_vista_del_coordinador"('emergencia_guardia'::"text") AS "alarmas_a_la_vista_del_coordinador")::"uuid"[]))));
+CREATE POLICY "la_informacion_de_salud_la_ve_quien_atiende" ON "public"."emergencias_turno_guardia" AS RESTRICTIVE FOR SELECT TO "authenticated" USING (((EXISTS ( SELECT 1
+   FROM "interno"."pacientes_del_turno_guardia"("emergencias_turno_guardia"."turno_guardia_id") "pg"("paciente_id")
+  WHERE "interno"."alcanza_la_informacion_de_salud"("pg"."paciente_id"))) OR ("id" = ANY (( SELECT "interno"."alarmas_a_la_vista_del_coordinador"('emergencia_turno_guardia'::"text") AS "alarmas_a_la_vista_del_coordinador")::"uuid"[]))));
 
 
 
@@ -25779,7 +25779,7 @@ CREATE POLICY "la_informacion_de_salud_pasa_por_el_registro" ON "public"."cargas
 
 
 
-CREATE POLICY "la_informacion_de_salud_pasa_por_el_registro" ON "public"."emergencias_guardia" AS RESTRICTIVE TO "authenticated" USING ("interno"."lectura_de_salud_anotada"()) WITH CHECK ("interno"."lectura_de_salud_anotada"());
+CREATE POLICY "la_informacion_de_salud_pasa_por_el_registro" ON "public"."emergencias_turno_guardia" AS RESTRICTIVE TO "authenticated" USING ("interno"."lectura_de_salud_anotada"()) WITH CHECK ("interno"."lectura_de_salud_anotada"());
 
 
 
@@ -26027,7 +26027,7 @@ CREATE POLICY "miembro_lee_sus_propios_permisos" ON "public"."permisos_personas_
 ALTER TABLE "public"."monedas_por_pais" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."motivos_aviso_previo_guardia" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."motivos_aviso_previo_turno_guardia" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."motivos_cierre_servicio" ENABLE ROW LEVEL SECURITY;
@@ -26039,7 +26039,7 @@ ALTER TABLE "public"."motivos_reactivacion_servicio" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."motivos_resolucion" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."motivos_sustitucion_guardia" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."motivos_sustitucion_turno_guardia" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."notificaciones_cierre_servicio" ENABLE ROW LEVEL SECURITY;
@@ -26126,13 +26126,13 @@ CREATE POLICY "panel_gestiona_alertas" ON "public"."alertas" USING ((("interno".
 
 
 
-CREATE POLICY "panel_gestiona_alertas_tempranas_guardia" ON "public"."alertas_tempranas_guardia" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "panel_gestiona_alertas_tempranas_turno_guardia" ON "public"."alertas_tempranas_turno_guardia" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
 
 
-CREATE POLICY "panel_gestiona_asignaciones_de_su_prestadora" ON "public"."asignaciones_de_turno" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "panel_gestiona_asignaciones_de_su_prestadora" ON "public"."asignaciones_de_turno_guardia" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = ANY (ARRAY['admin_prestadora'::"text", 'superadmin'::"text"]))))))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
@@ -26144,7 +26144,7 @@ CREATE POLICY "panel_gestiona_cobros_cliente" ON "public"."cobros_cliente" USING
 
 
 
-CREATE POLICY "panel_gestiona_comprobaciones" ON "public"."guardia_comprobaciones" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "panel_gestiona_comprobaciones" ON "public"."turno_guardia_comprobaciones" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -26178,13 +26178,13 @@ CREATE POLICY "panel_gestiona_facturas_cliente_items" ON "public"."facturas_clie
 
 
 
-CREATE POLICY "panel_gestiona_guardias" ON "public"."guardias" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "panel_gestiona_turnos_guardia" ON "public"."turnos_guardia" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
 
 
-CREATE POLICY "panel_gestiona_guardias_tracking_gps" ON "public"."guardias_tracking_gps" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "panel_gestiona_turnos_guardia_tracking_gps" ON "public"."turnos_guardia_tracking_gps" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -26200,7 +26200,7 @@ CREATE POLICY "panel_gestiona_incidentes_relevo" ON "public"."incidentes_relevo"
 
 
 
-CREATE POLICY "panel_gestiona_incidentes_turno_sin_cubrir" ON "public"."incidentes_turno_sin_cubrir" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "panel_gestiona_incidentes_turno_guardia_sin_cubrir" ON "public"."incidentes_turno_guardia_sin_cubrir" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -26240,7 +26240,7 @@ CREATE POLICY "panel_gestiona_reportes" ON "public"."reportes" USING ((("interno
 
 
 
-CREATE POLICY "panel_gestiona_series_guardias" ON "public"."series_guardias" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "panel_gestiona_series_turnos_guardia" ON "public"."series_turnos_guardia" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -26282,7 +26282,7 @@ CREATE POLICY "panel_lee_correcciones_factura_cliente" ON "public"."correcciones
 
 
 
-CREATE POLICY "panel_lee_descansos_guardia" ON "public"."descansos_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
+CREATE POLICY "panel_lee_descansos_turno_guardia" ON "public"."descansos_turno_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -26292,7 +26292,7 @@ CREATE POLICY "panel_lee_el_equipo_del_servicio" ON "public"."equipo_servicio" F
 
 
 
-CREATE POLICY "panel_lee_emergencias_guardia" ON "public"."emergencias_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
+CREATE POLICY "panel_lee_emergencias_turno_guardia" ON "public"."emergencias_turno_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -26318,7 +26318,7 @@ CREATE POLICY "panel_lee_estados_de_cuenta_externos" ON "public"."estados_de_cue
 
 
 
-CREATE POLICY "panel_lee_extensiones_de_turno" ON "public"."extensiones_de_turno" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
+CREATE POLICY "panel_lee_extensiones_de_turno_guardia" ON "public"."extensiones_de_turno_guardia" FOR SELECT USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -26514,7 +26514,7 @@ CREATE POLICY "prestadora_ve_accesos_intermediacion" ON "public"."accesos_interm
 
 
 
-CREATE POLICY "prestadora_ve_calificaciones" ON "public"."calificaciones_asistente" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."personal_ve_la_calificacion"("asistente_id", "guardia_id")));
+CREATE POLICY "prestadora_ve_calificaciones" ON "public"."calificaciones_asistente" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."personal_ve_la_calificacion"("asistente_id", "turno_guardia_id")));
 
 
 
@@ -26656,7 +26656,7 @@ CREATE POLICY "restricciones_de_cobranza_las_lee_la_administracion" ON "public".
 
 
 
-CREATE POLICY "se_anota_al_reasignar_por_emergencia" ON "public"."auditoria_reasignaciones_por_emergencia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("usuario_id" = "interno"."usuario_de_la_sesion"()) AND ("current_setting"('careonys.reasignacion_por_emergencia'::"text", true) = ("guardia_id")::"text")));
+CREATE POLICY "se_anota_al_reasignar_por_emergencia" ON "public"."auditoria_reasignaciones_por_emergencia" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("usuario_id" = "interno"."usuario_de_la_sesion"()) AND ("current_setting"('careonys.reasignacion_por_emergencia'::"text", true) = ("turno_guardia_id")::"text")));
 
 
 
@@ -26676,15 +26676,15 @@ CREATE POLICY "se_ve_la_historia_de_lo_que_se_ve" ON "public"."versiones_registr
 
 
 
-CREATE POLICY "se_ven_los_pacientes_de_una_guardia_visible" ON "public"."guardia_pacientes" FOR SELECT USING ((EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
-  WHERE ("g"."id" = "guardia_pacientes"."guardia_id"))));
+CREATE POLICY "se_ven_los_pacientes_de_un_turno_guardia_visible" ON "public"."turno_guardia_pacientes" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
+  WHERE ("g"."id" = "turno_guardia_pacientes"."turno_guardia_id"))));
 
 
 
-CREATE POLICY "se_ven_los_pacientes_de_una_serie_visible" ON "public"."series_guardias_pacientes" FOR SELECT USING ((EXISTS ( SELECT 1
-   FROM "public"."series_guardias" "s"
-  WHERE ("s"."id" = "series_guardias_pacientes"."serie_id"))));
+CREATE POLICY "se_ven_los_pacientes_de_una_serie_visible" ON "public"."series_turnos_guardia_pacientes" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."series_turnos_guardia" "s"
+  WHERE ("s"."id" = "series_turnos_guardia_pacientes"."serie_id"))));
 
 
 
@@ -26692,10 +26692,10 @@ ALTER TABLE "public"."secretos_de_terceros" ENABLE ROW LEVEL SECURITY;
 
 
 
-ALTER TABLE "public"."series_guardias" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."series_turnos_guardia" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."series_guardias_pacientes" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."series_turnos_guardia_pacientes" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."servicios" ENABLE ROW LEVEL SECURITY;
@@ -26994,7 +26994,7 @@ CREATE POLICY "trabajo_sin_persona_arma_en_esta_prestadora" ON "public"."instruc
 
 
 
-CREATE POLICY "trabajo_sin_persona_asigna_en_esta_prestadora" ON "public"."asignaciones_de_turno" FOR INSERT TO "trabajo_sin_persona" WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_asigna_en_esta_prestadora" ON "public"."asignaciones_de_turno_guardia" FOR INSERT TO "trabajo_sin_persona" WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27034,11 +27034,11 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."alertas" TO 
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."alertas_tempranas_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."alertas_tempranas_turno_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."asignaciones_de_turno" FOR SELECT TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."asignaciones_de_turno_guardia" FOR SELECT TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27146,7 +27146,7 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracio
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracion_aviso_guardia_sin_cubrir" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracion_aviso_turno_guardia_sin_cubrir" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27166,7 +27166,7 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracio
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracion_incidentes_turno_sin_cubrir" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."configuracion_incidentes_turno_guardia_sin_cubrir" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27218,7 +27218,7 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."desafios_de_
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."descansos_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."descansos_turno_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27234,7 +27234,7 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."domicilios_t
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."emergencias_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."emergencias_turno_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27266,7 +27266,7 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."excepciones_
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."extensiones_de_turno" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."extensiones_de_turno_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27278,19 +27278,19 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."formas_de_co
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."guardia_comprobaciones" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."guardia_pacientes" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."turno_guardia_pacientes" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."guardias" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."turnos_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."guardias_cobertura" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."turnos_guardia_cobertura" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27298,7 +27298,7 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."incidentes_r
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."incidentes_turno_sin_cubrir" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."incidentes_turno_guardia_sin_cubrir" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27330,7 +27330,7 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."mensajes_wha
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."motivos_sustitucion_guardia" FOR SELECT TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."motivos_sustitucion_turno_guardia" FOR SELECT TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27424,11 +27424,11 @@ CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."secretos_de_
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."series_guardias" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."series_turnos_guardia" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
-CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."series_guardias_pacientes" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+CREATE POLICY "trabajo_sin_persona_de_esta_prestadora" ON "public"."series_turnos_guardia_pacientes" TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"())) WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
 
 
 
@@ -27771,10 +27771,10 @@ GRANT ALL ON FUNCTION "interno"."anotar_precio_de_item_adicional"() TO "service_
 
 
 
-REVOKE ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() TO "service_role";
-GRANT ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno"() TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno_guardia"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno_guardia"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno_guardia"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."anotar_desde_cuando_se_controla_en_el_turno_guardia"() TO "trabajo_sin_persona";
 
 
 
@@ -27808,9 +27808,9 @@ GRANT ALL ON FUNCTION "interno"."asignar_numero_de_legajo"() TO "service_role";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."asistente_de_la_guardia"("p_guardia" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."asistente_de_la_guardia"("p_guardia" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."asistente_de_la_guardia"("p_guardia" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "interno"."asistente_del_turno_guardia"("p_turno_guardia" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."asistente_del_turno_guardia"("p_turno_guardia" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."asistente_del_turno_guardia"("p_turno_guardia" "uuid") TO "authenticated";
 
 
 
@@ -27828,9 +27828,9 @@ GRANT ALL ON FUNCTION "interno"."asistente_desactivado"("p_asistente" "uuid") TO
 
 
 
-REVOKE ALL ON FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_guardia_excluida" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_guardia_excluida" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) TO "service_role";
-GRANT ALL ON FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_guardia_excluida" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) TO "authenticated";
+REVOKE ALL ON FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_turno_guardia_excluido" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_turno_guardia_excluido" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) TO "service_role";
+GRANT ALL ON FUNCTION "interno"."asistente_ocupado_entre"("p_asistente" "uuid", "p_turno_guardia_excluido" "uuid", "p_desde" timestamp without time zone, "p_hasta" timestamp without time zone) TO "authenticated";
 
 
 
@@ -27981,16 +27981,16 @@ GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_asistente_de"("p_usuario" "
 
 
 
-REVOKE ALL ON FUNCTION "interno"."coordinador_alcanza_guardia"("p_asistente_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_guardia"("p_asistente_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_guardia"("p_asistente_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_guardia"("p_asistente_id" "uuid") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."coordinador_alcanza_turno_guardia"("p_asistente_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_turno_guardia"("p_asistente_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_turno_guardia"("p_asistente_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_turno_guardia"("p_asistente_id" "uuid") TO "trabajo_sin_persona";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."coordinador_alcanza_la_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_guardia" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_la_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_guardia" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_la_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_guardia" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "interno"."coordinador_alcanza_el_turno_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_turno_guardia" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_el_turno_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_turno_guardia" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."coordinador_alcanza_el_turno_guardia_de"("p_servicio" "uuid", "p_paciente" "uuid", "p_turno_guardia" "uuid") TO "authenticated";
 
 
 
@@ -28036,9 +28036,9 @@ GRANT ALL ON FUNCTION "interno"."coordinador_ve_la_conversacion"("p_conversacion
 
 
 
-REVOKE ALL ON FUNCTION "interno"."coordinador_ve_la_guardia"("p_guardia" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."coordinador_ve_la_guardia"("p_guardia" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."coordinador_ve_la_guardia"("p_guardia" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "interno"."coordinador_ve_el_turno_guardia"("p_turno_guardia" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."coordinador_ve_el_turno_guardia"("p_turno_guardia" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."coordinador_ve_el_turno_guardia"("p_turno_guardia" "uuid") TO "authenticated";
 
 
 
@@ -28088,10 +28088,10 @@ GRANT ALL ON FUNCTION "interno"."descuento_lo_escribe_la_base"() TO "service_rol
 
 
 
-REVOKE ALL ON FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) TO "service_role";
-GRANT ALL ON FUNCTION "interno"."dia_en_que_termina_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."dia_en_que_termina_turno_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."dia_en_que_termina_turno_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."dia_en_que_termina_turno_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) TO "service_role";
+GRANT ALL ON FUNCTION "interno"."dia_en_que_termina_turno_guardia"("p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) TO "trabajo_sin_persona";
 
 
 
@@ -28131,10 +28131,10 @@ GRANT ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p
 
 
 
-REVOKE ALL ON FUNCTION "interno"."el_asistente_marca_solo_su_guardia"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."el_asistente_marca_solo_su_guardia"() TO "service_role";
-GRANT ALL ON FUNCTION "interno"."el_asistente_marca_solo_su_guardia"() TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."el_asistente_marca_solo_su_guardia"() TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"() TO "trabajo_sin_persona";
 
 
 
@@ -28414,9 +28414,9 @@ GRANT ALL ON FUNCTION "interno"."escribe_el_catalogo"("p_prestadora" "uuid") TO 
 
 
 
-REVOKE ALL ON FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."excepcion_por_documentos"("p_prestadora_id" "uuid", "p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_bloquean" "text"[], "p_motivo" "text") TO "authenticated";
 
 
 
@@ -28434,10 +28434,10 @@ GRANT ALL ON FUNCTION "interno"."exigir_documentos_en_asignacion"() TO "trabajo_
 
 
 
-REVOKE ALL ON FUNCTION "interno"."exigir_documentos_en_guardia"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."exigir_documentos_en_guardia"() TO "service_role";
-GRANT ALL ON FUNCTION "interno"."exigir_documentos_en_guardia"() TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."exigir_documentos_en_guardia"() TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."exigir_documentos_en_turno_guardia"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."exigir_documentos_en_turno_guardia"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."exigir_documentos_en_turno_guardia"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."exigir_documentos_en_turno_guardia"() TO "trabajo_sin_persona";
 
 
 
@@ -28508,58 +28508,58 @@ GRANT ALL ON FUNCTION "interno"."gracia_hasta"("p_asistente_id" "uuid", "p_tipo_
 
 
 
-REVOKE ALL ON FUNCTION "interno"."guardia_empezada_no_cambia_de_asistente"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_cambia_de_asistente"() TO "service_role";
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_cambia_de_asistente"() TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_cambia_de_asistente"() TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_asistente"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_asistente"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_asistente"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_asistente"() TO "trabajo_sin_persona";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."guardia_empezada_no_cambia_de_paciente"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_cambia_de_paciente"() TO "service_role";
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_cambia_de_paciente"() TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_cambia_de_paciente"() TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_paciente"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_paciente"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_paciente"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_cambia_de_paciente"() TO "trabajo_sin_persona";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."guardia_empezada_no_pierde_pacientes"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_pierde_pacientes"() TO "service_role";
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_pierde_pacientes"() TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."guardia_empezada_no_pierde_pacientes"() TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."turno_guardia_empezado_no_pierde_pacientes"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_pierde_pacientes"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_pierde_pacientes"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_empezado_no_pierde_pacientes"() TO "trabajo_sin_persona";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."guardias_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."guardias_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."guardias_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) TO "service_role";
-GRANT ALL ON FUNCTION "interno"."guardias_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."turnos_guardia_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_a_la_vista_por_una_alarma"("p_solo_las_tomadas" boolean) TO "trabajo_sin_persona";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."guardias_asignadas_del_servicio"("p_servicio" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."guardias_asignadas_del_servicio"("p_servicio" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."guardias_asignadas_del_servicio"("p_servicio" "uuid") TO "authenticated";
+REVOKE ALL ON FUNCTION "interno"."turnos_guardia_asignados_del_servicio"("p_servicio" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_asignados_del_servicio"("p_servicio" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_asignados_del_servicio"("p_servicio" "uuid") TO "authenticated";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."guardias_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."guardias_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."guardias_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) TO "service_role";
-GRANT ALL ON FUNCTION "interno"."guardias_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."turnos_guardia_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_de_las_alarmas"("p_tipo" "text", "p_referencias" "uuid"[]) TO "trabajo_sin_persona";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."guardias_del_paciente"("p_paciente_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."guardias_del_paciente"("p_paciente_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."guardias_del_paciente"("p_paciente_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."guardias_del_paciente"("p_paciente_id" "uuid") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."turnos_guardia_del_paciente"("p_paciente_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_del_paciente"("p_paciente_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_del_paciente"("p_paciente_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_del_paciente"("p_paciente_id" "uuid") TO "trabajo_sin_persona";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."hay_excepcion_por_documentos"("p_guardia_id" "uuid", "p_asistente_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."hay_excepcion_por_documentos"("p_guardia_id" "uuid", "p_asistente_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."hay_excepcion_por_documentos"("p_guardia_id" "uuid", "p_asistente_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."hay_excepcion_por_documentos"("p_guardia_id" "uuid", "p_asistente_id" "uuid") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."hay_excepcion_por_documentos"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."hay_excepcion_por_documentos"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."hay_excepcion_por_documentos"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."hay_excepcion_por_documentos"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid") TO "trabajo_sin_persona";
 
 
 
@@ -28881,10 +28881,10 @@ GRANT ALL ON FUNCTION "interno"."pacientes_de_la_fila"("p_tabla" "text") TO "aut
 
 
 
-REVOKE ALL ON FUNCTION "interno"."pacientes_de_la_guardia"("p_guardia_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."pacientes_de_la_guardia"("p_guardia_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."pacientes_de_la_guardia"("p_guardia_id" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."pacientes_de_la_guardia"("p_guardia_id" "uuid") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."pacientes_del_turno_guardia"("p_turno_guardia_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."pacientes_del_turno_guardia"("p_turno_guardia_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."pacientes_del_turno_guardia"("p_turno_guardia_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."pacientes_del_turno_guardia"("p_turno_guardia_id" "uuid") TO "trabajo_sin_persona";
 
 
 
@@ -28936,15 +28936,15 @@ GRANT ALL ON FUNCTION "interno"."persona_autorizada_puede"("p_usuario" "uuid", "
 
 
 
-REVOKE ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") FROM PUBLIC;
+REVOKE ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_turno_guardia" "uuid") FROM PUBLIC;
 
 
 
-GRANT ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_turno_guardia" "uuid") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_guardia" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."personal_ve_la_calificacion"("p_asistente" "uuid", "p_turno_guardia" "uuid") TO "authenticated";
 
 
 
@@ -29032,13 +29032,13 @@ GRANT ALL ON FUNCTION "interno"."se_habilita_hacia_abajo_y_nunca_a_uno_mismo"() 
 
 
 
-REVOKE ALL ON FUNCTION "interno"."sin_coordinador_no_hay_guardias"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."sin_coordinador_no_hay_guardias"() TO "service_role";
+REVOKE ALL ON FUNCTION "interno"."sin_coordinador_no_hay_turnos_guardia"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."sin_coordinador_no_hay_turnos_guardia"() TO "service_role";
 
 
 
-REVOKE ALL ON FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."sin_firma_del_pagador_no_hay_guardias"() TO "service_role";
+REVOKE ALL ON FUNCTION "interno"."sin_firma_del_pagador_no_hay_turnos_guardia"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."sin_firma_del_pagador_no_hay_turnos_guardia"() TO "service_role";
 
 
 
@@ -29108,9 +29108,9 @@ GRANT ALL ON FUNCTION "interno"."tiene_permiso"("p_accion" "text") TO "trabajo_s
 
 
 
-REVOKE ALL ON FUNCTION "interno"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "interno"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid", "p_prestadora" "uuid") TO "trabajo_sin_persona";
 
 
 
@@ -29135,10 +29135,10 @@ GRANT ALL ON FUNCTION "interno"."usuario_elegido_bien_escrito"("p_usuario" "text
 
 
 
-REVOKE ALL ON FUNCTION "interno"."validar_paciente_de_guardia_del_contratante"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "interno"."validar_paciente_de_guardia_del_contratante"() TO "authenticated";
-GRANT ALL ON FUNCTION "interno"."validar_paciente_de_guardia_del_contratante"() TO "service_role";
-GRANT ALL ON FUNCTION "interno"."validar_paciente_de_guardia_del_contratante"() TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."validar_paciente_de_turno_guardia_del_contratante"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."validar_paciente_de_turno_guardia_del_contratante"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."validar_paciente_de_turno_guardia_del_contratante"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."validar_paciente_de_turno_guardia_del_contratante"() TO "trabajo_sin_persona";
 
 
 
@@ -29273,9 +29273,9 @@ GRANT ALL ON FUNCTION "public"."asignar_serie"("p_serie_id" "uuid", "p_asistente
 
 
 
-REVOKE ALL ON FUNCTION "public"."asignar_turno"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."asignar_turno"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."asignar_turno"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."asignar_turno_guardia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."asignar_turno_guardia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."asignar_turno_guardia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo_excepcion" "text") TO "authenticated";
 
 
 
@@ -29564,8 +29564,8 @@ GRANT ALL ON FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_c
 
 
 
-REVOKE ALL ON FUNCTION "public"."exigir_paciente_del_turno"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."exigir_paciente_del_turno"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."exigir_paciente_del_turno_guardia"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."exigir_paciente_del_turno_guardia"() TO "service_role";
 
 
 
@@ -29609,9 +29609,9 @@ GRANT ALL ON FUNCTION "public"."fn_estado_factura_segun_cobros"() TO "service_ro
 
 
 
-GRANT ALL ON FUNCTION "public"."fn_modalidad_de_la_guardia"() TO "anon";
-GRANT ALL ON FUNCTION "public"."fn_modalidad_de_la_guardia"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."fn_modalidad_de_la_guardia"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."fn_modalidad_del_turno_guardia"() TO "anon";
+GRANT ALL ON FUNCTION "public"."fn_modalidad_del_turno_guardia"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fn_modalidad_del_turno_guardia"() TO "service_role";
 
 
 
@@ -29730,9 +29730,9 @@ GRANT ALL ON FUNCTION "public"."monto_a_cobrar_de_factura"("p_monto_total" numer
 
 
 
-REVOKE ALL ON FUNCTION "public"."mover_turno_a_otro_paciente"("p_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."mover_turno_a_otro_paciente"("p_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) TO "service_role";
-GRANT ALL ON FUNCTION "public"."mover_turno_a_otro_paciente"("p_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) TO "service_role";
+GRANT ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) TO "authenticated";
 
 
 
@@ -29826,9 +29826,9 @@ GRANT ALL ON FUNCTION "public"."reactivar_la_cuenta"("p_usuario" "uuid") TO "aut
 
 
 
-REVOKE ALL ON FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."reasignar_guardia_por_emergencia"("p_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."reasignar_turno_guardia_por_emergencia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."reasignar_turno_guardia_por_emergencia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."reasignar_turno_guardia_por_emergencia"("p_turno_guardia_id" "uuid", "p_asistente_id" "uuid", "p_motivo" "text", "p_motivo_excepcion" "text") TO "authenticated";
 
 
 
@@ -29929,8 +29929,8 @@ GRANT ALL ON FUNCTION "public"."servicios_que_coordino"() TO "authenticated";
 
 
 
-REVOKE ALL ON FUNCTION "public"."sincronizar_paciente_principal_de_guardia"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."sincronizar_paciente_principal_de_guardia"() TO "service_role";
+REVOKE ALL ON FUNCTION "public"."sincronizar_paciente_principal_de_turno_guardia"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."sincronizar_paciente_principal_de_turno_guardia"() TO "service_role";
 
 
 
@@ -29962,15 +29962,15 @@ GRANT ALL ON FUNCTION "public"."tiene_permiso_la_sesion"("p_accion" "text") TO "
 
 
 
-REVOKE ALL ON FUNCTION "public"."turnos_asignados_sin_responder"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."turnos_asignados_sin_responder"() TO "service_role";
-GRANT ALL ON FUNCTION "public"."turnos_asignados_sin_responder"() TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."turnos_guardia_asignados_sin_responder"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."turnos_guardia_asignados_sin_responder"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."turnos_guardia_asignados_sin_responder"() TO "authenticated";
 
 
 
-REVOKE ALL ON FUNCTION "public"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid") TO "service_role";
-GRANT ALL ON FUNCTION "public"."turnos_que_traban_la_desactivacion"("p_usuario" "uuid") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "public"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."turnos_guardia_que_traban_la_desactivacion"("p_usuario" "uuid") TO "trabajo_sin_persona";
 
 
 
@@ -30066,29 +30066,29 @@ GRANT SELECT("created_at") ON TABLE "public"."alertas" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN ON TABLE "public"."alertas_tempranas_guardia" TO "authenticated";
-GRANT ALL ON TABLE "public"."alertas_tempranas_guardia" TO "service_role";
-GRANT SELECT,INSERT,UPDATE ON TABLE "public"."alertas_tempranas_guardia" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN ON TABLE "public"."alertas_tempranas_turno_guardia" TO "authenticated";
+GRANT ALL ON TABLE "public"."alertas_tempranas_turno_guardia" TO "service_role";
+GRANT SELECT,INSERT,UPDATE ON TABLE "public"."alertas_tempranas_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT UPDATE("resuelto_at") ON TABLE "public"."alertas_tempranas_guardia" TO "authenticated";
+GRANT UPDATE("resuelto_at") ON TABLE "public"."alertas_tempranas_turno_guardia" TO "authenticated";
 
 
 
-GRANT UPDATE("resuelto_nota") ON TABLE "public"."alertas_tempranas_guardia" TO "authenticated";
+GRANT UPDATE("resuelto_nota") ON TABLE "public"."alertas_tempranas_turno_guardia" TO "authenticated";
 
 
 
-GRANT UPDATE("ultima_notificacion_at") ON TABLE "public"."alertas_tempranas_guardia" TO "authenticated";
+GRANT UPDATE("ultima_notificacion_at") ON TABLE "public"."alertas_tempranas_turno_guardia" TO "authenticated";
 
 
 
-GRANT UPDATE("veces_notificado") ON TABLE "public"."alertas_tempranas_guardia" TO "authenticated";
+GRANT UPDATE("veces_notificado") ON TABLE "public"."alertas_tempranas_turno_guardia" TO "authenticated";
 
 
 
-GRANT UPDATE("backup_notificado_at") ON TABLE "public"."alertas_tempranas_guardia" TO "authenticated";
+GRANT UPDATE("backup_notificado_at") ON TABLE "public"."alertas_tempranas_turno_guardia" TO "authenticated";
 
 
 
@@ -30098,25 +30098,25 @@ GRANT SELECT ON TABLE "public"."apoderados" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT,INSERT,MAINTAIN,UPDATE ON TABLE "public"."asignaciones_de_turno" TO "authenticated";
-GRANT ALL ON TABLE "public"."asignaciones_de_turno" TO "service_role";
-GRANT SELECT ON TABLE "public"."asignaciones_de_turno" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,MAINTAIN,UPDATE ON TABLE "public"."asignaciones_de_turno_guardia" TO "authenticated";
+GRANT ALL ON TABLE "public"."asignaciones_de_turno_guardia" TO "service_role";
+GRANT SELECT ON TABLE "public"."asignaciones_de_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("prestadora_id") ON TABLE "public"."asignaciones_de_turno" TO "trabajo_sin_persona";
+GRANT INSERT("prestadora_id") ON TABLE "public"."asignaciones_de_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("asistente_id") ON TABLE "public"."asignaciones_de_turno" TO "trabajo_sin_persona";
+GRANT INSERT("asistente_id") ON TABLE "public"."asignaciones_de_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("asignado_por") ON TABLE "public"."asignaciones_de_turno" TO "trabajo_sin_persona";
+GRANT INSERT("asignado_por") ON TABLE "public"."asignaciones_de_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("ausencia_id") ON TABLE "public"."asignaciones_de_turno" TO "trabajo_sin_persona";
+GRANT INSERT("ausencia_id") ON TABLE "public"."asignaciones_de_turno_guardia" TO "trabajo_sin_persona";
 
 
 
@@ -30289,7 +30289,7 @@ GRANT INSERT("cliente_id") ON TABLE "public"."calificaciones_asistente" TO "auth
 
 
 
-GRANT INSERT("guardia_id") ON TABLE "public"."calificaciones_asistente" TO "authenticated";
+GRANT INSERT("turno_guardia_id") ON TABLE "public"."calificaciones_asistente" TO "authenticated";
 
 
 
@@ -30631,7 +30631,7 @@ GRANT UPDATE("descuenta_lo_no_prestado") ON TABLE "public"."condiciones_comercia
 
 
 
-GRANT UPDATE("cobra_guardias_adicionales") ON TABLE "public"."condiciones_comerciales_servicio" TO "authenticated";
+GRANT UPDATE("cobra_turnos_guardia_adicionales") ON TABLE "public"."condiciones_comerciales_servicio" TO "authenticated";
 
 
 
@@ -30739,9 +30739,9 @@ GRANT SELECT ON TABLE "public"."configuracion_aviso_cierre_del_servicio" TO "tra
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."configuracion_aviso_guardia_sin_cubrir" TO "authenticated";
-GRANT ALL ON TABLE "public"."configuracion_aviso_guardia_sin_cubrir" TO "service_role";
-GRANT SELECT ON TABLE "public"."configuracion_aviso_guardia_sin_cubrir" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."configuracion_aviso_turno_guardia_sin_cubrir" TO "authenticated";
+GRANT ALL ON TABLE "public"."configuracion_aviso_turno_guardia_sin_cubrir" TO "service_role";
+GRANT SELECT ON TABLE "public"."configuracion_aviso_turno_guardia_sin_cubrir" TO "trabajo_sin_persona";
 
 
 
@@ -30804,9 +30804,9 @@ GRANT SELECT("activa") ON TABLE "public"."configuracion_funciones_intermediacion
 
 
 
-GRANT ALL ON TABLE "public"."configuracion_incidentes_turno_sin_cubrir" TO "service_role";
-GRANT SELECT,INSERT,UPDATE ON TABLE "public"."configuracion_incidentes_turno_sin_cubrir" TO "authenticated";
-GRANT SELECT ON TABLE "public"."configuracion_incidentes_turno_sin_cubrir" TO "trabajo_sin_persona";
+GRANT ALL ON TABLE "public"."configuracion_incidentes_turno_guardia_sin_cubrir" TO "service_role";
+GRANT SELECT,INSERT,UPDATE ON TABLE "public"."configuracion_incidentes_turno_guardia_sin_cubrir" TO "authenticated";
+GRANT SELECT ON TABLE "public"."configuracion_incidentes_turno_guardia_sin_cubrir" TO "trabajo_sin_persona";
 
 
 
@@ -31175,41 +31175,41 @@ GRANT UPDATE("usado_en") ON TABLE "public"."desafios_de_llave" TO "authenticated
 
 
 
-GRANT ALL ON TABLE "public"."descansos_guardia" TO "service_role";
-GRANT SELECT,INSERT ON TABLE "public"."descansos_guardia" TO "authenticated";
+GRANT ALL ON TABLE "public"."descansos_turno_guardia" TO "service_role";
+GRANT SELECT,INSERT ON TABLE "public"."descansos_turno_guardia" TO "authenticated";
 
 
 
-GRANT SELECT("id") ON TABLE "public"."descansos_guardia" TO "trabajo_sin_persona";
+GRANT SELECT("id") ON TABLE "public"."descansos_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT("prestadora_id"),INSERT("prestadora_id") ON TABLE "public"."descansos_guardia" TO "trabajo_sin_persona";
+GRANT SELECT("prestadora_id"),INSERT("prestadora_id") ON TABLE "public"."descansos_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT("guardia_id"),INSERT("guardia_id") ON TABLE "public"."descansos_guardia" TO "trabajo_sin_persona";
+GRANT SELECT("turno_guardia_id"),INSERT("turno_guardia_id") ON TABLE "public"."descansos_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT("inicio_at"),INSERT("inicio_at") ON TABLE "public"."descansos_guardia" TO "trabajo_sin_persona";
+GRANT SELECT("inicio_at"),INSERT("inicio_at") ON TABLE "public"."descansos_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT UPDATE("fin_at") ON TABLE "public"."descansos_guardia" TO "authenticated";
-GRANT SELECT("fin_at"),INSERT("fin_at") ON TABLE "public"."descansos_guardia" TO "trabajo_sin_persona";
+GRANT UPDATE("fin_at") ON TABLE "public"."descansos_turno_guardia" TO "authenticated";
+GRANT SELECT("fin_at"),INSERT("fin_at") ON TABLE "public"."descansos_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT("registrado_por"),INSERT("registrado_por") ON TABLE "public"."descansos_guardia" TO "trabajo_sin_persona";
+GRANT SELECT("registrado_por"),INSERT("registrado_por") ON TABLE "public"."descansos_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT("nota"),INSERT("nota") ON TABLE "public"."descansos_guardia" TO "trabajo_sin_persona";
+GRANT SELECT("nota"),INSERT("nota") ON TABLE "public"."descansos_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT UPDATE("cliente_uuid_fin") ON TABLE "public"."descansos_guardia" TO "authenticated";
+GRANT UPDATE("cliente_uuid_fin") ON TABLE "public"."descansos_turno_guardia" TO "authenticated";
 
 
 
@@ -31300,31 +31300,31 @@ GRANT SELECT ON TABLE "public"."domicilios_temporales_paciente" TO "trabajo_sin_
 
 
 
-GRANT ALL ON TABLE "public"."emergencias_guardia" TO "service_role";
-GRANT SELECT,INSERT ON TABLE "public"."emergencias_guardia" TO "authenticated";
-GRANT SELECT ON TABLE "public"."emergencias_guardia" TO "trabajo_sin_persona";
+GRANT ALL ON TABLE "public"."emergencias_turno_guardia" TO "service_role";
+GRANT SELECT,INSERT ON TABLE "public"."emergencias_turno_guardia" TO "authenticated";
+GRANT SELECT ON TABLE "public"."emergencias_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT UPDATE("atendida_at") ON TABLE "public"."emergencias_guardia" TO "authenticated";
+GRANT UPDATE("atendida_at") ON TABLE "public"."emergencias_turno_guardia" TO "authenticated";
 
 
 
-GRANT UPDATE("atendida_por") ON TABLE "public"."emergencias_guardia" TO "authenticated";
+GRANT UPDATE("atendida_por") ON TABLE "public"."emergencias_turno_guardia" TO "authenticated";
 
 
 
-GRANT UPDATE("atendida_nota") ON TABLE "public"."emergencias_guardia" TO "authenticated";
+GRANT UPDATE("atendida_nota") ON TABLE "public"."emergencias_turno_guardia" TO "authenticated";
 
 
 
-GRANT UPDATE("ultima_notificacion_at") ON TABLE "public"."emergencias_guardia" TO "authenticated";
-GRANT UPDATE("ultima_notificacion_at") ON TABLE "public"."emergencias_guardia" TO "trabajo_sin_persona";
+GRANT UPDATE("ultima_notificacion_at") ON TABLE "public"."emergencias_turno_guardia" TO "authenticated";
+GRANT UPDATE("ultima_notificacion_at") ON TABLE "public"."emergencias_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT UPDATE("veces_notificado") ON TABLE "public"."emergencias_guardia" TO "authenticated";
-GRANT UPDATE("veces_notificado") ON TABLE "public"."emergencias_guardia" TO "trabajo_sin_persona";
+GRANT UPDATE("veces_notificado") ON TABLE "public"."emergencias_turno_guardia" TO "authenticated";
+GRANT UPDATE("veces_notificado") ON TABLE "public"."emergencias_turno_guardia" TO "trabajo_sin_persona";
 
 
 
@@ -31489,17 +31489,17 @@ GRANT SELECT ON TABLE "public"."excepciones_por_documentos" TO "trabajo_sin_pers
 
 
 
-GRANT ALL ON TABLE "public"."extensiones_de_turno" TO "service_role";
-GRANT SELECT ON TABLE "public"."extensiones_de_turno" TO "authenticated";
-GRANT SELECT,INSERT,UPDATE ON TABLE "public"."extensiones_de_turno" TO "trabajo_sin_persona";
+GRANT ALL ON TABLE "public"."extensiones_de_turno_guardia" TO "service_role";
+GRANT SELECT ON TABLE "public"."extensiones_de_turno_guardia" TO "authenticated";
+GRANT SELECT,INSERT,UPDATE ON TABLE "public"."extensiones_de_turno_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT UPDATE("ultima_notificacion_at") ON TABLE "public"."extensiones_de_turno" TO "authenticated";
+GRANT UPDATE("ultima_notificacion_at") ON TABLE "public"."extensiones_de_turno_guardia" TO "authenticated";
 
 
 
-GRANT UPDATE("veces_notificado") ON TABLE "public"."extensiones_de_turno" TO "authenticated";
+GRANT UPDATE("veces_notificado") ON TABLE "public"."extensiones_de_turno_guardia" TO "authenticated";
 
 
 
@@ -31525,8 +31525,8 @@ GRANT SELECT ON TABLE "public"."feriados_por_pais" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."finales_turno_sin_cubrir" TO "authenticated";
-GRANT ALL ON TABLE "public"."finales_turno_sin_cubrir" TO "service_role";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."finales_turno_guardia_sin_cubrir" TO "authenticated";
+GRANT ALL ON TABLE "public"."finales_turno_guardia_sin_cubrir" TO "service_role";
 
 
 
@@ -31552,104 +31552,104 @@ GRANT ALL ON TABLE "public"."formularios_declarados" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."guardia_comprobaciones" TO "service_role";
-GRANT SELECT,INSERT,UPDATE ON TABLE "public"."guardia_comprobaciones" TO "authenticated";
-GRANT SELECT ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT ALL ON TABLE "public"."turno_guardia_comprobaciones" TO "service_role";
+GRANT SELECT,INSERT,UPDATE ON TABLE "public"."turno_guardia_comprobaciones" TO "authenticated";
+GRANT SELECT ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("prestadora_id"),UPDATE("prestadora_id") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("prestadora_id"),UPDATE("prestadora_id") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("guardia_id"),UPDATE("guardia_id") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("turno_guardia_id"),UPDATE("turno_guardia_id") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("asistente_id"),UPDATE("asistente_id") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("asistente_id"),UPDATE("asistente_id") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("momento"),UPDATE("momento") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("momento"),UPDATE("momento") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("estado"),UPDATE("estado") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("estado"),UPDATE("estado") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("medio"),UPDATE("medio") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("medio"),UPDATE("medio") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("sujeto_tipo"),UPDATE("sujeto_tipo") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("sujeto_tipo"),UPDATE("sujeto_tipo") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("sujeto_id"),UPDATE("sujeto_id") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("sujeto_id"),UPDATE("sujeto_id") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("lat"),UPDATE("lat") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("lat"),UPDATE("lat") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("lng"),UPDATE("lng") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("lng"),UPDATE("lng") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("comprobada_en"),UPDATE("comprobada_en") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("comprobada_en"),UPDATE("comprobada_en") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("pedido_en"),UPDATE("pedido_en") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("pedido_en"),UPDATE("pedido_en") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("motivo_sin_comprobar"),UPDATE("motivo_sin_comprobar") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("motivo_sin_comprobar"),UPDATE("motivo_sin_comprobar") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("motivo_detalle"),UPDATE("motivo_detalle") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("motivo_detalle"),UPDATE("motivo_detalle") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("updated_at"),UPDATE("updated_at") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("updated_at"),UPDATE("updated_at") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("autorizada_por"),UPDATE("autorizada_por") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("autorizada_por"),UPDATE("autorizada_por") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("motivo_del_pedido"),UPDATE("motivo_del_pedido") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("motivo_del_pedido"),UPDATE("motivo_del_pedido") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT INSERT("detalle_del_pedido"),UPDATE("detalle_del_pedido") ON TABLE "public"."guardia_comprobaciones" TO "trabajo_sin_persona";
+GRANT INSERT("detalle_del_pedido"),UPDATE("detalle_del_pedido") ON TABLE "public"."turno_guardia_comprobaciones" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."guardia_pacientes" TO "authenticated";
-GRANT ALL ON TABLE "public"."guardia_pacientes" TO "service_role";
-GRANT SELECT,INSERT,UPDATE ON TABLE "public"."guardia_pacientes" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."turno_guardia_pacientes" TO "authenticated";
+GRANT ALL ON TABLE "public"."turno_guardia_pacientes" TO "service_role";
+GRANT SELECT,INSERT,UPDATE ON TABLE "public"."turno_guardia_pacientes" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."guardias" TO "authenticated";
-GRANT ALL ON TABLE "public"."guardias" TO "service_role";
-GRANT SELECT,INSERT,UPDATE ON TABLE "public"."guardias" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."turnos_guardia" TO "authenticated";
+GRANT ALL ON TABLE "public"."turnos_guardia" TO "service_role";
+GRANT SELECT,INSERT,UPDATE ON TABLE "public"."turnos_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."guardias_cobertura" TO "authenticated";
-GRANT ALL ON TABLE "public"."guardias_cobertura" TO "service_role";
-GRANT SELECT,INSERT,DELETE ON TABLE "public"."guardias_cobertura" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."turnos_guardia_cobertura" TO "authenticated";
+GRANT ALL ON TABLE "public"."turnos_guardia_cobertura" TO "service_role";
+GRANT SELECT,INSERT,DELETE ON TABLE "public"."turnos_guardia_cobertura" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."guardias_tracking_gps" TO "authenticated";
-GRANT ALL ON TABLE "public"."guardias_tracking_gps" TO "service_role";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."turnos_guardia_tracking_gps" TO "authenticated";
+GRANT ALL ON TABLE "public"."turnos_guardia_tracking_gps" TO "service_role";
 
 
 
@@ -31767,9 +31767,9 @@ GRANT SELECT,INSERT,UPDATE ON TABLE "public"."incidentes_relevo" TO "trabajo_sin
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."incidentes_turno_sin_cubrir" TO "authenticated";
-GRANT ALL ON TABLE "public"."incidentes_turno_sin_cubrir" TO "service_role";
-GRANT SELECT,INSERT,UPDATE ON TABLE "public"."incidentes_turno_sin_cubrir" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."incidentes_turno_guardia_sin_cubrir" TO "authenticated";
+GRANT ALL ON TABLE "public"."incidentes_turno_guardia_sin_cubrir" TO "service_role";
+GRANT SELECT,INSERT,UPDATE ON TABLE "public"."incidentes_turno_guardia_sin_cubrir" TO "trabajo_sin_persona";
 
 
 
@@ -32034,8 +32034,8 @@ GRANT ALL ON TABLE "public"."monedas_por_pais" TO "service_role";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."motivos_aviso_previo_guardia" TO "authenticated";
-GRANT ALL ON TABLE "public"."motivos_aviso_previo_guardia" TO "service_role";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."motivos_aviso_previo_turno_guardia" TO "authenticated";
+GRANT ALL ON TABLE "public"."motivos_aviso_previo_turno_guardia" TO "service_role";
 
 
 
@@ -32054,9 +32054,9 @@ GRANT ALL ON TABLE "public"."motivos_resolucion" TO "service_role";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."motivos_sustitucion_guardia" TO "authenticated";
-GRANT ALL ON TABLE "public"."motivos_sustitucion_guardia" TO "service_role";
-GRANT SELECT ON TABLE "public"."motivos_sustitucion_guardia" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."motivos_sustitucion_turno_guardia" TO "authenticated";
+GRANT ALL ON TABLE "public"."motivos_sustitucion_turno_guardia" TO "service_role";
+GRANT SELECT ON TABLE "public"."motivos_sustitucion_turno_guardia" TO "trabajo_sin_persona";
 
 
 
@@ -32399,7 +32399,7 @@ GRANT UPDATE("dias_aviso_vencimiento_documentos") ON TABLE "public"."prestadoras
 
 
 
-GRANT UPDATE("dias_generacion_series_guardia") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+GRANT UPDATE("dias_generacion_series_turno_guardia") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 
@@ -32407,7 +32407,7 @@ GRANT UPDATE("politica_verificacion_alta_manual") ON TABLE "public"."prestadoras
 
 
 
-GRANT UPDATE("minutos_aviso_previo_guardia") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+GRANT UPDATE("minutos_aviso_previo_turno_guardia") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 
@@ -32439,7 +32439,7 @@ GRANT UPDATE("cierre_por_inactividad_minutos") ON TABLE "public"."prestadoras" T
 
 
 
-GRANT UPDATE("control_de_ubicacion_en_el_turno") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+GRANT UPDATE("control_de_ubicacion_en_el_turno_guardia") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 
@@ -32451,11 +32451,11 @@ GRANT UPDATE("dias_para_aceptar_la_ubicacion") ON TABLE "public"."prestadoras" T
 
 
 
-GRANT UPDATE("control_de_ubicacion_en_el_turno_desde") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+GRANT UPDATE("control_de_ubicacion_en_el_turno_guardia_desde") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 
-GRANT UPDATE("guardias_solo_con_firma_del_pagador") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+GRANT UPDATE("turnos_guardia_solo_con_firma_del_pagador") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 
@@ -32667,15 +32667,15 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."secretos_de_terceros" TO "t
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."series_guardias" TO "authenticated";
-GRANT ALL ON TABLE "public"."series_guardias" TO "service_role";
-GRANT SELECT ON TABLE "public"."series_guardias" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."series_turnos_guardia" TO "authenticated";
+GRANT ALL ON TABLE "public"."series_turnos_guardia" TO "service_role";
+GRANT SELECT ON TABLE "public"."series_turnos_guardia" TO "trabajo_sin_persona";
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."series_guardias_pacientes" TO "authenticated";
-GRANT ALL ON TABLE "public"."series_guardias_pacientes" TO "service_role";
-GRANT SELECT ON TABLE "public"."series_guardias_pacientes" TO "trabajo_sin_persona";
+GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."series_turnos_guardia_pacientes" TO "authenticated";
+GRANT ALL ON TABLE "public"."series_turnos_guardia_pacientes" TO "service_role";
+GRANT SELECT ON TABLE "public"."series_turnos_guardia_pacientes" TO "trabajo_sin_persona";
 
 
 
@@ -33272,21 +33272,21 @@ CREATE POLICY "prescripciones_panel_sube_documento_firmado" ON "storage"."object
 
 
 
-CREATE POLICY "reportes_asistente_lee_fotos_de_sus_guardias" ON "storage"."objects" FOR SELECT TO "authenticated" USING ((("bucket_id" = 'reportes-fotos'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
+CREATE POLICY "reportes_asistente_lee_fotos_de_sus_turnos_guardia" ON "storage"."objects" FOR SELECT TO "authenticated" USING ((("bucket_id" = 'reportes-fotos'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
   WHERE (("g"."asistente_id" = "interno"."asistente_de_la_sesion"()) AND ("g"."prestadora_id" = "interno"."prestadora_actual"()) AND (("storage"."foldername"("objects"."name"))[2] = ("g"."id")::"text"))))));
 
 
 
-CREATE POLICY "reportes_asistente_sube_foto_de_su_guardia" ON "storage"."objects" FOR INSERT TO "authenticated" WITH CHECK ((("bucket_id" = 'reportes-fotos'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."guardias" "g"
+CREATE POLICY "reportes_asistente_sube_foto_de_su_turno_guardia" ON "storage"."objects" FOR INSERT TO "authenticated" WITH CHECK ((("bucket_id" = 'reportes-fotos'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."turnos_guardia" "g"
   WHERE (("g"."asistente_id" = "interno"."asistente_de_la_sesion"()) AND ("g"."prestadora_id" = "interno"."prestadora_actual"()) AND (("storage"."foldername"("objects"."name"))[2] = ("g"."id")::"text"))))));
 
 
 
 CREATE POLICY "reportes_cliente_lee_fotos_de_sus_pacientes" ON "storage"."objects" FOR SELECT TO "authenticated" USING ((("bucket_id" = 'reportes-fotos'::"text") AND (("storage"."foldername"("name"))[1] = ("interno"."prestadora_actual"())::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."guardia_pacientes" "gp"
-  WHERE (("gp"."paciente_id" IN ( SELECT "interno"."pacientes_del_cliente"() AS "pacientes_del_cliente")) AND (("storage"."foldername"("objects"."name"))[2] = ("gp"."guardia_id")::"text"))))));
+   FROM "public"."turno_guardia_pacientes" "gp"
+  WHERE (("gp"."paciente_id" IN ( SELECT "interno"."pacientes_del_cliente"() AS "pacientes_del_cliente")) AND (("storage"."foldername"("objects"."name"))[2] = ("gp"."turno_guardia_id")::"text"))))));
 
 
 

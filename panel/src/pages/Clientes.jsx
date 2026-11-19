@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
 import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
 import { clientesConSuLocalidad, filtrarClientes, localidadesConClientes } from '../lib/clientesPorLocalidad';
-import { textoDePacientes } from '../lib/pacientesDeGuardia';
+import { textoDePacientes } from '../lib/pacientesDeTurnoGuardia';
 import { claseBadge } from '../lib/tonos';
 import { formatearImporte } from '../lib/dinero';
 import { porCliente, estadoDelCliente } from '../lib/loQueTieneCadaCliente';
@@ -185,7 +185,7 @@ export function Clientes() {
                       }}
                     >
                       <td><strong>{fam.personas?.nombre_visible || '—'}</strong></td>
-                      <td>{textoDePacientes(nombres, t.guardias.pacientes_y_mas)}</td>
+                      <td>{textoDePacientes(nombres, t.turnos_guardia.pacientes_y_mas)}</td>
                       {verServicios && <td>{propios.length}</td>}
                       {verMatch && (
                         <td>

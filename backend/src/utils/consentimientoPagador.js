@@ -16,7 +16,7 @@ import { fraseDeLaFirma } from './fraseDeLaFirma.js';
 // Con la opción de la Prestadora apagada, que es como viene de fábrica, no se bloquea nada: la
 // contratación sigue, el Servicio se presta y el Cliente se da de alta igual. Con la opción
 // encendida, en un Servicio donde alguno de los Responsables de pagos que rigen hoy no firmó no se
-// programan guardias: lo rechaza la base, y el detalle del Servicio lo avisa. Lo que ya estaba
+// programan turnos de guardia: lo rechaza la base, y el detalle del Servicio lo avisa. Lo que ya estaba
 // programado sigue igual.
 //
 // TODO ES DEL SERVICIO. Los Responsables de pagos, lo que firma cada uno y sus documentos son de
@@ -351,7 +351,7 @@ export async function anularPendiente({ db, consentimientoId, prestadoraId }) {
 //
 // Trae a los Responsables de pagos que no terminaron antes de hoy: los que rigen hoy y los que
 // empiezan más adelante. `firmaCompleta` dice si firmaron todos los que rigen hoy, que es lo mismo
-// que exige la base para programar guardias con la opción de la Prestadora encendida.
+// que exige la base para programar turnos de guardia con la opción de la Prestadora encendida.
 export async function estadoDelPagador({ db, servicioId, prestadoraId, idioma, zona }) {
   const servicio = await servicioConSusResponsables({ db, servicioId, prestadoraId });
   const tipos = [...new Set(servicio.responsables.map((fila) => fila.pagador_tipo).filter(Boolean))];

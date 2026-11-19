@@ -113,7 +113,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     // ninguna se mide por hora, que es como se liquida mientras nadie decida otra cosa.
     unidad_medicion: unidadDeMedicionDe(asistente),
     valor_hora: asistente.valor_hora || '',
-    valor_guardia: asistente.valor_guardia || '',
+    valor_turno_guardia: asistente.valor_turno_guardia || '',
     valor_semana: asistente.valor_semana || '',
     valor_hora_extra: asistente.valor_hora_extra || '',
     horas_semanales: asistente.horas_semanales || '',
@@ -344,7 +344,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
       saltarAlPrimero(enPantalla);
       return;
     }
-    /* Sin ninguna forma de recibir trabajo, este Asistente no puede recibir una sola guardia.
+    /* Sin ninguna forma de recibir trabajo, este Asistente no puede recibir un solo turno de guardia.
        La base lo dejaría guardar así, y el problema recién aparecería el día que se le quiera
        asignar algo, lejos de la pantalla donde se produjo. */
     if (esAdmin && form.modalidades.length === 0) {
@@ -448,7 +448,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
             prestadora_id: usuario?.prestadora_id,
             unidad_medicion: form.unidad_medicion,
             valor_hora: form.valor_hora || null,
-            valor_guardia: form.valor_guardia || null,
+            valor_turno_guardia: form.valor_turno_guardia || null,
             valor_semana: form.valor_semana || null,
             valor_hora_extra: form.valor_hora_extra || null,
             // Sin arreglo propio, vacío: hereda lo de la Prestadora y sigue heredándolo el día
@@ -726,7 +726,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
               onChange={(e) => set(COLUMNA_DEL_VALOR[form.unidad_medicion], e.target.value)}
             />
 
-            {/* Se pregunta siempre, y no sólo a quien cobra por hora: una guardia con horas de más
+            {/* Se pregunta siempre, y no sólo a quien cobra por hora: un turno de guardia con horas de más
                 se paga igual midan el trabajo como lo midan. Vacío quiere decir que no está
                 cargado, y entonces la liquidación avisa en vez de estimarlo. */}
             <FormField label={t.asistentes.valor_hora_extra} name="valor_hora_extra" type="number" value={form.valor_hora_extra} onChange={(e) => set('valor_hora_extra', e.target.value)} />

@@ -1,38 +1,38 @@
 // Punto único de verdad para pasar de "fecha + hora escrita" a un momento real
 // (regla 12 de CLAUDE.md §7).
 //
-// Parece de más, pero no lo es: una guardia se guarda como una fecha (`2026-08-01`) y dos
-// horas de reloj (`22:00` y `06:00`). Leído literal, esa guardia "termina" ocho horas antes
-// de empezar. La guardia de noche es lo más común del rubro, así que cualquier cuenta que
+// Parece de más, pero no lo es: un turno de guardia se guarda como una fecha (`2026-08-01`) y dos
+// horas de reloj (`22:00` y `06:00`). Leído literal, ese turno de guardia "termina" ocho horas antes
+// de empezar. El turno de guardia de noche es lo más común del rubro, así que cualquier cuenta que
 // use `hora_fin` sin arreglar eso —cuántas horas duró, si ya pasaron dos horas del final,
 // si se pisa con otra— da mal justamente en el caso más frecuente.
 //
-// Antes de este archivo, `Guardias.jsx` armaba la fecha de fin a mano y tenía ese error.
+// Antes de este archivo, `TurnosGuardia.jsx` armaba la fecha de fin a mano y tenía ese error.
 // Ahora la conversión está escrita una sola vez, acá.
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
-/** Momento en que la guardia empieza. */
-export function inicioDeGuardia(guardia) {
-  return new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
+/** Momento en que el turno de guardia empieza. */
+export function inicioDeTurnoGuardia(turno_guardia) {
+  return new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
 }
 
 /**
- * Momento en que la guardia termina.
+ * Momento en que el turno de guardia termina.
  *
  * Manda `dias_hasta_el_fin`, que dice cuántos días después de `fecha` termina el turno: 0 el
- * mismo día, 1 al siguiente, 2 dos días después. Es lo que hace posibles las guardias de 24, 48
+ * mismo día, 1 al siguiente, 2 dos días después. Es lo que hace posibles los turnos de guardia de 24, 48
  * y 72 horas que cubre una sola Asistente.
  *
  * Cuando ese dato no viene se cae en la regla anterior: si la hora de fin es menor o igual a la
- * de inicio, la guardia cruza la medianoche y termina al día siguiente. Esa regla cubre la
+ * de inicio, el turno de guardia cruza la medianoche y termina al día siguiente. Esa regla cubre la
  * guardia de noche y no sabe de nada más largo, así que es sólo la red para los turnos cargados
  * antes de que la duración se escribiera.
  */
-export function finDeGuardia(guardia) {
-  const inicio = inicioDeGuardia(guardia);
-  const fin = new Date(`${guardia.fecha}T${guardia.hora_fin}`);
-  const dias = Number(guardia?.dias_hasta_el_fin);
+export function finDeTurnoGuardia(turno_guardia) {
+  const inicio = inicioDeTurnoGuardia(turno_guardia);
+  const fin = new Date(`${turno_guardia.fecha}T${turno_guardia.hora_fin}`);
+  const dias = Number(turno_guardia?.dias_hasta_el_fin);
   if (Number.isFinite(dias) && dias >= 0) {
     fin.setDate(fin.getDate() + dias);
     return fin;
@@ -42,23 +42,23 @@ export function finDeGuardia(guardia) {
 }
 
 /** Cuánto dura, en horas. Sirve para sumar la carga semanal de un Asistente. */
-export function horasDeGuardia(guardia) {
-  return (finDeGuardia(guardia) - inicioDeGuardia(guardia)) / MS_POR_HORA;
+export function horasDeTurnoGuardia(turno_guardia) {
+  return (finDeTurnoGuardia(turno_guardia) - inicioDeTurnoGuardia(turno_guardia)) / MS_POR_HORA;
 }
 
 /**
- * ¿Estas dos guardias se pisan?
+ * ¿Estos dos turnos de guardia se pisan?
  *
  * Se tocan por el borde no cuenta: una que termina 14:00 y otra que empieza 14:00 no se
  * superponen. Por eso las comparaciones son estrictas.
  */
 export function seSuperponen(a, b) {
-  return inicioDeGuardia(a) < finDeGuardia(b) && inicioDeGuardia(b) < finDeGuardia(a);
+  return inicioDeTurnoGuardia(a) < finDeTurnoGuardia(b) && inicioDeTurnoGuardia(b) < finDeTurnoGuardia(a);
 }
 
-/** Horas de descanso entre el fin de una guardia y el inicio de otra. Negativo = se pisan. */
+/** Horas de descanso entre el fin de un turno de guardia y el inicio de otra. Negativo = se pisan. */
 export function horasDeDescansoEntre(anterior, siguiente) {
-  return (inicioDeGuardia(siguiente) - finDeGuardia(anterior)) / MS_POR_HORA;
+  return (inicioDeTurnoGuardia(siguiente) - finDeTurnoGuardia(anterior)) / MS_POR_HORA;
 }
 
 /** La fecha de hoy en el formato en que la guarda la base: `2026-08-01`. */
@@ -113,7 +113,7 @@ export function diasDeEspera(desde, hasta = hoyISO()) {
  * La hora de reloj de un momento guardado (`2026-09-09T14:19:03Z` → `14:19`), en el huso del
  * aparato que lo muestra.
  *
- * RELOJ DE 24 HORAS EN LOS TRES IDIOMAS, a propósito. El horario de una guardia sale de la base
+ * RELOJ DE 24 HORAS EN LOS TRES IDIOMAS, a propósito. El horario de un turno de guardia sale de la base
  * escrito así —`08:00` a `16:00`— y no hay forma de escribirlo de otra manera. Dejar que el
  * idioma elija pondría «Llegó a las 08:03 a. m.» justo debajo de «08:00 - 16:00»: dos relojes
  * distintos en la misma tarjeta, que es lo que hace dudar de si llegó tarde o no.

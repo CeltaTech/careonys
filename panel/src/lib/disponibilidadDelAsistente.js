@@ -1,5 +1,5 @@
 /* El nombre de un Asistente con los horarios en que suele estar disponible, para la lista de
- * quién toma una guardia: «Ana Pérez — Mañana, Tarde». Sin ninguno cargado, sólo el nombre.
+ * quién toma un turno de guardia: «Ana Pérez — Mañana, Tarde». Sin ninguno cargado, sólo el nombre.
  *
  * Los horarios salen en el orden de la lista de opciones, no en el que se eligieron, para que
  * todos los nombres se lean igual. Una opción que ya no está en la lista no se muestra.

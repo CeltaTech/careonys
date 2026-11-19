@@ -1,6 +1,6 @@
 // Dónde está el teléfono ahora mismo, preguntado una sola vez y escrito en un solo lugar.
 //
-// La misma pregunta la hacen tres actos del turno —marcar la llegada, cerrar la guardia y avisar
+// La misma pregunta la hacen tres actos del turno de guardia —marcar la llegada, cerrar el turno de guardia y avisar
 // que se sale hacia el domicilio (pendiente #101)—, y con la condición escrita en cada pantalla
 // alcanzaba con que una se olvidara del tiempo de espera para que se quedara colgada esperando
 // un GPS que nunca contesta (CLAUDE.md §8, «ningún patrón repetido sin punto único de verdad»).

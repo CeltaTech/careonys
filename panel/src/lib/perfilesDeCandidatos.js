@@ -14,12 +14,12 @@
 // entero al backend (`scripts/copias_entre_apps.mjs`). `candidatos.js` los vuelve a exportar, así
 // que quien los importaba de allá los sigue encontrando.
 //
-// LO QUE NO SE CONFIGURA, Y POR QUÉ. Los cinco motivos que bloquean —ya tiene otra guardia, tiene
+// LO QUE NO SE CONFIGURA, Y POR QUÉ. Los cinco motivos que bloquean —ya tiene otro turno de guardia, tiene
 // una ausencia cargada, le falta la Matrícula o está vencida o sin comprobar, no trabaja en esa
 // modalidad— y el interruptor de "no disponible" no están acá. Esos números no deciden nada: el
 // bloqueo ya lo decidió otra cosa, y el −1000 solamente los manda al fondo de la lista. Dejarlos
 // tocar sería ofrecer una perilla que no hace nada, o peor, una con la que se puede subir a la
-// cabeza de la lista a alguien que no puede tomar la guardia.
+// cabeza de la lista a alguien que no puede tomar el turno de guardia.
 //
 // Y TAMPOCO ESTIRAR UN HORARIO. Un perfil ordena la lista de candidatos y nada más. Estirar el
 // turno de alguien que ya está adentro es una decisión de la Coordinadora, caso por caso, ante un
@@ -33,7 +33,7 @@ import { DIAS_AVISO_POR_DEFECTO } from './reglaVencimientos.js';
  * Cuánto suma o resta cada criterio. Valores de fábrica.
  *
  * La escala está pensada para que **la continuidad gane**. Para el Paciente y su Cliente, que
- * venga alguien que ya conocen vale más que cualquier otra comodidad de la agenda: tres guardias
+ * venga alguien que ya conocen vale más que cualquier otra comodidad de la agenda: tres turnos de guardia
  * previas con ese Paciente pesan más que todo lo demás a favor sumado.
  */
 const CONTINUIDAD_POR_VEZ_DE_FABRICA = 12;
@@ -51,20 +51,20 @@ export const PESOS = {
   /** Nunca lo atendió. Resta poco: no es un problema, es solo que no hay nada a favor. */
   sin_continuidad: -5,
 
-  /** No tiene ninguna guardia que se pise con esta. */
+  /** No tiene ningún turno de guardia que se pise con esta. */
   libre: 10,
-  /** Ya tiene una guardia encima. Bloquea igual; el número es para que quede al fondo. */
+  /** Ya tiene un turno de guardia encima. Bloquea igual; el número es para que quede al fondo. */
   ocupado: -1000,
 
   /**
-   * Tiene una ausencia registrada que cubre la fecha de la guardia. Bloquea igual que estar
+   * Tiene una ausencia registrada que cubre la fecha del turno de guardia. Bloquea igual que estar
    * ocupado y resta lo mismo por el mismo motivo: el número no decide nada —el bloqueo ya está
    * decidido—, solo la manda al fondo para que no se mezcle con quienes sí pueden tomarla.
    */
   ausencia: -1000,
 
   /**
-   * El Asistente no trabaja en la modalidad de esta guardia. Bloquea, y resta lo mismo que los
+   * El Asistente no trabaja en la modalidad de este turno de guardia. Bloquea, y resta lo mismo que los
    * demás bloqueos por el mismo motivo: el número no decide nada, solo lo manda al fondo.
    */
   modalidad_distinta: -1000,
@@ -94,7 +94,7 @@ export const PESOS = {
 
   /** Lo máximo que resta acercarse al tope de horas. Se aplica proporcional, no de golpe. */
   horas_cerca_del_tope: -15,
-  /** Con esta guardia se pasa del tope semanal. Resta mucho, pero no bloquea. */
+  /** Con este turno de guardia se pasa del tope semanal. Resta mucho, pero no bloquea. */
   horas_pasa_el_tope: -30,
 
   descanso_ok: 6,
@@ -116,11 +116,11 @@ export const TOPES = {
    */
   horas_semanales: 48,
 
-  /** Horas mínimas de descanso entre el fin de una guardia y el inicio de la siguiente. */
+  /** Horas mínimas de descanso entre el fin de un turno de guardia y el inicio de la siguiente. */
   horas_descanso_minimo: 12,
 
   /**
-   * Descansos más largos que esto no se comentan. Decir "descansa 300 h desde su guardia
+   * Descansos más largos que esto no se comentan. Decir "descansa 300 h desde su turno de guardia
    * anterior" es ruido: si hace tres días que no trabaja, el dato no aporta nada.
    */
   horas_descanso_a_mencionar: 24,
@@ -155,7 +155,7 @@ export const TOPES = {
  * Qué pesos se pueden tocar, y entre qué valores.
  *
  * El borde no es un capricho: un peso que pueda valer −1000 le deja a cualquiera la posibilidad
- * de esconder a un candidato que sí puede tomar la guardia, con el mismo número con el que el
+ * de esconder a un candidato que sí puede tomar el turno de guardia, con el mismo número con el que el
  * sistema marca lo que de verdad bloquea. Y un peso enorme para el otro lado vuelve el orden de
  * la lista una sola cosa repetida.
  */
@@ -317,7 +317,7 @@ export const PERFIL_POR_DEFECTO = 'continuidad';
 export const NOMBRES_DE_PERFIL = Object.keys(PERFILES);
 
 /**
- * Los pesos y topes con los que hay que llamar a `candidatosParaGuardia`.
+ * Los pesos y topes con los que hay que llamar a `candidatosParaTurnoGuardia`.
  *
  * Se apilan tres capas, y la última manda: los valores de fábrica, encima lo que corre el perfil
  * elegido, y encima lo que esa Prestadora haya cambiado número por número.

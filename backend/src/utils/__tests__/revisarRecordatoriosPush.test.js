@@ -13,7 +13,7 @@
  * prueba da al revés. El envío al celular no se prueba acá: sale por `push.js`, que tiene sus
  * propias pruebas.
  *
- * Se levanta la base de mentira igual que `revisarExtensionesDeTurno.test.js`. Datos inventados,
+ * Se levanta la base de mentira igual que `revisarExtensionesDeTurnoGuardia.test.js`. Datos inventados,
  * como manda CLAUDE.md §6.
  */
 import { strict as assert } from 'node:assert';
@@ -24,7 +24,7 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 
 const PRESTADORAS = 'GET /rest/v1/prestadoras';
-const TURNOS = 'GET /rest/v1/guardias';
+const TURNOS_GUARDIA = 'GET /rest/v1/turnos_guardia';
 const MENSAJES = 'GET /rest/v1/mensajes_asistente';
 
 /**
@@ -98,15 +98,15 @@ beforeEach(() => {
 
 describe('los avisos de rutina a la Asistente', () => {
   it('todo lo de cada Prestadora se lee con la credencial del trabajo de esa Prestadora', async () => {
-    respuestas.set(PRESTADORAS, [{ minutos_aviso_previo_guardia: 30 }]);
-    respuestas.set(TURNOS, []);
+    respuestas.set(PRESTADORAS, [{ minutos_aviso_previo_turno_guardia: 30 }]);
+    respuestas.set(TURNOS_GUARDIA, []);
     respuestas.set(MENSAJES, []);
 
     await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date(2026, 2, 1, 12, 0, 0));
 
     assert.deepEqual(
       llamadas.map((l) => l.clave),
-      [PRESTADORAS, TURNOS, MENSAJES, TURNOS],
+      [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA],
     );
     for (const llamada of llamadas) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);

@@ -1,17 +1,17 @@
 /**
- * `/api/app-asistentes/guardias` y `/perfil` — lo que el Asistente ve de lo suyo.
+ * `/api/app-asistentes/turnos-guardia` y `/perfil` — lo que el Asistente ve de lo suyo.
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. De sus guardias pasadas el Asistente ve sólo las que todavía no se le
+ * POR QUÉ EXISTE ESTA PRUEBA. De sus turnos de guardia pasados el Asistente ve sólo las que todavía no se le
  * pagaron: las que cubre el período de una liquidación pagada salen de la lista. Qué períodos se le
  * pagaron lo contesta la base con `periodos_pagados_de_la_sesion`, con su propia credencial. Los
- * reportes de otros Asistentes los lee sólo con una guardia en curso con ese Paciente, y sólo los
- * del Servicio de esa guardia. Durante una guardia en curso recibe la obra social y el número de
+ * reportes de otros Asistentes los lee sólo con un turno de guardia en curso con ese Paciente, y sólo los
+ * del Servicio de ese turno de guardia. Durante un turno de guardia en curso recibe la obra social y el número de
  * afiliado de sus Pacientes, y en ninguna otra. Y su perfil no lleva la credencial interna del
  * código QR.
  *
- * Qué daría con el sistema roto: si la lista dejara de preguntar los períodos pagados, la guardia
+ * Qué daría con el sistema roto: si la lista dejara de preguntar los períodos pagados, el turno de guardia
  * de septiembre volvería a aparecer; si se preguntara con otra credencial, falla la comprobación de
  * cuál viajó; si `qr_token` volviera al `select` del perfil, falla la comprobación del pedido. La
  * base de mentira no aplica políticas: qué períodos contesta la función lo prueba la base.
@@ -74,15 +74,15 @@ async function pedir(camino) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-// Datos inventados: una guardia cobrada, una sin cobrar y una que quedó sin cerrar en el período cobrado.
-const guardia = (id, fecha, estado) => ({
+// Datos inventados: un turno de guardia cobrado, una sin cobrar y una que quedó sin cerrar en el período cobrado.
+const turno_guardia = (id, fecha, estado) => ({
   id, paciente_id: null, fecha, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0,
   modalidad: null, estado, salida_checkin_at: null, medio_transporte: null,
   checkin_at: null, checkout_at: null, checkout_bloqueado: false,
 });
-const COBRADA = guardia('guardia-cobrada', '2026-09-10', 'completada');
-const SIN_COBRAR = guardia('guardia-sin-cobrar', '2026-10-10', 'completada');
-const SIN_CERRAR = guardia('guardia-sin-cerrar', '2026-09-20', 'activa');
+const COBRADA = turno_guardia('turno-guardia-cobrado', '2026-09-10', 'completada');
+const SIN_COBRAR = turno_guardia('turno-guardia-sin-cobrar', '2026-10-10', 'completada');
+const SIN_CERRAR = turno_guardia('turno-guardia-sin-cerrar', '2026-09-20', 'activa');
 
 beforeEach(() => {
   llamadas = [];
@@ -92,21 +92,21 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/guardias', () => [SIN_COBRAR, SIN_CERRAR, COBRADA]);
+  respuestas.set('GET /rest/v1/turnos_guardia', () => [SIN_COBRAR, SIN_CERRAR, COBRADA]);
   respuestas.set('POST /rest/v1/rpc/periodos_pagados_de_la_sesion', () => [
     { desde: '2026-09-01', hasta: '2026-09-30' },
   ]);
 });
 
-describe('GET /guardias — las pasadas, sólo las que no se le pagaron', () => {
+describe('GET /turnos-guardia — las pasadas, sólo las que no se le pagaron', () => {
   it('saca la que cubre un período pagado y deja la que sigue sin cerrar', async () => {
-    const { estado, cuerpo } = await pedir('/guardias');
+    const { estado, cuerpo } = await pedir('/turnos-guardia');
     assert.equal(estado, 200);
-    assert.deepEqual(cuerpo.guardias.map((g) => g.id), ['guardia-sin-cobrar', 'guardia-sin-cerrar']);
+    assert.deepEqual(cuerpo.turnos_guardia.map((g) => g.id), ['turno-guardia-sin-cobrar', 'turno-guardia-sin-cerrar']);
   });
 
   it('pregunta los períodos pagados con la credencial del Asistente', async () => {
-    await pedir('/guardias');
+    await pedir('/turnos-guardia');
     const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/periodos_pagados_de_la_sesion');
     assert.ok(pregunta, 'no preguntó qué períodos se le pagaron');
     assert.equal(pregunta.credencial, SESION);
@@ -114,8 +114,8 @@ describe('GET /guardias — las pasadas, sólo las que no se le pagaron', () => 
 
   it('sin ningún período pagado no saca ninguna', async () => {
     respuestas.set('POST /rest/v1/rpc/periodos_pagados_de_la_sesion', () => []);
-    const { cuerpo } = await pedir('/guardias');
-    assert.equal(cuerpo.guardias.length, 3);
+    const { cuerpo } = await pedir('/turnos-guardia');
+    assert.equal(cuerpo.turnos_guardia.length, 3);
   });
 });
 
@@ -132,26 +132,26 @@ describe('GET /pacientes/:id/reportes — sólo con una guardia en curso, y de e
   });
 
   it('sin una guardia en curso con el Paciente no lee ningún reporte', async () => {
-    respuestas.set('GET /rest/v1/guardia_pacientes', () => []);
+    respuestas.set('GET /rest/v1/turno_guardia_pacientes', () => []);
     const { estado } = await pedir(`/pacientes/${PACIENTE}/reportes`);
     assert.equal(estado, 403);
     assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/reportes'), 'leyó reportes sin guardia en curso');
   });
 
   it('con una guardia en curso lee sólo los del Servicio de esa guardia', async () => {
-    respuestas.set('GET /rest/v1/guardia_pacientes', () => [{ guardias: { servicio_id: SERVICIO } }]);
+    respuestas.set('GET /rest/v1/turno_guardia_pacientes', () => [{ turnos_guardia: { servicio_id: SERVICIO } }]);
     const { estado, cuerpo } = await pedir(`/pacientes/${PACIENTE}/reportes`);
     assert.equal(estado, 200);
     assert.equal(cuerpo.reportes.length, 1);
 
-    const enCurso = llamadas.find((l) => l.clave === 'GET /rest/v1/guardia_pacientes');
-    assert.ok(enCurso.url.includes('guardias.estado=eq.activa'), 'no pidió que la guardia esté en curso');
+    const enCurso = llamadas.find((l) => l.clave === 'GET /rest/v1/turno_guardia_pacientes');
+    assert.ok(enCurso.url.includes('turnos_guardia.estado=eq.activa'), 'no pidió que la guardia esté en curso');
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/reportes');
-    assert.ok(lectura.url.includes(`guardias.servicio_id=eq.${SERVICIO}`), 'no recortó los reportes al Servicio');
+    assert.ok(lectura.url.includes(`turnos_guardia.servicio_id=eq.${SERVICIO}`), 'no recortó los reportes al Servicio');
   });
 });
 
-describe('GET /guardias/:id — la obra social y el número de afiliado, sólo en curso', () => {
+describe('GET /turnos-guardia/:id — la obra social y el número de afiliado, sólo en curso', () => {
   const PACIENTE = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
   const FICHA_OBRA_SOCIAL = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 
@@ -164,8 +164,8 @@ describe('GET /guardias/:id — la obra social y el número de afiliado, sólo e
   });
 
   it('en curso, la manda junto al Paciente', async () => {
-    respuestas.set('GET /rest/v1/guardias', () => [{ ...SIN_CERRAR, paciente_id: PACIENTE }]);
-    const { estado, cuerpo } = await pedir('/guardias/guardia-sin-cerrar');
+    respuestas.set('GET /rest/v1/turnos_guardia', () => [{ ...SIN_CERRAR, paciente_id: PACIENTE }]);
+    const { estado, cuerpo } = await pedir('/turnos-guardia/turno-guardia-sin-cerrar');
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo.coberturaPorPaciente, {
       [PACIENTE]: { obra_social: 'Obra Social Inventada', numero_afiliado: 'INV-0001' },
@@ -175,8 +175,8 @@ describe('GET /guardias/:id — la obra social y el número de afiliado, sólo e
   });
 
   it('terminada, no la manda ni la busca', async () => {
-    respuestas.set('GET /rest/v1/guardias', () => [{ ...SIN_COBRAR, paciente_id: PACIENTE }]);
-    const { estado, cuerpo } = await pedir('/guardias/guardia-sin-cobrar');
+    respuestas.set('GET /rest/v1/turnos_guardia', () => [{ ...SIN_COBRAR, paciente_id: PACIENTE }]);
+    const { estado, cuerpo } = await pedir('/turnos-guardia/turno-guardia-sin-cobrar');
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo.coberturaPorPaciente, {});
     assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/personas'), 'buscó la obra social fuera de la guardia');

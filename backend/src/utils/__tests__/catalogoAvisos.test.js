@@ -34,7 +34,7 @@ describe('catálogo de avisos', () => {
   });
 
   it('busca un aviso por su clave y devuelve null si no existe', () => {
-    assert.equal(mensajeDelCatalogo('guardia_sin_cubrir').evento, 'guardia_sin_cubrir');
+    assert.equal(mensajeDelCatalogo('turno_guardia_sin_cubrir').evento, 'turno_guardia_sin_cubrir');
     assert.equal(mensajeDelCatalogo('un_aviso_que_no_existe'), null);
   });
 });
@@ -57,22 +57,22 @@ describe('mezclarMensajesConCatalogo', () => {
   it('lo que la Prestadora guardó le gana a lo de fábrica', () => {
     const mezclados = mezclarMensajesConCatalogo([
       {
-        evento: 'guardia_sin_cubrir',
+        evento: 'turno_guardia_sin_cubrir',
         emails: ['coordinacion@ejemplo.com'],
         activo: false,
         whatsapp_activo: true,
         notificar_cliente: false,
       },
     ]);
-    const guardia = mezclados.find((mensaje) => mensaje.evento === 'guardia_sin_cubrir');
-    assert.equal(guardia.configurado, true);
-    assert.equal(guardia.activo, false);
-    assert.deepEqual(guardia.emails, ['coordinacion@ejemplo.com']);
-    assert.equal(guardia.whatsapp_activo, true);
+    const turno_guardia = mezclados.find((mensaje) => mensaje.evento === 'turno_guardia_sin_cubrir');
+    assert.equal(turno_guardia.configurado, true);
+    assert.equal(turno_guardia.activo, false);
+    assert.deepEqual(turno_guardia.emails, ['coordinacion@ejemplo.com']);
+    assert.equal(turno_guardia.whatsapp_activo, true);
   });
 
   it('un aviso se puede apagar mientras no diga lo contrario', () => {
-    assert.equal(sePuedeApagar(mensajeDelCatalogo('guardia_sin_cubrir')), true);
+    assert.equal(sePuedeApagar(mensajeDelCatalogo('turno_guardia_sin_cubrir')), true);
     // El Cliente lo está esperando en la pantalla para poder firmar: acá se elige el canal, no
     // si sale.
     assert.equal(sePuedeApagar(mensajeDelCatalogo('codigo_instruccion_personas_autorizadas')), false);

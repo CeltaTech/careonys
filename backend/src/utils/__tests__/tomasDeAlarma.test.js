@@ -29,8 +29,8 @@ const EN_MEDIA_HORA = '2026-10-01T12:30:00Z';
 
 /** Las tomas en pie que hay en la base, de las dos Prestadoras. */
 const TOMAS = [
-  { referencia_id: 'alarma-propia', tipo: 'turno_sin_cubrir', tomada_at: '2026-10-01T11:55:00Z', vence_at: EN_MEDIA_HORA, soltada_at: null, prestadora_id: PRESTADORA },
-  { referencia_id: 'alarma-ajena', tipo: 'turno_sin_cubrir', tomada_at: '2026-10-01T11:55:00Z', vence_at: EN_MEDIA_HORA, soltada_at: null, prestadora_id: OTRA_PRESTADORA },
+  { referencia_id: 'alarma-propia', tipo: 'turno_guardia_sin_cubrir', tomada_at: '2026-10-01T11:55:00Z', vence_at: EN_MEDIA_HORA, soltada_at: null, prestadora_id: PRESTADORA },
+  { referencia_id: 'alarma-ajena', tipo: 'turno_guardia_sin_cubrir', tomada_at: '2026-10-01T11:55:00Z', vence_at: EN_MEDIA_HORA, soltada_at: null, prestadora_id: OTRA_PRESTADORA },
 ];
 
 /** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
@@ -91,7 +91,7 @@ function todasDentroDeLaPrestadora() {
 
 describe('las alarmas que alguien está atendiendo', () => {
   it('devuelve las tomas de la Prestadora, leídas con la credencial del trabajo de ella', async () => {
-    const tomadas = await tomadasAhora({ prestadoraId: PRESTADORA, tipo: 'turno_sin_cubrir', ahora: AHORA });
+    const tomadas = await tomadasAhora({ prestadoraId: PRESTADORA, tipo: 'turno_guardia_sin_cubrir', ahora: AHORA });
 
     assert.deepEqual([...tomadas], ['alarma-propia']);
     todasDentroDeLaPrestadora();
@@ -106,7 +106,7 @@ describe('las alarmas que alguien está atendiendo', () => {
   });
 
   it('sin Prestadora no lee nada, y no hay ninguna tomada', async () => {
-    const tomadas = await tomadasAhora({ prestadoraId: null, tipo: 'turno_sin_cubrir', ahora: AHORA });
+    const tomadas = await tomadasAhora({ prestadoraId: null, tipo: 'turno_guardia_sin_cubrir', ahora: AHORA });
     const regla = await reglaDeLaToma(null);
 
     assert.equal(tomadas.size, 0);

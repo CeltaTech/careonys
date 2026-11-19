@@ -17,7 +17,7 @@ import {
   reglaDeAvisoDe,
   revisarRegla,
   soloLoQueCorreDeLaRegla,
-  turnosQueDejaSinNadie,
+  turnosGuardiaQueDejaSinNadie,
 } from '../avisoDeAusencia';
 
 const ASISTENTE = 'asistente-1';
@@ -43,7 +43,7 @@ function ausencia({ desde = '2026-03-10', hasta = null, supo = '2026-03-09T10:00
 }
 
 /** Un turno de esa persona. */
-function turno({ fecha = '2026-03-10', hora = '08:00:00', ...resto } = {}) {
+function turno_guardia({ fecha = '2026-03-10', hora = '08:00:00', ...resto } = {}) {
   return {
     id: `${fecha}-${hora}`,
     asistente_id: ASISTENTE,
@@ -61,7 +61,7 @@ describe('con tiempo o de golpe', () => {
   it('avisar tres días antes del turno es con tiempo', () => {
     const resultado = comoLlegoLaAusencia({
       ausencia: ausencia({ desde: '2026-03-10', supo: '2026-03-07T08:00:00' }),
-      guardias: [turno({ fecha: '2026-03-10' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10' })],
     });
     expect(resultado.como).toBe(COMO_LLEGO.CON_TIEMPO);
     expect(resultado.horas).toBeCloseTo(72, 0);
@@ -70,7 +70,7 @@ describe('con tiempo o de golpe', () => {
   it('avisar dos horas antes del turno es de golpe', () => {
     const resultado = comoLlegoLaAusencia({
       ausencia: ausencia({ desde: '2026-03-10', supo: '2026-03-10T06:00:00' }),
-      guardias: [turno({ fecha: '2026-03-10', hora: '08:00:00' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10', hora: '08:00:00' })],
     });
     expect(resultado.como).toBe(COMO_LLEGO.DE_GOLPE);
     expect(resultado.horas).toBeCloseTo(2, 0);
@@ -79,14 +79,14 @@ describe('con tiempo o de golpe', () => {
   it('el borde deja pasar sus dos lados', () => {
     const justo = comoLlegoLaAusencia({
       ausencia: ausencia({ supo: '2026-03-09T08:00:00' }),
-      guardias: [turno({ fecha: '2026-03-10', hora: '08:00:00' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10', hora: '08:00:00' })],
     });
     expect(justo.horas).toBe(REGLA_DE_AVISO_DE_AUSENCIA.horas_para_considerarla_con_tiempo);
     expect(justo.como).toBe(COMO_LLEGO.CON_TIEMPO);
 
     const unMinutoMenos = comoLlegoLaAusencia({
       ausencia: ausencia({ supo: '2026-03-09T08:01:00' }),
-      guardias: [turno({ fecha: '2026-03-10', hora: '08:00:00' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10', hora: '08:00:00' })],
     });
     expect(unMinutoMenos.como).toBe(COMO_LLEGO.DE_GOLPE);
   });
@@ -94,9 +94,9 @@ describe('con tiempo o de golpe', () => {
   it('una ausencia que no deja ningún turno sin nadie no apura nada', () => {
     const resultado = comoLlegoLaAusencia({
       ausencia: ausencia({ desde: '2026-03-10', hasta: '2026-03-12', supo: '2026-03-10T07:00:00' }),
-      guardias: [turno({ fecha: '2026-03-20' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-20' })],
     });
-    expect(resultado.como).toBe(COMO_LLEGO.SIN_TURNOS);
+    expect(resultado.como).toBe(COMO_LLEGO.SIN_TURNOS_GUARDIA);
     expect(resultado.horas).toBeNull();
   });
 
@@ -105,24 +105,24 @@ describe('con tiempo o de golpe', () => {
     // resolverla, aunque el aviso haya llegado el lunes a la noche.
     const resultado = comoLlegoLaAusencia({
       ausencia: ausencia({ desde: '2026-03-10', supo: '2026-03-09T22:00:00' }),
-      guardias: [turno({ fecha: '2026-03-13', hora: '08:00:00' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-13', hora: '08:00:00' })],
     });
     expect(resultado.como).toBe(COMO_LLEGO.CON_TIEMPO);
-    expect(resultado.primerTurno.fecha).toBe('2026-03-13');
+    expect(resultado.primerTurnoGuardia.fecha).toBe('2026-03-13');
   });
 
   it('cuando hay varios turnos manda el más próximo', () => {
     const resultado = comoLlegoLaAusencia({
       ausencia: ausencia({ desde: '2026-03-10', supo: '2026-03-10T06:00:00' }),
-      guardias: [
-        turno({ fecha: '2026-03-14' }),
-        turno({ fecha: '2026-03-10', hora: '08:00:00' }),
-        turno({ fecha: '2026-03-12' }),
+      turnos_guardia: [
+        turno_guardia({ fecha: '2026-03-14' }),
+        turno_guardia({ fecha: '2026-03-10', hora: '08:00:00' }),
+        turno_guardia({ fecha: '2026-03-12' }),
       ],
     });
-    expect(resultado.primerTurno.fecha).toBe('2026-03-10');
+    expect(resultado.primerTurnoGuardia.fecha).toBe('2026-03-10');
     expect(resultado.como).toBe(COMO_LLEGO.DE_GOLPE);
-    expect(resultado.turnos).toHaveLength(3);
+    expect(resultado.turnos_guardia).toHaveLength(3);
   });
 
   it('un turno que ya había empezado cuando se supo no cuenta como hueco', () => {
@@ -130,16 +130,16 @@ describe('con tiempo o de golpe', () => {
     // mañana, no ése.
     const resultado = comoLlegoLaAusencia({
       ausencia: ausencia({ desde: '2026-03-10', supo: '2026-03-10T10:00:00' }),
-      guardias: [turno({ fecha: '2026-03-10', hora: '08:00:00' }), turno({ fecha: '2026-03-11', hora: '08:00:00' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10', hora: '08:00:00' }), turno_guardia({ fecha: '2026-03-11', hora: '08:00:00' })],
     });
-    expect(resultado.primerTurno.fecha).toBe('2026-03-11');
+    expect(resultado.primerTurnoGuardia.fecha).toBe('2026-03-11');
   });
 
   it('sin saber cuándo se supo, se trata como urgente', () => {
     // El error caro es el otro: dejar pasar en silencio un turno que empieza esta tarde.
     const resultado = comoLlegoLaAusencia({
       ausencia: { asistente_id: ASISTENTE, fecha_inicio: '2026-03-10', fecha_fin: null },
-      guardias: [turno({ fecha: '2026-03-10' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10' })],
     });
     expect(resultado.como).toBe(COMO_LLEGO.DE_GOLPE);
     expect(resultado.horas).toBeNull();
@@ -153,7 +153,7 @@ describe('con tiempo o de golpe', () => {
         fecha_fin: null,
         created_at: '2026-03-05T08:00:00',
       },
-      guardias: [turno({ fecha: '2026-03-10', hora: '08:00:00' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10', hora: '08:00:00' })],
     });
     expect(resultado.como).toBe(COMO_LLEGO.CON_TIEMPO);
   });
@@ -161,44 +161,44 @@ describe('con tiempo o de golpe', () => {
 
 describe('qué turnos deja sin nadie', () => {
   it('el turno de otra persona no cuenta', () => {
-    const turnos = turnosQueDejaSinNadie({
+    const turnos_guardia = turnosGuardiaQueDejaSinNadie({
       ausencia: ausencia({ supo: '2026-03-01T08:00:00' }),
-      guardias: [turno({ fecha: '2026-03-10', asistente_id: 'otra' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10', asistente_id: 'otra' })],
     });
-    expect(turnos).toHaveLength(0);
+    expect(turnos_guardia).toHaveLength(0);
   });
 
   it('un turno cancelado no es un hueco', () => {
-    const turnos = turnosQueDejaSinNadie({
+    const turnos_guardia = turnosGuardiaQueDejaSinNadie({
       ausencia: ausencia({ supo: '2026-03-01T08:00:00' }),
-      guardias: [turno({ fecha: '2026-03-10', estado: 'cancelada' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-10', estado: 'cancelada' })],
     });
-    expect(turnos).toHaveLength(0);
+    expect(turnos_guardia).toHaveLength(0);
   });
 
   it('un turno fuera de las fechas de la licencia no cuenta', () => {
-    const turnos = turnosQueDejaSinNadie({
+    const turnos_guardia = turnosGuardiaQueDejaSinNadie({
       ausencia: ausencia({ desde: '2026-03-10', hasta: '2026-03-12', supo: '2026-03-01T08:00:00' }),
-      guardias: [turno({ fecha: '2026-03-13' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-13' })],
     });
-    expect(turnos).toHaveLength(0);
+    expect(turnos_guardia).toHaveLength(0);
   });
 
   it('una licencia sin fecha de vuelta tapa hacia adelante sin límite', () => {
-    const turnos = turnosQueDejaSinNadie({
+    const turnos_guardia = turnosGuardiaQueDejaSinNadie({
       ausencia: ausencia({ desde: '2026-03-10', hasta: null, supo: '2026-03-01T08:00:00' }),
-      guardias: [turno({ fecha: '2026-06-01' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-06-01' })],
     });
-    expect(turnos).toHaveLength(1);
+    expect(turnos_guardia).toHaveLength(1);
   });
 
   it('el turno de noche que termina al día siguiente queda tapado igual', () => {
     // Arranca el 9 a las 22 y termina el 10 a las 6; la licencia empieza el 10 y lo parte al medio.
-    const turnos = turnosQueDejaSinNadie({
+    const turnos_guardia = turnosGuardiaQueDejaSinNadie({
       ausencia: ausencia({ desde: '2026-03-10', supo: '2026-03-01T08:00:00' }),
-      guardias: [turno({ fecha: '2026-03-09', hora: '22:00:00', hora_fin: '06:00:00' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-09', hora: '22:00:00', hora_fin: '06:00:00' })],
     });
-    expect(turnos).toHaveLength(1);
+    expect(turnos_guardia).toHaveLength(1);
   });
 });
 
@@ -211,7 +211,7 @@ describe('la Prestadora corre los números', () => {
   it('con otro borde, lo mismo se clasifica distinto', () => {
     const entrada = {
       ausencia: ausencia({ supo: '2026-03-09T08:00:00' }),
-      guardias: [turno({ fecha: '2026-03-13', hora: '08:00:00' })],
+      turnos_guardia: [turno_guardia({ fecha: '2026-03-13', hora: '08:00:00' })],
     };
     expect(comoLlegoLaAusencia(entrada).como).toBe(COMO_LLEGO.CON_TIEMPO);
     expect(

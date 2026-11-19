@@ -208,9 +208,9 @@ for (const app of APLICACIONES) {
 
 const BANCO = [
   ['la puerta de datos', PUERTA_DE_DATOS,
-    ['  const { data } = await supabase.from("guardias").select();',
-     '  const r = await fetch("/api/guardias");',
-     '  const r = await apiGuardias({ id });'],
+    ['  const { data } = await supabase.from("turnos_guardia").select();',
+     '  const r = await fetch("/api/turnos-guardia");',
+     '  const r = await apiTurnosGuardia({ id });'],
     ['  const guardias = props.guardias;',
      '  const total = suma.from(lista);']],
   ['el aviso de que espera', AVISA_QUE_ESPERA,

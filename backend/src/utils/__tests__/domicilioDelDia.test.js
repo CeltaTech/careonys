@@ -1,5 +1,5 @@
 /**
- * Pruebas de dónde se atiende a cada Paciente el día de su guardia.
+ * Pruebas de dónde se atiende a cada Paciente el día de su turno de guardia.
  *
  * Usan el banco de pruebas que ya trae Node adentro (`node --test`), sin instalar nada, igual
  * que el resto de las pruebas del backend:
@@ -9,7 +9,7 @@
  * ACÁ NO SE PRUEBA EL CRITERIO, SE PRUEBA QUIÉN PREGUNTA Y CÓMO APLICA LA RESPUESTA. Cuál
  * dirección gana un día dado lo decide la función `domicilios_de_pacientes_en` de la base
  * y no este archivo. Lo
- * que el backend tiene que hacer bien es otra cosa: preguntar por la fecha de cada guardia y no
+ * que el backend tiene que hacer bien es otra cosa: preguntar por la fecha de cada turno de guardia y no
  * por la de hoy, preguntar una vez por día y no una vez por Paciente, y pisar solamente los
  * campos que la consulta pidió.
  *
@@ -120,14 +120,14 @@ beforeEach(() => {
   preguntas = [];
 });
 
-/** Un Paciente como lo deja `pacientesDeGuardia.js` cuando la Prestadora muestra la dirección. */
+/** Un Paciente como lo deja `pacientesDeTurnoGuardia.js` cuando la Prestadora muestra la dirección. */
 function conDireccion(id) {
   return { id, nombre: 'Quien sea', ...DOMICILIOS_DE_SIEMPRE.get(id) };
 }
 
-/** Una guardia como la deja `conPacientes()`. */
-function guardiaDe(fecha, pacientes) {
-  return { id: `guardia-${fecha}`, fecha, hora_inicio: '08:00', pacientes };
+/** Un turno de guardia como la deja `conPacientes()`. */
+function turnoGuardiaDe(fecha, pacientes) {
+  return { id: `turno-guardia-${fecha}`, fecha, hora_inicio: '08:00', pacientes };
 }
 
 // El verano en la casa de un hijo: doce días con principio y fin.
@@ -145,8 +145,8 @@ describe('la dirección del día de la guardia', () => {
   it('una guardia adentro del período se atiende en la dirección temporal', async () => {
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
-    const [guardia] = await conDomicilioDelDia(db, [guardiaDe('2026-01-10', [conDireccion(PACIENTE_UNO)])]);
-    const [paciente] = guardia.pacientes;
+    const [turno_guardia] = await conDomicilioDelDia(db, [turnoGuardiaDe('2026-01-10', [conDireccion(PACIENTE_UNO)])]);
+    const [paciente] = turno_guardia.pacientes;
 
     assert.equal(paciente.domicilio, 'Los Aromos 15, Pinamar');
     assert.equal(paciente.lat, -37.11);
@@ -158,8 +158,8 @@ describe('la dirección del día de la guardia', () => {
   it('una guardia afuera del período se atiende en la casa de siempre', async () => {
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
-    const [guardia] = await conDomicilioDelDia(db, [guardiaDe('2026-03-02', [conDireccion(PACIENTE_UNO)])]);
-    const [paciente] = guardia.pacientes;
+    const [turno_guardia] = await conDomicilioDelDia(db, [turnoGuardiaDe('2026-03-02', [conDireccion(PACIENTE_UNO)])]);
+    const [paciente] = turno_guardia.pacientes;
 
     assert.equal(paciente.domicilio, 'Av. Siempreviva 742');
     assert.equal(paciente.lat, -34.6037);
@@ -174,13 +174,13 @@ describe('la dirección del día de la guardia', () => {
     // casa de siempre, porque si no la prueba pasaría con un período abierto para siempre.
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
-    const guardias = await conDomicilioDelDia(db, [
-      guardiaDe('2026-01-04', [conDireccion(PACIENTE_UNO)]),
-      guardiaDe('2026-01-05', [conDireccion(PACIENTE_UNO)]),
-      guardiaDe('2026-01-16', [conDireccion(PACIENTE_UNO)]),
-      guardiaDe('2026-01-17', [conDireccion(PACIENTE_UNO)]),
+    const turnos_guardia = await conDomicilioDelDia(db, [
+      turnoGuardiaDe('2026-01-04', [conDireccion(PACIENTE_UNO)]),
+      turnoGuardiaDe('2026-01-05', [conDireccion(PACIENTE_UNO)]),
+      turnoGuardiaDe('2026-01-16', [conDireccion(PACIENTE_UNO)]),
+      turnoGuardiaDe('2026-01-17', [conDireccion(PACIENTE_UNO)]),
     ]);
-    const esTemporal = guardias.map((g) => g.pacientes[0].domicilio_es_temporal);
+    const esTemporal = turnos_guardia.map((g) => g.pacientes[0].domicilio_es_temporal);
 
     assert.deepEqual(esTemporal, [false, true, true, false]);
   });
@@ -199,14 +199,14 @@ describe('la dirección del día de la guardia', () => {
       },
     ];
 
-    const guardias = await conDomicilioDelDia(db, [
-      guardiaDe('2026-01-31', [conDireccion(PACIENTE_UNO)]),
-      guardiaDe('2026-12-31', [conDireccion(PACIENTE_UNO)]),
+    const turnos_guardia = await conDomicilioDelDia(db, [
+      turnoGuardiaDe('2026-01-31', [conDireccion(PACIENTE_UNO)]),
+      turnoGuardiaDe('2026-12-31', [conDireccion(PACIENTE_UNO)]),
     ]);
 
-    assert.equal(guardias[0].pacientes[0].domicilio_es_temporal, false);
-    assert.equal(guardias[1].pacientes[0].domicilio_es_temporal, true);
-    assert.equal(guardias[1].pacientes[0].domicilio, 'Rivadavia 1000');
+    assert.equal(turnos_guardia[0].pacientes[0].domicilio_es_temporal, false);
+    assert.equal(turnos_guardia[1].pacientes[0].domicilio_es_temporal, true);
+    assert.equal(turnos_guardia[1].pacientes[0].domicilio, 'Rivadavia 1000');
   });
 
   it('cada guardia se resuelve con su propia fecha, no con la de la primera', async () => {
@@ -214,14 +214,14 @@ describe('la dirección del día de la guardia', () => {
     // en el medio. Si el backend preguntara una sola vez por "hoy", media lista quedaría mal.
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
-    const guardias = await conDomicilioDelDia(db, [
-      guardiaDe('2026-01-03', [conDireccion(PACIENTE_UNO)]),
-      guardiaDe('2026-01-08', [conDireccion(PACIENTE_UNO)]),
-      guardiaDe('2026-01-20', [conDireccion(PACIENTE_UNO)]),
+    const turnos_guardia = await conDomicilioDelDia(db, [
+      turnoGuardiaDe('2026-01-03', [conDireccion(PACIENTE_UNO)]),
+      turnoGuardiaDe('2026-01-08', [conDireccion(PACIENTE_UNO)]),
+      turnoGuardiaDe('2026-01-20', [conDireccion(PACIENTE_UNO)]),
     ]);
 
     assert.deepEqual(
-      guardias.map((g) => g.pacientes[0].domicilio),
+      turnos_guardia.map((g) => g.pacientes[0].domicilio),
       ['Av. Siempreviva 742', 'Los Aromos 15, Pinamar', 'Av. Siempreviva 742']
     );
   });
@@ -232,10 +232,10 @@ describe('cuántas veces se le pregunta a la base', () => {
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
     await conDomicilioDelDia(db, [
-      // Cinco guardias, dos Pacientes, y una sola fecha entre todas: una sola pregunta.
-      guardiaDe('2026-01-10', [conDireccion(PACIENTE_UNO), conDireccion(PACIENTE_DOS)]),
-      { ...guardiaDe('2026-01-10', [conDireccion(PACIENTE_UNO)]), id: 'otra-del-mismo-dia' },
-      { ...guardiaDe('2026-01-10', [conDireccion(PACIENTE_DOS)]), id: 'una-mas-del-mismo-dia' },
+      // Cinco turnos de guardia, dos Pacientes, y una sola fecha entre todas: una sola pregunta.
+      turnoGuardiaDe('2026-01-10', [conDireccion(PACIENTE_UNO), conDireccion(PACIENTE_DOS)]),
+      { ...turnoGuardiaDe('2026-01-10', [conDireccion(PACIENTE_UNO)]), id: 'otra-del-mismo-dia' },
+      { ...turnoGuardiaDe('2026-01-10', [conDireccion(PACIENTE_DOS)]), id: 'una-mas-del-mismo-dia' },
     ]);
 
     assert.equal(preguntas.length, 1);
@@ -245,8 +245,8 @@ describe('cuántas veces se le pregunta a la base', () => {
 
   it('una semana de turnos son siete preguntas como mucho', async () => {
     const semana = ['06', '07', '08', '09', '10', '11', '12'].flatMap((dia) => [
-      guardiaDe(`2026-01-${dia}`, [conDireccion(PACIENTE_UNO)]),
-      { ...guardiaDe(`2026-01-${dia}`, [conDireccion(PACIENTE_DOS)]), id: `tarde-${dia}` },
+      turnoGuardiaDe(`2026-01-${dia}`, [conDireccion(PACIENTE_UNO)]),
+      { ...turnoGuardiaDe(`2026-01-${dia}`, [conDireccion(PACIENTE_DOS)]), id: `tarde-${dia}` },
     ]);
 
     await conDomicilioDelDia(db, semana);
@@ -256,8 +256,8 @@ describe('cuántas veces se le pregunta a la base', () => {
 
   it('sin nadie a quien preguntarle no se toca la base', async () => {
     await conDomicilioDelDia(db, []);
-    await conDomicilioDelDia(db, [guardiaDe('2026-01-10', [])]);
-    // Una guardia sin fecha no se puede resolver: no hay día contra el cual preguntar.
+    await conDomicilioDelDia(db, [turnoGuardiaDe('2026-01-10', [])]);
+    // Un turno de guardia sin fecha no se puede resolver: no hay día contra el cual preguntar.
     await conDomicilioDelDia(db, [{ id: 'sin-fecha', pacientes: [conDireccion(PACIENTE_UNO)] }]);
 
     assert.equal(preguntas.length, 0);
@@ -272,8 +272,8 @@ describe('lo que no se pidió, no se completa', () => {
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
     const sinDireccion = { id: PACIENTE_UNO, nombre: 'Quien sea' };
-    const [guardia] = await conDomicilioDelDia(db, [guardiaDe('2026-01-10', [sinDireccion])]);
-    const [paciente] = guardia.pacientes;
+    const [turno_guardia] = await conDomicilioDelDia(db, [turnoGuardiaDe('2026-01-10', [sinDireccion])]);
+    const [paciente] = turno_guardia.pacientes;
 
     assert.deepEqual(Object.keys(paciente).sort(), ['id', 'nombre']);
     assert.equal(preguntas.length, 0);
@@ -287,7 +287,7 @@ describe('lo que no se pidió, no se completa', () => {
 
     const comoLosPideElCheckin = { id: PACIENTE_UNO, nombre: 'Quien sea', lat: -34.6037, lng: -58.3816, cliente_id: 'una-cliente' };
     const [paciente] = await pacientesConDomicilioDelDia(db, 
-      { id: 'una-guardia', fecha: '2026-01-10' },
+      { id: 'un-turno-guardia', fecha: '2026-01-10' },
       [comoLosPideElCheckin]
     );
 
@@ -305,7 +305,7 @@ describe('lo que no se pidió, no se completa', () => {
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
     const original = conDireccion(PACIENTE_UNO);
-    await conDomicilioDelDia(db, [guardiaDe('2026-01-10', [original])]);
+    await conDomicilioDelDia(db, [turnoGuardiaDe('2026-01-10', [original])]);
 
     assert.equal(original.domicilio, 'Av. Siempreviva 742');
     assert.ok(!Object.hasOwn(original, 'domicilio_es_temporal'));
@@ -313,7 +313,7 @@ describe('lo que no se pidió, no se completa', () => {
 });
 
 describe('lo que ve el Cliente, que mira hoy y no un turno', () => {
-  // El Cliente no entra a una guardia: entra a ver a los suyos. La pregunta que hace su
+  // El Cliente no entra a un turno de guardia: entra a ver a los suyos. La pregunta que hace su
   // aplicación es "¿dónde lo están atendiendo ahora?", y la fecha la pone el backend.
   const hoy = () => new Date().toISOString().slice(0, 10);
 
@@ -366,12 +366,12 @@ describe('varios Pacientes en el mismo turno', () => {
     // dirección es lo que manda al Asistente al lugar equivocado.
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
-    const [guardia] = await conDomicilioDelDia(db, [
-      guardiaDe('2026-01-10', [conDireccion(PACIENTE_UNO), conDireccion(PACIENTE_DOS)]),
+    const [turno_guardia] = await conDomicilioDelDia(db, [
+      turnoGuardiaDe('2026-01-10', [conDireccion(PACIENTE_UNO), conDireccion(PACIENTE_DOS)]),
     ]);
 
     assert.deepEqual(
-      guardia.pacientes.map((p) => [p.domicilio, p.domicilio_es_temporal]),
+      turno_guardia.pacientes.map((p) => [p.domicilio, p.domicilio_es_temporal]),
       [
         ['Los Aromos 15, Pinamar', true],
         ['Calle Falsa 123', false],

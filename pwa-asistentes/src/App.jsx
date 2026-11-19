@@ -8,10 +8,10 @@ import ActivarCuenta from './pages/ActivarCuenta';
 import ClaveNueva from './pages/ClaveNueva';
 import RecuperarClave from './pages/RecuperarClave';
 import Inicio from './pages/Inicio';
-import MisGuardias from './pages/MisGuardias';
+import MisTurnosGuardia from './pages/MisTurnosGuardia';
 import Servicio from './pages/Servicio';
 import AsignacionesSinResponder from './pages/AsignacionesSinResponder';
-import GuardiaActiva from './pages/GuardiaActiva';
+import TurnoGuardiaActivo from './pages/TurnoGuardiaActivo';
 import ReporteDiario from './pages/ReporteDiario';
 import MiPerfil from './pages/MiPerfil';
 import MiClave from './pages/MiClave';
@@ -46,7 +46,7 @@ function RutaPrivada({ children }) {
 // hablar. El candado de verdad está en el backend, que contesta que no ofrece esa modalidad; esto
 // es para que no quede una dirección que lleve a una pantalla de error.
 function SoloConIntermediacion({ children }) {
-  if (!useOfreceIntermediacion()) return <Navigate to="/guardias" replace />;
+  if (!useOfreceIntermediacion()) return <Navigate to="/turnos-guardia" replace />;
   return children;
 }
 
@@ -75,16 +75,16 @@ function Rutas() {
       >
         <Route index element={<Navigate to="/inicio" replace />} />
         <Route path="inicio" element={<Inicio />} />
-        <Route path="guardias" element={<MisGuardias />} />
-        {/* Los Pacientes que atiende, cada uno con su próxima guardia. */}
+        <Route path="turnos-guardia" element={<MisTurnosGuardia />} />
+        {/* Los Pacientes que atiende, cada uno con su próximo turno de guardia. */}
         <Route path="servicio" element={<Servicio />} />
-        {/* Los turnos que se le asignaron y todavía no respondió. Es una pantalla aparte de
-            "Mis Guardias" a propósito: un turno sin aceptar todavía no es un turno suyo. */}
+        {/* Los turnos de guardia que se le asignaron y todavía no respondió. Es una pantalla aparte de
+            "Turnos de guardia" a propósito: un turno de guardia sin aceptar todavía no es un turno de guardia suyo. */}
         <Route path="asignaciones" element={<AsignacionesSinResponder />} />
-        <Route path="guardias/:id" element={<GuardiaActiva />} />
-        {/* El reporte lleva el Paciente en la dirección: un turno puede cubrir a varias
+        <Route path="turnos-guardia/:id" element={<TurnoGuardiaActivo />} />
+        {/* El reporte lleva el Paciente en la dirección: un turno de guardia puede cubrir a varias
             personas y cada una tiene su propio reporte (tarea 93h). */}
-        <Route path="guardias/:id/reporte/:pacienteId" element={<ReporteDiario />} />
+        <Route path="turnos-guardia/:id/reporte/:pacienteId" element={<ReporteDiario />} />
         {/* El chat con un Cliente de la vidriera. El hilo lo abre siempre él: acá se
             contestan los que llegaron. */}
         <Route

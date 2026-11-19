@@ -74,7 +74,7 @@ export async function duenoDeLaSesion() {
 }
 
 // tipo: 'salida' | 'aviso_demora' | 'checkin' | 'reporte' | 'checkout'. payload: datos a enviar.
-// guardiaId: para agrupar/mostrar. El orden de creación es el orden de envío, y así los dos
+// turnoGuardiaId: para agrupar/mostrar. El orden de creación es el orden de envío, y así los dos
 // avisos de antes de llegar (pendiente #101) salen antes que la llegada, que es el orden en que
 // pasaron.
 //
@@ -82,11 +82,11 @@ export async function duenoDeLaSesion() {
 // no en el de mandar: lo que importa de un check-in que esperó tres horas de señal es cuándo
 // llegó la persona, no cuándo apareció la red. Viaja al backend junto con el envío, y allá se
 // guarda en su propia columna, aparte de la hora en que el dato llegó a la base.
-export async function agregarACola({ id, tipo, guardiaId, payload }) {
+export async function agregarACola({ id, tipo, turnoGuardiaId, payload }) {
   const item = {
     id,
     tipo,
-    guardiaId,
+    turnoGuardiaId,
     payload,
     duenoId: await duenoDeLaSesion(),
     creadoEn: Date.now(),
@@ -169,7 +169,7 @@ export async function marcarIntentoFallido(id, situacion) {
   });
 }
 
-export async function pendientesDeGuardia(guardiaId) {
+export async function pendientesDeTurnoGuardia(turnoGuardiaId) {
   const cola = await listarCola();
-  return cola.filter((item) => item.guardiaId === guardiaId);
+  return cola.filter((item) => item.turnoGuardiaId === turnoGuardiaId);
 }

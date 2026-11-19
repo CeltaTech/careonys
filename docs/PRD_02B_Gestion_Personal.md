@@ -3,7 +3,7 @@
 > Este PRD **extiende el Padrón de Asistentes del Panel, no es un módulo separado** — vive en la misma navegación, mismo rol de acceso
 > (Admin_prestadora gestiona todo lo de su Prestadora. El Coordinador da de alta, modifica y borra
 > las ausencias y las guardias de cobertura de los Asistentes de su zona: las políticas
-> `coordinador_gestiona_ausencias_de_su_zona` y `coordinador_gestiona_guardias_cobertura_de_su_zona`
+> `coordinador_gestiona_ausencias_de_su_zona` y `coordinador_gestiona_turnos_guardia_cobertura_de_su_zona`
 > valen para toda operación y resuelven la zona con `interno.coordinador_alcanza_asistente` — ver
 > `docs/SECURITY.md`).
 
@@ -39,7 +39,7 @@ versionados por fecha y nunca escritos en el código.
 
 Tablas `asistentes` (columnas `fecha_alta`, `fecha_baja`, `horas_semanales`),
 `remuneraciones_asistente`, `datos_reservados_asistente`, `escalas_legales`, `ausencias`,
-`guardias_cobertura`. Sus columnas se consultan en la base en vivo — no reproducir aquí para
+`turnos_guardia_cobertura`. Sus columnas se consultan en la base en vivo — no reproducir aquí para
 evitar que las dos fuentes diverjan.
 
 `horas_semanales` es el máximo de horas por semana que la persona acepta trabajar.
@@ -84,13 +84,13 @@ Flujo:
 1. Se registra una ausencia (`ausencias`, tipo enfermedad/accidente/licencia/no justificada).
 2. Si hay certificado médico, se sube a Storage (`certificado_url`).
 3. El sistema toma las guardias del Asistente que caen en el rango de fechas de la ausencia
-   (la columna `guardias_afectadas` las anota).
+   (la columna `turnos_guardia_afectados` las anota).
 4. El Coordinador elige otro Asistente por cada turno fijo de esas guardias, y uno para las
    sueltas; la elección queda en `coberturas_de_ausencia`. A ese Asistente se le asigna como
    turno y lo acepta o lo rechaza una sola vez, por todos los días. Hasta que acepta, las
    guardias siguen a nombre de quien las tenía.
 5. Al aceptar, cada guardia pasa a su nombre —el turno sigue teniendo una sola persona, la que lo
-   hace— y queda escrito en `guardias_cobertura` a quién le tocaba, con qué causa y con qué
+   hace— y queda escrito en `turnos_guardia_cobertura` a quién le tocaba, con qué causa y con qué
    `costo_adicional`. Lo que ya empezó no se toca; si la ausencia cambia de fechas, el trabajo
    programado vuelve a aplicar la cobertura, y una ausencia sin fecha de fin se cubre hasta
    pasado mañana.
@@ -103,7 +103,7 @@ Flujo:
 Durante la licencia, el Asistente no tiene guardias: las que caen en esos días no aparecen en su
 aplicación, no puede abrirlas ni empezarlas y no le llega su recordatorio. Quedan con el
 Coordinador, entre las guardias por cubrir. Si el Coordinador lo convoca antes, anota la vuelta en
-el Panel y las guardias desde ese día vuelven a aparecer (`backend/src/utils/guardiaDeLicencia.js`).
+el Panel y las guardias desde ese día vuelven a aparecer (`backend/src/utils/turnoGuardiaDeLicencia.js`).
 
 ## Constancia de ausencia
 
@@ -127,5 +127,5 @@ crear un ítem de navegación de primer nivel separado.
 ## Checklist de aceptación
 
 - [ ] Toda consulta a `escalas_legales` usa la fecha del hecho, no la fecha actual
-- [ ] RLS: `escalas_legales`/`ausencias`/`guardias_cobertura` invisibles para `asistente`/`cliente`
+- [ ] RLS: `escalas_legales`/`ausencias`/`turnos_guardia_cobertura` invisibles para `asistente`/`cliente`
 - [ ] Ninguna guardia que cae en una licencia aparece en la aplicación del Asistente que está de licencia

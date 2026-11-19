@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { medicacionVigenteDelPaciente, asistentePuedeDarLaVia } from '../utils/medicacionIndicaciones.js';
-import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
+import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeTurnoGuardia.js';
 import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
@@ -19,15 +19,15 @@ export const appAsistentesMedicacionRouter = Router();
 // Las órdenes que este Asistente puede ver: las vigentes del Paciente, y de ésas sólo las de una vía
 // que él está habilitado a dar. Null si no atiende a ese Paciente.
 async function ordenesDelAsistente(req) {
-  // El permiso se pregunta contra la lista de Pacientes de la guardia, no contra la columna
-  // vieja: el segundo Paciente de una guardia compartida también es un Paciente que este Asistente
+  // El permiso se pregunta contra la lista de Pacientes del turno de guardia, no contra la columna
+  // vieja: el segundo Paciente de un turno de guardia compartido también es un Paciente que este Asistente
   // atiende, y sus órdenes de medicación tienen que estar a la vista.
   if (!(await asistenteAtiendeAlPaciente(clienteDelPedido(req), req.params.pacienteId, req.usuarioAsistente))) return null;
 
   // Las indicaciones y sus recetas se leen con el trabajo de su Prestadora, que no pasa por la
   // regla de salud: se le pregunta antes, con su credencial. Con la restricción de la historia
-  // clínica encendida, la regla pide un Servicio vigente y una guardia no cancelada, y la
-  // comprobación de arriba deja pasar cualquier guardia suya con ese Paciente.
+  // clínica encendida, la regla pide un Servicio vigente y un turno de guardia no cancelado, y la
+  // comprobación de arriba deja pasar cualquier turno de guardia suyo con ese Paciente.
   if (!(await alcanzaLaInformacionDeSalud(clienteDelPedido(req), req.params.pacienteId))) return null;
 
   const indicaciones = await enLaPrestadora(
@@ -84,7 +84,7 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVis
 });
 
 // La receta de una orden, con un enlace temporal que se pide recién al tocar el botón: uno
-// preparado al abrir la guardia se vence antes de que lo usen. Lo pide la credencial del
+// preparado al abrir el turno de guardia se vence antes de que lo usen. Lo pide la credencial del
 // Asistente, y el depósito sólo se lo da si atiende a ese Paciente.
 appAsistentesMedicacionRouter.get('/:pacienteId/receta/:indicacionId', requiereRolAsistente, exigeVisible('asistente_medicacion_del_paciente'), async (req, res) => {
   const ordenes = await ordenesDelAsistente(req);

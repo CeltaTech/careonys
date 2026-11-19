@@ -8,7 +8,7 @@ import { useLocale } from '../i18n/LocaleContext';
 // nombre, que lleva al texto completo.
 //
 // Acá no se decide nada. La condición de la ubicación se firma en el reclutamiento, y el texto
-// nuevo que trae el paso de «Sólo viaje» a «Viaje y turno» se firma de la misma manera.
+// nuevo que trae el paso de «Sólo viaje» a «Viaje y turno de guardia» se firma de la misma manera.
 // ============================================================================
 
 export default function Consentimientos() {

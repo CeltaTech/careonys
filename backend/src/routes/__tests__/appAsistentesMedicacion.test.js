@@ -89,7 +89,7 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA, tipo_asistente_id: 'tipo-1' }]);
-  respuestas.set('GET /rest/v1/guardia_pacientes', () => (atiende ? [{ guardia_id: 'g1' }] : []));
+  respuestas.set('GET /rest/v1/turno_guardia_pacientes', () => (atiende ? [{ turno_guardia_id: 'g1' }] : []));
   respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
   respuestas.set('GET /rest/v1/indicaciones_medicacion', ({ url }) => (url.includes('prescripcion_archivo_url')
     ? [{ id: ORDEN, prescripcion_archivo_url: `${PRESTADORA}/receta.pdf` }]

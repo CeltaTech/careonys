@@ -1,0 +1,130 @@
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { api } from '../lib/api';
+import { hoyISO, horaDelMomento } from '../lib/horarios';
+import { enPalabras } from '../lib/fechaEnPalabras';
+import { useLocale } from '../i18n/LocaleContext';
+import { traducirValor } from '../i18n/valores';
+
+// La hora en que el Asistente llegó o se fue la escribe `horaDelMomento`, en `lib/horarios.js`:
+// la misma cuenta la usan la pantalla del Paciente y la aplicación de los Asistentes, y un reloj
+// que se escribe distinto en cada pantalla es la clase de cosa que hace dudar de si llegó tarde.
+
+export default function TurnosGuardia() {
+  const { id } = useParams();
+  const { t, locale } = useLocale();
+  // El día desde el que se pide. Arranca en el de hoy —el de este teléfono, no el del
+  // servidor— y cambia cuando se camina a la semana de al lado.
+  const [dia, setDia] = useState(hoyISO);
+  const [semana, setSemana] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let activo = true;
+    setCargando(true);
+    api
+      .turnosGuardiaDelPaciente(id, dia)
+      .then((data) => {
+        if (!activo) return;
+        setSemana(data);
+        setError('');
+      })
+      .catch(() => {
+        if (activo) setError(t.comun.error_generico);
+      })
+      .finally(() => {
+        if (activo) setCargando(false);
+      });
+    return () => {
+      activo = false;
+    };
+  }, [id, dia]);
+
+  if (error) return <div className="alert alert-error" role="alert">{error}</div>;
+  if (semana === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
+
+  const hoy = hoyISO();
+  // Comparar fechas escritas así —`2026-08-20`— es comparar dos textos, y da bien: el año va
+  // primero. No hace falta ninguna cuenta de calendario para saber si hoy cae en esta semana.
+  const mirandoEstaSemana = hoy >= semana.desde && hoy <= semana.hasta;
+  const opcionesDelRango = { day: 'numeric', month: 'long' };
+  const rango = `${enPalabras(semana.desde, locale, opcionesDelRango)} – ${enPalabras(semana.hasta, locale, opcionesDelRango)}`;
+  const vacia = semana.dias.every((d) => d.turnos_guardia.length === 0);
+
+  return (
+    <>
+      <Link to={`/pacientes/${id}`} className="btn btn-volver">
+        <span aria-hidden="true">←</span> {t.comun.volver}
+      </Link>
+      <h1>{t.turnos_guardia.titulo}</h1>
+
+      <section className="pwa-card">
+        {/* Los dos botones quedan apagados mientras la semana nueva está viajando: si no, dos
+            toques seguidos piden dos semanas y llega primero la que se pidió después. */}
+        <div className="semana-navegador">
+          <button type="button" className="btn btn-secondary" disabled={cargando} onClick={() => setDia(semana.semanaAnterior)}>
+            <span aria-hidden="true">←</span> {t.turnos_guardia.semana_anterior}
+          </button>
+          <span className="semana-rango">{rango}</span>
+          <button type="button" className="btn btn-secondary" disabled={cargando} onClick={() => setDia(semana.semanaSiguiente)}>
+            {t.turnos_guardia.semana_siguiente} <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        {/* El atajo de vuelta aparece solo cuando hace falta. Sin él, quien se fue cuatro semanas
+            para atrás tiene que tocar cuatro veces para volver a lo que le importa. */}
+        {!mirandoEstaSemana && (
+          <button type="button" className="btn btn-secondary btn-full" disabled={cargando} onClick={() => setDia(hoy)}>
+            {t.turnos_guardia.esta_semana}
+          </button>
+        )}
+      </section>
+
+      {vacia ? (
+        <div className="pwa-card estado-vacio" role="status">{t.turnos_guardia.sin_turnos_guardia_en_la_semana}</div>
+      ) : (
+        semana.dias.map((d) => (
+          <section key={d.fecha} className="pwa-card semana-dia">
+            <div className="semana-dia-titulo">
+              <span className="semana-dia-fecha">
+                {enPalabras(d.fecha, locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+              </span>
+              {d.fecha === hoy && <span className="badge">{t.turnos_guardia.hoy}</span>}
+            </div>
+
+            {d.turnos_guardia.length === 0 ? (
+              <div className="semana-dia-vacio">{t.turnos_guardia.sin_turnos_guardia_en_el_dia}</div>
+            ) : (
+              d.turnos_guardia.map((g) => (
+                <div key={g.id} className={`tarjeta turno-guardia-${g.estado}`}>
+                  <div className="tarjeta-paciente">{g.asistente || t.paciente.sin_asistente}</div>
+                  <div className="tarjeta-detalle">
+                    {g.hora_inicio?.slice(0, 5)} - {g.hora_fin?.slice(0, 5)}
+                  </div>
+                  <div className="mini-abajo">
+                    {/* Quién canceló manda sobre el estado: "cancelada" a secas deja al
+                        Cliente sin saber si fue una decisión suya o de la Prestadora. */}
+                    <span className="badge">
+                      {g.cancelacion_origen
+                        ? traducirValor(t.turnos_guardia, `cancelo_${g.cancelacion_origen}`)
+                        : traducirValor(t.turnos_guardia, `estado_${g.estado}`)}
+                    </span>
+                  </div>
+                  {/* La hora real de llegada y de salida es lo que separa "estaba programada"
+                      de "pasó de verdad". Solo se muestra la que está registrada. */}
+                  {g.checkin_at && (
+                    <div className="tarjeta-detalle">{t.turnos_guardia.llegada.replace('{hora}', horaDelMomento(g.checkin_at, locale))}</div>
+                  )}
+                  {g.checkout_at && (
+                    <div className="tarjeta-detalle">{t.turnos_guardia.salida.replace('{hora}', horaDelMomento(g.checkout_at, locale))}</div>
+                  )}
+                </div>
+              ))
+            )}
+          </section>
+        ))
+      )}
+    </>
+  );
+}

@@ -5,7 +5,7 @@ import { EstadoLista } from '../layout/EstadoLista';
 import { diaDelMomento, horaDelMomento } from '../../lib/horarios';
 import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
-import '../../pages/seguimientoDeGuardias.css';
+import '../../pages/seguimientoDeTurnosGuardia.css';
 import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
@@ -90,7 +90,7 @@ export function ConsentimientosVigentes() {
               {/* Hasta cuándo vale, que es lo único que hay que mirar para saber si todavía
                   alcanza. Con día y hora: un plazo de ocho horas dicho sólo por el día no dice
                   nada. */}
-              <div className="panel-guardia-alerta">
+              <div className="panel-turno-guardia-alerta">
                 {con(t.continuidad.consentimientos_vale_hasta, {
                   dia: diaDelMomento(c.hasta_at) || '—',
                   hora: horaDelMomento(c.hasta_at, locale) || '—',

@@ -65,7 +65,7 @@ describe('el contacto de la Prestadora', () => {
       {
         telefono: '+54 11 5555 0000',
         whatsapp_numero: '+54 9 11 5555 0001',
-        email: 'guardia@prestadora.invalido',
+        email: 'turno_guardia@prestadora.invalido',
       },
     ]);
 
@@ -74,7 +74,7 @@ describe('el contacto de la Prestadora', () => {
     assert.deepEqual(contacto, {
       telefono: '+54 11 5555 0000',
       whatsapp: '+54 9 11 5555 0001',
-      email: 'guardia@prestadora.invalido',
+      email: 'turno_guardia@prestadora.invalido',
     });
     assert.equal(hayPorDondeLlamar(contacto), true);
   });

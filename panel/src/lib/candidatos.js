@@ -15,11 +15,11 @@
 // Qué NO hace este archivo: no toca la base, no arma texto y no sabe en qué idioma está el
 // Panel. Devuelve **claves de traducción más los valores a reemplazar** —
 // `{ clave: 'motivo_ocupado', valores: { desde: '08:00', hasta: '16:00' } }`— y la pantalla
-// arma la frase con `t.guardias.cobertura_panel[clave]`. Es la única forma de que el mismo
+// arma la frase con `t.turnos_guardia.cobertura_panel[clave]`. Es la única forma de que el mismo
 // cálculo sirva en los tres idiomas (regla 2 de CLAUDE.md §7).
 //
 // Todas las cuentas de reloj salen de `lib/horarios.js`, nunca de comparar textos de hora a
-// mano: la guardia de noche empieza a las 22:00 y termina a las 06:00 del día siguiente, y
+// mano: el turno de guardia de noche empieza a las 22:00 y termina a las 06:00 del día siguiente, y
 // cualquier cuenta que lea esas dos horas literalmente da mal justo en el caso más común.
 //
 // ----------------------------------------------------------------------------
@@ -56,17 +56,17 @@
 // y una comprobación más abajo — nada del resto cambia.
 
 import {
-  inicioDeGuardia,
-  finDeGuardia,
-  horasDeGuardia,
+  inicioDeTurnoGuardia,
+  finDeTurnoGuardia,
+  horasDeTurnoGuardia,
   seSuperponen,
   horasDeDescansoEntre,
 } from './horarios';
 // Se reexporta más abajo: la cuenta es la misma del lado del backend, así que vive en un archivo
 // propio que se copia allá, y quien la importaba de acá la sigue encontrando.
-import { ausenciaQueTapa, ultimoDiaDeLaGuardia } from './ausenciaQueTapa';
+import { ausenciaQueTapa, ultimoDiaDelTurnoGuardia } from './ausenciaQueTapa';
 import { trabajaEnModalidad } from './modalidades';
-import { idsDePacientes } from './pacientesDeGuardia';
+import { idsDePacientes } from './pacientesDeTurnoGuardia';
 
 // Los números con los que se ordena la lista viven en `perfilesDeCandidatos.js`, junto con las
 // tres formas armadas que puede elegir la Prestadora. Se vuelven a exportar acá para que quien
@@ -74,7 +74,7 @@ import { idsDePacientes } from './pacientesDeGuardia';
 export { PESOS, TOPES } from './perfilesDeCandidatos';
 import { PESOS, TOPES } from './perfilesDeCandidatos';
 
-/** Las claves de traducción que devuelve este archivo. Viven en `t.guardias.cobertura_panel`. */
+/** Las claves de traducción que devuelve este archivo. Viven en `t.turnos_guardia.cobertura_panel`. */
 export const MOTIVO = {
   CONTINUIDAD: 'motivo_continuidad',
   CONTINUIDAD_UNA_VEZ: 'motivo_continuidad_una',
@@ -92,7 +92,7 @@ export const MOTIVO = {
    * Uno por modalidad, en vez de uno solo con la modalidad adentro. La frase la arma la
    * pantalla reemplazando valores a secas, así que un `{modalidad}` le llegaría en crudo
    * —"intermediacion", en minúscula y sin traducir— justo en el motivo que explica por qué
-   * alguien no puede tomar la guardia.
+   * alguien no puede tomar el turno de guardia.
    */
   MODALIDAD_DIRECTA: 'motivo_modalidad_directa',
   MODALIDAD_INTERMEDIACION: 'motivo_modalidad_intermediacion',
@@ -150,11 +150,11 @@ const lista = (x) => (Array.isArray(x) ? x : []);
 // LAS COMPROBACIONES COMPARTIDAS
 //
 // Todo lo que sigue está exportado a propósito. `avisosAsignacion.js` contesta una pregunta
-// distinta —"¿qué puede salir mal si le doy esta guardia a este Asistente?"— pero se apoya en
-// exactamente las mismas cuentas: si se pisa con otra guardia, cuánto descansa, cuántas horas
+// distinta —"¿qué puede salir mal si le doy este turno de guardia a este Asistente?"— pero se apoya en
+// exactamente las mismas cuentas: si se pisa con otro turno de guardia, cuánto descansa, cuántas horas
 // lleva en la semana, qué documentos vencen. Escribirlas dos veces sería garantizar que algún día
 // la lista de candidatos diga una cosa y la advertencia de confirmación diga otra sobre la misma
-// persona y la misma guardia — el error más difícil de encontrar, porque no rompe nada: solo
+// persona y el mismo turno de guardia — el error más difícil de encontrar, porque no rompe nada: solo
 // hace que nadie vuelva a confiar en la pantalla. Están escritas una sola vez, acá
 // (regla 12 de CLAUDE.md §7).
 // ============================================================================
@@ -192,48 +192,48 @@ export function estaDisponible(asistente) {
 }
 
 /**
- * Las guardias que ocupan realmente a un Asistente.
+ * Los turnos de guardia que ocupan realmente a un Asistente.
  *
- * Se sacan las canceladas —una guardia cancelada no ocupa a nadie— y la guardia que se está
- * evaluando, para el caso de una reasignación: una guardia nunca se pisa consigo misma.
+ * Se sacan las canceladas —un turno de guardia cancelado no ocupa a nadie— y el turno de guardia que se está
+ * evaluando, para el caso de una reasignación: un turno de guardia nunca se pisa consigo misma.
  */
-export function guardiasDeAsistente(asistenteId, guardias, excluirGuardiaId = null) {
-  return lista(guardias).filter(
+export function turnosGuardiaDeAsistente(asistenteId, turnos_guardia, excluirTurnoGuardiaId = null) {
+  return lista(turnos_guardia).filter(
     (g) =>
       g.asistente_id === asistenteId &&
       g.estado !== 'cancelada' &&
-      (!excluirGuardiaId || g.id !== excluirGuardiaId)
+      (!excluirTurnoGuardiaId || g.id !== excluirTurnoGuardiaId)
   );
 }
 
 /**
- * La guardia del Asistente que se pisa con esta, o `null` si no hay ninguna.
+ * El turno de guardia del Asistente que se pisa con esta, o `null` si no hay ninguna.
  * Nadie puede estar en dos casas a la vez: esto es lo único que bloquea sin discusión.
  */
-export function guardiaQueSePisa(guardia, guardiasDelAsistente) {
-  return lista(guardiasDelAsistente).find((g) => seSuperponen(g, guardia)) ?? null;
+export function turnoGuardiaQueSePisa(turno_guardia, turnosGuardiaDelAsistente) {
+  return lista(turnosGuardiaDelAsistente).find((g) => seSuperponen(g, turno_guardia)) ?? null;
 }
 
-// La ausencia registrada que tapa una guardia. Se escribe una sola vez en
+// La ausencia registrada que tapa un turno de guardia. Se escribe una sola vez en
 // `lib/ausenciaQueTapa.js`, porque el backend hace la misma pregunta al marcar la llegada, y se
 // reexporta desde acá porque es una comprobación compartida más, como las de arriba.
 export { ausenciaQueTapa };
 
 /**
- * Cuántas horas de descanso le quedan al Asistente alrededor de esta guardia, mirando tanto la
- * guardia anterior como la siguiente. Devuelve `null` si no tiene ninguna guardia cerca.
+ * Cuántas horas de descanso le quedan al Asistente alrededor de este turno de guardia, mirando tanto la
+ * guardia anterior como la siguiente. Devuelve `null` si no tiene ningún turno de guardia cerca.
  *
  * Se mira para los dos lados porque el descanso corto se puede producir de las dos maneras:
  * porque salió hace poco, o porque entra enseguida después.
  */
-export function descansoMasCorto(guardia, guardiasDelAsistente) {
+export function descansoMasCorto(turno_guardia, turnosGuardiaDelAsistente) {
   let menor = null;
-  for (const otra of lista(guardiasDelAsistente)) {
-    if (seSuperponen(otra, guardia)) continue; // eso ya es superposición, no descanso corto
+  for (const otra of lista(turnosGuardiaDelAsistente)) {
+    if (seSuperponen(otra, turno_guardia)) continue; // eso ya es superposición, no descanso corto
     const horas =
-      finDeGuardia(otra) <= inicioDeGuardia(guardia)
-        ? horasDeDescansoEntre(otra, guardia)
-        : horasDeDescansoEntre(guardia, otra);
+      finDeTurnoGuardia(otra) <= inicioDeTurnoGuardia(turno_guardia)
+        ? horasDeDescansoEntre(otra, turno_guardia)
+        : horasDeDescansoEntre(turno_guardia, otra);
     if (horas < 0) continue;
     if (menor === null || horas < menor) menor = horas;
   }
@@ -265,20 +265,20 @@ export function topeSemanalDe(asistente, topes = TOPES) {
 }
 
 /**
- * Cuántas horas lleva el Asistente en la semana de esta guardia, sin contarla y contándola.
+ * Cuántas horas lleva el Asistente en la semana de este turno de guardia, sin contarla y contándola.
  *
- * Una guardia cuenta en la semana en la que **empieza**. La de las 22:00 del domingo que
+ * Un turno de guardia cuenta en la semana en la que **empieza**. La de las 22:00 del domingo que
  * termina el lunes a las 06:00 cuenta entera en la semana del domingo: partirla al medio sería
  * más exacto en teoría y mucho más difícil de entender para quien lee el número.
  */
-export function cargaSemanal(guardia, guardiasDelAsistente, topes = TOPES) {
-  const { desde, hasta } = limitesDeSemana(guardia.fecha, topes.dia_inicio_semana);
+export function cargaSemanal(turno_guardia, turnosGuardiaDelAsistente, topes = TOPES) {
+  const { desde, hasta } = limitesDeSemana(turno_guardia.fecha, topes.dia_inicio_semana);
   let horas = 0;
-  for (const g of lista(guardiasDelAsistente)) {
-    const inicio = inicioDeGuardia(g);
-    if (inicio >= desde && inicio < hasta) horas += horasDeGuardia(g);
+  for (const g of lista(turnosGuardiaDelAsistente)) {
+    const inicio = inicioDeTurnoGuardia(g);
+    if (inicio >= desde && inicio < hasta) horas += horasDeTurnoGuardia(g);
   }
-  return { sinEsta: horas, conEsta: horas + horasDeGuardia(guardia) };
+  return { sinEsta: horas, conEsta: horas + horasDeTurnoGuardia(turno_guardia) };
 }
 
 /**
@@ -298,10 +298,10 @@ export function documentoQueVencePrimero(asistenteId, documentos) {
 /**
  * Cuántas veces este Asistente ya atendió a esta gente.
  *
- * "Ya atendió" significa que la guardia empezó antes de ahora y no se canceló ni quedó como
- * ausencia. Una guardia futura ya asignada no es continuidad todavía: es una intención.
+ * "Ya atendió" significa que el turno de guardia empezó antes de ahora y no se canceló ni quedó como
+ * ausencia. Un turno de guardia futuro ya asignada no es continuidad todavía: es una intención.
  *
- * Recibe la lista de Pacientes del hueco, no uno solo, y cuenta la guardia si el Asistente ya
+ * Recibe la lista de Pacientes del hueco, no uno solo, y cuenta el turno de guardia si el Asistente ya
  * atendió a **alguno** de ellos: quien viene atendiendo hace meses a la señora de la casa no
  * es un desconocido porque ahora el turno incluya también al marido. Contar por un solo
  * Paciente le borraba toda la historia y lo mandaba al fondo de la lista de candidatos.
@@ -309,21 +309,21 @@ export function documentoQueVencePrimero(asistenteId, documentos) {
  * El número depende del rango de guardias que la pantalla haya cargado. Si trajo un mes, el
  * conteo es de ese mes. Es una limitación conocida y no se disimula: se cuenta lo que hay.
  */
-export function vecesQueAtendio(asistenteId, pacienteIds, guardias, ahora) {
+export function vecesQueAtendio(asistenteId, pacienteIds, turnos_guardia, ahora) {
   const buscados = new Set((pacienteIds ?? []).filter(Boolean));
   if (buscados.size === 0) return 0;
-  return lista(guardias).filter(
+  return lista(turnos_guardia).filter(
     (g) =>
       g.asistente_id === asistenteId &&
       idsDePacientes(g).some((id) => buscados.has(id)) &&
       g.estado !== 'cancelada' &&
       g.estado !== 'ausente' &&
-      inicioDeGuardia(g) < ahora
+      inicioDeTurnoGuardia(g) < ahora
   ).length;
 }
 
 /**
- * A cuántos kilómetros vive el Asistente del Paciente más cercano de esta guardia, o `null`.
+ * A cuántos kilómetros vive el Asistente del Paciente más cercano de este turno de guardia, o `null`.
  *
  * `distancias` es lo que devolvió `cargarDistanciasDeAsistentes`: un objeto de id de Asistente →
  * metros, ya calculado por la base contra el Paciente más cercano del hueco. Con varios Pacientes
@@ -331,7 +331,7 @@ export function vecesQueAtendio(asistenteId, pacienteIds, guardias, ahora) {
  * esa casa y las demás le quedan a un paso.
  *
  * Devuelve `null` —y no un número grande, ni un cero— cuando ese Asistente no tiene distancia:
- * le falta el domicilio ubicado en el mapa, o a ninguno de los Pacientes de la guardia. Quien
+ * le falta el domicilio ubicado en el mapa, o a ninguno de los Pacientes del turno de guardia. Quien
  * llama tiene que callarse en ese caso. Una distancia inventada es peor que ninguna distancia,
  * porque parece confiable y nadie la vuelve a revisar.
  *
@@ -353,7 +353,7 @@ export function kmHastaElPaciente(asistenteId, distancias) {
 /**
  * Ordena a los Asistentes de la Prestadora de mejor a peor para cubrir un hueco.
  *
- * @param hueco     la fila de `guardias` sin Asistente que hay que tapar.
+ * @param hueco     la fila de `turnos_guardia` sin Asistente que hay que tapar.
  * @param datos     lo que la pantalla ya cargó:
  *                    asistentes     → el Padrón de la Prestadora, entero. Quién sigue estando
  *                                     se decide acá adentro, no en la consulta de la pantalla
@@ -377,13 +377,13 @@ export function kmHastaElPaciente(asistenteId, distancias) {
  *
  * Los bloqueados y los desaconsejados **también vienen en la lista**, al final y con su motivo a
  * la vista. Sacarlos haría que quien mira se pregunte por qué falta fulano y no encuentre
- * respuesta en ningún lado; verlo al fondo con "ese día ya tiene una guardia de 08:00 a 16:00"
+ * respuesta en ningún lado; verlo al fondo con "ese día ya tiene un turno de guardia de 08:00 a 16:00"
  * cierra la pregunta.
  *
  * `bloqueado` es el no de la base y no se puede pasar por arriba; `desaconsejado` es el no de la
  * lista y sí. La diferencia está explicada adentro de `evaluarAsistente`.
  */
-export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
+export function candidatosParaTurnoGuardia(hueco, datos = {}, opciones = {}) {
   if (!hueco) return [];
 
   const pesos = { ...PESOS, ...(opciones.pesos ?? {}) };
@@ -394,9 +394,9 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
      ------------------------------------------------------------------------------------------
      POR QUÉ EL FILTRO VIVE ACÁ Y NO EN LA CONSULTA DE LA PANTALLA. La pantalla que abre el panel
      de cobertura pide el Padrón una sola vez y lo usa para tres cosas distintas: poner el
-     nombre del Asistente en cada guardia ya asignada de la grilla, llenar los desplegables de
+     nombre del Asistente en cada turno de guardia ya asignada de la grilla, llenar los desplegables de
      reasignación, y alimentar esta lista. Filtrar en esa consulta arreglaría esta lista y
-     rompería la primera: una guardia de la semana pasada que cubrió alguien que después fue
+     rompería la primera: un turno de guardia de la semana pasada que cubrió alguien que después fue
      cesado se quedaría sin nombre, con un guión donde antes había una persona.
      Y sobre todo, la pregunta "¿a quién se puede proponer para un hueco?" es de este archivo,
      que es el punto único de verdad (regla 12 de CLAUDE.md §7). Dejarla escrita en cada consulta
@@ -404,11 +404,11 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
 
      POR QUÉ SE VAN Y NO QUEDAN AL FONDO CON SU MOTIVO, que es lo que hace todo el resto de este
      archivo. La diferencia es real: los bloqueados de más abajo son gente del Padrón que no
-     puede tomar ESTA guardia, y verlos ahí cierra la pregunta "¿por qué no aparece fulana?".
+     puede tomar Este turno de guardia, y verlos ahí cierra la pregunta "¿por qué no aparece fulana?".
      Quien ya no trabaja en la Prestadora no es un candidato bloqueado: no es un candidato.
      Arrastrarlo por el fondo de todos los huecos, para siempre, sería ruido. */
   const asistentes = lista(datos.asistentes).filter(estaEnElPadron);
-  const guardias = lista(datos.guardias);
+  const turnos_guardia = lista(datos.turnos_guardia);
   const ausencias = lista(datos.ausencias);
   const documentos = lista(datos.documentos);
 
@@ -417,7 +417,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   const evaluados = asistentes.map((asistente) =>
     evaluarAsistente(asistente, {
       hueco,
-      guardias,
+      turnos_guardia,
       ausencias,
       documentos,
       distancias,
@@ -441,7 +441,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
 
 /** Todo lo que se mira de un solo Asistente. Devuelve el elemento de la lista, sin ordenar. */
 function evaluarAsistente(asistente, ctx) {
-  const { hueco, guardias, documentos, ahora, pesos, topes } = ctx;
+  const { hueco, turnos_guardia, documentos, ahora, pesos, topes } = ctx;
 
   const aFavor = [];
   const enContra = [];
@@ -452,10 +452,10 @@ function evaluarAsistente(asistente, ctx) {
      disparador, así que la asignación falla igual, se apriete lo que se apriete. Mostrar un botón
      encendido ahí sería mandar a alguien contra una pared.
 
-     `desaconsejado` es el no de ESTA PANTALLA: que se pise con otra guardia y que haya una
+     `desaconsejado` es el no de ESTA PANTALLA: que se pise con otro turno de guardia y que haya una
      ausencia registrada son hechos que el sistema conoce, pero que la base acepta sin decir nada.
      Y son justo los dos sobre los que quien coordina puede saber algo que el sistema no sabe —que
-     la licencia se cortó antes, que las dos guardias se están permutando—. Ahí la lista propone
+     la licencia se cortó antes, que los dos turnos de guardia se están permutando—. Ahí la lista propone
      que no, y quien decide sigue siendo la persona: el botón queda encendido, con el motivo
      delante y dejando constancia de lo que pasó por arriba.
 
@@ -469,17 +469,17 @@ function evaluarAsistente(asistente, ctx) {
     puntaje += peso;
   };
 
-  const propias = guardiasDeAsistente(asistente.id, guardias, hueco.id);
+  const propias = turnosGuardiaDeAsistente(asistente.id, turnos_guardia, hueco.id);
 
-  // El último día que ocupa la guardia. La de noche arranca a las 22:00 y termina a las 06:00
-  // del día siguiente, así que "el día de la guardia" en realidad son dos, y las dos
+  // El último día que ocupa el turno de guardia. La de noche arranca a las 22:00 y termina a las 06:00
+  // del día siguiente, así que "el día del turno de guardia" en realidad son dos, y las dos
   // comprobaciones que miran el almanaque —la ausencia y los documentos— tienen que llegar hasta
   // el final y no quedarse en el comienzo. Es el mismo día que mira la base.
-  const ultimoDia = ultimoDiaDeLaGuardia(hueco);
+  const ultimoDia = ultimoDiaDelTurnoGuardia(hueco);
 
   // --- 1. Continuidad. El criterio que más pesa: para el Paciente y su Cliente, que venga
   //        alguien conocido vale más que cualquier comodidad de la agenda.
-  const veces = vecesQueAtendio(asistente.id, idsDePacientes(hueco), guardias, ahora);
+  const veces = vecesQueAtendio(asistente.id, idsDePacientes(hueco), turnos_guardia, ahora);
   if (veces > 0) {
     const puntos = Math.min(veces * pesos.continuidad_por_vez, pesos.continuidad_maxima);
     suma(aFavor, veces === 1 ? MOTIVO.CONTINUIDAD_UNA_VEZ : MOTIVO.CONTINUIDAD, { n: veces }, puntos);
@@ -489,9 +489,9 @@ function evaluarAsistente(asistente, ctx) {
 
   // --- 2. ¿Está libre a esa hora? Nadie puede estar en dos casas a la vez, así que esta persona
   //        no se propone. Pero no es un bloqueo de la base: la base acepta la asignación sin
-  //        decir nada, y quien coordina puede saber que esas dos guardias se están permutando.
+  //        decir nada, y quien coordina puede saber que esos dos turnos de guardia se están permutando.
   //        Por eso va a `desaconsejado` y no a `bloqueado` (ver la diferencia más arriba).
-  const choque = guardiaQueSePisa(hueco, propias);
+  const choque = turnoGuardiaQueSePisa(hueco, propias);
   if (choque) {
     desaconsejado = true;
     suma(
@@ -507,7 +507,7 @@ function evaluarAsistente(asistente, ctx) {
   // --- 2 bis. La modalidad de trabajo. Bloquea igual que estar ocupado, y por un motivo
   //        parecido: en prestación directa la Prestadora dirige el trabajo y en Match el
   //        Asistente elige qué toma (CLAUDE.md §3). Quien no trabaja en la modalidad de esta
-  //        guardia no es que esté peor puesto que otro: es que esa guardia no es para él.
+  //        guardia no es que esté peor puesto que otro: es que ese turno de guardia no es para él.
   //
   //        La regla la hace cumplir la base, en las tres puertas. Acá se la anticipa para que
   //        el motivo se vea antes de elegir a esa persona (`lib/modalidades.js`).
@@ -523,7 +523,7 @@ function evaluarAsistente(asistente, ctx) {
   //        que el choque de horarios: se desaconseja, no se bloquea.
   //
   //        Sin esta comprobación, quien está de licencia no solo aparece: aparece **arriba**,
-  //        porque no tiene ninguna guardia encima y se lleva los puntos de "ese día lo tiene
+  //        porque no tiene ningún turno de guardia encima y se lleva los puntos de "ese día lo tiene
   //        libre".
   //
   //        El motivo que se muestra no dice de qué ausencia se trata, y el tipo ni siquiera
@@ -562,7 +562,7 @@ function evaluarAsistente(asistente, ctx) {
   }
 
   // --- 5. Horas de la semana. Pasarse del tope no bloquea: la Prestadora puede decidir pagarlo,
-  //        y una guardia sin cubrir es peor que una hora extra. Solo tiene que verse.
+  //        y un turno de guardia sin cubrir es peor que una hora extra. Solo tiene que verse.
   const tope = topeSemanalDe(asistente, topes);
   const carga = cargaSemanal(hueco, propias, topes);
   if (carga.conEsta > tope) {

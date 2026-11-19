@@ -115,7 +115,7 @@ export default function LlavesDeEsteAparato() {
       {!error && llaves !== null && (
         <>
           {llaves.length === 0 ? (
-            <p className="guardia-card-detalle">{t.llaves.ninguna}</p>
+            <p className="tarjeta-detalle">{t.llaves.ninguna}</p>
           ) : (
             <ul className="llaves-lista">
               {llaves.map((llave) => (
@@ -152,7 +152,7 @@ export default function LlavesDeEsteAparato() {
               {guardando ? t.llaves.agregando : t.llaves.agregar}
             </button>
           ) : (
-            <p className="guardia-card-detalle" style={{ marginTop: '1rem' }}>{t.llaves.no_disponible}</p>
+            <p className="tarjeta-detalle" style={{ marginTop: '1rem' }}>{t.llaves.no_disponible}</p>
           )}
 
           {aviso && <div className="alert" role="status">{aviso}</div>}

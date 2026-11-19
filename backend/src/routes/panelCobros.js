@@ -250,7 +250,7 @@ async function saldoDeLaFactura(db, facturaId) {
 //
 // Sólo se leen. El sistema no las decide, no las cambia y no hace nada con ellas: las muestra
 // para que una persona de la Prestadora sepa que a ese Cliente le pusieron una restricción y
-// resuelva qué hacer. Ningún Servicio se corta ni ninguna Guardia se cancela por esto.
+// resuelva qué hacer. Ningún Servicio se corta ni ningún Turno de guardia se cancela por esto.
 //
 // De cada Cliente vale la fila más nueva: las anteriores quedan guardadas, pero lo que rige hoy
 // es la última. Y se devuelven sólo las que están restringidas, porque una fila que levantó una
@@ -261,7 +261,7 @@ async function saldoDeLaFactura(db, facturaId) {
  * El portero del estado de cuenta.
  *
  * Cuánto debe un Cliente y si está atrasado es del trato económico entre la Prestadora y ese
- * Cliente, no del armado de las guardias. La acción nace reservada a la administración y cada
+ * Cliente, no del armado de los turnos de guardia. La acción nace reservada a la administración y cada
  * Prestadora decide si se la abre a quien coordina, como con cualquier otra del catálogo.
  */
 const veElEstadoDeCuenta = requierePermiso('ver_estado_de_cuenta_cliente');
@@ -701,7 +701,7 @@ panelCobrosRouter.put(
  *
  * EL TRAMO llega como `{ desde, hasta }`, o como el mes de antes, `periodo: 'AAAA-MM'`. El período
  * de cada factura sale de la frecuencia del Servicio, y lo que se cobra, de su medición y del
- * trabajo anotado en las guardias completadas: la cuenta vive en `utils/facturaDelPeriodo.js` y
+ * trabajo anotado en los turnos de guardia completados: la cuenta vive en `utils/facturaDelPeriodo.js` y
  * `utils/calcularLiquidacion.js`, del mismo lado que las facturas.
  *
  * UNA FACTURA SIN RENGLONES NO QUEDA. Si los renglones no entran, se borra la factura recién

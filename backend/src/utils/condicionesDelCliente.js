@@ -37,7 +37,7 @@ export const FRECUENCIAS_DE_COBRO_AL_CLIENTE = Object.freeze({
 // Con qué se mide lo que se le cobra.
 //   pactado_mas_excedente: lo acordado por período, más lo que se trabajó por encima de lo acordado.
 //   hora: cada hora trabajada.
-//   dia_de_guardia: cada día en que hubo una guardia.
+//   dia_de_guardia: cada día en que hubo un turno de guardia.
 export const MEDICIONES = Object.freeze({
   PACTADO_MAS_EXCEDENTE: 'pactado_mas_excedente',
   HORA: 'hora',
@@ -62,8 +62,8 @@ export const AJUSTES_POR_INDICE_POSIBLES = Object.freeze(Object.values(AJUSTES_P
 export const MESES_ENTRE_ACTUALIZACIONES_POSIBLES = Object.freeze([1, 3, 6]);
 
 // Lo que rige cuando ni la Prestadora ni el Servicio dijeron nada.
-//   La medición de fábrica: se descuentan las guardias no prestadas por causa de la Prestadora o
-//   del Asistente, se cobran las guardias canceladas por el Cliente, y se cobran las guardias y
+//   La medición de fábrica: se descuentan los turnos de guardia no prestadas por causa de la Prestadora o
+//   del Asistente, se cobran los turnos de guardia cancelados por el Cliente, y se cobran los turnos de guardia y
 //   las horas adicionales.
 export const VALORES_DE_FABRICA_DEL_CLIENTE = Object.freeze({
   forma_de_precio: FORMAS_DE_PRECIO.DIRECTO,
@@ -71,7 +71,7 @@ export const VALORES_DE_FABRICA_DEL_CLIENTE = Object.freeze({
   medicion: MEDICIONES.PACTADO_MAS_EXCEDENTE,
   cobra_cancelada_por_el_cliente: true,
   descuenta_lo_no_prestado: true,
-  cobra_guardias_adicionales: true,
+  cobra_turnos_guardia_adicionales: true,
   cobra_horas_adicionales: true,
   indice_de_actualizacion: null,
   meses_entre_actualizaciones: 1,
@@ -85,7 +85,7 @@ const TIPOS = Object.freeze({
   medicion: { lista: MEDICIONES_POSIBLES },
   cobra_cancelada_por_el_cliente: { siNo: true },
   descuenta_lo_no_prestado: { siNo: true },
-  cobra_guardias_adicionales: { siNo: true },
+  cobra_turnos_guardia_adicionales: { siNo: true },
   cobra_horas_adicionales: { siNo: true },
   indice_de_actualizacion: { codigo: true },
   meses_entre_actualizaciones: { entero: { valores: MESES_ENTRE_ACTUALIZACIONES_POSIBLES } },

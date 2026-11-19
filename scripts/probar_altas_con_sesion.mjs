@@ -160,7 +160,7 @@ function anclas() {
        WHERE razon_social ILIKE '%Sandbox%' OR nombre_fantasia ILIKE '%Sandbox%'
        LIMIT 1
     ),
-    -- Un Asistente al que los documentos no le frenen la Guardia, porque si lo
+    -- Un Asistente al que los documentos no le frenen el Turno de guardia, porque si lo
     -- frena el alta rebota por ese otro motivo y la prueba diría que hay un
     -- problema de permisos donde no lo hay. Y de esos, primero el que trabaje
     -- en más de una modalidad: es el único con el que se puede probar el
@@ -182,7 +182,7 @@ function anclas() {
            (SELECT id FROM elegido),
            (SELECT array_to_string(canales, ',') FROM elegido),
            -- El Servicio del Paciente, que es el de quien lo contrata, y con Coordinador: sin él
-           -- no se arma ninguna guardia.
+           -- no se arma ningún turno de guardia.
            (SELECT s.id FROM public.servicios s
               JOIN public.pacientes pa ON pa.cliente_id = s.cliente_id
                                       AND pa.prestadora_id = s.prestadora_id
@@ -254,10 +254,10 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
         : `las modalidades quedaron en ${JSON.stringify(f.canales)}`),
     },
     {
-      tabla: 'guardias',
+      tabla: 'turnos_guardia',
       disparadores:
-        'trg_exigir_documentos_en_guardia → interno.documentos_que_bloquean, y '
-        + 'fn_modalidad_de_la_guardia → interno.asistente_trabaja_en_modalidad',
+        'trg_exigir_documentos_en_turno_guardia → interno.documentos_que_bloquean, y '
+        + 'fn_modalidad_del_turno_guardia → interno.asistente_trabaja_en_modalidad',
       fila: {
         prestadora_id: d.prestadora,
         paciente_id: d.paciente,
@@ -273,7 +273,7 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
     },
   ];
 
-  // La asignación necesita la Guardia que crea el caso anterior, así que se arma
+  // La asignación necesita el Turno de guardia que crea el caso anterior, así que se arma
   // recién cuando ésa entró.
   const creado = [];
   const problemas = [];
@@ -285,16 +285,16 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
     let elCaso = caso;
 
     if (elCaso === null) {
-      const guardia = creado.find((c) => c.tabla === 'guardias');
-      if (!guardia) continue;
+      const turno_guardia = creado.find((c) => c.tabla === 'turnos_guardia');
+      if (!turno_guardia) continue;
       elCaso = {
-        tabla: 'asignaciones_de_turno',
+        tabla: 'asignaciones_de_turno_guardia',
         disparadores:
           'trg_exigir_documentos_en_asignacion → interno.documentos_que_bloquean, y '
           + 'fn_modalidad_en_asignacion → interno.asistente_trabaja_en_modalidad',
         fila: {
           prestadora_id: d.prestadora,
-          guardia_id: guardia.id,
+          turno_guardia_id: turno_guardia.id,
           asistente_id: d.asistente,
         },
         completa: () => null,
@@ -376,7 +376,7 @@ async function probarElHueco({ base, llavePublica }, d) {
   const token = await entrar(base, llavePublica, COORDINADORA, d.prestadora);
   const enUnMes = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-  const r = await fetch(`${base}/rest/v1/series_guardias`, {
+  const r = await fetch(`${base}/rest/v1/series_turnos_guardia`, {
     method: 'POST',
     headers: {
       apikey: llavePublica,
@@ -400,15 +400,15 @@ async function probarElHueco({ base, llavePublica }, d) {
   if (!r.ok) {
     const codigo = cuerpo?.code ? `${cuerpo.code} ` : '';
     const detalle = cuerpo?.message || JSON.stringify(cuerpo);
-    console.log(rojo('  ✗ series_guardias sin Asistente'));
+    console.log(rojo('  ✗ series_turnos_guardia sin Asistente'));
     console.log(rojo(`      ${r.status} ${codigo}${detalle}`));
-    return [`series_guardias: el Coordinador no pudo armar la serie sin Asistente — ${r.status} ${codigo}${detalle}`];
+    return [`series_turnos_guardia: el Coordinador no pudo armar la serie sin Asistente — ${r.status} ${codigo}${detalle}`];
   }
 
   const fila = Array.isArray(cuerpo) ? cuerpo[0] : cuerpo;
-  if (fila?.id) consultarBase(`DELETE FROM public.series_guardias WHERE id = '${fila.id}';`);
-  console.log(verde('  ✓ series_guardias sin Asistente'));
-  console.log(gris('      coordinador_gestiona_series_guardias_de_sus_servicios → interno.coordina_el_servicio'));
+  if (fila?.id) consultarBase(`DELETE FROM public.series_turnos_guardia WHERE id = '${fila.id}';`);
+  console.log(verde('  ✓ series_turnos_guardia sin Asistente'));
+  console.log(gris('      coordinador_gestiona_series_turnos_guardia_de_sus_servicios → interno.coordina_el_servicio'));
   return [];
 }
 
@@ -991,7 +991,7 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
 // ---------------------------------------------------------------------------
 // El Asistente y el Cliente escriben sólo lo suyo
 // ---------------------------------------------------------------------------
-// En la guardia, la asignación, la calificación, el reporte y la suscripción a las notificaciones
+// En el turno de guardia, la asignación, la calificación, el reporte y la suscripción a las notificaciones
 // la política alcanza la fila; qué columnas y qué cambios son de la persona lo decide la base.
 // Cada fila que se toca se deja como estaba, con la llave del dueño de la base.
 
@@ -1023,24 +1023,24 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
      ORDER BY id LIMIT 1;
   `);
 
-  // ---- La guardia ----------------------------------------------------------
-  const [[guardia, pacienteDeLaGuardia]] = consultarBase(`
-    SELECT g.id, gp.paciente_id FROM public.guardias g
-      JOIN public.guardia_pacientes gp ON gp.guardia_id = g.id
+  // ---- El turno de guardia ----------------------------------------------------------
+  const [[turno_guardia, pacienteDelTurnoGuardia]] = consultarBase(`
+    SELECT g.id, gp.paciente_id FROM public.turnos_guardia g
+      JOIN public.turno_guardia_pacientes gp ON gp.turno_guardia_id = g.id
      WHERE g.asistente_id = '${asistenteDeLaSesion}' AND g.estado = 'programada' AND g.checkin_at IS NULL
      ORDER BY g.id, gp.paciente_id LIMIT 1;
   `);
-  const [[fechaOriginal]] = consultarBase(`SELECT fecha FROM public.guardias WHERE id = '${guardia}';`);
+  const [[fechaOriginal]] = consultarBase(`SELECT fecha FROM public.turnos_guardia WHERE id = '${turno_guardia}';`);
   try {
     rebota('el Asistente NO cambia la fecha de su guardia',
-      await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`, { fecha: '2001-01-01' }));
+      await pedir(entorno, delAsistente, 'PATCH', `turnos_guardia?id=eq.${turno_guardia}`, { fecha: '2001-01-01' }));
     rebota('el Asistente NO cancela su guardia',
-      await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`, { estado: 'cancelada' }));
+      await pedir(entorno, delAsistente, 'PATCH', `turnos_guardia?id=eq.${turno_guardia}`, { estado: 'cancelada' }));
     rebota('el Asistente NO cierra una guardia que no empezó',
-      await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`,
+      await pedir(entorno, delAsistente, 'PATCH', `turnos_guardia?id=eq.${turno_guardia}`,
         { checkout_at: new Date().toISOString(), estado: 'completada' }));
 
-    const llegada = await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`,
+    const llegada = await pedir(entorno, delAsistente, 'PATCH', `turnos_guardia?id=eq.${turno_guardia}`,
       { checkin_at: '2001-01-01T00:00:00Z', checkin_lat: -34.6, checkin_lng: -58.4, estado: 'activa' });
     const horaQueQuedo = llegada.filas[0]?.checkin_at;
     if (!horaQueQuedo) {
@@ -1048,38 +1048,38 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
     } else if (new Date(horaQueQuedo).getFullYear() === 2001) {
       mal('la hora de la llegada la pone la base', 'quedó la que mandó el teléfono');
     } else {
-      bien('el Asistente SÍ marca su llegada', 'asistente_marca_solo_su_guardia');
+      bien('el Asistente SÍ marca su llegada', 'asistente_marca_solo_su_turno_guardia');
       bien('la hora de la llegada la pone la base', `quedó ${horaQueQuedo}`);
       rebota('el Asistente NO reescribe su llegada',
-        await pedir(entorno, delAsistente, 'PATCH', `guardias?id=eq.${guardia}`, { checkin_lat: 0 }));
+        await pedir(entorno, delAsistente, 'PATCH', `turnos_guardia?id=eq.${turno_guardia}`, { checkin_lat: 0 }));
     }
 
-    const delPanel = await pedir(entorno, deLaAdministracion, 'PATCH', `guardias?id=eq.${guardia}`,
+    const delPanel = await pedir(entorno, deLaAdministracion, 'PATCH', `turnos_guardia?id=eq.${turno_guardia}`,
       { checkin_at: null, checkin_lat: null, checkin_lng: null, estado: 'programada' });
     if (delPanel.filas.length === 1) {
-      bien('la administración SÍ sigue escribiendo cualquier columna de la guardia', 'panel_gestiona_guardias');
+      bien('la administración SÍ sigue escribiendo cualquier columna de la guardia', 'panel_gestiona_turnos_guardia');
     } else {
       mal('la administración SÍ sigue escribiendo cualquier columna de la guardia', motivo(delPanel));
     }
   } finally {
     consultarBase(`
-      UPDATE public.guardias SET checkin_at = NULL, checkin_lat = NULL, checkin_lng = NULL,
+      UPDATE public.turnos_guardia SET checkin_at = NULL, checkin_lat = NULL, checkin_lng = NULL,
              estado = 'programada', fecha = '${fechaOriginal}', checkout_at = NULL
-       WHERE id = '${guardia}' RETURNING '';
+       WHERE id = '${turno_guardia}' RETURNING '';
     `);
   }
 
   // ---- La asignación de un turno --------------------------------------------
   const [[asignacion]] = consultarBase(`
-    SELECT id FROM public.asignaciones_de_turno
+    SELECT id FROM public.asignaciones_de_turno_guardia
      WHERE asistente_id = '${asistenteDeLaSesion}' AND estado = 'sin_responder' ORDER BY id LIMIT 1;
   `);
   if (asignacion) {
     try {
       rebota('el Asistente NO cambia quién asignó el turno',
-        await pedir(entorno, delAsistente, 'PATCH', `asignaciones_de_turno?id=eq.${asignacion}`,
+        await pedir(entorno, delAsistente, 'PATCH', `asignaciones_de_turno_guardia?id=eq.${asignacion}`,
           { estado: 'rechazada', asistente_anterior_id: otroAsistente }));
-      const rechazo = await pedir(entorno, delAsistente, 'PATCH', `asignaciones_de_turno?id=eq.${asignacion}`,
+      const rechazo = await pedir(entorno, delAsistente, 'PATCH', `asignaciones_de_turno_guardia?id=eq.${asignacion}`,
         { estado: 'rechazada' });
       if (rechazo.filas.length === 1) bien('el Asistente SÍ rechaza su asignación', 'asistente_rechaza_su_asignacion');
       else mal('el Asistente SÍ rechaza su asignación', motivo(rechazo));
@@ -1088,7 +1088,7 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
       // para devolver la siembra a como estaba se lo saltea sólo en esta sentencia.
       consultarBase(`
         SET session_replication_role = replica;
-        UPDATE public.asignaciones_de_turno SET estado = 'sin_responder', respondida_at = NULL
+        UPDATE public.asignaciones_de_turno_guardia SET estado = 'sin_responder', respondida_at = NULL
          WHERE id = '${asignacion}';
       `);
     }
@@ -1097,8 +1097,8 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
   }
 
   // ---- La calificación -------------------------------------------------------
-  const [[calificacion, guardiaCalificada, pacienteCalificado, descargoOriginal, estrellasOriginales]] = consultarBase(`
-    SELECT id, guardia_id, paciente_id, coalesce(descargo_asistente, ''), estrellas FROM public.calificaciones_asistente
+  const [[calificacion, turnoGuardiaCalificado, pacienteCalificado, descargoOriginal, estrellasOriginales]] = consultarBase(`
+    SELECT id, turno_guardia_id, paciente_id, coalesce(descargo_asistente, ''), estrellas FROM public.calificaciones_asistente
      WHERE asistente_id = '${asistenteDeLaSesion}' ORDER BY id LIMIT 1;
   `);
   const calificacionesNuevas = [];
@@ -1123,14 +1123,14 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
 
     const ajena = await pedir(entorno, delCliente, 'POST', 'calificaciones_asistente', {
       prestadora_id: d.prestadora, asistente_id: otroAsistente, cliente_id: clienteDeLaCalificacion,
-      guardia_id: guardiaCalificada, paciente_id: pacienteCalificado, estrellas: 1,
+      turno_guardia_id: turnoGuardiaCalificado, paciente_id: pacienteCalificado, estrellas: 1,
     });
     calificacionesNuevas.push(...ajena.filas.map((f) => f.id));
     rebota('el Cliente NO califica a un Asistente que no tuvo esa guardia', ajena);
 
     const calificacionPropia = {
       prestadora_id: d.prestadora, asistente_id: asistenteDeLaSesion, cliente_id: clienteDeLaCalificacion,
-      guardia_id: guardiaCalificada, paciente_id: pacienteCalificado, estrellas: 5, comentario: 'Prueba.',
+      turno_guardia_id: turnoGuardiaCalificado, paciente_id: pacienteCalificado, estrellas: 5, comentario: 'Prueba.',
     };
     const deLaPersonaAutorizada = await entrar(entorno.base, entorno.llavePublica, PERSONA_AUTORIZADA, d.prestadora);
     const sinPermiso = await pedir(entorno, deLaPersonaAutorizada, 'POST', 'calificaciones_asistente', calificacionPropia);
@@ -1160,14 +1160,14 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
     // accesos, como lo hace el backend. Directo, la base no lo entrega ni lo deja cargar.
     const delReporte = { p_tabla: 'reportes', p_origen: 'prueba de permisos' };
     const fila = {
-      prestadora_id: d.prestadora, guardia_id: guardia, paciente_id: pacienteDeLaGuardia, texto_libre: 'Reporte de prueba.',
+      prestadora_id: d.prestadora, turno_guardia_id: turno_guardia, paciente_id: pacienteDelTurnoGuardia, texto_libre: 'Reporte de prueba.',
     };
     rebota('el Asistente NO carga un reporte sin pasar por el registro',
       await pedir(entorno, delAsistente, 'POST', 'reportes', fila));
     const carga = await pedir(entorno, delAsistente, 'POST', 'rpc/agregar_informacion_de_salud',
       { ...delReporte, p_fila: fila, p_columnas_devueltas: ['id'] });
     reporte = carga.filas[0]?.id;
-    if (reporte) bien('el Asistente SÍ carga el reporte de su guardia', 'asistente_carga_reportes_de_su_guardia');
+    if (reporte) bien('el Asistente SÍ carga el reporte de su guardia', 'asistente_carga_reportes_de_su_turno_guardia');
     else mal('el Asistente SÍ carga el reporte de su guardia', motivo(carga));
     if (reporte) {
       const esteReporte = [{ columna: 'id', op: 'eq', valor: reporte }];
@@ -1181,7 +1181,7 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
       else mal('el Asistente NO lee el reporte sin pasar por el registro', 'la base se lo entregó');
       const lee = await pedir(entorno, delAsistente, 'POST', 'rpc/leer_informacion_de_salud',
         { ...delReporte, p_columnas: ['id'], p_filtros: esteReporte });
-      if (lee.filas.length === 1) bien('el Asistente SÍ lee el reporte de su guardia', 'asistente_lee_reportes_de_su_guardia');
+      if (lee.filas.length === 1) bien('el Asistente SÍ lee el reporte de su guardia', 'asistente_lee_reportes_de_su_turno_guardia');
       else mal('el Asistente SÍ lee el reporte de su guardia', motivo(lee));
     }
   } finally {
@@ -1214,7 +1214,7 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
 // ---------------------------------------------------------------------------
 // Cuarta comprobación: el Coordinador de cada Servicio
 // ---------------------------------------------------------------------------
-// Un Servicio sin Coordinador no tiene guardias, sólo la administración le asigna uno, y cada
+// Un Servicio sin Coordinador no tiene turnos de guardia, sólo la administración le asigna uno, y cada
 // Coordinador ve sólo los Servicios que tiene asignados. Las tres cosas las decide la base, así que
 // se prueban con la sesión de cada uno, sobre un Servicio que nace sin Coordinador para la prueba.
 
@@ -1259,7 +1259,7 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
   }
 
   try {
-    const guardia = {
+    const turno_guardia = {
       prestadora_id: d.prestadora,
       paciente_id: d.paciente,
       servicio_id: servicio,
@@ -1268,13 +1268,13 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
       hora_fin: '12:00',
       modalidad: 'presencial',
     };
-    const sinCoordinador = await pedir(admin, 'POST', 'guardias', guardia);
+    const sinCoordinador = await pedir(admin, 'POST', 'turnos_guardia', turno_guardia);
     if (sinCoordinador.estado >= 400 && String(sinCoordinador.cuerpo?.message).startsWith('servicio_sin_coordinador')) {
       bien('sin Coordinador, el Servicio no tiene guardias');
     } else {
       mal('sin Coordinador, el Servicio no tiene guardias', `${sinCoordinador.estado} ${JSON.stringify(sinCoordinador.cuerpo)}`);
       const id = sinCoordinador.cuerpo?.[0]?.id;
-      if (id) consultarBase(`DELETE FROM public.guardias WHERE id = '${id}';`);
+      if (id) consultarBase(`DELETE FROM public.turnos_guardia WHERE id = '${id}';`);
     }
 
     const noLoVe = await pedir(coordinadora, 'GET', `servicios?id=eq.${servicio}&select=id`);
@@ -1294,11 +1294,11 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
     if (loVe.cuerpo?.length === 1) bien('la Coordinadora ve el Servicio que se le asignó');
     else mal('la Coordinadora ve el Servicio que se le asignó', `${loVe.estado} ${JSON.stringify(loVe.cuerpo)}`);
 
-    const conCoordinador = await pedir(coordinadora, 'POST', 'guardias', guardia);
-    const idGuardia = conCoordinador.cuerpo?.[0]?.id;
-    if (idGuardia) {
+    const conCoordinador = await pedir(coordinadora, 'POST', 'turnos_guardia', turno_guardia);
+    const idTurnoGuardia = conCoordinador.cuerpo?.[0]?.id;
+    if (idTurnoGuardia) {
       bien('con Coordinador, su Coordinadora le arma una guardia');
-      consultarBase(`DELETE FROM public.guardias WHERE id = '${idGuardia}';`);
+      consultarBase(`DELETE FROM public.turnos_guardia WHERE id = '${idTurnoGuardia}';`);
     } else {
       mal('con Coordinador, su Coordinadora le arma una guardia', `${conCoordinador.estado} ${JSON.stringify(conCoordinador.cuerpo)}`);
     }
@@ -1310,7 +1310,7 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
       mal('el Servicio no vuelve a quedarse sin Coordinador', `${vaciar.estado} ${JSON.stringify(vaciar.cuerpo)}`);
     }
   } finally {
-    consultarBase(`DELETE FROM public.guardias WHERE servicio_id = '${servicio}';`);
+    consultarBase(`DELETE FROM public.turnos_guardia WHERE servicio_id = '${servicio}';`);
     consultarBase(`DELETE FROM public.servicios WHERE id = '${servicio}';`);
   }
 
@@ -1320,10 +1320,10 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
 // ---------------------------------------------------------------------------
 // Quinta comprobación: la firma del Responsable de pagos
 // ---------------------------------------------------------------------------
-// Cada Prestadora decide si un Servicio programa guardias sin la firma vigente de su Responsable
-// de pagos. Con la opción encendida la base rechaza la guardia, y la pregunta del Panel contesta
-// lo mismo que el rechazo. Con la firma cerrada, o con la opción apagada, la guardia pasa. Una
-// guardia programada antes de encender la opción sigue igual. Se prueba con la sesión de la
+// Cada Prestadora decide si un Servicio programa turnos de guardia sin la firma vigente de su Responsable
+// de pagos. Con la opción encendida la base rechaza el turno de guardia, y la pregunta del Panel contesta
+// lo mismo que el rechazo. Con la firma cerrada, o con la opción apagada, el turno de guardia pasa. Una
+// turno de guardia programado antes de encender la opción sigue igual. Se prueba con la sesión de la
 // administración y de la Coordinadora, sobre un Servicio que nace para la prueba. Datos inventados.
 
 async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
@@ -1342,9 +1342,9 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
   const [[cargadoPor]] = consultarBase(`SELECT id FROM public.usuarios WHERE lower(email) = '${ADMINISTRADORA}';`);
   const [[cliente]] = consultarBase(`SELECT cliente_id FROM public.pacientes WHERE id = '${d.paciente}';`);
   const [[pagador]] = consultarBase(`SELECT id FROM public.personas WHERE prestadora_id = '${d.prestadora}' ORDER BY created_at LIMIT 1;`);
-  const [[opcionAntes]] = consultarBase(`SELECT guardias_solo_con_firma_del_pagador::text FROM public.prestadoras WHERE id = '${d.prestadora}';`);
+  const [[opcionAntes]] = consultarBase(`SELECT turnos_guardia_solo_con_firma_del_pagador::text FROM public.prestadoras WHERE id = '${d.prestadora}';`);
   const opcion = (encendida) =>
-    consultarBase(`UPDATE public.prestadoras SET guardias_solo_con_firma_del_pagador = ${encendida} WHERE id = '${d.prestadora}';`);
+    consultarBase(`UPDATE public.prestadoras SET turnos_guardia_solo_con_firma_del_pagador = ${encendida} WHERE id = '${d.prestadora}';`);
 
   const pedir = async (token, metodo, ruta, cuerpo) => {
     const r = await fetch(`${base}/rest/v1/${ruta}`, {
@@ -1373,7 +1373,7 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
     return problemas;
   }
 
-  const guardiaDelDia = (dias, hora) => ({
+  const turnoGuardiaDelDia = (dias, hora) => ({
     prestadora_id: d.prestadora,
     paciente_id: d.paciente,
     servicio_id: servicio,
@@ -1387,7 +1387,7 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
     await pedir(admin, 'PATCH', `servicios?id=eq.${servicio}`, { coordinador_id: carla });
 
     opcion(false);
-    const previa = await pedir(admin, 'POST', 'guardias', guardiaDelDia(41, '08:00'));
+    const previa = await pedir(admin, 'POST', 'turnos_guardia', turnoGuardiaDelDia(41, '08:00'));
     const idPrevia = previa.cuerpo?.[0]?.id;
     if (idPrevia) bien('con la opción apagada, el Servicio sin firma tiene guardias');
     else mal('con la opción apagada, el Servicio sin firma tiene guardias', `${previa.estado} ${JSON.stringify(previa.cuerpo)}`);
@@ -1395,7 +1395,7 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
     else mal('con la opción apagada, el Panel no avisa nada', 'la pregunta contestó otra cosa que falso');
 
     opcion(true);
-    const sinFirma = await pedir(coordinadora, 'POST', 'guardias', guardiaDelDia(42, '08:00'));
+    const sinFirma = await pedir(coordinadora, 'POST', 'turnos_guardia', turnoGuardiaDelDia(42, '08:00'));
     if (sinFirma.estado >= 400 && sinFirma.cuerpo?.message === 'servicio_sin_firma_del_pagador') {
       bien('con la opción encendida y sin firma, no se programa la guardia');
     } else {
@@ -1408,8 +1408,8 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
     }
 
     if (idPrevia) {
-      const [[sigue]] = consultarBase(`SELECT count(*)::text FROM public.guardias WHERE id = '${idPrevia}';`);
-      const cambio = await pedir(admin, 'PATCH', `guardias?id=eq.${idPrevia}`, { hora_inicio: '09:00' });
+      const [[sigue]] = consultarBase(`SELECT count(*)::text FROM public.turnos_guardia WHERE id = '${idPrevia}';`);
+      const cambio = await pedir(admin, 'PATCH', `turnos_guardia?id=eq.${idPrevia}`, { hora_inicio: '09:00' });
       if (sigue === '1' && cambio.estado === 200) bien('la guardia programada antes sigue igual y se puede corregir');
       else mal('la guardia programada antes sigue igual y se puede corregir', `${cambio.estado} ${JSON.stringify(cambio.cuerpo)}`);
     }
@@ -1425,14 +1425,14 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
        VALUES ('${d.prestadora}', '${cliente}', '${servicio}', '${pagador}', 'Responsable inventado',
                'Texto inventado', 'verificador-inventado', 'es-AR', 'cerrado', 'documento_firmado', now(), '${cargadoPor}');`,
     );
-    const conFirma = await pedir(coordinadora, 'POST', 'guardias', guardiaDelDia(43, '08:00'));
+    const conFirma = await pedir(coordinadora, 'POST', 'turnos_guardia', turnoGuardiaDelDia(43, '08:00'));
     if (conFirma.cuerpo?.[0]?.id) bien('con la firma cerrada, la guardia se programa');
     else mal('con la firma cerrada, la guardia se programa', `${conFirma.estado} ${JSON.stringify(conFirma.cuerpo)}`);
     if ((await faltaLaFirma(admin, servicio)) === false) bien('con la firma cerrada, el Panel no avisa nada');
     else mal('con la firma cerrada, el Panel no avisa nada', 'la pregunta contestó otra cosa que falso');
   } finally {
     opcion(opcionAntes === 'true');
-    consultarBase(`DELETE FROM public.guardias WHERE servicio_id = '${servicio}';`);
+    consultarBase(`DELETE FROM public.turnos_guardia WHERE servicio_id = '${servicio}';`);
     consultarBase(`DELETE FROM public.consentimientos_pagador WHERE servicio_id = '${servicio}';`);
     consultarBase(`DELETE FROM public.pagadores_del_servicio WHERE servicio_id = '${servicio}';`);
     consultarBase(`DELETE FROM public.condiciones_comerciales_servicio WHERE servicio_id = '${servicio}';`);
@@ -1563,7 +1563,7 @@ async function probarLoQueCargaOtroCoordinador({ base, llavePublica }, d) {
 
 // Cada Coordinador ve sólo sus Servicios. Se le pasa a otro Coordinador uno de los Servicios
 // sembrados y se mira con la sesión de la Coordinadora: tiene que dejar de verlo, con su Cliente, su
-// Paciente, la información de salud y las guardias, y seguir viendo lo suyo. Después se le da cada
+// Paciente, la información de salud y los turnos de guardia, y seguir viendo lo suyo. Después se le da cada
 // una de las dos puertas que reabren lo ajeno —una alarma tomada y la cobertura de una ausencia— y
 // tiene que volver a verlo. Si el recorte no existiera, la primera tanda ya fallaría.
 async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
@@ -1584,11 +1584,11 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
   // quede del todo afuera; y otro que se quede con ella, para ver que lo propio no se pierde.
   const [ajeno] = consultarBase(`
     SELECT s.id, s.cliente_id, p.id,
-           (SELECT g.id FROM public.guardias g WHERE g.servicio_id = s.id ORDER BY g.id LIMIT 1)
+           (SELECT g.id FROM public.turnos_guardia g WHERE g.servicio_id = s.id ORDER BY g.id LIMIT 1)
       FROM public.servicios s
       JOIN public.pacientes p ON p.cliente_id = s.cliente_id AND p.prestadora_id = s.prestadora_id
      WHERE s.prestadora_id = '${d.prestadora}' AND s.coordinador_id = '${carla}'
-       AND EXISTS (SELECT 1 FROM public.guardias g WHERE g.servicio_id = s.id)
+       AND EXISTS (SELECT 1 FROM public.turnos_guardia g WHERE g.servicio_id = s.id)
        AND NOT EXISTS (SELECT 1 FROM public.servicios o WHERE o.cliente_id = s.cliente_id
                         AND o.id <> s.id AND o.coordinador_id = '${carla}')
      ORDER BY s.id DESC LIMIT 1;`);
@@ -1600,7 +1600,7 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     mal('la siembra trae dos Servicios de la Coordinadora con guardias', 'no los encontré');
     return problemas;
   }
-  const [servicio, cliente, paciente, guardia] = ajeno;
+  const [servicio, cliente, paciente, turno_guardia] = ajeno;
   const [[contratante]] = consultarBase(`SELECT contratante_persona_id FROM public.clientes WHERE id = '${cliente}';`);
 
   // La información de salud se lee por el registro de accesos, como la lee el backend: directo, la
@@ -1619,7 +1619,7 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
       p_columnas: ['id'],
       p_filtros: [{ columna: 'paciente_id', op: 'eq', valor: paciente }],
     }],
-    'la guardia': `guardias?id=eq.${guardia}&select=id`,
+    'la guardia': `turnos_guardia?id=eq.${turno_guardia}&select=id`,
   };
   const mirar = async (que, espera) => {
     for (const [nombre, ruta] of Object.entries(lecturas)) {
@@ -1665,30 +1665,30 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     if (suyo === 1) bien('sigue viendo su propio Servicio');
     else mal('sigue viendo su propio Servicio', `filas=${suyo}`);
 
-    // No puede tomar una alarma de una guardia que no ve, que sería otra puerta para verla.
+    // No puede tomar una alarma de un turno de guardia que no ve, que sería otra puerta para verla.
     const intento = await pedir(entorno, coordinadora, 'POST', 'alarmas_tomadas', {
-      prestadora_id: d.prestadora, tipo: 'guardia_sin_cerrar', referencia_id: guardia,
+      prestadora_id: d.prestadora, tipo: 'turno_guardia_sin_cerrar', referencia_id: turno_guardia,
       tomada_por: carla, vence_at: new Date(Date.now() + 3600e3).toISOString(),
     });
-    const [[tomas]] = consultarBase(`SELECT count(*) FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}';`);
+    const [[tomas]] = consultarBase(`SELECT count(*) FROM public.alarmas_tomadas WHERE referencia_id = '${turno_guardia}';`);
     if (intento.estado >= 400 && Number(tomas) === 0) bien('no puede tomar la alarma de una guardia que no ve');
     else mal('no puede tomar la alarma de una guardia que no ve', `${intento.estado} tomas=${tomas}`);
 
-    // Lo que hizo el otro Coordinador con esa guardia no le llega: ni su toma ni su reasignación.
+    // Lo que hizo el otro Coordinador con ese turno de guardia no le llega: ni su toma ni su reasignación.
     // Antes se comprueba que exista, para que el «no la ve» quiera decir algo.
     consultarBase(`INSERT INTO public.alarmas_tomadas (prestadora_id, tipo, referencia_id, tomada_por, vence_at)
-      VALUES ('${d.prestadora}', 'guardia_sin_cerrar', '${guardia}', '${otro}', now() + interval '1 hour');
-      INSERT INTO public.auditoria_reasignaciones_por_emergencia (prestadora_id, guardia_id, usuario_id, asistente_nuevo_id, motivo)
-      SELECT '${d.prestadora}', '${guardia}', '${otro}', g.asistente_id, 'prueba' FROM public.guardias g WHERE g.id = '${guardia}';`);
-    const [[sembradas]] = consultarBase(`SELECT (SELECT count(*) FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}')
-      + (SELECT count(*) FROM public.auditoria_reasignaciones_por_emergencia WHERE guardia_id = '${guardia}');`);
-    const tomaAjena = await cuenta(`alarmas_tomadas?referencia_id=eq.${guardia}&select=id`);
-    const reasignacionAjena = await cuenta(`auditoria_reasignaciones_por_emergencia?guardia_id=eq.${guardia}&select=id`);
+      VALUES ('${d.prestadora}', 'turno_guardia_sin_cerrar', '${turno_guardia}', '${otro}', now() + interval '1 hour');
+      INSERT INTO public.auditoria_reasignaciones_por_emergencia (prestadora_id, turno_guardia_id, usuario_id, asistente_nuevo_id, motivo)
+      SELECT '${d.prestadora}', '${turno_guardia}', '${otro}', g.asistente_id, 'prueba' FROM public.turnos_guardia g WHERE g.id = '${turno_guardia}';`);
+    const [[sembradas]] = consultarBase(`SELECT (SELECT count(*) FROM public.alarmas_tomadas WHERE referencia_id = '${turno_guardia}')
+      + (SELECT count(*) FROM public.auditoria_reasignaciones_por_emergencia WHERE turno_guardia_id = '${turno_guardia}');`);
+    const tomaAjena = await cuenta(`alarmas_tomadas?referencia_id=eq.${turno_guardia}&select=id`);
+    const reasignacionAjena = await cuenta(`auditoria_reasignaciones_por_emergencia?turno_guardia_id=eq.${turno_guardia}&select=id`);
     if (Number(sembradas) === 2 && tomaAjena === 0) bien('no ve la toma de otro Coordinador');
     else mal('no ve la toma de otro Coordinador', `sembradas=${sembradas} filas=${tomaAjena}`);
     if (Number(sembradas) === 2 && reasignacionAjena === 0) bien('no ve la reasignación de una guardia ajena');
     else mal('no ve la reasignación de una guardia ajena', `sembradas=${sembradas} filas=${reasignacionAjena}`);
-    consultarBase(`DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}';`);
+    consultarBase(`DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${turno_guardia}';`);
 
     // Los archivos del Paciente —prescripción, documento firmado, autorización de monitoreo— tampoco.
     // Se siembran en la base de los depósitos y se listan con la sesión: la lista la filtra la
@@ -1708,19 +1708,19 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     if (!subida.ok && Number(subidos) === 0) bien('no puede subir el documento firmado de un Paciente que no ve');
     else mal('no puede subir el documento firmado de un Paciente que no ve', `${subida.status} subidos=${subidos}`);
 
-    // Con una alarma de esa guardia tomada, la ve mientras la tenga.
+    // Con una alarma de ese turno de guardia tomado, la ve mientras la tenga.
     consultarBase(`INSERT INTO public.alarmas_tomadas (prestadora_id, tipo, referencia_id, tomada_por, vence_at)
-      VALUES ('${d.prestadora}', 'guardia_sin_cerrar', '${guardia}', '${carla}', now() + interval '1 hour');`);
+      VALUES ('${d.prestadora}', 'turno_guardia_sin_cerrar', '${turno_guardia}', '${carla}', now() + interval '1 hour');`);
     const conAlarma = await cuenta(lecturas['la guardia']);
     if (conAlarma === 1) bien('con la alarma tomada ve la guardia');
     else mal('con la alarma tomada ve la guardia', `filas=${conAlarma}`);
-    consultarBase(`DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}' AND tomada_por = '${carla}';`);
+    consultarBase(`DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${turno_guardia}' AND tomada_por = '${carla}';`);
 
     // Cubriendo la ausencia de la otra, ve todo lo que la otra coordina.
     consultarBase(`INSERT INTO public.ausencias (prestadora_id, usuario_id, coordinador_que_cubre_id, tipo, fecha_inicio, fecha_fin)
       VALUES ('${d.prestadora}', '${otro}', '${carla}', 'otra_licencia', current_date, current_date + 7);`);
     await mirar('cubriendo la ausencia de quien lo coordina', true);
-    const reasignacionCubriendo = await cuenta(`auditoria_reasignaciones_por_emergencia?guardia_id=eq.${guardia}&select=id`);
+    const reasignacionCubriendo = await cuenta(`auditoria_reasignaciones_por_emergencia?turno_guardia_id=eq.${turno_guardia}&select=id`);
     if (reasignacionCubriendo === 1) bien('cubriendo la ausencia ve la reasignación');
     else mal('cubriendo la ausencia ve la reasignación', `filas=${reasignacionCubriendo}`);
     const archivosCubriendo = await archivosDelPaciente();
@@ -1763,8 +1763,8 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
   } finally {
     consultarBase(`SET session_replication_role = replica;
       UPDATE public.servicios SET coordinador_id = '${carla}' WHERE id = '${servicio}';
-      DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${guardia}';
-      DELETE FROM public.auditoria_reasignaciones_por_emergencia WHERE guardia_id = '${guardia}' AND motivo = 'prueba';
+      DELETE FROM public.alarmas_tomadas WHERE referencia_id = '${turno_guardia}';
+      DELETE FROM public.auditoria_reasignaciones_por_emergencia WHERE turno_guardia_id = '${turno_guardia}' AND motivo = 'prueba';
       DELETE FROM public.mensajes_whatsapp WHERE conversacion_id::text LIKE '30000000-0000-4000-8000-0000000000c%';
       DELETE FROM public.conversaciones_whatsapp WHERE id::text LIKE '30000000-0000-4000-8000-0000000000c%';
       DELETE FROM storage.objects WHERE name LIKE '${d.prestadora}/%prueba-coordinador%';

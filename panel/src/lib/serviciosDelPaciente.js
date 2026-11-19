@@ -2,7 +2,7 @@
 //
 // La regla no se inventa acá: es la misma que aplica la base en
 // `interno.exigir_paciente_y_servicio_del_mismo_contratante`, que llaman los disparadores de
-// `prestaciones`, `guardias`, `guardia_pacientes` y `cierres_servicio_paciente`: **el Paciente
+// `prestaciones`, `turnos_guardia`, `turno_guardia_pacientes` y `cierres_servicio_paciente`: **el Paciente
 // tiene que ser del mismo Cliente que el Servicio**.
 //
 // Está en un archivo aparte porque la usan dos pantallas —el alta de Prestaciones y el alta de

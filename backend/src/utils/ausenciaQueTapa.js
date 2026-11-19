@@ -1,14 +1,14 @@
-// La única cuenta que contesta "¿este Asistente está de licencia el día de esta guardia?".
+// La única cuenta que contesta "¿este Asistente está de licencia el día de este turno de guardia?".
 //
 // POR QUÉ VIVE EN UN ARCHIVO PROPIO. La pregunta se hace en dos lados que no se pueden
 // importar entre sí: el Panel, cuando arma la lista de quién puede cubrir un hueco
-// (`lib/candidatos.js`), y el backend, que le esconde al Asistente las guardias que caen en su
-// licencia (`utils/guardiaDeLicencia.js`). Escrita dos veces, las dos versiones se separan el día que
+// (`lib/candidatos.js`), y el backend, que le esconde al Asistente los turnos de guardia que caen en su
+// licencia (`utils/turnoGuardiaDeLicencia.js`). Escrita dos veces, las dos versiones se separan el día que
 // alguien corrija una sola —y la que quede vieja va a dar por trabajando a quien está de
 // licencia (regla «ningún patrón repetido sin punto único de verdad», CeltaTech §8)—. El
 // original es éste y la copia la mantiene `scripts/sincronizar_copias.mjs`.
 
-import { finDeGuardia, diaDelMomento, hoyISO } from './horarios.js';
+import { finDeTurnoGuardia, diaDelMomento, hoyISO } from './horarios.js';
 
 const lista = (x) => (Array.isArray(x) ? x : []);
 
@@ -18,7 +18,7 @@ const lista = (x) => (Array.isArray(x) ? x : []);
  * `fecha_fin` es el último día previsto, y se carga siempre. Cuando la persona vuelve se anota
  * `fecha_vuelta_real`, y `fecha_fin` pasa a ser el día anterior. Si la fecha prevista ya pasó y
  * nadie anotó la vuelta, no se sabe si volvió: la ausencia se sigue contando abierta, porque darla
- * por terminada dejaría sus guardias sin nadie y sin que nadie se entere.
+ * por terminada dejaría sus turnos de guardia sin nadie y sin que nadie se entere.
  */
 export function finEfectivoDeLaAusencia(ausencia, hoy = hoyISO()) {
   if (!ausencia?.fecha_fin) return null;
@@ -36,24 +36,24 @@ export function finPrevistoDeLaAusencia(ausencia) {
 }
 
 /**
- * El último día que ocupa una guardia, en el formato de la base: `2026-08-01`.
+ * El último día que ocupa un turno de guardia, en el formato de la base: `2026-08-01`.
  *
  * Casi siempre es el mismo día en que empieza, pero la de noche arranca a las 22:00 y termina
- * a las 06:00 del día siguiente, así que "el día de la guardia" en realidad son dos. Todo lo
+ * a las 06:00 del día siguiente, así que "el día del turno de guardia" en realidad son dos. Todo lo
  * que mire el almanaque —una licencia, una Matrícula— tiene que llegar hasta el final y no
  * quedarse en el comienzo.
  */
-export function ultimoDiaDeLaGuardia(guardia) {
-  return diaDelMomento(finDeGuardia(guardia));
+export function ultimoDiaDelTurnoGuardia(turno_guardia) {
+  return diaDelMomento(finDeTurnoGuardia(turno_guardia));
 }
 
 /**
- * La ausencia registrada del Asistente que tapa esta guardia, o `null` si no hay ninguna.
+ * La ausencia registrada del Asistente que tapa este turno de guardia, o `null` si no hay ninguna.
  *
- * Estar de licencia pesa exactamente lo mismo que tener otra guardia encima: los dos casos
+ * Estar de licencia pesa exactamente lo mismo que tener otro turno de guardia encima: los dos casos
  * contestan que esa persona no está ese día. Por eso bloquea y no descuenta puntos.
  *
- * Se compara contra los **dos** días que puede ocupar la guardia, el primero y el último: la de
+ * Se compara contra los **dos** días que puede ocupar el turno de guardia, el primero y el último: la de
  * noche arranca a las 22:00 y termina a las 06:00 del día siguiente, y una licencia que empieza
  * ese día siguiente igual la parte al medio.
  *
@@ -78,13 +78,13 @@ export function ausenciaQueTapa(asistenteId, ausencias, primerDia, ultimoDia, fi
 }
 
 /**
- * ¿Hay una ausencia registrada que tape esta guardia entera, de punta a punta?
+ * ¿Hay una ausencia registrada que tape este turno de guardia entero, de punta a punta?
  *
- * Es la misma pregunta de arriba, hecha desde el otro lado: quien llama tiene la guardia y no
+ * Es la misma pregunta de arriba, hecha desde el otro lado: quien llama tiene el turno de guardia y no
  * los dos días sueltos. Existe para que ninguno de los dos que la usan tenga que acordarse de
- * que la guardia de noche ocupa dos días.
+ * que el turno de guardia de noche ocupa dos días.
  */
-export function ausenciaQueTapaLaGuardia(guardia, ausencias, finDe = finEfectivoDeLaAusencia) {
-  if (!guardia?.asistente_id || !guardia?.fecha) return null;
-  return ausenciaQueTapa(guardia.asistente_id, ausencias, guardia.fecha, ultimoDiaDeLaGuardia(guardia), finDe);
+export function ausenciaQueTapaElTurnoGuardia(turno_guardia, ausencias, finDe = finEfectivoDeLaAusencia) {
+  if (!turno_guardia?.asistente_id || !turno_guardia?.fecha) return null;
+  return ausenciaQueTapa(turno_guardia.asistente_id, ausencias, turno_guardia.fecha, ultimoDiaDelTurnoGuardia(turno_guardia), finDe);
 }

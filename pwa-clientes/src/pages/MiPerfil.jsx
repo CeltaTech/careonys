@@ -20,7 +20,7 @@ function ListaDeAccesos({ titulo, claves, etiquetas, vacio }) {
     <>
       <h3 className="pwa-card-dato">{titulo}</h3>
       {claves.length === 0 ? (
-        <p className="guardia-card-detalle">{vacio}</p>
+        <p className="tarjeta-detalle">{vacio}</p>
       ) : (
         <ul className="lista-tareas">
           {claves.map((clave) => (
@@ -63,7 +63,7 @@ function PersonasAutorizadasDelTitular() {
       ) : personas === null ? (
         <div className="estado-cargando" role="status">{t.comun.cargando}</div>
       ) : personas.length === 0 ? (
-        <p className="guardia-card-detalle">{textos.lista_vacia}</p>
+        <p className="tarjeta-detalle">{textos.lista_vacia}</p>
       ) : (
         <ul className="lista-tareas">
           {personas.map((p) => (

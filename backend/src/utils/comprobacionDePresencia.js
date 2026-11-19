@@ -23,14 +23,14 @@ import { sumarDias } from './fechas.js';
 //   permanente a la vista de cualquiera que pasara por la puerta.
 //
 //   Plan B — cuando no lo puede leer, el Asistente pide autorización y llama a quien coordina.
-//   Queda anotado el lugar y la hora desde donde la pidió. Quien coordina encuentra su guardia en
-//   Guardias y —después de las verificaciones que acostumbre— aprieta «Autorizar ingreso». Eso vale lo mismo que leer el
+//   Queda anotado el lugar y la hora desde donde la pidió. Quien coordina encuentra su turno de guardia en
+//   Turnos de guardia y —después de las verificaciones que acostumbre— aprieta «Autorizar ingreso». Eso vale lo mismo que leer el
 //   código QR: la llegada queda comprobada, con quién la autorizó y a qué hora, y la salida del
 //   Asistente que se va queda autorizada también. El teléfono del que espera se entera solo y
 //   marca la llegada sin que tenga que escribir nada.
 //
 //   El piso — si en la Prestadora no atiende nadie, se entra igual eligiendo un motivo, y la
-//   llegada queda anotada SIN COMPROBAR, con ese motivo. La guardia nunca se traba, y lo que
+//   llegada queda anotada SIN COMPROBAR, con ese motivo. El turno de guardia nunca se traba, y lo que
 //   siga lo deciden los protocolos que la Prestadora ya tenga para eso.
 //
 // EL PACIENTE NO ESTÁ EN ESTA LISTA, Y NO ES UN OLVIDO. El diseño aprobado dice que el código lo
@@ -42,7 +42,7 @@ import { sumarDias } from './fechas.js';
 // CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA, NO CON LA DE QUIEN PIDE. El Asistente compara el
 // código que mostró el Cliente, y la autorización de una llegada deja autorizada la salida de otro
 // Asistente: cada uno necesita lo de otro, y su propia sesión no se lo deja ver. Cada función que
-// sale de acá abre la Prestadora de la guardia, y las de adentro reciben esa conexión, `db`.
+// sale de acá abre la Prestadora del turno de guardia, y las de adentro reciben esa conexión, `db`.
 
 // Los mismos números que la base pone por omisión en las columnas. Se repiten acá para el único
 // caso en que la base no llega a aplicarlos, que es cuando esa Prestadora no tiene fila de
@@ -129,59 +129,59 @@ export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) 
   });
 }
 
-async function pacientesDeLaGuardia(db, guardia) {
+async function pacientesDelTurnoGuardia(db, turno_guardia) {
   const { data: filas } = await db
-    .from('guardia_pacientes')
+    .from('turno_guardia_pacientes')
     .select('paciente_id')
-    .eq('guardia_id', guardia.id)
-    .eq('prestadora_id', guardia.prestadora_id);
+    .eq('turno_guardia_id', turno_guardia.id)
+    .eq('prestadora_id', turno_guardia.prestadora_id);
 
   const pacienteIds = (filas ?? []).map((f) => f.paciente_id);
-  if (pacienteIds.length === 0 && guardia.paciente_id) pacienteIds.push(guardia.paciente_id);
+  if (pacienteIds.length === 0 && turno_guardia.paciente_id) pacienteIds.push(turno_guardia.paciente_id);
   return pacienteIds;
 }
 
 /**
- * Las guardias que todavía están abiertas sobre los mismos Pacientes que ésta: la del Asistente
- * que se va cuando hay relevo. Se las busca por estado, no por horario: quien todavía no cerró es
+ * Los turnos de guardia que todavía están abiertos sobre los mismos Pacientes que éste: el del Asistente
+ * que se va cuando hay relevo. Se los busca por estado, no por horario: quien todavía no cerró es
  * quien todavía está.
  */
-async function guardiasSalientes(db, guardia, pacienteIds) {
+async function turnosGuardiaSalientes(db, turno_guardia, pacienteIds) {
   if (pacienteIds.length === 0) return [];
 
-  const { data: otrasGuardias } = await db
-    .from('guardia_pacientes')
-    .select('guardia_id, guardias!inner(id, asistente_id, estado, checkout_at)')
+  const { data: otrosTurnosGuardia } = await db
+    .from('turno_guardia_pacientes')
+    .select('turno_guardia_id, turnos_guardia!inner(id, asistente_id, estado, checkout_at)')
     .in('paciente_id', pacienteIds)
-    .eq('prestadora_id', guardia.prestadora_id)
-    .eq('guardias.estado', 'activa')
-    .is('guardias.checkout_at', null);
+    .eq('prestadora_id', turno_guardia.prestadora_id)
+    .eq('turnos_guardia.estado', 'activa')
+    .is('turnos_guardia.checkout_at', null);
 
   const salientes = [];
-  for (const fila of otrasGuardias ?? []) {
-    const otra = fila.guardias;
-    if (!otra || otra.id === guardia.id || !otra.asistente_id) continue;
+  for (const fila of otrosTurnosGuardia ?? []) {
+    const otra = fila.turnos_guardia;
+    if (!otra || otra.id === turno_guardia.id || !otra.asistente_id) continue;
     if (!salientes.some((s) => s.id === otra.id)) salientes.push(otra);
   }
   return salientes;
 }
 
 /**
- * Quiénes podrían estar mostrando un código QR válido para esta guardia. Se resuelve del lado del
+ * Quiénes podrían estar mostrando un código QR válido para este turno de guardia. Se resuelve del lado del
  * backend y nunca con un dato que venga en el pedido: si el teléfono pudiera decir a quién
  * comparar, podría decir cualquiera.
  *
- * Son dos: las personas autorizadas de los Pacientes de esta guardia, y el Asistente que todavía
- * está adentro —el que tiene una guardia abierta sobre alguno de esos mismos Pacientes—, que es
+ * Son dos: las personas autorizadas de los Pacientes de este turno de guardia, y el Asistente que todavía
+ * está adentro —el que tiene un turno de guardia abierto sobre alguno de esos mismos Pacientes—, que es
  * la definición operativa de «hay relevo».
  */
-export async function sujetosQuePuedenMostrar(guardia) {
-  return enLaPrestadora(guardia?.prestadora_id, 'Quiénes muestran el código de una guardia', (db) =>
-    sujetosCon(db, guardia));
+export async function sujetosQuePuedenMostrar(turno_guardia) {
+  return enLaPrestadora(turno_guardia?.prestadora_id, 'Quiénes muestran el código de una guardia', (db) =>
+    sujetosCon(db, turno_guardia));
 }
 
-async function sujetosCon(db, guardia) {
-  const pacienteIds = await pacientesDeLaGuardia(db, guardia);
+async function sujetosCon(db, turno_guardia) {
+  const pacienteIds = await pacientesDelTurnoGuardia(db, turno_guardia);
   if (pacienteIds.length === 0) return [];
 
   const sujetos = [];
@@ -190,7 +190,7 @@ async function sujetosCon(db, guardia) {
     .from('pacientes')
     .select('id, cliente_id')
     .in('id', pacienteIds)
-    .eq('prestadora_id', guardia.prestadora_id);
+    .eq('prestadora_id', turno_guardia.prestadora_id);
 
   for (const paciente of pacientes ?? []) {
     if (paciente.cliente_id && !sujetos.some((s) => s.tipo === 'cliente' && s.id === paciente.cliente_id)) {
@@ -198,7 +198,7 @@ async function sujetosCon(db, guardia) {
     }
   }
 
-  for (const otra of await guardiasSalientes(db, guardia, pacienteIds)) {
+  for (const otra of await turnosGuardiaSalientes(db, turno_guardia, pacienteIds)) {
     if (!sujetos.some((s) => s.tipo === 'asistente' && s.id === otra.asistente_id)) {
       sujetos.push({ tipo: 'asistente', id: otra.asistente_id });
     }
@@ -211,21 +211,21 @@ async function sujetosCon(db, guardia) {
 // La comprobación de una llegada o de una salida
 // ---------------------------------------------------------------------------------------
 
-export async function comprobacionDe({ prestadoraId, guardiaId, momento }) {
+export async function comprobacionDe({ prestadoraId, turnoGuardiaId, momento }) {
   if (!prestadoraId) {
     throw new ErrorConMotivo('faltan_datos', 'No se busca una comprobación sin saber de qué Organización es');
   }
 
   return enLaPrestadora(prestadoraId, 'Ver una comprobación de presencia', (db) =>
-    comprobacionCon(db, { prestadoraId, guardiaId, momento }));
+    comprobacionCon(db, { prestadoraId, turnoGuardiaId, momento }));
 }
 
-async function comprobacionCon(db, { prestadoraId, guardiaId, momento }) {
+async function comprobacionCon(db, { prestadoraId, turnoGuardiaId, momento }) {
   const { data } = await db
-    .from('guardia_comprobaciones')
+    .from('turno_guardia_comprobaciones')
     .select('*')
     .eq('prestadora_id', prestadoraId)
-    .eq('guardia_id', guardiaId)
+    .eq('turno_guardia_id', turnoGuardiaId)
     .eq('momento', momento)
     .maybeSingle();
   return data ?? null;
@@ -241,15 +241,15 @@ async function guardarComprobacion(db, fila) {
   }
 
   const { data, error } = await db
-    .from('guardia_comprobaciones')
-    .upsert({ ...fila, updated_at: ahora() }, { onConflict: 'guardia_id,momento' })
+    .from('turno_guardia_comprobaciones')
+    .upsert({ ...fila, updated_at: ahora() }, { onConflict: 'turno_guardia_id,momento' })
     .select('*')
     .single();
   if (error) throw new Error(error.message);
 
   // La pantalla de la Prestadora se entera acá y no cuando le toque preguntar. Sale en toda
   // escritura y no sólo en las que entran o salen de «esperando autorización»: por acá pasan dos
-  // escrituras por guardia, el mensaje no lleva ningún dato y lo único que provoca del otro lado
+  // escrituras por turno de guardia, el mensaje no lleva ningún dato y lo único que provoca del otro lado
   // es que la lista se vuelva a pedir. Averiguar antes el estado anterior costaría una consulta
   // por escritura —más de lo que ahorra— y dejaría la puerta abierta a olvidarse de un camino.
   empujar(fila.prestadora_id, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
@@ -258,15 +258,15 @@ async function guardarComprobacion(db, fila) {
 }
 
 /**
- * ¿Hoy cae adentro de esta guardia? Se cuenta del día anterior al de inicio al siguiente al del
- * fin, porque el servidor cuenta el día en hora universal y la Prestadora en la suya: una guardia
+ * ¿Hoy cae adentro de este turno de guardia? Se cuenta del día anterior al de inicio al siguiente al del
+ * fin, porque el servidor cuenta el día en hora universal y la Prestadora en la suya: un turno de guardia
  * que empieza a las 22 en Buenos Aires ya es «mañana» para el servidor. Un día de margen alcanza
- * para cualquier huso, y deja afuera las guardias de otros días.
+ * para cualquier huso, y deja afuera los turnos de guardia de otros días.
  */
-export function esGuardiaDeHoy(guardia, hoy = new Date().toISOString().slice(0, 10)) {
-  if (!guardia?.fecha) return false;
-  const desde = sumarDias(guardia.fecha, -1);
-  const hasta = sumarDias(guardia.fecha, (Number(guardia.dias_hasta_el_fin) || 0) + 1);
+export function esTurnoGuardiaDeHoy(turno_guardia, hoy = new Date().toISOString().slice(0, 10)) {
+  if (!turno_guardia?.fecha) return false;
+  const desde = sumarDias(turno_guardia.fecha, -1);
+  const hasta = sumarDias(turno_guardia.fecha, (Number(turno_guardia.dias_hasta_el_fin) || 0) + 1);
   return hoy >= desde && hoy <= hasta;
 }
 
@@ -279,22 +279,22 @@ export function esGuardiaDeHoy(guardia, hoy = new Date().toISOString().slice(0, 
  * llegada no traba nada: el camino de «pido autorización» y el de «entro igual con un motivo»
  * están siempre a un botón de distancia.
  */
-async function resolverCodigo(db, { guardia, codigo }) {
+async function resolverCodigo(db, { turno_guardia, codigo }) {
   const texto = String(codigo ?? '').trim();
   if (!texto) throw new ErrorConMotivo('faltan_datos', 'Falta el código');
 
-  // El código de esa casa vale para la guardia de hoy, no para una de otro día: si no, quien tiene
-  // una guardia el mes que viene con ese Paciente marcaría con él una llegada que no es.
-  if (!esGuardiaDeHoy(guardia)) {
+  // El código de esa casa vale para el turno de guardia de hoy, no para una de otro día: si no, quien tiene
+  // un turno de guardia el mes que viene con ese Paciente marcaría con él una llegada que no es.
+  if (!esTurnoGuardiaDeHoy(turno_guardia)) {
     throw new ErrorConMotivo('codigo_incorrecto', 'El código no corresponde a nadie de este domicilio');
   }
 
-  const sujetos = await sujetosCon(db, guardia);
+  const sujetos = await sujetosCon(db, turno_guardia);
   if (sujetos.length > 0) {
     const { data: vigentes } = await db
       .from('codigos_de_presencia')
       .select('sujeto_tipo, sujeto_id, codigo_verificador, expira_en')
-      .eq('prestadora_id', guardia.prestadora_id)
+      .eq('prestadora_id', turno_guardia.prestadora_id)
       .in('sujeto_id', sujetos.map((s) => s.id))
       .gt('expira_en', ahora());
 
@@ -328,21 +328,21 @@ async function resolverCodigo(db, { guardia, codigo }) {
  *
  * Devuelve `{ estado, medio }`.
  */
-export async function registrarComprobacion({ guardia, momento, lat, lng, comprobacion }) {
-  return enLaPrestadora(guardia?.prestadora_id, 'Comprobar una llegada o una salida', (db) =>
-    registrarCon(db, { guardia, momento, lat, lng, comprobacion }));
+export async function registrarComprobacion({ turno_guardia, momento, lat, lng, comprobacion }) {
+  return enLaPrestadora(turno_guardia?.prestadora_id, 'Comprobar una llegada o una salida', (db) =>
+    registrarCon(db, { turno_guardia, momento, lat, lng, comprobacion }));
 }
 
-async function registrarCon(db, { guardia, momento, lat, lng, comprobacion }) {
-  const yaHay = await comprobacionCon(db, { prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
+async function registrarCon(db, { turno_guardia, momento, lat, lng, comprobacion }) {
+  const yaHay = await comprobacionCon(db, { prestadoraId: turno_guardia.prestadora_id, turnoGuardiaId: turno_guardia.id, momento });
   if (yaHay?.estado === 'comprobada') {
     return { estado: 'comprobada', medio: yaHay.medio };
   }
 
   const base = {
-    prestadora_id: guardia.prestadora_id,
-    guardia_id: guardia.id,
-    asistente_id: guardia.asistente_id,
+    prestadora_id: turno_guardia.prestadora_id,
+    turno_guardia_id: turno_guardia.id,
+    asistente_id: turno_guardia.asistente_id,
     momento,
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
@@ -350,7 +350,7 @@ async function registrarCon(db, { guardia, momento, lat, lng, comprobacion }) {
   };
 
   if (comprobacion?.codigo) {
-    const { medio, sujetoTipo, sujetoId } = await resolverCodigo(db, { guardia, codigo: comprobacion.codigo });
+    const { medio, sujetoTipo, sujetoId } = await resolverCodigo(db, { turno_guardia, codigo: comprobacion.codigo });
     await guardarComprobacion(db, {
       ...base,
       estado: 'comprobada',
@@ -397,13 +397,13 @@ async function registrarCon(db, { guardia, momento, lat, lng, comprobacion }) {
  * hora y por qué motivo la pidió, y el pedido aparece en el Panel. No marca ni la llegada ni la
  * salida.
  */
-export async function pedirAutorizacion({ guardia, momento, lat, lng, motivo, detalle }) {
-  return enLaPrestadora(guardia?.prestadora_id, 'Pedir autorización de ingreso', (db) =>
-    pedirCon(db, { guardia, momento, lat, lng, motivo, detalle }));
+export async function pedirAutorizacion({ turno_guardia, momento, lat, lng, motivo, detalle }) {
+  return enLaPrestadora(turno_guardia?.prestadora_id, 'Pedir autorización de ingreso', (db) =>
+    pedirCon(db, { turno_guardia, momento, lat, lng, motivo, detalle }));
 }
 
-async function pedirCon(db, { guardia, momento, lat, lng, motivo, detalle }) {
-  const yaHay = await comprobacionCon(db, { prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
+async function pedirCon(db, { turno_guardia, momento, lat, lng, motivo, detalle }) {
+  const yaHay = await comprobacionCon(db, { prestadoraId: turno_guardia.prestadora_id, turnoGuardiaId: turno_guardia.id, momento });
   if (yaHay?.estado === 'comprobada') {
     return { id: yaHay.id, estado: yaHay.estado, pedidoEn: yaHay.pedido_en };
   }
@@ -413,9 +413,9 @@ async function pedirCon(db, { guardia, momento, lat, lng, motivo, detalle }) {
   }
 
   const fila = await guardarComprobacion(db, {
-    prestadora_id: guardia.prestadora_id,
-    guardia_id: guardia.id,
-    asistente_id: guardia.asistente_id,
+    prestadora_id: turno_guardia.prestadora_id,
+    turno_guardia_id: turno_guardia.id,
+    asistente_id: turno_guardia.asistente_id,
     momento,
     estado: 'pendiente_de_autorizacion',
     medio: null,
@@ -443,11 +443,11 @@ export async function pedidosEsperandoAutorizacion(prestadoraId) {
 
 async function pedidosCon(db, prestadoraId) {
   const { data, error } = await db
-    .from('guardia_comprobaciones')
+    .from('turno_guardia_comprobaciones')
     .select(`
       id, momento, pedido_en, motivo_del_pedido, detalle_del_pedido,
-      guardia_id, guardias!guardia_comprobaciones_guardia_tenant_fk(fecha, hora_inicio, hora_fin),
-      asistente_id, asistentes!guardia_comprobaciones_asistente_tenant_fk(nombre)
+      turno_guardia_id, turnos_guardia!turno_guardia_comprobaciones_turno_guardia_tenant_fk(fecha, hora_inicio, hora_fin),
+      asistente_id, asistentes!turno_guardia_comprobaciones_asistente_tenant_fk(nombre)
     `)
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'pendiente_de_autorizacion')
@@ -456,15 +456,15 @@ async function pedidosCon(db, prestadoraId) {
 
   return (data ?? []).map((fila) => ({
     id: fila.id,
-    guardiaId: fila.guardia_id,
+    turnoGuardiaId: fila.turno_guardia_id,
     momento: fila.momento,
     pedidoEn: fila.pedido_en,
     motivo: fila.motivo_del_pedido ?? null,
     detalle: fila.detalle_del_pedido ?? null,
     asistente: fila.asistentes?.nombre ?? null,
-    fecha: fila.guardias?.fecha ?? null,
-    horaInicio: fila.guardias?.hora_inicio ?? null,
-    horaFin: fila.guardias?.hora_fin ?? null,
+    fecha: fila.turnos_guardia?.fecha ?? null,
+    horaInicio: fila.turnos_guardia?.hora_inicio ?? null,
+    horaFin: fila.turnos_guardia?.hora_fin ?? null,
   }));
 }
 
@@ -472,7 +472,7 @@ async function pedidosCon(db, prestadoraId) {
  * Quien coordina hizo las verificaciones que acostumbre y autoriza. Vale lo mismo que leer el
  * código QR: la comprobación queda hecha, con quién la autorizó y a qué hora. Si lo que se
  * autoriza es una llegada, la salida del Asistente que se va queda autorizada en el mismo acto,
- * así su teléfono cierra la guardia sin pedirle ningún código QR.
+ * así su teléfono cierra el turno de guardia sin pedirle ningún código QR.
  */
 export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizadaPor }) {
   if (!autorizadaPor) throw new ErrorConMotivo('faltan_datos', 'Falta quién autoriza');
@@ -483,8 +483,8 @@ export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizad
 
 async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor }) {
   const { data: fila } = await db
-    .from('guardia_comprobaciones')
-    .select('id, estado, momento, guardia_id')
+    .from('turno_guardia_comprobaciones')
+    .select('id, estado, momento, turno_guardia_id')
     .eq('id', comprobacionId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
@@ -507,7 +507,7 @@ async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor })
   };
 
   const { data: cambiada, error } = await db
-    .from('guardia_comprobaciones')
+    .from('turno_guardia_comprobaciones')
     .update({ ...autorizada, updated_at: cuando })
     .eq('prestadora_id', prestadoraId)
     .eq('id', comprobacionId)
@@ -517,21 +517,21 @@ async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor })
   if (!cambiada?.length) throw new ErrorConMotivo('ya_resuelta', 'Ese pedido ya no está esperando autorización');
 
   if (fila.momento === 'checkin') {
-    const { data: guardia } = await db
-      .from('guardias')
+    const { data: turno_guardia } = await db
+      .from('turnos_guardia')
       .select('id, prestadora_id, asistente_id, paciente_id')
-      .eq('id', fila.guardia_id)
+      .eq('id', fila.turno_guardia_id)
       .eq('prestadora_id', prestadoraId)
       .maybeSingle();
 
-    if (guardia) {
-      const salientes = await guardiasSalientes(db, guardia, await pacientesDeLaGuardia(db, guardia));
+    if (turno_guardia) {
+      const salientes = await turnosGuardiaSalientes(db, turno_guardia, await pacientesDelTurnoGuardia(db, turno_guardia));
       for (const saliente of salientes) {
-        const suya = await comprobacionCon(db, { prestadoraId, guardiaId: saliente.id, momento: 'checkout' });
+        const suya = await comprobacionCon(db, { prestadoraId, turnoGuardiaId: saliente.id, momento: 'checkout' });
         if (suya?.estado === 'comprobada') continue;
         await guardarComprobacion(db, {
           prestadora_id: prestadoraId,
-          guardia_id: saliente.id,
+          turno_guardia_id: saliente.id,
           asistente_id: saliente.asistente_id,
           momento: 'checkout',
           ...autorizada,

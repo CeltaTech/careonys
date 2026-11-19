@@ -12,7 +12,7 @@ import { PerfilTab } from './PerfilTab';
 import { VerificacionTab } from './VerificacionTab';
 import { CertificadoTab } from './CertificadoTab';
 import { DatosBancariosTab } from './DatosBancariosTab';
-import { GuardiasTab } from './GuardiasTab';
+import { TurnosGuardiaTab } from './TurnosGuardiaTab';
 import { EvaluacionesTab } from './EvaluacionesTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
@@ -166,7 +166,7 @@ export function AsistenteDetalle() {
         {tab === 'datos_bancarios' && (esAdmin || puede('ver_datos_bancarios_asistente')) && (
           <DatosBancariosTab asistente={asistente} />
         )}
-        {tab === 'guardias' && <GuardiasTab asistente={asistente} />}
+        {tab === 'turnos_guardia' && <TurnosGuardiaTab asistente={asistente} />}
         {tab === 'evaluaciones' && intermediacion && <EvaluacionesTab asistente={asistente} />}
         {tab === 'ausencias' && <AusenciasCoberturaTab asistente={asistente} />}
         {tab === 'comunicacion' && <ComunicacionTab asistente={asistente} />}

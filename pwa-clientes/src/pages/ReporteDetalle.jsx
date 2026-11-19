@@ -51,9 +51,9 @@ export default function ReporteDetalle() {
       <h1>{t.reporte_detalle.titulo}</h1>
 
       <section className="pwa-card">
-        <h2>{reporte.guardias?.fecha}</h2>
+        <h2>{reporte.turnos_guardia?.fecha}</h2>
         <div className="pwa-card-dato">
-          {t.reporte_detalle.asistente}: {reporte.guardias?.asistentes?.nombre}
+          {t.reporte_detalle.asistente}: {reporte.turnos_guardia?.asistentes?.nombre}
         </div>
       </section>
 

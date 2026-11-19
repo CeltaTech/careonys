@@ -13,7 +13,7 @@ export const panelComprobacionesRouter = Router();
 /* El pase de guardia visto desde la Prestadora (pendiente #113).
  *
  * El Asistente está parado en la puerta, no puede leer el código QR, pidió autorización y llamó a
- * quien coordina. Quien coordina encuentra su guardia en Guardias, hace las verificaciones que
+ * quien coordina. Quien coordina encuentra su turno de guardia en Turnos de guardia, hace las verificaciones que
  * acostumbre y autoriza el ingreso, que vale lo mismo que el código QR. Si nadie atiende, rigen
  * los protocolos que la Prestadora ya tenga para eso: el sistema no abre ninguna revisión
  * posterior.
@@ -24,7 +24,7 @@ export const panelComprobacionesRouter = Router();
  * `no_encontrado`.
  *
  * POR QUÉ ALCANZA `requiereRolPanel`. Autorizar un ingreso es trabajo operativo del turno, igual
- * que marcar una ausencia (`panelGuardias.js`), y el Coordinador es quien atiende la llamada. Si
+ * que marcar una ausencia (`panelTurnosGuardia.js`), y el Coordinador es quien atiende la llamada. Si
  * alguna Prestadora quisiera reservárselo a su administración, se agrega la acción al catálogo de
  * permisos y se cuelga `requierePermiso(...)` acá; hoy ninguna lo pidió y el catálogo no se infla
  * por las dudas.
@@ -42,7 +42,7 @@ panelComprobacionesRouter.get('/pedidos', requiereRolPanel, exigirOrganizacionAc
 /* Autoriza el ingreso de ese pedido. La llegada queda comprobada, con quién la autorizó y a qué
  * hora, y si hay un Asistente que se va, su salida queda autorizada en el mismo acto.
  *
- * LLEVA TOPE DE PEDIDOS POR MINUTO, como toda ruta que cambia el estado de una guardia desde
+ * LLEVA TOPE DE PEDIDOS POR MINUTO, como toda ruta que cambia el estado de un turno de guardia desde
  * afuera del domicilio. */
 panelComprobacionesRouter.post('/:id/autorizar', requiereRolPanel, exigirOrganizacionActiva, topeDePedidos({ nombre: 'comprobacion_autorizar_ingreso' }), async (req, res) => {
   try {

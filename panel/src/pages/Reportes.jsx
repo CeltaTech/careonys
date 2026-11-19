@@ -49,10 +49,10 @@ export function Reportes() {
         // El reporte dice de qué Paciente habla, así que se pide directo. Antes había que
         // traer la lista entera del turno y mostrar todos los nombres juntos en la misma fila.
         .select(
-          `id, created_at, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, confirmado_asistente, pacientes!inner(id, ${FICHA_NOMBRE}), guardias!inner(fecha, hora_inicio, hora_fin, asistentes(nombre))`,
+          `id, created_at, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, confirmado_asistente, pacientes!inner(id, ${FICHA_NOMBRE}), turnos_guardia!inner(fecha, hora_inicio, hora_fin, asistentes(nombre))`,
         )
-        .gte('guardias.fecha', f.desde)
-        .lte('guardias.fecha', f.hasta)
+        .gte('turnos_guardia.fecha', f.desde)
+        .lte('turnos_guardia.fecha', f.hasta)
         .order('created_at', { ascending: false })
         .limit(TOPE_FILAS),
       informacionDeSalud
@@ -75,8 +75,8 @@ export function Reportes() {
         ...r,
         paciente_id: r.pacientes?.id ?? null,
         paciente_nombre: conSuFicha(r.pacientes)?.nombre || '—',
-        asistente_nombre: r.guardias?.asistentes?.nombre || '—',
-        fecha: r.guardias?.fecha ?? null,
+        asistente_nombre: r.turnos_guardia?.asistentes?.nombre || '—',
+        fecha: r.turnos_guardia?.fecha ?? null,
         fuera_de_rango: tieneSignoFueraDeRango(r.signos_vitales, r.pacientes?.id ?? null, buscador),
       })),
     );

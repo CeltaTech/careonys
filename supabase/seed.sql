@@ -435,7 +435,7 @@ INSERT INTO public.permisos_personas_autorizadas (prestadora_id, cliente_id, usu
   ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_reportes',              true),
   ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_ficha_del_paciente',    true),
   ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_medicacion',            true),
-  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_guardias',              true),
+  ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_turnos_guardia',              true),
   ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_ubicacion_en_vivo',     false),
   ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_alertas',               true),
   ('11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_internaciones',         true),
@@ -572,7 +572,7 @@ INSERT INTO public.prestaciones (
 --    una terminada, una en curso, una programada, una que nadie cubrió
 --    todavía y una en la que la Asistente no se presentó.
 -- ----------------------------------------------------------------------------
-INSERT INTO public.guardias (
+INSERT INTO public.turnos_guardia (
   id, prestadora_id, servicio_id, asistente_id, paciente_id, coordinador_id,
   fecha, hora_inicio, hora_fin, modalidad, estado, canal_modalidad,
   checkin_at, checkout_at
@@ -651,7 +651,7 @@ INSERT INTO public.guardias (
 -- la modalidad de esta guardia; si se le asignara a alguien que no trabaja en esa
 -- modalidad, la propia base rechazaría la fila. Quién asignó va escrito porque acá
 -- no hay ninguna sesión de la que la base lo pueda tomar.
-INSERT INTO public.asignaciones_de_turno (prestadora_id, guardia_id, asistente_id, asignado_por) VALUES
+INSERT INTO public.asignaciones_de_turno_guardia (prestadora_id, turno_guardia_id, asistente_id, asignado_por) VALUES
   ('11111111-1111-4111-8111-111111111111', '70000000-0000-4000-8000-000000000009',
    '30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003');
 
@@ -672,13 +672,13 @@ INSERT INTO public.asignaciones_de_turno (prestadora_id, guardia_id, asistente_i
 --       - la de anteayer está `completada`, y es la única que sirve para ver el
 --         reparto de horas en el informe de obra social: ocho horas de visita
 --         para dos Pacientes son cuatro horas para cada informe, no ocho y ocho
---         (ver `backend/src/utils/horasDeGuardia.js`). Una guardia que todavía
+--         (ver `backend/src/utils/horasDeTurnoGuardia.js`). Una guardia que todavía
 --         no se prestó no suma horas en ningún lado;
 --
 --       - la de mañana está `programada`, y es la que sirve para ver la grilla y
 --         Estado actual: una sola fila con los dos nombres.
 -- ----------------------------------------------------------------------------
-INSERT INTO public.guardia_pacientes (guardia_id, paciente_id, prestadora_id) VALUES
+INSERT INTO public.turno_guardia_pacientes (turno_guardia_id, paciente_id, prestadora_id) VALUES
   -- la que ya se cumplió
   ('70000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004',
    '11111111-1111-4111-8111-111111111111'),
@@ -700,7 +700,7 @@ INSERT INTO public.guardia_pacientes (guardia_id, paciente_id, prestadora_id) VA
 --        dispara el aviso apenas arranca el backend, que es justo lo que hace
 --        falta para probarlo sin esperar.
 -- ----------------------------------------------------------------------------
-INSERT INTO public.configuracion_aviso_guardia_sin_cubrir (
+INSERT INTO public.configuracion_aviso_turno_guardia_sin_cubrir (
   prestadora_id, activo, horas_antes, horas_entre_avisos
 ) VALUES (
   '11111111-1111-4111-8111-111111111111', true, 48, 12
@@ -720,9 +720,9 @@ ON CONFLICT (prestadora_id) DO UPDATE SET
 INSERT INTO public.configuracion_notificaciones (
   evento, prestadora_id, descripcion, emails, activo
 ) VALUES (
-  'guardia_sin_cubrir',
+  'turno_guardia_sin_cubrir',
   '11111111-1111-4111-8111-111111111111',
-  'Una guardia próxima sigue sin Asistente asignado',
+  'Un turno de guardia próximo sigue sin Asistente asignado',
   '{}',
   true
 );
@@ -1169,7 +1169,7 @@ VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-2222222
 -- Con Asistente asignado, por el mismo motivo que el Paciente lleva Cliente: un
 -- Asistente sin Guardias no ve nada, y una prueba contra la nada no prueba nada.
 -- Y colgada de su Servicio, como toda Guardia: el calendario es del Servicio, no del Paciente.
-INSERT INTO public.guardias (id, prestadora_id, servicio_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad)
+INSERT INTO public.turnos_guardia (id, prestadora_id, servicio_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad)
 VALUES ('80000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
         '70000000-0000-4000-8000-000000000001',
         '50000000-0000-4000-8000-000000000003',
@@ -1179,7 +1179,7 @@ VALUES ('80000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-2222222
         '50000000-0000-4000-8000-000000000005',
         '60000000-0000-4000-8000-000000000001', current_date + 2, '08:00', '16:00', 'presencial');
 
--- La fila de `guardia_pacientes` no se siembra: la escribe sola la base al
+-- La fila de `turno_guardia_pacientes` no se siembra: la escribe sola la base al
 -- insertar la Guardia.
 
 -- ----------------------------------------------------------------------------
@@ -1296,7 +1296,7 @@ VALUES ('22222222-2222-4222-8222-222222222222', '3e000000-0000-4000-8000-0000000
 
 -- Un turno asignado con documentos pendientes en cada Prestadora. La fila es el
 -- registro de la excepción: quién, a quién, por qué y qué faltaba.
-INSERT INTO public.excepciones_por_documentos (prestadora_id, guardia_id, asistente_id, usuario_id, motivo, documentos)
+INSERT INTO public.excepciones_por_documentos (prestadora_id, turno_guardia_id, asistente_id, usuario_id, motivo, documentos)
 VALUES ('11111111-1111-4111-8111-111111111111', '70000000-0000-4000-8000-000000000007',
         '30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003',
         'No hay otra Asistente disponible para ese horario.', ARRAY['Libreta sanitaria']),
@@ -1321,19 +1321,19 @@ VALUES ('9d000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-1111111
         '30000000-0000-4000-8000-000000000001', 'seguimiento_ubicacion',
         (SELECT id FROM public.textos_consentimiento
           WHERE clave = 'seguimiento_ubicacion' AND idioma = 'es-AR' AND vigente_hasta IS NULL
-            AND control_de_ubicacion_en_el_turno ORDER BY version DESC LIMIT 1),
+            AND control_de_ubicacion_en_el_turno_guardia ORDER BY version DESC LIMIT 1),
         2, 'es-AR', 'Texto de prueba del consentimiento de seguimiento de ubicación.', 'otorgado'),
        ('9d000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000003', 'seguimiento_ubicacion',
         (SELECT id FROM public.textos_consentimiento
           WHERE clave = 'seguimiento_ubicacion' AND idioma = 'es-AR' AND vigente_hasta IS NULL
-            AND control_de_ubicacion_en_el_turno ORDER BY version DESC LIMIT 1),
+            AND control_de_ubicacion_en_el_turno_guardia ORDER BY version DESC LIMIT 1),
         2, 'es-AR', 'Texto de prueba del consentimiento de seguimiento de ubicación.', 'otorgado');
 
 -- Calificación del Cliente al Asistente. El Asistente la lee y puede
 -- contestarla; el Cliente lee la que escribió.
 INSERT INTO public.calificaciones_asistente
-  (id, asistente_id, paciente_id, cliente_id, guardia_id, prestadora_id, estrellas, comentario)
+  (id, asistente_id, paciente_id, cliente_id, turno_guardia_id, prestadora_id, estrellas, comentario)
 VALUES ('9e000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
         '50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
         '70000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',

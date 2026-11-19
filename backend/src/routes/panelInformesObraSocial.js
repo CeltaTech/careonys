@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
-import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js';
+import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeTurnoGuardia.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { FICHA_NOMBRE, conSuFicha } from '../utils/fichaDelPaciente.js';
@@ -24,22 +24,22 @@ const TIPOS_INFORME = ['planilla_asistencia', 'resumen_mensual'];
 /**
  * A cuántos Pacientes cubrió cada uno de estos turnos.
  *
- * Devuelve un mapa `id de guardia → cantidad`. Hace falta para repartir las horas: un turno
+ * Devuelve un mapa `id de turno_guardia → cantidad`. Hace falta para repartir las horas: un turno
  * que cubrió a dos personas no le imputa las horas enteras a cada una (ver
- * `utils/horasDeGuardia.js`).
+ * `utils/horasDeTurnoGuardia.js`).
  */
-async function cuantosPacientesPorGuardia(db, guardiaIds) {
-  if (guardiaIds.length === 0) return {};
+async function cuantosPacientesPorTurnoGuardia(db, turnoGuardiaIds) {
+  if (turnoGuardiaIds.length === 0) return {};
 
   const { data, error } = await db
-    .from('guardia_pacientes')
-    .select('guardia_id')
-    .in('guardia_id', guardiaIds);
+    .from('turno_guardia_pacientes')
+    .select('turno_guardia_id')
+    .in('turno_guardia_id', turnoGuardiaIds);
   if (error) throw new Error(error.message);
 
   const cantidad = {};
   for (const fila of data || []) {
-    cantidad[fila.guardia_id] = (cantidad[fila.guardia_id] || 0) + 1;
+    cantidad[fila.turno_guardia_id] = (cantidad[fila.turno_guardia_id] || 0) + 1;
   }
   return cantidad;
 }
@@ -73,36 +73,36 @@ async function construirContenido(db, { pacienteId, tipo, periodoDesde, periodoH
     obraSocialNombre = persona?.nombre_visible ?? null;
   }
 
-  // Las guardias de este Paciente salen de la lista de Pacientes de cada guardia, no de la
-  // columna vieja `guardias.paciente_id`: esa columna guarda UNO solo, así que en una guardia
+  // Los turnos de guardia de este Paciente salen de la lista de Pacientes de cada turno de guardia, no de la
+  // columna vieja `turnos_guardia.paciente_id`: esa columna guarda UNO solo, así que en un turno de guardia
   // compartida el informe del otro Paciente salía vacío aunque lo hubieran atendido.
   const { data: enLista, error: errorLista } = await db
-    .from('guardia_pacientes')
-    .select('guardia_id')
+    .from('turno_guardia_pacientes')
+    .select('turno_guardia_id')
     .eq('paciente_id', pacienteId);
   if (errorLista) throw new Error(errorLista.message);
 
-  const idsDeSusGuardias = [...new Set((enLista || []).map((f) => f.guardia_id))];
+  const idsDeSusTurnosGuardia = [...new Set((enLista || []).map((f) => f.turno_guardia_id))];
 
-  let guardias = [];
-  if (idsDeSusGuardias.length > 0) {
-    const { data, error: errorGuardias } = await db
-      .from('guardias')
+  let turnos_guardia = [];
+  if (idsDeSusTurnosGuardia.length > 0) {
+    const { data, error: errorTurnosGuardia } = await db
+      .from('turnos_guardia')
       .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, asistente_id')
-      .in('id', idsDeSusGuardias)
+      .in('id', idsDeSusTurnosGuardia)
       .gte('fecha', periodoDesde)
       .lte('fecha', periodoHasta)
       .order('fecha', { ascending: true });
-    if (errorGuardias) throw new Error(errorGuardias.message);
-    guardias = data || [];
+    if (errorTurnosGuardia) throw new Error(errorTurnosGuardia.message);
+    turnos_guardia = data || [];
   }
 
-  const pacientesPorGuardia = await cuantosPacientesPorGuardia(db, guardias.map((g) => g.id));
+  const pacientesPorTurnoGuardia = await cuantosPacientesPorTurnoGuardia(db, turnos_guardia.map((g) => g.id));
 
-  // .filter(Boolean) porque una guardia puede estar sin cubrir: sin este filtro el NULL
+  // .filter(Boolean) porque un turno de guardia puede estar sin cubrir: sin este filtro el NULL
   // llega al .in('id', …) contra una columna uuid y la consulta revienta con un 500.
-  const asistenteIds = [...new Set(guardias.map((g) => g.asistente_id).filter(Boolean))];
-  // `guardias.asistente_id` es el Legajo, y el nombre se lee del Legajo: la cuenta de la persona
+  const asistenteIds = [...new Set(turnos_guardia.map((g) => g.asistente_id).filter(Boolean))];
+  // `turnos_guardia.asistente_id` es el Legajo, y el nombre se lee del Legajo: la cuenta de la persona
   // no la ve nadie más que ella.
   const nombresAsistente = {};
   if (asistenteIds.length > 0) {
@@ -117,8 +117,8 @@ async function construirContenido(db, { pacienteId, tipo, periodoDesde, periodoH
   // Cada renglón lleva escrito a cuánta gente cubrió ese turno y cuántas horas le tocan a
   // este Paciente. Se muestran las dos cosas juntas a propósito: si el informe dijera
   // "cuatro horas" en un turno de ocho sin explicar por qué, parecería un error de carga.
-  const guardiasDetalle = guardias.map((g) => {
-    const cuantos = pacientesPorGuardia[g.id] || 1;
+  const turnosGuardiaDetalle = turnos_guardia.map((g) => {
+    const cuantos = pacientesPorTurnoGuardia[g.id] || 1;
     return {
       fecha: g.fecha,
       hora_inicio: g.hora_inicio,
@@ -126,25 +126,25 @@ async function construirContenido(db, { pacienteId, tipo, periodoDesde, periodoH
       modalidad: g.modalidad,
       estado: g.estado,
       asistente_nombre: nombresAsistente[g.asistente_id] || null,
-      pacientes_en_el_turno: cuantos,
+      pacientes_en_el_turno_guardia: cuantos,
       horas_imputadas: horasImputadasAlPaciente(horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin), cuantos),
     };
   });
 
-  // Totales por modalidad: se agrupa por el valor real usado en cada guardia, sin catálogo
+  // Totales por modalidad: se agrupa por el valor real usado en cada turno de guardia, sin catálogo
   // cerrado de códigos (ver plan aprobado — el PRD original de "Planillas IOMA" asumía una
   // codificación S4/S6/F4/F6 que nunca llegó a existir en el modelo de datos). Solo cuentan
-  // las guardias efectivamente prestadas ('completada'), no las programadas/canceladas.
+  // los turnos de guardia efectivamente prestadas ('completada'), no las programadas/canceladas.
   //
   // Las horas que se suman son las IMPUTADAS a este Paciente, no las que duró el turno: un
   // turno de ocho horas para dos Pacientes aporta cuatro horas al informe de cada uno. Si se
   // sumaran las ocho a los dos, la obra social vería dieciséis horas de cuidado donde hubo
   // ocho de trabajo, o sea le estaríamos cobrando dos veces la misma hora.
   const totalesPorModalidad = {};
-  for (const g of guardiasDetalle) {
+  for (const g of turnosGuardiaDetalle) {
     if (g.estado !== 'completada') continue;
-    if (!totalesPorModalidad[g.modalidad]) totalesPorModalidad[g.modalidad] = { cantidad_guardias: 0, horas_totales: 0 };
-    totalesPorModalidad[g.modalidad].cantidad_guardias += 1;
+    if (!totalesPorModalidad[g.modalidad]) totalesPorModalidad[g.modalidad] = { cantidad_turnos_guardia: 0, horas_totales: 0 };
+    totalesPorModalidad[g.modalidad].cantidad_turnos_guardia += 1;
     totalesPorModalidad[g.modalidad].horas_totales += g.horas_imputadas;
   }
 
@@ -155,7 +155,7 @@ async function construirContenido(db, { pacienteId, tipo, periodoDesde, periodoH
     tipo,
     periodo_desde: periodoDesde,
     periodo_hasta: periodoHasta,
-    guardias: guardiasDetalle,
+    turnos_guardia: turnosGuardiaDetalle,
     totales_por_modalidad: totalesPorModalidad,
   };
 }
@@ -170,7 +170,7 @@ panelInformesObraSocialRouter.get('/preview', requiereRolPanel, async (req, res)
     const { prestadora_id: _prestadora, ...contenido } = await construirContenido(db, { pacienteId, tipo, periodoDesde, periodoHasta });
     await anotarConsultaAHce(
       req.usuarioPanel,
-      { pacienteId, categorias: ['pacientes', 'guardias'], origen: origenDelPedido(req) },
+      { pacienteId, categorias: ['pacientes', 'turnos_guardia'], origen: origenDelPedido(req) },
       { cliente: db },
     );
     res.json({ contenido });
@@ -191,7 +191,7 @@ panelInformesObraSocialRouter.post('/', requiereRolPanel, requierePermiso('valid
     const { prestadora_id: prestadoraId, ...contenido } = await construirContenido(db, { pacienteId, tipo, periodoDesde, periodoHasta });
     await anotarConsultaAHce(
       req.usuarioPanel,
-      { pacienteId, categorias: ['pacientes', 'guardias'], origen: origenDelPedido(req) },
+      { pacienteId, categorias: ['pacientes', 'turnos_guardia'], origen: origenDelPedido(req) },
       { cliente: db },
     );
 

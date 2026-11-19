@@ -1,9 +1,9 @@
 // Procesa la cola offline en orden de creación, y ese orden es justamente la garantía: los
-// tres actos de una guardia dependen del anterior —check-in, después Reporte Diario, después
+// tres actos de un turno de guardia dependen del anterior —check-in, después Reporte Diario, después
 // cierre—, y el backend rechaza cada uno si falta el de más atrás
 // (backend/src/routes/appAsistentes.js). Si un ítem falla por un motivo real (no de red), se
-// traba esa guardia y se sigue con las demás — los siguientes ítems de esa misma guardia
-// dependen del que falló, pero los de otra guardia no tienen nada que ver y antes quedaban
+// traba ese turno de guardia y se sigue con los demás — los siguientes ítems de ese mismo turno de guardia
+// dependen del que falló, pero los de otro turno de guardia no tienen nada que ver y antes quedaban
 // esperando detrás de un rechazo ajeno.
 //
 // LO PRIMERO QUE HACE ES DESCARTAR LO DE OTRAS SESIONES. Un teléfono lo usa más de una persona y
@@ -59,15 +59,15 @@ function avisar() {
  */
 function mandar(item) {
   const datos = { ...item.payload, ocurrido_at: item.payload?.ocurrido_at ?? item.ocurridoEn, clienteUuid: item.id };
-  if (item.tipo === 'checkin') return api.checkin(item.guardiaId, datos);
-  if (item.tipo === 'reporte') return api.confirmarReporte(item.guardiaId, datos);
-  if (item.tipo === 'checkout') return api.checkout(item.guardiaId, datos);
-  if (item.tipo === 'salida') return api.registrarSalida(item.guardiaId, datos);
-  if (item.tipo === 'aviso_demora') return api.avisarDemora(item.guardiaId, datos);
-  if (item.tipo === 'emergencia') return api.avisarEmergencia(item.guardiaId, datos);
-  if (item.tipo === 'relevo_de_emergencia') return api.relevoDeEmergencia(item.guardiaId, datos);
-  if (item.tipo === 'descanso_empezar') return api.empezarDescanso(item.guardiaId, datos);
-  if (item.tipo === 'descanso_terminar') return api.terminarDescanso(item.guardiaId, datos);
+  if (item.tipo === 'checkin') return api.checkin(item.turnoGuardiaId, datos);
+  if (item.tipo === 'reporte') return api.confirmarReporte(item.turnoGuardiaId, datos);
+  if (item.tipo === 'checkout') return api.checkout(item.turnoGuardiaId, datos);
+  if (item.tipo === 'salida') return api.registrarSalida(item.turnoGuardiaId, datos);
+  if (item.tipo === 'aviso_demora') return api.avisarDemora(item.turnoGuardiaId, datos);
+  if (item.tipo === 'emergencia') return api.avisarEmergencia(item.turnoGuardiaId, datos);
+  if (item.tipo === 'relevo_de_emergencia') return api.relevoDeEmergencia(item.turnoGuardiaId, datos);
+  if (item.tipo === 'descanso_empezar') return api.empezarDescanso(item.turnoGuardiaId, datos);
+  if (item.tipo === 'descanso_terminar') return api.terminarDescanso(item.turnoGuardiaId, datos);
   // Un tipo que esta versión no conoce no se manda a ningún lado: adivinar la dirección sería
   // registrar una cosa como otra.
   return Promise.reject(new Error('tipo_desconocido'));
@@ -81,13 +81,13 @@ export async function sincronizarCola() {
     // `listarCola()` es lo de la sesión abierta, agotado o no, y `colaParaMandar()` le saca lo
     // agotado. Las dos salen del mismo filtro por dueño: nada que no sea de esta sesión llega acá.
     const cola = await listarCola();
-    // Las guardias en las que algo quedó trabado: lo que viene detrás depende de eso y rebotaría.
+    // Los turnos de guardia en los que algo quedó trabado: lo que viene detrás depende de eso y rebotaría.
     // Las agotadas entran de entrada: lo agotado ya no se manda —y no se borra, porque el motivo
     // por el que no entró es lo que tiene que poder leer la persona—, y lo que venía detrás de
-    // ello en esa misma guardia tampoco, porque depende de lo que no llegó.
-    const trabadas = new Set(cola.filter(seAgoto).map((item) => item.guardiaId));
+    // ello en ese mismo turno de guardia tampoco, porque depende de lo que no llegó.
+    const trabadas = new Set(cola.filter(seAgoto).map((item) => item.turnoGuardiaId));
     for (const item of await colaParaMandar()) {
-      if (trabadas.has(item.guardiaId)) continue;
+      if (trabadas.has(item.turnoGuardiaId)) continue;
       try {
         await mandar(item);
         await quitarDeCola(item.id);
@@ -105,12 +105,12 @@ export async function sincronizarCola() {
         }
         const situacion = situacionDelError(error);
         // Una emergencia que chocó con una falla del servidor queda en la cola tal como estaba, y
-        // no traba lo demás de su guardia: nada de lo que viene detrás depende de ella.
+        // no traba lo demás de su turno de guardia: nada de lo que viene detrás depende de ella.
         if (seReintentaSinContar(item, situacion)) continue;
         // El motivo que se guarda es una de las ocho situaciones del catálogo, nunca el texto
         // crudo del backend: eso describe tablas y columnas y no puede llegar a una pantalla.
         await marcarIntentoFallido(item.id, situacion);
-        trabadas.add(item.guardiaId);
+        trabadas.add(item.turnoGuardiaId);
         avisar();
       }
     }

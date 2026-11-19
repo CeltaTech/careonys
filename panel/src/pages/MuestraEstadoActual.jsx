@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { FranjaExcepciones } from '../components/estado-actual/FranjaExcepciones';
-import { GrillaGuardias } from './guardias/GrillaGuardias';
-import { BarraAccionesMasivas } from './guardias/BarraAccionesMasivas';
+import { GrillaTurnosGuardia } from './turnos_guardia/GrillaTurnosGuardia';
+import { BarraAccionesMasivas } from './turnos_guardia/BarraAccionesMasivas';
 import { filtrarPorExcepcion } from '../lib/excepciones';
 import { hoyISO, sumarDias } from '../lib/horarios';
 import { SelectoresPreferencias } from '../components/layout/SelectoresPreferencias';
@@ -11,7 +11,7 @@ import { SelectoresPreferencias } from '../components/layout/SelectoresPreferenc
 
    Para qué está. Las tres piezas nuevas del Estado actual —la franja de contadores, la grilla
    de guardias y la barra de acciones de a muchos— se pueden mirar acá sin entrar al Panel:
-   sin usuario, sin contraseña y sin tocar la base de datos de nadie. Todas las guardias que
+   sin usuario, sin contraseña y sin tocar la base de datos de nadie. Todas los turnos de guardia que
    se ven abajo están inventadas en este mismo archivo.
 
    Por qué hace falta. Estas piezas cambian de aspecto según la hora: un hueco de mañana se
@@ -44,9 +44,9 @@ const ahoraHora = new Date().getHours();
 const hh = (n) => `${String(((n % 24) + 24) % 24).padStart(2, '0')}:00`;
 
 /* Las nueve situaciones del semáforo, una por guardia, armadas para que se den de verdad y no
-   por un estado escrito a mano. Las horas se calculan alrededor de la hora actual: así la
-   guardia "en curso" está realmente en curso a cualquier hora en que se abra esta pantalla. */
-const GUARDIAS = [
+   por un estado escrito a mano. Las horas se calculan alrededor de la hora actual: así el
+   turno de guardia "en curso" está realmente en curso a cualquier hora en que se abra esta pantalla. */
+const TURNOS_GUARDIA = [
   // Huecos: uno para mañana (urgente, dentro de las 48 h) y otro para dentro de tres semanas.
   { id: 'g1', asistente_id: null, paciente_id: 'p1', paciente_nombre: 'Paciente Uno',
     fecha: dia(1), hora_inicio: '08:00', hora_fin: '16:00', estado: 'programada' },
@@ -104,20 +104,20 @@ export function MuestraEstadoActual() {
       ahora: new Date(),
       asistentesConDocumentoPorVencer: new Set(['a2']),
       asistentesConDocumentoVencido: new Set(['a3']),
-      guardiasSinReporte: new Set(['g9']),
+      turnosGuardiaSinReporte: new Set(['g9']),
       diasDePreaviso: 30,
     }),
     []
   );
 
   const visibles = useMemo(
-    () => (filtro ? filtrarPorExcepcion(GUARDIAS, filtro, ctx) : GUARDIAS),
+    () => (filtro ? filtrarPorExcepcion(TURNOS_GUARDIA, filtro, ctx) : TURNOS_GUARDIA),
     [filtro, ctx]
   );
 
-  // La grilla manda la guardia entera; acá se guarda solo el id, igual que en el Estado actual.
-  function alternar(guardia) {
-    const id = guardia?.id ?? guardia;
+  // La grilla manda el turno de guardia entero; acá se guarda solo el id, igual que en el Estado actual.
+  function alternar(turno_guardia) {
+    const id = turno_guardia?.id ?? turno_guardia;
     setSeleccionadas((previas) => {
       const nuevas = new Set(previas);
       if (nuevas.has(id)) nuevas.delete(id);
@@ -147,14 +147,14 @@ export function MuestraEstadoActual() {
       </header>
 
       <FranjaExcepciones
-        guardias={GUARDIAS}
+        turnos_guardia={TURNOS_GUARDIA}
         ctx={ctx}
         excepcionActiva={filtro}
         onElegir={setFiltro}
       />
 
-      <GrillaGuardias
-        guardias={visibles}
+      <GrillaTurnosGuardia
+        turnos_guardia={visibles}
         desde={dia(-2)}
         hasta={dia(6)}
         vista={vista}
@@ -172,7 +172,7 @@ export function MuestraEstadoActual() {
 
       <BarraAccionesMasivas
         seleccionadas={Array.from(seleccionadas)
-          .map((id) => GUARDIAS.find((g) => g.id === id))
+          .map((id) => TURNOS_GUARDIA.find((g) => g.id === id))
           .filter(Boolean)}
         asistentes={ASISTENTES}
         onAplicar={async (orden) => {
@@ -182,7 +182,7 @@ export function MuestraEstadoActual() {
         onLimpiar={() => setSeleccionadas(new Set())}
       />
 
-      {/* Un hueco abre el panel lateral para cubrirlo; una guardia cubierta abre su detalle.
+      {/* Un hueco abre el panel lateral para cubrirlo; un turno de guardia cubierto abre su detalle.
           Acá no se muestra ninguno de los dos —los dos consultan la base y este banco no
           consulta nada—, pero el nombre de la acción queda escrito abajo para poder comprobar
           que tocar cada tipo de guardia dispara lo que corresponde. */}

@@ -84,13 +84,13 @@ export default function BotonDeDictado({ t, locale, valor, alCambiar, campo, dis
       {/* Lo que va oyendo se muestra aparte y no se guarda: sirve para ver que está escuchando de
           verdad, y desaparece en cuanto el reconocedor lo da por firme y pasa a la caja. */}
       {escuchando && (
-        <p className="guardia-card-detalle" aria-live="polite">
+        <p className="tarjeta-detalle" aria-live="polite">
           {parcial || tr.hable_ahora}
         </p>
       )}
 
       {advertencia && (
-        <p className="guardia-card-detalle" role="status">
+        <p className="tarjeta-detalle" role="status">
           {advertencia}
         </p>
       )}

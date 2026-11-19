@@ -85,8 +85,8 @@ function quienPide(req) {
  *
  * `nombre` separa las cuentas: gastar los pedidos de la firma no tiene que dejar sin pedidos al
  * pase de guardia. `soloSi` permite contar nada más que los pedidos que corresponde —en la
- * llegada y en la salida de una guardia, únicamente los que traen un código—, para que el piso
- * siga intacto: entrar eligiendo un motivo nunca se frena, o el tope trabaría la guardia, que es
+ * llegada y en la salida de un turno de guardia, únicamente los que traen un código—, para que el piso
+ * siga intacto: entrar eligiendo un motivo nunca se frena, o el tope trabaría el turno de guardia, que es
  * justamente lo que este producto no hace.
  */
 export function topeDePedidos({ nombre, soloSi = null }) {

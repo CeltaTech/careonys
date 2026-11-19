@@ -44,8 +44,8 @@ const DOS_DEPOSITOS = {
     { ruta: 'presdemo/asis-1/apto.pdf', tamano: 120, actualizado: '2026-09-01T10:00:00Z' },
   ],
   'reportes-fotos': [
-    { ruta: 'presdemo/guardia-7/foto.jpg', tamano: 900, actualizado: '2026-09-02T10:00:00Z' },
-    { ruta: 'presdemo/guardia-8/foto.jpg', tamano: 800, actualizado: '2026-09-03T10:00:00Z' },
+    { ruta: 'presdemo/turno-guardia-7/foto.jpg', tamano: 900, actualizado: '2026-09-02T10:00:00Z' },
+    { ruta: 'presdemo/turno-guardia-8/foto.jpg', tamano: 800, actualizado: '2026-09-03T10:00:00Z' },
   ],
 };
 
@@ -64,8 +64,8 @@ describe('copiarDepositos', () => {
     assert.equal(cuenta.fallados, 0);
     assert.deepEqual(destino.subidos.map((s) => s.clave), [
       'archivos/certificados-medicos/presdemo/asis-1/apto.pdf',
-      'archivos/reportes-fotos/presdemo/guardia-7/foto.jpg',
-      'archivos/reportes-fotos/presdemo/guardia-8/foto.jpg',
+      'archivos/reportes-fotos/presdemo/turno-guardia-7/foto.jpg',
+      'archivos/reportes-fotos/presdemo/turno-guardia-8/foto.jpg',
     ]);
   });
 
@@ -86,8 +86,8 @@ describe('copiarDepositos', () => {
     const destino = destinoFalso({
       yaTiene: [
         'archivos/certificados-medicos/presdemo/asis-1/apto.pdf',
-        'archivos/reportes-fotos/presdemo/guardia-7/foto.jpg',
-        'archivos/reportes-fotos/presdemo/guardia-8/foto.jpg',
+        'archivos/reportes-fotos/presdemo/turno-guardia-7/foto.jpg',
+        'archivos/reportes-fotos/presdemo/turno-guardia-8/foto.jpg',
       ],
     });
 

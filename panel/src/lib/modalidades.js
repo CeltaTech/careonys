@@ -4,11 +4,11 @@
 //
 // QUÉ ES UNA MODALIDAD DE TRABAJO
 // Cómo el Asistente recibe el trabajo, y son dos cosas distintas:
-//   * `directa`      — la Prestadora le dirige el trabajo y le asigna las guardias.
+//   * `directa`      — la Prestadora le dirige el trabajo y le asigna los turnos de guardia.
 //   * `intermediacion`  — el Asistente elige qué toma y mantiene su independencia
 //                      operativa (CLAUDE.md §3).
 // No es un detalle administrativo: es la línea que separa dos regímenes de
-// trabajo. Ofrecerle una guardia de Match a alguien contratado en directa
+// trabajo. Ofrecerle un turno de guardia de Match a alguien contratado en directa
 // —o al revés— es cruzar esa línea.
 //
 // Es la misma palabra que usa la Prestadora para decir cómo estructura su negocio
@@ -28,7 +28,7 @@
 //   * dentro de ese techo, el Legajo de cada Asistente.
 //
 // DÓNDE SE HACE CUMPLIR
-// En la base, que es la única que no se puede saltear: frena la guardia, la
+// En la base, que es la única que no se puede saltear: frena el turno de guardia, la
 // asignación y la serie. Este archivo es la misma regla del lado de la pantalla,
 // para que el motivo se vea **antes** de chocarse con la pared, y para traducir el
 // rechazo de la base a una frase que se pueda leer.
@@ -44,7 +44,7 @@ export const MODALIDAD = {
   INTERMEDIACION: 'intermediacion',
 };
 
-/** Las mismas dos para la Prestadora, para el Asistente y para la guardia, en este orden. */
+/** Las mismas dos para la Prestadora, para el Asistente y para el turno de guardia, en este orden. */
 export const MODALIDADES = [MODALIDAD.DIRECTA, MODALIDAD.INTERMEDIACION];
 
 const lista = (x) => (Array.isArray(x) ? x : []);

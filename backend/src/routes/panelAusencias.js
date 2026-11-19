@@ -7,7 +7,7 @@ import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { hastaDondeCubrir } from '../utils/coberturaDeAusencia.js';
-import { avisarAsignacionDeAusencia } from '../utils/avisoAsignacionDeTurno.js';
+import { avisarAsignacionDeAusencia } from '../utils/avisoAsignacionDeTurnoGuardia.js';
 import { hoyISO } from '../utils/horarios.js';
 
 // CON LA CREDENCIAL DE QUIEN PIDE. La base decide qué ausencias alcanza: el Administrador, todas
@@ -140,11 +140,11 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
 /* Cubrir la ausencia de un Asistente.
    -----------------------------------
    Quien coordina elige un sustituto y, si quiere, uno solo de los turnos fijos del ausente. Por
-   cada turno fijo que tenga guardias en la ausencia queda anotada una cobertura, y otra más, sin
-   turno fijo, para las guardias sueltas.
+   cada turno fijo que tenga turnos de guardia en la ausencia queda anotada una cobertura, y otra más, sin
+   turno fijo, para los turnos de guardia sueltos.
 
    El reemplazo se le asigna al sustituto como un turno: le llega un aviso y lo acepta o lo rechaza
-   una sola vez, por todos los días. Hasta que responde, las guardias siguen del titular. Al
+   una sola vez, por todos los días. Hasta que responde, los turnos de guardia siguen del titular. Al
    aceptar se aplican las coberturas, y el trabajo programado las va corriendo si la ausencia se
    estira o se acorta (`utils/coberturaDeAusencia.js`).
 
@@ -157,7 +157,7 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
    asignación y su aviso van con el trabajo de la Prestadora, después de que la base le dejó ver
    la ausencia y el sustituto.
 
-   Contesta las guardias que quedaron cubiertas, que hasta que el sustituto acepte son ninguna. */
+   Contesta los turnos de guardia que quedaron cubiertos, que hasta que el sustituto acepte son ninguno. */
 panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const {
     asistente_sustituto_id: asistenteSustitutoId,
@@ -193,19 +193,19 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   const hoy = hoyISO();
   const desde = ausencia.fecha_inicio > hoy ? ausencia.fecha_inicio : hoy;
   const hasta = hastaDondeCubrir(ausencia, hoy);
-  if (desde > hasta) return res.json({ guardia_ids: [] });
+  if (desde > hasta) return res.json({ turno_guardia_ids: [] });
 
-  let consultaGuardias = db
-    .from('guardias')
+  let consultaTurnosGuardia = db
+    .from('turnos_guardia')
     .select('id, serie_id')
     .eq('prestadora_id', ausencia.prestadora_id)
     .eq('asistente_id', ausencia.asistente_id)
     .eq('estado', 'programada')
     .gte('fecha', desde)
     .lte('fecha', hasta);
-  if (serieElegida) consultaGuardias = consultaGuardias.eq('serie_id', serieElegida);
-  const { data: guardias, error: errorGuardias } = await consultaGuardias;
-  if (errorGuardias) return responderError(res, errorGuardias);
+  if (serieElegida) consultaTurnosGuardia = consultaTurnosGuardia.eq('serie_id', serieElegida);
+  const { data: turnos_guardia, error: errorTurnosGuardia } = await consultaTurnosGuardia;
+  if (errorTurnosGuardia) return responderError(res, errorTurnosGuardia);
 
   const { data: vigentes, error: errorVigentes } = await db
     .from('coberturas_de_ausencia')
@@ -217,8 +217,8 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   const yaCubiertas = new Set((vigentes ?? []).map((c) => c.serie_id));
 
   // Una cobertura por turno fijo, y la de las sueltas con la serie vacía.
-  const aCubrir = [...new Set((guardias ?? []).map((g) => g.serie_id ?? null))].filter((s) => !yaCubiertas.has(s));
-  if (!aCubrir.length) return res.json({ guardia_ids: [] });
+  const aCubrir = [...new Set((turnos_guardia ?? []).map((g) => g.serie_id ?? null))].filter((s) => !yaCubiertas.has(s));
+  if (!aCubrir.length) return res.json({ turno_guardia_ids: [] });
 
   const { error: errorAlta } = await db.from('coberturas_de_ausencia').insert(
     aCubrir.map((serieId) => ({
@@ -236,12 +236,12 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
 
   // Una sola asignación por sustituto y ausencia: si ya tenía una esperando respuesta, las
   // coberturas nuevas entran en esa y no se le vuelve a avisar. Con el trabajo de la Prestadora,
-  // porque la base no le da a quien coordina permiso de alta en `asignaciones_de_turno`; la
+  // porque la base no le da a quien coordina permiso de alta en `asignaciones_de_turno_guardia`; la
   // ausencia ya la dejó ver la credencial de quien pide, y la Prestadora es la de esa ausencia.
   try {
     const error = await enLaPrestadora(ausencia.prestadora_id, 'asignación del sustituto', async (dbTrabajo) => {
       const { data: pendiente, error: errorPendiente } = await dbTrabajo
-        .from('asignaciones_de_turno')
+        .from('asignaciones_de_turno_guardia')
         .select('id')
         .eq('prestadora_id', ausencia.prestadora_id)
         .eq('ausencia_id', ausencia.id)
@@ -251,7 +251,7 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
       if (errorPendiente) return errorPendiente;
       if (pendiente) return null;
 
-      const { error: errorAsignacion } = await dbTrabajo.from('asignaciones_de_turno').insert({
+      const { error: errorAsignacion } = await dbTrabajo.from('asignaciones_de_turno_guardia').insert({
         prestadora_id: ausencia.prestadora_id,
         ausencia_id: ausencia.id,
         asistente_id: asistenteSustitutoId,
@@ -272,5 +272,5 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
     return responderError(res, e);
   }
 
-  res.json({ guardia_ids: [] });
+  res.json({ turno_guardia_ids: [] });
 });

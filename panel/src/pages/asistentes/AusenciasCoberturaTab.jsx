@@ -10,12 +10,12 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/constanciaDeAusencia';
 import { prepararMembrete } from '../../lib/membrete';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
-import { guardiasAfectadas, guardiasSinCubrir, sumarLasYaCubiertas } from '../../lib/guardiasAfectadas';
+import { turnosGuardiaAfectados, turnosGuardiaSinCubrir, sumarLasYaCubiertas } from '../../lib/turnosGuardiaAfectados';
 import { diasComputados } from '../../lib/diasDeAusencia';
 import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
 import { llamadorDe } from '../../lib/apiPanel';
-import { useMotivosSustitucionGuardia } from '../../hooks/useMotivosSustitucionGuardia';
+import { useMotivosSustitucionTurnoGuardia } from '../../hooks/useMotivosSustitucionTurnoGuardia';
 import { nombreMotivoSustitucion, valorGuardado } from '../../lib/motivoDeSustitucion';
 import { hoyISO, sumarDias } from '../../lib/horarios';
 import '../../styles/molde-paginas.css';
@@ -57,8 +57,8 @@ export function AusenciasCoberturaTab({ asistente }) {
   const [coberturaForm, setCoberturaForm] = useState({});
   const [fechaForm, setFechaForm] = useState({});
   const [cambiosDeFecha, setCambiosDeFecha] = useState({});
-  const [turnosCubiertos, setTurnosCubiertos] = useState({});
-  const [turnosFijos, setTurnosFijos] = useState([]);
+  const [turnosGuardiaCubiertos, setTurnosGuardiaCubiertos] = useState({});
+  const [turnosGuardiaFijos, setTurnosGuardiaFijos] = useState([]);
   const [subiendoCertificado, setSubiendoCertificado] = useState(null);
   const [armandoConstancia, setArmandoConstancia] = useState(null);
   const [errorCertificado, setErrorCertificado] = useState(null);
@@ -66,7 +66,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     filas: motivosSustitucion,
     estado: estadoMotivos,
     error: errorMotivos,
-  } = useMotivosSustitucionGuardia(prestadoraId);
+  } = useMotivosSustitucionTurnoGuardia(prestadoraId);
 
   // La fila del catálogo que está elegida en el formulario de una ausencia. Se busca por lo que se
   // guarda —la clave o el nombre—, que es lo mismo que viaja al backend, y sirve para saber si esa
@@ -93,7 +93,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       // (regla 12 de CLAUDE.md §7).
       supabase.from('asistentes').select('id, nombre').eq('prestadora_id', prestadoraId).eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).neq('id', asistente.id),
       // Los turnos fijos de esta persona, para elegir cuál se cubre.
-      supabase.from('series_guardias').select('id, dias_semana, hora_inicio, hora_fin').eq('asistente_id', asistente.id),
+      supabase.from('series_turnos_guardia').select('id, dias_semana, hora_inicio, hora_fin').eq('asistente_id', asistente.id),
     ]);
     if (errorAusencias || errorSeries) {
       setError(mensajeDeError(errorAusencias ?? errorSeries, t));
@@ -107,22 +107,22 @@ export function AusenciasCoberturaTab({ asistente }) {
     const lista = dataAusencias ?? [];
     const porAusencia = {};
     const cambiosPorAusencia = {};
-    const turnosPorAusencia = {};
+    const turnosGuardiaPorAusencia = {};
     if (lista.length > 0) {
       const ids = lista.map((a) => a.id);
       const [
         { data: dataCobertura, error: errorCobertura },
         { data: dataCambios, error: errorCambios },
-        { data: dataTurnos, error: errorTurnos },
+        { data: dataTurnosGuardia, error: errorTurnosGuardia },
       ] = await Promise.all([
-        supabase.from('guardias_cobertura').select('id, ausencia_id, guardia_original_id').in('ausencia_id', ids),
+        supabase.from('turnos_guardia_cobertura').select('id, ausencia_id, turno_guardia_original_id').in('ausencia_id', ids),
         supabase.from('ausencias_cambios_de_fecha').select('id, ausencia_id, fecha_anterior, fecha_nueva, cambiado_at')
           .in('ausencia_id', ids).order('cambiado_at'),
         supabase.from('coberturas_de_ausencia')
-          .select('id, ausencia_id, aceptada_at, objetada_at, asistentes(nombre), series_guardias(dias_semana, hora_inicio, hora_fin)')
+          .select('id, ausencia_id, aceptada_at, objetada_at, asistentes(nombre), series_turnos_guardia(dias_semana, hora_inicio, hora_fin)')
           .in('ausencia_id', ids).order('created_at'),
       ]);
-      const errorLectura = errorCobertura ?? errorCambios ?? errorTurnos;
+      const errorLectura = errorCobertura ?? errorCambios ?? errorTurnosGuardia;
       if (errorLectura) {
         setError(mensajeDeError(errorLectura, t));
         setEstado('error');
@@ -134,26 +134,26 @@ export function AusenciasCoberturaTab({ asistente }) {
       for (const cambio of dataCambios ?? []) {
         (cambiosPorAusencia[cambio.ausencia_id] ??= []).push(cambio);
       }
-      for (const turno of dataTurnos ?? []) {
-        (turnosPorAusencia[turno.ausencia_id] ??= []).push(turno);
+      for (const turno_guardia of dataTurnosGuardia ?? []) {
+        (turnosGuardiaPorAusencia[turno_guardia.ausencia_id] ??= []).push(turno_guardia);
       }
     }
 
     setAusencias(lista);
     setCoberturas(porAusencia);
     setCambiosDeFecha(cambiosPorAusencia);
-    setTurnosCubiertos(turnosPorAusencia);
-    setTurnosFijos(dataSeries ?? []);
+    setTurnosGuardiaCubiertos(turnosGuardiaPorAusencia);
+    setTurnosGuardiaFijos(dataSeries ?? []);
     setOtrosAsistentes(dataAsistentes ?? []);
     setEstado('listo');
   }
 
   useEffect(() => { recargar(); }, [asistente.id, prestadoraId]);
 
-  // Qué guardias deja sin Asistente esta ausencia. Se pregunta al guardarla y queda escrito en la
+  // Qué turnos de guardia deja sin Asistente esta ausencia. Se pregunta al guardarla y queda escrito en la
   // ausencia: lo que hay que cubrir son turnos, no un rango de fechas, y sin esta lista la
   // cobertura quedaba colgada de la ausencia sin decir de qué día. Cuál cuenta lo decide
-  // `guardiasAfectadas`, y acá sólo se traen las de esta persona desde el primer día.
+  // `turnosGuardiaAfectados`, y acá sólo se traen las de esta persona desde el primer día.
   //
   // La fecha de fin es siempre la prevista, y se vuelve a calcular cada vez que se la cambia o se
   // registra la vuelta.
@@ -161,28 +161,28 @@ export function AusenciasCoberturaTab({ asistente }) {
   // Y lo ya cubierto se suma aparte, porque la consulta no lo encuentra: un turno cubierto pasó a
   // nombre de quien lo hace, así que dejó de ser de esta persona. Por qué eso importa lo explica
   // `sumarLasYaCubiertas`, que es donde vive la regla.
-  async function guardiasDeLaAusencia(ausencia) {
-    const { data, error: errorGuardias } = await supabase
-      .from('guardias')
+  async function turnosGuardiaDeLaAusencia(ausencia) {
+    const { data, error: errorTurnosGuardia } = await supabase
+      .from('turnos_guardia')
       .select('id, fecha, estado')
       .eq('asistente_id', asistente.id)
       .gte('fecha', ausencia.fecha_inicio)
       .lte('fecha', ausencia.fecha_fin);
-    if (errorGuardias) throw errorGuardias;
+    if (errorTurnosGuardia) throw errorTurnosGuardia;
 
-    return sumarLasYaCubiertas(guardiasAfectadas(data ?? [], ausencia), coberturas[ausencia.id]);
+    return sumarLasYaCubiertas(turnosGuardiaAfectados(data ?? [], ausencia), coberturas[ausencia.id]);
   }
 
-  // Las guardias que esta ausencia dejó descubiertas. Las cargadas antes de que esto se escribiera
+  // Los turnos de guardia que esta ausencia dejó descubiertas. Las cargadas antes de que esto se escribiera
   // tienen la columna vacía, y ahí se averigua ahora y se guarda: son ausencias reales, con turnos
   // reales sin cubrir, y dejarlas sin poder asignar un sustituto sería castigarlas por haber sido
   // cargadas primero.
   async function afectadasDe(ausencia) {
-    if (Array.isArray(ausencia.guardias_afectadas)) return ausencia.guardias_afectadas;
-    const afectadas = await guardiasDeLaAusencia(ausencia);
+    if (Array.isArray(ausencia.turnos_guardia_afectados)) return ausencia.turnos_guardia_afectados;
+    const afectadas = await turnosGuardiaDeLaAusencia(ausencia);
     const { error: errorUpdate } = await supabase
       .from('ausencias')
-      .update({ guardias_afectadas: afectadas })
+      .update({ turnos_guardia_afectados: afectadas })
       .eq('id', ausencia.id);
     if (errorUpdate) throw errorUpdate;
     return afectadas;
@@ -195,7 +195,7 @@ export function AusenciasCoberturaTab({ asistente }) {
 
     let afectadas;
     try {
-      afectadas = await guardiasDeLaAusencia(nueva);
+      afectadas = await turnosGuardiaDeLaAusencia(nueva);
     } catch {
       // Sin saber qué turnos quedan descubiertos la ausencia no se guarda. Guardarla igual la
       // dejaría con la lista vacía, que se lee como «no afectó a ninguno» y no como «no se pudo
@@ -213,7 +213,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       fecha_fin: nueva.fecha_fin,
       observaciones: nueva.observaciones || null,
       avisada_en: momentoGuardado(nueva.avisada_en),
-      guardias_afectadas: afectadas,
+      turnos_guardia_afectados: afectadas,
       dias_computados: diasComputados(nueva),
     });
     setGuardando(false);
@@ -238,14 +238,14 @@ export function AusenciasCoberturaTab({ asistente }) {
     const movida = { ...ausencia, fecha_fin: fechaFin };
     let afectadas;
     try {
-      afectadas = await guardiasDeLaAusencia(movida);
+      afectadas = await turnosGuardiaDeLaAusencia(movida);
     } catch {
       setGuardando(false);
       setError(t.comun.error_generico);
       return;
     }
 
-    const cambios = { fecha_fin: fechaFin, guardias_afectadas: afectadas, dias_computados: diasComputados(movida) };
+    const cambios = { fecha_fin: fechaFin, turnos_guardia_afectados: afectadas, dias_computados: diasComputados(movida) };
     if (fechaVuelta) cambios.fecha_vuelta_real = fechaVuelta;
     const { error: errorUpdate } = await supabase.from('ausencias').update(cambios).eq('id', ausencia.id);
     setGuardando(false);
@@ -269,18 +269,18 @@ export function AusenciasCoberturaTab({ asistente }) {
 
   // Un turno fijo se describe por sus días y su horario: «Lunes, Miércoles 08:00–20:00». Sin turno
   // fijo, la cobertura es de los turnos sueltos del ausente.
-  function nombreDelTurno(serie) {
-    if (!serie) return t.asistentes.ausencias.otros_turnos;
-    const dias = (serie.dias_semana ?? []).map((d) => t.guardias.nueva_guardia.dias[d] ?? d).join(', ');
+  function nombreDelTurnoGuardia(serie) {
+    if (!serie) return t.asistentes.ausencias.otros_turnos_guardia;
+    const dias = (serie.dias_semana ?? []).map((d) => t.turnos_guardia.nuevo_turno_guardia.dias[d] ?? d).join(', ');
     return `${dias} ${serie.hora_inicio?.slice(0, 5) ?? ''}–${serie.hora_fin?.slice(0, 5) ?? ''}`;
   }
 
   // Objetada, esperando que el sustituto conteste, o aceptada.
   function textoDeLaCobertura(cobertura) {
     const ta = t.asistentes.ausencias;
-    if (cobertura.objetada_at) return ta.turno_objetado;
-    if (!cobertura.aceptada_at) return ta.turno_sin_responder;
-    return ta.turno_cubierto_por;
+    if (cobertura.objetada_at) return ta.turno_guardia_objetado;
+    if (!cobertura.aceptada_at) return ta.turno_guardia_sin_responder;
+    return ta.turno_guardia_cubierto_por;
   }
 
   function fechaVisible(fecha) {
@@ -328,13 +328,13 @@ export function AusenciasCoberturaTab({ asistente }) {
   // La cobertura se pide al backend por turno fijo, para toda la ausencia: el sustituto hace ese
   // turno hasta la vuelta, y si la fecha prevista se corre la cobertura la sigue sola
   // (`backend/src/utils/coberturaDeAusencia.js`). Sin turno elegido van todos los turnos fijos del
-  // ausente, y las guardias sueltas se cubren una por una. Un turno que ya tiene sustituto no se
+  // ausente, y los turnos de guardia sueltos se cubren una por una. Un turno que ya tiene sustituto no se
   // vuelve a cubrir: apretar dos veces no duplica nada.
   //
   // El reemplazo queda esperando que el sustituto lo acepte, una sola vez para todos sus días. Los
   // turnos pasan a su nombre al aceptar, y ahí avisa el backend.
   //
-  // Una guardia sola, fuera de esto, se sigue cubriendo desde la guardia misma.
+  // Un turno de guardia sola, fuera de esto, se sigue cubriendo desde el turno de guardia mismo.
   async function asignarCobertura(ausencia) {
     const formulario = coberturaForm[ausencia.id] ?? {};
     const sustitutoId = formulario.asistente_sustituto_id;
@@ -382,8 +382,8 @@ export function AusenciasCoberturaTab({ asistente }) {
             // Cuántos turnos faltan cubrir. Con la lista todavía sin calcular —las ausencias
             // cargadas antes de que esto existiera— no se sabe, y entonces el sustituto se ofrece
             // igual: la cuenta se hace al asignarlo.
-            const afectadas = Array.isArray(a.guardias_afectadas) ? a.guardias_afectadas : null;
-            const sinCubrir = afectadas === null ? null : guardiasSinCubrir(afectadas, coberturas[a.id]);
+            const afectadas = Array.isArray(a.turnos_guardia_afectados) ? a.turnos_guardia_afectados : null;
+            const sinCubrir = afectadas === null ? null : turnosGuardiaSinCubrir(afectadas, coberturas[a.id]);
             return (
             <div key={a.id} className="panel-fila-alerta">
               <div className="renglon-del-asistente">
@@ -404,18 +404,18 @@ export function AusenciasCoberturaTab({ asistente }) {
                 {afectadas !== null && (
                   <span className="panel-mini">
                     {afectadas.length === 0
-                      ? t.asistentes.ausencias.sin_guardias_afectadas
+                      ? t.asistentes.ausencias.sin_turnos_guardia_afectados
                       : afectadas.length === 1
-                        ? t.asistentes.ausencias.guardias_afectadas_uno
-                        : con(t.asistentes.ausencias.guardias_afectadas, { n: afectadas.length })}
+                        ? t.asistentes.ausencias.turnos_guardia_afectados_uno
+                        : con(t.asistentes.ausencias.turnos_guardia_afectados, { n: afectadas.length })}
                     {afectadas.length > 0 && (
                       <>
                         {' — '}
                         {sinCubrir.length === 0
                           ? t.asistentes.ausencias.todas_cubiertas
                           : sinCubrir.length === 1
-                            ? t.asistentes.ausencias.guardias_sin_cubrir_uno
-                            : con(t.asistentes.ausencias.guardias_sin_cubrir, { n: sinCubrir.length })}
+                            ? t.asistentes.ausencias.turnos_guardia_sin_cubrir_uno
+                            : con(t.asistentes.ausencias.turnos_guardia_sin_cubrir, { n: sinCubrir.length })}
                       </>
                     )}
                   </span>
@@ -472,12 +472,12 @@ export function AusenciasCoberturaTab({ asistente }) {
                   </div>
                 )}
 
-                {turnosCubiertos[a.id]?.length > 0 && (
-                  <div className="panel-turnos-cubiertos">
-                    {turnosCubiertos[a.id].map((c) => (
+                {turnosGuardiaCubiertos[a.id]?.length > 0 && (
+                  <div className="panel-turnos-guardia-cubiertos">
+                    {turnosGuardiaCubiertos[a.id].map((c) => (
                       <span key={c.id} className="panel-mini">
                         {con(textoDeLaCobertura(c), {
-                          turno: nombreDelTurno(c.series_guardias),
+                          turno_guardia: nombreDelTurnoGuardia(c.series_turnos_guardia),
                           nombre: c.asistentes?.nombre ?? '',
                         })}
                       </span>
@@ -530,22 +530,22 @@ export function AusenciasCoberturaTab({ asistente }) {
                         value={coberturaForm[a.id]?.asistente_sustituto_id || ''}
                         onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], asistente_sustituto_id: e.target.value } }))}
                       >
-                        <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                        <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
                         {otrosAsistentes.map((o) => (
                           <option key={o.id} value={o.id}>{o.nombre}</option>
                         ))}
                       </FormField>
-                      {turnosFijos.length > 0 && (
+                      {turnosGuardiaFijos.length > 0 && (
                         <FormField
-                          label={t.asistentes.ausencias.turno_fijo}
-                          name={`turno-${a.id}`}
+                          label={t.asistentes.ausencias.turno_guardia_fijo}
+                          name={`turno_guardia-${a.id}`}
                           type="select"
                           value={coberturaForm[a.id]?.serie_id || ''}
                           onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], serie_id: e.target.value } }))}
                         >
-                          <option value="">{t.asistentes.ausencias.todos_los_turnos}</option>
-                          {turnosFijos.map((s) => (
-                            <option key={s.id} value={s.id}>{nombreDelTurno(s)}</option>
+                          <option value="">{t.asistentes.ausencias.todos_los_turnos_guardia}</option>
+                          {turnosGuardiaFijos.map((s) => (
+                            <option key={s.id} value={s.id}>{nombreDelTurnoGuardia(s)}</option>
                           ))}
                         </FormField>
                       )}
@@ -557,7 +557,7 @@ export function AusenciasCoberturaTab({ asistente }) {
                         onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], motivo: e.target.value } }))}
                         disabled={estadoMotivos !== 'listo'}
                       >
-                        <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                        <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
                         {motivosSustitucion.map((m) => (
                           <option key={m.id} value={valorGuardado(m)}>
                             {nombreMotivoSustitucion(m, t)}

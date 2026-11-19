@@ -10,7 +10,7 @@
 // con lo que este sistema tenga anotado y no se compara contra nada: un saldo que llega de afuera
 // y otro calculado acá serían dos verdades para lo mismo.
 //
-// LO QUE ESTO NO HACE. No corta ningún Servicio, no cancela ninguna Guardia y no bloquea
+// LO QUE ESTO NO HACE. No corta ningún Servicio, no cancela ningún Turno de guardia y no bloquea
 // ninguna pantalla. Se anota y se muestra. Quien decide qué hacer con un Cliente que no paga es
 // una persona de la Prestadora.
 //

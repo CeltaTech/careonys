@@ -23,31 +23,31 @@ sembrarMensajesDelSistema(filasSembradas());
 // «undefined» a la vista en alguno de los tres idiomas.
 const DATOS = {
   origen_de_alerta: { fuente: 'aviso_telefonico' },
-  guardia_sin_cerrar: {
+  turno_guardia_sin_cerrar: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00',
     pacientes: ['Elena', 'Alberto'], asistente: 'Marta', minutosDeAtraso: 40,
     salidaMarcada: true, veces: 2,
   },
-  guardia_sin_cerrar_grave: {
+  turno_guardia_sin_cerrar_grave: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00',
     pacientes: ['Elena'], asistente: 'Marta', minutosDeAtraso: 300, salidaMarcada: false,
   },
-  guardia_sin_cerrar_respaldo: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', minutosDeAtraso: 90 },
-  // Los tres del Cliente: la guardia y nada más. Ni el Asistente, ni los minutos, ni el
+  turno_guardia_sin_cerrar_respaldo: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', minutosDeAtraso: 90 },
+  // Los tres del Cliente: el turno de guardia y nada más. Ni el Asistente, ni los minutos, ni el
   // identificador — eso lo comprueba la prueba de más abajo.
-  guardia_sin_cerrar_cliente: {
+  turno_guardia_sin_cerrar_cliente: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
   },
-  guardia_sin_cerrar_grave_cliente: {
+  turno_guardia_sin_cerrar_grave_cliente: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
   },
-  alerta_temprana_guardia_cliente: {
+  alerta_temprana_turno_guardia_cliente: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
   },
   escalada_a_respaldo: {},
   escalada_a_todos_los_coordinadores: { minutos: 45 },
   escalada_a_la_administracion: { minutos: 90 },
-  // Ni la alerta temprana ni el incidente de relevo llevan el identificador de la guardia: dicen
+  // Ni la alerta temprana ni el incidente de relevo llevan el identificador del turno de guardia: dicen
   // la fecha, la hora y a quién se atiende, igual que los mensajes de guardia sin cerrar.
   alerta_temprana_sin_resolver: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
@@ -72,49 +72,49 @@ const DATOS = {
   incidente_relevo_cliente: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
   cambio_de_asistente: {
     asistenteNuevo: 'Rita Solano', asistenteAnterior: 'Marcos Peña',
-    turnos: [
+    turnos_guardia: [
       { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] },
       { fecha: '2026-10-08', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena', 'Aníbal'] },
     ],
   },
   cambio_de_asistente_cliente: {
     asistenteNuevo: 'Rita Solano',
-    turnos: [{ fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] }],
+    turnos_guardia: [{ fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] }],
   },
-  turno_para_responder: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
-  turno_retirado: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
-  turno_fijo_para_responder: { dias: ['miercoles', 'lunes'], horaInicio: '08:00', horaFin: '14:00' },
-  turno_fijo_retirado: { dias: ['lunes', 'miercoles'], horaInicio: '08:00', horaFin: '14:00' },
+  turno_guardia_para_responder: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
+  turno_guardia_retirado: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
+  turno_guardia_fijo_para_responder: { dias: ['miercoles', 'lunes'], horaInicio: '08:00', horaFin: '14:00' },
+  turno_guardia_fijo_retirado: { dias: ['lunes', 'miercoles'], horaInicio: '08:00', horaFin: '14:00' },
   reemplazo_para_responder: { desde: '2026-11-03', hasta: '2026-11-14' },
   ausencia_avisada_con_tiempo: {
     asistente: 'Rita Solano', fechaInicio: '2026-10-07', fechaFin: '2026-10-14',
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
-    turnos: 3, yaEmpezo: false, horas: 72, veces: 1,
+    turnos_guardia: 3, yaEmpezo: false, horas: 72, veces: 1,
   },
   ausencia_de_golpe: {
     asistente: 'Rita Solano', fechaInicio: '2026-10-07', fechaFin: null,
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena', 'Aníbal'],
-    turnos: 1, yaEmpezo: false, horas: 2, veces: 2,
+    turnos_guardia: 1, yaEmpezo: false, horas: 2, veces: 2,
   },
   vuelta_de_ausencia_sin_confirmar: { nombre: 'Rita Solano', fecha: '2026-10-14', veces: 2 },
   vuelta_de_coordinador_sin_confirmar: { nombre: 'Marcos Peña', fecha: '2026-10-14', veces: 1 },
   cobertura_objetada: { nombre: 'Rita Solano' },
   plazo_ubicacion_sin_aceptar: { nombre: 'Rita Solano', dias: 30 },
   baja_servicio_con_deuda: { servicio: 'Cuidado nocturno', importe: '$ 4.500,00', dias: 12 },
-  guardia_sin_cubrir: {
+  turno_guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 5,
     busqueda: { sinResponder: false, rechazos: 2 },
     veces: 1,
   },
-  incidente_turno_sin_cubrir: {
+  incidente_turno_guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 12, veces: 2,
     cubrenFrancos: ['Rita Solano'], candidatos: ['Rita Solano', 'Marta Ruiz'],
   },
   // El mensaje no lleva el detalle a propósito: lo que escribió el Asistente es información sensible
   // y se lee entrando al Panel (`celtatech/CLAUDE.md` §6).
-  emergencia_en_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
+  emergencia_en_turno_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
   // Tampoco lleva el detalle, por lo mismo: el mensaje dice de qué turno se trata y nada más.
   relevo_de_emergencia: { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00' },
   alerta_ia_coordinador: { esRoja: true },
@@ -147,8 +147,8 @@ const DATOS = {
   mensaje_del_coordinador: {},
   llegada_del_asistente: { asistente: 'Ana Pérez', paciente: 'Rosa Gómez' },
   reporte_disponible: { paciente: 'Rosa Gómez' },
-  guardia_asignada: { fecha: '2026-10-07', horaInicio: '08:00' },
-  recordatorio_de_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
+  turno_guardia_asignado: { fecha: '2026-10-07', horaInicio: '08:00' },
+  recordatorio_de_turno_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
   fin_periodo_sin_cargo: { dia: '7/10/2026', importe: '4500.00 ARS' },
   cobro_no_realizado: { importe: '4500.00 ARS', dia: '7/10/2026' },
   cierre_del_servicio: {},
@@ -223,18 +223,18 @@ test('una clave que no existe se avisa, no se devuelve vacía', () => {
 // Los minutos y los días que configura la Prestadora, o que salen de una cuenta, pueden ser uno.
 // Con uno la frase va en singular y con dos en plural, en los tres idiomas.
 test('el número de la frase concuerda con la cantidad', () => {
-  const guardia = { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] };
+  const turno_guardia = { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] };
   const conCantidad = (n) => ({
-    guardia_sin_cerrar: { ...guardia, asistente: 'Marta', minutosDeAtraso: n, salidaMarcada: true, veces: 1 },
-    guardia_sin_cerrar_respaldo: { ...guardia, minutosDeAtraso: n },
+    turno_guardia_sin_cerrar: { ...turno_guardia, asistente: 'Marta', minutosDeAtraso: n, salidaMarcada: true, veces: 1 },
+    turno_guardia_sin_cerrar_respaldo: { ...turno_guardia, minutosDeAtraso: n },
     escalada_a_todos_los_coordinadores: { minutos: n },
     escalada_a_la_administracion: { minutos: n },
-    alerta_temprana_sin_resolver: { ...guardia, origen: 'un origen', motivo: 'no contesta', minutos: n },
-    alerta_temprana_respaldo: { ...guardia, minutos: n },
-    incidente_relevo_sin_resolver: { ...guardia, minutos: n },
-    incidente_relevo_respaldo: { ...guardia, minutos: n },
+    alerta_temprana_sin_resolver: { ...turno_guardia, origen: 'un origen', motivo: 'no contesta', minutos: n },
+    alerta_temprana_respaldo: { ...turno_guardia, minutos: n },
+    incidente_relevo_sin_resolver: { ...turno_guardia, minutos: n },
+    incidente_relevo_respaldo: { ...turno_guardia, minutos: n },
     incidente_relevo_fase_automatica: {
-      ...guardia, minutosUmbral: n, contactados: 0, sinNivel: false, sinOrden: false, quedaElFamiliar: false,
+      ...turno_guardia, minutosUmbral: n, contactados: 0, sinNivel: false, sinOrden: false, quedaElFamiliar: false,
     },
     vencimiento_documentos: {
       etiqueta: 'el Seguro', dias: n, documentos: [{ nombre: 'Marta', fechaVencimiento: '2026-10-08' }],
@@ -263,11 +263,11 @@ test('el número de la frase concuerda con la cantidad', () => {
 });
 
 test('cuando se sabe quién deja la guardia, el Cliente lee los dos nombres', () => {
-  const turno = { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] };
+  const turno_guardia = { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] };
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const turnos of [[turno], [turno, { ...turno, fecha: '2026-10-08' }]]) {
+    for (const turnos_guardia of [[turno_guardia], [turno_guardia, { ...turno_guardia, fecha: '2026-10-08' }]]) {
       const { cuerpo } = mensajeDelSistema('cambio_de_asistente_cliente', idioma, {
-        asistenteNuevo: 'Rita Solano', asistenteAnterior: 'Marcos Peña', turnos,
+        asistenteNuevo: 'Rita Solano', asistenteAnterior: 'Marcos Peña', turnos_guardia,
       });
       assert.ok(cuerpo.includes('Rita Solano'), `${idioma} no nombra al nuevo`);
       assert.ok(cuerpo.includes('Marcos Peña'), `${idioma} no nombra a quien deja`);
@@ -277,15 +277,15 @@ test('cuando se sabe quién deja la guardia, el Cliente lee los dos nombres', ()
 });
 
 // Los tres mensajes de guardia que le llegan al Cliente, probados rompiéndolos a propósito.
-const MENSAJES_DE_GUARDIA_PARA_EL_CLIENTE = [
-  'guardia_sin_cerrar_cliente',
-  'guardia_sin_cerrar_grave_cliente',
-  'alerta_temprana_guardia_cliente',
+const MENSAJES_DE_TURNO_GUARDIA_PARA_EL_CLIENTE = [
+  'turno_guardia_sin_cerrar_cliente',
+  'turno_guardia_sin_cerrar_grave_cliente',
+  'alerta_temprana_turno_guardia_cliente',
 ];
 
 test('una guardia sin Pacientes cargados se nombra igual, sin dejar el renglón cortado', () => {
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const clave of MENSAJES_DE_GUARDIA_PARA_EL_CLIENTE) {
+    for (const clave of MENSAJES_DE_TURNO_GUARDIA_PARA_EL_CLIENTE) {
       const { cuerpo } = mensajeDelSistema(clave, idioma, { ...DATOS[clave], pacientes: [] });
       assert.equal(cuerpo.includes('undefined'), false, `${clave} en ${idioma} deja un hueco`);
       assert.equal(/\s,/.test(cuerpo), false, `${clave} en ${idioma} deja una coma suelta`);
@@ -295,7 +295,7 @@ test('una guardia sin Pacientes cargados se nombra igual, sin dejar el renglón 
 
 test('nada de adentro entra en el texto del Cliente', () => {
   // El mensaje de quien coordina lleva el nombre del Asistente, los minutos de la cuenta interna,
-  // el escalón y el identificador de la guardia. Si alguno se cuela acá, el Cliente está viendo
+  // el escalón y el identificador del turno de guardia. Si alguno se cuela acá, el Cliente está viendo
   // lo que no es suyo.
   const deAdentro = {
     fecha: '2026-10-07',
@@ -306,15 +306,15 @@ test('nada de adentro entra en el texto del Cliente', () => {
     minutosDeAtraso: 137,
     veces: 4,
     salidaMarcada: false,
-    id: 'guardia-uuid-0001',
+    id: 'turno-guardia-uuid-0001',
     motivo: 'sin marcar salida',
   };
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const clave of MENSAJES_DE_GUARDIA_PARA_EL_CLIENTE) {
+    for (const clave of MENSAJES_DE_TURNO_GUARDIA_PARA_EL_CLIENTE) {
       const { titulo, cuerpo } = mensajeDelSistema(clave, idioma, deAdentro);
       assert.ok(cuerpo.includes('Marta Giménez'), `${clave} en ${idioma} no nombra al Paciente`);
       const texto = `${titulo} ${cuerpo}`;
-      for (const prohibido of ['Rocío Paz', '137', 'guardia-uuid-0001', 'sin marcar salida']) {
+      for (const prohibido of ['Rocío Paz', '137', 'turno-guardia-uuid-0001', 'sin marcar salida']) {
         assert.equal(texto.includes(prohibido), false, `${clave} en ${idioma} filtró ${prohibido}`);
       }
     }

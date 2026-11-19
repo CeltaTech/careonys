@@ -62,7 +62,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const [filaEnCurso, setFilaEnCurso] = useState(null);
   const [errorFila, setErrorFila] = useState(null);
 
-  // La internación vive acá porque decide dónde se atiende al Paciente: o las guardias se pausan,
+  // La internación vive acá porque decide dónde se atiende al Paciente: o los turnos de guardia se pausan,
   // o continúan en la institución, que pasa a ser su domicilio temporal mientras dure.
   const puedeInternar = ['admin_prestadora', 'coordinador'].includes(usuario?.rol);
   const [hospitalizacionActiva, setHospitalizacionActiva] = useState(null);
@@ -245,7 +245,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const errorHospDe = (campo) =>
     intentadoHosp && faltasHosp[campo] ? t.formularios.falta_un_dato_obligatorio : null;
 
-  // Una sola operación en la base: la internación, y con ella o la pausa de las guardias o el
+  // Una sola operación en la base: la internación, y con ella o la pausa de los turnos de guardia o el
   // domicilio temporal en la institución. Se guarda todo junto o no se guarda nada.
   async function handleRegistrarHospitalizacion() {
     setIntentadoHosp(true);

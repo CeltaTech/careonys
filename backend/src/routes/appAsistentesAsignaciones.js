@@ -24,7 +24,7 @@ import { hoyISO } from '../utils/horarios.js';
 // Todo va con la credencial del Asistente. Mientras no respondió, del turno ve lo necesario para
 // decidir —día, horario, barrio, nivel de complejidad, a qué distancia queda y qué tareas se
 // acordaron en el Servicio para alguien de su tipo—, y eso lo arma la función
-// `turnos_asignados_sin_responder` de la base. El nombre del Paciente y el domicilio exacto, recién
+// `turnos_guardia_asignados_sin_responder` de la base. El nombre del Paciente y el domicilio exacto, recién
 // al aceptar, cuando el turno ya es suyo.
 //
 // El rechazo es una resolución, así que pasa por la función `resolver`, que firma con la sesión.
@@ -44,7 +44,7 @@ function motivoDeLaAceptacion(error) {
   const texto = String(error?.message ?? '');
   if (texto.includes('asignacion_no_encontrada')) return { estado: 404, motivo: 'asignacion_no_encontrada' };
   if (texto.includes('asignacion_ya_respondida')) return { estado: 409, motivo: 'asignacion_ya_respondida' };
-  if (texto.includes('guardia_ya_cubierta')) return { estado: 409, motivo: 'guardia_ya_cubierta' };
+  if (texto.includes('turno_guardia_ya_cubierto')) return { estado: 409, motivo: 'turno_guardia_ya_cubierto' };
   return null;
 }
 
@@ -79,26 +79,26 @@ function noSePudo(res, estado, motivo, detalle) {
 // avisa al Coordinador y al Cliente quién deja de ir y quién lo reemplaza. Se lee con la
 // credencial del Asistente, que ya es dueño del turno y de su asignación. Nunca voltea la
 // respuesta: el turno ya es suyo.
-async function avisarSiReemplaza(req, guardiaId) {
+async function avisarSiReemplaza(req, turnoGuardiaId) {
   try {
     const { data: asignacion } = await clienteDelPedido(req)
-      .from('asignaciones_de_turno')
-      .select('asistente_id, asistente_anterior_id, guardias(id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)')
+      .from('asignaciones_de_turno_guardia')
+      .select('asistente_id, asistente_anterior_id, turnos_guardia(id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)')
       .eq('id', req.params.id)
       .maybeSingle();
 
     const anterior = asignacion?.asistente_anterior_id;
-    const guardia = asignacion?.guardias;
-    if (!anterior || anterior === asignacion.asistente_id || !guardia || guardia.id !== guardiaId) return;
+    const turno_guardia = asignacion?.turnos_guardia;
+    if (!anterior || anterior === asignacion.asistente_id || !turno_guardia || turno_guardia.id !== turnoGuardiaId) return;
 
     await avisarCambioDeAsistente({
-      guardias: [guardia],
-      prestadoraId: guardia.prestadora_id,
+      turnos_guardia: [turno_guardia],
+      prestadoraId: turno_guardia.prestadora_id,
       asistenteNuevoId: asignacion.asistente_id,
       asistenteAnteriorId: anterior,
     });
   } catch (e) {
-    console.error(`Error avisando el reemplazo del turno ${guardiaId}:`, e.message);
+    console.error(`Error avisando el reemplazo del turno ${turnoGuardiaId}:`, e.message);
   }
 }
 
@@ -112,40 +112,40 @@ async function aplicarLoAceptado(req) {
   const { prestadoraId, asistenteId } = req.usuarioAsistente;
   try {
     const { data: asignacion } = await clienteDelPedido(req)
-      .from('asignaciones_de_turno')
+      .from('asignaciones_de_turno_guardia')
       .select('serie_id, ausencia_id, asistente_anterior_id')
       .eq('id', req.params.id)
       .maybeSingle();
     if (!asignacion) return;
 
-    let guardiaIds = [];
+    let turnoGuardiaIds = [];
     let anterior = null;
     if (asignacion.ausencia_id) {
       const { cubiertas, titularId } = await enLaPrestadora(prestadoraId, 'aplicar el reemplazo aceptado', (db) =>
         aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId: asignacion.ausencia_id, sustitutoId: asistenteId }),
       );
-      guardiaIds = cubiertas;
+      turnoGuardiaIds = cubiertas;
       anterior = titularId;
     } else if (asignacion.serie_id && asignacion.asistente_anterior_id) {
       const { data } = await clienteDelPedido(req)
-        .from('guardias')
+        .from('turnos_guardia')
         .select('id')
         .eq('serie_id', asignacion.serie_id)
         .eq('asistente_id', asistenteId)
         .gte('fecha', hoyISO());
-      guardiaIds = (data ?? []).map((g) => g.id);
+      turnoGuardiaIds = (data ?? []).map((g) => g.id);
       anterior = asignacion.asistente_anterior_id;
     }
-    if (!anterior || anterior === asistenteId || guardiaIds.length === 0) return;
+    if (!anterior || anterior === asistenteId || turnoGuardiaIds.length === 0) return;
 
-    const { data: guardias } = await clienteDelPedido(req)
-      .from('guardias')
+    const { data: turnos_guardia } = await clienteDelPedido(req)
+      .from('turnos_guardia')
       .select('id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
-      .in('id', guardiaIds)
+      .in('id', turnoGuardiaIds)
       .order('fecha', { ascending: true });
-    if (!guardias?.length) return;
+    if (!turnos_guardia?.length) return;
 
-    await avisarCambioDeAsistente({ guardias, prestadoraId, asistenteNuevoId: asistenteId, asistenteAnteriorId: anterior });
+    await avisarCambioDeAsistente({ turnos_guardia, prestadoraId, asistenteNuevoId: asistenteId, asistenteAnteriorId: anterior });
   } catch (e) {
     console.error(`Error aplicando lo aceptado en la asignación ${req.params.id}:`, e.message);
   }
@@ -182,11 +182,11 @@ async function dejarElReemplazo(req, ausenciaId) {
 // rechazar.
 appAsistentesAsignacionesRouter.get('/', requiereRolAsistente, async (req, res) => {
   const [asignaciones, motivos] = await Promise.all([
-    clienteDelPedido(req).rpc('turnos_asignados_sin_responder'),
+    clienteDelPedido(req).rpc('turnos_guardia_asignados_sin_responder'),
     clienteDelPedido(req)
       .from('motivos_resolucion')
       .select('id, nombre_es_ar, nombre_en, nombre_pt_br, pide_detalle, orden')
-      .eq('tabla', 'asignaciones_de_turno')
+      .eq('tabla', 'asignaciones_de_turno_guardia')
       .eq('estado', 'rechazada')
       .eq('activo', true)
       .order('orden', { ascending: true }),
@@ -206,8 +206,8 @@ appAsistentesAsignacionesRouter.get('/', requiereRolAsistente, async (req, res) 
       desde: a.desde ?? null,
       hasta: a.hasta ?? null,
       cantidad: a.cantidad ?? null,
-      guardia: {
-        id: a.guardia_id,
+      turno_guardia: {
+        id: a.turno_guardia_id,
         fecha: a.fecha,
         hora_inicio: a.hora_inicio,
         hora_fin: a.hora_fin,
@@ -246,7 +246,7 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
   // Las comprobaciones —que la asignación sea suya, que siga sin responder y que el turno siga
   // libre— las hace la función, en el mismo paso en que toma el turno.
   if (respuesta === 'acepta') {
-    const { data: guardiaId, error: falla } = await clienteDelPedido(req).rpc('aceptar_asignacion', {
+    const { data: turnoGuardiaId, error: falla } = await clienteDelPedido(req).rpc('aceptar_asignacion', {
       p_asignacion_id: req.params.id,
     });
     if (falla) {
@@ -256,12 +256,12 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
       // esta respuesta pudo vencerse. Viaja con los nombres de los que faltan.
       return responderError(res, errorDeDocumentos(falla) ?? falla);
     }
-    if (guardiaId) {
-      await avisarSiReemplaza(req, guardiaId);
+    if (turnoGuardiaId) {
+      await avisarSiReemplaza(req, turnoGuardiaId);
     } else {
       await aplicarLoAceptado(req);
     }
-    return res.json({ respuesta: 'acepta', guardiaId: guardiaId ?? null });
+    return res.json({ respuesta: 'acepta', turnoGuardiaId: turnoGuardiaId ?? null });
   }
 
   // --- Rechazar ---
@@ -269,7 +269,7 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
   // La asignación tiene que ser de esta persona. Se lee con su credencial: si no es suya, para el
   // Asistente no existe y se contesta lo mismo que si el número estuviera mal escrito.
   const { data: asignacion } = await clienteDelPedido(req)
-    .from('asignaciones_de_turno')
+    .from('asignaciones_de_turno_guardia')
     .select('id, estado, ausencia_id')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
@@ -291,7 +291,7 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
       : null;
 
   const { error: falla } = await clienteDelPedido(req).rpc('resolver', {
-    p_tabla: 'asignaciones_de_turno',
+    p_tabla: 'asignaciones_de_turno_guardia',
     p_fila_id: String(asignacion.id),
     p_motivo_id: motivoId,
     p_detalle: detalle,

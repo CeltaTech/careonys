@@ -77,7 +77,7 @@ export function ReactivarElServicioModal({ servicioId, onClose, onReactivado }) 
             disabled={reactivando || estadoMotivos !== 'listo'}
             error={faltaMotivo ? t.formularios.falta_un_dato_obligatorio : undefined}
           >
-            <option value="">{t.guardias.nueva_guardia.elegir}</option>
+            <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
             {motivos.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.nombre}

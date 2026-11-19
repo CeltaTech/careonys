@@ -131,8 +131,8 @@ describe('leer con cuántos turnos se entra al equipo', () => {
     const { cuerpo } = await leer();
     assert.equal(cuerpo.configuracion.regla.dias_hacia_atras, 180);
     assert.equal(
-      cuerpo.configuracion.regla.turnos_para_ser_del_equipo,
-      REGLA_DE_EQUIPO.turnos_para_ser_del_equipo
+      cuerpo.configuracion.regla.turnos_guardia_para_ser_del_equipo,
+      REGLA_DE_EQUIPO.turnos_guardia_para_ser_del_equipo
     );
     assert.deepEqual(cuerpo.configuracion.corridos, { dias_hacia_atras: 180 });
   });
@@ -188,7 +188,7 @@ describe('guardar', () => {
   });
 
   it('escribe para esta Prestadora y no para cualquiera', async () => {
-    await guardar({ regla: { turnos_para_ser_del_equipo: 5 } });
+    await guardar({ regla: { turnos_guardia_para_ser_del_equipo: 5 } });
     assert.equal(loEscrito().prestadora_id, PRESTADORA);
   });
 });

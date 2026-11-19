@@ -5,8 +5,8 @@
  * intento llegó a la base y lo que se perdió fue la respuesta, el segundo intento escribiría una
  * fila más: dos emergencias de la misma emergencia, dos descansos del mismo descanso.
  *
- * Casi todos los avisos ya están a salvo por su propio estado —una guardia no tiene dos llegadas
- * ni dos cierres—, y para ésos el backend contesta `yaRegistrado` mirando la guardia. Los que sí
+ * Casi todos los avisos ya están a salvo por su propio estado —un turno de guardia no tiene dos llegadas
+ * ni dos cierres—, y para ésos el backend contesta `yaRegistrado` mirando el turno de guardia. Los que sí
  * pueden pasar dos veces de verdad en el mismo turno necesitan esto: el identificador que el
  * teléfono pone ANTES del primer intento y no cambia entre reintentos.
  *
@@ -23,13 +23,13 @@ export function identificadorDelTelefono(cuerpo, campo = 'clienteUuid') {
  * La fila que ese mismo aviso ya escribió, si está. Sin identificador no hay nada que buscar.
  *
  * Entra con la conexión que le pasa quien llama, que es la de quien manda el aviso: la base le
- * contesta sólo lo de sus propias guardias.
+ * contesta sólo lo de sus propios turnos de guardia.
  *
- * Se busca por Prestadora, por guardia y por identificador juntos. La Prestadora es obligatoria y
+ * Se busca por Prestadora, por turno de guardia y por identificador juntos. La Prestadora es obligatoria y
  * no tiene valor por omisión: quien llama la sabe siempre —sale de la sesión de quien manda el
  * aviso—, y el filtro va escrito igual en la consulta.
  */
-export async function filaDeEsteMensaje({ db, tabla, prestadoraId, guardiaId, clienteUuid, campos = 'id', columna = 'cliente_uuid' }) {
+export async function filaDeEsteMensaje({ db, tabla, prestadoraId, turnoGuardiaId, clienteUuid, campos = 'id', columna = 'cliente_uuid' }) {
   // Falla cerrado: sin Prestadora no se lee nada. Y hacia escribir, como el error de más abajo:
   // no se afirma que el aviso ya estaba.
   if (!prestadoraId) {
@@ -42,7 +42,7 @@ export async function filaDeEsteMensaje({ db, tabla, prestadoraId, guardiaId, cl
     .from(tabla)
     .select(campos)
     .eq('prestadora_id', prestadoraId)
-    .eq('guardia_id', guardiaId)
+    .eq('turno_guardia_id', turnoGuardiaId)
     .eq(columna, clienteUuid)
     .maybeSingle();
 

@@ -125,7 +125,7 @@ de una Prestadora no lee nada de otra.
    serie sin fecha de fin cubra hacia adelante sin límite.
 3. **La cuenta corre en los tres momentos**: al crear o cambiar una serie, al suspender o cancelar
    una —también en las cascadas de cierre y de hospitalización—, y en el pasaje diario de
-   `backend/src/utils/generacionSeriesGuardia.js`. El hueco avisa por el catálogo de avisos que ya
+   `backend/src/utils/generacionSeriesTurnoGuardia.js`. El hueco avisa por el catálogo de avisos que ya
    existe. El texto del aviso es el del paso 24.
 4. **Clientes › Servicios deja de ser de sólo lectura**: el Servicio dice qué períodos cubre, en qué
    zona —elegida de los lugares cargados—, quién lo realiza y quién lo coordina.
@@ -311,7 +311,7 @@ la nombra.
 
 - **El tiempo de viaje real sale de un servicio de mapas ajeno.** Cuál se contrata, con qué cuenta y qué se le manda en cada consulta —las coordenadas de la casa de una persona salen del producto— es decisión suya, y la credencial la pone usted.
 - **Dónde vive el Asistente ya se guarda**, con su dirección escrita y sus coordenadas, y anotado como dato sensible que no sale hacia el Cliente. Las coordenadas las saca el backend solo, al dar el alta y al cambiar la dirección (`backend/src/utils/cuentasPanel.js:403`, `backend/src/routes/panelCoordenadas.js:37`); el servicio de mapas del punto anterior hace falta sólo para el tiempo de viaje. Esto **no es una decisión suya**: está tomada y construida.
-- **Y exige mirar el teléfono antes de que la guardia empiece.** Hoy el GPS se sigue sólo durante el viaje, desde «Salgo ahora» hasta que escanea la entrada, y con consentimiento vigente (`pwa-asistentes/src/pages/GuardiaActiva.jsx:324-335`). Leerlo antes, mientras todavía no empezó a trabajar, es seguir a alguien fuera de su horario: hay que decidir si se hace, con qué advertencia y con qué permiso.
+- **Y exige mirar el teléfono antes de que la guardia empiece.** Hoy el GPS se sigue sólo durante el viaje, desde «Salgo ahora» hasta que escanea la entrada, y con consentimiento vigente (`pwa-asistentes/src/pages/TurnoGuardiaActivo.jsx:324-335`). Leerlo antes, mientras todavía no empezó a trabajar, es seguir a alguien fuera de su horario: hay que decidir si se hace, con qué advertencia y con qué permiso.
 
 **76. Usted** — El botón de contacto de «Asistente Asignado»: ¿a quién llama? Hoy la pantalla no tiene ninguno (`pwa-clientes/src/pages/AsistenteAsignado.jsx`), y las dos salidas tienen consecuencias. Darle al Cliente el teléfono del Asistente es entregar el dato personal de quien trabaja, y es exactamente lo que Match cobra por abrir: ahí el contacto va tapado hasta que alguien paga. La otra salida es que el botón lleve a la Prestadora, que es con quien el Cliente tiene el trato en prestación directa, usando el contacto que ella misma configura. Hay una tercera: el hilo interno, que hoy existe sólo para Match y con el tapado puesto.
 
@@ -945,10 +945,10 @@ no exista un hueco invisible; que se pueda pausar, suspender, modificar y cancel
 parcial; y que use las zonas que ya están cargadas.
 
 **Lo que ya funciona y no se rehace:** la serie sin fecha de fin, que se extiende sola
-(`extenderSeriesGuardiaAbiertas`, en `backend/src/utils/generacionSeriesGuardia.js`); el cierre del
+(`extenderSeriesTurnoGuardiaAbiertas`, en `backend/src/utils/generacionSeriesTurnoGuardia.js`); el cierre del
 Servicio; los seis mecanismos de aviso; la estructura de zonas (`lugares`, `zona_lugares`,
 `asistente_lugares`, `usuario_lugares`); y la cancelación parcial de un turno suelto
-(`guardias.cancelacion_alcance`).
+(`turnos_guardia.cancelacion_alcance`).
 
 **Lo que usted fijó sobre cómo se resuelve:** los días y el horario de la Prestación se cargan igual
 que en una serie —días marcados, hora de inicio, hora de fin—, con más de un renglón cuando haga
@@ -987,7 +987,7 @@ títulos:
   Quien tiene el Servicio asignado arma el equipo: si esa salida se elige, tiene que decir que ese
   rol nunca queda como responsable de un Servicio.
 - **La ventana de crear un turno ya exige elegir el Servicio**
-  (`panel/src/pages/guardias/NuevaGuardiaModal.jsx:170`), pero todavía pide todos los Pacientes que
+  (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:170`), pero todavía pide todos los Pacientes que
   la base le deja ver a quien la abre, sin recortarlos al Servicio elegido. Cuando el turno cuelgue
   del Servicio esa ventana cambia de raíz.
 
@@ -998,7 +998,7 @@ estén no se escribe código de producción de ninguno.
 cubra, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o
 dos, una por tiempo conocido y otra indefinida—.
 
-**25. Claude Code** — **Todo nombre guardado que es un turno de guardia pasa a llamarse turno de guardia**, nunca «turno» a secas, para que no se confunda con un turno de otra cosa. La tabla `guardias`
+**25. Claude Code** — **Todo nombre guardado que es un turno de guardia pasa a llamarse turno de guardia**, nunca «turno» a secas, para que no se confunda con un turno de otra cosa. La tabla `turnos_guardia`
 guarda turnos: cada fila lleva una Asistente, un día, un horario y su check-in y su check-out. La
 guardia completa es la Prestación con su cronograma. El Desarrollador decidió renombrar, para que
 el nombre guardado no mezcle los dos niveles. Se hace antes del paso 27, que ya escribe con los
@@ -1542,7 +1542,7 @@ Los pasos ya comenzados de este tema están al principio, en la sección «Los p
 **144. Usted** — Tres cosas de la guardia en curso que no están decididas:
 
 - **Si la salida espera a las horas mínimas de la modalidad.** Hoy el backend no compara el cierre contra ninguna cantidad de horas (`backend/src/routes/appAsistentes.js:2011-2081`).
-- **Las notas del Coordinador en la Guardia Activa**, junto a los datos del Paciente. No hay dónde guardarlas: ni `pacientes`, ni `guardias`, ni `servicios` tienen una columna para eso.
+- **Las notas del Coordinador en la Guardia Activa**, junto a los datos del Paciente. No hay dónde guardarlas: ni `pacientes`, ni `turnos_guardia`, ni `servicios` tienen una columna para eso.
 - **El mapa del Cliente durante la guardia y el botón «Ver al Asistente en el mapa».** Hoy el mapa existe sólo durante el viaje, desde «Salgo ahora» hasta la entrada (`pwa-clientes/src/pages/PacienteDetalle.jsx:157-160`), y no hay botón. Seguir al Asistente adentro del domicilio es otra cosa que seguirlo en el camino.
 
 **145.** Construirlo según lo contestado.
@@ -1668,7 +1668,7 @@ sigan en uso: «Guardia de cobertura». La definición se le presenta para aprob
 **162. Usted** — La consulta de antecedentes penales hoy es manual. Si se automatiza, ¿con qué
 proveedor?
 
-**163. Usted** — ¿Cuánto tiempo se guarda el recorrido del Asistente (`guardias_tracking_gps`), y se
+**163. Usted** — ¿Cuánto tiempo se guarda el recorrido del Asistente (`turnos_guardia_tracking_gps`), y se
 le pide al Asistente un consentimiento propio para eso? Va con las preguntas del paso 93.
 
 **104. Usted** — Empresas subcontratadas o tercerizadas: son un recurso dentro de la prestación directa, como el Padrón propio, y no una modalidad. Todavía no hay dónde cargarlas ni cómo encargarles una prestación. La precondición era no construirlo hasta que una Prestadora real lo pida. ¿Sigue valiendo?
@@ -1716,7 +1716,7 @@ mismo que darlo de baja.
 
 **Ya se puede contestar.** El acto de armar el Servicio está construido: **una sola persona
 coordina todo el Servicio**, la asigna la administración y sin ella no hay guardias
-(`sin_coordinador_no_hay_guardias`, `el_coordinador_lo_asigna_la_administracion`). La pregunta es si
+(`sin_coordinador_no_hay_turnos_guardia`, `el_coordinador_lo_asigna_la_administracion`). La pregunta es si
 hace falta alguien más además de esa persona.
 
 **116. Usted** — Cursos para Clientes: ¿va o no va?

@@ -1,20 +1,20 @@
-import { idsDePacientesDeGuardia } from './pacientesDeGuardia.js';
-import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
+import { idsDePacientesDeTurnoGuardia } from './pacientesDeTurnoGuardia.js';
+import { finDeTurnoGuardia, inicioDeTurnoGuardia, sumarDias } from './horarios.js';
 
-/* Marcar una guardia como ausente y abrir el incidente de relevo.
+/* Marcar un turno de guardia como ausente y abrir el incidente de relevo.
    ==========================================================================
 
    POR QUÉ ESTE ARCHIVO EXISTE. Hasta el 2026-09-05 esto estaba escrito dos veces: acá lo hacía
    la detección automática (`ausenciaAutomatica.js`) y del otro lado lo hacía a mano el Panel,
-   con su propia consulta contra la base (`GuardiaAcciones.jsx`). Eran dos versiones distintas
+   con su propia consulta contra la base (`TurnoGuardiaAcciones.jsx`). Eran dos versiones distintas
    de la misma decisión, y no daban lo mismo:
 
-     - La del Panel buscaba por `guardias.paciente_id`, o sea por un solo Paciente. Si el turno
-       cubría a un matrimonio, la guardia anterior del otro no aparecía y el caso se anotaba como
+     - La del Panel buscaba por `turnos_guardia.paciente_id`, o sea por un solo Paciente. Si el turno
+       cubría a un matrimonio, el turno de guardia anterior del otro no aparecía y el caso se anotaba como
        «Ausente sin relevo previo» —la alerta más grave del sistema— cuando en realidad había
        alguien esperando el relevo. La automática ya usaba la lista entera.
      - Las dos comparaban `hora_fin <= hora_inicio` como si las dos horas fueran del mismo día, y
-       la guardia de noche no lo es: un turno `22:00 → 06:00` termina a la mañana siguiente. Ese
+       el turno de guardia de noche no lo es: un turno `22:00 → 06:00` termina a la mañana siguiente. Ese
        error tenía dos caras. Contra un turno entrante de las `08:00` del mismo día, el de la
        noche anterior figuraba como «terminó antes» y se lo señalaba como saliente, cuando en
        realidad todavía estaba corriendo. Y al revés: contra el turno entrante de las `08:00` del
@@ -22,38 +22,38 @@ import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
        miraba el mismo día.
 
    Ahora la operación entera vive acá y la hacen los dos caminos —la detección automática y el
-   botón del Panel, que pasó a pedírsela al backend por `routes/panelGuardias.js`—. La cuenta de
+   botón del Panel, que pasó a pedírsela al backend por `routes/panelTurnosGuardia.js`—. La cuenta de
    cuándo termina un turno sale de `utils/horarios.js`, que es copia máquina de
    `panel/src/lib/horarios.js` y donde la regla de la medianoche está escrita una sola vez para
    todo el producto (CLAUDE.md §8, «ningún patrón repetido sin punto único de verdad»).
 
    Entra con la conexión que le pasa quien llama: la detección automática, con la credencial del
    trabajo de esa Prestadora; la ruta del Panel, también, después de que la base le dejó ver la
-   guardia a quien pide. El filtro por Prestadora va escrito igual en cada consulta. */
+   turno de guardia a quien pide. El filtro por Prestadora va escrito igual en cada consulta. */
 
 /**
- * Deja la guardia en `ausente` y le abre el incidente de relevo.
+ * Deja el turno de guardia en `ausente` y le abre el incidente de relevo.
  *
- * `guardia` tiene que traer al menos `id`, `fecha`, `hora_inicio` y `paciente_id` (esta última
- * es la red de seguridad de `idsDePacientesDeGuardia`).
+ * `turno_guardia` tiene que traer al menos `id`, `fecha`, `hora_inicio` y `paciente_id` (esta última
+ * es la red de seguridad de `idsDePacientesDeTurnoGuardia`).
  *
  * Devuelve `{ ok: true }`, o `{ ok: false, motivo }` con un texto para registrar. No levanta
- * excepciones: los dos caminos que la usan quieren seguir andando aunque una guardia falle.
+ * excepciones: los dos caminos que la usan quieren seguir andando aunque un turno de guardia falle.
  */
-export async function marcarAusenteYCrearIncidente({ db, guardia, prestadoraId }) {
+export async function marcarAusenteYCrearIncidente({ db, turno_guardia, prestadoraId }) {
   const { error: errorUpdate } = await db
-    .from('guardias')
+    .from('turnos_guardia')
     .update({ estado: 'ausente' })
     .eq('prestadora_id', prestadoraId)
-    .eq('id', guardia.id);
+    .eq('id', turno_guardia.id);
   if (errorUpdate) return { ok: false, motivo: errorUpdate.message };
 
-  const saliente = await buscarGuardiaSaliente({ db, guardia, prestadoraId });
+  const saliente = await buscarTurnoGuardiaSaliente({ db, turno_guardia, prestadoraId });
 
   const { error: errorIncidente } = await db.from('incidentes_relevo').insert({
     prestadora_id: prestadoraId,
-    guardia_saliente_id: saliente,
-    guardia_entrante_id: guardia.id,
+    turno_guardia_saliente_id: saliente,
+    turno_guardia_entrante_id: turno_guardia.id,
     nivel_actual: 1,
   });
   if (errorIncidente) return { ok: false, motivo: errorIncidente.message };
@@ -68,39 +68,39 @@ export async function marcarAusenteYCrearIncidente({ db, guardia, prestadoraId }
  * atender a un matrimonio y no llegó, la persona que estuvo antes con cualquiera de los dos es
  * la que se quedó esperando el relevo, y es a la que hay que enganchar el incidente.
  *
- * Se miran dos días —el del turno y el anterior— porque el saliente de una guardia de la mañana
- * suele ser la guardia de noche, que empezó el día antes. Filtrar por un solo día dejaba a esa
+ * Se miran dos días —el del turno y el anterior— porque el saliente de un turno de guardia de la mañana
+ * suele ser el turno de guardia de noche, que empezó el día antes. Filtrar por un solo día dejaba a esa
  * afuera siempre.
  *
  * El más cercano se elige acá y no en la base: la base guarda dos horas de reloj y no sabe cuál
- * de las dos es del día siguiente, así que ordenar por `hora_fin` ordena mal justo en la guardia
+ * de las dos es del día siguiente, así que ordenar por `hora_fin` ordena mal justo en el turno de guardia
  * de noche. Además, ordenar por una columna de la tabla de adentro no ordena las filas de afuera.
  */
-async function buscarGuardiaSaliente({ db, guardia, prestadoraId }) {
+async function buscarTurnoGuardiaSaliente({ db, turno_guardia, prestadoraId }) {
   let pacienteIds;
   try {
-    pacienteIds = await idsDePacientesDeGuardia(db, prestadoraId, guardia);
+    pacienteIds = await idsDePacientesDeTurnoGuardia(db, prestadoraId, turno_guardia);
   } catch (e) {
-    console.error(`Error leyendo los Pacientes de la guardia ${guardia.id}:`, e.message);
+    console.error(`Error leyendo los Pacientes de la guardia ${turno_guardia.id}:`, e.message);
     return null;
   }
   if (pacienteIds.length === 0) return null;
 
   const { data: candidatas, error } = await db
-    .from('guardia_pacientes')
-    .select('guardias!inner(id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)')
+    .from('turno_guardia_pacientes')
+    .select('turnos_guardia!inner(id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)')
     .in('paciente_id', pacienteIds)
     .eq('prestadora_id', prestadoraId)
-    .in('guardias.fecha', [sumarDias(guardia.fecha, -1), guardia.fecha])
-    .neq('guardias.estado', 'cancelada')
-    .neq('guardias.id', guardia.id);
+    .in('turnos_guardia.fecha', [sumarDias(turno_guardia.fecha, -1), turno_guardia.fecha])
+    .neq('turnos_guardia.estado', 'cancelada')
+    .neq('turnos_guardia.id', turno_guardia.id);
   if (error) {
-    console.error(`Error buscando guardia saliente (guardia ${guardia.id}):`, error.message);
+    console.error(`Error buscando guardia saliente (guardia ${turno_guardia.id}):`, error.message);
     return null;
   }
 
-  const filas = (candidatas ?? []).map((fila) => fila.guardias).filter(Boolean);
-  return laQueTerminoJustoAntes(guardia, filas)?.id ?? null;
+  const filas = (candidatas ?? []).map((fila) => fila.turnos_guardia).filter(Boolean);
+  return laQueTerminoJustoAntes(turno_guardia, filas)?.id ?? null;
 }
 
 /**
@@ -114,12 +114,12 @@ async function buscarGuardiaSaliente({ db, guardia, prestadoraId }) {
  * arranca no cuenta, porque no es un relevo que quedó esperando.
  */
 export function laQueTerminoJustoAntes(entrante, candidatas) {
-  const arranque = inicioDeGuardia(entrante);
+  const arranque = inicioDeTurnoGuardia(entrante);
   let elegida = null;
   let finElegido = null;
 
   for (const candidata of candidatas ?? []) {
-    const fin = finDeGuardia(candidata);
+    const fin = finDeTurnoGuardia(candidata);
     if (fin > arranque) continue;
     if (finElegido === null || fin > finElegido) {
       elegida = candidata;

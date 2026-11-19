@@ -9,8 +9,8 @@ import { api } from '../lib/api';
 
 const claseDeLaPestana = ({ isActive }) => (isActive ? 'active' : '');
 
-// La pestaña Guardias queda encendida también en las asignaciones sin responder, que cuelgan de ella.
-const ES_GUARDIAS = /^\/(guardias|asignaciones)(\/|$)/;
+// La pestaña Turnos de guardia queda encendida también en las asignaciones sin responder, que cuelgan de ella.
+const ES_TURNOS_GUARDIA = /^\/(turnos-guardia|asignaciones)(\/|$)/;
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -18,7 +18,7 @@ export default function Layout() {
   const marca = useMarca();
   const ofreceIntermediacion = useOfreceIntermediacion();
 
-  // Cuántos turnos se le asignaron y todavía no respondió. El número va en la pestaña de abajo
+  // Cuántos turnos de guardia se le asignaron y todavía no respondió. El número va en la pestaña de abajo
   // porque mientras no responde, el Coordinador no puede buscar a otro: si hubiera que entrar a
   // la pantalla para enterarse de que hay algo, la pantalla no serviría de nada.
   //
@@ -82,11 +82,11 @@ export default function Layout() {
         <NavLink to="/inicio" className={claseDeLaPestana}>
           {t.nav.inicio}
         </NavLink>
-        {/* Las asignaciones sin responder cuelgan de Guardias, así que el número de las que
+        {/* Las asignaciones sin responder cuelgan de Turnos de guardia, así que el número de las que
             esperan respuesta va en esta pestaña. Dibujado se entiende por dónde está; dicho en voz
             alta, un "3" suelto no dice de qué es, así que al lado va la frase entera, que no se ve. */}
-        <NavLink to="/guardias" className={() => (ES_GUARDIAS.test(pathname) ? 'active' : '')}>
-          {t.nav.guardias}
+        <NavLink to="/turnos-guardia" className={() => (ES_TURNOS_GUARDIA.test(pathname) ? 'active' : '')}>
+          {t.nav.turnos_guardia}
           {sinResponder > 0 && (
             <>
               <span className="nav-cuenta" aria-hidden="true">{sinResponder}</span>

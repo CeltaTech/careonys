@@ -107,14 +107,14 @@ function diasDeLaSemana(t, dias) {
   return unirNombres(nombres, t('comun.conjuncion'), '');
 }
 
-/** La lista de Pacientes de una guardia, con la conjunción del idioma que corresponda. */
+/** La lista de Pacientes de un turno de guardia, con la conjunción del idioma que corresponda. */
 function pacientesDe(t, pacientes) {
   return unirNombres(pacientes, t('comun.conjuncion'), t('comun.paciente_sin_nombre'));
 }
 
 /** El renglón que abre casi todos los mensajes de guardia: cuál es, cuándo y para quién. */
-function lineaGuardia(t, d) {
-  return t('comun.linea_guardia', {
+function lineaTurnoGuardia(t, d) {
+  return t('comun.linea_turno_guardia', {
     fecha: d.fecha,
     horaInicio: d.horaInicio,
     horaFin: d.horaFin,
@@ -156,14 +156,14 @@ function lineaDeArranque(t, d) {
 // o si los que la recibieron la rechazaron. Son tres situaciones con tres acciones distintas. El
 // turno se le asigna a uno por vez, así que nunca hay más de una asignación sin responder.
 function estadoDeLaBusqueda(t, { sinResponder, rechazos, rechazadaPor }) {
-  if (sinResponder) return t('guardia_sin_cubrir.sin_responder');
+  if (sinResponder) return t('turno_guardia_sin_cubrir.sin_responder');
   if (rechazos === 1) {
-    return t('guardia_sin_cubrir.rechazada_una_vez', { asistente: rechazadaPor ?? cuantosAsistentes(t, 1) });
+    return t('turno_guardia_sin_cubrir.rechazada_una_vez', { asistente: rechazadaPor ?? cuantosAsistentes(t, 1) });
   }
   if (rechazos > 1) {
-    return t('guardia_sin_cubrir.rechazada_varias_veces', { rechazos: cuantosAsistentes(t, rechazos) });
+    return t('turno_guardia_sin_cubrir.rechazada_varias_veces', { rechazos: cuantosAsistentes(t, rechazos) });
   }
-  return t('guardia_sin_cubrir.sin_asignar');
+  return t('turno_guardia_sin_cubrir.sin_asignar');
 }
 
 /** De dónde salió la alerta temprana. La clave sale de la fuente; el texto, de la tabla. */
@@ -188,42 +188,42 @@ const ARMADORES = {
     texto: t(CLAVE_POR_FUENTE[fuente] ?? 'origen_de_alerta.sin_registrar'),
   }),
 
-  guardia_sin_cerrar: (t, d) => ({
-    asunto: t('guardia_sin_cerrar.asunto'),
+  turno_guardia_sin_cerrar: (t, d) => ({
+    asunto: t('turno_guardia_sin_cerrar.asunto'),
     texto: [
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       t('comun.a_cargo', {
         asistente: d.asistente || t('comun.asistente_sin_asignar'),
         atraso: enMinutosUHoras(d.minutosDeAtraso, t),
       }),
-      t(d.salidaMarcada ? 'guardia_sin_cerrar.salida_marcada' : 'guardia_sin_cerrar.salida_sin_marcar'),
-      d.veces > 1 ? t('comun.aviso_repetido_guardia', { veces: d.veces }) : null,
+      t(d.salidaMarcada ? 'turno_guardia_sin_cerrar.salida_marcada' : 'turno_guardia_sin_cerrar.salida_sin_marcar'),
+      d.veces > 1 ? t('comun.aviso_repetido_turno_guardia', { veces: d.veces }) : null,
     ].filter(Boolean).join('\n'),
   }),
 
-  guardia_sin_cerrar_grave: (t, d) => ({
-    asunto: t('guardia_sin_cerrar_grave.asunto'),
+  turno_guardia_sin_cerrar_grave: (t, d) => ({
+    asunto: t('turno_guardia_sin_cerrar_grave.asunto'),
     texto: [
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       t('comun.a_cargo', {
         asistente: d.asistente || t('comun.asistente_sin_asignar'),
         atraso: enMinutosUHoras(d.minutosDeAtraso, t),
       }),
-      t('guardia_sin_cerrar_grave.hace_falta_autoridad'),
+      t('turno_guardia_sin_cerrar_grave.hace_falta_autoridad'),
       t(d.salidaMarcada
-        ? 'guardia_sin_cerrar_grave.salida_marcada'
-        : 'guardia_sin_cerrar_grave.salida_sin_marcar'),
+        ? 'turno_guardia_sin_cerrar_grave.salida_marcada'
+        : 'turno_guardia_sin_cerrar_grave.salida_sin_marcar'),
     ].join('\n'),
   }),
 
-  // Lo mismo que arriba, contado para el Cliente. Dice cuál es la guardia y qué pasó, y nada de
+  // Lo mismo que arriba, contado para el Cliente. Dice cuál es el turno de guardia y qué pasó, y nada de
   // adentro: ni el escalón de la alarma, ni los minutos de la cuenta interna, ni ningún
   // identificador, ni el nombre de quien estaba asignado. Las claves terminan en `_cliente` por lo
   // mismo que `incidente_relevo_cliente`: son dos textos distintos sobre el mismo hecho, y tenerlos
   // separados es lo que impide que al Cliente le llegue el de adentro.
-  guardia_sin_cerrar_cliente: (t, d) => ({
-    titulo: t('guardia_sin_cerrar_cliente.titulo'),
-    cuerpo: t('guardia_sin_cerrar_cliente.cuerpo', {
+  turno_guardia_sin_cerrar_cliente: (t, d) => ({
+    titulo: t('turno_guardia_sin_cerrar_cliente.titulo'),
+    cuerpo: t('turno_guardia_sin_cerrar_cliente.cuerpo', {
       fecha: d.fecha,
       horaInicio: d.horaInicio,
       horaFin: d.horaFin,
@@ -231,9 +231,9 @@ const ARMADORES = {
     }),
   }),
 
-  guardia_sin_cerrar_grave_cliente: (t, d) => ({
-    titulo: t('guardia_sin_cerrar_grave_cliente.titulo'),
-    cuerpo: t('guardia_sin_cerrar_grave_cliente.cuerpo', {
+  turno_guardia_sin_cerrar_grave_cliente: (t, d) => ({
+    titulo: t('turno_guardia_sin_cerrar_grave_cliente.titulo'),
+    cuerpo: t('turno_guardia_sin_cerrar_grave_cliente.cuerpo', {
       fecha: d.fecha,
       horaInicio: d.horaInicio,
       horaFin: d.horaFin,
@@ -241,9 +241,9 @@ const ARMADORES = {
     }),
   }),
 
-  alerta_temprana_guardia_cliente: (t, d) => ({
-    titulo: t('alerta_temprana_guardia_cliente.titulo'),
-    cuerpo: t('alerta_temprana_guardia_cliente.cuerpo', {
+  alerta_temprana_turno_guardia_cliente: (t, d) => ({
+    titulo: t('alerta_temprana_turno_guardia_cliente.titulo'),
+    cuerpo: t('alerta_temprana_turno_guardia_cliente.cuerpo', {
       fecha: d.fecha,
       horaInicio: d.horaInicio,
       horaFin: d.horaFin,
@@ -251,8 +251,8 @@ const ARMADORES = {
     }),
   }),
 
-  guardia_sin_cerrar_respaldo: (t, d) => ({
-    texto: t(segunCantidad('guardia_sin_cerrar_respaldo.texto', Math.round(d.minutosDeAtraso)), {
+  turno_guardia_sin_cerrar_respaldo: (t, d) => ({
+    texto: t(segunCantidad('turno_guardia_sin_cerrar_respaldo.texto', Math.round(d.minutosDeAtraso)), {
       fecha: d.fecha,
       horaInicio: d.horaInicio,
       horaFin: d.horaFin,
@@ -277,7 +277,7 @@ const ARMADORES = {
     // El origen va adelante del motivo a propósito: quien lee tiene que poder distinguir de un
     // vistazo un aviso que dio una persona de una cuenta que sacó el sistema.
     texto: [
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       t(segunCantidad('alerta_temprana_sin_resolver.detalle', Math.round(d.minutos)), {
         origen: d.origen,
         motivo: d.motivo ?? '—',
@@ -288,7 +288,7 @@ const ARMADORES = {
 
   alerta_temprana_respaldo: (t, d) => ({
     texto: [
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       t(segunCantidad('alerta_temprana_respaldo.demora', Math.round(d.minutos)), { minutos: Math.round(d.minutos) }),
     ].join('\n'),
   }),
@@ -306,9 +306,9 @@ const ARMADORES = {
   // Lo que escribió el Asistente no entra acá. Este mensaje sale por WhatsApp o por correo, y lo
   // escribió alguien que está mirando a un Paciente (`celtatech/CLAUDE.md` §6). El texto se lee
   // entrando al Panel, que es donde el permiso se comprueba.
-  emergencia_en_guardia: (t, d) => ({
-    asunto: t('emergencia_en_guardia.asunto'),
-    texto: t('emergencia_en_guardia.texto', { fecha: d.fecha, horaInicio: d.horaInicio }),
+  emergencia_en_turno_guardia: (t, d) => ({
+    asunto: t('emergencia_en_turno_guardia.asunto'),
+    texto: t('emergencia_en_turno_guardia.texto', { fecha: d.fecha, horaInicio: d.horaInicio }),
   }),
 
   // Lo mismo: lo que escribió no entra acá. Y el texto no pide nada ni sugiere qué hacer — quien
@@ -327,14 +327,14 @@ const ARMADORES = {
   incidente_relevo_sin_resolver: (t, d) => ({
     asunto: t('incidente_relevo_sin_resolver.asunto'),
     texto: [
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       t(segunCantidad('incidente_relevo_sin_resolver.demora', Math.round(d.minutos)), { minutos: Math.round(d.minutos) }),
     ].join('\n'),
   }),
 
   incidente_relevo_respaldo: (t, d) => ({
     texto: [
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       t(segunCantidad('incidente_relevo_respaldo.demora', Math.round(d.minutos)), { minutos: Math.round(d.minutos) }),
     ].join('\n'),
   }),
@@ -342,7 +342,7 @@ const ARMADORES = {
   incidente_relevo_fase_automatica: (t, d) => ({
     asunto: t('incidente_relevo_fase_automatica.asunto'),
     texto: [
-      `${lineaGuardia(t, d)} ${t(segunCantidad('incidente_relevo_fase_automatica.sin_resolver_desde', d.minutosUmbral), { minutosUmbral: d.minutosUmbral })}`,
+      `${lineaTurnoGuardia(t, d)} ${t(segunCantidad('incidente_relevo_fase_automatica.sin_resolver_desde', d.minutosUmbral), { minutosUmbral: d.minutosUmbral })}`,
       d.sinNivel || d.sinOrden
         ? t('incidente_relevo_fase_automatica.sin_orden')
         : d.contactados > 0
@@ -363,7 +363,7 @@ const ARMADORES = {
     }),
   }),
 
-  // Al Cliente se le dice lo que le toca saber y nada más: cuál es la guardia y que el relevo
+  // Al Cliente se le dice lo que le toca saber y nada más: cuál es el turno de guardia y que el relevo
   // todavía no llegó. Nada de adentro del funcionamiento, y con quién hablar si quiere preguntar.
   incidente_relevo_cliente: (t, d) => ({
     titulo: t('incidente_relevo_cliente.titulo'),
@@ -375,7 +375,7 @@ const ARMADORES = {
   }),
 
   cambio_de_asistente: (t, d) => {
-    const unaSola = d.turnos.length === 1;
+    const unaSola = d.turnos_guardia.length === 1;
     return {
       asunto: t(unaSola ? 'cambio_de_asistente.asunto_uno' : 'cambio_de_asistente.asunto_varios'),
       texto: [
@@ -388,11 +388,11 @@ const ARMADORES = {
           : t(unaSola ? 'cambio_de_asistente.pasa_uno' : 'cambio_de_asistente.pasa_varios', {
             nuevo: d.asistenteNuevo ?? t('cambio_de_asistente.asistente_sin_nombre'),
           }),
-        ...d.turnos.map((turno) => t('cambio_de_asistente.linea_turno', {
-          fecha: turno.fecha,
-          horaInicio: turno.horaInicio,
-          horaFin: turno.horaFin,
-          pacientes: pacientesDe(t, turno.pacientes),
+        ...d.turnos_guardia.map((turno_guardia) => t('cambio_de_asistente.linea_turno_guardia', {
+          fecha: turno_guardia.fecha,
+          horaInicio: turno_guardia.horaInicio,
+          horaFin: turno_guardia.horaFin,
+          pacientes: pacientesDe(t, turno_guardia.pacientes),
         })),
       ].join('\n'),
     };
@@ -403,24 +403,24 @@ const ARMADORES = {
   cambio_de_asistente_cliente: (t, d) => ({
     titulo: t('cambio_de_asistente_cliente.titulo'),
     cuerpo: d.asistenteAnterior
-      ? t(d.turnos.length === 1 ? 'cambio_de_asistente_cliente.reemplaza_uno' : 'cambio_de_asistente_cliente.reemplaza_varios', {
-        cuantas: d.turnos.length,
-        fecha: d.turnos[0].fecha,
-        horaInicio: d.turnos[0].horaInicio,
-        horaFin: d.turnos[0].horaFin,
+      ? t(d.turnos_guardia.length === 1 ? 'cambio_de_asistente_cliente.reemplaza_uno' : 'cambio_de_asistente_cliente.reemplaza_varios', {
+        cuantas: d.turnos_guardia.length,
+        fecha: d.turnos_guardia[0].fecha,
+        horaInicio: d.turnos_guardia[0].horaInicio,
+        horaFin: d.turnos_guardia[0].horaFin,
         anterior: d.asistenteAnterior,
         nuevo: d.asistenteNuevo ?? t('cambio_de_asistente_cliente.otro_asistente'),
       })
-      : d.turnos.length === 1
+      : d.turnos_guardia.length === 1
       ? t('cambio_de_asistente_cliente.cuerpo_uno', {
-        fecha: d.turnos[0].fecha,
-        horaInicio: d.turnos[0].horaInicio,
-        horaFin: d.turnos[0].horaFin,
+        fecha: d.turnos_guardia[0].fecha,
+        horaInicio: d.turnos_guardia[0].horaInicio,
+        horaFin: d.turnos_guardia[0].horaFin,
         nuevo: d.asistenteNuevo ?? t('cambio_de_asistente_cliente.otro_asistente'),
       })
       : t('cambio_de_asistente_cliente.cuerpo_varios', {
-        cuantas: d.turnos.length,
-        fecha: d.turnos[0].fecha,
+        cuantas: d.turnos_guardia.length,
+        fecha: d.turnos_guardia[0].fecha,
         nuevo: d.asistenteNuevo ?? t('cambio_de_asistente_cliente.otro_asistente'),
       }),
   }),
@@ -429,10 +429,10 @@ const ARMADORES = {
     asunto: t('ausencia_avisada_con_tiempo.asunto'),
     texto: [
       lineaDeAusencia(t, d),
-      t(d.turnos === 1
-        ? 'ausencia_avisada_con_tiempo.deja_turnos_uno'
-        : 'ausencia_avisada_con_tiempo.deja_turnos_varios', {
-        turnos: d.turnos,
+      t(d.turnos_guardia === 1
+        ? 'ausencia_avisada_con_tiempo.deja_turnos_guardia_uno'
+        : 'ausencia_avisada_con_tiempo.deja_turnos_guardia_varios', {
+        turnos_guardia: d.turnos_guardia,
         fecha: d.fecha,
         horaInicio: d.horaInicio,
         horaFin: d.horaFin,
@@ -446,11 +446,11 @@ const ARMADORES = {
     asunto: t(d.yaEmpezo ? 'ausencia_de_golpe.asunto_ya_empezo' : 'ausencia_de_golpe.asunto'),
     texto: [
       lineaDeAusencia(t, d),
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       lineaDeArranque(t, d),
-      d.turnos > 1
-        ? t(d.turnos - 1 === 1 ? 'ausencia_de_golpe.ademas_uno' : 'ausencia_de_golpe.ademas_varios', {
-          otras: d.turnos - 1,
+      d.turnos_guardia > 1
+        ? t(d.turnos_guardia - 1 === 1 ? 'ausencia_de_golpe.ademas_uno' : 'ausencia_de_golpe.ademas_varios', {
+          otras: d.turnos_guardia - 1,
         })
         : null,
       d.veces > 1 ? t('comun.aviso_repetido_ausencia', { veces: d.veces }) : null,
@@ -486,34 +486,34 @@ const ARMADORES = {
     texto: t('cobertura_objetada.cuerpo', { nombre: d.nombre ?? t('comun.un_asistente') }),
   }),
 
-  guardia_sin_cubrir: (t, d) => ({
-    asunto: t(d.yaEmpezo ? 'guardia_sin_cubrir.asunto_ya_empezo' : 'guardia_sin_cubrir.asunto'),
+  turno_guardia_sin_cubrir: (t, d) => ({
+    asunto: t(d.yaEmpezo ? 'turno_guardia_sin_cubrir.asunto_ya_empezo' : 'turno_guardia_sin_cubrir.asunto'),
     texto: [
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       lineaDeArranque(t, d),
       estadoDeLaBusqueda(t, d.busqueda),
-      d.veces > 1 ? t('comun.aviso_repetido_guardia', { veces: d.veces }) : null,
+      d.veces > 1 ? t('comun.aviso_repetido_turno_guardia', { veces: d.veces }) : null,
     ].filter(Boolean).join('\n'),
   }),
 
-  incidente_turno_sin_cubrir: (t, d) => ({
+  incidente_turno_guardia_sin_cubrir: (t, d) => ({
     asunto: t(d.yaEmpezo
-      ? 'incidente_turno_sin_cubrir.asunto_ya_empezo'
-      : 'incidente_turno_sin_cubrir.asunto'),
+      ? 'incidente_turno_guardia_sin_cubrir.asunto_ya_empezo'
+      : 'incidente_turno_guardia_sin_cubrir.asunto'),
     texto: [
-      lineaGuardia(t, d),
+      lineaTurnoGuardia(t, d),
       lineaDeArranque(t, d),
       d.cubrenFrancos?.length
-        ? t('incidente_turno_sin_cubrir.cubren_francos', {
+        ? t('incidente_turno_guardia_sin_cubrir.cubren_francos', {
           nombres: unirNombres(d.cubrenFrancos, t('comun.conjuncion'), ''),
         })
         : null,
       d.candidatos?.length
-        ? t('incidente_turno_sin_cubrir.equipo', {
+        ? t('incidente_turno_guardia_sin_cubrir.equipo', {
           nombres: unirNombres(d.candidatos, t('comun.conjuncion'), ''),
         })
-        : t('incidente_turno_sin_cubrir.sin_equipo'),
-      d.veces > 1 ? t('incidente_turno_sin_cubrir.recordatorio_repetido', { veces: d.veces }) : null,
+        : t('incidente_turno_guardia_sin_cubrir.sin_equipo'),
+      d.veces > 1 ? t('incidente_turno_guardia_sin_cubrir.recordatorio_repetido', { veces: d.veces }) : null,
     ].filter(Boolean).join('\n'),
   }),
 
@@ -638,7 +638,7 @@ const ARMADORES = {
   },
 
   // Los datos de quien se postula no salen en el cuerpo del correo, igual que en
-  // `emergencia_en_guardia`: se leen entrando al Panel, que es donde el permiso se comprueba.
+  // `emergencia_en_turno_guardia`: se leen entrando al Panel, que es donde el permiso se comprueba.
 
 
   mensaje_del_coordinador: (t) => ({ titulo: t('mensaje_del_coordinador.titulo') }),
@@ -653,29 +653,29 @@ const ARMADORES = {
     cuerpo: t('reporte_disponible.cuerpo', { paciente: d.paciente }),
   }),
 
-  guardia_asignada: (t, d) => ({
-    titulo: t('guardia_asignada.titulo'),
-    cuerpo: t('guardia_asignada.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio }),
+  turno_guardia_asignado: (t, d) => ({
+    titulo: t('turno_guardia_asignado.titulo'),
+    cuerpo: t('turno_guardia_asignado.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio }),
   }),
 
-  turno_para_responder: (t, d) => ({
-    titulo: t('turno_para_responder.titulo'),
-    cuerpo: t('turno_para_responder.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio, horaFin: d.horaFin }),
+  turno_guardia_para_responder: (t, d) => ({
+    titulo: t('turno_guardia_para_responder.titulo'),
+    cuerpo: t('turno_guardia_para_responder.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio, horaFin: d.horaFin }),
   }),
 
-  turno_retirado: (t, d) => ({
-    titulo: t('turno_retirado.titulo'),
-    cuerpo: t('turno_retirado.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio, horaFin: d.horaFin }),
+  turno_guardia_retirado: (t, d) => ({
+    titulo: t('turno_guardia_retirado.titulo'),
+    cuerpo: t('turno_guardia_retirado.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio, horaFin: d.horaFin }),
   }),
 
-  turno_fijo_para_responder: (t, d) => ({
-    titulo: t('turno_fijo_para_responder.titulo'),
-    cuerpo: t('turno_fijo_para_responder.cuerpo', { dias: diasDeLaSemana(t, d.dias), horaInicio: d.horaInicio, horaFin: d.horaFin }),
+  turno_guardia_fijo_para_responder: (t, d) => ({
+    titulo: t('turno_guardia_fijo_para_responder.titulo'),
+    cuerpo: t('turno_guardia_fijo_para_responder.cuerpo', { dias: diasDeLaSemana(t, d.dias), horaInicio: d.horaInicio, horaFin: d.horaFin }),
   }),
 
-  turno_fijo_retirado: (t, d) => ({
-    titulo: t('turno_fijo_retirado.titulo'),
-    cuerpo: t('turno_fijo_retirado.cuerpo', { dias: diasDeLaSemana(t, d.dias), horaInicio: d.horaInicio, horaFin: d.horaFin }),
+  turno_guardia_fijo_retirado: (t, d) => ({
+    titulo: t('turno_guardia_fijo_retirado.titulo'),
+    cuerpo: t('turno_guardia_fijo_retirado.cuerpo', { dias: diasDeLaSemana(t, d.dias), horaInicio: d.horaInicio, horaFin: d.horaFin }),
   }),
 
   reemplazo_para_responder: (t, d) => ({
@@ -685,9 +685,9 @@ const ARMADORES = {
       : t('reemplazo_para_responder.cuerpo_sin_fin', { desde: d.desde }),
   }),
 
-  recordatorio_de_guardia: (t, d) => ({
-    titulo: t('recordatorio_de_guardia.titulo'),
-    cuerpo: t('recordatorio_de_guardia.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio }),
+  recordatorio_de_turno_guardia: (t, d) => ({
+    titulo: t('recordatorio_de_turno_guardia.titulo'),
+    cuerpo: t('recordatorio_de_turno_guardia.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio }),
   }),
 
   fin_periodo_sin_cargo: (t, d) => ({

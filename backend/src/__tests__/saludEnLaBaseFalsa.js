@@ -44,7 +44,7 @@ export function traducirPedidoDeSalud(clave, cuerpo) {
   if (columnas) parametros.append('select', columnas.join(','));
   for (const f of cuerpo.p_filtros ?? []) {
     if (f.o) parametros.append('or', `(${f.o.map(enTextoDeO).join(',')})`);
-    else if (f.guardia) for (const g of f.guardia) parametros.append(...condicion('guardias.', g));
+    else if (f.turno_guardia) for (const g of f.turno_guardia) parametros.append(...condicion('turnos_guardia.', g));
     else parametros.append(...condicion('', f));
   }
   if (cuerpo.p_orden?.length) {

@@ -170,7 +170,7 @@ export async function avisarPorWhatsapp({ config, prestadoraId, telefono, valore
  * Es el mismo criterio que usa el correo: sin destinatarios cargados, el mensaje cae al contacto de
  * la Prestadora (`utils/email.js`). Sin esto, la casilla de WhatsApp de la pantalla de Avisos
  * quedaba encendida sin que saliera nunca un mensaje, porque los que nacen de un proceso
- * —una guardia sin cubrir, un documento por vencer— no tienen a quién preguntarle el número.
+ * —un turno de guardia sin cubrir, un documento por vencer— no tienen a quién preguntarle el número.
  */
 export async function telefonoDeMensajes(prestadoraId) {
   if (!prestadoraId) return null;

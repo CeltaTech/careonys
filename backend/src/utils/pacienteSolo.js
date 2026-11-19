@@ -19,7 +19,7 @@
 // renuncia abierta, y el Cliente nunca aceptó eso. Se pide el fin igual que se pide el comienzo.
 //
 // AL FAMILIAR NO SE LE PIDE NADA, Y POR ESO NO HAY NADA QUE AUTORIZAR. Un familiar es el cliente:
-// no le debe una guardia a nadie. Que igual se haya quedado se anota como lo que es —un defecto
+// no le debe un turno de guardia a nadie. Que igual se haya quedado se anota como lo que es —un defecto
 // grave del servicio que no se pudo solucionar—, y quien figura en el registro es quien lo dejó
 // escrito, no quien lo permitió.
 //
@@ -52,7 +52,7 @@ export const MEDIOS_POSIBLES = Object.values(MEDIOS);
  */
 export const ORIGENES = {
   RELEVO: 'relevo',
-  TURNO_SIN_CUBRIR: 'turno_sin_cubrir',
+  TURNO_GUARDIA_SIN_CUBRIR: 'turno_guardia_sin_cubrir',
   EXTENSION: 'extension',
 };
 

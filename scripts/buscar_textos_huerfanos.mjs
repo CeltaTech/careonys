@@ -29,7 +29,7 @@
 // CÓMO RECONOCE QUE UNA CLAVE ESTÁ VIVA. Tres formas, porque el código no
 // siempre escribe la clave entera:
 //   1. El nombre de la clave aparece tal cual en el código.
-//   2. La clave se arma al vuelo, `traducirValor(t.guardias, `estado_${x}`)`.
+//   2. La clave se arma al vuelo, `traducirValor(t.turnos_guardia, `estado_${x}`)`.
 //      Se juntan todos los comienzos que aparecen en el código (`estado_`,
 //      `nivel_`…) y se da por viva toda clave que empiece con alguno.
 //   3. El grupo entero se pasa como un paquete,

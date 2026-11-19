@@ -41,7 +41,7 @@ export const CATALOGO_VISIBILIDAD = [
   {
     clave: 'cliente_ubicacion_en_vivo',
     app: 'clientes',
-    descripcion: 'Ver en un mapa dónde está el Asistente mientras dura la guardia',
+    descripcion: 'Ver en un mapa dónde está el Asistente mientras dura el turno de guardia',
     ayuda: 'Es la función con más riesgo legal del producto: seguir la ubicación de un trabajador. Apagada, el Cliente sigue viendo que llegó y que se fue, pero no el recorrido.',
     de_fabrica: true,
   },
@@ -113,7 +113,7 @@ export const CATALOGO_VISIBILIDAD = [
   {
     clave: 'asistente_patologias_del_paciente',
     app: 'asistentes',
-    descripcion: 'Ver las patologías del Paciente en el detalle de la guardia',
+    descripcion: 'Ver las patologías del Paciente en el detalle del turno de guardia',
     ayuda: 'Dato clínico. Hay Prestadoras que solo lo entregan a los tipos de Asistente con matrícula, y prefieren que no viaje al teléfono de nadie.',
     de_fabrica: true,
   },
@@ -141,7 +141,7 @@ export const CATALOGO_VISIBILIDAD = [
   {
     clave: 'asistente_relato_con_ia',
     app: 'asistentes',
-    descripcion: 'Contar la guardia hablando y que la revisión automática ordene el reporte',
+    descripcion: 'Contar el turno de guardia hablando y que la revisión automática ordene el reporte',
     ayuda: 'Manda el relato a un tercero para que lo ordene. Apagada, el Reporte Diario se completa a mano en los mismos campos, que es la opción que ya existe al lado del botón.',
     de_fabrica: true,
   },

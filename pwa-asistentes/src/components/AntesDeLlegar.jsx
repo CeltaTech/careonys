@@ -17,7 +17,7 @@ import { MOTIVOS_DEMORA } from '../lib/motivosDemora';
  * mérito de nadie, se guarda con otro origen y nunca se mezcla con esto.
  *
  * LA MEDIDA DE ESTA PANTALLA SON LOS MINUTOS DE PREAVISO que le gana a la Prestadora para cubrir la
- * guardia. De ahí salen todas las decisiones de acá:
+ * turno de guardia. De ahí salen todas las decisiones de acá:
  *
  *   - NINGUNO DE LOS DOS BOTONES SE TRABA. Sin GPS la salida se registra igual y lo único que se
  *     pierde es la estimación. Sin conexión los dos van a la cola del teléfono, como el check-in,
@@ -31,7 +31,7 @@ import { MOTIVOS_DEMORA } from '../lib/motivosDemora';
  * transporte». Nunca «llegó tarde» ni nada que se le parezca: la conclusión la saca el
  * Coordinador, no un programa.
  */
-export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPendiente, avisoPendiente, alRegistrar }) {
+export default function AntesDeLlegar({ t, locale, turnoGuardiaId, turno_guardia, salidaPendiente, avisoPendiente, alRegistrar }) {
   const [abriendoSalida, setAbriendoSalida] = useState(false);
   const [medioTransporte, setMedioTransporte] = useState('');
   const [registrandoSalida, setRegistrandoSalida] = useState(false);
@@ -46,7 +46,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
   // sin conexión no ve nada de lo que hizo hasta que vuelve la red, y vuelve a apretar.
   const [demoraEnEsteTelefono, setDemoraEnEsteTelefono] = useState(null);
 
-  const salidaRegistrada = Boolean(guardia?.salida_checkin_at);
+  const salidaRegistrada = Boolean(turno_guardia?.salida_checkin_at);
 
   async function alSalir() {
     setError('');
@@ -66,7 +66,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
     const clienteUuid = nuevoId();
     const datos = { ...punto, medioTransporte: medioTransporte.trim() || undefined, clienteUuid };
     try {
-      const resultado = await api.registrarSalida(guardiaId, datos);
+      const resultado = await api.registrarSalida(turnoGuardiaId, datos);
       if (resultado.yaLlego) setAdvertencia(t.antes_de_llegar.ya_llego);
       else if (!punto) setAdvertencia(t.antes_de_llegar.salida_sin_ubicacion);
       setAbriendoSalida(false);
@@ -80,7 +80,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
       }
       // Sin señal: se guarda en el teléfono y sale solo. La hora que le va a quedar es la de
       // cuando llegue al backend y no la de ahora — se dice así en pantalla, sin disimularlo.
-      await agregarACola({ id: clienteUuid, tipo: 'salida', guardiaId, payload: datos });
+      await agregarACola({ id: clienteUuid, tipo: 'salida', turnoGuardiaId, payload: datos });
       setAdvertencia(t.antes_de_llegar.sin_conexion);
       setAbriendoSalida(false);
       setMedioTransporte('');
@@ -98,7 +98,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
     const clienteUuid = nuevoId();
     const datos = { motivo, clienteUuid };
     try {
-      const resultado = await api.avisarDemora(guardiaId, datos);
+      const resultado = await api.avisarDemora(turnoGuardiaId, datos);
       if (resultado.yaLlego) setAdvertencia(t.antes_de_llegar.ya_llego);
       else {
         setDemoraEnEsteTelefono({ at: resultado.avisoAt, motivo: resultado.motivo ?? motivo });
@@ -112,7 +112,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
         setAvisandoDemora(false);
         return;
       }
-      await agregarACola({ id: clienteUuid, tipo: 'aviso_demora', guardiaId, payload: datos });
+      await agregarACola({ id: clienteUuid, tipo: 'aviso_demora', turnoGuardiaId, payload: datos });
       setDemoraEnEsteTelefono({ at: null, motivo });
       setAdvertencia(t.antes_de_llegar.sin_conexion);
       setAbriendoDemora(false);
@@ -136,9 +136,9 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
           desaparece: no hay nada que volver a apretar. */}
       {salidaRegistrada && (
         <div className="alert alert-info" role="status">
-          {con(t.antes_de_llegar.salida_registrada, { hora: horaDelMomento(guardia.salida_checkin_at, locale) })}
-          {guardia.medio_transporte
-            ? ` ${con(t.antes_de_llegar.salida_medio, { medio: guardia.medio_transporte })}`
+          {con(t.antes_de_llegar.salida_registrada, { hora: horaDelMomento(turno_guardia.salida_checkin_at, locale) })}
+          {turno_guardia.medio_transporte
+            ? ` ${con(t.antes_de_llegar.salida_medio, { medio: turno_guardia.medio_transporte })}`
             : ''}
         </div>
       )}
@@ -208,7 +208,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
 
       {!hayDemoraAvisada && abriendoDemora && (
         <div className="pwa-card-pie">
-          <p className="guardia-card-detalle">{t.antes_de_llegar.motivo_pregunta}</p>
+          <p className="tarjeta-detalle">{t.antes_de_llegar.motivo_pregunta}</p>
           {MOTIVOS_DEMORA.map((m) => (
             <label
               key={m}

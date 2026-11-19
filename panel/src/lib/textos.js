@@ -4,7 +4,7 @@
 // Los textos viven en los tres idiomas y muchos tienen huecos:
 //
 //   "Vence en {dias} días"
-//   "La guardia va de {desde} a {hasta}"
+//   "El turno de guardia va de {desde} a {hasta}"
 //
 // Sin esta función cada pantalla los rellenaría con `.replace('{dias}', valor)` encadenado.
 // Funciona, pero tiene dos problemas que se pagan más adelante: con dos o tres huecos la línea

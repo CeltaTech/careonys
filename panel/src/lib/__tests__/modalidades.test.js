@@ -174,7 +174,7 @@ describe('los textos existen en los tres idiomas', () => {
   });
 
   it.each(IDIOMAS)('%s explica por qué un candidato queda afuera por la modalidad', (idioma) => {
-    const motivos = T[idioma].guardias.cobertura_panel;
+    const motivos = T[idioma].turnos_guardia.cobertura_panel;
     for (const clave of [
       'motivo_modalidad_directa',
       'motivo_modalidad_intermediacion',
@@ -186,12 +186,12 @@ describe('los textos existen en los tres idiomas', () => {
 
 describe('contarPorModalidad', () => {
   it('cuenta cada fila en su modalidad', () => {
-    const guardias = [
+    const turnos_guardia = [
       { canal_modalidad: MODALIDAD.DIRECTA },
       { canal_modalidad: MODALIDAD.DIRECTA },
       { canal_modalidad: MODALIDAD.INTERMEDIACION },
     ];
-    expect(contarPorModalidad(guardias, (g) => g.canal_modalidad)).toEqual({
+    expect(contarPorModalidad(turnos_guardia, (g) => g.canal_modalidad)).toEqual({
       directa: 2,
       intermediacion: 1,
     });

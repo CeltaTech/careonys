@@ -28,7 +28,7 @@
 
 // Con extensión a propósito: este archivo se copia tal cual al backend, que corre en Node y ahí la
 // ruta sin extensión no resuelve.
-import { inicioDeGuardia } from './horarios.js';
+import { inicioDeTurnoGuardia } from './horarios.js';
 
 /**
  * Cuándo una Asistente es del equipo sin que nadie la haya puesto. Valores de fábrica.
@@ -39,14 +39,14 @@ import { inicioDeGuardia } from './horarios.js';
  */
 export const REGLA_DE_EQUIPO = {
   /** Cuántos turnos en ese Servicio hacen falta para entrar solo. */
-  turnos_para_ser_del_equipo: 3,
+  turnos_guardia_para_ser_del_equipo: 3,
   /** Hasta cuántos días hacia atrás se miran esos turnos. */
   dias_hacia_atras: 90,
 };
 
 /** Entre qué valores se puede correr cada número de la regla. */
 export const REGLA_QUE_SE_PUEDE_TOCAR = {
-  turnos_para_ser_del_equipo: { minimo: 1, maximo: 60 },
+  turnos_guardia_para_ser_del_equipo: { minimo: 1, maximo: 60 },
   dias_hacia_atras: { minimo: 7, maximo: 730 },
 };
 
@@ -65,7 +65,7 @@ export const SITUACIONES = ['sumada', 'sacada'];
  */
 export const ORIGEN = {
   /** Cumple la regla: tiene los turnos que hacen falta en la ventana que se mira. */
-  POR_SUS_TURNOS: 'por_sus_turnos',
+  POR_SUS_TURNOS_GUARDIA: 'por_sus_turnos_guardia',
   /** Tiene una serie vigente en ese Servicio. Es el caso más claro de "habitual". */
   POR_SU_SERIE: 'por_su_serie',
   /** La puso la Coordinadora. */
@@ -119,7 +119,7 @@ export function soloLoQueCorreDeLaRegla(cambios) {
  *
  * @param {object} entrada
  * @param {string} entrada.servicioId De qué Servicio es el equipo.
- * @param {Array} entrada.guardias Turnos con `servicio_id`, `asistente_id`, `estado`, `fecha` y
+ * @param {Array} entrada.turnos_guardia Turnos con `servicio_id`, `asistente_id`, `estado`, `fecha` y
  *   `hora_inicio`. Los de otro Servicio se ignoran, así que se puede pasar la lista entera.
  * @param {Array} entrada.series Series con `servicio_id` y `asistente_id`.
  * @param {Array} entrada.decisiones Lo guardado: `{ asistente_id, usuario_id, situacion,
@@ -131,7 +131,7 @@ export function soloLoQueCorreDeLaRegla(cambios) {
  */
 export function equipoDelServicio({
   servicioId,
-  guardias = [],
+  turnos_guardia = [],
   series = [],
   decisiones = [],
   coordinadorDelServicio = null,
@@ -143,16 +143,16 @@ export function equipoDelServicio({
 
   // Cuántos turnos hizo cada una en este Servicio adentro de la ventana, y cuándo fue el último.
   const cuenta = new Map();
-  for (const guardia of guardias) {
-    if (!guardia?.asistente_id) continue;
-    if (!servicioId || guardia.servicio_id !== servicioId) continue;
-    if (guardia.estado === 'cancelada' || guardia.estado === 'ausente') continue;
-    const empezo = inicioDeGuardia(guardia);
+  for (const turno_guardia of turnos_guardia) {
+    if (!turno_guardia?.asistente_id) continue;
+    if (!servicioId || turno_guardia.servicio_id !== servicioId) continue;
+    if (turno_guardia.estado === 'cancelada' || turno_guardia.estado === 'ausente') continue;
+    const empezo = inicioDeTurnoGuardia(turno_guardia);
     if (!empezo || empezo >= ahora || empezo < desde) continue;
-    const llevado = cuenta.get(guardia.asistente_id) ?? { turnos: 0, ultima_vez: null };
-    llevado.turnos += 1;
+    const llevado = cuenta.get(turno_guardia.asistente_id) ?? { turnos_guardia: 0, ultima_vez: null };
+    llevado.turnos_guardia += 1;
     if (!llevado.ultima_vez || empezo > llevado.ultima_vez) llevado.ultima_vez = empezo;
-    cuenta.set(guardia.asistente_id, llevado);
+    cuenta.set(turno_guardia.asistente_id, llevado);
   }
 
   const conSerie = new Set(
@@ -172,12 +172,12 @@ export function equipoDelServicio({
   const afuera = [];
   for (const id of idsAsistentes) {
     const suya = decision.get(claveAsistente(id));
-    const llevado = cuenta.get(id) ?? { turnos: 0, ultima_vez: null };
-    const llegaSola = conSerie.has(id) || llevado.turnos >= regla.turnos_para_ser_del_equipo;
+    const llevado = cuenta.get(id) ?? { turnos_guardia: 0, ultima_vez: null };
+    const llegaSola = conSerie.has(id) || llevado.turnos_guardia >= regla.turnos_guardia_para_ser_del_equipo;
 
     const integrante = {
       asistente_id: id,
-      turnos: llevado.turnos,
+      turnos_guardia: llevado.turnos_guardia,
       ultima_vez: llevado.ultima_vez,
       cubre_francos: Boolean(suya?.cubre_francos),
       // La serie manda sobre la cuenta de turnos: tener un turno fijo semanal es lo más parecido
@@ -186,7 +186,7 @@ export function equipoDelServicio({
         ? ORIGEN.A_MANO
         : conSerie.has(id)
           ? ORIGEN.POR_SU_SERIE
-          : ORIGEN.POR_SUS_TURNOS,
+          : ORIGEN.POR_SUS_TURNOS_GUARDIA,
       decidido: Boolean(suya),
     };
 
@@ -203,7 +203,7 @@ export function equipoDelServicio({
   asistentes.sort(
     (a, b) =>
       Number(b.cubre_francos) - Number(a.cubre_francos) ||
-      b.turnos - a.turnos ||
+      b.turnos_guardia - a.turnos_guardia ||
       (b.ultima_vez?.getTime() ?? 0) - (a.ultima_vez?.getTime() ?? 0)
   );
 

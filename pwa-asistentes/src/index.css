@@ -130,7 +130,7 @@ p {
 }
 
 .pwa-card,
-.guardia-card,
+.tarjeta,
 .tarjeta-consentimiento,
 .login-card {
   display: block;
@@ -150,7 +150,7 @@ p {
 }
 
 /* Adentro de una tarjeta, otra tarjeta no lleva su propio marco: se separa con una línea. */
-.pwa-card .guardia-card {
+.pwa-card .tarjeta {
   border: 0;
   border-top: 1px solid var(--linea-suave);
   border-radius: 0;
@@ -255,7 +255,7 @@ p {
   font-weight: 700;
 }
 
-/* Cuántos turnos asignados esperan respuesta. Va en la pestaña de Guardias porque mientras el
+/* Cuántos turnos de guardia asignados esperan respuesta. Va en la pestaña de Turnos de guardia porque mientras el
    Asistente no responde, el Coordinador no puede buscar a otro. */
 .nav-cuenta {
   display: inline-block;
@@ -632,9 +632,9 @@ p {
   color: var(--gris);
 }
 
-/* ---------- Guardias ---------- */
+/* ---------- Turnos de guardia ---------- */
 
-.guardia-card-paciente {
+.tarjeta-paciente {
   font-family: var(--font-display);
   color: var(--tinta);
   font-size: 14px;
@@ -642,13 +642,13 @@ p {
   margin: 0 0 4px;
 }
 
-.guardia-card-detalle {
+.tarjeta-detalle {
   color: var(--gris);
   font-size: 11px;
   margin: 0 0 6px;
 }
 
-.guardia-card .badge {
+.tarjeta .badge {
   margin-right: 5px;
 }
 
@@ -676,7 +676,7 @@ p {
   flex: 1;
 }
 
-.guardia-timer {
+.turno-guardia-timer {
   font-family: var(--font-display);
   font-size: 27px;
   font-weight: 750;
@@ -685,7 +685,7 @@ p {
   margin: 0 0 2px;
 }
 
-.guardia-timer-pie {
+.turno-guardia-timer-pie {
   text-align: center;
 }
 
@@ -721,7 +721,7 @@ p {
   color: var(--ok-texto);
 }
 
-/* El mismo cartelito, pero cuando avisa de algo que hay que atender: una guardia que quedó sin
+/* El mismo cartelito, pero cuando avisa de algo que hay que atender: un turno de guardia que quedó sin
    cerrar, un envío que todavía está esperando. */
 .badge-alerta,
 .badge-amarilla {

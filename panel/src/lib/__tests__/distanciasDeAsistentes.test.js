@@ -15,7 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const rpc = vi.fn();
 vi.mock('../supabaseClient', () => ({ supabase: { rpc: (...args) => rpc(...args) } }));
 
-const { candidatosParaGuardia, MOTIVO } = await import('../candidatos');
+const { candidatosParaTurnoGuardia, MOTIVO } = await import('../candidatos');
 const { cargarDistanciasDeAsistentes } = await import('../distanciasDeAsistentes');
 
 const HUECO = {
@@ -40,7 +40,7 @@ const LEJANA = activo('a-lejos', 'Beatriz Prueba');
 const SIN_MAPA = activo('a-sin-mapa', 'Carla Prueba');
 
 const evaluar = (distancias) =>
-  candidatosParaGuardia(HUECO, {
+  candidatosParaTurnoGuardia(HUECO, {
     asistentes: [CERCANA, LEJANA, SIN_MAPA],
     distancias,
     ahora: new Date('2026-09-18T10:00:00'),

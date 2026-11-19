@@ -19,10 +19,10 @@ import { mensajeDeError } from '../lib/errores';
 
 // El puntaje, dicho de las dos maneras: dibujado para quien mira y escrito para quien escucha.
 function Estrellas({ calificacion, t }) {
-  if (!calificacion) return <p className="guardia-card-detalle">{t.vidriera.sin_calificaciones}</p>;
+  if (!calificacion) return <p className="tarjeta-detalle">{t.vidriera.sin_calificaciones}</p>;
   const enteras = Math.round(calificacion.promedio);
   return (
-    <p className="guardia-card-detalle">
+    <p className="tarjeta-detalle">
       <span aria-hidden="true">
         {'★'.repeat(enteras)}
         {'☆'.repeat(Math.max(0, 5 - enteras))}
@@ -101,16 +101,16 @@ export default function BuscarAsistentes() {
         <div className="pwa-card estado-vacio" role="status">{t.vidriera.sin_resultados}</div>
       ) : (
         asistentes.map((a) => (
-          <Link key={a.id} to={`/buscar/${a.id}`} className="guardia-card">
-            <div className="guardia-card-paciente">{a.nombre}</div>
-            {a.tipo && <div className="guardia-card-detalle">{nombreTipo(a.tipo, t)}</div>}
+          <Link key={a.id} to={`/buscar/${a.id}`} className="tarjeta">
+            <div className="tarjeta-paciente">{a.nombre}</div>
+            {a.tipo && <div className="tarjeta-detalle">{nombreTipo(a.tipo, t)}</div>}
             {a.zonas.length > 0 && (
-              <div className="guardia-card-detalle">
+              <div className="tarjeta-detalle">
                 {t.vidriera.zonas}: {a.zonas.join(', ')}
               </div>
             )}
             {a.antiguedad_meses !== null && (
-              <div className="guardia-card-detalle">
+              <div className="tarjeta-detalle">
                 {t.vidriera.antiguedad.replace('{meses}', a.antiguedad_meses)}
               </div>
             )}

@@ -5,24 +5,24 @@ import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { guardiasEnLicenciaAdentro } from './guardiaDeLicencia.js';
+import { turnosGuardiaEnLicenciaAdentro } from './turnoGuardiaDeLicencia.js';
 
 // Recorre los 3 eventos de push a Asistentes listados en
-// docs/PRD_04_05_App_Servicio.md:115 ("Nueva guardia asignada, mensajes del coordinador,
+// docs/PRD_04_05_App_Servicio.md:115 ("Nuevo turno de guardia asignado, mensajes del coordinador,
 // recordatorios"). Mismo patrón de "ya notificado" que revisarNotificacionesCoordinador.js:
 // cada evento tiene su propia columna *_enviado_at, se manda una sola vez, y el cron corre
 // cada pocos minutos recorriendo TODAS las prestadoras por igual.
 
-// Cuánto antes se le recuerda a la Asistente su próxima guardia, mientras la Prestadora no
-// haya elegido otra cosa. Es el mismo valor que la columna `prestadoras.minutos_aviso_previo_guardia`
+// Cuánto antes se le recuerda a la Asistente su próximo turno de guardia, mientras la Prestadora no
+// haya elegido otra cosa. Es el mismo valor que la columna `prestadoras.minutos_aviso_previo_turno_guardia`
 // tiene por defecto: está escrito en los dos lados a propósito, así una Prestadora que nunca
 // tocó el número se comporta igual que una que guardó el de fábrica.
 export const MINUTOS_ANTES_RECORDATORIO = 60;
 
-// Los mismos topes que la regla de la base (`prestadoras_minutos_aviso_previo_guardia_check`). Se exponen para que el
+// Los mismos topes que la regla de la base (`prestadoras_minutos_aviso_previo_turno_guardia_check`). Se exponen para que el
 // backend rechace el número antes que la base, y el Panel reciba un mensaje en castellano en
 // vez del error crudo de Postgres.
-export const LIMITES_PREAVISO_GUARDIA = { minimo: 5, maximo: 1440 };
+export const LIMITES_PREAVISO_TURNO_GUARDIA = { minimo: 5, maximo: 1440 };
 
 const EVENTO_AVISO_RUTINA = 'aviso_rutina_asistente';
 
@@ -80,23 +80,23 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
   return enLaPrestadora(prestadoraId, 'revisar los avisos al Asistente', async (db) => {
     const { data: prestadora, error } = await db
       .from('prestadoras')
-      .select('minutos_aviso_previo_guardia')
+      .select('minutos_aviso_previo_turno_guardia')
       .eq('id', prestadoraId)
       .maybeSingle();
     if (error) {
       console.error(`Error consultando la anticipación de los avisos (prestadora ${prestadoraId}):`, error.message);
       return;
     }
-    const minutosAntes = prestadora?.minutos_aviso_previo_guardia ?? MINUTOS_ANTES_RECORDATORIO;
-    await revisarGuardiasAsignadas(db, prestadoraId);
+    const minutosAntes = prestadora?.minutos_aviso_previo_turno_guardia ?? MINUTOS_ANTES_RECORDATORIO;
+    await revisarTurnosGuardiaAsignados(db, prestadoraId);
     await revisarMensajesCoordinador(db, prestadoraId);
-    await revisarRecordatoriosGuardiaProxima(db, prestadoraId, minutosAntes, ahora);
+    await revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutosAntes, ahora);
   });
 }
 
-async function revisarGuardiasAsignadas(db, prestadoraId) {
-  const { data: guardias, error } = await db
-    .from('guardias')
+async function revisarTurnosGuardiaAsignados(db, prestadoraId) {
+  const { data: turnos_guardia, error } = await db
+    .from('turnos_guardia')
     .select('id, asistente_id, fecha, hora_inicio')
     .eq('prestadora_id', prestadoraId)
     .is('push_asignacion_enviado_at', null)
@@ -106,29 +106,29 @@ async function revisarGuardiasAsignadas(db, prestadoraId) {
     console.error(`Error consultando guardias para push de asignación (prestadora ${prestadoraId}):`, error.message);
     return;
   }
-  if (!guardias?.length) return;
+  if (!turnos_guardia?.length) return;
 
   // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
   const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
 
-  for (const guardia of guardias) {
-    const { titulo, cuerpo } = mensajeDelSistema('guardia_asignada', idioma, {
-      fecha: guardia.fecha,
-      horaInicio: guardia.hora_inicio,
+  for (const turno_guardia of turnos_guardia) {
+    const { titulo, cuerpo } = mensajeDelSistema('turno_guardia_asignado', idioma, {
+      fecha: turno_guardia.fecha,
+      horaInicio: turno_guardia.hora_inicio,
     });
 
-    const enviadoPorPush = await enviarPushAsistente(prestadoraId, guardia.asistente_id, {
+    const enviadoPorPush = await enviarPushAsistente(prestadoraId, turno_guardia.asistente_id, {
       titulo,
       cuerpo,
-      url: `/guardias/${guardia.id}`,
+      url: `/turnos-guardia/${turno_guardia.id}`,
     });
-    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
+    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: turno_guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
 
     await db
-      .from('guardias')
+      .from('turnos_guardia')
       .update({ push_asignacion_enviado_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)
-      .eq('id', guardia.id);
+      .eq('id', turno_guardia.id);
   }
 }
 
@@ -165,9 +165,9 @@ async function revisarMensajesCoordinador(db, prestadoraId) {
   }
 }
 
-async function revisarRecordatoriosGuardiaProxima(db, prestadoraId, minutosAntes, ahora) {
-  const { data: guardias, error } = await db
-    .from('guardias')
+async function revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutosAntes, ahora) {
+  const { data: turnos_guardia, error } = await db
+    .from('turnos_guardia')
     .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, checkin_at')
     .eq('prestadora_id', prestadoraId)
     .is('push_recordatorio_enviado_at', null)
@@ -179,39 +179,39 @@ async function revisarRecordatoriosGuardiaProxima(db, prestadoraId, minutosAntes
     console.error(`Error consultando guardias para recordatorio push (prestadora ${prestadoraId}):`, error.message);
     return;
   }
-  if (!guardias?.length) return;
+  if (!turnos_guardia?.length) return;
 
   const limite = new Date(ahora.getTime() + minutosAntes * 60_000);
-  const proximas = guardias.filter((guardia) => {
-    const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
+  const proximas = turnos_guardia.filter((turno_guardia) => {
+    const inicio = new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
     return inicio.getTime() <= limite.getTime() && inicio.getTime() >= ahora.getTime();
   });
   if (!proximas.length) return;
 
-  // Durante la licencia no tiene guardias, así que tampoco recordatorio. No se marca como
+  // Durante la licencia no tiene turnos de guardia, así que tampoco recordatorio. No se marca como
   // enviado: si el Coordinador anota la vuelta a tiempo, el recordatorio sale en la próxima vuelta.
-  const deLicencia = await guardiasEnLicenciaAdentro(db, prestadoraId, proximas);
+  const deLicencia = await turnosGuardiaEnLicenciaAdentro(db, prestadoraId, proximas);
   const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
 
-  for (const guardia of proximas) {
-    if (deLicencia.has(guardia.id)) continue;
+  for (const turno_guardia of proximas) {
+    if (deLicencia.has(turno_guardia.id)) continue;
 
-    const { titulo, cuerpo } = mensajeDelSistema('recordatorio_de_guardia', idioma, {
-      fecha: guardia.fecha,
-      horaInicio: guardia.hora_inicio,
+    const { titulo, cuerpo } = mensajeDelSistema('recordatorio_de_turno_guardia', idioma, {
+      fecha: turno_guardia.fecha,
+      horaInicio: turno_guardia.hora_inicio,
     });
 
-    const enviadoPorPush = await enviarPushAsistente(prestadoraId, guardia.asistente_id, {
+    const enviadoPorPush = await enviarPushAsistente(prestadoraId, turno_guardia.asistente_id, {
       titulo,
       cuerpo,
-      url: `/guardias/${guardia.id}`,
+      url: `/turnos-guardia/${turno_guardia.id}`,
     });
-    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
+    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: turno_guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
 
     await db
-      .from('guardias')
+      .from('turnos_guardia')
       .update({ push_recordatorio_enviado_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)
-      .eq('id', guardia.id);
+      .eq('id', turno_guardia.id);
   }
 }

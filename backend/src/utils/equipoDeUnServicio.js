@@ -44,8 +44,8 @@ export async function equipoDeUnServicio({ servicioId, prestadoraId, regla = nul
   if (!servicioId) return vacio;
 
   const reglaFinal = regla ?? reglaDeEquipoDe(await configuracionDeEquipo(prestadoraId));
-  const [guardias, series, decisiones, coordinadorDelServicio] = await Promise.all([
-    guardiasDelServicio({ servicioId, prestadoraId, regla: reglaFinal, ahora }),
+  const [turnos_guardia, series, decisiones, coordinadorDelServicio] = await Promise.all([
+    turnosGuardiaDelServicio({ servicioId, prestadoraId, regla: reglaFinal, ahora }),
     seriesDelServicio({ servicioId, prestadoraId }),
     decisionesDelEquipo({ servicioId, prestadoraId }),
     coordinadorDe({ servicioId, prestadoraId }),
@@ -53,7 +53,7 @@ export async function equipoDeUnServicio({ servicioId, prestadoraId, regla = nul
 
   const equipo = equipoDelServicio({
     servicioId,
-    guardias,
+    turnos_guardia,
     series,
     decisiones,
     coordinadorDelServicio,
@@ -106,11 +106,11 @@ async function configuracionDeEquipo(prestadoraId) {
  *
  * Se piden de la ventana configurada; el recorte fino lo hace después `equipoDelServicio()`.
  */
-async function guardiasDelServicio({ servicioId, prestadoraId, regla, ahora }) {
+async function turnosGuardiaDelServicio({ servicioId, prestadoraId, regla, ahora }) {
   const dias = Math.max(regla.dias_hacia_atras, REGLA_QUE_SE_PUEDE_TOCAR.dias_hacia_atras.minimo);
   const desde = fechaISO(new Date(ahora.getTime() - dias * MS_POR_DIA));
   const { data, error } = await supabase
-    .from('guardias')
+    .from('turnos_guardia')
     .select('id, servicio_id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado')
     .eq('prestadora_id', prestadoraId)
     .eq('servicio_id', servicioId)
@@ -124,7 +124,7 @@ async function guardiasDelServicio({ servicioId, prestadoraId, regla, ahora }) {
 
 async function seriesDelServicio({ servicioId, prestadoraId }) {
   const { data, error } = await supabase
-    .from('series_guardias')
+    .from('series_turnos_guardia')
     .select('id, servicio_id, asistente_id, estado, vigente_hasta')
     .eq('prestadora_id', prestadoraId)
     .eq('servicio_id', servicioId);

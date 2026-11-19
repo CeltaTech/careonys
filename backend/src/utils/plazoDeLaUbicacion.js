@@ -6,7 +6,7 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 // EL PLAZO PARA ACEPTAR LA UBICACIÓN DURANTE EL TURNO.
 //
 // Cuando la Prestadora pasa de «Sólo viaje» a «Viaje y turno», la base anota el día del cambio
-// (`prestadoras.control_de_ubicacion_en_el_turno_desde`), y cada Asistente tiene los días que ella
+// (`prestadoras.control_de_ubicacion_en_el_turno_guardia_desde`), y cada Asistente tiene los días que ella
 // configuró para aceptar el texto nuevo. Al revés no corre ningún plazo: lo aceptado para «Viaje y
 // turno» cubre «Sólo viaje».
 //
@@ -25,14 +25,14 @@ export async function avisarLosPlazosDeUbicacionVencidos(prestadoraId, ahora = n
 
   const { data: prestadora, error } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
     .from('prestadoras')
-    .select('control_de_ubicacion_en_el_turno, control_de_ubicacion_en_el_turno_desde, dias_para_aceptar_la_ubicacion')
+    .select('control_de_ubicacion_en_el_turno_guardia, control_de_ubicacion_en_el_turno_guardia_desde, dias_para_aceptar_la_ubicacion')
     .eq('id', prestadoraId)
     .maybeSingle());
   if (error) throw new Error(error.message);
-  if (prestadora?.control_de_ubicacion_en_el_turno !== true || !prestadora.control_de_ubicacion_en_el_turno_desde) {
+  if (prestadora?.control_de_ubicacion_en_el_turno_guardia !== true || !prestadora.control_de_ubicacion_en_el_turno_guardia_desde) {
     return { avisados: 0 };
   }
-  const desde = prestadora.control_de_ubicacion_en_el_turno_desde;
+  const desde = prestadora.control_de_ubicacion_en_el_turno_guardia_desde;
   const dias = prestadora.dias_para_aceptar_la_ubicacion;
   const plazoMs = dias * 24 * 60 * 60 * 1000;
 
@@ -51,13 +51,13 @@ export async function avisarLosPlazosDeUbicacionVencidos(prestadoraId, ahora = n
 
   const { data: aceptados, error: errorAceptados } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
     .from('consentimientos_asistente')
-    .select('asistente_id, textos_consentimiento!inner(control_de_ubicacion_en_el_turno, es_borrador, vigente_hasta)')
+    .select('asistente_id, textos_consentimiento!inner(control_de_ubicacion_en_el_turno_guardia, es_borrador, vigente_hasta)')
     .eq('prestadora_id', prestadoraId)
     .eq('clave', 'seguimiento_ubicacion')
     .eq('decision', 'otorgado')
     .is('retirado_at', null)
     .in('asistente_id', vencidos.map((a) => a.id))
-    .eq('textos_consentimiento.control_de_ubicacion_en_el_turno', true)
+    .eq('textos_consentimiento.control_de_ubicacion_en_el_turno_guardia', true)
     .eq('textos_consentimiento.es_borrador', false)
     .is('textos_consentimiento.vigente_hasta', null));
   if (errorAceptados) throw new Error(errorAceptados.message);
@@ -75,8 +75,8 @@ export async function avisarLosPlazosDeUbicacionVencidos(prestadoraId, ahora = n
     const { data: anotado, error: errorAnotado } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
       .from('plazos_de_ubicacion_avisados')
       .upsert(
-        { prestadora_id: prestadoraId, asistente_id: asistente.id, control_en_el_turno_desde: desde },
-        { onConflict: 'asistente_id,control_en_el_turno_desde', ignoreDuplicates: true },
+        { prestadora_id: prestadoraId, asistente_id: asistente.id, control_en_el_turno_guardia_desde: desde },
+        { onConflict: 'asistente_id,control_en_el_turno_guardia_desde', ignoreDuplicates: true },
       )
       .select('id'));
     if (errorAnotado) {

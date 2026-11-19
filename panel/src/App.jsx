@@ -34,10 +34,10 @@ import { Personas } from './pages/Personas';
 import { ClienteDetalle } from './pages/clientes/ClienteDetalle';
 import { Servicios } from './pages/Servicios';
 import { ServicioDetalle } from './pages/servicios/ServicioDetalle';
-import { Guardias } from './pages/Guardias';
+import { TurnosGuardia } from './pages/TurnosGuardia';
 import { Reportes } from './pages/Reportes';
 import { Alertas } from './pages/Alertas';
-import { EmergenciasEnGuardia } from './pages/EmergenciasEnGuardia';
+import { EmergenciasEnTurnoGuardia } from './pages/EmergenciasEnTurnoGuardia';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
 import { Comunicacion } from './pages/Comunicacion';
 import { Evv } from './pages/Evv';
@@ -156,15 +156,15 @@ function App() {
                     <Route path="servicios/:id" element={<ServicioDetalle />} />
                     <Route path="medicacion" element={<Medicacion />} />
                     <Route path="cargas-pendientes" element={<CargasPendientes />} />
-                    <Route path="guardias" element={<Guardias />} />
+                    <Route path="turnos-guardia" element={<TurnosGuardia />} />
                     <Route path="reportes" element={<Reportes />} />
                     <Route path="alertas" element={<Alertas />} />
-                    {/* Lo que un Asistente avisó apretando el botón de emergencia de su guardia.
+                    {/* Lo que un Asistente avisó apretando el botón de emergencia de su turno de guardia.
                         Sin candado propio, igual que sus vecinas de Cumplimiento: quien está de
                         turno cuando entra una es el Coordinador, y el backend pide lo mismo. */}
-                    <Route path="emergencias" element={<EmergenciasEnGuardia />} />
+                    <Route path="emergencias" element={<EmergenciasEnTurnoGuardia />} />
                     <Route path="comunicacion" element={<Comunicacion />} />
-                    <Route path="verificacion-guardias" element={<Evv />} />
+                    <Route path="verificacion-turnos-guardia" element={<Evv />} />
                     <Route path="facturacion" element={<Facturacion />} />
                     {/* Lo que se le paga al Asistente es dato sensible (CLAUDE.md §6), así que
                         además de estar en el menú tiene candado propio en la dirección: sin el

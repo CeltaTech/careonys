@@ -1,4 +1,4 @@
-// A cuántos metros vive cada Asistente del Paciente más cercano de una guardia.
+// A cuántos metros vive cada Asistente del Paciente más cercano de un turno de guardia.
 //
 // La cuenta la hace la base, con la función `distancias_de_asistentes_a_pacientes`, porque el
 // domicilio del Asistente sólo lo ve quien tiene el permiso de verlo y la distancia la necesita
@@ -6,17 +6,17 @@
 // metros: ninguna coordenada del Asistente sale de la base.
 //
 // La base contesta únicamente por los Asistentes y los Pacientes que quien pide ya puede ver, y
-// sólo al personal de la Prestadora. Un Asistente sin domicilio ubicado en el mapa, o una guardia
+// sólo al personal de la Prestadora. Un Asistente sin domicilio ubicado en el mapa, o un turno de guardia
 // cuyos Pacientes no lo tienen, no vuelve en la respuesta: la lista de candidatos se calla sobre
 // la cercanía en ese caso, que es lo que corresponde.
 
 import { supabase } from './supabaseClient';
-import { idsDePacientes } from './pacientesDeGuardia';
+import { idsDePacientes } from './pacientesDeTurnoGuardia';
 
 /**
- * Trae las distancias de los Asistentes hasta el Paciente más cercano de la guardia `hueco`.
+ * Trae las distancias de los Asistentes hasta el Paciente más cercano del turno de guardia `hueco`.
  *
- * @param hueco          la fila de `guardias` que hay que cubrir, con `fecha` y sus Pacientes.
+ * @param hueco          la fila de `turnos_guardia` que hay que cubrir, con `fecha` y sus Pacientes.
  * @param idsAsistentes  los Asistentes por los que se pregunta.
  * @returns {Promise<Record<string, number>>} id de Asistente → metros. Vacío si no hay a quién
  *   preguntar o si la consulta falló: sin distancia, la lista de candidatos no dice nada de la

@@ -23,6 +23,7 @@ const MIGRACIONES_POSTERIORES = [
   '20270401000800_la_frase_antes_del_enlace.sql',
   '20270401001200_los_avisos_de_llegada_y_de_reporte.sql',
   '20270402000200_el_mensaje_del_cierre_del_servicio_cambia_de_nombre.sql',
+  '20270415000000_turno_de_guardia.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;
@@ -30,6 +31,16 @@ const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|f
 const SIEMBRA_CON_PRESTADORA = /\(NULL,\s*'([^']+)',\s*'(\{[^\n]*?\})'\)/g;
 const BORRADO = /DELETE FROM public\.mensajes_del_sistema\s+WHERE prestadora_id IS NULL AND clave = '([^']+)'/g;
 const RENOMBRE = /SET clave = replace\(clave, '([^']+)', '([^']+)'\)\s+WHERE clave IN \(([^)]*)\)/g;
+// Renombre por pares: `UPDATE public.mensajes_del_sistema x SET clave = m.nuevo FROM (VALUES ('<de>', '<a>'), …)
+// m(viejo, nuevo)`.
+const RENOMBRE_POR_PARES = /UPDATE public\.mensajes_del_sistema x SET clave = m\.nuevo FROM \(VALUES([\s\S]*?)\)\s*m\(viejo, nuevo\)/g;
+// Un marcador que cambia de nombre en todas las frases: `SET i18n = replace(i18n::text, '<de>', '<a>')::jsonb`.
+const MARCADOR = /UPDATE public\.mensajes_del_sistema SET i18n = replace\(i18n::text, '([^']+)', '([^']+)'\)::jsonb/g;
+// Una frase de fábrica que se reescribe en un idioma: `SET i18n = jsonb_set(i18n, '{<idioma>}',
+// to_jsonb('<frase>'::text)) WHERE prestadora_id IS NULL AND clave = '<clave>'`, con la frase anterior
+// como condición si la dice (`AND i18n->>'<idioma>' = '<frase anterior>'`).
+const FRASE = /UPDATE public\.mensajes_del_sistema SET i18n = jsonb_set\(i18n, '\{([^}]+)\}', to_jsonb\('((?:[^']|'')*)'::text\)\) WHERE prestadora_id IS NULL AND clave = '([^']+)'(?: AND i18n->>'[^']+' = '((?:[^']|'')*)')?/g;
+const sinComillasDobles = (texto) => texto.replace(/''/g, "'");
 
 /** Lo que hace cada migración posterior, en orden: `{ clave, fila }` siembra, `{ clave }` borra y
     `{ clave, nueva }` renombra. */
@@ -43,6 +54,14 @@ function cambiosPosteriores() {
         clave,
         nueva: clave.replace(m[1], m[2]),
       }))),
+      ...[...texto.matchAll(RENOMBRE_POR_PARES)].flatMap((m) =>
+        [...m[1].matchAll(/\('([^']+)',\s*'([^']+)'\)/g)].map(([, clave, nueva]) => ({ donde: m.index, clave, nueva }))),
+      ...[...texto.matchAll(MARCADOR)].map((m) => ({ donde: m.index, marcador: { de: m[1], a: m[2] } })),
+      ...[...texto.matchAll(FRASE)].map((m) => ({
+        donde: m.index,
+        clave: m[3],
+        frase: { idioma: m[1], texto: sinComillasDobles(m[2]), antes: m[4] === undefined ? null : sinComillasDobles(m[4]) },
+      })),
       ...[...texto.matchAll(SIEMBRA)].map(([, clave, i18n, admite, activo], i, todos) => ({
         donde: todos[i].index,
         clave,
@@ -81,7 +100,18 @@ export function filasSembradas() {
       })),
   ]) porClave.set(fila.clave, fila);
   for (const cambio of cambiosPosteriores()) {
-    if (cambio.fila) porClave.set(cambio.clave, cambio.fila);
+    if (cambio.marcador) {
+      for (const [clave, fila] of porClave) {
+        const i18n = JSON.parse(JSON.stringify(fila.i18n).split(cambio.marcador.de).join(cambio.marcador.a));
+        porClave.set(clave, { ...fila, i18n });
+      }
+    } else if (cambio.frase) {
+      const fila = porClave.get(cambio.clave);
+      const { idioma, texto, antes } = cambio.frase;
+      if (fila && (antes === null || fila.i18n?.[idioma] === antes)) {
+        porClave.set(cambio.clave, { ...fila, i18n: { ...fila.i18n, [idioma]: texto } });
+      }
+    } else if (cambio.fila) porClave.set(cambio.clave, cambio.fila);
     else if (cambio.nueva) {
       const fila = porClave.get(cambio.clave);
       porClave.delete(cambio.clave);

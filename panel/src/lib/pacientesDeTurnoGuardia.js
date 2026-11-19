@@ -1,0 +1,227 @@
+// Punto único de verdad de a quiénes atiende un turno de guardia, dentro del Panel
+// (regla 12 de CLAUDE.md §7).
+//
+// Un turno de guardia son las horas que el Asistente pasa cuidando, no el cuidado de una persona.
+// Adentro de esas horas puede atender a más de un Paciente: un matrimonio en su casa, o un
+// grupo entero en una residencia. Por eso la respuesta a "¿a quién atiende este turno de guardia?" es siempre una lista,
+// aunque casi siempre tenga un solo nombre.
+//
+// La lista vive en la tabla `turno_guardia_pacientes`. La columna vieja `turnos_guardia.paciente_id`
+// está en retiro: guarda a uno solo de los Pacientes y sigue existiendo únicamente para que
+// las pantallas todavía sin actualizar no se rompan. Este archivo es el único lugar que
+// sabe que esa columna existe, y la usa nada más que como red de seguridad — cuando ese
+// respaldo deje de hacer falta, se saca de acá y de ningún otro lado.
+//
+// Ver el disparador `sincronizar_paciente_principal` de `turnos_guardia`.
+
+import { supabase } from './supabaseClient';
+import { con } from './textos';
+
+/**
+ * Identificador de la fila de la grilla cuando el turno de guardia no tiene ningún Paciente.
+ *
+ * Se usa una cadena y no `null` por el mismo motivo que en `cobertura.js`: `null` como clave
+ * de Map se confunde con "todavía no cargó".
+ */
+export const SIN_PACIENTES = 'sin-pacientes';
+
+/**
+ * Trae de la base a quiénes atiende cada turno de guardia de la lista.
+ *
+ * Devuelve un Map de id de guardia → array de ids de Paciente. Los turnos de guardia que no aparecen
+ * en el resultado quedan fuera del Map, no con un array vacío: "no vino" y "no tiene a
+ * nadie" son cosas distintas y conviene no confundirlas.
+ */
+export async function cargarPacientesDeTurnosGuardia(idsTurnosGuardia) {
+  const ids = [...new Set((idsTurnosGuardia ?? []).filter(Boolean))];
+  if (ids.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('turno_guardia_pacientes')
+    .select('turno_guardia_id, paciente_id')
+    .in('turno_guardia_id', ids);
+
+  if (error) throw error;
+
+  const mapa = new Map();
+  for (const fila of data ?? []) {
+    if (!mapa.has(fila.turno_guardia_id)) mapa.set(fila.turno_guardia_id, []);
+    mapa.get(fila.turno_guardia_id).push(fila.paciente_id);
+  }
+  return mapa;
+}
+
+/**
+ * Los turnos de guardia que atienden a alguno de estos Pacientes.
+ *
+ * Es la pregunta al revés de `cargarPacientesDeTurnosGuardia`, y vive acá por el mismo motivo: hay
+ * dos lugares donde puede estar escrito a quién atiende un turno de guardia —la tabla
+ * `turno_guardia_pacientes` y la columna vieja `turnos_guardia.paciente_id`—, y este archivo es el único
+ * que sabe que el segundo existe. Una pantalla que preguntara sólo por uno de los dos se
+ * saltearía guardias sin avisar.
+ *
+ * `seleccion` son las columnas que se piden de `turnos_guardia`, y tiene que incluir `id`: es la
+ * clave con la que se juntan los dos caminos sin repetir ningún turno de guardia.
+ *
+ * `afinar` es lo que cada pantalla le agrega a la consulta —un rango de fechas, un orden, un
+ * tope—. Se aplica a los dos caminos por igual, que es justamente el motivo por el que se
+ * recibe acá y no se arma afuera: una condición puesta en uno solo dejaría afuera guardias
+ * sin que nadie se entere.
+ */
+export async function cargarTurnosGuardiaDePacientes(idsPacientes, seleccion = '*', afinar = (c) => c) {
+  const ids = [...new Set((idsPacientes ?? []).filter(Boolean))];
+  if (ids.length === 0) return [];
+
+  const { data: vinculos, error: errorVinculos } = await supabase
+    .from('turno_guardia_pacientes')
+    .select('turno_guardia_id')
+    .in('paciente_id', ids);
+
+  if (errorVinculos) throw errorVinculos;
+
+  const idsTurnosGuardia = [...new Set((vinculos ?? []).map((v) => v.turno_guardia_id).filter(Boolean))];
+
+  const [porLista, porColumnaVieja] = await Promise.all([
+    idsTurnosGuardia.length
+      ? afinar(supabase.from('turnos_guardia').select(seleccion).in('id', idsTurnosGuardia))
+      : Promise.resolve({ data: [], error: null }),
+    afinar(supabase.from('turnos_guardia').select(seleccion).in('paciente_id', ids)),
+  ]);
+
+  if (porLista.error) throw porLista.error;
+  if (porColumnaVieja.error) throw porColumnaVieja.error;
+
+  // Los mismos turnos de guardia pueden venir por los dos caminos: se juntan por id para que ninguna
+  // aparezca dos veces en la pantalla.
+  const porId = new Map();
+  for (const turno_guardia of [...(porLista.data ?? []), ...(porColumnaVieja.data ?? [])]) {
+    if (turno_guardia?.id) porId.set(turno_guardia.id, turno_guardia);
+  }
+  return [...porId.values()];
+}
+
+/** Lo mismo, para las series de guardias (la plantilla que las genera). */
+export async function cargarPacientesDeSeries(idsSeries) {
+  const ids = [...new Set((idsSeries ?? []).filter(Boolean))];
+  if (ids.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('series_turnos_guardia_pacientes')
+    .select('serie_id, paciente_id')
+    .in('serie_id', ids);
+
+  if (error) throw error;
+
+  const mapa = new Map();
+  for (const fila of data ?? []) {
+    if (!mapa.has(fila.serie_id)) mapa.set(fila.serie_id, []);
+    mapa.get(fila.serie_id).push(fila.paciente_id);
+  }
+  return mapa;
+}
+
+/**
+ * Los ids de los Pacientes de un turno de guardia.
+ *
+ * Se busca primero en la lista traída de la base. Si ese turno de guardia no está en el Map —porque
+ * la pantalla todavía no pide la lista, o porque la consulta no la trajo— se cae al Paciente
+ * de la columna vieja, para no mostrar un turno de guardia sin nadie cuando en realidad sí tiene.
+ */
+export function pacientesDeTurnoGuardia(turno_guardia, mapa) {
+  const deLaLista = mapa?.get(turno_guardia?.id);
+  if (deLaLista?.length) return deLaLista;
+  return turno_guardia?.paciente_id ? [turno_guardia.paciente_id] : [];
+}
+
+/**
+ * Los ids de los Pacientes de un turno de guardia que ya viene enriquecida.
+ *
+ * Es la versión de `pacientesDeTurnoGuardia` para cuando la pantalla ya pasó por `conPacientes` y
+ * no tiene el Map a mano — el caso de un turno de guardia que viaja de una pantalla a otra. Si por lo
+ * que sea llega sin enriquecer, se cae al Paciente de la columna vieja, la misma red de
+ * seguridad de siempre.
+ */
+export function idsDePacientes(turno_guardia) {
+  if (turno_guardia?.paciente_ids?.length) return turno_guardia.paciente_ids;
+  return turno_guardia?.paciente_id ? [turno_guardia.paciente_id] : [];
+}
+
+/** ¿Este turno cubre a más de una persona? */
+export function atiendeAVarios(turno_guardia, mapa) {
+  return pacientesDeTurnoGuardia(turno_guardia, mapa).length > 1;
+}
+
+/**
+ * Le agrega a cada turno de guardia sus Pacientes, ya con nombre.
+ *
+ * Deja tres campos nuevos: `pacientes` (la lista de `{ id, nombre }`, ordenada por nombre para
+ * que dos turnos de guardia con la misma gente se lean igual) y, sacados de esa misma lista y en el
+ * mismo orden, `paciente_ids` y `pacientes_nombres`.
+ *
+ * El id y el nombre viajan **juntos, en el mismo objeto**, y no en dos listas paralelas: dos
+ * listas ordenadas por separado se desalinean sin avisar y terminan mostrando el nombre de
+ * una persona al lado del id de otra.
+ *
+ * Un Paciente cuyo nombre todavía no cargó no se inventa ni se pierde: su nombre entra como
+ * `null` y cada pantalla decide qué poner en su lugar.
+ */
+export function conPacientes(turnos_guardia, mapa, nombresPorId) {
+  return (turnos_guardia ?? []).map((g) => {
+    const pacientes = pacientesDeTurnoGuardia(g, mapa)
+      .map((id) => ({ id, nombre: nombresPorId?.[id] ?? null }))
+      .sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
+    return {
+      ...g,
+      pacientes,
+      paciente_ids: pacientes.map((p) => p.id),
+      pacientes_nombres: pacientes.map((p) => p.nombre),
+    };
+  });
+}
+
+/**
+ * Qué nombres mostrar y cuántos quedaron afuera.
+ *
+ * En una grilla no entran veinte nombres, así que se muestran los primeros y se dice cuántos
+ * faltan. Devuelve los datos, no el texto: la frase final ("y 3 más") la arma cada pantalla
+ * con sus traducciones, porque este archivo no depende del idioma.
+ */
+export function resumenDePacientes(nombres, maximo = 2) {
+  const lista = (nombres ?? []).filter(Boolean);
+  return {
+    visibles: lista.slice(0, maximo),
+    restantes: Math.max(0, lista.length - maximo),
+  };
+}
+
+/**
+ * En qué filas aparece un turno de guardia cuando la grilla agrupa por Paciente.
+ *
+ * Es la única vista que sigue necesitando un solo Paciente por fila: si un turno cubre a
+ * tres personas, en la vista por Paciente aparece en las tres filas. Eso no duplica el
+ * turno — es el mismo turno de guardia mirado desde tres lugares distintos, igual que un mismo
+ * partido aparece en el calendario de los dos equipos.
+ *
+ * Recibe el turno de guardia ya enriquecida por `conPacientes`, porque la grilla nunca habla con la
+ * base: dibuja lo que le pasan.
+ */
+export function filasPorPaciente(turno_guardia) {
+  const lista = turno_guardia?.pacientes ?? [];
+  if (lista.length) return lista.map((p) => p.id);
+  return turno_guardia?.paciente_id ? [turno_guardia.paciente_id] : [SIN_PACIENTES];
+}
+
+/**
+ * Los nombres, en una sola línea, para mostrar donde no entra una lista.
+ *
+ * Recibe los textos ya traducidos —no las claves— justamente para no depender del idioma:
+ * `plantillaMas` es la frase con el hueco `{n}` ("y {n} más") y `vacio` es lo que se escribe
+ * cuando el turno de guardia no tiene a nadie.
+ */
+export function textoDePacientes(nombres, plantillaMas, vacio = '—') {
+  const { visibles, restantes } = resumenDePacientes(nombres);
+  if (visibles.length === 0) return vacio;
+  const partes = [...visibles];
+  if (restantes > 0) partes.push(con(plantillaMas, { n: restantes }));
+  return partes.join(' · ');
+}

@@ -1,5 +1,5 @@
 import { enLaPrestadora } from '../db/connection.js';
-import { pasosDeLaBusqueda } from './extensionDeTurno.js';
+import { pasosDeLaBusqueda } from './extensionDeTurnoGuardia.js';
 
 /* Lo que se le muestra a la que quedó de más.
    ==========================================================================
@@ -25,37 +25,37 @@ import { pasosDeLaBusqueda } from './extensionDeTurno.js';
  * Las cinco van con la credencial del trabajo de esa Prestadora, que la base acota a ella. Si no
  * se pudo leer, no hay nada que mostrar: lo mismo que cuando una consulta falla.
  */
-export async function estadoDeLaExtension({ guardiaId, prestadoraId }) {
+export async function estadoDeLaExtension({ turnoGuardiaId, prestadoraId }) {
   if (!prestadoraId) return null;
   try {
     return await enLaPrestadora(prestadoraId, 'leer la extension del turno', (db) =>
-      leerLaExtension(db, { guardiaId, prestadoraId }),
+      leerLaExtension(db, { turnoGuardiaId, prestadoraId }),
     );
   } catch (error) {
-    console.error(`No se pudo leer la extension del turno ${guardiaId}:`, error.message);
+    console.error(`No se pudo leer la extension del turno ${turnoGuardiaId}:`, error.message);
     return null;
   }
 }
 
-async function leerLaExtension(db, { guardiaId, prestadoraId }) {
+async function leerLaExtension(db, { turnoGuardiaId, prestadoraId }) {
   const { data: extension, error } = await db
-    .from('extensiones_de_turno')
-    .select('id, desde_at, relevo_guardia_id')
-    .eq('guardia_id', guardiaId)
+    .from('extensiones_de_turno_guardia')
+    .select('id, desde_at, relevo_turno_guardia_id')
+    .eq('turno_guardia_id', turnoGuardiaId)
     .eq('prestadora_id', prestadoraId)
     .is('hasta_at', null)
     .maybeSingle();
 
   if (error) {
-    console.error(`Error leyendo la extension del turno ${guardiaId}:`, error.message);
+    console.error(`Error leyendo la extension del turno ${turnoGuardiaId}:`, error.message);
     return null;
   }
   if (!extension) return null;
 
-  const relevo = await elRelevo(db, extension.relevo_guardia_id, prestadoraId);
+  const relevo = await elRelevo(db, extension.relevo_turno_guardia_id, prestadoraId);
   const { coordinacionAvisada, escalado } = await comoVaElMensaje(db, {
-    guardiaId,
-    relevoId: extension.relevo_guardia_id,
+    turnoGuardiaId,
+    relevoId: extension.relevo_turno_guardia_id,
     prestadoraId,
   });
 
@@ -69,7 +69,7 @@ async function elRelevo(db, relevoId, prestadoraId) {
   if (!relevoId) return null;
 
   const { data, error } = await db
-    .from('guardias')
+    .from('turnos_guardia')
     .select('id, asistente_id, checkin_at')
     .eq('id', relevoId)
     .eq('prestadora_id', prestadoraId)
@@ -93,7 +93,7 @@ async function elRelevo(db, relevoId, prestadoraId) {
  * «Avisada» quiere decir que el mensaje salió, no que se abrió el expediente: un expediente abierto
  * del que todavía no salió ningún correo no enteró a nadie, y decirle que sí sería mentirle.
  */
-async function comoVaElMensaje(db, { guardiaId, relevoId, prestadoraId }) {
+async function comoVaElMensaje(db, { turnoGuardiaId, relevoId, prestadoraId }) {
   const referencias = [];
   let coordinacionAvisada = false;
 
@@ -101,11 +101,11 @@ async function comoVaElMensaje(db, { guardiaId, relevoId, prestadoraId }) {
     .from('incidentes_relevo')
     .select('id, ultima_notificacion_at')
     .eq('prestadora_id', prestadoraId)
-    .eq('guardia_saliente_id', guardiaId)
+    .eq('turno_guardia_saliente_id', turnoGuardiaId)
     .is('resuelto_at', null);
 
   if (errorRelevo) {
-    console.error(`Error leyendo el incidente de relevo del turno ${guardiaId}:`, errorRelevo.message);
+    console.error(`Error leyendo el incidente de relevo del turno ${turnoGuardiaId}:`, errorRelevo.message);
   }
   for (const fila of relevoFallado ?? []) {
     referencias.push(fila.id);
@@ -114,10 +114,10 @@ async function comoVaElMensaje(db, { guardiaId, relevoId, prestadoraId }) {
 
   if (relevoId) {
     const { data: sinCubrir, error: errorSinCubrir } = await db
-      .from('incidentes_turno_sin_cubrir')
+      .from('incidentes_turno_guardia_sin_cubrir')
       .select('id, ultimo_recordatorio_at')
       .eq('prestadora_id', prestadoraId)
-      .eq('guardia_id', relevoId)
+      .eq('turno_guardia_id', relevoId)
       .is('resuelto_at', null);
 
     if (errorSinCubrir) {

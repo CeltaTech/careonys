@@ -2098,7 +2098,7 @@ button.panel-kpi-card[aria-pressed='true'] {
    misma en la pantalla de Guardias y en el Estado actual— se dibuja con las clases `grilla-*`,
    más abajo en este mismo archivo. */
 
-.panel-guardia-card {
+.panel-turno-guardia-card {
   background: var(--superficie);
   border-radius: var(--radio-card);
   padding: 1rem 1.25rem;
@@ -2111,9 +2111,9 @@ button.panel-kpi-card[aria-pressed='true'] {
   cursor: pointer;
 }
 
-.guardia-ausente { border-left: 4px solid var(--naranja-alerta); }
+.turno-guardia-ausente { border-left: 4px solid var(--naranja-alerta); }
 
-.panel-guardia-alerta {
+.panel-turno-guardia-alerta {
   color: var(--tono-critico-texto);
   font-weight: 600;
   font-size: 0.85rem;
@@ -2309,7 +2309,7 @@ button.panel-kpi-card[aria-pressed='true'] {
    pinta con el mismo rojo que "sin cubrir": las dos cosas quieren decir lo mismo —algo está
    roto y alguien tiene que actuar— y ese es exactamente el significado del rojo en este
    sistema. Quedan cinco colores, que son los cinco tonos de siempre, y quién cae en cada
-   uno lo decide `lib/semaforoGuardia.js` y ninguna pantalla más. */
+   uno lo decide `lib/semaforoTurnoGuardia.js` y ninguna pantalla más. */
 
 .estado-actual-filtro-activo {
   display: flex;
@@ -2486,7 +2486,7 @@ button.panel-kpi-card[aria-pressed='true'] {
 }
 
 /* Los cinco tonos del semáforo. Son cinco reglas y no hay una sexta: el mapa de qué
-   situación cae en cada tono vive en `lib/semaforoGuardia.js`. */
+   situación cae en cada tono vive en `lib/semaforoTurnoGuardia.js`. */
 .grilla-chip[data-tono='critico'] { border-left-color: var(--rojo-peligro); }
 .grilla-chip[data-tono='atencion'] { border-left-color: var(--naranja-alerta); }
 .grilla-chip[data-tono='info']     { border-left-color: var(--azul-medio); }

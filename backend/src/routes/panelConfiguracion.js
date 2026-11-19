@@ -55,7 +55,7 @@ import {
   reglaDelIncidenteDe,
   revisarRegla as revisarReglaDelIncidente,
   soloLoQueCorreDeLaRegla as soloLoQueCorreDelIncidente,
-} from '../utils/incidenteTurnoSinCubrir.js';
+} from '../utils/incidenteTurnoGuardiaSinCubrir.js';
 import {
   reglaDeLaTomaDe,
   revisarRegla as revisarReglaDeLaToma,
@@ -73,7 +73,7 @@ import {
   hayReenvioConfigurado,
   respuestasConfirmadas,
 } from '../utils/reenvioDeRespuestas.js';
-import { LIMITES_PREAVISO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
+import { LIMITES_PREAVISO_TURNO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { reglaDePagoDe, revisarReglaDePago, soloLoQueCorreDelPago } from '../utils/formaDePago.js';
 import {
   frecuenciaDePagoDe,
@@ -991,30 +991,30 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Cuánto antes se le recuerda a la Asistente su próxima guardia. Estaba escrito fijo en
+// --- Cuánto antes se le recuerda a la Asistente su próximo turno de guardia. Estaba escrito fijo en
 //     una hora para todas las Prestadoras (utils/revisarRecordatoriosPush.js), y una hora no
-//     le sirve a todas: quien trabaja con guardias de doce horas quiere avisar la noche
-//     anterior. Mismo patrón que /guardias/horizonte-generacion: el valor vive en
+//     le sirve a todas: quien trabaja con turnos de guardia de doce horas quiere avisar la noche
+//     anterior. Mismo patrón que /turnos-guardia/horizonte-generacion: el valor vive en
 //     "prestadoras" y se expone acá para reusar el acotado por Prestadora de este router. ---
-panelConfiguracionRouter.get('/aviso-previo-guardia', async (req, res) => {
+panelConfiguracionRouter.get('/aviso-previo-turno-guardia', async (req, res) => {
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('prestadoras')
-    .select('minutos_aviso_previo_guardia')
+    .select('minutos_aviso_previo_turno_guardia')
     .single();
   if (error) return responderError(res, error);
-  res.json({ minutos_aviso_previo_guardia: data.minutos_aviso_previo_guardia });
+  res.json({ minutos_aviso_previo_turno_guardia: data.minutos_aviso_previo_turno_guardia });
 });
 
-panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
+panelConfiguracionRouter.patch('/aviso-previo-turno-guardia', async (req, res) => {
   const { minutos } = req.body;
   if (
     !Number.isInteger(minutos)
-    || minutos < LIMITES_PREAVISO_GUARDIA.minimo
-    || minutos > LIMITES_PREAVISO_GUARDIA.maximo
+    || minutos < LIMITES_PREAVISO_TURNO_GUARDIA.minimo
+    || minutos > LIMITES_PREAVISO_TURNO_GUARDIA.maximo
   ) {
     return res.status(400).json({
-      error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_PREAVISO_GUARDIA.minimo} y ${LIMITES_PREAVISO_GUARDIA.maximo}.`,
+      error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_PREAVISO_TURNO_GUARDIA.minimo} y ${LIMITES_PREAVISO_TURNO_GUARDIA.maximo}.`,
     });
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
@@ -1022,7 +1022,7 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
   // Con el trabajo de la Prestadora: la base sólo le deja cambiar `prestadoras` al Superadmin. La
   // fila es la que la base acaba de dejar ver con la credencial de quien pide.
   const { error } = await enLaPrestadora(prestadoraId, 'aviso previo de guardia', (dbDelTrabajo) =>
-    dbDelTrabajo.from('prestadoras').update({ minutos_aviso_previo_guardia: minutos }).eq('id', prestadoraId)
+    dbDelTrabajo.from('prestadoras').update({ minutos_aviso_previo_turno_guardia: minutos }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });
@@ -1030,7 +1030,7 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
 
 // --- Cómo se toma la ubicación del Asistente. En las dos formas el viaje se sigue de forma
 //     continua; la Prestadora elige si además se controla cada tantos minutos durante la
-//     guardia. Mismo patrón que /aviso-previo-guardia. ---
+//     turno de guardia. Mismo patrón que /aviso-previo-turno-guardia. ---
 export const LIMITES_MINUTOS_CONTROL_UBICACION = { minimo: 1, maximo: 60 };
 // Los días que tiene el Asistente para aceptar el control durante el turno.
 export const LIMITES_DIAS_PARA_ACEPTAR_LA_UBICACION = { minimo: 1, maximo: 365 };
@@ -1040,7 +1040,7 @@ const dentroDe = (valor, { minimo, maximo }) => Number.isInteger(valor) && valor
 panelConfiguracionRouter.get('/ubicacion-del-asistente', async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('prestadoras')
-    .select('control_de_ubicacion_en_el_turno, minutos_entre_controles_de_ubicacion, dias_para_aceptar_la_ubicacion')
+    .select('control_de_ubicacion_en_el_turno_guardia, minutos_entre_controles_de_ubicacion, dias_para_aceptar_la_ubicacion')
     .single();
   if (error) return responderError(res, error);
   res.json(data);
@@ -1048,12 +1048,12 @@ panelConfiguracionRouter.get('/ubicacion-del-asistente', async (req, res) => {
 
 panelConfiguracionRouter.patch('/ubicacion-del-asistente', async (req, res) => {
   const {
-    control_de_ubicacion_en_el_turno: controlEnElTurno,
+    control_de_ubicacion_en_el_turno_guardia: controlEnElTurnoGuardia,
     minutos_entre_controles_de_ubicacion: minutos,
     dias_para_aceptar_la_ubicacion: dias,
   } = req.body ?? {};
   if (
-    typeof controlEnElTurno !== 'boolean'
+    typeof controlEnElTurnoGuardia !== 'boolean'
     || !dentroDe(minutos, LIMITES_MINUTOS_CONTROL_UBICACION)
     || !dentroDe(dias, LIMITES_DIAS_PARA_ACEPTAR_LA_UBICACION)
   ) {
@@ -1065,7 +1065,7 @@ panelConfiguracionRouter.patch('/ubicacion-del-asistente', async (req, res) => {
     dbDelTrabajo
       .from('prestadoras')
       .update({
-        control_de_ubicacion_en_el_turno: controlEnElTurno,
+        control_de_ubicacion_en_el_turno_guardia: controlEnElTurnoGuardia,
         minutos_entre_controles_de_ubicacion: minutos,
         dias_para_aceptar_la_ubicacion: dias,
       })
@@ -1344,10 +1344,10 @@ panelConfiguracionRouter.put('/ausencias', async (req, res) => {
 // se configura acá es el destino ni si el recordatorio se manda: un defecto grave no se apaga, y
 // el destinatario es quien coordina a ese Paciente, no una dirección elegible.
 
-panelConfiguracionRouter.get('/incidentes-turno-sin-cubrir', async (req, res) => {
+panelConfiguracionRouter.get('/incidentes-turno-guardia-sin-cubrir', async (req, res) => {
   const db = clienteDelPedido(req);
   const { data, error } = await db
-    .from('configuracion_incidentes_turno_sin_cubrir')
+    .from('configuracion_incidentes_turno_guardia_sin_cubrir')
     .select('regla')
     .maybeSingle();
   if (error) return responderError(res, error);
@@ -1357,7 +1357,7 @@ panelConfiguracionRouter.get('/incidentes-turno-sin-cubrir', async (req, res) =>
   res.json({ configuracion: { regla: reglaDelIncidenteDe(corrido), corridos: corrido } });
 });
 
-panelConfiguracionRouter.put('/incidentes-turno-sin-cubrir', async (req, res) => {
+panelConfiguracionRouter.put('/incidentes-turno-guardia-sin-cubrir', async (req, res) => {
   const corridos = soloLoQueCorreDelIncidente(req.body?.regla);
   const revision = revisarReglaDelIncidente(corridos);
   if (!revision.ok) {
@@ -1367,7 +1367,7 @@ panelConfiguracionRouter.put('/incidentes-turno-sin-cubrir', async (req, res) =>
   const db = clienteDelPedido(req);
   const prestadoraId = await prestadoraVisibleOContestar(db, res);
   if (!prestadoraId) return;
-  const { error } = await db.from('configuracion_incidentes_turno_sin_cubrir').upsert(
+  const { error } = await db.from('configuracion_incidentes_turno_guardia_sin_cubrir').upsert(
     {
       prestadora_id: prestadoraId,
       regla: corridos,
@@ -1422,7 +1422,7 @@ panelConfiguracionRouter.put('/alarmas-tomadas', async (req, res) => {
 
 // --- Cómo se le paga el período a quien cobra un monto fijo ---
 //
-// A quien cobra por hora o por guardia se le paga lo que hizo, y no hay nada que decidir. La
+// A quien cobra por hora o por turno de guardia se le paga lo que hizo, y no hay nada que decidir. La
 // pregunta aparece con el monto fijo —por semana o por mes— cuando la persona entró o se fue a
 // mitad del período: o se le paga la parte de los días que estuvo, o se le paga el monto entero.
 // Las dos formas se usan, y cuál corresponde lo arregla la Prestadora con cada persona, así que
@@ -2397,7 +2397,7 @@ panelConfiguracionRouter.get('/organismos-otorgantes', async (req, res) => {
 //     que /documentos-tipo. ---
 panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
-    .from('motivos_aviso_previo_guardia')
+    .from('motivos_aviso_previo_turno_guardia')
     .select('*')
     .order('nombre');
   if (error) return responderError(res, error);
@@ -2411,7 +2411,7 @@ panelConfiguracionRouter.post('/motivos-aviso-previo', async (req, res) => {
   const prestadoraId = await prestadoraVisibleOContestar(db, res);
   if (!prestadoraId) return;
   const { error } = await db
-    .from('motivos_aviso_previo_guardia')
+    .from('motivos_aviso_previo_turno_guardia')
     .insert({ nombre, prestadora_id: prestadoraId });
   if (error) return responderError(res, error);
   res.json({ ok: true });
@@ -2420,7 +2420,7 @@ panelConfiguracionRouter.post('/motivos-aviso-previo', async (req, res) => {
 panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => {
   const { nombre, activo } = req.body;
   const { data, error } = await clienteDelPedido(req)
-    .from('motivos_aviso_previo_guardia')
+    .from('motivos_aviso_previo_turno_guardia')
     .update({ nombre, activo })
     .eq('id', req.params.id)
     .select('id');
@@ -2562,19 +2562,19 @@ catalogoDeLaPrestadora('/motivos-reactivacion-servicio', 'motivos_reactivacion_s
 catalogoDeLaPrestadora('/relaciones-laborales', 'relaciones_laborales', { conDetalle: false });
 
 // --- Horizonte de generación de guardias de series abiertas — cron
-//     backend/src/utils/generacionSeriesGuardia.js. Mismo patrón que
+//     backend/src/utils/generacionSeriesTurnoGuardia.js. Mismo patrón que
 //     /documentos-tipo/plazo-aviso: valor en "prestadoras", expuesto acá para reusar el
 //     scoping por prestadora ya resuelto en este router. ---
-panelConfiguracionRouter.get('/guardias/horizonte-generacion', async (req, res) => {
+panelConfiguracionRouter.get('/turnos-guardia/horizonte-generacion', async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('prestadoras')
-    .select('dias_generacion_series_guardia')
+    .select('dias_generacion_series_turno_guardia')
     .single();
   if (error) return responderError(res, error);
-  res.json({ dias_generacion_series_guardia: data.dias_generacion_series_guardia });
+  res.json({ dias_generacion_series_turno_guardia: data.dias_generacion_series_turno_guardia });
 });
 
-panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res) => {
+panelConfiguracionRouter.patch('/turnos-guardia/horizonte-generacion', async (req, res) => {
   const { dias } = req.body;
   if (!Number.isInteger(dias) || dias <= 0) {
     return res.status(400).json({ error: 'dias debe ser un entero positivo' });
@@ -2583,26 +2583,26 @@ panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res
   if (!prestadoraId) return;
   // Con el trabajo de la Prestadora: la fila de la Prestadora sólo la modifica superadmin por RLS.
   const { error } = await enLaPrestadora(prestadoraId, 'configuración de la Prestadora', (dbDelTrabajo) =>
-    dbDelTrabajo.from('prestadoras').update({ dias_generacion_series_guardia: dias }).eq('id', prestadoraId)
+    dbDelTrabajo.from('prestadoras').update({ dias_generacion_series_turno_guardia: dias }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
-// --- Si un Servicio programa guardias sólo con la firma vigente del Responsable de pagos. Lo
+// --- Si un Servicio programa turnos de guardia sólo con la firma vigente del Responsable de pagos. Lo
 //     decide cada Prestadora; de fábrica no se exige. La base lo hace cumplir al programar. Mismo
-//     patrón que /guardias/horizonte-generacion. ---
-panelConfiguracionRouter.get('/guardias/firma-del-pagador', async (req, res) => {
+//     patrón que /turnos-guardia/horizonte-generacion. ---
+panelConfiguracionRouter.get('/turnos-guardia/firma-del-pagador', async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('prestadoras')
-    .select('guardias_solo_con_firma_del_pagador')
+    .select('turnos_guardia_solo_con_firma_del_pagador')
     .single();
   if (error) return responderError(res, error);
-  res.json({ guardias_solo_con_firma_del_pagador: data.guardias_solo_con_firma_del_pagador });
+  res.json({ turnos_guardia_solo_con_firma_del_pagador: data.turnos_guardia_solo_con_firma_del_pagador });
 });
 
-panelConfiguracionRouter.patch('/guardias/firma-del-pagador', async (req, res) => {
-  const { guardias_solo_con_firma_del_pagador: soloConFirma } = req.body ?? {};
+panelConfiguracionRouter.patch('/turnos-guardia/firma-del-pagador', async (req, res) => {
+  const { turnos_guardia_solo_con_firma_del_pagador: soloConFirma } = req.body ?? {};
   if (typeof soloConFirma !== 'boolean') {
     return responderError(res, new ErrorConMotivo('faltan_datos', 'firma del pagador: datos inválidos'));
   }
@@ -2611,7 +2611,7 @@ panelConfiguracionRouter.patch('/guardias/firma-del-pagador', async (req, res) =
   const { error } = await enLaPrestadora(prestadoraId, 'firma del pagador', (dbDelTrabajo) =>
     dbDelTrabajo
       .from('prestadoras')
-      .update({ guardias_solo_con_firma_del_pagador: soloConFirma })
+      .update({ turnos_guardia_solo_con_firma_del_pagador: soloConFirma })
       .eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
@@ -2940,7 +2940,7 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
   const {
     coordinador_backup_id, minutos_antes_backup, umbrales_premura,
     fase_automatica_activa, minutos_antes_fase_automatica,
-    minutos_gracia_cierre_guardia, horas_antes_aviso_grave_sin_cerrar,
+    minutos_gracia_cierre_turno_guardia, horas_antes_aviso_grave_sin_cerrar,
     minutos_antes_todos_los_coordinadores, minutos_antes_administracion,
     minutos_insistencia_emergencia,
   } = req.body;
@@ -2963,11 +2963,11 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
   // Coordinadora se entere sin esperar la respuesta del servidor — no es la que protege el
   // dato. Esta es la que protege: la base rechazaría un valor fuera de rango con un error
   // suyo, ilegible, y cualquiera puede llamar a esta dirección sin pasar por la pantalla.
-  if (minutos_gracia_cierre_guardia !== undefined) {
-    const minutos = Number(minutos_gracia_cierre_guardia);
+  if (minutos_gracia_cierre_turno_guardia !== undefined) {
+    const minutos = Number(minutos_gracia_cierre_turno_guardia);
     if (!Number.isInteger(minutos) || minutos <= 0 || minutos > MINUTOS_DE_UN_DIA) {
       return res.status(400).json({
-        error: `Los minutos de espera para avisar que una guardia quedó sin cerrar tienen que ser un número entero entre 1 y ${MINUTOS_DE_UN_DIA}`,
+        error: `Los minutos de espera para avisar que un turno de guardia quedó sin cerrar tienen que ser un número entero entre 1 y ${MINUTOS_DE_UN_DIA}`,
       });
     }
   }
@@ -2976,7 +2976,7 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
     const horas = Number(horas_antes_aviso_grave_sin_cerrar);
     if (!Number.isInteger(horas) || horas <= 0 || horas > HORAS_DE_TRES_DIAS) {
       return res.status(400).json({
-        error: `Las horas antes de escalar una guardia sin cerrar tienen que ser un número entero entre 1 y ${HORAS_DE_TRES_DIAS}`,
+        error: `Las horas antes de escalar un turno de guardia sin cerrar tienen que ser un número entero entre 1 y ${HORAS_DE_TRES_DIAS}`,
       });
     }
   }
@@ -3017,9 +3017,9 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
       // existe conserva lo que la Prestadora había configurado y la que se crea toma el
       // `DEFAULT` de la columna. Antes acá se forzaba un número escrito en este archivo, que
       // borraba en silencio una configuración guardada.
-      ...(minutos_gracia_cierre_guardia === undefined
+      ...(minutos_gracia_cierre_turno_guardia === undefined
         ? {}
-        : { minutos_gracia_cierre_guardia }),
+        : { minutos_gracia_cierre_turno_guardia }),
       ...(horas_antes_aviso_grave_sin_cerrar === undefined
         ? {}
         : { horas_antes_aviso_grave_sin_cerrar }),

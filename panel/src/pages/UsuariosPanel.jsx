@@ -16,7 +16,7 @@ import { llamarApiLugaresDeTrabajo } from '../lib/apiLugaresDeTrabajo';
 import { con } from '../lib/textos';
 import { nombreDeLaAccion, queCambio } from '../lib/registroDeActividad';
 import { AusenciasDelCoordinador } from './AusenciasDelCoordinador';
-import { TurnosQueTraban } from '../components/cuenta/TurnosQueTraban';
+import { TurnosGuardiaQueTraban } from '../components/cuenta/TurnosGuardiaQueTraban';
 import '../styles/molde-paginas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -325,7 +325,7 @@ function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizad
       onActualizado();
     } catch (err) {
       if (Array.isArray(err.motivos) && err.motivos.length > 0) {
-        setTraban({ motivos: err.motivos, turnos: err.turnos ?? [] });
+        setTraban({ motivos: err.motivos, turnos_guardia: err.turnos_guardia ?? [] });
       } else {
         setError(mensajeDeError(err, t));
       }
@@ -338,7 +338,7 @@ function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizad
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{usuario.nombre}</h2>
         {error && <Alert variant="error">{error}</Alert>}
-        {traban && <TurnosQueTraban motivos={traban.motivos} turnos={traban.turnos} />}
+        {traban && <TurnosGuardiaQueTraban motivos={traban.motivos} turnos_guardia={traban.turnos_guardia} />}
         <div className="molde-formgrid">
           <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
           <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />

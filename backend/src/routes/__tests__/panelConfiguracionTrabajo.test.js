@@ -128,7 +128,7 @@ describe('la configuración de la Prestadora', () => {
   });
 
   it('la ubicación del Asistente se guarda con los días del plazo, en su propia fila', async () => {
-    const datos = { control_de_ubicacion_en_el_turno: true, minutos_entre_controles_de_ubicacion: 5, dias_para_aceptar_la_ubicacion: 30 };
+    const datos = { control_de_ubicacion_en_el_turno_guardia: true, minutos_entre_controles_de_ubicacion: 5, dias_para_aceptar_la_ubicacion: 30 };
     const { estado } = await pedir('PATCH', '/ubicacion-del-asistente', datos);
     assert.equal(estado, 200);
     const cambio = unaSola('PATCH /rest/v1/prestadoras');
@@ -141,7 +141,7 @@ describe('la configuración de la Prestadora', () => {
     for (const dias of [0, 366, 2.5, undefined, '30']) {
       llamadas = [];
       const { estado } = await pedir('PATCH', '/ubicacion-del-asistente', {
-        control_de_ubicacion_en_el_turno: true, minutos_entre_controles_de_ubicacion: 5, dias_para_aceptar_la_ubicacion: dias,
+        control_de_ubicacion_en_el_turno_guardia: true, minutos_entre_controles_de_ubicacion: 5, dias_para_aceptar_la_ubicacion: dias,
       });
       assert.equal(estado, 400, `pasó con ${dias}`);
       assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/prestadoras').length, 0);
@@ -151,19 +151,19 @@ describe('la configuración de la Prestadora', () => {
   it('la firma del Responsable de pagos para programar guardias se guarda en su propia fila', async () => {
     for (const valor of [true, false]) {
       llamadas = [];
-      const { estado } = await pedir('PATCH', '/guardias/firma-del-pagador', { guardias_solo_con_firma_del_pagador: valor });
+      const { estado } = await pedir('PATCH', '/turnos-guardia/firma-del-pagador', { turnos_guardia_solo_con_firma_del_pagador: valor });
       assert.equal(estado, 200);
       const cambio = unaSola('PATCH /rest/v1/prestadoras');
       conElTrabajoDeLaPrestadora(cambio);
       assert.equal(cambio.url.searchParams.get('id'), `eq.${PRESTADORA}`);
-      assert.deepEqual(JSON.parse(cambio.cuerpo), { guardias_solo_con_firma_del_pagador: valor });
+      assert.deepEqual(JSON.parse(cambio.cuerpo), { turnos_guardia_solo_con_firma_del_pagador: valor });
     }
   });
 
   it('la firma del Responsable de pagos no se guarda con algo que no sea sí o no', async () => {
     for (const valor of [undefined, 'true', 1, null]) {
       llamadas = [];
-      const { estado } = await pedir('PATCH', '/guardias/firma-del-pagador', { guardias_solo_con_firma_del_pagador: valor });
+      const { estado } = await pedir('PATCH', '/turnos-guardia/firma-del-pagador', { turnos_guardia_solo_con_firma_del_pagador: valor });
       assert.equal(estado, 400, `pasó con ${valor}`);
       assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/prestadoras').length, 0);
     }

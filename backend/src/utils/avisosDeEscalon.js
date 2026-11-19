@@ -154,7 +154,7 @@ const ASUNTO_DE_CADA_ESCALON = {
  * A quién le llega cada escalón.
  *
  * La administración es Admin_prestadora y nadie más. Superadmin es el rol técnico de CeltaTech
- * (`CLAUDE.md` §5): tiene el acceso de la administración para operar el producto, pero una guardia
+ * (`CLAUDE.md` §5): tiene el acceso de la administración para operar el producto, pero un turno de guardia
  * que quedó sin cubrir es un asunto de la Prestadora, no de quien le licencia el software.
  */
 async function aQuienLeToca({ prestadoraId, escalon }) {

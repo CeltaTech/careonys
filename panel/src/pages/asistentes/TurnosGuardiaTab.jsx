@@ -1,0 +1,153 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useLocale } from '../../i18n/LocaleContext';
+import { supabase } from '../../lib/supabaseClient';
+import { mensajeDeError } from '../../lib/errores';
+import { claseBadgeTono } from '../../lib/tonos';
+import { con } from '../../lib/textos';
+import { hoyISO, horaDelMomento } from '../../lib/horarios';
+import { EstadoLista } from '../../components/layout/EstadoLista';
+import {
+  cargarPacientesDeTurnosGuardia,
+  conPacientes,
+  textoDePacientes,
+} from '../../lib/pacientesDeTurnoGuardia';
+import { situacionDeTurnoGuardia, tonoDeTurnoGuardia } from '../../lib/semaforoTurnoGuardia';
+import { useUmbrales } from '../../context/UmbralesContext';
+import '../tarjetas.css';
+import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
+
+/* Lo que este Asistente ya trabajó.
+   ==========================================================================
+
+   Hasta acá, saber si alguien cumplió sus turnos obligaba a abrir la pantalla de Guardias y
+   filtrarla por su nombre, período por período. El dato estaba; lo que faltaba era mirarlo
+   desde la persona.
+
+   SE MUESTRA LO QUE YA PASÓ, Y SÓLO ESO. Lo que tiene por delante ya se ve en la grilla de
+   Guardias y, contado, en la lista del Padrón. Mezclar las dos cosas en una sola tabla haría
+   que un turno todavía no trabajado se lea como un antecedente.
+
+   No se decide nada acá: la situación de cada turno de guardia sale del semáforo
+   (`lib/semaforoTurnoGuardia.js`) y a quiénes atendió, de `lib/pacientesDeTurnoGuardia.js`, que es el
+   único lugar que sabe que hay dos maneras de tener un Paciente cargado. */
+
+/* Cuántas filas como mucho. Un Asistente con dos años de antigüedad tiene cientos de guardias
+   atrás: esto es el Legajo del Asistente, no la pantalla de Guardias. Cuando se llega al tope se dice, que es
+   lo que evita que alguien crea que está viendo toda la historia. */
+const TOPE = 50;
+
+/* Las columnas de `turnos_guardia` que hacen falta. Las cuatro últimas no se muestran como tales: las
+   necesita `situacionDeTurnoGuardia` para decidir en qué situación quedó cada turno. */
+const COLUMNAS =
+  'id, fecha, hora_inicio, hora_fin, paciente_id, estado, asistente_id, checkin_at, checkout_at';
+
+export function TurnosGuardiaTab({ asistente }) {
+  const { t, locale } = useLocale();
+  const [datos, setDatos] = useState({ filas: [], tope: false });
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  /* Los umbrales de esta Prestadora, los mismos que pinta la grilla de Guardias: un turno que
+     allá figura sin cerrar no puede figurar acá como completado. */
+  const umbrales = useUmbrales();
+
+  const cargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { data, error: errorTurnosGuardia } = await supabase
+        .from('turnos_guardia')
+        .select(COLUMNAS)
+        .eq('asistente_id', asistente.id)
+        .lte('fecha', hoyISO())
+        .order('fecha', { ascending: false })
+        .order('hora_inicio', { ascending: false })
+        .limit(TOPE);
+
+      if (errorTurnosGuardia) throw errorTurnosGuardia;
+
+      const turnos_guardia = data ?? [];
+      const porTurnoGuardia = await cargarPacientesDeTurnosGuardia(turnos_guardia.map((g) => g.id));
+
+      // Los nombres se piden aparte y en una sola consulta: pedirlos anidados a `turnos_guardia`
+      // traería el mismo nombre repetido una vez por turno.
+      const idsPacientes = [
+        ...new Set([...porTurnoGuardia.values()].flat().concat(turnos_guardia.map((g) => g.paciente_id))),
+      ].filter(Boolean);
+      const { data: pacientes, error: errorPacientes } = idsPacientes.length
+        ? await supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPacientes)
+        : { data: [], error: null };
+      if (errorPacientes) throw errorPacientes;
+
+      const nombres = Object.fromEntries(conSusFichas(pacientes).map((p) => [p.id, p.nombre]));
+      const ctx = { umbrales };
+      const filas = conPacientes(turnos_guardia, porTurnoGuardia, nombres).map((g) => ({
+        ...g,
+        situacion: situacionDeTurnoGuardia(g, ctx),
+        tono: tonoDeTurnoGuardia(g, ctx),
+      }));
+
+      setDatos({ filas, tope: filas.length === TOPE });
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [asistente.id, t, umbrales]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  return (
+    <section className="panel-tarjeta tarjeta-desplazable">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.asistentes.tabs.turnos_guardia}</h2>
+        {datos.tope && (
+          <span className="panel-mini">{con(t.asistentes.historial.tope, { n: TOPE })}</span>
+        )}
+      </div>
+    <EstadoLista
+      estado={estado}
+      error={error}
+      vacio={estado === 'listo' && datos.filas.length === 0}
+      recargar={cargar}
+    >
+      <>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.asistentes.historial.col_fecha}</th>
+              <th>{t.asistentes.historial.col_horario}</th>
+              <th>{t.asistentes.historial.col_paciente}</th>
+              <th>{t.asistentes.historial.col_registro}</th>
+              <th>{t.asistentes.historial.col_situacion}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {datos.filas.map((g) => (
+              <tr key={g.id}>
+                <td><b>{g.fecha}</b></td>
+                <td>
+                  {g.hora_inicio} – {g.hora_fin}
+                </td>
+                <td>{textoDePacientes(g.pacientes_nombres, t.turnos_guardia.pacientes_y_mas)}</td>
+                {/* La llegada y la salida que quedaron registradas. Cuando falta alguna de las
+                    dos se dice que no quedó registro, que no es lo mismo que decir que no
+                    trabajó: el turno pudo cumplirse y el registro no haberse hecho. */}
+                <td>
+                  {g.checkin_at || g.checkout_at
+                    ? `${horaDelMomento(g.checkin_at, locale) || '—'} – ${horaDelMomento(g.checkout_at, locale) || '—'}`
+                    : t.asistentes.historial.sin_registro}
+                </td>
+                <td>
+                  <span className={claseBadgeTono(g.tono)}>{t.turnos_guardia.situacion[g.situacion]}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </>
+    </EstadoLista>
+    </section>
+  );
+}

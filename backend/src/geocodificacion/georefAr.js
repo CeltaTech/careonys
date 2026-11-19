@@ -96,7 +96,7 @@ const LUGARES_POR_BUSQUEDA = 25;
  *
  * **Se consulta para cargar, y nunca en vivo.** El renglón queda guardado con su identificador,
  * su nombre y su punto; de ahí en más el producto trabaja contra su propia lista y no depende de
- * que el servicio del Estado esté levantado para armar una guardia.
+ * que el servicio del Estado esté levantado para armar un turno de guardia.
  *
  * `provincia` es opcional y sirve para desempatar, que es lo corriente: hay un Belgrano en
  * varias. Devuelve la lista vacía cuando no reconoce nada, que no es un error.

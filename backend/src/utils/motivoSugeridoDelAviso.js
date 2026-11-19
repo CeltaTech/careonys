@@ -9,7 +9,7 @@ import { MODELO_IA } from '../config/modeloIA.js';
    QUÉ RESUELVE. Cuando alguien llama para avisar que no va a poder ir, lo que dice es una
    frase: «me desperté con fiebre», «se cortó el tren en Constitución», «tuve que llevar a mi
    hijo al hospital». Quien atiende el teléfono tiene delante una lista de motivos —la que armó
-   su Prestadora en `motivos_aviso_previo_guardia`— y tiene que elegir uno mientras sostiene la
+   su Prestadora en `motivos_aviso_previo_turno_guardia`— y tiene que elegir uno mientras sostiene la
    conversación. Lo que se elige mal ahí no se nota nunca más: la Prestadora termina con la
    mitad de sus avisos en «Otro», y entonces no puede saber cuántas ausencias le causa el
    transporte y cuántas la salud, que es justamente para lo que armó la lista.
@@ -69,7 +69,7 @@ function obtenerCliente() {
  *
  * Los de baja quedan afuera: el catálogo de hoy es el que está activo hoy, y los avisos viejos
  * que nombran un motivo retirado siguen diciendo lo que decían porque lo que se guarda es el
- * texto (ver la columna `alertas_tempranas_guardia.motivo`).
+ * texto (ver la columna `alertas_tempranas_turno_guardia.motivo`).
  */
 export function nombresElegibles(motivos) {
   return (Array.isArray(motivos) ? motivos : [])
@@ -80,7 +80,7 @@ export function nombresElegibles(motivos) {
 /**
  * Lee lo que se contó y sugiere uno de los motivos de la Prestadora.
  *
- * `motivos` son las filas de `motivos_aviso_previo_guardia` de esa Prestadora, tal como salen
+ * `motivos` son las filas de `motivos_aviso_previo_turno_guardia` de esa Prestadora, tal como salen
  * de la base; quien llama ya las acotó a la Organización activa.
  *
  * Devuelve siempre `{ motivo }`, con el nombre exacto de uno de los activos o `null`. Nunca

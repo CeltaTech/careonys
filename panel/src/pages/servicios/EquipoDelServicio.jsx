@@ -47,13 +47,13 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
     setErrorFila(null);
 
     try {
-      const [guardias, series, configuracion, decisiones] = await Promise.all([
+      const [turnos_guardia, series, configuracion, decisiones] = await Promise.all([
         supabase
-          .from('guardias')
+          .from('turnos_guardia')
           .select('id, servicio_id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado')
           .eq('servicio_id', servicio.id),
         supabase
-          .from('series_guardias')
+          .from('series_turnos_guardia')
           .select('id, servicio_id, asistente_id, estado, vigente_hasta')
           .eq('servicio_id', servicio.id),
         supabase
@@ -63,13 +63,13 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
           .maybeSingle(),
         supabase.from('equipo_servicio').select('*').eq('servicio_id', servicio.id),
       ]);
-      for (const respuesta of [guardias, series, configuracion, decisiones]) {
+      for (const respuesta of [turnos_guardia, series, configuracion, decisiones]) {
         if (respuesta.error) throw respuesta.error;
       }
 
       const equipo = equipoDelServicio({
         servicioId: servicio.id,
-        guardias: guardias.data ?? [],
+        turnos_guardia: turnos_guardia.data ?? [],
         series: series.data ?? [],
         decisiones: decisiones.data ?? [],
         coordinadorDelServicio: servicio.coordinador_id ?? null,
@@ -168,7 +168,7 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
 
   const explicacionDeOrigen = useMemo(
     () => ({
-      [ORIGEN.POR_SUS_TURNOS]: e.origen_por_sus_turnos,
+      [ORIGEN.POR_SUS_TURNOS_GUARDIA]: e.origen_por_sus_turnos_guardia,
       [ORIGEN.POR_SU_SERIE]: e.origen_por_su_serie,
       [ORIGEN.A_MANO]: e.origen_a_mano,
       [ORIGEN.POR_SU_SERVICIO]: e.origen_por_su_servicio,
@@ -202,7 +202,7 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
                     <tr>
                       <th>{e.col_persona}</th>
                       <th>{e.col_por_que}</th>
-                      <th>{e.col_turnos}</th>
+                      <th>{e.col_turnos_guardia}</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -214,7 +214,7 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
                           {a.cubre_francos && <div className="panel-mini">{e.cubre_francos}</div>}
                         </td>
                         <td>{explicacionDeOrigen[a.origen]}</td>
-                        <td>{a.turnos}</td>
+                        <td>{a.turnos_guardia}</td>
                         <td>
                           {puedeEditar && (
                             <>

@@ -9,7 +9,7 @@
  *
  * La consulta sale con el trabajo de la Prestadora, que sólo alcanza a la suya, y con columnas
  * contadas: la base no le deja al Cliente leer Asistentes, porque la protección por fila no
- * recorta columnas. Y sólo se busca al de la guardia en curso o la próxima.
+ * recorta columnas. Y sólo se busca al del turno de guardia en curso o la próxima.
  *
  * Qué daría con el sistema roto: con la consulta en la credencial de la persona o en cualquier
  * otra que no sea el trabajo de esta Prestadora, o con el teléfono viajando, las comprobaciones de abajo fallan. Los datos son inventados.
@@ -111,7 +111,7 @@ beforeEach(() => {
 
 describe('el Asistente que ve el Cliente', () => {
   it('se lee con el trabajo de la Prestadora, ni con la credencial de la persona ni con la llave maestra', async () => {
-    respuestas.set('GET /rest/v1/guardias', [
+    respuestas.set('GET /rest/v1/turnos_guardia', [
       { id: 'g-1', estado: 'activa', asistente_id: ASISTENTE },
     ]);
 
@@ -128,7 +128,7 @@ describe('el Asistente que ve el Cliente', () => {
   });
 
   it('del Asistente viajan el nombre y la foto, nada más', async () => {
-    respuestas.set('GET /rest/v1/guardias', [
+    respuestas.set('GET /rest/v1/turnos_guardia', [
       { id: 'g-1', estado: 'activa', asistente_id: ASISTENTE },
     ]);
     respuestas.set('GET /rest/v1/asistentes', [
@@ -143,20 +143,20 @@ describe('el Asistente que ve el Cliente', () => {
   });
 
   it('busca sólo la guardia en curso o una próxima', async () => {
-    respuestas.set('GET /rest/v1/guardias', ({ url }) =>
+    respuestas.set('GET /rest/v1/turnos_guardia', ({ url }) =>
       (url.includes('estado=eq.activa') ? [] : [{ id: 'g-2', estado: 'programada', asistente_id: ASISTENTE }]));
 
     const { cuerpo } = await pedir(`/pacientes/${PACIENTE}/asistente`);
-    assert.equal(cuerpo.guardiaId, 'g-2');
+    assert.equal(cuerpo.turnoGuardiaId, 'g-2');
 
-    const consultas = llamadas.filter((l) => l.clave === 'GET /rest/v1/guardias').map((l) => l.url);
+    const consultas = llamadas.filter((l) => l.clave === 'GET /rest/v1/turnos_guardia').map((l) => l.url);
     assert.equal(consultas.length, 2, consultas.join('\n'));
     assert.ok(consultas[0].includes('estado=eq.activa'), consultas[0]);
     assert.ok(consultas[1].includes('estado=eq.programada') && consultas[1].includes('fecha=gte.'), consultas[1]);
   });
 
   it('sin guardia en curso ni próxima, no hay Asistente', async () => {
-    respuestas.set('GET /rest/v1/guardias', []);
+    respuestas.set('GET /rest/v1/turnos_guardia', []);
 
     const { cuerpo } = await pedir(`/pacientes/${PACIENTE}/asistente`);
     assert.equal(cuerpo.asistente, null);

@@ -26,7 +26,7 @@ const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const LEGAJO = 'bbbbbbbb-bbbb-4bbb-8bbb-b0000000000b';
 const OTRO_LEGAJO = 'bbbbbbbb-bbbb-4bbb-8bbb-b0000000000c';
-const GUARDIA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const TURNO_GUARDIA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const PACIENTE = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const INCIDENTE = '11111111-1111-4111-8111-111111111111';
 const INCIDENTE_CERRADO = '11111111-1111-4111-8111-111111111112';
@@ -135,11 +135,11 @@ beforeEach(() => {
   respuestas.clear();
   consentimientoVigente = true;
   incidentesEnLaBase = [
-    { id: INCIDENTE, prestadora_id: PRESTADORA, guardia_entrante_id: GUARDIA, resuelto_at: null },
+    { id: INCIDENTE, prestadora_id: PRESTADORA, turno_guardia_entrante_id: TURNO_GUARDIA, resuelto_at: null },
     {
       id: INCIDENTE_CERRADO,
       prestadora_id: PRESTADORA,
-      guardia_entrante_id: GUARDIA,
+      turno_guardia_entrante_id: TURNO_GUARDIA,
       resuelto_at: '2026-09-15T21:00:00Z',
     },
   ];
@@ -187,10 +187,10 @@ beforeEach(() => {
     return filas.map((f) => ({ id: f.id }));
   });
   respuestas.set('GET /rest/v1/incidentes_relevo', ({ url }) => filasQuePasanLosFiltros(url, incidentesEnLaBase));
-  respuestas.set('GET /rest/v1/guardias', ({ url }) =>
+  respuestas.set('GET /rest/v1/turnos_guardia', ({ url }) =>
     filasQuePasanLosFiltros(url, [
       {
-        id: GUARDIA,
+        id: TURNO_GUARDIA,
         prestadora_id: PRESTADORA,
         paciente_id: PACIENTE,
         fecha: '2026-09-15',
@@ -200,9 +200,9 @@ beforeEach(() => {
     ])
   );
   respuestas.set('POST /rest/v1/rpc/consentimiento_seguimiento_vigente', () => consentimientoVigente);
-  respuestas.set('GET /rest/v1/guardia_pacientes', () => [
+  respuestas.set('GET /rest/v1/turno_guardia_pacientes', () => [
     {
-      guardia_id: GUARDIA,
+      turno_guardia_id: TURNO_GUARDIA,
       pacientes: { id: PACIENTE, persona: { nombre_visible: 'Inventada Gómez', ...DOMICILIO } },
     },
   ]);
@@ -282,7 +282,7 @@ describe('contestar una consulta de relevo', () => {
     assert.equal(estado, 200);
     assert.equal(laRespuesta().length, 1);
     assert.equal(losMinutosPorGps().length, 0);
-    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/guardia_pacientes'));
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/turno_guardia_pacientes'));
   });
 
   it('sin el punto no se calcula nada', async () => {
@@ -292,7 +292,7 @@ describe('contestar una consulta de relevo', () => {
   });
 
   it('si el cálculo falla, la respuesta ya quedó y sale bien', async () => {
-    respuestas.set('GET /rest/v1/guardia_pacientes', undefined);
+    respuestas.set('GET /rest/v1/turno_guardia_pacientes', undefined);
     const { estado, cuerpo } = await contestar(CONSULTA, { respuesta: 'disponible', minutos: 40, ...DESDE_DONDE_CONTESTA });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);

@@ -23,7 +23,7 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const LEGAJO = 'bbbbbbbb-bbbb-bbbb-bbbb-b0000000000b';
-const GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const TURNO_GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const MOTIVO = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Lo que no se preparó contesta vacío. */
@@ -83,9 +83,9 @@ async function pedir(camino = '', cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-// Lo que devuelve `turnos_asignados_sin_responder`: datos inventados.
-const TURNO = {
-  asignacion_id: 'asignacion-1', asignado_at: '2026-09-01T10:00:00Z', guardia_id: GUARDIA,
+// Lo que devuelve `turnos_guardia_asignados_sin_responder`: datos inventados.
+const TURNO_GUARDIA_SIN_RESPONDER = {
+  asignacion_id: 'asignacion-1', asignado_at: '2026-09-01T10:00:00Z', turno_guardia_id: TURNO_GUARDIA,
   fecha: '2099-01-01', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0,
   modalidad: null, barrios: ['Barrio Inventado'], niveles_de_complejidad: ['II'],
   distancia_m: 1112,
@@ -101,9 +101,9 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
-  respuestas.set('POST /rest/v1/rpc/turnos_asignados_sin_responder', () => [TURNO]);
-  respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => GUARDIA);
-  respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [{ id: 'asignacion-1', estado: 'sin_responder' }]);
+  respuestas.set('POST /rest/v1/rpc/turnos_guardia_asignados_sin_responder', () => [TURNO_GUARDIA_SIN_RESPONDER]);
+  respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => TURNO_GUARDIA);
+  respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', () => [{ id: 'asignacion-1', estado: 'sin_responder' }]);
   respuestas.set('GET /rest/v1/motivos_resolucion', () => [
     { id: MOTIVO, nombre_es_ar: 'Problema de salud', nombre_en: 'Health problem', nombre_pt_br: 'Problema de saúde', pide_detalle: false, orden: 10 },
   ]);
@@ -114,25 +114,25 @@ describe('la lista de asignaciones sin responder', () => {
   it('sale de la función de la base, con la credencial del Asistente', async () => {
     const { estado, cuerpo } = await pedir();
     assert.equal(estado, 200);
-    const lecturas = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/turnos_asignados_sin_responder');
+    const lecturas = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/turnos_guardia_asignados_sin_responder');
     assert.equal(lecturas.length, 1);
     assert.equal(lecturas[0].credencial, SESION, 'la lista no fue con la sesión del Asistente');
-    assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/guardias').length, 0, 'leyó el turno entero');
+    assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/turnos_guardia').length, 0, 'leyó el turno entero');
     assert.equal(cuerpo.asignaciones.length, 1);
     assert.equal(cuerpo.asignaciones[0].id, 'asignacion-1');
   });
 
   it('del turno muestra día, horario, barrio, complejidad, distancia y tareas, y nada del Paciente', async () => {
     const { cuerpo } = await pedir();
-    const { guardia } = cuerpo.asignaciones[0];
-    assert.equal(guardia.id, GUARDIA);
-    assert.equal(guardia.fecha, '2099-01-01');
-    assert.deepEqual(guardia.barrios, ['Barrio Inventado']);
-    assert.deepEqual(guardia.niveles_de_complejidad, ['II']);
-    assert.equal(guardia.distancia_m, 1112);
-    assert.deepEqual(guardia.tareas.map((t) => t.id), ['tarea-1']);
-    assert.equal(guardia.pacientes, undefined);
-    assert.equal(guardia.paciente_id, undefined);
+    const { turno_guardia } = cuerpo.asignaciones[0];
+    assert.equal(turno_guardia.id, TURNO_GUARDIA);
+    assert.equal(turno_guardia.fecha, '2099-01-01');
+    assert.deepEqual(turno_guardia.barrios, ['Barrio Inventado']);
+    assert.deepEqual(turno_guardia.niveles_de_complejidad, ['II']);
+    assert.equal(turno_guardia.distancia_m, 1112);
+    assert.deepEqual(turno_guardia.tareas.map((t) => t.id), ['tarea-1']);
+    assert.equal(turno_guardia.pacientes, undefined);
+    assert.equal(turno_guardia.paciente_id, undefined);
   });
 
   it('trae la lista de motivos de rechazo de la Prestadora, con la credencial del Asistente', async () => {
@@ -140,7 +140,7 @@ describe('la lista de asignaciones sin responder', () => {
     const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/motivos_resolucion');
     assert.equal(lecturas.length, 1);
     assert.equal(lecturas[0].credencial, SESION);
-    assert.ok(lecturas[0].url.includes('tabla=eq.asignaciones_de_turno'));
+    assert.ok(lecturas[0].url.includes('tabla=eq.asignaciones_de_turno_guardia'));
     assert.equal(cuerpo.motivos[0].id, MOTIVO);
   });
 
@@ -159,7 +159,7 @@ describe('rechazar', () => {
     assert.equal(resoluciones.length, 1);
     assert.equal(resoluciones[0].credencial, SESION, 'el rechazo no fue con la sesión del Asistente');
     const enviado = JSON.parse(resoluciones[0].cuerpo);
-    assert.equal(enviado.p_tabla, 'asignaciones_de_turno');
+    assert.equal(enviado.p_tabla, 'asignaciones_de_turno_guardia');
     assert.equal(enviado.p_fila_id, 'asignacion-1');
     assert.equal(enviado.p_motivo_id, MOTIVO);
   });
@@ -172,7 +172,7 @@ describe('rechazar', () => {
   });
 
   it('una asignación ya respondida no se vuelve a responder', async () => {
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [{ id: 'asignacion-1', estado: 'rechazada' }]);
+    respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', () => [{ id: 'asignacion-1', estado: 'rechazada' }]);
     const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'rechaza', motivoId: MOTIVO });
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'asignacion_ya_respondida');
@@ -183,7 +183,7 @@ describe('aceptar', () => {
   it('pasa por `aceptar_asignacion` con la credencial del Asistente, en un solo paso', async () => {
     const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
     assert.equal(estado, 200);
-    assert.equal(cuerpo.guardiaId, GUARDIA);
+    assert.equal(cuerpo.turnoGuardiaId, TURNO_GUARDIA);
     const aceptaciones = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/aceptar_asignacion');
     assert.equal(aceptaciones.length, 1);
     assert.equal(aceptaciones[0].credencial, SESION, 'aceptar no fue con la sesión del Asistente');
@@ -194,7 +194,7 @@ describe('aceptar', () => {
   for (const [falla, estadoEsperado, motivo] of [
     ['asignacion_no_encontrada', 404, 'asignacion_no_encontrada'],
     ['asignacion_ya_respondida', 409, 'asignacion_ya_respondida'],
-    ['guardia_ya_cubierta', 409, 'guardia_ya_cubierta'],
+    ['turno_guardia_ya_cubierto', 409, 'turno_guardia_ya_cubierto'],
   ]) {
     it(`si la base dice «${falla}», contesta ${motivo} y no deja salir el texto de la base`, async () => {
       respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => ({ falla }));
@@ -226,7 +226,7 @@ describe('al aceptar un turno que era de otro Asistente', () => {
   const conAnterior = (anterior) => () => [{
     asistente_id: LEGAJO,
     asistente_anterior_id: anterior,
-    guardias: { id: GUARDIA, prestadora_id: PRESTADORA, paciente_id: null, fecha: '2099-01-01', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0 },
+    turnos_guardia: { id: TURNO_GUARDIA, prestadora_id: PRESTADORA, paciente_id: null, fecha: '2099-01-01', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0 },
   }];
 
   /** Acepta y dice si el aviso del reemplazo llegó a armarse. */
@@ -238,24 +238,24 @@ describe('al aceptar un turno que era de otro Asistente', () => {
   }
 
   it('recién al aceptar se intenta avisar el reemplazo, y la aceptación queda hecha igual', async () => {
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', conAnterior(ANTERIOR));
+    respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', conAnterior(ANTERIOR));
     const { estado, cuerpo, intentoAvisar } = await aceptarMirandoElRegistro();
     assert.equal(estado, 200);
     assert.equal(cuerpo.respuesta, 'acepta');
     assert.ok(intentoAvisar, 'no se intentó avisar el reemplazo');
-    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/asignaciones_de_turno');
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/asignaciones_de_turno_guardia');
     assert.equal(lectura.credencial, SESION, 'la asignación no se leyó con la sesión del Asistente');
   });
 
   it('sin Asistente anterior no hay reemplazo que avisar', async () => {
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', conAnterior(null));
+    respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', conAnterior(null));
     const { estado, intentoAvisar } = await aceptarMirandoElRegistro();
     assert.equal(estado, 200);
     assert.equal(intentoAvisar, false);
   });
 
   it('si el turno vuelve al mismo Asistente no hay reemplazo que avisar', async () => {
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', conAnterior(LEGAJO));
+    respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', conAnterior(LEGAJO));
     const { intentoAvisar } = await aceptarMirandoElRegistro();
     assert.equal(intentoAvisar, false);
   });
@@ -278,14 +278,14 @@ describe('el reemplazo durante una ausencia', () => {
 
   beforeEach(() => {
     respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => null);
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [
+    respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', () => [
       { id: 'asignacion-1', estado: 'sin_responder', serie_id: null, ausencia_id: AUSENCIA, asistente_anterior_id: null },
     ]);
   });
 
   it('la lista lo trae con sus fechas y cuántos turnos son', async () => {
-    respuestas.set('POST /rest/v1/rpc/turnos_asignados_sin_responder', () => [{
-      ...TURNO, tipo: 'ausencia', guardia_id: null, ausencia_id: AUSENCIA, desde: '2099-11-03', hasta: '2099-11-14', cantidad: 8,
+    respuestas.set('POST /rest/v1/rpc/turnos_guardia_asignados_sin_responder', () => [{
+      ...TURNO_GUARDIA_SIN_RESPONDER, tipo: 'ausencia', turno_guardia_id: null, ausencia_id: AUSENCIA, desde: '2099-11-03', hasta: '2099-11-14', cantidad: 8,
     }]);
     const { cuerpo } = await pedir();
     const [asignacion] = cuerpo.asignaciones;
@@ -302,7 +302,7 @@ describe('el reemplazo durante una ausencia', () => {
     }]);
     const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
     assert.equal(estado, 200);
-    assert.equal(cuerpo.guardiaId, null);
+    assert.equal(cuerpo.turnoGuardiaId, null);
     const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/coberturas_de_ausencia');
     assert.ok(lecturas.length > 0, 'no se leyeron las coberturas aceptadas');
     for (const lectura of lecturas) {
@@ -327,7 +327,7 @@ describe('el reemplazo durante una ausencia', () => {
   });
 
   it('el rechazo de un turno de un día no toca ninguna cobertura', async () => {
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [{ id: 'asignacion-1', estado: 'sin_responder', ausencia_id: null }]);
+    respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', () => [{ id: 'asignacion-1', estado: 'sin_responder', ausencia_id: null }]);
     await pedir('/asignacion-1/responder', { respuesta: 'rechaza', motivoId: MOTIVO });
     assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/coberturas_de_ausencia').length, 0);
   });
@@ -335,8 +335,8 @@ describe('el reemplazo durante una ausencia', () => {
 
 describe('el turno fijo', () => {
   it('la lista lo trae con sus días de la semana', async () => {
-    respuestas.set('POST /rest/v1/rpc/turnos_asignados_sin_responder', () => [{
-      ...TURNO, tipo: 'serie', guardia_id: null, serie_id: 'serie-1', dias_semana: ['lunes', 'miercoles'],
+    respuestas.set('POST /rest/v1/rpc/turnos_guardia_asignados_sin_responder', () => [{
+      ...TURNO_GUARDIA_SIN_RESPONDER, tipo: 'serie', turno_guardia_id: null, serie_id: 'serie-1', dias_semana: ['lunes', 'miercoles'],
     }]);
     const { cuerpo } = await pedir();
     assert.equal(cuerpo.asignaciones[0].tipo, 'serie');
@@ -345,7 +345,7 @@ describe('el turno fijo', () => {
 
   it('al aceptarlo no se escribe nada con el trabajo: la base ya lo puso a su nombre', async () => {
     respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => null);
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [{ serie_id: 'serie-1', ausencia_id: null, asistente_anterior_id: null }]);
+    respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', () => [{ serie_id: 'serie-1', ausencia_id: null, asistente_anterior_id: null }]);
     const { estado } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
     assert.equal(estado, 200);
     assert.equal(llamadas.filter((l) => quienLlamo(l)?.role === 'trabajo_sin_persona').length, 0);

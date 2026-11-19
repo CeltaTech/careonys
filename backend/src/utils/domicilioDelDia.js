@@ -1,4 +1,4 @@
-// Dónde se atiende a cada Paciente el día de su guardia, del lado del backend.
+// Dónde se atiende a cada Paciente el día de su turno de guardia, del lado del backend.
 //
 // POR QUÉ EXISTE. El Paciente tiene una sola dirección, la de sus datos, y hay temporadas en que
 // no está ahí: el verano en la casa de un hijo, una internación, una mudanza mientras arreglan
@@ -16,7 +16,7 @@
 // dos aplicaciones y al Panel.
 //
 // UNA PREGUNTA POR FECHA, NO UNA POR PACIENTE. La lista de turnos del Asistente trae cien
-// guardias de golpe. Preguntar de a un Paciente serían cien viajes a la base para contestar
+// turnos de guardia de golpe. Preguntar de a un Paciente serían cien viajes a la base para contestar
 // algo que cambia por día y no por persona: se agrupa por fecha y se pregunta una vez por cada
 // día distinto. Una semana de turnos son siete preguntas como mucho.
 //
@@ -29,7 +29,7 @@
 import { domicilioEscrito } from './domicilioEscrito.js';
 
 // Los tres campos del Paciente que contestan "¿dónde se lo atiende?". Cada consulta pide los que
-// necesita: la pantalla de una guardia pide los tres, el check-in solamente las coordenadas
+// necesita: la pantalla de un turno de guardia pide los tres, el check-in solamente las coordenadas
 // —mide una distancia, no muestra una dirección—, y una Prestadora con el interruptor apagado
 // no pide ninguno.
 const CAMPOS_DE_UBICACION = ['domicilio', 'lat', 'lng'];
@@ -83,30 +83,30 @@ function conSuDireccionDelDia(paciente, resuelto) {
 }
 
 /**
- * Le pone a cada Paciente de cada guardia la dirección que rige **la fecha de esa guardia**.
+ * Le pone a cada Paciente de cada turno de guardia la dirección que rige **la fecha de ese turno de guardia**.
  *
- * Recibe las guardias como las deja `utils/pacientesDeGuardia.js` —cada una con su `fecha` y su
+ * Recibe los turnos de guardia como las deja `utils/pacientesDeTurnoGuardia.js` —cada una con su `fecha` y su
  * lista `pacientes`— y devuelve la misma lista con las direcciones del día ya aplicadas. Una
- * guardia sin fecha, o sin nadie a quien atender, pasa igual y sin tocar.
+ * turno de guardia sin fecha, o sin nadie a quien atender, pasa igual y sin tocar.
  *
  * Pregunta con `db`, la conexión de quien pide: la base contesta sólo por los Pacientes que
  * esa conexión puede ver.
  *
  * Devuelve copias: nada de lo que llegó se modifica en el lugar.
  */
-export async function conDomicilioDelDia(db, guardias) {
-  const lista = (guardias ?? []).filter(Boolean);
+export async function conDomicilioDelDia(db, turnos_guardia) {
+  const lista = (turnos_guardia ?? []).filter(Boolean);
   if (lista.length === 0) return lista;
 
   // A quién hay que preguntar por cada día distinto. El conjunto evita repetir al mismo
   // Paciente cuando tiene dos turnos la misma fecha.
   const pacientesPorFecha = new Map();
-  for (const guardia of lista) {
-    if (!guardia.fecha || !Array.isArray(guardia.pacientes)) continue;
-    for (const paciente of guardia.pacientes) {
+  for (const turno_guardia of lista) {
+    if (!turno_guardia.fecha || !Array.isArray(turno_guardia.pacientes)) continue;
+    for (const paciente of turno_guardia.pacientes) {
       if (!paciente?.id || !pidioLaDireccion(paciente)) continue;
-      if (!pacientesPorFecha.has(guardia.fecha)) pacientesPorFecha.set(guardia.fecha, new Set());
-      pacientesPorFecha.get(guardia.fecha).add(paciente.id);
+      if (!pacientesPorFecha.has(turno_guardia.fecha)) pacientesPorFecha.set(turno_guardia.fecha, new Set());
+      pacientesPorFecha.get(turno_guardia.fecha).add(paciente.id);
     }
   }
   if (pacientesPorFecha.size === 0) return lista;
@@ -125,24 +125,24 @@ export async function conDomicilioDelDia(db, guardias) {
     })
   );
 
-  return lista.map((guardia) => {
-    if (!Array.isArray(guardia.pacientes)) return guardia;
+  return lista.map((turno_guardia) => {
+    if (!Array.isArray(turno_guardia.pacientes)) return turno_guardia;
     return {
-      ...guardia,
-      pacientes: guardia.pacientes.map((paciente) =>
-        conSuDireccionDelDia(paciente, resueltos.get(llave(guardia.fecha, paciente?.id)))
+      ...turno_guardia,
+      pacientes: turno_guardia.pacientes.map((paciente) =>
+        conSuDireccionDelDia(paciente, resueltos.get(llave(turno_guardia.fecha, paciente?.id)))
       ),
     };
   });
 }
 
 /**
- * Lo mismo para una sola guardia: recibe su lista de Pacientes y la devuelve con la dirección
- * del día puesta. Es la forma en que se lee mejor donde ya se tiene la guardia en la mano —el
+ * Lo mismo para un solo turno de guardia: recibe su lista de Pacientes y la devuelve con la dirección
+ * del día puesta. Es la forma en que se lee mejor donde ya se tiene el turno de guardia en la mano —el
  * check-in, sin ir más lejos—, y no repite nada: llama a la de arriba.
  */
-export async function pacientesConDomicilioDelDia(db, guardia, pacientes) {
-  const [conDia] = await conDomicilioDelDia(db, [{ ...guardia, pacientes: pacientes ?? [] }]);
+export async function pacientesConDomicilioDelDia(db, turno_guardia, pacientes) {
+  const [conDia] = await conDomicilioDelDia(db, [{ ...turno_guardia, pacientes: pacientes ?? [] }]);
   return conDia?.pacientes ?? [];
 }
 
@@ -150,7 +150,7 @@ export async function pacientesConDomicilioDelDia(db, guardia, pacientes) {
  * Dónde se atiende hoy a estos Pacientes.
  *
  * El Cliente no está mirando un turno: está mirando a los suyos, y lo que pregunta es dónde
- * se los está atendiendo ahora. Por eso acá la fecha es la de hoy y no la de ninguna guardia.
+ * se los está atendiendo ahora. Por eso acá la fecha es la de hoy y no la de ningún turno de guardia.
  *
  * El día se saca igual que en todo el resto del backend, con la fecha del servidor; no hay una
  * hora por Prestadora en ningún lado del producto todavía, y resolverlo acá solo para esta

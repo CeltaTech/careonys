@@ -5,7 +5,7 @@
  *
  * QUÉ TIENE QUE GARANTIZAR ESTA PRUEBA. Que el tope existe de verdad y no es un comentario: que
  * el pedido que se pasa se frena, que el número sale de la configuración y no está escrito en el
- * código, que sin identidad resuelta se niega —falla cerrado—, y que el piso de la guardia nunca
+ * código, que sin identidad resuelta se niega —falla cerrado—, y que el piso del turno de guardia nunca
  * se traba, porque un tope que deja a un Asistente parado en la puerta sería peor que el problema
  * que vino a resolver.
  *
@@ -122,11 +122,11 @@ describe('el tope de pedidos por minuto', () => {
   it('cada tope lleva su cuenta: gastar los de una ruta no deja sin pedidos a la otra', async () => {
     process.env.TOPE_PEDIDOS_POR_MINUTO = '1';
     const firma = await levantar(backendCon({ nombre: 'firma' }));
-    const guardia = await levantar(backendCon({ nombre: 'guardia' }));
+    const turno_guardia = await levantar(backendCon({ nombre: 'turno_guardia' }));
 
     assert.equal((await pedir(firma.direccion)).estado, 200);
     assert.equal((await pedir(firma.direccion)).estado, 429);
-    assert.equal((await pedir(guardia.direccion)).estado, 200);
+    assert.equal((await pedir(turno_guardia.direccion)).estado, 200);
   });
 
   it('la cuenta es de cada persona: quien no probó nada entra igual', async () => {

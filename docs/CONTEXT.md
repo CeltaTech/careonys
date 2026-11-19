@@ -100,10 +100,10 @@ Etapa 2 — Panel de administración
     instrucciones que firma el titular, y el Servicio contratado con su continuidad.
   - **Guardias** — series y guardias, asignaciones de turno, cobertura, grilla, acciones masivas, guardias sin
     cerrar, pase de guardia con código de presencia, emergencias en guardia, domicilios
-    temporales y seguimiento de ubicación. Tiene rutas (`panelGuardias.js`, `panelComprobaciones.js`,
-    `panelEmergencias.js`) y pantallas (`panel/src/pages/Guardias.jsx`,
-    `guardias/SolicitudDeIngresoModal.jsx`, `panel/src/context/PedidosDeAutorizacionContext.jsx`,
-    `EmergenciasEnGuardia.jsx`, `panel/src/pages/guardias/`).
+    temporales y seguimiento de ubicación. Tiene rutas (`panelTurnosGuardia.js`, `panelComprobaciones.js`,
+    `panelEmergencias.js`) y pantallas (`panel/src/pages/TurnosGuardia.jsx`,
+    `turnos_guardia/SolicitudDeIngresoModal.jsx`, `panel/src/context/PedidosDeAutorizacionContext.jsx`,
+    `EmergenciasEnTurnoGuardia.jsx`, `panel/src/pages/turnos_guardia/`).
   - **Reportes, alertas y medicación** — el reporte diario que arma la IA, las alertas por
     patrones, los signos vitales con su autorización, y las indicaciones de medicación.
   - **El dinero** — lista de precios y prestaciones, facturación a los Clientes, cobros,

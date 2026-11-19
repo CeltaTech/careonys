@@ -8,10 +8,10 @@
  *
  *   - `bloqueado`  — lo rechaza la base. La Matrícula y la modalidad de trabajo las hace cumplir
  *                    un disparador, así que la asignación falla igual. El botón queda apagado.
- *   - `desaconsejado` — lo rechaza esta lista. Que se pise con otra guardia y que haya una
+ *   - `desaconsejado` — lo rechaza esta lista. Que se pise con otro turno de guardia y que haya una
  *                    ausencia registrada son hechos que la base acepta sin decir nada. El botón
  *                    queda encendido, porque quien coordina puede saber que la licencia se cortó
- *                    antes o que las dos guardias se están permutando.
+ *                    antes o que los dos turnos de guardia se están permutando.
  *
  * Confundirlos tiene consecuencia en las dos direcciones: marcar como bloqueado lo que no lo es
  * deja a la Coordinadora sin poder cargar un reemplazo que ya arregló por teléfono, y marcar como
@@ -22,7 +22,7 @@
  * de los tres grupos se mezclara, falla la última.
  */
 import { describe, expect, it } from 'vitest';
-import { candidatosParaGuardia, MOTIVO } from '../candidatos';
+import { candidatosParaTurnoGuardia, MOTIVO } from '../candidatos';
 import { ADVERTENCIA, advertenciasDeAsignacion } from '../avisosAsignacion';
 
 const HUECO = {
@@ -47,8 +47,8 @@ const OCUPADA = activo('a-ocupada', 'Beatriz Prueba');
 const DE_LICENCIA = activo('a-licencia', 'Carla Prueba');
 const DE_OTRA_MODALIDAD = activo('a-modalidad', 'Delia Prueba', ['intermediacion']);
 
-/** La otra guardia de Beatriz, el mismo día y a la misma hora que el hueco. */
-const GUARDIA_QUE_SE_PISA = {
+/** El otro turno de guardia de Beatriz, el mismo día y a la misma hora que el hueco. */
+const TURNO_GUARDIA_QUE_SE_PISA = {
   id: 'g-otra',
   asistente_id: OCUPADA.id,
   fecha: '2026-09-20',
@@ -66,9 +66,9 @@ const AUSENCIA_ABIERTA = {
 };
 
 const evaluar = (asistentes, extra = {}) =>
-  candidatosParaGuardia(HUECO, {
+  candidatosParaTurnoGuardia(HUECO, {
     asistentes,
-    guardias: [GUARDIA_QUE_SE_PISA],
+    turnos_guardia: [TURNO_GUARDIA_QUE_SE_PISA],
     ausencias: [AUSENCIA_ABIERTA],
     ahora: new Date('2026-09-18T10:00:00'),
     ...extra,
@@ -129,7 +129,7 @@ describe('lo que se le muestra a quien confirma', () => {
   // se aprieta sin saber por qué el sistema lo desaconsejaba.
   const datos = {
     asistentes: TODOS,
-    guardias: [GUARDIA_QUE_SE_PISA],
+    turnos_guardia: [TURNO_GUARDIA_QUE_SE_PISA],
     ausencias: [AUSENCIA_ABIERTA],
     ahora: new Date('2026-09-18T10:00:00'),
   };

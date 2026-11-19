@@ -47,7 +47,7 @@ const ICONOS = {
     </>
   ),
   asistentes: PERSONAS,
-  guardias: (
+  turnos_guardia: (
     <>
       <rect x="4" y="5" width="16" height="15" rx="2" />
       <path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h5" />
@@ -211,13 +211,13 @@ export function Layout() {
       ],
     },
     {
-      clave: 'guardias',
-      texto: t.nav.sec_guardias,
+      clave: 'turnos_guardia',
+      texto: t.nav.sec_turnos_guardia,
       enlaces: [
-        { a: '/guardias', texto: t.nav.guardias, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        { a: '/turnos-guardia', texto: t.nav.turnos_guardia, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/emergencias', texto: t.nav.emergencias, ver: hayPadron, contador: emergenciasSinAtender.length, critico: true },
         { a: '/continuidad', texto: t.nav.continuidad, ver: hayPadron },
-        { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPadron },
+        { a: '/verificacion-turnos-guardia', texto: t.nav.verificacion_turnos_guardia, ver: hayPadron },
         { a: '/reportes', texto: t.nav.reportes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/medicacion', texto: t.nav.medicacion, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/alertas', texto: t.nav.alertas, ver: directa },

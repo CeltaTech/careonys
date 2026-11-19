@@ -17,7 +17,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { FormField } from '../../components/ui/FormField';
 import { mensajeDeError } from '../../lib/errores';
 import { clienteDelServicio, contactosDeClientes } from '../../lib/clienteDelServicio';
-import { claseDeResponsable, modalidadesDeGuardias, nombreDeModalidad } from './modalidadesDelServicio';
+import { claseDeResponsable, modalidadesDeTurnosGuardia, nombreDeModalidad } from './modalidadesDelServicio';
 import { TareasDelServicio } from './TareasDelServicio';
 import { PagosDelServicio } from './PagosDelServicio';
 import { BajaDelServicioModal } from './BajaDelServicioModal';
@@ -28,10 +28,10 @@ import './servicios.css';
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
 import { informacionDeSalud } from '../../lib/informacionDeSalud';
 
-// Cuántas guardias se listan en la pestaña. Un Servicio de meses puede tener cientos, y esta
+// Cuántos turnos de guardia se listan en la pestaña. Un Servicio de meses puede tener cientos, y esta
 // pantalla no es la grilla de guardias: quien quiera verlas todas va a Guardias. Las modalidades y
 // las incidencias sí se calculan sobre todas.
-const GUARDIAS_A_MOSTRAR = 20;
+const TURNOS_GUARDIA_A_MOSTRAR = 20;
 
 // Tope de reportes en Seguimiento, por la misma razón.
 const REPORTES_A_MOSTRAR = 50;
@@ -76,7 +76,7 @@ export function ServicioDetalle() {
   // Cómo se llama quien firmó la contratación. `null` es que el Servicio viene de antes del Padrón
   // y no lo dice.
   const [prestaciones, setPrestaciones] = useState([]);
-  const [guardias, setGuardias] = useState([]);
+  const [turnos_guardia, setTurnosGuardia] = useState([]);
   const [reportes, setReportes] = useState([]);
   const [incidencias, setIncidencias] = useState([]);
   const [nombresPaciente, setNombresPaciente] = useState({});
@@ -104,7 +104,7 @@ export function ServicioDetalle() {
       return;
     }
 
-    // La modalidad la lleva cada guardia, así que se traen todas las del Servicio: de ahí salen
+    // La modalidad la lleva cada turno de guardia, así que se traen todas las del Servicio: de ahí salen
     // las modalidades, y por sus ids se buscan las incidencias.
     // Quiénes pueden coordinarlo: las cuentas de coordinación activas de la Prestadora. Quien no
     // asigna recibe de la base sólo la suya, que es la del Servicio que está mirando.
@@ -115,16 +115,16 @@ export function ServicioDetalle() {
         .eq('servicio_id', id)
         .order('created_at', { ascending: false }),
       supabase
-        .from('guardias')
+        .from('turnos_guardia')
         .select('id, fecha, hora_inicio, hora_fin, estado, paciente_id, asistente_id, canal_modalidad')
         .eq('servicio_id', id)
         .order('fecha', { ascending: false }),
       informacionDeSalud
         .from('reportes')
         .select(
-          `id, created_at, estado_animo, incidentes, signos_vitales, confirmado_asistente, pacientes!inner(id, ${FICHA_NOMBRE}), guardias!inner(fecha, servicio_id, asistentes(nombre))`,
+          `id, created_at, estado_animo, incidentes, signos_vitales, confirmado_asistente, pacientes!inner(id, ${FICHA_NOMBRE}), turnos_guardia!inner(fecha, servicio_id, asistentes(nombre))`,
         )
-        .eq('guardias.servicio_id', id)
+        .eq('turnos_guardia.servicio_id', id)
         .order('created_at', { ascending: false })
         .limit(REPORTES_A_MOSTRAR),
       informacionDeSalud
@@ -148,29 +148,29 @@ export function ServicioDetalle() {
       return;
     }
 
-    const listaGuardias = gu.data ?? [];
-    const idsGuardia = listaGuardias.map((g) => g.id);
-    const idsPaciente = [...new Set([...(pr.data ?? []), ...listaGuardias].map((r) => r.paciente_id).filter(Boolean))];
-    const idsAsistente = [...new Set(listaGuardias.map((r) => r.asistente_id).filter(Boolean))];
+    const listaTurnosGuardia = gu.data ?? [];
+    const idsTurnoGuardia = listaTurnosGuardia.map((g) => g.id);
+    const idsPaciente = [...new Set([...(pr.data ?? []), ...listaTurnosGuardia].map((r) => r.paciente_id).filter(Boolean))];
+    const idsAsistente = [...new Set(listaTurnosGuardia.map((r) => r.asistente_id).filter(Boolean))];
     const vacio = Promise.resolve({ data: [], error: null });
-    const listaIds = idsGuardia.join(',');
+    const listaIds = idsTurnoGuardia.join(',');
 
     const [pacientes, asistentes, { contactos: mapaContactos, error: fallaContactos }, relevos, sinCubrir] =
       await Promise.all([
         idsPaciente.length ? supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPaciente) : vacio,
         idsAsistente.length ? supabase.from('asistentes').select('id, nombre').in('id', idsAsistente) : vacio,
         contactosDeClientes(supabase, [s]),
-        idsGuardia.length
+        idsTurnoGuardia.length
           ? supabase
               .from('incidentes_relevo')
-              .select('id, guardia_saliente_id, guardia_entrante_id, iniciado_at, resuelto_at')
-              .or(`guardia_entrante_id.in.(${listaIds}),guardia_saliente_id.in.(${listaIds})`)
+              .select('id, turno_guardia_saliente_id, turno_guardia_entrante_id, iniciado_at, resuelto_at')
+              .or(`turno_guardia_entrante_id.in.(${listaIds}),turno_guardia_saliente_id.in.(${listaIds})`)
           : vacio,
-        idsGuardia.length
+        idsTurnoGuardia.length
           ? supabase
-              .from('incidentes_turno_sin_cubrir')
-              .select('id, guardia_id, abierto_at, resuelto_at')
-              .in('guardia_id', idsGuardia)
+              .from('incidentes_turno_guardia_sin_cubrir')
+              .select('id, turno_guardia_id, abierto_at, resuelto_at')
+              .in('turno_guardia_id', idsTurnoGuardia)
           : vacio,
       ]);
 
@@ -181,7 +181,7 @@ export function ServicioDetalle() {
       return;
     }
 
-    const guardiaPorId = Object.fromEntries(listaGuardias.map((g) => [g.id, g]));
+    const turnoGuardiaPorId = Object.fromEntries(listaTurnosGuardia.map((g) => [g.id, g]));
     const buscador = armarBuscadorDeRangos(rangos.data);
 
     setServicio(s);
@@ -190,7 +190,7 @@ export function ServicioDetalle() {
     );
     setContactos(mapaContactos);
     setPrestaciones(pr.data ?? []);
-    setGuardias(listaGuardias);
+    setTurnosGuardia(listaTurnosGuardia);
     setReportes(
       (rep.data ?? []).map((r) => ({
         ...r,
@@ -204,14 +204,14 @@ export function ServicioDetalle() {
           tipo: 'relevo',
           inicio: i.iniciado_at,
           resuelta: Boolean(i.resuelto_at),
-          guardia: guardiaPorId[i.guardia_entrante_id] ?? guardiaPorId[i.guardia_saliente_id] ?? null,
+          turno_guardia: turnoGuardiaPorId[i.turno_guardia_entrante_id] ?? turnoGuardiaPorId[i.turno_guardia_saliente_id] ?? null,
         })),
         ...(sinCubrir.data ?? []).map((i) => ({
           id: `sin-cubrir-${i.id}`,
           tipo: 'sin_cubrir',
           inicio: i.abierto_at,
           resuelta: Boolean(i.resuelto_at),
-          guardia: guardiaPorId[i.guardia_id] ?? null,
+          turno_guardia: turnoGuardiaPorId[i.turno_guardia_id] ?? null,
         })),
       ].sort((a, b) => String(b.inicio).localeCompare(String(a.inicio))),
     );
@@ -225,18 +225,18 @@ export function ServicioDetalle() {
     recargar();
   }, [recargar]);
 
-  // Los Pacientes del Servicio salen de sus prestaciones y sus guardias, que dicen de qué
+  // Los Pacientes del Servicio salen de sus prestaciones y sus turnos de guardia, que dicen de qué
   // Servicio son.
   const idsPacienteDelServicio = useMemo(
-    () => [...new Set([...prestaciones, ...guardias].map((r) => r.paciente_id).filter(Boolean))],
-    [prestaciones, guardias],
+    () => [...new Set([...prestaciones, ...turnos_guardia].map((r) => r.paciente_id).filter(Boolean))],
+    [prestaciones, turnos_guardia],
   );
   const pacientesDelServicio = useMemo(
     () => idsPacienteDelServicio.map((idPaciente) => nombresPaciente[idPaciente] || '—'),
     [idsPacienteDelServicio, nombresPaciente],
   );
 
-  const modalidades = useMemo(() => modalidadesDeGuardias(guardias), [guardias]);
+  const modalidades = useMemo(() => modalidadesDeTurnosGuardia(turnos_guardia), [turnos_guardia]);
 
   const asignarCoordinador = async (coordinadorId) => {
     if (!coordinadorId || coordinadorId === servicio.coordinador_id) return;
@@ -286,14 +286,14 @@ export function ServicioDetalle() {
   const nombrePacientes = pacientesDelServicio.length ? pacientesDelServicio.join(', ') : '—';
   const nombreCliente = contacto?.nombre || '—';
   const puedeAgregarPrestacion = servicio.estado === ESTADO_ACTIVO && Boolean(cliente.ruta);
-  const guardiasVisibles = guardias.slice(0, GUARDIAS_A_MOSTRAR);
+  const turnosGuardiaVisibles = turnos_guardia.slice(0, TURNOS_GUARDIA_A_MOSTRAR);
   const nombreCoordinador = coordinadores.find((c) => c.id === servicio.coordinador_id)?.nombre || '—';
 
   const pestanas = [
     ['resumen', d.tab_resumen],
     ['prestaciones', d.tab_prestaciones],
     ['tareas', d.tab_tareas],
-    ['guardias', d.tab_guardias],
+    ['turnos_guardia', d.tab_turnos_guardia],
     ['seguimiento', d.tab_seguimiento],
     ['incidencias', d.tab_incidencias],
     ...(veLosPagos ? [['pagos', d.tab_pagos]] : []),
@@ -460,13 +460,13 @@ export function ServicioDetalle() {
           />
         )}
 
-        {tab === 'guardias' &&
-          (guardias.length === 0 ? (
-            vacio(d.sin_guardias)
+        {tab === 'turnos_guardia' &&
+          (turnos_guardia.length === 0 ? (
+            vacio(d.sin_turnos_guardia)
           ) : (
             <>
-              {guardias.length > GUARDIAS_A_MOSTRAR && (
-                <span className="panel-mini">{con(d.guardias_mostradas, { n: GUARDIAS_A_MOSTRAR })}</span>
+              {turnos_guardia.length > TURNOS_GUARDIA_A_MOSTRAR && (
+                <span className="panel-mini">{con(d.turnos_guardia_mostrados, { n: TURNOS_GUARDIA_A_MOSTRAR })}</span>
               )}
               <div className="servicios-tabla-envoltura">
                 <table className="panel-tabla">
@@ -481,17 +481,17 @@ export function ServicioDetalle() {
                     </tr>
                   </thead>
                   <tbody>
-                    {guardiasVisibles.map((g) => (
+                    {turnosGuardiaVisibles.map((g) => (
                       <tr key={g.id}>
                         <td>{g.fecha}</td>
                         <td>{g.hora_inicio?.slice(0, 5)} – {g.hora_fin?.slice(0, 5)}</td>
                         <td>{nombresPaciente[g.paciente_id] || '—'}</td>
                         <td>{g.asistente_id ? nombresAsistente[g.asistente_id] || '—' : d.sin_cubrir}</td>
                         <td>{g.canal_modalidad ? nombreDeModalidad(g.canal_modalidad, t) : '—'}</td>
-                        {/* El estado de la guardia se traduce con los textos de Guardias: es el
+                        {/* El estado del turno de guardia se traduce con los textos de Guardias: es el
                             mismo estado, y no se nombra de dos maneras. */}
                         <td>
-                          <span className={claseBadge(g.estado)}>{traducirValor(t.guardias, `estado_${g.estado}`)}</span>
+                          <span className={claseBadge(g.estado)}>{traducirValor(t.turnos_guardia, `estado_${g.estado}`)}</span>
                         </td>
                       </tr>
                     ))}
@@ -519,9 +519,9 @@ export function ServicioDetalle() {
                 <tbody>
                   {reportes.map((r) => (
                     <tr key={r.id}>
-                      <td>{r.guardias?.fecha ?? fecha(r.created_at, locale)}</td>
+                      <td>{r.turnos_guardia?.fecha ?? fecha(r.created_at, locale)}</td>
                       <td>{conSuFicha(r.pacientes)?.nombre || '—'}</td>
-                      <td>{r.guardias?.asistentes?.nombre || '—'}</td>
+                      <td>{r.turnos_guardia?.asistentes?.nombre || '—'}</td>
                       <td>{r.estado_animo ? t.reportes[`animo_${r.estado_animo}`] ?? r.estado_animo : '—'}</td>
                       <td>
                         <div className="servicios-badges">
@@ -558,10 +558,10 @@ export function ServicioDetalle() {
                 <tbody>
                   {incidencias.map((i) => (
                     <tr key={i.id}>
-                      <td>{i.guardia?.fecha ?? fecha(i.inicio, locale)}</td>
-                      <td>{i.guardia ? `${i.guardia.hora_inicio?.slice(0, 5)} – ${i.guardia.hora_fin?.slice(0, 5)}` : '—'}</td>
-                      <td>{nombresPaciente[i.guardia?.paciente_id] || '—'}</td>
-                      <td>{i.tipo === 'relevo' ? t.continuidad.incidentes_titulo : t.continuidad.turnos_vacios_titulo}</td>
+                      <td>{i.turno_guardia?.fecha ?? fecha(i.inicio, locale)}</td>
+                      <td>{i.turno_guardia ? `${i.turno_guardia.hora_inicio?.slice(0, 5)} – ${i.turno_guardia.hora_fin?.slice(0, 5)}` : '—'}</td>
+                      <td>{nombresPaciente[i.turno_guardia?.paciente_id] || '—'}</td>
+                      <td>{i.tipo === 'relevo' ? t.continuidad.incidentes_titulo : t.continuidad.turnos_guardia_vacios_titulo}</td>
                       <td>
                         <span className={i.resuelta ? 'badge badge-exito' : 'badge badge-critico'}>
                           {i.resuelta ? t.alertas.estado_resuelta : t.alertas.estado_pendiente}

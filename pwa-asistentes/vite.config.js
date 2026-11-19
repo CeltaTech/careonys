@@ -44,7 +44,7 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        // Nunca cachear llamadas a la API (datos de guardias/reportes cambian todo el
+        // Nunca cachear llamadas a la API (datos de turnos de guardia/reportes cambian todo el
         // tiempo y son sensibles) — el precache es solo para el shell de la app.
         globPatterns: ['**/*.{js,css,html,svg}'],
       },

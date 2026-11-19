@@ -183,7 +183,7 @@ for (const i of identidades.filter((x) => x.esAdministracion)) {
 }
 
 // 2 bis. La misma persona en las dos Prestadoras: una cuenta en cada una, con el mismo email. Cada
-// cuenta ve sus propias guardias y ninguna fila de la otra, en las dos direcciones. Lo ajeno ya lo
+// cuenta ve sus propios turnos de guardia y ninguna fila de la otra, en las dos direcciones. Lo ajeno ya lo
 // revisó la lectura de arriba; acá se exige que la persona exista y que cada cuenta vea lo suyo,
 // porque una cuenta que no ve nada también pasaría.
 const enLasDos = correr(`
@@ -200,7 +200,7 @@ for (const [, ...deLaPersona] of enLasDos) {
     const i = identidades.find((x) => x.sesion.sub === id);
     if (!i) {
       fallas.push(`La cuenta ${id} tiene el mismo email en las dos Prestadoras y la prueba no la leyó.`);
-    } else if (!(propiasPorTabla.get(`${i.etiqueta}|guardias`) > 0)) {
+    } else if (!(propiasPorTabla.get(`${i.etiqueta}|turnos_guardia`) > 0)) {
       fallas.push(`${i.etiqueta} no ve ninguna guardia propia: con la misma persona en las dos Prestadoras, cada cuenta tiene que ver lo suyo.`);
     }
   }

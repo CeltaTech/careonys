@@ -32,15 +32,15 @@
  */
 export const TIPOS_DE_ALARMA = {
   /** Alguien avisó que una Asistente no llega, o la cuenta dice que no llega. */
-  ALERTA_TEMPRANA: 'alerta_temprana_guardia',
+  ALERTA_TEMPRANA: 'alerta_temprana_turno_guardia',
   /** Un relevo que no apareció y dejó a alguien adentro esperando. */
   INCIDENTE_RELEVO: 'incidente_relevo',
   /** Un turno que terminó y nadie cerró. */
-  GUARDIA_SIN_CERRAR: 'guardia_sin_cerrar',
+  TURNO_GUARDIA_SIN_CERRAR: 'turno_guardia_sin_cerrar',
   /** Un turno que se acerca sin nadie asignado. */
-  TURNO_SIN_CUBRIR: 'incidente_turno_sin_cubrir',
-  /** Una emergencia avisada desde una guardia en curso. */
-  EMERGENCIA: 'emergencia_guardia',
+  TURNO_GUARDIA_SIN_CUBRIR: 'incidente_turno_guardia_sin_cubrir',
+  /** Una emergencia avisada desde un turno de guardia en curso. */
+  EMERGENCIA: 'emergencia_turno_guardia',
 };
 
 export const TIPOS_DE_ALARMA_POSIBLES = Object.values(TIPOS_DE_ALARMA);

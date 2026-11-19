@@ -253,8 +253,8 @@ export default function PerfilPublicoAsistente() {
 
       {opiniones.length > 0 && (
         opiniones.map((o) => (
-          <div key={o.id} className="guardia-card">
-            <div className="guardia-card-paciente">
+          <div key={o.id} className="tarjeta">
+            <div className="tarjeta-paciente">
               <span aria-hidden="true">
                 {'★'.repeat(o.estrellas)}
                 {'☆'.repeat(Math.max(0, 5 - o.estrellas))}
@@ -263,8 +263,8 @@ export default function PerfilPublicoAsistente() {
                 {t.comun.puntaje_estrellas.replace('{n}', o.estrellas)}
               </span>
             </div>
-            {o.comentario && <div className="guardia-card-detalle">{o.comentario}</div>}
-            <div className="guardia-card-detalle">{diaEnPalabras(String(o.created_at).slice(0, 10), locale)}</div>
+            {o.comentario && <div className="tarjeta-detalle">{o.comentario}</div>}
+            <div className="tarjeta-detalle">{diaEnPalabras(String(o.created_at).slice(0, 10), locale)}</div>
           </div>
         ))
       )}

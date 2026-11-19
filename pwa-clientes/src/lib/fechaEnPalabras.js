@@ -5,7 +5,7 @@
 // veces y corregirlos tres veces.
 //
 // LA HORA DEL MEDIO NO ES UN DETALLE. Una fecha sola —`2026-08-20`— se entiende como medianoche
-// en Londres, y en Buenos Aires eso todavía es el 19. Sin el `T00:00:00`, una guardia y un
+// en Londres, y en Buenos Aires eso todavía es el 19. Sin el `T00:00:00`, un turno de guardia y un
 // vencimiento se muestran corridos un día, que en una factura es la diferencia entre estar al día
 // y estar vencido.
 

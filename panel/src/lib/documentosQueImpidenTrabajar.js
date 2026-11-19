@@ -5,7 +5,7 @@ import { impideTrabajarHoy } from './documentos';
 
 // Los documentos que hoy no dejan trabajar a un Asistente activo: faltan, están observados o
 // vencieron, y no tienen gracia que corra. Qué cuenta lo decide `impideTrabajarHoy`, el mismo que
-// usa la base para no dejar asignar. El Estado actual lo usa para señalar las guardias asignadas a
+// usa la base para no dejar asignar. El Estado actual lo usa para señalar los turnos de guardia asignados a
 // quien los tiene. El documento que nunca se cargó no es una alerta propia: es del reclutamiento.
 
 // Sin la Prestadora de quien mira no se consulta y vuelve un error.

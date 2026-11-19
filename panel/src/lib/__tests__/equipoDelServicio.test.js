@@ -30,7 +30,7 @@ const OTRO_SERVICIO = 'servicio-2';
 const AHORA = new Date('2026-09-16T12:00:00');
 
 /** Un turno de ese Servicio, hecho por esa Asistente, hace tantos días. */
-function turno(asistenteId, diasAtras, extra = {}) {
+function turno_guardia(asistenteId, diasAtras, extra = {}) {
   const dia = new Date(AHORA.getTime() - diasAtras * 24 * 60 * 60 * 1000);
   const fecha = dia.toISOString().slice(0, 10);
   return {
@@ -46,8 +46,8 @@ function turno(asistenteId, diasAtras, extra = {}) {
 }
 
 /** Tantos turnos de esa Asistente, uno por semana hacia atrás. */
-function turnosSemanales(asistenteId, cuantos, extra = {}) {
-  return Array.from({ length: cuantos }, (_, i) => turno(asistenteId, 7 * (i + 1), extra));
+function turnosGuardiaSemanales(asistenteId, cuantos, extra = {}) {
+  return Array.from({ length: cuantos }, (_, i) => turno_guardia(asistenteId, 7 * (i + 1), extra));
 }
 
 const idsDe = (equipo) => equipo.asistentes.map((a) => a.asistente_id);
@@ -56,19 +56,19 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   it('con los turnos que pide la regla, entra sola', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: turnosSemanales('ana', 3),
+      turnos_guardia: turnosGuardiaSemanales('ana', 3),
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual(['ana']);
-    expect(equipo.asistentes[0].origen).toBe(ORIGEN.POR_SUS_TURNOS);
-    expect(equipo.asistentes[0].turnos).toBe(3);
+    expect(equipo.asistentes[0].origen).toBe(ORIGEN.POR_SUS_TURNOS_GUARDIA);
+    expect(equipo.asistentes[0].turnos_guardia).toBe(3);
     expect(equipo.asistentes[0].decidido).toBe(false);
   });
 
   it('con un turno menos, no entra', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: turnosSemanales('ana', 2),
+      turnos_guardia: turnosGuardiaSemanales('ana', 2),
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual([]);
@@ -78,7 +78,7 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
     // Tres turnos, pero de hace más de un año. Nadie tiene que sacarla a mano.
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: [turno('ana', 400), turno('ana', 407), turno('ana', 414)],
+      turnos_guardia: [turno_guardia('ana', 400), turno_guardia('ana', 407), turno_guardia('ana', 414)],
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual([]);
@@ -87,7 +87,7 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   it('los turnos que todavía no pasaron no cuentan', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: [turno('ana', -1), turno('ana', -8), turno('ana', -15)],
+      turnos_guardia: [turno_guardia('ana', -1), turno_guardia('ana', -8), turno_guardia('ana', -15)],
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual([]);
@@ -96,10 +96,10 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   it('los turnos cancelados y los que la Asistente faltó no cuentan', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: [
-        turno('ana', 7),
-        turno('ana', 14, { estado: 'cancelada' }),
-        turno('ana', 21, { estado: 'ausente' }),
+      turnos_guardia: [
+        turno_guardia('ana', 7),
+        turno_guardia('ana', 14, { estado: 'cancelada' }),
+        turno_guardia('ana', 21, { estado: 'ausente' }),
       ],
       ahora: AHORA,
     });
@@ -109,14 +109,14 @@ describe('el equipo se arma solo con quienes tienen turnos habituales', () => {
   it('los turnos de otro Servicio no cuentan', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: turnosSemanales('ana', 3, { servicio_id: OTRO_SERVICIO }),
+      turnos_guardia: turnosGuardiaSemanales('ana', 3, { servicio_id: OTRO_SERVICIO }),
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual([]);
   });
 
   it('sin Servicio no hay equipo', () => {
-    const equipo = equipoDelServicio({ servicioId: null, guardias: turnosSemanales('ana', 3), ahora: AHORA });
+    const equipo = equipoDelServicio({ servicioId: null, turnos_guardia: turnosGuardiaSemanales('ana', 3), ahora: AHORA });
     expect(idsDe(equipo)).toEqual([]);
   });
 
@@ -163,7 +163,7 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   it('puede sumar a alguien que no llega sola', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: [turno('ana', 7)],
+      turnos_guardia: [turno_guardia('ana', 7)],
       decisiones: [{ asistente_id: 'ana', situacion: 'sumada' }],
       ahora: AHORA,
     });
@@ -179,13 +179,13 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual(['carla']);
-    expect(equipo.asistentes[0].turnos).toBe(0);
+    expect(equipo.asistentes[0].turnos_guardia).toBe(0);
   });
 
   it('puede sacar a alguien que el sistema pondría, y no vuelve a entrar', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: turnosSemanales('ana', 5),
+      turnos_guardia: turnosGuardiaSemanales('ana', 5),
       decisiones: [{ asistente_id: 'ana', situacion: 'sacada' }],
       ahora: AHORA,
     });
@@ -197,7 +197,7 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   it('marca quién cubre francos, y esa persona va primero', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: [...turnosSemanales('ana', 8), ...turnosSemanales('dora', 3)],
+      turnos_guardia: [...turnosGuardiaSemanales('ana', 8), ...turnosGuardiaSemanales('dora', 3)],
       decisiones: [{ asistente_id: 'dora', situacion: 'sumada', cubre_francos: true }],
       ahora: AHORA,
     });
@@ -208,7 +208,7 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
   it('el resto se ordena por cuántos turnos hizo', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: [...turnosSemanales('ana', 3), ...turnosSemanales('elsa', 9)],
+      turnos_guardia: [...turnosGuardiaSemanales('ana', 3), ...turnosGuardiaSemanales('elsa', 9)],
       ahora: AHORA,
     });
     expect(idsDe(equipo)).toEqual(['elsa', 'ana']);
@@ -219,7 +219,7 @@ describe('la Coordinadora corrige a mano, y su corrección manda', () => {
     // Ana tendría que haber sido agregada a mano el día que empezó a venir.
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: turnosSemanales('ana', 4),
+      turnos_guardia: turnosGuardiaSemanales('ana', 4),
       decisiones: [{ asistente_id: 'carla', situacion: 'sumada' }],
       ahora: AHORA,
     });
@@ -267,7 +267,7 @@ describe('quién coordina el equipo', () => {
   it('quien coordina no se mezcla con las Asistentes', () => {
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: turnosSemanales('ana', 3),
+      turnos_guardia: turnosGuardiaSemanales('ana', 3),
       decisiones: [{ usuario_id: 'u-3', situacion: 'sumada' }],
       ahora: AHORA,
     });
@@ -282,11 +282,11 @@ describe('cada Prestadora corre los números de la regla', () => {
   });
 
   it('lo corrido manda, y cambia de verdad quién entra', () => {
-    const regla = reglaDeEquipoDe({ turnos_para_ser_del_equipo: 2 });
-    expect(regla.turnos_para_ser_del_equipo).toBe(2);
+    const regla = reglaDeEquipoDe({ turnos_guardia_para_ser_del_equipo: 2 });
+    expect(regla.turnos_guardia_para_ser_del_equipo).toBe(2);
     const equipo = equipoDelServicio({
       servicioId: SERVICIO,
-      guardias: turnosSemanales('ana', 2),
+      turnos_guardia: turnosGuardiaSemanales('ana', 2),
       regla,
       ahora: AHORA,
     });
@@ -294,14 +294,14 @@ describe('cada Prestadora corre los números de la regla', () => {
   });
 
   it('la ventana corrida también cambia quién entra', () => {
-    const guardias = [turno('ana', 100), turno('ana', 110), turno('ana', 120)];
-    expect(idsDe(equipoDelServicio({ servicioId: SERVICIO, guardias, ahora: AHORA }))).toEqual([]);
+    const turnos_guardia = [turno_guardia('ana', 100), turno_guardia('ana', 110), turno_guardia('ana', 120)];
+    expect(idsDe(equipoDelServicio({ servicioId: SERVICIO, turnos_guardia, ahora: AHORA }))).toEqual([]);
     const regla = reglaDeEquipoDe({ dias_hacia_atras: 365 });
-    expect(idsDe(equipoDelServicio({ servicioId: SERVICIO, guardias, regla, ahora: AHORA }))).toEqual(['ana']);
+    expect(idsDe(equipoDelServicio({ servicioId: SERVICIO, turnos_guardia, regla, ahora: AHORA }))).toEqual(['ana']);
   });
 
   it('un número fuera de borde o que no es número se ignora', () => {
-    expect(reglaDeEquipoDe({ turnos_para_ser_del_equipo: 0 })).toEqual(REGLA_DE_EQUIPO);
+    expect(reglaDeEquipoDe({ turnos_guardia_para_ser_del_equipo: 0 })).toEqual(REGLA_DE_EQUIPO);
     expect(reglaDeEquipoDe({ dias_hacia_atras: 5000 })).toEqual(REGLA_DE_EQUIPO);
     expect(reglaDeEquipoDe({ dias_hacia_atras: 'noventa' })).toEqual(REGLA_DE_EQUIPO);
   });
@@ -314,7 +314,7 @@ describe('cada Prestadora corre los números de la regla', () => {
   });
 
   it('lo guardado y lo leído dan la vuelta completa sin cambiar nada', () => {
-    const elegida = { turnos_para_ser_del_equipo: 5, dias_hacia_atras: 180 };
+    const elegida = { turnos_guardia_para_ser_del_equipo: 5, dias_hacia_atras: 180 };
     expect(reglaDeEquipoDe(soloLoQueCorreDeLaRegla(elegida))).toEqual(elegida);
   });
 
@@ -331,6 +331,6 @@ describe('cada Prestadora corre los números de la regla', () => {
 
   it('ninguna ventana puede llegar a cero, que dejaría a todo Servicio sin equipo', () => {
     expect(REGLA_QUE_SE_PUEDE_TOCAR.dias_hacia_atras.minimo).toBeGreaterThan(0);
-    expect(REGLA_QUE_SE_PUEDE_TOCAR.turnos_para_ser_del_equipo.minimo).toBeGreaterThan(0);
+    expect(REGLA_QUE_SE_PUEDE_TOCAR.turnos_guardia_para_ser_del_equipo.minimo).toBeGreaterThan(0);
   });
 });

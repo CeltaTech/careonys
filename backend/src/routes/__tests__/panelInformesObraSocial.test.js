@@ -11,7 +11,7 @@
  *
  * La base es de mentira y contesta por HTTP como la de verdad. Con la credencial de quien pide imita
  * las políticas: sólo lo de su Prestadora, sin Paciente pendiente de conformidad y, para quien
- * coordina, sin las guardias de otras zonas. Con la llave maestra no contesta nada. Con el sistema
+ * coordina, sin los turnos de guardia de otras zonas. Con la llave maestra no contesta nada. Con el sistema
  * roto —una consulta de vuelta con la llave maestra— el informe sale vacío y la prueba falla. Lo que
  * esta prueba no ve es la protección por fila en sí: la base de mentira no la tiene.
  *
@@ -27,7 +27,7 @@ const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 const PACIENTE = '33333333-3333-3333-3333-333333333333';
 const OBRA_SOCIAL = '44444444-4444-4444-4444-444444444444';
-const GUARDIA = '55555555-5555-5555-5555-555555555555';
+const TURNO_GUARDIA = '55555555-5555-5555-5555-555555555555';
 
 /** La llave maestra, tal como la manda la conexión del backend. */
 const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
@@ -103,17 +103,17 @@ function prepararLaBase({ paciente = {} } = {}) {
   const personas = [{ id: OBRA_SOCIAL, prestadora_id: PRESTADORA, nombre_visible: 'Obra social inventada' }];
   respuestas.set('GET /rest/v1/personas', (credencial) => deSuPrestadora(personas, credencial));
 
-  const enLista = [{ guardia_id: GUARDIA, paciente_id: PACIENTE, prestadora_id: PRESTADORA }];
-  respuestas.set('GET /rest/v1/guardia_pacientes', (credencial) => deSuPrestadora(enLista, credencial));
+  const enLista = [{ turno_guardia_id: TURNO_GUARDIA, paciente_id: PACIENTE, prestadora_id: PRESTADORA }];
+  respuestas.set('GET /rest/v1/turno_guardia_pacientes', (credencial) => deSuPrestadora(enLista, credencial));
 
-  const guardias = [{
-    id: GUARDIA, prestadora_id: PRESTADORA, fecha: '2026-08-10', hora_inicio: '08:00', hora_fin: '16:00',
+  const turnos_guardia = [{
+    id: TURNO_GUARDIA, prestadora_id: PRESTADORA, fecha: '2026-08-10', hora_inicio: '08:00', hora_fin: '16:00',
     dias_hasta_el_fin: 0, modalidad: 'diurna', estado: 'completada', asistente_id: null,
   }];
   // La política de zona: quien coordina en esta prueba no alcanza a ningún Asistente.
-  respuestas.set('GET /rest/v1/guardias', (credencial) => (rolDelUsuario === 'coordinador'
+  respuestas.set('GET /rest/v1/turnos_guardia', (credencial) => (rolDelUsuario === 'coordinador'
     ? []
-    : deSuPrestadora(guardias, credencial)));
+    : deSuPrestadora(turnos_guardia, credencial)));
 }
 
 beforeEach(() => {
@@ -136,7 +136,7 @@ describe('la vista previa del informe para la obra social', () => {
     assert.equal(cuerpo.contenido.paciente.obra_social, 'Obra social inventada');
     // Y con el nombre del Paciente, que sale de sus datos.
     assert.equal(cuerpo.contenido.paciente.nombre, 'Paciente de prueba');
-    assert.equal(cuerpo.contenido.guardias.length, 1);
+    assert.equal(cuerpo.contenido.turnos_guardia.length, 1);
     // La Prestadora del Paciente sirve para guardar el informe, no viaja en la vista previa.
     assert.equal(cuerpo.contenido.prestadora_id, undefined);
   });
@@ -146,7 +146,7 @@ describe('la vista previa del informe para la obra social', () => {
 
     await pedirVistaPrevia();
 
-    const tablas = ['pacientes', 'personas', 'guardia_pacientes', 'guardias'];
+    const tablas = ['pacientes', 'personas', 'turno_guardia_pacientes', 'turnos_guardia'];
     for (const tabla of tablas) {
       const lecturas = llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`);
       assert.ok(lecturas.length > 0, `no se leyó ${tabla}`);
@@ -164,7 +164,7 @@ describe('la vista previa del informe para la obra social', () => {
     const { estado, cuerpo } = await pedirVistaPrevia();
 
     assert.equal(estado, 200, JSON.stringify(cuerpo));
-    assert.equal(cuerpo.contenido.guardias.length, 0);
+    assert.equal(cuerpo.contenido.turnos_guardia.length, 0);
   });
 
   it('el Paciente importado que espera conformidad no se encuentra, y no se anota ninguna consulta', async () => {

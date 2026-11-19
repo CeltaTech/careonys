@@ -27,7 +27,7 @@ import {
 
 describe('con qué se le mide el trabajo a cada persona', () => {
   it('usa la unidad que se eligió en el Legajo del Asistente', () => {
-    expect(unidadDeMedicionDe({ unidad_medicion: 'guardia' })).toBe(UNIDADES.GUARDIA);
+    expect(unidadDeMedicionDe({ unidad_medicion: 'turno_guardia' })).toBe(UNIDADES.TURNO_GUARDIA);
   });
 
   it('un Legajo del Asistente que no eligió ninguna se mide por hora', () => {
@@ -43,15 +43,15 @@ describe('con qué se le mide el trabajo a cada persona', () => {
   it('el monto fijo es el de semana, no el de hora ni el de guardia', () => {
     expect(esMontoFijo(UNIDADES.SEMANA)).toBe(true);
     expect(esMontoFijo(UNIDADES.HORA)).toBe(false);
-    expect(esMontoFijo(UNIDADES.GUARDIA)).toBe(false);
+    expect(esMontoFijo(UNIDADES.TURNO_GUARDIA)).toBe(false);
   });
 });
 
 describe('cuánto vale una unidad', () => {
   it('busca el valor en la columna que le corresponde a esa unidad', () => {
-    const pago = { valor_hora: 100, valor_guardia: 200, valor_semana: 300 };
+    const pago = { valor_hora: 100, valor_turno_guardia: 200, valor_semana: 300 };
     expect(valorDeLaUnidad(pago, UNIDADES.HORA)).toBe(100);
-    expect(valorDeLaUnidad(pago, UNIDADES.GUARDIA)).toBe(200);
+    expect(valorDeLaUnidad(pago, UNIDADES.TURNO_GUARDIA)).toBe(200);
     expect(valorDeLaUnidad(pago, UNIDADES.SEMANA)).toBe(300);
   });
 
@@ -129,16 +129,16 @@ describe('cuántas unidades se pagan en el período', () => {
   const MARZO = { diasDeLaPersona: 31 };
 
   it('por hora, las horas que hizo', () => {
-    expect(unidadesDelPeriodo({ unidad: UNIDADES.HORA, acumulado: { horas: 176, guardias: 22 }, ...MARZO })).toBe(176);
+    expect(unidadesDelPeriodo({ unidad: UNIDADES.HORA, acumulado: { horas: 176, turnos_guardia: 22 }, ...MARZO })).toBe(176);
   });
 
   it('por guardia, las guardias que hizo', () => {
-    expect(unidadesDelPeriodo({ unidad: UNIDADES.GUARDIA, acumulado: { horas: 176, guardias: 22 }, ...MARZO })).toBe(22);
+    expect(unidadesDelPeriodo({ unidad: UNIDADES.TURNO_GUARDIA, acumulado: { horas: 176, turnos_guardia: 22 }, ...MARZO })).toBe(22);
   });
 
   it('sin nada acumulado, cero: no se le paga por lo que no hizo', () => {
     expect(unidadesDelPeriodo({ unidad: UNIDADES.HORA, acumulado: null, ...MARZO })).toBe(0);
-    expect(unidadesDelPeriodo({ unidad: UNIDADES.GUARDIA, acumulado: {}, ...MARZO })).toBe(0);
+    expect(unidadesDelPeriodo({ unidad: UNIDADES.TURNO_GUARDIA, acumulado: {}, ...MARZO })).toBe(0);
   });
 
   it('por semana, los días divididos por siete', () => {

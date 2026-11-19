@@ -10,14 +10,14 @@
 // cosa, se arregla con cada persona y no cambia ni un centavo de esta cuenta. Acá está sólo
 // la medición.
 //
-// DE DÓNDE SALEN LAS HORAS EXTRA, Y DE DÓNDE NO. Salen de lo que se anotó en la guardia
+// DE DÓNDE SALEN LAS HORAS EXTRA, Y DE DÓNDE NO. Salen de lo que se anotó en el turno de guardia
 // cuando pasó. NO salen de restarle a la marca de salida la hora de fin planificada: irse
 // media hora tarde porque el relevo se demoró no es una hora extra autorizada, y calcularlas
 // así convertiría cualquier demora en plata sin que nadie lo haya decidido.
 //
 // Y TAMPOCO HAY JORNADA NORMAL DE OCHO HORAS. Existen guardias de veinticuatro, cuarenta y
 // ocho y setenta y dos horas cubiertas por una sola persona. Un tope de jornada convertiría
-// casi toda guardia larga en horas extra, que es exactamente lo contrario de lo que significan.
+// casi todo turno de guardia largo en horas extra, que es exactamente lo contrario de lo que significan.
 //
 // NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el backend usa una copia generada
 // (`backend/src/utils/formaDePago.js`, ver `scripts/copias_entre_apps.mjs`), y lo que se copia
@@ -27,7 +27,7 @@
 /** Con qué se mide el trabajo. Son identificadores guardados: no se renombran nunca. */
 export const UNIDADES = {
   HORA: 'hora',
-  GUARDIA: 'guardia',
+  TURNO_GUARDIA: 'turno_guardia',
   SEMANA: 'semana',
 };
 
@@ -36,7 +36,7 @@ export const UNIDADES_POSIBLES = Object.values(UNIDADES);
 /** En qué columna de la remuneración del Asistente vive el valor de cada unidad. */
 export const COLUMNA_DEL_VALOR = {
   [UNIDADES.HORA]: 'valor_hora',
-  [UNIDADES.GUARDIA]: 'valor_guardia',
+  [UNIDADES.TURNO_GUARDIA]: 'valor_turno_guardia',
   [UNIDADES.SEMANA]: 'valor_semana',
 };
 
@@ -165,7 +165,7 @@ export function diasCubiertos({ desde, hasta, fechaAlta, fechaBaja, prorratear }
  */
 export function unidadesDelPeriodo({ unidad, acumulado, diasDeLaPersona }) {
   if (unidad === UNIDADES.HORA) return acumulado?.horas ?? 0;
-  if (unidad === UNIDADES.GUARDIA) return acumulado?.guardias ?? 0;
+  if (unidad === UNIDADES.TURNO_GUARDIA) return acumulado?.turnos_guardia ?? 0;
   if (unidad === UNIDADES.SEMANA) return diasDeLaPersona / DIAS_DE_UNA_SEMANA;
   return 0;
 }

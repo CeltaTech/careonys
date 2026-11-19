@@ -8,7 +8,7 @@
  *
  *   1. NINGUNO DE LOS DOS BOTONES SE TRABA. Ni por GPS, ni por hora, ni por conexión. Lo que se
  *      gana con ellos son los minutos de preaviso que le quedan a la Prestadora para cubrir la
- *      guardia; un botón que se niega a guardar es un aviso perdido. Y hay un motivo técnico
+ *      turno de guardia; un botón que se niega a guardar es un aviso perdido. Y hay un motivo técnico
  *      además: un pedido de la cola sin conexión que vuelve con error queda marcado y **corta la
  *      cola entera** (`pwa-asistentes/src/lib/sincronizarCola.js`), así que un rechazo acá
  *      dejaría trabado el check-in que viene atrás.
@@ -17,11 +17,11 @@
  *      sacó una máquina.
  *   3. NO SE ESCRIBE UNA SALIDA DESPUÉS DE LA LLEGADA. Un pedido que llega tarde desde la cola
  *      no inventa una hora que no pasó.
- *   4. UNA PRESTADORA NO ALCANZA LA GUARDIA DE OTRA. La guardia se busca y se escribe con la
+ *   4. UNA PRESTADORA NO ALCANZA EL TURNO DE GUARDIA DE OTRA. El turno de guardia se busca y se escribe con la
  *      credencial de quien pide, y la base le contesta sólo lo de su Prestadora.
  *
  * La base falsa de acá abajo honra los filtros de la consulta de guardias y, con la credencial de
- * una persona, deja ver sólo su Prestadora: si la guardia se buscara con la llave maestra, o sin el
+ * una persona, deja ver sólo su Prestadora: si el turno de guardia se buscara con la llave maestra, o sin el
  * filtro por Asistente, la prueba del aislamiento deja de pasar.
  */
 import { strict as assert } from 'node:assert';
@@ -42,9 +42,9 @@ const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 // El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
 const LEGAJO = 'bbbbbbbb-bbbb-bbbb-bbbb-b0000000000b';
 const OTRO_ASISTENTE = '88888888-8888-8888-8888-888888888888';
-const GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-const GUARDIA_DE_OTRA_PRESTADORA = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
-const GUARDIA_DE_OTRO_ASISTENTE = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+const TURNO_GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const TURNO_GUARDIA_DE_OTRA_PRESTADORA = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+const TURNO_GUARDIA_DE_OTRO_ASISTENTE = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
 const PACIENTE = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 const ALERTA = '77777777-7777-7777-7777-777777777777';
 const LAT = -34.6;
@@ -116,14 +116,14 @@ function haceUnRato(minutos) {
   return new Date(Date.now() - minutos * 60 * 1000).toISOString();
 }
 
-/** Las guardias que hay en la base falsa, de tres dueños distintos. */
-let guardiasEnLaBase;
+/** Los turnos de guardia que hay en la base falsa, de tres dueños distintos. */
+let turnosGuardiaEnLaBase;
 /** Las alertas tempranas que ya están anotadas. */
 let alertasEnLaBase;
 
-function guardiaDePrueba(extra = {}) {
+function turnoGuardiaDePrueba(extra = {}) {
   return {
-    id: GUARDIA,
+    id: TURNO_GUARDIA,
     prestadora_id: PRESTADORA,
     asistente_id: LEGAJO,
     paciente_id: PACIENTE,
@@ -168,7 +168,7 @@ function filaQuePasaLosFiltros(url, filas) {
  *
  * Con la llave maestra ve todo. Con la credencial de una persona, sólo las filas de la Prestadora
  * donde entró, que es lo que hace la protección por fila de verdad. Sin esto, la prueba de que la
- * guardia de otra Prestadora no aparece pasaría igual con la llave maestra y sin filtro.
+ * turno de guardia de otra Prestadora no aparece pasaría igual con la llave maestra y sin filtro.
  */
 function loQueVeLaCredencial(credencial, filas) {
   if (credencial === 'Bearer clave-de-mentira') return filas;
@@ -178,38 +178,38 @@ function loQueVeLaCredencial(credencial, filas) {
 /** Las alertas tempranas que el backend dio de alta en este pedido. */
 function alertasAnotadas() {
   return llamadas
-    .filter((l) => l.clave === 'POST /rest/v1/alertas_tempranas_guardia')
+    .filter((l) => l.clave === 'POST /rest/v1/alertas_tempranas_turno_guardia')
     .map((l) => (Array.isArray(l.cuerpo) ? l.cuerpo[0] : l.cuerpo));
 }
 
-/** Lo que el backend le escribió a la guardia, si le escribió algo. */
-function guardiasActualizadas() {
-  return llamadas.filter((l) => l.clave === 'PATCH /rest/v1/guardias');
+/** Lo que el backend le escribió al turno de guardia, si le escribió algo. */
+function turnosGuardiaActualizados() {
+  return llamadas.filter((l) => l.clave === 'PATCH /rest/v1/turnos_guardia');
 }
 
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
   alertasEnLaBase = [];
-  guardiasEnLaBase = [
-    guardiaDePrueba(),
-    guardiaDePrueba({ id: GUARDIA_DE_OTRA_PRESTADORA, prestadora_id: OTRA_PRESTADORA }),
-    guardiaDePrueba({ id: GUARDIA_DE_OTRO_ASISTENTE, asistente_id: OTRO_ASISTENTE }),
+  turnosGuardiaEnLaBase = [
+    turnoGuardiaDePrueba(),
+    turnoGuardiaDePrueba({ id: TURNO_GUARDIA_DE_OTRA_PRESTADORA, prestadora_id: OTRA_PRESTADORA }),
+    turnoGuardiaDePrueba({ id: TURNO_GUARDIA_DE_OTRO_ASISTENTE, asistente_id: OTRO_ASISTENTE }),
   ];
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/guardias', ({ url, credencial }) =>
-    filaQuePasaLosFiltros(url, loQueVeLaCredencial(credencial, guardiasEnLaBase))
+  respuestas.set('GET /rest/v1/turnos_guardia', ({ url, credencial }) =>
+    filaQuePasaLosFiltros(url, loQueVeLaCredencial(credencial, turnosGuardiaEnLaBase))
   );
-  respuestas.set('PATCH /rest/v1/guardias', () => []);
-  respuestas.set('GET /rest/v1/alertas_tempranas_guardia', ({ url }) =>
+  respuestas.set('PATCH /rest/v1/turnos_guardia', () => []);
+  respuestas.set('GET /rest/v1/alertas_tempranas_turno_guardia', ({ url }) =>
     filaQuePasaLosFiltros(url, alertasEnLaBase)
   );
-  respuestas.set('POST /rest/v1/alertas_tempranas_guardia', () => [{ id: ALERTA }]);
-  respuestas.set('PATCH /rest/v1/alertas_tempranas_guardia', () => []);
+  respuestas.set('POST /rest/v1/alertas_tempranas_turno_guardia', () => [{ id: ALERTA }]);
+  respuestas.set('PATCH /rest/v1/alertas_tempranas_turno_guardia', () => []);
   // El mensaje al Coordinador pasa por acá antes de salir. Sin configuración cargada el evento se
   // considera encendido, y el correo no sale porque en las pruebas no hay servidor de correo.
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => []);
@@ -222,7 +222,7 @@ beforeEach(() => {
 
 describe('salida — el acto de avisar que se sale, que es lo que da los minutos', () => {
   it('guarda la hora, el punto de salida y el medio de transporte', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/salida`, {
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/salida`, {
       lat: LAT,
       lng: LNG,
       medioTransporte: 'colectivo',
@@ -231,7 +231,7 @@ describe('salida — el acto de avisar que se sale, que es lo que da los minutos
     assert.equal(cuerpo.ok, true);
     assert.ok(cuerpo.salidaAt);
 
-    const [escritura] = guardiasActualizadas();
+    const [escritura] = turnosGuardiaActualizados();
     assert.ok(escritura, 'la salida tiene que quedar guardada');
     assert.equal(escritura.cuerpo.salida_checkin_at, cuerpo.salidaAt);
     assert.equal(escritura.cuerpo.salida_lat, LAT);
@@ -240,11 +240,11 @@ describe('salida — el acto de avisar que se sale, que es lo que da los minutos
   });
 
   it('sin GPS se guarda igual: el botón no se traba porque el teléfono no ubicó', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/salida`, { medioTransporte: 'a pie' });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/salida`, { medioTransporte: 'a pie' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
 
-    const [escritura] = guardiasActualizadas();
+    const [escritura] = turnosGuardiaActualizados();
     assert.ok(escritura.cuerpo.salida_checkin_at, 'la hora se guarda aunque no haya punto');
     // Y el punto queda en blanco, no en cero: un cero es un lugar del planeta.
     assert.equal(escritura.cuerpo.salida_lat, null);
@@ -252,62 +252,62 @@ describe('salida — el acto de avisar que se sale, que es lo que da los minutos
   });
 
   it('sin medio de transporte se guarda igual, en blanco', async () => {
-    await pedir('POST', `/guardias/${GUARDIA}/salida`, { lat: LAT, lng: LNG });
-    const [escritura] = guardiasActualizadas();
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/salida`, { lat: LAT, lng: LNG });
+    const [escritura] = turnosGuardiaActualizados();
     assert.equal(escritura.cuerpo.medio_transporte, null);
     // Y un texto en blanco tampoco se guarda como texto en blanco.
     llamadas = [];
-    await pedir('POST', `/guardias/${GUARDIA}/salida`, { medioTransporte: '   ' });
-    assert.equal(guardiasActualizadas()[0].cuerpo.medio_transporte, null);
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/salida`, { medioTransporte: '   ' });
+    assert.equal(turnosGuardiaActualizados()[0].cuerpo.medio_transporte, null);
   });
 
   it('un punto que no es un punto sí se rechaza: guardarlo sería guardar una mentira', async () => {
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/salida`, { lat: 'por ahí', lng: LNG });
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/salida`, { lat: 'por ahí', lng: LNG });
     assert.equal(estado, 400);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 
   it('el mismo pedido dos veces no pisa la hora que ya estaba', async () => {
     const salidaVieja = haceUnRato(20);
-    guardiasEnLaBase[0].salida_checkin_at = salidaVieja;
+    turnosGuardiaEnLaBase[0].salida_checkin_at = salidaVieja;
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/salida`, { lat: LAT, lng: LNG });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/salida`, { lat: LAT, lng: LNG });
     // No es un error: es la cola sin conexión reintentando, y un error acá cortaría la cola.
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     assert.equal(cuerpo.yaRegistrado, true);
     assert.equal(cuerpo.salidaAt, salidaVieja);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 
   it('si la persona ya llegó no se escribe una salida posterior a la llegada', async () => {
-    guardiasEnLaBase[0].checkin_at = haceUnRato(5);
+    turnosGuardiaEnLaBase[0].checkin_at = haceUnRato(5);
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/salida`, { lat: LAT, lng: LNG });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/salida`, { lat: LAT, lng: LNG });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     assert.equal(cuerpo.yaLlego, true);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 
   it('la guardia de otra Prestadora no existe para este Asistente', async () => {
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA_DE_OTRA_PRESTADORA}/salida`, { lat: LAT, lng: LNG });
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA_DE_OTRA_PRESTADORA}/salida`, { lat: LAT, lng: LNG });
     assert.equal(estado, 404);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 
   it('la guardia de otro Asistente de la misma Prestadora tampoco', async () => {
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA_DE_OTRO_ASISTENTE}/salida`, { lat: LAT, lng: LNG });
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA_DE_OTRO_ASISTENTE}/salida`, { lat: LAT, lng: LNG });
     assert.equal(estado, 404);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 
   it('la escritura también va con la credencial de quien pide, no sólo la lectura', async () => {
-    await pedir('POST', `/guardias/${GUARDIA}/salida`, { lat: LAT, lng: LNG });
-    const [escritura] = guardiasActualizadas();
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/salida`, { lat: LAT, lng: LNG });
+    const [escritura] = turnosGuardiaActualizados();
     assert.ok(escritura.credencial, 'la salida se escribió sin credencial');
     assert.notEqual(escritura.credencial, 'Bearer clave-de-mentira', 'la salida se escribió con la llave maestra');
-    assert.ok(escritura.url.includes(`id=eq.${GUARDIA}`), escritura.url);
+    assert.ok(escritura.url.includes(`id=eq.${TURNO_GUARDIA}`), escritura.url);
   });
 });
 
@@ -318,18 +318,18 @@ describe('salida — el acto de avisar que se sale, que es lo que da los minutos
 describe('ubicación del viaje — un solo punto, sólo entre la salida y la llegada', () => {
   beforeEach(() => {
     respuestas.set('POST /rest/v1/rpc/consentimiento_seguimiento_vigente', () => true);
-    respuestas.set('PATCH /rest/v1/guardias', ({ url }) =>
-      filaQuePasaLosFiltros(url, guardiasEnLaBase).map(({ id }) => ({ id }))
+    respuestas.set('PATCH /rest/v1/turnos_guardia', ({ url }) =>
+      filaQuePasaLosFiltros(url, turnosGuardiaEnLaBase).map(({ id }) => ({ id }))
     );
   });
 
   it('en viaje guarda el punto, filtrado a que siga en viaje', async () => {
-    guardiasEnLaBase[0].salida_checkin_at = haceUnRato(10);
-    const { estado, cuerpo } = await pedir('PATCH', `/guardias/${GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
+    turnosGuardiaEnLaBase[0].salida_checkin_at = haceUnRato(10);
+    const { estado, cuerpo } = await pedir('PATCH', `/turnos-guardia/${TURNO_GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ubicacion_registrada, true);
 
-    const [escritura] = guardiasActualizadas();
+    const [escritura] = turnosGuardiaActualizados();
     assert.equal(escritura.cuerpo.ubicacion_actual_lat, LAT);
     assert.equal(escritura.cuerpo.ubicacion_actual_lng, LNG);
     assert.ok(escritura.url.includes('salida_checkin_at=not.is.null'), escritura.url);
@@ -337,34 +337,34 @@ describe('ubicación del viaje — un solo punto, sólo entre la salida y la lle
   });
 
   it('antes de «Salgo ahora» no se guarda nada', async () => {
-    const { estado } = await pedir('PATCH', `/guardias/${GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
+    const { estado } = await pedir('PATCH', `/turnos-guardia/${TURNO_GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
     assert.equal(estado, 404);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 
   it('después de escanear la entrada tampoco: el turno no deja coordenadas', async () => {
-    guardiasEnLaBase[0].salida_checkin_at = haceUnRato(30);
-    guardiasEnLaBase[0].checkin_at = haceUnRato(5);
-    guardiasEnLaBase[0].estado = 'activa';
-    const { estado } = await pedir('PATCH', `/guardias/${GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
+    turnosGuardiaEnLaBase[0].salida_checkin_at = haceUnRato(30);
+    turnosGuardiaEnLaBase[0].checkin_at = haceUnRato(5);
+    turnosGuardiaEnLaBase[0].estado = 'activa';
+    const { estado } = await pedir('PATCH', `/turnos-guardia/${TURNO_GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
     assert.equal(estado, 404);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 
   it('sin consentimiento vigente no se guarda, y la aplicación se entera', async () => {
     respuestas.set('POST /rest/v1/rpc/consentimiento_seguimiento_vigente', () => false);
-    guardiasEnLaBase[0].salida_checkin_at = haceUnRato(10);
-    const { estado, cuerpo } = await pedir('PATCH', `/guardias/${GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
+    turnosGuardiaEnLaBase[0].salida_checkin_at = haceUnRato(10);
+    const { estado, cuerpo } = await pedir('PATCH', `/turnos-guardia/${TURNO_GUARDIA}/ubicacion`, { lat: LAT, lng: LNG });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ubicacion_registrada, false);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 
   it('la guardia de otra Prestadora no existe para este Asistente', async () => {
-    guardiasEnLaBase[1].salida_checkin_at = haceUnRato(10);
-    const { estado } = await pedir('PATCH', `/guardias/${GUARDIA_DE_OTRA_PRESTADORA}/ubicacion`, { lat: LAT, lng: LNG });
+    turnosGuardiaEnLaBase[1].salida_checkin_at = haceUnRato(10);
+    const { estado } = await pedir('PATCH', `/turnos-guardia/${TURNO_GUARDIA_DE_OTRA_PRESTADORA}/ubicacion`, { lat: LAT, lng: LNG });
     assert.equal(estado, 404);
-    assert.equal(guardiasActualizadas().length, 0);
+    assert.equal(turnosGuardiaActualizados().length, 0);
   });
 });
 
@@ -374,7 +374,7 @@ describe('ubicación del viaje — un solo punto, sólo entre la salida y la lle
 
 describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
   it('queda anotado con el origen de los avisos de persona y con quién lo dio', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'transporte' });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'transporte' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     assert.equal(cuerpo.motivo, 'transporte');
@@ -385,12 +385,12 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
     assert.equal(alerta.motivo, 'transporte');
     assert.equal(alerta.reportado_por, USUARIO);
     assert.equal(alerta.prestadora_id, PRESTADORA);
-    assert.equal(alerta.guardia_id, GUARDIA);
+    assert.equal(alerta.turno_guardia_id, TURNO_GUARDIA);
     assert.ok(alerta.detectado_at);
   });
 
   it('el origen es el de una persona, y nunca el de la cuenta automática', async () => {
-    await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'transito' });
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'transito' });
     const [alerta] = alertasAnotadas();
     assert.equal(laDioUnaPersona(alerta.fuente), true);
     assert.notEqual(alerta.fuente, FUENTE_CALCULO_LLEGADA_TARDIA);
@@ -399,7 +399,7 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
   it('cualquiera de los motivos de la lista se guarda tal cual', async () => {
     for (const motivo of MOTIVOS_DEMORA) {
       llamadas = [];
-      const { cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo });
+      const { cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo });
       assert.equal(cuerpo.motivo, motivo);
       assert.equal(alertasAnotadas()[0].motivo, motivo);
     }
@@ -408,14 +408,14 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
   it('un motivo que no está en la lista no pierde el aviso: se guarda como «otro»', async () => {
     // Es el teléfono con la versión anterior cargada, o la lista que cambió. Perder el aviso por
     // un desajuste de versiones sería perder los minutos, que es lo único que importa acá.
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'se_cortó_la_ruta' });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'se_cortó_la_ruta' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.motivo, 'otro');
     assert.equal(alertasAnotadas()[0].motivo, 'otro');
   });
 
   it('un aviso sin motivo tampoco se pierde', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, {});
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, {});
     assert.equal(estado, 200);
     assert.equal(cuerpo.motivo, 'otro');
     assert.equal(alertasAnotadas().length, 1);
@@ -423,8 +423,8 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
 
   it('se puede avisar la demora sin haber marcado la salida', async () => {
     // Quien salió corriendo y no apretó nada tiene que poder avisar igual desde el colectivo.
-    assert.equal(guardiasEnLaBase[0].salida_checkin_at, null);
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'transporte' });
+    assert.equal(turnosGuardiaEnLaBase[0].salida_checkin_at, null);
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'transporte' });
     assert.equal(estado, 200);
     assert.equal(alertasAnotadas().length, 1);
   });
@@ -434,7 +434,7 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
     alertasEnLaBase = [
       {
         id: ALERTA,
-        guardia_id: GUARDIA,
+        turno_guardia_id: TURNO_GUARDIA,
         prestadora_id: PRESTADORA,
         fuente: FUENTE_AVISO_DEMORA_ASISTENTE,
         motivo: 'transito',
@@ -443,7 +443,7 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
       },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'salud' });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'salud' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.yaRegistrado, true);
     assert.equal(cuerpo.avisoAt, antes);
@@ -455,7 +455,7 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
     alertasEnLaBase = [
       {
         id: ALERTA,
-        guardia_id: GUARDIA,
+        turno_guardia_id: TURNO_GUARDIA,
         prestadora_id: PRESTADORA,
         fuente: FUENTE_AVISO_DEMORA_ASISTENTE,
         motivo: 'transito',
@@ -464,7 +464,7 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
       },
     ];
 
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'imprevisto_familiar' });
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'imprevisto_familiar' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.yaRegistrado, undefined);
     assert.equal(alertasAnotadas().length, 1);
@@ -472,44 +472,44 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
   });
 
   it('el aviso sale en el momento, sin esperar la vuelta del proceso de fondo', async () => {
-    await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'transporte' });
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'transporte' });
     // Se mira la antesala del envío, que es lo único observable acá: el backend fue a buscar la
     // configuración del evento del Coordinador, y después anotó en la fila que ya notificó.
     assert.ok(
       llamadas.some((l) => l.clave === 'GET /rest/v1/configuracion_notificaciones'),
       'el aviso al Coordinador tiene que salir en el mismo pedido'
     );
-    const marcada = llamadas.find((l) => l.clave === 'PATCH /rest/v1/alertas_tempranas_guardia');
+    const marcada = llamadas.find((l) => l.clave === 'PATCH /rest/v1/alertas_tempranas_turno_guardia');
     assert.ok(marcada, 'la fila tiene que quedar marcada como notificada');
     assert.equal(marcada.cuerpo.veces_notificado, 1);
     assert.ok(marcada.cuerpo.ultima_notificacion_at);
   });
 
   it('si la persona ya llegó, el aviso que venía en la cola no anota nada', async () => {
-    guardiasEnLaBase[0].checkin_at = haceUnRato(3);
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'transito' });
+    turnosGuardiaEnLaBase[0].checkin_at = haceUnRato(3);
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'transito' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.yaLlego, true);
     assert.equal(alertasAnotadas().length, 0);
   });
 
   it('la guardia de otra Prestadora no existe para este Asistente', async () => {
-    const { estado } = await pedir('POST', `/guardias/${GUARDIA_DE_OTRA_PRESTADORA}/aviso-demora`, { motivo: 'salud' });
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA_DE_OTRA_PRESTADORA}/aviso-demora`, { motivo: 'salud' });
     assert.equal(estado, 404);
     assert.equal(alertasAnotadas().length, 0);
   });
 
   it('la búsqueda de la alerta abierta también va acotada a la Prestadora', async () => {
-    await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'salud' });
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/alertas_tempranas_guardia');
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'salud' });
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/alertas_tempranas_turno_guardia');
     assert.ok(consulta, 'antes de anotar se mira si ya hay un aviso abierto');
     assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
     assert.ok(consulta.url.includes(`fuente=eq.${FUENTE_AVISO_DEMORA_ASISTENTE}`), consulta.url);
   });
 
   it('buscar, anotar y marcar el aviso van con la credencial del Asistente, nunca con la maestra', async () => {
-    await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'salud' });
-    const conLaAlerta = llamadas.filter((l) => l.clave.endsWith(' /rest/v1/alertas_tempranas_guardia'));
+    await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/aviso-demora`, { motivo: 'salud' });
+    const conLaAlerta = llamadas.filter((l) => l.clave.endsWith(' /rest/v1/alertas_tempranas_turno_guardia'));
     assert.deepEqual(
       conLaAlerta.map((l) => l.clave.split(' ')[0]).sort(),
       ['GET', 'PATCH', 'POST']

@@ -42,7 +42,7 @@ const TABLA_FAMILIAR = 'excepciones_familiar_relevo';
  * Los dos botones, para un turno.
  *
  * @param {object} props
- * @param {string} props.guardiaId El turno del que cuelgan los dos hechos.
+ * @param {string} props.turnoGuardiaId El turno del que cuelgan los dos hechos.
  * @param {Array} [props.pacientes] Los Pacientes del turno, con `id` y `nombre`. Un turno puede
  *   atender a más de uno, y el consentimiento es de una persona: por eso se pasan todos y se
  *   elige adentro, en vez de quedarse con el primero sin decirlo.
@@ -50,7 +50,7 @@ const TABLA_FAMILIAR = 'excepciones_familiar_relevo';
  * @param {string} [props.incidenteId] El expediente del que salió, cuando hubo uno.
  * @param {Function} [props.alRegistrar] Para que quien llama recargue lo suyo.
  */
-export function LoQuePasoEnLaCasa({ guardiaId, pacientes = [], origen, incidenteId, alRegistrar }) {
+export function LoQuePasoEnLaCasa({ turnoGuardiaId, pacientes = [], origen, incidenteId, alRegistrar }) {
   const { t } = useLocale();
   const [abriendo, setAbriendo] = useState(null);
 
@@ -73,7 +73,7 @@ export function LoQuePasoEnLaCasa({ guardiaId, pacientes = [], origen, incidente
 
       {abriendo === 'consentimiento' && (
         <RegistrarConsentimiento
-          guardiaId={guardiaId}
+          turnoGuardiaId={turnoGuardiaId}
           pacientes={conId}
           onClose={cerrar}
           onGuardado={listo}
@@ -81,7 +81,7 @@ export function LoQuePasoEnLaCasa({ guardiaId, pacientes = [], origen, incidente
       )}
       {abriendo === 'familiar' && (
         <RegistrarFamiliarQueSeQuedo
-          guardiaId={guardiaId}
+          turnoGuardiaId={turnoGuardiaId}
           origen={origen}
           incidenteId={incidenteId}
           onClose={cerrar}
@@ -104,7 +104,7 @@ function ahoraParaElCampo(desplazamientoEnHoras = 0) {
 /* `alGuardar`, cuando viene, corre después de anotar el hecho y antes de cerrar la ventana: es lo
    que usa el incidente de relevo para darse por resuelto con lo que se acaba de anotar. Si falla,
    el hecho ya quedó escrito, así que reintentar no lo vuelve a anotar: sólo repite ese paso. */
-export function RegistrarConsentimiento({ guardiaId, pacientes, onClose, onGuardado, alGuardar }) {
+export function RegistrarConsentimiento({ turnoGuardiaId, pacientes, onClose, onGuardado, alGuardar }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
@@ -135,7 +135,7 @@ export function RegistrarConsentimiento({ guardiaId, pacientes, onClose, onGuard
       if (!anotado) {
         const { error: errorInsert } = await supabase.from(TABLA_CONSENTIMIENTOS).insert({
           prestadora_id: prestadoraId,
-          guardia_id: guardiaId,
+          turno_guardia_id: turnoGuardiaId,
           paciente_id: pacienteId,
           quien_consintio: quien.trim(),
           medio,
@@ -240,7 +240,7 @@ export function RegistrarConsentimiento({ guardiaId, pacientes, onClose, onGuard
   );
 }
 
-export function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, onClose, onGuardado, alGuardar }) {
+export function RegistrarFamiliarQueSeQuedo({ turnoGuardiaId, origen, incidenteId, onClose, onGuardado, alGuardar }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
@@ -266,7 +266,7 @@ export function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, on
       if (!anotado) {
         const { error: errorInsert } = await supabase.from(TABLA_FAMILIAR).insert({
           prestadora_id: prestadoraId,
-          guardia_id: guardiaId,
+          turno_guardia_id: turnoGuardiaId,
           origen,
           incidente_id: incidenteId ?? null,
           familiar_persona_id: familiarPersonaId,

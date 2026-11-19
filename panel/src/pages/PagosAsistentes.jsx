@@ -449,8 +449,8 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                 </dd>
                 <dt>{t.pagos_asistentes.col_horas}</dt>
                 <dd>{formatearHoras(liquidacion.horas, locale)}</dd>
-                <dt>{t.pagos_asistentes.col_guardias}</dt>
-                <dd>{liquidacion.guardias_contadas}</dd>
+                <dt>{t.pagos_asistentes.col_turnos_guardia}</dt>
+                <dd>{liquidacion.turnos_guardia_contados}</dd>
                 <dt>{t.pagos_asistentes.horas_extra}</dt>
                 <dd>{formatearHoras(liquidacion.horas_extra, locale)}</dd>
                 <dt>{t.pagos_asistentes.col_estado}</dt>

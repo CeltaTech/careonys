@@ -24,7 +24,7 @@ const ANA = 'ana-uuid';
 const BETO = 'beto-uuid';
 
 function item(extra = {}) {
-  return { id: 'x', tipo: 'checkin', guardiaId: 'g1', duenoId: ANA, creadoEn: 1, intentos: 0, situacion: null, ...extra };
+  return { id: 'x', tipo: 'checkin', turnoGuardiaId: 'g1', duenoId: ANA, creadoEn: 1, intentos: 0, situacion: null, ...extra };
 }
 
 // ---------------------------------------------------------------------------

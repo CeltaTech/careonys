@@ -1,19 +1,19 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
-import { cubrirGuardiaConSustituto } from './cubrirGuardia.js';
+import { cubrirTurnoGuardiaConSustituto } from './cubrirTurnoGuardia.js';
 import { finEfectivoDeLaAusencia } from './ausenciaQueTapa.js';
 import { hoyISO, sumarDias } from './horarios.js';
 
 /* La cobertura de un turno fijo durante una ausencia
    ==================================================
 
-   QUÉ ES. Cuando un Asistente falta varios días, quien coordina no elige un sustituto guardia por
-   guardia: elige quién hace cada turno fijo del ausente —cada serie— por toda la ausencia, y quién
+   QUÉ ES. Cuando un Asistente falta varios días, quien coordina no elige un sustituto turno de guardia por
+   turno de guardia: elige quién hace cada turno fijo del ausente —cada serie— por toda la ausencia, y quién
    hace sus turnos sueltos. Eso queda anotado en `coberturas_de_ausencia` —las sueltas, con la serie
-   vacía—, y este archivo es el que lo convierte en guardias cubiertas.
+   vacía—, y este archivo es el que lo convierte en turnos de guardia cubiertos.
 
    RECIÉN CUANDO EL SUSTITUTO ACEPTA. El reemplazo se le asigna como un turno: lo acepta o lo
-   rechaza una sola vez, por todos los días. Hasta que acepta, las guardias siguen del titular y el
+   rechaza una sola vez, por todos los días. Hasta que acepta, los turnos de guardia siguen del titular y el
    trabajo programado no aplica esa cobertura.
 
    POR QUÉ SE VUELVE A APLICAR CADA TANTO. La ausencia se mueve: se le corre la fecha prevista, se
@@ -24,7 +24,7 @@ import { hoyISO, sumarDias } from './horarios.js';
    sabe hasta cuándo sigue: se cubre hasta pasado mañana, y el trabajo lo va corriendo día a día
    mientras tanto. Así la cobertura continúa sin inventar un fin.
 
-   LO QUE YA EMPEZÓ NO SE TOCA. Sólo se cubren y se devuelven guardias programadas de hoy en
+   LO QUE YA EMPEZÓ NO SE TOCA. Sólo se cubren y se devuelven turnos de guardia programados de hoy en
    adelante: las que están corriendo o ya pasaron son de quien las hizo.
 
    Entra con la conexión que le pasan. El trabajo programado corre con la credencial de una sola
@@ -38,8 +38,8 @@ export function hastaDondeCubrir(ausencia, hoy = hoyISO()) {
 }
 
 /**
- * Cubre las guardias de la serie que caen en la ausencia y devuelve al titular las que quedaron
- * afuera. Devuelve `{ cubiertas, devueltas }`, cada una con los identificadores de las guardias.
+ * Cubre los turnos de guardia de la serie que caen en la ausencia y devuelve al titular las que quedaron
+ * afuera. Devuelve `{ cubiertas, devueltas }`, cada una con los identificadores de los turnos de guardia.
  */
 export async function aplicarCobertura({ db, cobertura, ausencia, hoy = hoyISO() }) {
   const prestadoraId = cobertura.prestadora_id;
@@ -53,12 +53,12 @@ export async function aplicarCobertura({ db, cobertura, ausencia, hoy = hoyISO()
   if (desde > hasta) return { cubiertas, devueltas };
 
   let consulta = db
-    .from('guardias')
+    .from('turnos_guardia')
     .select('id, prestadora_id, asistente_id, fecha')
     .eq('prestadora_id', prestadoraId);
   // Sin serie, la cobertura es la de los turnos sueltos del titular.
   consulta = cobertura.serie_id ? consulta.eq('serie_id', cobertura.serie_id) : consulta.is('serie_id', null);
-  const { data: guardias, error } = await consulta
+  const { data: turnos_guardia, error } = await consulta
     .eq('asistente_id', titularId)
     .eq('estado', 'programada')
     .gte('fecha', desde)
@@ -69,10 +69,10 @@ export async function aplicarCobertura({ db, cobertura, ausencia, hoy = hoyISO()
     return { cubiertas, devueltas };
   }
 
-  for (const guardia of guardias ?? []) {
-    const resultado = await cubrirGuardiaConSustituto({
+  for (const turno_guardia of turnos_guardia ?? []) {
+    const resultado = await cubrirTurnoGuardiaConSustituto({
       db,
-      guardia,
+      turno_guardia,
       asistenteSustitutoId: cobertura.asistente_sustituto_id,
       ausenciaId: ausencia.id,
       coberturaDeAusenciaId: cobertura.id,
@@ -80,14 +80,14 @@ export async function aplicarCobertura({ db, cobertura, ausencia, hoy = hoyISO()
       motivoDetalle: cobertura.motivo_detalle,
       costoAdicional: cobertura.costo_adicional,
     });
-    if (resultado.ok) cubiertas.push(guardia.id);
-    else console.error(`[coberturaDeAusencia] no se pudo cubrir la guardia ${guardia.id}:`, resultado.motivo);
+    if (resultado.ok) cubiertas.push(turno_guardia.id);
+    else console.error(`[coberturaDeAusencia] no se pudo cubrir la guardia ${turno_guardia.id}:`, resultado.motivo);
   }
   return { cubiertas, devueltas };
 }
 
 /**
- * Devuelve al titular las guardias programadas de la cobertura desde un día en adelante, y borra
+ * Devuelve al titular los turnos de guardia programados de la cobertura desde un día en adelante, y borra
  * la constancia de sustitución de cada una: esa sustitución no llegó a ocurrir.
  */
 export async function devolverAlTitular({ db, cobertura, titularId, desde }) {
@@ -95,8 +95,8 @@ export async function devolverAlTitular({ db, cobertura, titularId, desde }) {
   const devueltas = [];
 
   const { data: filas, error } = await db
-    .from('guardias_cobertura')
-    .select('id, guardia_original_id')
+    .from('turnos_guardia_cobertura')
+    .select('id, turno_guardia_original_id')
     .eq('prestadora_id', prestadoraId)
     .eq('cobertura_de_ausencia_id', cobertura.id);
   if (error) {
@@ -105,45 +105,45 @@ export async function devolverAlTitular({ db, cobertura, titularId, desde }) {
   }
   if (!filas?.length) return devueltas;
 
-  const { data: guardias, error: errorGuardias } = await db
-    .from('guardias')
+  const { data: turnos_guardia, error: errorTurnosGuardia } = await db
+    .from('turnos_guardia')
     .select('id')
     .eq('prestadora_id', prestadoraId)
-    .in('id', filas.map((f) => f.guardia_original_id))
+    .in('id', filas.map((f) => f.turno_guardia_original_id))
     .eq('estado', 'programada')
     .gte('fecha', desde);
-  if (errorGuardias) {
-    console.error(`[coberturaDeAusencia] no se pudieron leer las guardias a devolver (${cobertura.id}):`, errorGuardias.message);
+  if (errorTurnosGuardia) {
+    console.error(`[coberturaDeAusencia] no se pudieron leer las guardias a devolver (${cobertura.id}):`, errorTurnosGuardia.message);
     return devueltas;
   }
 
-  const aDevolver = new Set((guardias ?? []).map((g) => g.id));
+  const aDevolver = new Set((turnos_guardia ?? []).map((g) => g.id));
   for (const fila of filas) {
-    if (!aDevolver.has(fila.guardia_original_id)) continue;
-    const { error: errorGuardia } = await db
-      .from('guardias')
+    if (!aDevolver.has(fila.turno_guardia_original_id)) continue;
+    const { error: errorTurnoGuardia } = await db
+      .from('turnos_guardia')
       .update({ asistente_id: titularId })
       .eq('prestadora_id', prestadoraId)
-      .eq('id', fila.guardia_original_id);
-    if (errorGuardia) {
-      console.error(`[coberturaDeAusencia] no se pudo devolver la guardia ${fila.guardia_original_id}:`, errorGuardia.message);
+      .eq('id', fila.turno_guardia_original_id);
+    if (errorTurnoGuardia) {
+      console.error(`[coberturaDeAusencia] no se pudo devolver la guardia ${fila.turno_guardia_original_id}:`, errorTurnoGuardia.message);
       continue;
     }
     const { error: errorFila } = await db
-      .from('guardias_cobertura')
+      .from('turnos_guardia_cobertura')
       .delete()
       .eq('prestadora_id', prestadoraId)
       .eq('id', fila.id);
     if (errorFila) console.error(`[coberturaDeAusencia] no se pudo borrar la constancia ${fila.id}:`, errorFila.message);
-    devueltas.push(fila.guardia_original_id);
+    devueltas.push(fila.turno_guardia_original_id);
   }
   return devueltas;
 }
 
 /**
  * El sustituto aceptó el reemplazo: se aplican sus coberturas de esa ausencia. Ya respondió que
- * sí, así que las guardias que pasan a su nombre se dan por avisadas y no le llega un mensaje por
- * cada día. Devuelve las guardias que quedaron cubiertas.
+ * sí, así que los turnos de guardia que pasan a su nombre se dan por avisadas y no le llega un mensaje por
+ * cada día. Devuelve los turnos de guardia que quedaron cubiertos.
  */
 export async function aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId, sustitutoId }) {
   const { data: coberturas, error } = await db
@@ -170,7 +170,7 @@ export async function aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId, s
   }
 
   if (cubiertas.length) {
-    await db.from('guardias').update({ push_asignacion_enviado_at: new Date().toISOString() })
+    await db.from('turnos_guardia').update({ push_asignacion_enviado_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId).in('id', cubiertas);
   }
   return { cubiertas, titularId };

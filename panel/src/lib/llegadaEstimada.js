@@ -11,7 +11,7 @@
 // (el mismo criterio que ya está escrito en `panel/src/lib/candidatos.js`).
 //
 // POR QUÉ LA VELOCIDAD ES UNA SOLA Y NO UNA POR MEDIO DE TRANSPORTE.
-// `guardias.medio_transporte` es texto libre —lo escribe quien registra la
+// `turnos_guardia.medio_transporte` es texto libre —lo escribe quien registra la
 // salida, «colectivo», «auto propio», «a pie»—, así que no hay ninguna lista
 // contra la cual traducirlo a una velocidad. Inventar esa tabla sería adivinar
 // dos veces. Se usa una velocidad media urbana única, y el margen que la
@@ -103,7 +103,7 @@ export function horaEstimadaDeLlegada({ salidaAt, metros }) {
  *
  * @param {object} datos
  * @param {Date|null} datos.llegadaEstimada
- * @param {Date|null} datos.inicio hora de inicio de la guardia
+ * @param {Date|null} datos.inicio hora de inicio del turno de guardia
  * @param {number} datos.minutosTolerados margen que decidió la Prestadora
  * @returns {boolean|null}
  */

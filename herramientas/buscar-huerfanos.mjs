@@ -62,9 +62,9 @@ const codigoFrontends = APPS.flatMap((a) => archivosDe(path.join(RAIZ, a, 'src')
   .join('\n');
 
 /* Comparación apretada: no alcanza con que las palabras de la dirección aparezcan
-   sueltas por ahí (`guardias` aparece en todos lados). Se busca el tramo fijo más
+   sueltas por ahí (`turnos_guardia` aparece en todos lados). Se busca el tramo fijo más
    largo de la dirección, tal cual, pegado. Por ejemplo de
-   `/guardias/:id/reporte/confirmar` se busca el texto `reporte/confirmar`. */
+   `/turnos-guardia/:id/reporte/confirmar` se busca el texto `reporte/confirmar`. */
 const rutasSinLlamar = rutasBackend.filter(({ ruta }) => {
   const partes = ruta.split('/').filter(Boolean);
   const tramos = [];

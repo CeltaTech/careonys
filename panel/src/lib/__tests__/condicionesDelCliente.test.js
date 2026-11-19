@@ -32,7 +32,7 @@ const FABRICA = {
   medicion: 'pactado_mas_excedente',
   cobra_cancelada_por_el_cliente: true,
   descuenta_lo_no_prestado: true,
-  cobra_guardias_adicionales: true,
+  cobra_turnos_guardia_adicionales: true,
   cobra_horas_adicionales: true,
   indice_de_actualizacion: null,
   meses_entre_actualizaciones: 1,
@@ -56,7 +56,7 @@ describe('los nombres guardados', () => {
     expect(CLAVES_SI_NO).toEqual([
       'cobra_cancelada_por_el_cliente',
       'descuenta_lo_no_prestado',
-      'cobra_guardias_adicionales',
+      'cobra_turnos_guardia_adicionales',
       'cobra_horas_adicionales',
     ]);
     expect(CLAVES_ENTERAS).toEqual(['meses_entre_actualizaciones']);

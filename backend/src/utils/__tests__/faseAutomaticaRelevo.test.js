@@ -19,7 +19,7 @@ import { respuestaDeSecretosDePrueba } from '../../__tests__/secretosDeTercerosD
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const PLANTILLA = '22222222-2222-2222-2222-222222222222';
-const GUARDIA = '33333333-3333-3333-3333-333333333333';
+const TURNO_GUARDIA = '33333333-3333-3333-3333-333333333333';
 const AUSENTE = 'aaaaaaaa-0000-0000-0000-000000000001';
 const SUPLENTE_LIBRE = 'aaaaaaaa-0000-0000-0000-000000000002';
 const SUPLENTE_OCUPADO = 'aaaaaaaa-0000-0000-0000-000000000003';
@@ -32,11 +32,11 @@ const TELEFONOS = {
   [FRANQUERO]: '+5491100000004',
 };
 
-const INCIDENTE = { id: '44444444-4444-4444-4444-444444444444', guardia_entrante_id: GUARDIA, nivel_actual: 1 };
+const INCIDENTE = { id: '44444444-4444-4444-4444-444444444444', turno_guardia_entrante_id: TURNO_GUARDIA, nivel_actual: 1 };
 
-/** La guardia que quedó sin nadie: de 22:00 a 06:00, la que cruza la medianoche. */
-const GUARDIA_ENTRANTE = {
-  id: GUARDIA,
+/** El turno de guardia que quedó sin nadie: de 22:00 a 06:00, la que cruza la medianoche. */
+const TURNO_GUARDIA_ENTRANTE = {
+  id: TURNO_GUARDIA,
   asistente_id: AUSENTE,
   fecha: '2026-09-15',
   hora_inicio: '22:00',
@@ -124,11 +124,11 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/configuracion_escalada_relevo', () => [
     { orden_prioridad: ['suplente', 'franquero'], plantilla_mensaje: 'Necesitamos quien cubra esta noche.' },
   ]);
-  respuestas.set('GET /rest/v1/guardias', (busqueda) =>
+  respuestas.set('GET /rest/v1/turnos_guardia', (busqueda) =>
     busqueda.has('id')
-      ? [GUARDIA_ENTRANTE]
+      ? [TURNO_GUARDIA_ENTRANTE]
       : [
-          GUARDIA_ENTRANTE,
+          TURNO_GUARDIA_ENTRANTE,
           // De 18:00 a 02:00: empieza antes que la entrante y sigue corriendo después de la
           // medianoche, así que a las 22:00 esta persona ya está trabajando.
           { id: 'otra', asistente_id: SUPLENTE_OCUPADO, fecha: '2026-09-15', hora_inicio: '18:00', hora_fin: '02:00' },
@@ -198,8 +198,8 @@ describe('a quiénes sale a buscar la fase automática', () => {
   it('tampoco a quien sigue adentro de la guardia de anoche', async () => {
     // La que quedó sin nadie empieza a las 06:00 de la mañana. Quien entró ayer a las 22:00 sale
     // recién a las 08:00: buscando sólo por la fecha de hoy, aparecería libre.
-    const temprana = { ...GUARDIA_ENTRANTE, fecha: '2026-09-16', hora_inicio: '06:00', hora_fin: '14:00' };
-    respuestas.set('GET /rest/v1/guardias', (busqueda) =>
+    const temprana = { ...TURNO_GUARDIA_ENTRANTE, fecha: '2026-09-16', hora_inicio: '06:00', hora_fin: '14:00' };
+    respuestas.set('GET /rest/v1/turnos_guardia', (busqueda) =>
       busqueda.has('id')
         ? [temprana]
         : [

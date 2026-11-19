@@ -11,7 +11,7 @@
 // Ante cualquier falla de la consulta se contesta que NO. Es un control de privacidad y falla
 // cerrado: si no se pudo saber si la persona dio permiso, no se la ubica.
 //
-// CON QUÉ CREDENCIAL. La pregunta la hace el trabajo de la Prestadora de la guardia, y la función
+// CON QUÉ CREDENCIAL. La pregunta la hace el trabajo de la Prestadora del turno de guardia, y la función
 // contesta sólo por los Asistentes de esa Prestadora: el consentimiento que alguien dio en otra
 // no habilita a ubicarlo en ésta. Sin Prestadora no se pregunta.
 import { enLaPrestadora } from '../db/connection.js';

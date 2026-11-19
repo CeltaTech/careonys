@@ -175,7 +175,7 @@ const diasDesdeElOrigen = (fecha) => Math.round(enMedianoche(fecha).getTime() / 
  * se pase de reserva.
  *
  * Los bordes no se cruzan y no dejan huecos: todo día del calendario pertenece a exactamente un
- * período. De eso depende que ninguna guardia se pague ni se cobre dos veces ni se quede afuera.
+ * período. De eso depende que ningún turno de guardia se pague ni se cobre dos veces ni se quede afuera.
  */
 function periodoConCorte(fecha, cadaCuanto, diaDeCorte) {
   const dia = enTexto(enMedianoche(fecha));

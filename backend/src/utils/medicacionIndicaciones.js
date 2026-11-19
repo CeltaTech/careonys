@@ -45,7 +45,7 @@ async function viasProhibidasAlTipo(db, prestadoraId, tipoAsistenteId) {
 
 // ¿Puede este Asistente dar una medicación por esta vía? Falla cerrado: sin vía elegida, sin tipo
 // de Asistente o sin poder leer las prohibiciones, la respuesta es no. Que tenga la matrícula de su
-// tipo se controla al asignarle la guardia.
+// tipo se controla al asignarle el turno de guardia.
 export async function asistentePuedeDarLaVia(db, prestadoraId, asistenteId, viaAdministracionId) {
   if (!viaAdministracionId) return false;
   const { data: asistente } = await db
@@ -60,16 +60,16 @@ export async function asistentePuedeDarLaVia(db, prestadoraId, asistenteId, viaA
   return !prohibidas.has(viaAdministracionId);
 }
 
-// Asistentes con alguna Guardia futura o de hoy para ese Paciente — no hace falta un vínculo
-// dedicado "asistente asignado", guardias ya es la fuente real de asignación en el resto del
+// Asistentes con algún Turno de guardia futuro o de hoy para ese Paciente — no hace falta un vínculo
+// dedicado "asistente asignado", turnos de guardia ya es la fuente real de asignación en el resto del
 // sistema (mismo criterio que appClientes.js:/pacientes/:id/asistente).
 //
-// Se pregunta por la lista de la guardia y no por la columna vieja: si un turno cubre a dos
+// Se pregunta por la lista del turno de guardia y no por la columna vieja: si un turno cubre a dos
 // personas de la misma casa, el Asistente atiende a las dos, y para la segunda no aparecía
 // nadie. De acá cuelga el aviso de que nadie asignado puede dar esa vía, así que quedarse corto
 // significa avisar de más sobre un pedido que sí se podía cumplir.
 //
-// Lo contesta la base (`asistentes_asignados_al_paciente`), que mira las guardias de todas las
+// Lo contesta la base (`asistentes_asignados_al_paciente`), que mira los turnos de guardia de todas las
 // zonas: quien coordina sólo ve las de la suya, y el bloqueo tiene que mirarlas todas. La
 // Prestadora sale de la sesión. Si no se puede leer, falla: callar a los asignados destrabaría la vía.
 export async function asistentesAsignadosAlPaciente(db, pacienteId) {

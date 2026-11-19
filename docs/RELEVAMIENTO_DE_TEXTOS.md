@@ -392,10 +392,10 @@ Ubicación de cada ficha: clave de traducción y archivo:renglón donde se usa. 
 6. Panel: `continuidad.paciente_solo_falta_desde_at`, usado en `panel/src/pages/continuidad/LoQuePasoEnLaCasa.jsx:228`. Sin uso: `paciente_solo_falta_quien_consintio`, `_medio`, `_hasta_at`, `_nota`.
 7. Panel: `errores.motivos.logo_invalido`, enviado por `backend/src/routes/panelConfiguracion.js:254`. Sin uso: `errores.motivos.logo_para_impresion_invalido`.
 8. Asistentes: `errores.motivos.nombre_del_banco_invalido`, `titular_invalido`. Origen: `backend/src/routes/appAsistentes.js:438` y `:442`.
-9. Panel: `configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar_invalido`, `whatsapp_escalada_minutos_escalon_invalido`. Usos: `panel/src/pages/configuracion/Avisos.jsx:1487` y `:1508`.
+9. Panel: `configuracion.whatsapp_escalada_minutos_turno_guardia_sin_cerrar_invalido`, `whatsapp_escalada_minutos_escalon_invalido`. Usos: `panel/src/pages/configuracion/Avisos.jsx:1487` y `:1508`.
 10. Panel, Clientes y Asistentes: `errores.dato_invalido`. Lo elige `lib/errores.js` de cada parte. Texto hermano: `errores.motivos.dato_invalido` del Panel.
 11. Panel: `configuracion.visibilidad_guardado`. Usos: `panel/src/pages/configuracion/LasAplicaciones.jsx:127` y `:251`.
-12. Panel: `guardias.seleccion.hecho`, `hecho_una`, `error_parcial`. Uso: `panel/src/components/BarraAccionesMasivas.jsx`, alrededor de los renglones 376 y 379.
+12. Panel: `turnos_guardia.seleccion.hecho`, `hecho_una`, `error_parcial`. Uso: `panel/src/components/BarraAccionesMasivas.jsx`, alrededor de los renglones 376 y 379.
 13. Panel, Clientes y Asistentes: `auth.clave_nueva_exito`. Usos: `panel/src/pages/ClaveNueva.jsx:136`, y `ClaveNueva.jsx:137` en las dos aplicaciones.
 14. Panel: `importacion.conformidad_exito`, `rechazo_exito`. Usos: `panel/src/pages/Importacion.jsx:478` y `:479`.
 15. Asistentes: `reporte.guardado_pendiente`. Uso: `pwa-asistentes/src/pages/ReporteDiario.jsx:215`.
@@ -406,13 +406,13 @@ Ubicación de cada ficha: clave de traducción y archivo:renglón donde se usa. 
 20. Panel: `postulaciones.entrevista.reprogramar_confirmar`, `cancelar_confirmar`. Usos: `EntrevistaDePostulacion.jsx:126` y `:133`.
 21. Panel: `servicios.baja.confirmar`. Uso: `panel/src/pages/servicios/BajaDelServicioModal.jsx:71`.
 22. Panel: `asistentes.cuenta.confirmar`. Uso: `panel/src/pages/asistentes/DesactivarAsistenteModal.jsx:54`.
-23. Panel: `guardias.detalle.confirmar_cancelar`, `confirmar_ausente`, `confirmar_aviso_previo`. Usos: `GuardiaAcciones.jsx:163`, `:198`, `:250`.
-24. Panel: `guardias_sin_cerrar.confirmar`. Uso: `panel/src/pages/guardias/GuardiasSinCerrar.jsx:205`.
+23. Panel: `turnos_guardia.detalle.confirmar_cancelar`, `confirmar_ausente`, `confirmar_aviso_previo`. Usos: `TurnoGuardiaAcciones.jsx:163`, `:198`, `:250`.
+24. Panel: `turnos_guardia_sin_cerrar.confirmar`. Uso: `panel/src/pages/turnos_guardia/TurnosGuardiaSinCerrar.jsx:205`.
 25. Panel: `continuidad.confirmar_resolver_alerta`. Uso: `Continuidad.jsx:246`.
 26. Panel: `lista_precios.confirmar_cambio_precio`. Uso: `ListaPrecioDetalle.jsx:57`.
 27. Panel: `domicilios_temporales.confirmar_cierre_hospitalizacion`. Uso: `DomiciliosTemporalesPaciente.jsx:293`.
 28. Panel: `usuarios_panel.confirmar_baja`. Uso: `panel/src/pages/UsuariosPanel.jsx:317`.
-29. Asistentes: `guardias.confirmar_objecion`. Uso: `CoberturasQueCubro.jsx:34`, con la confirmación nativa del navegador.
+29. Asistentes: `turnos_guardia.confirmar_objecion`. Uso: `CoberturasQueCubro.jsx:34`, con la confirmación nativa del navegador.
 30. Panel: `configuracion.listas_confirmar_apagar`. Uso: `panel/src/pages/configuracion/LasListasDeOpciones.jsx:126`.
 31. Panel: `pagos_asistentes.confirmar_generar`, `confirmar_borrar`, `confirmar_baja`. Usos: `panel/src/pages/PagosAsistentes.jsx:198`, `:412`, `:633`.
 32. Panel: `contenidos.archivo_borrar_confirmar`, con marcador `{{nombre}}`. Uso: `panel/src/pages/contenidos/ContenidoDetalle.jsx:233`, que reemplaza con `con()` de `panel/src/lib/textos.js:33`, que busca `{nombre}` con un solo par.
@@ -422,9 +422,9 @@ Ubicación de cada ficha: clave de traducción y archivo:renglón donde se usa. 
 36. Clientes: `vidriera.contacto_confirmar_renueva`. Uso: `pwa-clientes/src/pages/PerfilPublicoAsistente.jsx:199`.
 37. Asistentes: `errores.motivos.falta_checkin`. Origen: `backend/src/routes/appAsistentes.js:2026`.
 38. Panel, Clientes y Asistentes: `errores.no_encontrado`. Lo elige `lib/errores.js` de cada parte.
-39. Panel: `errores.motivos.desactivacion_con_turnos_por_delante`. Origen: `backend/src/utils/cuentasPanel.js:177`.
+39. Panel: `errores.motivos.desactivacion_con_turnos_guardia_por_delante`. Origen: `backend/src/utils/cuentasPanel.js:177`.
 40. Panel: `configuracion.whatsapp_token_cargar`, `whatsapp_token_reemplazar`, `whatsapp_verify_token_cargar`, `whatsapp_verify_token_reemplazar`. Usos: `panel/src/pages/configuracion/Avisos.jsx:981`, `:995`, `:1018`.
 41. Panel: `configuracion.whatsapp_entrada_sin_secretos`, en `panel/src/pages/configuracion/Avisos.jsx`.
-42. Panel: `guardias.detalle.checkout_bloqueado_explicacion`. Uso: `GuardiaAcciones.jsx:384`.
+42. Panel: `turnos_guardia.detalle.checkout_bloqueado_explicacion`. Uso: `TurnoGuardiaAcciones.jsx:384`.
 43. Panel: `configuracion.whatsapp_plantillas_hueco`. Uso: `panel/src/pages/configuracion/Avisos.jsx:1234`.
 44. Panel, inglés: `configuracion.listas_origen_propia`. Uso: `panel/src/pages/configuracion/LasListasDeOpciones.jsx:247`.

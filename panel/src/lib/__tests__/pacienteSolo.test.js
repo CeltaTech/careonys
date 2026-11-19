@@ -39,7 +39,7 @@ function consentimiento(resto = {}) {
 function familiar(resto = {}) {
   return {
     familiar_persona_id: '11111111-2222-3333-4444-555555555555',
-    origen: ORIGENES.TURNO_SIN_CUBRIR,
+    origen: ORIGENES.TURNO_GUARDIA_SIN_CUBRIR,
     desde_at: '2026-03-10T20:00:00',
     ...resto,
   };
@@ -48,7 +48,7 @@ function familiar(resto = {}) {
 describe('lo que se guarda no se escribe dos veces', () => {
   it('los medios y los orígenes son los que la base acepta', () => {
     expect(MEDIOS_POSIBLES).toEqual(['telefono', 'en_persona', 'mensaje', 'correo']);
-    expect(ORIGENES_POSIBLES).toEqual(['relevo', 'turno_sin_cubrir', 'extension']);
+    expect(ORIGENES_POSIBLES).toEqual(['relevo', 'turno_guardia_sin_cubrir', 'extension']);
   });
 });
 

@@ -57,7 +57,7 @@ const baseFalsa = createServer((req, res) => {
     if (clave === 'POST /rest/v1/plazos_de_ubicacion_avisados') {
       // Como `ON CONFLICT DO NOTHING`: la anotación repetida no devuelve fila.
       const fila = JSON.parse(cuerpo);
-      const repetida = anotados.some((a) => a.asistente_id === fila.asistente_id && a.control_en_el_turno_desde === fila.control_en_el_turno_desde);
+      const repetida = anotados.some((a) => a.asistente_id === fila.asistente_id && a.control_en_el_turno_guardia_desde === fila.control_en_el_turno_guardia_desde);
       if (!repetida) {
         anotados.push(fila);
         filas = [{ id: `anotado-${anotados.length}` }];
@@ -88,8 +88,8 @@ beforeEach(() => {
   process.env.RESEND_API_KEY = 'clave-del-despachante';
   process.env.REMITENTE_AVISOS = 'avisos@ejemplo.local';
   prestadora = {
-    control_de_ubicacion_en_el_turno: true,
-    control_de_ubicacion_en_el_turno_desde: CAMBIO,
+    control_de_ubicacion_en_el_turno_guardia: true,
+    control_de_ubicacion_en_el_turno_guardia_desde: CAMBIO,
     dias_para_aceptar_la_ubicacion: 30,
   };
   asistentes = [
@@ -121,7 +121,7 @@ describe('el plazo para aceptar la ubicación', () => {
   it('avisa sólo por quien no aceptó y ya está fuera de plazo, con su nombre y los días', async () => {
     assert.deepEqual(await avisarLosPlazosDeUbicacionVencidos(PRESTADORA, AHORA), { avisados: 1 });
     assert.deepEqual(anotados.map((a) => a.asistente_id), [SIN_ACEPTAR]);
-    assert.equal(anotados[0].control_en_el_turno_desde, CAMBIO);
+    assert.equal(anotados[0].control_en_el_turno_guardia_desde, CAMBIO);
     assert.equal(enviados.length, 1);
     assert.equal(enviados[0].subject, 'Rita Solano no aceptó el registro de su ubicación');
     assert.match(enviados[0].text, /plazo de 30 días/);
@@ -146,7 +146,7 @@ describe('el plazo para aceptar la ubicación', () => {
   });
 
   it('en «Sólo viaje» no hay plazo', async () => {
-    prestadora.control_de_ubicacion_en_el_turno = false;
+    prestadora.control_de_ubicacion_en_el_turno_guardia = false;
     assert.deepEqual(await avisarLosPlazosDeUbicacionVencidos(PRESTADORA, AHORA), { avisados: 0 });
     assert.equal(anotados.length, 0);
   });
@@ -156,7 +156,7 @@ describe('el plazo para aceptar la ubicación', () => {
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/consentimientos_asistente').url.searchParams;
     assert.equal(consulta.get('decision'), 'eq.otorgado');
     assert.equal(consulta.get('retirado_at'), 'is.null');
-    assert.equal(consulta.get('textos_consentimiento.control_de_ubicacion_en_el_turno'), 'eq.true');
+    assert.equal(consulta.get('textos_consentimiento.control_de_ubicacion_en_el_turno_guardia'), 'eq.true');
     assert.equal(consulta.get('textos_consentimiento.es_borrador'), 'eq.false');
     assert.equal(consulta.get('textos_consentimiento.vigente_hasta'), 'is.null');
     assert.match(consulta.get('select'), /textos_consentimiento!inner/);

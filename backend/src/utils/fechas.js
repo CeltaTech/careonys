@@ -51,7 +51,7 @@ export function sumarDias(fechaISO, dias) {
  * configuración de la Prestadora: no describe cómo trabaja una empresa, describe el calendario.
  *
  * Devuelve los siete días ya escritos —no solamente los extremos— porque la pantalla dibuja un
- * renglón por día, incluidos los días sin ninguna guardia: "el jueves no viene nadie" también
+ * renglón por día, incluidos los días sin ningún turno de guardia: "el jueves no viene nadie" también
  * es una respuesta, y es de las que evitan una llamada.
  */
 export function semanaQueContiene(diaISO) {

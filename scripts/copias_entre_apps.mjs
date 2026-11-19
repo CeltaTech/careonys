@@ -237,8 +237,8 @@ export const GRUPOS = [
   },
   {
     que: 'cuándo un turno vacío se vuelve un incidente grave y cómo puede cerrarse',
-    original: 'panel/src/lib/incidenteTurnoSinCubrir.js',
-    copias: ['backend/src/utils/incidenteTurnoSinCubrir.js'],
+    original: 'panel/src/lib/incidenteTurnoGuardiaSinCubrir.js',
+    copias: ['backend/src/utils/incidenteTurnoGuardiaSinCubrir.js'],
   },
   {
     que: 'qué se registra cuando no va nadie: el consentimiento del Cliente y el familiar que se quedó',
@@ -262,8 +262,8 @@ export const GRUPOS = [
   },
   {
     que: 'cuándo una guardia quedó sin cerrar',
-    original: 'panel/src/lib/guardiaSinCerrar.js',
-    copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],
+    original: 'panel/src/lib/turnoGuardiaSinCerrar.js',
+    copias: ['pwa-asistentes/src/lib/turnoGuardiaSinCerrar.js'],
   },
   {
     que: 'qué signos vitales se toman y cuándo un valor quedó fuera de rango',

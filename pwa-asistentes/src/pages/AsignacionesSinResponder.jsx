@@ -6,9 +6,9 @@ import { mensajeDeError } from '../lib/errores';
 import { nombreDelMotivo } from '../lib/nombreDelMotivo';
 import { con } from '../lib/textos';
 
-// Los turnos que se le asignaron y todavía no respondió.
+// Los turnos de guardia que se le asignaron y todavía no respondió.
 //
-// Cada turno se le asigna a un Asistente por vez, y mientras no responde el Coordinador no puede
+// Cada turno de guardia se le asigna a un Asistente por vez, y mientras no responde el Coordinador no puede
 // buscar a otro. Por eso no hay plazo ni carrera: hay una persona que tiene que decir sí o no.
 //
 // Para decir que no hay que elegir un motivo de la lista de la Prestadora, y cuando el motivo lo
@@ -21,17 +21,17 @@ function horaCorta(hora) {
   return m === '00' ? String(Number(h)) : `${Number(h)}:${m}`;
 }
 
-// Lo que se le asignó, en una línea. Un turno de un día dice el día y el horario; un turno fijo,
-// los días de la semana y el horario; un reemplazo, desde cuándo, hasta cuándo y cuántos turnos.
+// Lo que se le asignó, en una línea. Un turno de guardia de un día dice el día y el horario; un turno de guardia fijo,
+// los días de la semana y el horario; un reemplazo, desde cuándo, hasta cuándo y cuántos turnos de guardia.
 function lineaDeArriba(asignacion, t, locale) {
-  const guardia = asignacion.guardia;
+  const turno_guardia = asignacion.turno_guardia;
   if (asignacion.tipo === 'serie') {
     const nombres = (asignacion.dias_semana ?? []).map((d) => t.asignaciones.dias[d] ?? d);
     const dias = new Intl.ListFormat(locale, { type: 'conjunction' }).format(nombres);
-    return con(t.asignaciones.turno_fijo, {
+    return con(t.asignaciones.turno_guardia_fijo, {
       dias: dias.charAt(0).toLocaleUpperCase(locale) + dias.slice(1),
-      inicio: horaCorta(guardia.hora_inicio),
-      fin: horaCorta(guardia.hora_fin),
+      inicio: horaCorta(turno_guardia.hora_inicio),
+      fin: horaCorta(turno_guardia.hora_fin),
     });
   }
   if (asignacion.tipo === 'ausencia') {
@@ -39,15 +39,15 @@ function lineaDeArriba(asignacion, t, locale) {
       new Date(`${valor}T00:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'numeric' });
     const uno = asignacion.cantidad === 1;
     const plantilla = asignacion.hasta
-      ? uno ? t.asignaciones.reemplazo_un_turno : t.asignaciones.reemplazo
-      : uno ? t.asignaciones.reemplazo_sin_fin_un_turno : t.asignaciones.reemplazo_sin_fin;
+      ? uno ? t.asignaciones.reemplazo_un_turno_guardia : t.asignaciones.reemplazo
+      : uno ? t.asignaciones.reemplazo_sin_fin_un_turno_guardia : t.asignaciones.reemplazo_sin_fin;
     return con(plantilla, {
       desde: fecha(asignacion.desde),
       hasta: asignacion.hasta ? fecha(asignacion.hasta) : '',
       n: asignacion.cantidad ?? 0,
     });
   }
-  return `${guardia.fecha} · ${guardia.hora_inicio?.slice(0, 5)} - ${guardia.hora_fin?.slice(0, 5)}`;
+  return `${turno_guardia.fecha} · ${turno_guardia.hora_inicio?.slice(0, 5)} - ${turno_guardia.hora_fin?.slice(0, 5)}`;
 }
 
 function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, locale }) {
@@ -59,10 +59,10 @@ function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, loc
   const refDetalle = useRef(null);
 
   // Antes de responder se ve lo necesario para decidir: día, horario, barrio y nivel de
-  // complejidad. El nombre del Paciente y el domicilio exacto aparecen en el turno, al aceptarlo.
-  const guardia = asignacion.guardia;
-  const barrios = guardia.barrios ?? [];
-  const niveles = guardia.niveles_de_complejidad ?? [];
+  // complejidad. El nombre del Paciente y el domicilio exacto aparecen en el turno de guardia, al aceptarlo.
+  const turno_guardia = asignacion.turno_guardia;
+  const barrios = turno_guardia.barrios ?? [];
+  const niveles = turno_guardia.niveles_de_complejidad ?? [];
   const ocupado = enCurso !== null;
   const motivoElegido = motivos.find((m) => m.id === motivoId);
   const pideDetalle = Boolean(motivoElegido?.pide_detalle);
@@ -86,13 +86,13 @@ function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, loc
   }
 
   return (
-    <div className="guardia-card">
-      <div className="guardia-card-paciente">
+    <div className="tarjeta">
+      <div className="tarjeta-paciente">
         {lineaDeArriba(asignacion, t, locale)}
       </div>
-      {barrios.length > 0 && <div className="guardia-card-detalle">{barrios.join(' · ')}</div>}
+      {barrios.length > 0 && <div className="tarjeta-detalle">{barrios.join(' · ')}</div>}
       {niveles.length > 0 && (
-        <div className="guardia-card-detalle">
+        <div className="tarjeta-detalle">
           {t.asignaciones.nivel_complejidad}: {niveles.join(' · ')}
         </div>
       )}
@@ -190,7 +190,7 @@ export default function AsignacionesSinResponder() {
   const [error, setError] = useState('');
   const [pidiendo, setPidiendo] = useState(false);
   const [enCurso, setEnCurso] = useState(null);
-  // Lo aceptado recién: `{ guardiaId }`. Un turno fijo o un reemplazo no tienen un único turno
+  // Lo aceptado recién: `{ turnoGuardiaId }`. Un turno de guardia fijo o un reemplazo no tienen un único turno de guardia
   // al que llevarlo, así que ahí el aviso va sin enlace.
   const [aceptada, setAceptada] = useState(null);
 
@@ -214,14 +214,14 @@ export default function AsignacionesSinResponder() {
   async function responder(asignacion, respuesta, { motivoId, detalle } = {}) {
     setEnCurso(`${respuesta}:${asignacion.id}`);
     setError('');
-    // El aviso del turno anterior se apaga antes de responder el siguiente, para que no queden
+    // El aviso del turno de guardia anterior se apaga antes de responder el siguiente, para que no queden
     // dos avisos de cosas distintas uno debajo del otro.
     setAceptada(null);
     try {
       const resultado = await api.responderAsignacion(asignacion.id, respuesta, { motivoId, detalle });
-      if (resultado.respuesta === 'acepta') setAceptada({ guardiaId: resultado.guardiaId ?? null });
+      if (resultado.respuesta === 'acepta') setAceptada({ turnoGuardiaId: resultado.turnoGuardiaId ?? null });
     } catch (e) {
-      // Casi siempre es que el turno ya no está disponible. Se explica y se vuelve a cargar la
+      // Casi siempre es que el turno de guardia ya no está disponible. Se explica y se vuelve a cargar la
       // lista, que es lo que lo deja al día.
       // Si lo frenan documentos pendientes, se dice cuáles: «tiene documentos pendientes» sin
       // nombrarlos lo manda a buscar a ciegas.
@@ -262,10 +262,10 @@ export default function AsignacionesSinResponder() {
       {aceptada && (
         <div className="alert alert-info" role="status">
           {t.asignaciones.aceptada}
-          {aceptada.guardiaId && (
+          {aceptada.turnoGuardiaId && (
             <>
               {' '}
-              <Link to={`/guardias/${aceptada.guardiaId}`}>{t.asignaciones.ver_el_turno}</Link>
+              <Link to={`/turnos-guardia/${aceptada.turnoGuardiaId}`}>{t.asignaciones.ver_el_turno_guardia}</Link>
             </>
           )}
         </div>

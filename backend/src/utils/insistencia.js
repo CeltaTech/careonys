@@ -7,7 +7,7 @@
 // escrita una sola vez acá (regla 12 de CLAUDE.md §7) en vez de repetida en cada proceso.
 //
 // La escribió primero revisarNotificacionesCoordinador.js; cuando se sumó el mensaje de
-// guardia sin cubrir hubiera quedado copiada en dos lugares, así que se mudó a este archivo
+// turno de guardia sin cubrir hubiera quedado copiada en dos lugares, así que se mudó a este archivo
 // y los dos la importan.
 
 // Unos segundos de tolerancia. La revisión que corre cada minuto no arranca justo a los sesenta

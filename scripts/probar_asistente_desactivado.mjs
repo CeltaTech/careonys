@@ -15,13 +15,13 @@
 //     activo por los dos caminos: una base que negara todo daría «no lo ve» sin probar nada.
 //   - El Administrador lo ve con `cuenta_desactivada` en verdadero, y el filtro de los no
 //     desactivados lo deja afuera y deja adentro al activo.
-//   - No se le puede asignar una guardia: el disparador la rechaza. Al activo, sí.
+//   - No se le puede asignar un turno de guardia: el disparador la rechaza. Al activo, sí.
 //   - Al desactivarlo como lo hace el backend, su cuenta de ingreso queda bloqueada y sus sesiones
 //     abiertas se cierran: no vuelve a entrar.
 //   - El Administrador lo reactiva: vuelve a ofrecerse y la cuenta de ingreso queda sin bloqueo.
 //
-// CON QUÉ DATOS. Dos Asistentes inventados ya cargados en una Prestadora de prueba con guardias,
-// una guardia ya asignada de esa Prestadora, y un Administrador y un Coordinador que crea la
+// CON QUÉ DATOS. Dos Asistentes inventados ya cargados en una Prestadora de prueba con turnos de guardia,
+// un turno de guardia ya asignado de esa Prestadora, y un Administrador y un Coordinador que crea la
 // prueba. Todo adentro de una transacción que termina en ROLLBACK: al terminar no queda nada. Las sesiones se simulan como las arma la base:
 // el rol `authenticated` con la credencial de la persona, y el trabajo sin persona para la baja.
 // ---------------------------------------------------------------------------
@@ -46,24 +46,24 @@ DECLARE
   v_activo uuid;
   v_des uuid;
   v_marca text := substr(replace(gen_random_uuid()::text, '-', ''), 1, 10);
-  v_guardia uuid;
+  v_turno_guardia uuid;
   v_fallas text[] := '{}';
   v_n int;
   v_ok boolean;
   v_motivo text;
   v_cuenta uuid;
 BEGIN
-  SELECT id, prestadora_id INTO v_guardia, v_prestadora FROM guardias
+  SELECT id, prestadora_id INTO v_turno_guardia, v_prestadora FROM turnos_guardia
    WHERE asistente_id IS NOT NULL
    ORDER BY fecha DESC LIMIT 1;
-  IF v_guardia IS NULL THEN RAISE EXCEPTION 'Falta una Prestadora de prueba con alguna guardia asignada'; END IF;
+  IF v_turno_guardia IS NULL THEN RAISE EXCEPTION 'Falta una Prestadora de prueba con alguna guardia asignada'; END IF;
 
   -- Dos Asistentes de esa Prestadora con la cuenta activa: uno sin nada que trabe su baja, que es
   -- el que se desactiva, y otro cualquiera.
   SELECT a.id, a.usuario_id INTO v_des, v_cuenta_des
     FROM asistentes a JOIN usuarios u ON u.id = a.usuario_id AND u.rol = 'asistente' AND u.desactivada_en IS NULL
    WHERE a.prestadora_id = v_prestadora AND a.estado = 'activo'
-     AND NOT EXISTS (SELECT 1 FROM interno.turnos_que_traban_la_desactivacion(a.usuario_id, a.prestadora_id))
+     AND NOT EXISTS (SELECT 1 FROM interno.turnos_guardia_que_traban_la_desactivacion(a.usuario_id, a.prestadora_id))
    ORDER BY a.id LIMIT 1;
   SELECT a.id, a.usuario_id INTO v_activo, v_cuenta_activo
     FROM asistentes a JOIN usuarios u ON u.id = a.usuario_id AND u.rol = 'asistente' AND u.desactivada_en IS NULL
@@ -103,10 +103,10 @@ BEGIN
   SELECT count(*) INTO v_n FROM usuarios WHERE id = v_cuenta_activo AND desactivada_en IS NULL;
   IF v_n <> 1 THEN v_fallas := v_fallas || text 'quedó desactivada la cuenta del otro Asistente'; END IF;
 
-  -- NO SE LE ASIGNA UNA GUARDIA. Cada intento se deshace con su bloque.
+  -- NO SE LE ASIGNA UN TURNO DE GUARDIA. Cada intento se deshace con su bloque.
   v_motivo := NULL;
   BEGIN
-    UPDATE guardias SET asistente_id = v_des WHERE id = v_guardia;
+    UPDATE turnos_guardia SET asistente_id = v_des WHERE id = v_turno_guardia;
     RAISE EXCEPTION 'deshacer';
   EXCEPTION WHEN OTHERS THEN v_motivo := SQLERRM;
   END;
@@ -115,7 +115,7 @@ BEGIN
   END IF;
   v_motivo := NULL;
   BEGIN
-    UPDATE guardias SET asistente_id = v_activo WHERE id = v_guardia;
+    UPDATE turnos_guardia SET asistente_id = v_activo WHERE id = v_turno_guardia;
     RAISE EXCEPTION 'deshacer';
   EXCEPTION WHEN OTHERS THEN v_motivo := SQLERRM;
   END;

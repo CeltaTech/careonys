@@ -488,7 +488,7 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
 // ============================================================================
 //
 // Las dos las hace la base, con la credencial de quien pide y en una sola operación: la base
-// rechaza la baja con guardias asignadas o con la Lista de comprobación incompleta, y deja el
+// rechaza la baja con turnos de guardia asignados o con la Lista de comprobación incompleta, y deja el
 // registro. Si el Cliente debe algo, la base anota el aviso para créditos y cobranzas, y acá se
 // manda además por WhatsApp o mensaje de texto.
 
@@ -498,7 +498,7 @@ const MOTIVOS_DE_LA_BAJA = [
   'servicio_inexistente',
   'el_servicio_ya_esta_de_baja',
   'el_servicio_esta_vigente',
-  'el_servicio_tiene_guardias_asignadas',
+  'el_servicio_tiene_turnos_guardia_asignados',
   'faltan_comprobaciones_de_la_baja',
   'motivo_de_cierre_inexistente',
   'motivo_de_cierre_pide_detalle',

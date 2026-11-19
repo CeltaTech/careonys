@@ -6,12 +6,12 @@ import { distanciaKm } from '../lib/distancia';
 import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
-import { cargarPacientesDeGuardias, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
+import { cargarPacientesDeTurnosGuardia, pacientesDeTurnoGuardia, textoDePacientes } from '../lib/pacientesDeTurnoGuardia';
 import { llegoAlDomicilio } from '../lib/toleranciaCheckin';
 import { domiciliosPorFecha, domicilioDe } from '../lib/domicilioDelDia';
 import { mensajeDeError } from '../lib/errores';
 import './tarjetas.css';
-import './seguimientoDeGuardias.css';
+import './seguimientoDeTurnosGuardia.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
@@ -59,7 +59,7 @@ function estadoVerificacion(punto, paciente, configuracion) {
  */
 const ORDEN_VERIFICACION = ['verificado', 'fuera_de_rango', 'sin_domicilio'];
 
-function estadoVerificacionDelTurno(punto, pacientes, configuracion) {
+function estadoVerificacionDelTurnoGuardia(punto, pacientes, configuracion) {
   if (!punto?.lat || !punto?.lng) return 'sin_datos';
   if (!pacientes?.length) return 'sin_domicilio';
   const estados = pacientes.map((p) => estadoVerificacion(punto, p, configuracion));
@@ -85,13 +85,13 @@ export function Evv() {
     setError(null);
 
     const [
-      { data: guardiasData, error: errorGuardias },
+      { data: turnosGuardiaData, error: errorTurnosGuardia },
       { data: asistentesData },
       { data: pacientesData },
       { data: configuracion },
     ] = await Promise.all([
       supabase
-        .from('guardias')
+        .from('turnos_guardia')
         .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, asistente_id, paciente_id, checkin_at, checkin_lat, checkin_lng, checkout_at, checkout_lat, checkout_lng')
         .eq('prestadora_id', prestadoraId)
         .gte('fecha', f.desde)
@@ -111,8 +111,8 @@ export function Evv() {
         .maybeSingle(),
     ]);
 
-    if (errorGuardias) {
-      setError(mensajeDeError(errorGuardias, t));
+    if (errorTurnosGuardia) {
+      setError(mensajeDeError(errorTurnosGuardia, t));
       setEstadoCarga('error');
       return;
     }
@@ -120,9 +120,9 @@ export function Evv() {
     const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
     const pacientesPorId = Object.fromEntries(conSusFichas(pacientesData).map((p) => [p.id, p]));
 
-    let pacientesPorGuardia;
+    let pacientesPorTurnoGuardia;
     try {
-      pacientesPorGuardia = await cargarPacientesDeGuardias((guardiasData ?? []).map((g) => g.id));
+      pacientesPorTurnoGuardia = await cargarPacientesDeTurnosGuardia((turnosGuardiaData ?? []).map((g) => g.id));
     } catch (e) {
       setError(mensajeDeError(e, t));
       setEstadoCarga('error');
@@ -133,19 +133,19 @@ export function Evv() {
     // pueden ser del mismo Paciente sin ser la misma dirección, así que la pregunta se agrupa
     // por día y no por persona.
     const pacientesPorFecha = {};
-    for (const g of guardiasData ?? []) {
+    for (const g of turnosGuardiaData ?? []) {
       const pedidos = pacientesPorFecha[g.fecha] ?? [];
-      for (const id of pacientesDeGuardia(g, pacientesPorGuardia)) {
+      for (const id of pacientesDeTurnoGuardia(g, pacientesPorTurnoGuardia)) {
         if (!pedidos.includes(id)) pedidos.push(id);
       }
       pacientesPorFecha[g.fecha] = pedidos;
     }
     const domicilios = await domiciliosPorFecha(pacientesPorFecha);
 
-    const filasConEstado = (guardiasData ?? []).map((g) => {
+    const filasConEstado = (turnosGuardiaData ?? []).map((g) => {
       // Todos los Pacientes del turno, ordenados por nombre para que dos turnos con la misma
       // gente se lean igual, y cada uno con las coordenadas que le regían ese día.
-      const pacientes = pacientesDeGuardia(g, pacientesPorGuardia)
+      const pacientes = pacientesDeTurnoGuardia(g, pacientesPorTurnoGuardia)
         .map((id) => {
           const paciente = pacientesPorId[id];
           if (!paciente) return null;
@@ -159,10 +159,10 @@ export function Evv() {
         asistente_nombre: asistentesPorId[g.asistente_id] || '—',
         paciente_nombre: textoDePacientes(
           pacientes.map((p) => p.nombre),
-          t.guardias.pacientes_y_mas,
+          t.turnos_guardia.pacientes_y_mas,
         ),
-        estado_checkin: estadoVerificacionDelTurno({ lat: g.checkin_lat, lng: g.checkin_lng }, pacientes, configuracion),
-        estado_checkout: estadoVerificacionDelTurno({ lat: g.checkout_lat, lng: g.checkout_lng }, pacientes, configuracion),
+        estado_checkin: estadoVerificacionDelTurnoGuardia({ lat: g.checkin_lat, lng: g.checkin_lng }, pacientes, configuracion),
+        estado_checkout: estadoVerificacionDelTurnoGuardia({ lat: g.checkout_lat, lng: g.checkout_lng }, pacientes, configuracion),
       };
     });
 
@@ -187,11 +187,11 @@ export function Evv() {
       <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-filtros seguimiento-filtros">
         <label>
-          {t.guardias.filtro_desde}
+          {t.turnos_guardia.filtro_desde}
           <input type="date" value={f.desde} onChange={(e) => set('desde', e.target.value)} />
         </label>
         <label>
-          {t.guardias.filtro_hasta}
+          {t.turnos_guardia.filtro_hasta}
           <input type="date" value={f.hasta} onChange={(e) => set('hasta', e.target.value)} />
         </label>
         <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>

@@ -5,7 +5,7 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Esta lista reemplaza a las zonas escritas a mano, que decidían tres
- * cosas a la vez sin que se notara: a quién se le ofrece una guardia, qué Asistentes ve cada
+ * cosas a la vez sin que se notara: a quién se le ofrece un turno de guardia, qué Asistentes ve cada
  * coordinadora y qué zonas ve el Cliente. Los agujeros que tapa acá:
  *
  *  1. Que un lugar entre marcado como oficial sin traer el identificador del organismo. Marcado

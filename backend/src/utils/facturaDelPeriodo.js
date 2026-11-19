@@ -26,7 +26,7 @@
    en `aNombreDeQuienSaleLaFactura`.
 
    LA CUENTA NO VIVE ACÁ. Qué se cobra por cada prestación —con la medición que rija y la
-   prestación vigente el día de cada guardia— lo calcula `calcularLiquidacion.js`, que es el mismo
+   prestación vigente el día de cada turno de guardia— lo calcula `calcularLiquidacion.js`, que es el mismo
    archivo en el Panel y en el backend. Acá sólo se arma lo que va a la base. */
 
 import { calcularLiquidacionDelCliente } from './calcularLiquidacion.js';
@@ -239,18 +239,18 @@ export function seSuperponen(a, b) {
  *   renglones: Array<{paciente_id, servicio_id, descripcion, monto, cantidad, unidad, precio_unitario,
  *     concepto}>,
  *   total: number, moneda: string|null, monedasMezcladas: boolean,
- *   guardiasSinAsignar: number, guardiasAmbiguas: number, sinPrecio: number, sinCantidadPactada: number,
+ *   turnosGuardiaSinAsignar: number, turnosGuardiaAmbiguos: number, sinPrecio: number, sinCantidadPactada: number,
  *   medicionDesconocida: boolean,
  * }}
  */
-export function armarLaFacturaDelPeriodo({ periodo, parte = null, medicion, condiciones, prestaciones, guardias, nombresDePacientes }) {
+export function armarLaFacturaDelPeriodo({ periodo, parte = null, medicion, condiciones, prestaciones, turnos_guardia, nombresDePacientes }) {
   const liquidacion = calcularLiquidacionDelCliente({
     periodo,
     parte,
     medicion,
     condiciones,
     prestaciones: prestaciones ?? [],
-    guardias: guardias ?? [],
+    turnos_guardia: turnos_guardia ?? [],
     nombresDePacientes: nombresDePacientes ?? new Map(),
   });
   const monedas = liquidacion.monedas.filter(Boolean);
@@ -272,8 +272,8 @@ export function armarLaFacturaDelPeriodo({ periodo, parte = null, medicion, cond
     // sería convertir sin cotización.
     moneda: monedas.length === 1 ? monedas[0] : null,
     monedasMezcladas: monedas.length > 1,
-    guardiasSinAsignar: liquidacion.guardiasSinAsignar,
-    guardiasAmbiguas: liquidacion.guardiasAmbiguas,
+    turnosGuardiaSinAsignar: liquidacion.turnosGuardiaSinAsignar,
+    turnosGuardiaAmbiguos: liquidacion.turnosGuardiaAmbiguos,
     sinPrecio: liquidacion.sinPrecio.length,
     sinCantidadPactada: liquidacion.sinCantidadPactada.length,
     medicionDesconocida: liquidacion.medicionDesconocida,

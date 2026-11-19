@@ -76,7 +76,7 @@ const { default: express } = await import('express');
 await import('express-async-errors');
 const {
   panelLiquidacionesRouter,
-  acumularGuardias,
+  acumularTurnosGuardia,
   calcularLiquidacion,
   escalasEstablesDelPeriodo,
   esPeriodoValido,
@@ -158,43 +158,43 @@ describe('las horas del mes', () => {
     // Ocho horas trabajadas son ocho, atienda a uno o a cinco. La lista que entra acá es la
     // de guardias y nada más: no trae Pacientes, justamente para que no haya forma de
     // contarlas dos veces.
-    const acumulado = acumularGuardias([
+    const acumulado = acumularTurnosGuardia([
       { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00' },
     ]);
     assert.equal(acumulado.get('a-1').horas, 8);
-    assert.equal(acumulado.get('a-1').guardias, 1);
+    assert.equal(acumulado.get('a-1').turnos_guardia, 1);
   });
 
   it('la cuenta del Asistente nunca se cruza con la lista de Pacientes', () => {
     // Esta es la prueba de fondo del renglón anterior, y se hace mirando el código: unir
-    // `guardias` con `guardia_pacientes` haría aparecer dos veces la misma guardia y el
+    // `turnos_guardia` con `turno_guardia_pacientes` haría aparecer dos veces el mismo turno de guardia y el
     // Asistente cobraría dieciséis horas por ocho trabajadas. Si alguna vez alguien
     // "completa" la consulta, esto falla acá y no en el recibo de alguien.
     const codigo = readFileSync(new URL('../panelLiquidaciones.js', import.meta.url), 'utf8');
-    assert.equal(codigo.includes("from('guardia_pacientes')"), false);
+    assert.equal(codigo.includes("from('turno_guardia_pacientes')"), false);
   });
 
   it('la guardia de noche no da horas negativas', () => {
-    const acumulado = acumularGuardias([
+    const acumulado = acumularTurnosGuardia([
       { asistente_id: 'a-1', estado: 'completada', hora_inicio: '22:00', hora_fin: '06:00' },
     ]);
     assert.equal(acumulado.get('a-1').horas, 8);
   });
 
   it('solo se cuentan las guardias cerradas', () => {
-    const acumulado = acumularGuardias([
+    const acumulado = acumularTurnosGuardia([
       { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00', hora_fin: '16:00' },
       { asistente_id: 'a-1', estado: 'programada', hora_inicio: '08:00', hora_fin: '16:00' },
       { asistente_id: 'a-1', estado: 'cancelada', hora_inicio: '08:00', hora_fin: '16:00' },
     ]);
-    assert.equal(acumulado.get('a-1').guardias, 1);
+    assert.equal(acumulado.get('a-1').turnos_guardia, 1);
     assert.equal(acumulado.get('a-1').horas, 8);
   });
 });
 
 describe('la base: valor por hora o por semana', () => {
   it('quien cobra por hora: las horas por su valor', () => {
-    const { liquidacion, items } = liquidar(ASISTENTE_POR_HORA, { guardias: 10, horas: 80 });
+    const { liquidacion, items } = liquidar(ASISTENTE_POR_HORA, { turnos_guardia: 10, horas: 80 });
     assert.equal(liquidacion.base_unidad, 'valor_hora');
     assert.equal(liquidacion.base_valor, 1500);
     assert.equal(liquidacion.bruto, 120000);
@@ -207,22 +207,22 @@ describe('la base: valor por hora o por semana', () => {
   it('quien cobra por semana cobra los días del período, no las horas', () => {
     // El mismo mes con las mismas horas que arriba tiene que dar las semanas y nada más: para
     // esa persona las horas son un control, no la cuenta.
-    const { liquidacion } = liquidar(ASISTENTE_POR_SEMANA, { guardias: 10, horas: 80 });
+    const { liquidacion } = liquidar(ASISTENTE_POR_SEMANA, { turnos_guardia: 10, horas: 80 });
     assert.equal(liquidacion.base_unidad, 'valor_semana');
     assert.equal(liquidacion.bruto, 310000);
     assert.equal(liquidacion.horas, 80);
   });
 
   it('la semana se paga aunque no haya hecho ninguna guardia', () => {
-    const { liquidacion } = liquidar(ASISTENTE_POR_SEMANA, { guardias: 0, horas: 0 });
+    const { liquidacion } = liquidar(ASISTENTE_POR_SEMANA, { turnos_guardia: 0, horas: 0 });
     assert.equal(liquidacion.bruto, 310000);
-    assert.equal(liquidacion.guardias_contadas, 0);
+    assert.equal(liquidacion.turnos_guardia_contados, 0);
   });
 
   it('sin el dato de base no se liquida nada', () => {
     // No se estima, no se completa con el de otro, no se pone cero: un cero se lee como "no
     // se le paga nada", que es una afirmación distinta de "no sabemos cuánto".
-    const resultado = liquidar({ ...ASISTENTE_POR_HORA, valor_hora: null }, { guardias: 1, horas: 8 });
+    const resultado = liquidar({ ...ASISTENTE_POR_HORA, valor_hora: null }, { turnos_guardia: 1, horas: 8 });
     assert.equal(resultado.faltaBase, true);
     assert.equal(resultado.liquidacion, undefined);
   });
@@ -230,17 +230,17 @@ describe('la base: valor por hora o por semana', () => {
 
 describe('las otras dos unidades de medición: la guardia y la semana', () => {
   // Agosto de 2026 tiene 31 días, que es el período de `liquidar`.
-  const POR_GUARDIA = { id: 'a-3', nombre: 'Tercera', relaciones_laborales: { nombre: 'Monotributo' }, unidad_medicion: 'guardia', valor_guardia: 50000 };
+  const POR_TURNO_GUARDIA = { id: 'a-3', nombre: 'Tercera', relaciones_laborales: { nombre: 'Monotributo' }, unidad_medicion: 'turno_guardia', valor_turno_guardia: 50000 };
   const POR_SEMANA = { id: 'a-4', nombre: 'Cuarta', relaciones_laborales: { nombre: 'Monotributo' }, unidad_medicion: 'semana', valor_semana: 70000 };
 
   it('por guardia se paga lo que hizo, sin mirar cuántas horas duró cada una', () => {
-    const { liquidacion } = liquidar(POR_GUARDIA, { guardias: 10, horas: 240 });
-    assert.equal(liquidacion.base_unidad, 'valor_guardia');
+    const { liquidacion } = liquidar(POR_TURNO_GUARDIA, { turnos_guardia: 10, horas: 240 });
+    assert.equal(liquidacion.base_unidad, 'valor_turno_guardia');
     assert.equal(liquidacion.bruto, 500000);
   });
 
   it('por semana, los días del período divididos por siete', () => {
-    const { liquidacion } = liquidar(POR_SEMANA, { guardias: 8, horas: 64 });
+    const { liquidacion } = liquidar(POR_SEMANA, { turnos_guardia: 8, horas: 64 });
     assert.equal(liquidacion.base_unidad, 'valor_semana');
     assert.equal(liquidacion.bruto, 310000);
   });
@@ -251,12 +251,12 @@ describe('a quien cobra un monto fijo y entró o se fue a mitad de camino', () =
 
   it('de fábrica se le paga la parte de los días que estuvo', () => {
     // Del 17 al 31 hay 15 días, y quince séptimos de 70.000 son 150.000.
-    const { liquidacion } = liquidar(ENTRO_A_MITAD, { guardias: 5, horas: 40 });
+    const { liquidacion } = liquidar(ENTRO_A_MITAD, { turnos_guardia: 5, horas: 40 });
     assert.equal(liquidacion.bruto, 150000);
   });
 
   it('si la Prestadora apagó el prorrateo, cobra el monto entero', () => {
-    const { liquidacion } = liquidar(ENTRO_A_MITAD, { guardias: 5, horas: 40 }, {
+    const { liquidacion } = liquidar(ENTRO_A_MITAD, { turnos_guardia: 5, horas: 40 }, {
       reglaDePago: { prorratear_monto_fijo: false },
     });
     assert.equal(liquidacion.bruto, 310000);
@@ -264,9 +264,9 @@ describe('a quien cobra un monto fijo y entró o se fue a mitad de camino', () =
 
   it('a quien cobra por hora el prorrateo no le cambia nada: cobra lo que hizo', () => {
     const conAlta = { ...ASISTENTE_POR_HORA, fecha_alta: '2026-08-17' };
-    assert.equal(liquidar(conAlta, { guardias: 5, horas: 40 }).liquidacion.bruto, 60000);
+    assert.equal(liquidar(conAlta, { turnos_guardia: 5, horas: 40 }).liquidacion.bruto, 60000);
     assert.equal(
-      liquidar(conAlta, { guardias: 5, horas: 40 }, { reglaDePago: { prorratear_monto_fijo: false } }).liquidacion.bruto,
+      liquidar(conAlta, { turnos_guardia: 5, horas: 40 }, { reglaDePago: { prorratear_monto_fijo: false } }).liquidacion.bruto,
       60000
     );
   });
@@ -276,7 +276,7 @@ describe('las horas de más', () => {
   const CON_VALOR_EXTRA = { ...ASISTENTE_POR_HORA, valor_hora_extra: 2250 };
 
   it('se suman a la cuenta del mes desde lo anotado en cada guardia', () => {
-    const acumulado = acumularGuardias([
+    const acumulado = acumularTurnosGuardia([
       { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00', hora_fin: '16:00', horas_extra: 2 },
       { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00', hora_fin: '16:00', horas_extra: 1.5 },
       { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00', hora_fin: '16:00' },
@@ -286,7 +286,7 @@ describe('las horas de más', () => {
   });
 
   it('salen en su propio renglón, a su propio valor, y entran al bruto', () => {
-    const { liquidacion, items } = liquidar(CON_VALOR_EXTRA, { guardias: 10, horas: 80, horasExtra: 4 });
+    const { liquidacion, items } = liquidar(CON_VALOR_EXTRA, { turnos_guardia: 10, horas: 80, horasExtra: 4 });
     const renglon = items.find((i) => i.unidad === 'horas_extra');
     assert.equal(renglon.valor_aplicado, 2250);
     assert.equal(renglon.monto, 9000);
@@ -298,7 +298,7 @@ describe('las horas de más', () => {
   // Estimarlas con el valor hora normal sería inventar un número, y pagarlas a cero sería
   // borrarlas en silencio. Se avisa, igual que con un concepto sin escala vigente.
   it('sin el valor cargado no se pagan, y queda dicho por qué', () => {
-    const { liquidacion, items, sinEscala } = liquidar(ASISTENTE_POR_HORA, { guardias: 10, horas: 80, horasExtra: 4 });
+    const { liquidacion, items, sinEscala } = liquidar(ASISTENTE_POR_HORA, { turnos_guardia: 10, horas: 80, horasExtra: 4 });
     assert.equal(items.some((i) => i.unidad === 'horas_extra'), false);
     assert.equal(liquidacion.importe_horas_extra, 0);
     assert.equal(liquidacion.valor_hora_extra, null);
@@ -308,7 +308,7 @@ describe('las horas de más', () => {
   });
 
   it('un mes sin horas de más no agrega ningún renglón', () => {
-    const { liquidacion, items, sinEscala } = liquidar(CON_VALOR_EXTRA, { guardias: 10, horas: 80, horasExtra: 0 });
+    const { liquidacion, items, sinEscala } = liquidar(CON_VALOR_EXTRA, { turnos_guardia: 10, horas: 80, horasExtra: 0 });
     assert.equal(items.length, 1);
     assert.equal(liquidacion.horas_extra, 0);
     assert.equal(sinEscala.length, 0);
@@ -317,7 +317,7 @@ describe('las horas de más', () => {
   it('se le pagan también a quien cobra un monto fijo', () => {
     const { liquidacion } = liquidar(
       { ...ASISTENTE_POR_SEMANA, valor_hora_extra: 3000 },
-      { guardias: 10, horas: 80, horasExtra: 2 }
+      { turnos_guardia: 10, horas: 80, horasExtra: 2 }
     );
     assert.equal(liquidacion.bruto, 316000);
   });
@@ -334,7 +334,7 @@ describe('los conceptos que pone la Prestadora', () => {
   };
 
   it('un porcentaje se aplica sobre el bruto', () => {
-    const { liquidacion, items } = liquidar(ASISTENTE_POR_HORA, { guardias: 10, horas: 80 }, { conceptos: [aporte] });
+    const { liquidacion, items } = liquidar(ASISTENTE_POR_HORA, { turnos_guardia: 10, horas: 80 }, { conceptos: [aporte] });
     assert.equal(liquidacion.bruto, 120000);
     assert.equal(liquidacion.total_restas, 12000);
     assert.equal(liquidacion.total_sumas, 0);
@@ -350,14 +350,14 @@ describe('los conceptos que pone la Prestadora', () => {
       { id: 'c-2', nombre: 'Adicional por hora', signo: 'suma', unidad: 'monto_por_hora', origen_valor: 'propio', valor: 50 },
       { id: 'c-3', nombre: 'Adelanto entregado', signo: 'resta', unidad: 'monto_fijo_mensual', origen_valor: 'propio', valor: 20000 },
     ];
-    const { liquidacion } = liquidar(ASISTENTE_POR_HORA, { guardias: 10, horas: 80 }, { conceptos });
+    const { liquidacion } = liquidar(ASISTENTE_POR_HORA, { turnos_guardia: 10, horas: 80 }, { conceptos });
     assert.equal(liquidacion.total_sumas, 4000);
     assert.equal(liquidacion.total_restas, 20000);
     assert.equal(liquidacion.neto, 104000);
   });
 
   it('el nombre del concepto se copia al renglón, no se busca después', () => {
-    const { items } = liquidar(ASISTENTE_POR_HORA, { guardias: 1, horas: 8 }, { conceptos: [aporte] });
+    const { items } = liquidar(ASISTENTE_POR_HORA, { turnos_guardia: 1, horas: 8 }, { conceptos: [aporte] });
     assert.equal(items[1].descripcion, aporte.nombre);
     assert.equal(items[1].concepto_id, 'c-1');
   });
@@ -383,7 +383,7 @@ describe('los conceptos que salen de una escala legal', () => {
     // cargado, el concepto no entra y la Prestadora se entera.
     const { liquidacion, items, sinEscala } = liquidar(
       ASISTENTE_POR_HORA,
-      { guardias: 10, horas: 80 },
+      { turnos_guardia: 10, horas: 80 },
       { conceptos: [conceptoConEscala], escalasPorTipo: escalas([]) }
     );
     assert.equal(items.length, 1);
@@ -399,7 +399,7 @@ describe('los conceptos que salen de una escala legal', () => {
     ]);
     const { liquidacion, items, sinEscala } = liquidar(
       ASISTENTE_POR_HORA,
-      { guardias: 10, horas: 80 },
+      { turnos_guardia: 10, horas: 80 },
       { conceptos: [conceptoConEscala], escalasPorTipo: cargadas }
     );
     assert.equal(sinEscala.length, 0);
@@ -415,7 +415,7 @@ describe('los conceptos que salen de una escala legal', () => {
     const concepto = { ...conceptoConEscala, unidad: 'monto_fijo_mensual', escala_tipo: 'piso_de_prueba' };
     const { items, sinEscala } = liquidar(
       ASISTENTE_POR_HORA,
-      { guardias: 10, horas: 80 },
+      { turnos_guardia: 10, horas: 80 },
       { conceptos: [concepto], escalasPorTipo: enOtraMoneda, moneda: 'ARS' }
     );
     assert.equal(items.length, 1);
@@ -507,11 +507,11 @@ describe('quién puede mirar y quién puede tocar', () => {
 });
 
 describe('generar el mes', () => {
-  function prepararLaBase({ liquidacionesExistentes = [], remuneracion, configuracionPago = [], guardias } = {}) {
+  function prepararLaBase({ liquidacionesExistentes = [], remuneracion, configuracionPago = [], turnos_guardia } = {}) {
     respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS' }]);
-    // La fecha de la guardia importa: desde que el período puede ser una semana, cada uno se
-    // queda con las guardias que caen adentro de sus bordes.
-    respuestas.set('GET /rest/v1/guardias', () => guardias ?? [
+    // La fecha del turno de guardia importa: desde que el período puede ser una semana, cada uno se
+    // queda con los turnos de guardia que caen adentro de sus bordes.
+    respuestas.set('GET /rest/v1/turnos_guardia', () => turnos_guardia ?? [
       { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
     ]);
     respuestas.set('GET /rest/v1/asistentes', () => [
@@ -604,7 +604,7 @@ describe('generar el mes', () => {
     prepararLaBase();
     const { estado } = await pedir('POST', '/generar', { periodo: 'agosto' });
     assert.equal(estado, 400);
-    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/guardias'), false);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/turnos_guardia'), false);
   });
 
   // -------------------------------------------------------------------------------------
@@ -614,8 +614,8 @@ describe('generar el mes', () => {
   // persona recibe los períodos suyos: uno solo si cobra por mes, cinco si cobra los viernes.
   // -------------------------------------------------------------------------------------
 
-  /** Una guardia de ocho horas, que a mil quinientos la hora da doce mil. */
-  const guardiaDe = (id, fecha) => ({
+  /** Un turno de guardia de ocho horas, que a mil quinientos la hora da doce mil. */
+  const turnoGuardiaDe = (id, fecha) => ({
     id,
     fecha,
     estado: 'completada',
@@ -625,15 +625,15 @@ describe('generar el mes', () => {
   });
 
   it('quien cobra por semana recibe una liquidación por cada semana del mes', async () => {
-    // Agosto de 2026 con corte los viernes tiene cinco semanas, y hay una guardia en cada una.
+    // Agosto de 2026 con corte los viernes tiene cinco semanas, y hay un turno de guardia en cada una.
     prepararLaBase({
       configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'semana' } }],
-      guardias: [
-        guardiaDe('g-1', '2026-08-03'),
-        guardiaDe('g-2', '2026-08-10'),
-        guardiaDe('g-3', '2026-08-18'),
-        guardiaDe('g-4', '2026-08-25'),
-        guardiaDe('g-5', '2026-08-31'),
+      turnos_guardia: [
+        turnoGuardiaDe('g-1', '2026-08-03'),
+        turnoGuardiaDe('g-2', '2026-08-10'),
+        turnoGuardiaDe('g-3', '2026-08-18'),
+        turnoGuardiaDe('g-4', '2026-08-25'),
+        turnoGuardiaDe('g-5', '2026-08-31'),
       ],
     });
 
@@ -653,7 +653,7 @@ describe('generar el mes', () => {
       ]
     );
 
-    // Y cada semana cobra la suya: ninguna guardia se paga dos veces ni se queda sin pagar.
+    // Y cada semana cobra la suya: ningún turno de guardia se paga dos veces ni se queda sin pagar.
     for (const escritura of escrituras) {
       assert.equal(escritura.cuerpo.horas, 8);
       assert.equal(escritura.cuerpo.bruto, 12000);
@@ -663,7 +663,7 @@ describe('generar el mes', () => {
   it('quien cobra cada quince días recibe períodos de catorce días que cierran el viernes', async () => {
     prepararLaBase({
       configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'quincena' } }],
-      guardias: [guardiaDe('g-1', '2026-08-10'), guardiaDe('g-2', '2026-08-20')],
+      turnos_guardia: [turnoGuardiaDe('g-1', '2026-08-10'), turnoGuardiaDe('g-2', '2026-08-20')],
     });
 
     const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
@@ -758,9 +758,9 @@ describe('con qué se le pagó al Asistente', () => {
       },
     ]);
     respuestas.set('PATCH /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pagada' }]);
-    // De qué modalidad son las guardias que esta liquidación paga. Sin esto el backend no puede
+    // De qué modalidad son los turnos de guardia que esta liquidación paga. Sin esto el backend no puede
     // saber si el medio anotado alcanza, y un control que no supo contra qué comparar niega.
-    respuestas.set('GET /rest/v1/guardias', () => [{ canal_modalidad: 'directa' }]);
+    respuestas.set('GET /rest/v1/turnos_guardia', () => [{ canal_modalidad: 'directa' }]);
   }
 
   it('un medio que el catálogo no nombra no llega a la base', async () => {
@@ -880,7 +880,7 @@ describe('con qué credencial entra cada ruta', () => {
 
   it('generar el mes va con la credencial de quien pide y sin filtrar por Prestadora', async () => {
     respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS' }]);
-    respuestas.set('GET /rest/v1/guardias', () => [
+    respuestas.set('GET /rest/v1/turnos_guardia', () => [
       { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
     ]);
     respuestas.set('GET /rest/v1/asistentes', () => [
@@ -904,7 +904,7 @@ describe('con qué credencial entra cada ruta', () => {
       assert.equal(llamada.credencial, credencialEnviada, `${llamada.clave} no fue con la credencial de quien pide`);
       assert.notEqual(llamada.credencial, LLAVE_MAESTRA);
     }
-    for (const tabla of ['guardias', 'asistentes', 'remuneraciones_asistente', 'configuracion_pago_asistentes', 'conceptos_liquidacion', 'liquidaciones_asistente']) {
+    for (const tabla of ['turnos_guardia', 'asistentes', 'remuneraciones_asistente', 'configuracion_pago_asistentes', 'conceptos_liquidacion', 'liquidaciones_asistente']) {
       const lectura = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
       assert.ok(!lectura.url.includes('prestadora_id='), `${tabla}: el aislamiento lo hace la base, no un filtro`);
     }
@@ -918,7 +918,7 @@ describe('con qué credencial entra cada ruta', () => {
     ]);
     respuestas.set('GET /rest/v1/liquidaciones_asistente_items', () => []);
     respuestas.set('GET /rest/v1/asistentes', () => [{ id: 'a-1', nombre: 'Asistente de prueba' }]);
-    respuestas.set('GET /rest/v1/guardias', () => []);
+    respuestas.set('GET /rest/v1/turnos_guardia', () => []);
 
     const { estado } = await pedir('GET', '/liq-1');
     assert.equal(estado, 200);

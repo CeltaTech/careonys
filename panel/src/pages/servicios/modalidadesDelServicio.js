@@ -1,14 +1,14 @@
 // En qué modalidades trabaja un Servicio y quién administra cada una. Lo usan la lista y el Detalle del servicio.
 //
-// La modalidad no está guardada en el Servicio ni en la prestación: la lleva cada guardia, en la
+// La modalidad no está guardada en el Servicio ni en la prestación: la lleva cada turno de guardia, en la
 // columna `canal_modalidad` (nombre guardado, no se renombra). Las del Servicio son las que
-// aparecen en sus guardias, en el orden fijo de `MODALIDADES`.
+// aparecen en sus turnos de guardia, en el orden fijo de `MODALIDADES`.
 
 import { MODALIDAD, MODALIDADES } from '../../lib/modalidades';
 
 /** Las modalidades distintas que aparecen en una lista de guardias. */
-export function modalidadesDeGuardias(guardias) {
-  const presentes = new Set((guardias ?? []).map((g) => g?.canal_modalidad).filter(Boolean));
+export function modalidadesDeTurnosGuardia(turnos_guardia) {
+  const presentes = new Set((turnos_guardia ?? []).map((g) => g?.canal_modalidad).filter(Boolean));
   return MODALIDADES.filter((m) => presentes.has(m));
 }
 

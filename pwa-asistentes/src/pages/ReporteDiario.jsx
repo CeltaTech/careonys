@@ -40,7 +40,7 @@ export default function ReporteDiario() {
   const navigate = useNavigate();
   const seVe = useSeVe();
 
-  // De quién habla este reporte. El nombre se muestra arriba de todo, siempre, aunque el turno
+  // De quién habla este reporte. El nombre se muestra arriba de todo, siempre, aunque el turno de guardia
   // cubra a una sola persona: escribir la comida y la medicación en el reporte equivocado es un
   // daño que después nadie encuentra.
   const [paciente, setPaciente] = useState(null);
@@ -87,13 +87,13 @@ export default function ReporteDiario() {
   useEffect(() => {
     let activo = true;
     api
-      .guardia(id)
-      .then(({ guardia, vitalesPorPaciente }) => {
+      .turno_guardia(id)
+      .then(({ turno_guardia, vitalesPorPaciente }) => {
         if (!activo) return;
-        setPaciente((guardia?.pacientes ?? []).find((p) => p.id === pacienteId) ?? null);
+        setPaciente((turno_guardia?.pacientes ?? []).find((p) => p.id === pacienteId) ?? null);
         // Los signos vitales son de una persona: la presión normal de la señora de la casa no es
         // la del marido, y la autorización de monitoreo puede estar firmada para una y no para
-        // la otra. Por eso se toman los de este Paciente y no los del turno.
+        // la otra. Por eso se toman los de este Paciente y no los del turno de guardia.
         const vitales = vitalesPorPaciente?.[pacienteId];
         setVitalesHabilitados(!!vitales?.habilitados);
         // Con la autorización del Cliente no entran los que se toman pinchando: ésos sólo los toma
@@ -166,7 +166,7 @@ export default function ReporteDiario() {
     }
   }
 
-  // El reporte ya no pide ubicación: desde que el cierre de guardia es un acto propio
+  // El reporte ya no pide ubicación: desde que el cierre del turno de guardia es un acto propio
   // (tarea 66a), los dos momentos que dejan constancia de dónde estuvo el Asistente son la
   // llegada y el retiro, y los dos la registran. Exigir el GPS también acá solo servía para
   // dejarlo sin poder mandar el reporte cuando el teléfono no consigue señal satelital.
@@ -194,13 +194,13 @@ export default function ReporteDiario() {
       } catch (e) {
         if (!esErrorDeRed(e)) throw e;
         // Sin señal: se guarda local y se reintenta solo al volver la conexión.
-        await agregarACola({ id: clienteUuid, tipo: 'reporte', guardiaId: id, payload: datos });
+        await agregarACola({ id: clienteUuid, tipo: 'reporte', turnoGuardiaId: id, payload: datos });
         setGuardadoPendiente(true);
         sincronizarCola();
       }
-      // Vuelve a la guardia, no a la lista: ahí está el botón de cerrarla, que es el paso
+      // Vuelve al turno de guardia, no a la lista: ahí está el botón de cerrarlo, que es el paso
       // que sigue y el que antes ocurría solo, sin que el Asistente lo viera.
-      setTimeout(() => navigate(`/guardias/${id}`), 1500);
+      setTimeout(() => navigate(`/turnos-guardia/${id}`), 1500);
     } catch (e) {
       setError(mensajeDeError(e, t, 'confirmar reporte'));
     } finally {
@@ -219,7 +219,7 @@ export default function ReporteDiario() {
 
   return (
     <div>
-      <Link to={`/guardias/${id}`} className="btn btn-volver">
+      <Link to={`/turnos-guardia/${id}`} className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <section className="pwa-card">
@@ -253,7 +253,7 @@ export default function ReporteDiario() {
           </button>
           {!enLinea && (
             <>
-              <p className="guardia-card-detalle">{t.reporte.ia_requiere_conexion}</p>
+              <p className="tarjeta-detalle">{t.reporte.ia_requiere_conexion}</p>
               <button className="btn btn-secondary btn-full" onClick={completarAMano}>
                 {t.reporte.completar_a_mano}
               </button>
@@ -380,7 +380,7 @@ export default function ReporteDiario() {
             <div className="form-field">
               <label htmlFor="foto">{t.reporte.agregar_foto}</label>
               <input id="foto" type="file" accept="image/jpeg,image/png" onChange={alSubirFoto} disabled={!enLinea} />
-              {!enLinea && <p className="guardia-card-detalle">{t.reporte.foto_requiere_conexion}</p>}
+              {!enLinea && <p className="tarjeta-detalle">{t.reporte.foto_requiere_conexion}</p>}
             </div>
           )}
 

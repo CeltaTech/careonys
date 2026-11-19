@@ -22,7 +22,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
-const GUARDIA = '11111111-1111-4111-8111-111111111111';
+const TURNO_GUARDIA = '11111111-1111-4111-8111-111111111111';
 const COORDINADORA = '22222222-2222-4222-8222-222222222222';
 const ANTERIOR = '2026-11-08T10:00:00.000Z';
 
@@ -98,37 +98,37 @@ const pedidos = (clave) => llamadas.filter((l) => l.clave === clave);
 
 describe('anotarElAviso', () => {
   const aviso = {
-    tabla: 'guardias',
+    tabla: 'turnos_guardia',
     prestadoraId: PRESTADORA_DE_PRUEBA,
-    id: GUARDIA,
+    id: TURNO_GUARDIA,
     columna: 'aviso_sin_cerrar_at',
     cambios: { aviso_sin_cerrar_at: '2026-11-08T10:05:00.000Z', aviso_sin_cerrar_veces: 2 },
   };
 
   it('anota sólo si la fila sigue como la vio esta vuelta, y en la Prestadora de la vuelta', async () => {
-    respuestas.set('PATCH /rest/v1/guardias', [{ id: GUARDIA }]);
+    respuestas.set('PATCH /rest/v1/turnos_guardia', [{ id: TURNO_GUARDIA }]);
     assert.equal(await anotarElAviso({ ...aviso, anterior: ANTERIOR }), true);
 
-    const [pedido] = pedidos('PATCH /rest/v1/guardias');
+    const [pedido] = pedidos('PATCH /rest/v1/turnos_guardia');
     assert.equal(pedido.filtros.get('prestadora_id'), `eq.${PRESTADORA_DE_PRUEBA}`);
-    assert.equal(pedido.filtros.get('id'), `eq.${GUARDIA}`);
+    assert.equal(pedido.filtros.get('id'), `eq.${TURNO_GUARDIA}`);
     assert.equal(pedido.filtros.get('aviso_sin_cerrar_at'), `eq.${ANTERIOR}`);
     assert.deepEqual(pedido.cuerpo, aviso.cambios);
   });
 
   it('el primer aviso pide que no haya ninguno anotado', async () => {
-    respuestas.set('PATCH /rest/v1/guardias', [{ id: GUARDIA }]);
+    respuestas.set('PATCH /rest/v1/turnos_guardia', [{ id: TURNO_GUARDIA }]);
     await anotarElAviso({ ...aviso, anterior: null });
-    assert.equal(pedidos('PATCH /rest/v1/guardias')[0].filtros.get('aviso_sin_cerrar_at'), 'is.null');
+    assert.equal(pedidos('PATCH /rest/v1/turnos_guardia')[0].filtros.get('aviso_sin_cerrar_at'), 'is.null');
   });
 
   it('si otra vuelta ya la anotó, contesta que no: el aviso no sale', async () => {
-    respuestas.set('PATCH /rest/v1/guardias', []);
+    respuestas.set('PATCH /rest/v1/turnos_guardia', []);
     assert.equal(await anotarElAviso({ ...aviso, anterior: ANTERIOR }), false);
   });
 
   it('si la base no deja anotar, falla: el aviso tampoco sale', async () => {
-    respuestas.set('PATCH /rest/v1/guardias', { estado: 403, cuerpo: { code: '42501', message: 'permission denied' } });
+    respuestas.set('PATCH /rest/v1/turnos_guardia', { estado: 403, cuerpo: { code: '42501', message: 'permission denied' } });
     await assert.rejects(anotarElAviso({ ...aviso, anterior: ANTERIOR }));
   });
 });
@@ -142,11 +142,11 @@ describe('escalarSiCorresponde', () => {
   }
 
   async function unaVuelta() {
-    const yaSalieron = await escalonesYaAvisados({ prestadoraId: PRESTADORA_DE_PRUEBA, tipo: 'guardia_sin_cerrar' });
+    const yaSalieron = await escalonesYaAvisados({ prestadoraId: PRESTADORA_DE_PRUEBA, tipo: 'turno_guardia_sin_cerrar' });
     return escalarSiCorresponde({
       prestadoraId: PRESTADORA_DE_PRUEBA,
-      tipo: 'guardia_sin_cerrar',
-      referenciaId: GUARDIA,
+      tipo: 'turno_guardia_sin_cerrar',
+      referenciaId: TURNO_GUARDIA,
       minutosPremura: 30,
       config,
       idioma: 'es-AR',
@@ -161,7 +161,7 @@ describe('escalarSiCorresponde', () => {
     respuestas.set('POST /rest/v1/escalones_de_alarma_avisados', () => {
       // En el momento de la constancia todavía no se intentó ningún correo.
       assert.equal(correosIntentados, 0);
-      constancias.push({ referencia_id: GUARDIA, escalon: ESCALONES.ADMINISTRACION });
+      constancias.push({ referencia_id: TURNO_GUARDIA, escalon: ESCALONES.ADMINISTRACION });
       return [];
     });
     respuestas.set('GET /rest/v1/escalones_de_alarma_avisados', () => constancias);

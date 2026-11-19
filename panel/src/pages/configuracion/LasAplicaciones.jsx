@@ -42,12 +42,12 @@ export function ConfiguracionAplicaciones() {
 }
 
 /* Cómo se toma la ubicación del Asistente. Hay viaje en las dos formas: desde «Salgo ahora»
-   hasta el check-in se sigue continuo. La diferencia es la guardia: con «Viaje y turno» se hace
+   hasta el check-in se sigue continuo. La diferencia es el turno de guardia: con «Viaje y turno» se hace
    un control cada tantos minutos, que anota sólo si estaba dentro o fuera del domicilio; con
    «Sólo viaje» no hay control, y queda la ubicación del check-in y del check-out. */
 function UbicacionDelAsistente() {
   const { t } = useLocale();
-  const [enElTurno, setEnElTurno] = useState(true);
+  const [enElTurnoGuardia, setEnElTurnoGuardia] = useState(true);
   const [minutos, setMinutos] = useState('');
   const [errorMinutos, setErrorMinutos] = useState(null);
   const [dias, setDias] = useState('');
@@ -62,7 +62,7 @@ function UbicacionDelAsistente() {
     setError(null);
     try {
       const datos = await llamarApi('/ubicacion-del-asistente');
-      setEnElTurno(datos.control_de_ubicacion_en_el_turno);
+      setEnElTurnoGuardia(datos.control_de_ubicacion_en_el_turno_guardia);
       setMinutos(datos.minutos_entre_controles_de_ubicacion);
       setDias(datos.dias_para_aceptar_la_ubicacion);
       setEstado('listo');
@@ -88,8 +88,8 @@ function UbicacionDelAsistente() {
 
   async function guardar() {
     // Con «Sólo viaje» los dos campos están escondidos y guardan lo que tenían.
-    const faltaMinutos = enElTurno && !minutosValidos(minutos);
-    const faltaDias = enElTurno && !diasValidos(dias);
+    const faltaMinutos = enElTurnoGuardia && !minutosValidos(minutos);
+    const faltaDias = enElTurnoGuardia && !diasValidos(dias);
     setErrorMinutos(faltaMinutos ? t.configuracion.ubicacion_minutos_fuera_de_rango : null);
     setErrorDias(faltaDias ? t.configuracion.ubicacion_dias_fuera_de_rango : null);
     if (faltaMinutos || faltaDias) {
@@ -103,7 +103,7 @@ function UbicacionDelAsistente() {
       await llamarApi('/ubicacion-del-asistente', {
         method: 'PATCH',
         body: JSON.stringify({
-          control_de_ubicacion_en_el_turno: enElTurno,
+          control_de_ubicacion_en_el_turno_guardia: enElTurnoGuardia,
           minutos_entre_controles_de_ubicacion: Number(minutos),
           dias_para_aceptar_la_ubicacion: Number(dias),
         }),
@@ -128,15 +128,15 @@ function UbicacionDelAsistente() {
           <div className="molde-formgrid">
             <FormField
               label={t.configuracion.ubicacion_forma}
-              name="control_de_ubicacion_en_el_turno"
+              name="control_de_ubicacion_en_el_turno_guardia"
               type="select"
-              value={enElTurno ? 'viaje_y_turno' : 'solo_viaje'}
-              onChange={(e) => { setEnElTurno(e.target.value === 'viaje_y_turno'); setGuardado(false); }}
+              value={enElTurnoGuardia ? 'viaje_y_turno_guardia' : 'solo_viaje'}
+              onChange={(e) => { setEnElTurnoGuardia(e.target.value === 'viaje_y_turno_guardia'); setGuardado(false); }}
             >
-              <option value="viaje_y_turno">{t.configuracion.ubicacion_viaje_y_turno}</option>
+              <option value="viaje_y_turno_guardia">{t.configuracion.ubicacion_viaje_y_turno_guardia}</option>
               <option value="solo_viaje">{t.configuracion.ubicacion_solo_viaje}</option>
             </FormField>
-            {enElTurno && (
+            {enElTurnoGuardia && (
               <>
                 <FormField
                   label={t.configuracion.ubicacion_minutos}

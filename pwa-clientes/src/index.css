@@ -105,7 +105,7 @@ a {
 }
 
 .pwa-card,
-.guardia-card,
+.tarjeta,
 .login-card {
   display: block;
   background: var(--blanco);
@@ -524,22 +524,22 @@ a {
   color: var(--gris);
 }
 
-/* ---------- Guardias ---------- */
+/* ---------- Turnos de guardia ---------- */
 
-.guardia-card-paciente {
+.tarjeta-paciente {
   font-family: var(--font-display);
   color: var(--tinta);
   font-weight: 700;
   margin-bottom: 4px;
 }
 
-.guardia-card-detalle {
+.tarjeta-detalle {
   color: var(--gris);
   font-size: 11px;
   margin: 0;
 }
 
-.guardia-card-detalle + .guardia-card-detalle {
+.tarjeta-detalle + .tarjeta-detalle {
   margin-top: 4px;
 }
 
@@ -549,7 +549,7 @@ a {
   text-decoration: underline;
 }
 
-.guardia-timer {
+.turno-guardia-timer {
   font-family: var(--font-display);
   font-size: 27px;
   font-weight: 750;
@@ -604,7 +604,7 @@ a {
   color: var(--info-texto);
 }
 
-/* ---------- La semana de guardias ---------- */
+/* ---------- La semana de turnos de guardia ---------- */
 
 /* Los dos botones de mover la semana, y en el medio qué semana se está mirando. En un
    teléfono angosto el rango se acomoda arriba en su propio renglón: los botones no se
@@ -627,7 +627,7 @@ a {
   font-weight: 700;
 }
 
-/* Cada día es un bloque, tenga guardias o no: la semana se lee de corrido y el día sin
+/* Cada día es un bloque, tenga turnos de guardia o no: la semana se lee de corrido y el día sin
    nadie también contesta la pregunta. */
 .semana-dia {
   margin-bottom: 10px;
@@ -1046,7 +1046,7 @@ a {
 }
 
 /* Adentro de una tarjeta, otra tarjeta no lleva su propio marco: se separa con una línea. */
-.pwa-card .guardia-card {
+.pwa-card .tarjeta {
   border: 0;
   border-top: 1px solid var(--linea-suave);
   border-radius: 0;

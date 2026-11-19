@@ -352,7 +352,7 @@ de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 encontrando porque guardan el identificador interno de la función, no su nombre. **Una función se
 queda en `public` solamente si el navegador la llama a propósito, y entonces no puede recibir un
 identificador que la apunte a otra Prestadora** — hoy el Panel llama ocho: `resolver`, que
-resuelve la Prestadora adentro con `prestadora_actual()`; `reasignar_guardia_por_emergencia`, que
+resuelve la Prestadora adentro con `prestadora_actual()`; `reasignar_turno_guardia_por_emergencia`, que
 también la resuelve adentro, corre con los permisos de quien llama y es el único camino por el que
 una guardia empezada —la ausente— cambia de Asistente, con motivo y registro, con un
 segundo motivo cuando se la asigna igual a quien tiene documentos pendientes, y rechazando a quien
@@ -434,7 +434,7 @@ y el Panel, con el responsable vacío cuando es el Contratante. Adentro de la ba
 `interno.responsables_de_pagos_en` contesta quiénes son los Responsables de pagos de un Servicio en
 una fecha.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
-`desactivar_la_cuenta` y `turnos_que_traban_la_desactivacion`, que toman la Prestadora de esa
+`desactivar_la_cuenta` y `turnos_guardia_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial; `borrar_consultas_a_hce_vencidas`, que no recibe nada, borra de esa Prestadora los
 años enteros del registro de accesos cuyo plazo de su país ya venció y deja el corte y el
 registro de actividad; `aviso_de_borrado_de_consultas_a_hce_pendiente`, que no recibe nada y

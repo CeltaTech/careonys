@@ -5,18 +5,18 @@ import { con } from '../../lib/textos';
 import { Button } from '../ui/Button';
 
 /* Las tarjetas de arriba del Inicio: una por cada cosa que puede estar mal. Al tocar una, la
-   grilla de abajo queda sólo con esas guardias.
+   grilla de abajo queda sólo con esos turnos de guardia.
 
-   No cuenta nada: qué guardia cae en cada tarjeta y cuándo va en rojo lo decide
+   No cuenta nada: qué turno de guardia cae en cada tarjeta y cuándo va en rojo lo decide
    `lib/excepciones.js`, que es la misma función con la que se filtra la grilla. Así el número
    y la lista no pueden discrepar.
 
    Quien elige el filtro es la página de arriba (`onElegir`): la franja avisa y nada más. */
 
-export function FranjaExcepciones({ guardias, ctx, excepcionActiva, onElegir }) {
+export function FranjaExcepciones({ turnos_guardia, ctx, excepcionActiva, onElegir }) {
   const { t } = useLocale();
 
-  const resumen = useMemo(() => resumenDeExcepciones(guardias, ctx), [guardias, ctx]);
+  const resumen = useMemo(() => resumenDeExcepciones(turnos_guardia, ctx), [turnos_guardia, ctx]);
   const nombreDe = (exc) => con(t.estado_actual[exc.claveEtiqueta], exc.parametros);
   const activa = resumen.find((exc) => exc.id === excepcionActiva) ?? null;
 

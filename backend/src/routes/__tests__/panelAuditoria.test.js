@@ -55,7 +55,7 @@ const USUARIOS = [
 const ACCESOS = [
   { id: 'acc-a-1', prestadora_id: PRESTADORA_A, usuario_id: 'ua-1', paciente_id: 'pa-1', categorias: ['reportes'], momento: '2026-11-01T10:00:00Z', origen: 'POST /api/panel/informacion-de-salud/reportes' },
   { id: 'acc-a-2', prestadora_id: PRESTADORA_A, usuario_id: null, paciente_id: 'pa-1', categorias: ['alertas'], momento: '2026-11-01T09:00:00Z', origen: 'tarea programada' },
-  { id: 'acc-b-1', prestadora_id: PRESTADORA_B, usuario_id: 'ub-1', paciente_id: 'pb-1', categorias: ['reportes'], momento: '2026-11-02T10:00:00Z', origen: 'GET /api/app-asistentes/guardias/:id' },
+  { id: 'acc-b-1', prestadora_id: PRESTADORA_B, usuario_id: 'ub-1', paciente_id: 'pb-1', categorias: ['reportes'], momento: '2026-11-02T10:00:00Z', origen: 'GET /api/app-asistentes/turnos-guardia/:id' },
 ];
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
@@ -556,7 +556,7 @@ describe('la revisión del registro de accesos', () => {
       { consulta_id: 'acc-a-1', usuario_id: 'ua-1', persona: 'Coordinación Inventada A', paciente_id: 'pa-1', paciente: 'Paciente Inventado A', categorias: ['reportes'], momento: '2026-11-01T03:00:00Z', origen: 'POST /api/panel/informacion-de-salud/reportes', motivos: ['fuera_del_horario', 'sin_relacion_con_el_paciente'] },
     ],
     [PRESTADORA_B]: [
-      { consulta_id: 'acc-b-1', usuario_id: 'ub-1', persona: 'Coordinación Inventada B', paciente_id: 'pb-1', paciente: 'Paciente Inventado B', categorias: ['reportes'], momento: '2026-11-02T10:00:00Z', origen: 'GET /api/app-asistentes/guardias/:id', motivos: ['volumen_inusual'] },
+      { consulta_id: 'acc-b-1', usuario_id: 'ub-1', persona: 'Coordinación Inventada B', paciente_id: 'pb-1', paciente: 'Paciente Inventado B', categorias: ['reportes'], momento: '2026-11-02T10:00:00Z', origen: 'GET /api/app-asistentes/turnos-guardia/:id', motivos: ['volumen_inusual'] },
     ],
   };
   const RESUMEN = {

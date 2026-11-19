@@ -305,9 +305,9 @@ CREATE POLICY panel_gestiona_guardias ON guardias
 
 **Patrón OR para FK nullable (ejemplo oficial, `incidentes_relevo`):**
 cuando una tabla tiene una FK opcional que cambia de qué fila derivar el alcance según esté NULL
-o no (acá, `guardia_saliente_id` NULL = "Ausente sin relevo previo"), la policy resuelve ambos
+o no (acá, `turno_guardia_saliente_id` NULL = "Ausente sin relevo previo"), la policy resuelve ambos
 casos con dos llamadas a la misma función unidas por `OR`, en vez de intentar una sola condición
-que cubra los dos. `interno.coordinador_ve_la_guardia` devuelve falso ante un NULL:
+que cubra los dos. `interno.coordinador_ve_el_turno_guardia` devuelve falso ante un NULL:
 
 ```sql
 -- Copiado de la base (pg_policies).
@@ -319,10 +319,10 @@ CREATE POLICY coordinador_gestiona_incidentes_relevo_de_sus_servicios ON inciden
 ```
 
 Tablas que **nunca** deben tener policy de lectura para `asistente` ni `cliente`:
-`escalas_legales`, `ausencias`, `guardias_cobertura`, `remuneraciones_asistente`,
+`escalas_legales`, `ausencias`, `turnos_guardia_cobertura`, `remuneraciones_asistente`,
 `datos_reservados_asistente`.
 
-**Lo que se le paga al Asistente vive en una tabla aparte.** `valor_hora`, `valor_guardia`,
+**Lo que se le paga al Asistente vive en una tabla aparte.** `valor_hora`, `valor_turno_guardia`,
 `valor_semana`, `valor_hora_extra`, `moneda`, `unidad_medicion` y
 `frecuencia_pago` están en `remuneraciones_asistente`, no en `asistentes`, con su propia policy de
 lectura. Contra `asistentes` es uno a uno
@@ -352,9 +352,9 @@ no recorta columnas, y una fila abierta le entregaba el teléfono y el domicilio
 Asistente —nombre, foto, tipo y certificado vigente, sólo del que tiene una guardia en curso o
 próxima— se lo arma el backend con el trabajo de la Prestadora y columnas contadas
 (`backend/src/routes/appClientes.js`). Y el código QR vale sólo para la guardia de hoy
-(`backend/src/utils/comprobacionDePresencia.js`, `esGuardiaDeHoy`).
+(`backend/src/utils/comprobacionDePresencia.js`, `esTurnoGuardiaDeHoy`).
 
-Por el mismo motivo, el Cliente no lee de la base ninguna fila de `guardias`, de `personas` del
+Por el mismo motivo, el Cliente no lee de la base ninguna fila de `turnos_guardia`, de `personas` del
 Paciente, de `informacion_de_salud_del_paciente` ni de `domicilios_temporales_paciente`. La base no
 distingue entre el titular y la persona autorizada, ni sabe qué le dio el titular a cada una: una
 fila abierta le entregaba a cualquiera de las dos el punto del que salió el Asistente, el domicilio
@@ -432,16 +432,16 @@ ausencia de otro Coordinador que lo alcanza, mientras dura. No se da acceso tota
 `coordinador` salvo en las tablas donde el PRD lo indica explícitamente.
 
 Esa función está en las policies de las tablas de Asistentes —entre otras `asistentes`,
-`verificaciones_asistente`, `ausencias`, `guardias_cobertura`, `certificados`, `incidentes_relevo`,
-`guardias_tracking_gps` y `reportes`—. Las tablas que cuelgan de una guardia —`guardias`,
-`series_guardias`, `extensiones_de_turno`, `guardia_comprobaciones`,
-`incidentes_turno_sin_cubrir`, `excepciones_familiar_relevo` y `consentimientos_paciente_solo`—
-usan `interno.coordinador_alcanza_guardia(asistente_id)`, que además alcanza la guardia que todavía
+`verificaciones_asistente`, `ausencias`, `turnos_guardia_cobertura`, `certificados`, `incidentes_relevo`,
+`turnos_guardia_tracking_gps` y `reportes`—. Las tablas que cuelgan de una guardia —`turnos_guardia`,
+`series_turnos_guardia`, `extensiones_de_turno_guardia`, `turno_guardia_comprobaciones`,
+`incidentes_turno_guardia_sin_cubrir`, `excepciones_familiar_relevo` y `consentimientos_paciente_solo`—
+usan `interno.coordinador_alcanza_turno_guardia(asistente_id)`, que además alcanza la guardia que todavía
 no tiene Asistente. Van en policies separadas de las de administración, que Postgres combina con OR
 al ser ambas permisivas. Una alarma que llega a todos los Coordinadores abre una vía más, aparte de
-la zona: en `guardias` y en `incidentes_relevo`, el Coordinador ve la fila de la alarma que tiene a
-la vista y modifica la de la alarma que tomó (`coordinador_ve_la_guardia_de_una_alarma_que_llego_a_todos`,
-`coordinador_resuelve_la_guardia_de_una_alarma_que_tomo`, `coordinador_ve_la_alarma_que_llego_a_todos`,
+la zona: en `turnos_guardia` y en `incidentes_relevo`, el Coordinador ve la fila de la alarma que tiene a
+la vista y modifica la de la alarma que tomó (`coordinador_ve_el_turno_guardia_de_una_alarma_que_llego_a_todos`,
+`coordinador_resuelve_el_turno_guardia_de_una_alarma_que_tomo`, `coordinador_ve_la_alarma_que_llego_a_todos`,
 `coordinador_resuelve_la_alarma_que_tomo`).
 
 En `clientes`, `pacientes` y `prestaciones` el alcance del Coordinador no sale de la zona sino de
@@ -454,16 +454,16 @@ ese Cliente (`coordinador_agrega_pacientes`).
 
 **Guardias:** las tablas de guardias tienen RLS multi-tenant aplicada, incluido el patrón
 OR-de-dos-EXISTS de `incidentes_relevo` documentado arriba, y las consume el backend —entre
-otras, `backend/src/routes/panelGuardias.js`, `panelEmergencias.js` y `appAsistentes.js`—.
+otras, `backend/src/routes/panelTurnosGuardia.js`, `panelEmergencias.js` y `appAsistentes.js`—.
 
 - **A una guardia con check-in no se le saca ningún Paciente**: la base rechaza borrar o
-  cambiar una fila de `guardia_pacientes` y cambiar `guardias.paciente_id` (disparadores
-  `guardia_empezada_no_pierde_pacientes` y `guardia_empezada_no_cambia_de_paciente`).
+  cambiar una fila de `turno_guardia_pacientes` y cambiar `turnos_guardia.paciente_id` (disparadores
+  `turno_guardia_empezado_no_pierde_pacientes` y `turno_guardia_empezado_no_cambia_de_paciente`).
 - **Una guardia empezada no cambia de Asistente, de día ni de horario.** Empezada es la que
   tiene check-in o un estado que no sea programada, pausada o cancelada. El disparador
-  `guardia_empezada_no_cambia_de_asistente` rechaza en ella todo cambio de `asistente_id`,
+  `turno_guardia_empezado_no_cambia_de_asistente` rechaza en ella todo cambio de `asistente_id`,
   `fecha`, `hora_inicio` y `hora_fin`. La única excepción es la guardia **ausente** —empezó y
-  nadie la está haciendo—, que pasa sólo por `reasignar_guardia_por_emergencia`: toma la
+  nadie la está haciendo—, que pasa sólo por `reasignar_turno_guardia_por_emergencia`: toma la
   Prestadora y la persona de la sesión, exige el motivo, cambia sólo el Asistente, deja la
   guardia en `programada` esperando el check-in de quien la cubre, y anota en
   `auditoria_reasignaciones_por_emergencia` quién, cuándo, la guardia, el Asistente anterior, el
@@ -565,7 +565,7 @@ CREATE POLICY prestadora_ve_los_contactos_vistos ON contactos_vistos_intermediac
   );
 ```
 
-`guardias_tracking_gps` guarda el histórico de posiciones del Asistente durante una guardia
+`turnos_guardia_tracking_gps` guarda el histórico de posiciones del Asistente durante una guardia
 activa, que es un dato personal sensible bajo la Ley 25.326 (geolocalización de una persona
 física).
 

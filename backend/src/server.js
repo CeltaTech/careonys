@@ -50,14 +50,14 @@ import { paraCadaPrestadora } from './db/connection.js';
 import { revisarVencimientos } from './utils/vencimientos.js';
 import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
 import { revisarNotificacionesCoordinador, revisarEmergenciasSinTomar } from './utils/revisarNotificacionesCoordinador.js';
-import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.js';
+import { extenderSeriesTurnoGuardiaAbiertas } from './utils/generacionSeriesTurnoGuardia.js';
 import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
-import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
+import { revisarTurnosGuardiaSinCubrir } from './utils/revisarTurnosGuardiaSinCubrir.js';
 import { revisarAusenciasAvisadas } from './utils/revisarAusenciasAvisadas.js';
 import { extenderCoberturasDeAusencia } from './utils/coberturaDeAusencia.js';
-import { revisarIncidentesTurnoSinCubrir } from './utils/revisarIncidentesTurnoSinCubrir.js';
+import { revisarIncidentesTurnoGuardiaSinCubrir } from './utils/revisarIncidentesTurnoGuardiaSinCubrir.js';
 import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
-import { revisarExtensionesDeTurno } from './utils/revisarExtensionesDeTurno.js';
+import { revisarExtensionesDeTurnoGuardia } from './utils/revisarExtensionesDeTurnoGuardia.js';
 import { recordarLosEnlacesDeActivacion } from './utils/activacionCuenta.js';
 import { avisarLosCambiosDeEmail } from './utils/avisosDeEmailCambiado.js';
 import { avisarLosPlazosDeUbicacionVencidos } from './utils/plazoDeLaUbicacion.js';
@@ -84,7 +84,7 @@ import { panelIntermediacionRouter } from './routes/panelIntermediacion.js';
 import { panelCalificacionesRouter } from './routes/panelCalificaciones.js';
 import { panelWhatsappRouter } from './routes/panelWhatsapp.js';
 import { panelRespuestasPreparadasRouter } from './routes/panelRespuestasPreparadas.js';
-import { panelGuardiasRouter } from './routes/panelGuardias.js';
+import { panelTurnosGuardiaRouter } from './routes/panelTurnosGuardia.js';
 import { panelComprobacionesRouter } from './routes/panelComprobaciones.js';
 import { panelAvisosEnVivoRouter } from './routes/panelAvisosEnVivo.js';
 import { cobranzaExternaRouter } from './routes/avisoDeCobranzaExterna.js';
@@ -214,7 +214,7 @@ app.use('/api/panel/intermediacion', panelIntermediacionRouter);
 app.use('/api/panel/calificaciones', panelCalificacionesRouter);
 app.use('/api/panel/whatsapp', panelWhatsappRouter);
 app.use('/api/panel/respuestas-preparadas', panelRespuestasPreparadasRouter);
-app.use('/api/panel/guardias', panelGuardiasRouter);
+app.use('/api/panel/turnos-guardia', panelTurnosGuardiaRouter);
 app.use('/api/panel/comprobaciones', panelComprobacionesRouter);
 app.use('/api/panel/avisos-en-vivo', panelAvisosEnVivoRouter);
 app.use('/api/panel/derechos-de-la-persona', panelDerechosDeLaPersonaRouter);
@@ -223,7 +223,7 @@ app.use('/api/panel/incidentes-de-seguridad', panelIncidentesDeSeguridadRouter);
 
 // Las tareas automatizadas. Cada una corre de a una Prestadora por vez, con la credencial de esa
 // sola Prestadora (db/connection.js): lo que la tarea consulta, la base se lo recorta a esa
-// Prestadora, y lo que falla en una no frena a las demás. Arranca apenas se levanta el backend y
+// Prestadora, y lo que falla en una no frena a las demás. Arranca apenas se cargan los mensajes y
 // después se repite con su cadencia.
 //
 // Si una vuelta todavía no terminó cuando toca la siguiente, la siguiente no arranca: dos vueltas
@@ -231,6 +231,19 @@ app.use('/api/panel/incidentes-de-seguridad', panelIncidentesDeSeguridadRouter);
 //
 // La tarea que necesita saber en qué Prestadora está la pide con `conLaPrestadora`, y la recibe
 // como único argumento. Las demás no reciben nada.
+// Las frases de los mensajes viven en la base y se editan desde afuera. Se traen una vez, al
+// arrancar, y quedan en memoria: un mensaje se arma mientras se está mandando un correo y ahí no
+// hay lugar para esperar una consulta. Ninguna tarea da su primera vuelta antes de que la carga
+// termine: si no, los primeros correos saldrían con la marca de frase faltante aunque la frase
+// esté en la base. Si la lectura falla, el backend sigue levantado, las tareas corren igual y los
+// mensajes salen con esa marca, que es lo que se quiere ver.
+const mensajesListos = cargarMensajesDelSistema()
+  .then(({ cargadas, error }) => {
+    if (error) return;
+    console.log(`Mensajes del sistema cargados: ${cargadas}`);
+  })
+  .catch((err) => console.error('No se pudieron cargar los mensajes del sistema:', err));
+
 function programar(tarea, cadaMs, { conLaPrestadora = false } = {}) {
   let corriendo = false;
   const correr = () => {
@@ -240,7 +253,7 @@ function programar(tarea, cadaMs, { conLaPrestadora = false } = {}) {
       .catch((err) => console.error(`${tarea.name}:`, err?.message ?? err))
       .finally(() => { corriendo = false; });
   };
-  correr();
+  mensajesListos.then(correr);
   setInterval(correr, cadaMs);
 }
 
@@ -263,9 +276,9 @@ programar(revisarEmergenciasSinTomar, UN_MINUTO_MS);
 
 // Renovación automática del horizonte de guardias de series abiertas (pendiente #18 punto 2,
 // docs/PLAN_HASTA_PRODUCCION.md) — se mide en días, misma cadencia que revisarVencimientos.
-programar(extenderSeriesGuardiaAbiertas, UN_DIA_MS);
+programar(extenderSeriesTurnoGuardiaAbiertas, UN_DIA_MS);
 
-// Push a Asistentes (nueva guardia asignada, mensajes del coordinador, recordatorios) —
+// Push a Asistentes (nuevo turno de guardia asignado, mensajes del coordinador, recordatorios) —
 // docs/PRD_04_05_App_Servicio.md:115. Misma cadencia que revisarAusenciasAutomaticas.
 programar(revisarRecordatoriosPush, CINCO_MINUTOS_MS);
 
@@ -280,9 +293,9 @@ programar(revisarAvisosAutomaticosDelCierreDelServicio, CINCO_MINUTOS_MS);
 
 // Mensaje al Coordinador de guardias próximas que siguen sin cubrir (pendiente #106,
 // docs/PLAN_HASTA_PRODUCCION.md). Con cuánta anticipación avisar y cada cuánto repetirlo los define
-// cada Prestadora en configuracion_aviso_guardia_sin_cubrir; acá solo se fija cada cuánto se
+// cada Prestadora en configuracion_aviso_turno_guardia_sin_cubrir; acá solo se fija cada cuánto se
 // mira, y se mira seguido porque la anticipación configurada puede ser de pocas horas.
-programar(revisarGuardiasSinCubrir, CINCO_MINUTOS_MS);
+programar(revisarTurnosGuardiaSinCubrir, CINCO_MINUTOS_MS);
 
 // Mensaje a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta: con
 // margen para conseguir reemplazo, o con el turno empezando enseguida. El de arriba no lo ve,
@@ -300,19 +313,19 @@ programar(extenderCoberturasDeAusencia, CINCO_MINUTOS_MS);
 // terminó. El mensaje de arriba mira los mismos turnos, pero avisa y se termina; éste deja constancia
 // y le insiste a quien coordina a ese Paciente. Se mira seguido porque la insistencia se cuenta en
 // horas y el turno que se acerca cambia de estado solo.
-programar(revisarIncidentesTurnoSinCubrir, CINCO_MINUTOS_MS);
+programar(revisarIncidentesTurnoGuardiaSinCubrir, CINCO_MINUTOS_MS);
 
 // Alertas de llegada demorada que nadie avisó (pendiente #101, docs/PLAN_HASTA_PRODUCCION.md). Sólo detecta
 // y anota; de avisarle al Coordinador se ocupa revisarNotificacionesCoordinador, que ya insiste
 // sobre esa misma tabla. Corre seguido porque lo que mira son minutos: cuanto antes se anote,
-// más tiempo queda para cubrir la guardia.
+// más tiempo queda para cubrir el turno de guardia.
 programar(revisarLlegadasDemoradas, CINCO_MINUTOS_MS);
 
 // La Asistente que se queda adentro porque el relevo no llegó. Sólo anota desde cuándo está de
 // más y hasta cuándo: no avisa nada —de que falta el relevo ya se enteró quien coordina— y no
 // decide nada. Corre seguido porque lo que mira son minutos, y porque su pantalla necesita saber
 // que quedó de más apenas pasa la hora.
-programar(revisarExtensionesDeTurno, CINCO_MINUTOS_MS);
+programar(revisarExtensionesDeTurnoGuardia, CINCO_MINUTOS_MS);
 
 // El recordatorio del enlace de activación que sigue sin usarse. La espera se cuenta en días, pero
 // se mira cada hora para que el recordatorio no llegue casi un día tarde.
@@ -364,7 +377,7 @@ programar(avisarLosDerechosPorVencer, UN_DIA_MS, { conLaPrestadora: true });
       .catch((err) => console.error('copiarLosArchivosAlRespaldo:', err?.message ?? err))
       .finally(() => { copiando = false; });
   };
-  copiar();
+  mensajesListos.then(copiar);
   setInterval(copiar, UN_DIA_MS);
 }
 
@@ -380,7 +393,7 @@ programar(avisarLosDerechosPorVencer, UN_DIA_MS, { conLaPrestadora: true });
       .catch((err) => console.error('cargarLosIndicesPublicos:', err?.message ?? err))
       .finally(() => { cargando = false; });
   };
-  cargarIndices();
+  mensajesListos.then(cargarIndices);
   setInterval(cargarIndices, UN_DIA_MS);
 }
 
@@ -397,7 +410,7 @@ programar(avisarLosDerechosPorVencer, UN_DIA_MS, { conLaPrestadora: true });
       .catch((err) => console.error('avisarLasAlarmasDeLasCuentasAutomaticas:', err?.message ?? err))
       .finally(() => { corriendo = false; });
   };
-  avisar();
+  mensajesListos.then(avisar);
   setInterval(avisar, UN_MINUTO_MS);
 }
 
@@ -422,17 +435,6 @@ secretoDeLosCodigos();
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Backend escuchando en puerto ${PORT}`);
-
-  // Las frases de los mensajes viven en la base y se editan desde afuera. Se traen una vez, acá, y
-  // quedan en memoria: un mensaje se arma mientras se está mandando un correo y ahí no hay lugar
-  // para esperar una consulta. Si la lectura falla, el backend sigue levantado y los mensajes salen
-  // con la marca de frase faltante, que es lo que se quiere ver.
-  cargarMensajesDelSistema()
-    .then(({ cargadas, error }) => {
-      if (error) return;
-      console.log(`Mensajes del sistema cargados: ${cargadas}`);
-    })
-    .catch((err) => console.error('No se pudieron cargar los mensajes del sistema:', err));
 });
 
 // Red de seguridad de último recurso a nivel de proceso: cubre errores fuera del ciclo

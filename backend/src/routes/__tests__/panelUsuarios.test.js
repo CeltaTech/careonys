@@ -27,8 +27,8 @@ let llamadas = [];
 let cuentaExiste = true;
 let rolDeQuienLlama = 'admin_prestadora';
 let choqueAlReactivar = null;
-let conTurnosPorDelante = false;
-let turnosQueTraban = [];
+let conTurnosGuardiaPorDelante = false;
+let turnosGuardiaQueTraban = [];
 let asistenteExiste = true;
 let coordinadorConElPermiso = false;
 let asistenteASuCargo = true;
@@ -99,8 +99,8 @@ const baseFalsa = createServer((req, res) => {
       respuesta = credencial?.role !== 'trabajo_sin_persona' && asistenteExiste
         && (rolDeQuienLlama === 'admin_prestadora' || asistenteASuCargo);
     }
-    if (clave === 'POST /rest/v1/rpc/turnos_que_traban_la_desactivacion') {
-      respuesta = credencial?.role === 'trabajo_sin_persona' ? turnosQueTraban : [];
+    if (clave === 'POST /rest/v1/rpc/turnos_guardia_que_traban_la_desactivacion') {
+      respuesta = credencial?.role === 'trabajo_sin_persona' ? turnosGuardiaQueTraban : [];
     }
     if (clave === 'POST /rest/v1/rpc/reactivar_la_cuenta') {
       if (choqueAlReactivar) {
@@ -112,9 +112,9 @@ const baseFalsa = createServer((req, res) => {
     }
     if (clave === 'PATCH /rest/v1/usuarios') respuesta = cuentaExiste ? [{ id: CUENTA }] : [];
     if (clave === 'POST /rest/v1/rpc/desactivar_la_cuenta') {
-      if (conTurnosPorDelante) {
+      if (conTurnosGuardiaPorDelante) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ code: 'P0001', message: 'desactivacion_con_turnos_por_delante' }));
+        res.end(JSON.stringify({ code: 'P0001', message: 'desactivacion_con_turnos_guardia_por_delante' }));
         return;
       }
       respuesta = true;
@@ -154,8 +154,8 @@ beforeEach(() => {
   cuentaExiste = true;
   rolDeQuienLlama = 'admin_prestadora';
   choqueAlReactivar = null;
-  conTurnosPorDelante = false;
-  turnosQueTraban = [];
+  conTurnosGuardiaPorDelante = false;
+  turnosGuardiaQueTraban = [];
   asistenteExiste = true;
   coordinadorConElPermiso = false;
   asistenteASuCargo = true;
@@ -262,12 +262,12 @@ describe('las cuentas de coordinación del Panel', () => {
   });
 
   // Con turnos de guardia por delante la base no desactiva; el backend lo contesta con su motivo y
-  // no anota ninguna baja. Lo que la base hace cumplir lo prueba `scripts/probar_desactivar_con_turnos.mjs`.
+  // no anota ninguna baja. Lo que la base hace cumplir lo prueba `scripts/probar_desactivar_con_turnos_guardia.mjs`.
   it('una cuenta con turnos por delante no se da de baja', async () => {
-    conTurnosPorDelante = true;
+    conTurnosGuardiaPorDelante = true;
     const { estado, cuerpo } = await pedir('DELETE', `/${CUENTA}`, { motivo: 'Motivo inventado' });
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'desactivacion_con_turnos_por_delante');
+    assert.equal(cuerpo.motivo, 'desactivacion_con_turnos_guardia_por_delante');
     assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/registro_actividad'),
       'quedó anotada una baja que no se hizo');
   });
@@ -358,12 +358,12 @@ describe('las cuentas desactivadas', () => {
 });
 
 // La baja de un Asistente, desde su Legajo. Lo que la base hace cumplir —qué turnos traban y que un
-// Asistente desactivado no se elige— lo prueban `scripts/probar_desactivar_con_turnos.mjs` y
+// Asistente desactivado no se elige— lo prueban `scripts/probar_desactivar_con_turnos_guardia.mjs` y
 // `scripts/probar_asistente_desactivado.mjs`; acá, el candado, la Prestadora y la respuesta.
 const PASADO_MANANA = new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 const ANTEAYER = new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-const POR_DELANTE = { tipo: 'guardia', id: 'g1', fecha: PASADO_MANANA, hora_inicio: '08:00:00', hora_fin: '16:00:00', checkin_at: null, cliente: 'Cliente inventado' };
-const SIN_CERRAR = { tipo: 'guardia', id: 'g2', fecha: ANTEAYER, hora_inicio: '08:00:00', hora_fin: '16:00:00', checkin_at: null, cliente: 'Otro cliente inventado' };
+const POR_DELANTE = { tipo: 'turno_guardia', id: 'g1', fecha: PASADO_MANANA, hora_inicio: '08:00:00', hora_fin: '16:00:00', checkin_at: null, cliente: 'Cliente inventado' };
+const SIN_CERRAR = { tipo: 'turno_guardia', id: 'g2', fecha: ANTEAYER, hora_inicio: '08:00:00', hora_fin: '16:00:00', checkin_at: null, cliente: 'Otro cliente inventado' };
 
 describe('la baja de un Asistente', () => {
   const RUTA = `/asistentes/${ASISTENTE}/desactivar`;
@@ -387,36 +387,36 @@ describe('la baja de un Asistente', () => {
   });
 
   it('con turnos por delante no se desactiva, y dice cuáles reasignar', async () => {
-    conTurnosPorDelante = true;
-    turnosQueTraban = [POR_DELANTE];
+    conTurnosGuardiaPorDelante = true;
+    turnosGuardiaQueTraban = [POR_DELANTE];
     const { estado, cuerpo } = await pedir('POST', RUTA, { motivo: 'Motivo inventado' });
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'desactivacion_con_turnos_por_delante');
-    assert.deepEqual(cuerpo.motivos, ['desactivacion_con_turnos_por_delante']);
-    assert.deepEqual(cuerpo.turnos.map((t) => [t.id, t.motivo, t.cliente]),
-      [['g1', 'desactivacion_con_turnos_por_delante', 'Cliente inventado']]);
-    conElTrabajoDeLaPrestadora(llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/turnos_que_traban_la_desactivacion'));
+    assert.equal(cuerpo.motivo, 'desactivacion_con_turnos_guardia_por_delante');
+    assert.deepEqual(cuerpo.motivos, ['desactivacion_con_turnos_guardia_por_delante']);
+    assert.deepEqual(cuerpo.turnos_guardia.map((t) => [t.id, t.motivo, t.cliente]),
+      [['g1', 'desactivacion_con_turnos_guardia_por_delante', 'Cliente inventado']]);
+    conElTrabajoDeLaPrestadora(llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/turnos_guardia_que_traban_la_desactivacion'));
     assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/registro_actividad'), 'quedó anotada una baja que no se hizo');
   });
 
   it('con turnos terminados sin cerrar no se desactiva, y dice cuáles cerrar', async () => {
-    conTurnosPorDelante = true;
-    turnosQueTraban = [SIN_CERRAR];
+    conTurnosGuardiaPorDelante = true;
+    turnosGuardiaQueTraban = [SIN_CERRAR];
     const { estado, cuerpo } = await pedir('POST', RUTA, { motivo: 'Motivo inventado' });
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'desactivacion_con_turnos_sin_cerrar');
-    assert.deepEqual(cuerpo.motivos, ['desactivacion_con_turnos_sin_cerrar']);
-    assert.deepEqual(cuerpo.turnos.map((t) => [t.id, t.motivo]), [['g2', 'desactivacion_con_turnos_sin_cerrar']]);
+    assert.equal(cuerpo.motivo, 'desactivacion_con_turnos_guardia_sin_cerrar');
+    assert.deepEqual(cuerpo.motivos, ['desactivacion_con_turnos_guardia_sin_cerrar']);
+    assert.deepEqual(cuerpo.turnos_guardia.map((t) => [t.id, t.motivo]), [['g2', 'desactivacion_con_turnos_guardia_sin_cerrar']]);
     assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/registro_actividad'));
   });
 
   it('con los dos casos dice los dos motivos', async () => {
-    conTurnosPorDelante = true;
-    turnosQueTraban = [SIN_CERRAR, POR_DELANTE];
+    conTurnosGuardiaPorDelante = true;
+    turnosGuardiaQueTraban = [SIN_CERRAR, POR_DELANTE];
     const { estado, cuerpo } = await pedir('POST', RUTA, { motivo: 'Motivo inventado' });
     assert.equal(estado, 409);
-    assert.deepEqual(cuerpo.motivos, ['desactivacion_con_turnos_por_delante', 'desactivacion_con_turnos_sin_cerrar']);
-    assert.equal(cuerpo.turnos.length, 2);
+    assert.deepEqual(cuerpo.motivos, ['desactivacion_con_turnos_guardia_por_delante', 'desactivacion_con_turnos_guardia_sin_cerrar']);
+    assert.equal(cuerpo.turnos_guardia.length, 2);
   });
 
   it('un coordinador sin el permiso no desactiva a un Asistente', async () => {
@@ -478,22 +478,22 @@ describe('la baja de un Asistente', () => {
 });
 
 describe('qué hacer con cada turno que traba', async () => {
-  const { motivoDelTurnoQueTraba } = await import('../../utils/cuentasPanel.js');
+  const { motivoDelTurnoGuardiaQueTraba } = await import('../../utils/cuentasPanel.js');
   const AHORA = new Date('2027-03-10T12:00:00');
   it('el que no empezó se reasigna', () => {
-    assert.equal(motivoDelTurnoQueTraba({ tipo: 'guardia', fecha: '2027-03-11', hora_inicio: '08:00:00' }, AHORA),
-      'desactivacion_con_turnos_por_delante');
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-11', hora_inicio: '08:00:00' }, AHORA),
+      'desactivacion_con_turnos_guardia_por_delante');
   });
   it('el que ya pasó se cierra', () => {
-    assert.equal(motivoDelTurnoQueTraba({ tipo: 'guardia', fecha: '2027-03-09', hora_inicio: '08:00:00' }, AHORA),
-      'desactivacion_con_turnos_sin_cerrar');
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-09', hora_inicio: '08:00:00' }, AHORA),
+      'desactivacion_con_turnos_guardia_sin_cerrar');
   });
   it('el que tiene llegada registrada se cierra, aunque la hora de inicio no haya llegado', () => {
-    assert.equal(motivoDelTurnoQueTraba({ tipo: 'guardia', fecha: '2027-03-10', hora_inicio: '13:00:00', checkin_at: '2027-03-10T11:50:00Z' }, AHORA),
-      'desactivacion_con_turnos_sin_cerrar');
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-10', hora_inicio: '13:00:00', checkin_at: '2027-03-10T11:50:00Z' }, AHORA),
+      'desactivacion_con_turnos_guardia_sin_cerrar');
   });
   it('una serie vigente se reasigna', () => {
-    assert.equal(motivoDelTurnoQueTraba({ tipo: 'serie', fecha: '2027-01-01', hora_inicio: '08:00:00' }, AHORA),
-      'desactivacion_con_turnos_por_delante');
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'serie', fecha: '2027-01-01', hora_inicio: '08:00:00' }, AHORA),
+      'desactivacion_con_turnos_guardia_por_delante');
   });
 });

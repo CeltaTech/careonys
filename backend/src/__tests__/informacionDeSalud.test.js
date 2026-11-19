@@ -80,13 +80,13 @@ test('lo pegado se lee aparte con la misma conexión, y la columna pedida sólo 
 
 test('!inner descarta las filas sin lo pegado, y el filtro de la guardia va a la base', async () => {
   const falsa = conexionFalsa({
-    leer_informacion_de_salud: [{ id: 'a', guardia_id: 'g1' }, { id: 'b', guardia_id: 'g2' }],
-    guardias: [{ id: 'g1', fecha: '2026-11-10' }],
+    leer_informacion_de_salud: [{ id: 'a', turno_guardia_id: 'g1' }, { id: 'b', turno_guardia_id: 'g2' }],
+    turnos_guardia: [{ id: 'g1', fecha: '2026-11-10' }],
   });
   const db = conRegistroDeSalud(falsa, 'GET /x');
-  const { data } = await db.from('reportes').select('id, guardias!inner(fecha)').eq('guardias.servicio_id', 's1');
-  assert.deepEqual(data, [{ id: 'a', guardias: { fecha: '2026-11-10' } }]);
-  assert.deepEqual(falsa.pedidos[0].args.p_filtros, [{ guardia: [{ columna: 'servicio_id', op: 'eq', valor: 's1' }] }]);
+  const { data } = await db.from('reportes').select('id, turnos_guardia!inner(fecha)').eq('turnos_guardia.servicio_id', 's1');
+  assert.deepEqual(data, [{ id: 'a', turnos_guardia: { fecha: '2026-11-10' } }]);
+  assert.deepEqual(falsa.pedidos[0].args.p_filtros, [{ turno_guardia: [{ columna: 'servicio_id', op: 'eq', valor: 's1' }] }]);
 });
 
 test('la relación nombrada dice qué tabla y por qué columna se pega', async () => {
@@ -157,6 +157,6 @@ test('un error de la base llega con su código', async () => {
   const falsa = conexionFalsa({
     agregar_informacion_de_salud: () => ({ data: null, error: { code: '23505', message: 'duplicada' } }),
   });
-  const { error } = await conRegistroDeSalud(falsa, 'X').from('emergencias_guardia').insert({ a: 1 }).select('id').maybeSingle();
+  const { error } = await conRegistroDeSalud(falsa, 'X').from('emergencias_turno_guardia').insert({ a: 1 }).select('id').maybeSingle();
   assert.equal(error.code, '23505');
 });

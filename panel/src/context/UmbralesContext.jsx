@@ -1,10 +1,10 @@
 // Los umbrales del semáforo de guardia, traídos de la configuración de cada Prestadora.
 //
-// QUÉ RESUELVE. El color de una guardia en la grilla —urgente, tarde, sin cerrar— sale de tres
+// QUÉ RESUELVE. El color de un turno de guardia en la grilla —urgente, tarde, sin cerrar— sale de tres
 // números que son reglas operativas, y una regla operativa no se escribe en el código
 // (`celtatech/CLAUDE.md`, «Nunca hardcodear»). Los tres ya viven en la base, cada uno en la tabla
 // donde esa Prestadora lo decidió; la traducción de columnas a umbrales está en
-// `lib/semaforoGuardia.js` y acá sólo se consulta.
+// `lib/semaforoTurnoGuardia.js` y acá sólo se consulta.
 //
 // POR QUÉ UNA SOLA CONSULTA PARA TODO EL PANEL. Los mismos tres números los necesitan la grilla,
 // el Estado actual, la Ficha del cliente y el Legajo del Asistente. Preguntarlos pantalla por
@@ -19,7 +19,7 @@
 // Prestadora ajena se pintaría con los umbrales de la anterior.
 //
 // MIENTRAS NO LLEGÓ LA RESPUESTA, VALEN LOS DE FÁBRICA. Una pantalla que no puede pintar un chip
-// no sirve, y la diferencia entre un umbral y otro es de matiz: en el peor caso una guardia queda
+// no sirve, y la diferencia entre un umbral y otro es de matiz: en el peor caso un turno de guardia queda
 // un instante del color de al lado.
 //
 // PERO EL FALLO SE DICE, no se disfraza de valor de fábrica. Antes, una lectura que
@@ -30,7 +30,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { UMBRALES, umbralesDeLaPrestadora } from '../lib/semaforoGuardia';
+import { UMBRALES, umbralesDeLaPrestadora } from '../lib/semaforoTurnoGuardia';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
 const UmbralesContext = createContext(UMBRALES);
@@ -39,7 +39,7 @@ const EstadoDeUmbralesContext = createContext('cargando');
 async function cargarUmbralesPropios(prestadoraId) {
   const [mensajeSinCubrir, ausenciaAutomatica, escaladaCoordinador] = await Promise.all([
     supabase
-      .from('configuracion_aviso_guardia_sin_cubrir')
+      .from('configuracion_aviso_turno_guardia_sin_cubrir')
       .select('horas_antes')
       .eq('prestadora_id', prestadoraId)
       .maybeSingle(),
@@ -50,7 +50,7 @@ async function cargarUmbralesPropios(prestadoraId) {
       .maybeSingle(),
     supabase
       .from('configuracion_escalada_coordinador')
-      .select('minutos_gracia_cierre_guardia')
+      .select('minutos_gracia_cierre_turno_guardia')
       .eq('prestadora_id', prestadoraId)
       .maybeSingle(),
   ]);

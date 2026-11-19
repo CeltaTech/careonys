@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { SITUACION, UMBRALES, situacionDeGuardia, umbralesDeLaPrestadora } from '../semaforoGuardia';
+import { SITUACION, UMBRALES, situacionDeTurnoGuardia, umbralesDeLaPrestadora } from '../semaforoTurnoGuardia';
 
 /* Los umbrales del semáforo salen de la configuración de cada Prestadora.
    ==========================================================================
 
    Las primeras pruebas miran la traducción de columnas a umbrales. Las últimas dos miran lo que
-   de verdad importa: que ese número cambie el color de una guardia. Comprobar sólo que la
+   de verdad importa: que ese número cambie el color de un turno de guardia. Comprobar sólo que la
    función devuelve `24` no probaría nada — un umbral bien traducido que nadie usa deja la grilla
    exactamente como estaba. */
 
@@ -14,7 +14,7 @@ describe('umbralesDeLaPrestadora', () => {
     const u = umbralesDeLaPrestadora({
       mensajeSinCubrir: { horas_antes: 24 },
       ausenciaAutomatica: { minutos_tolerancia_checkin: 30 },
-      escaladaCoordinador: { minutos_gracia_cierre_guardia: 90 },
+      escaladaCoordinador: { minutos_gracia_cierre_turno_guardia: 90 },
     });
 
     expect(u.horas_hueco_urgente).toBe(24);
@@ -25,7 +25,7 @@ describe('umbralesDeLaPrestadora', () => {
   it('pasa de minutos a horas, que es como razona el semáforo', () => {
     // La Prestadora contesta «a los cuántos minutos de terminada quiero que me avisen»; el
     // semáforo pregunta «cuántas horas puede quedar sin cerrar». Es el mismo número.
-    expect(umbralesDeLaPrestadora({ escaladaCoordinador: { minutos_gracia_cierre_guardia: 15 } }).horas_para_cerrar).toBe(0.25);
+    expect(umbralesDeLaPrestadora({ escaladaCoordinador: { minutos_gracia_cierre_turno_guardia: 15 } }).horas_para_cerrar).toBe(0.25);
   });
 
   it('sin ninguna configuración devuelve los de fábrica', () => {
@@ -42,20 +42,20 @@ describe('umbralesDeLaPrestadora', () => {
   });
 
   it('un valor que no es un número útil no reemplaza al de fábrica', () => {
-    // Un cero diría «toda guardia es urgente desde siempre», y un nulo o un texto vacío son
+    // Un cero diría «todo turno de guardia es urgente desde siempre», y un nulo o un texto vacío son
     // columnas que esa Prestadora nunca completó. Ninguno de los tres es una decisión suya.
     for (const valor of [0, -3, null, undefined, '', 'mucho', NaN]) {
       const u = umbralesDeLaPrestadora({
         mensajeSinCubrir: { horas_antes: valor },
         ausenciaAutomatica: { minutos_tolerancia_checkin: valor },
-        escaladaCoordinador: { minutos_gracia_cierre_guardia: valor },
+        escaladaCoordinador: { minutos_gracia_cierre_turno_guardia: valor },
       });
       expect(u).toEqual(UMBRALES);
     }
   });
 });
 
-/* Las fechas se arman en hora local a propósito: `inicioDeGuardia` lee `fecha` y `hora_inicio`
+/* Las fechas se arman en hora local a propósito: `inicioDeTurnoGuardia` lee `fecha` y `hora_inicio`
    como cadenas sin huso, así que una prueba escrita en huso cero daría distinto según dónde
    corra. */
 const AHORA = new Date(2026, 8, 15, 12, 0, 0);
@@ -63,7 +63,7 @@ const HOY = '2026-09-15';
 
 describe('el umbral configurado cambia lo que se ve', () => {
   it('una guardia terminada hace media hora y sin salida marcada: sin cerrar para quien puso quince minutos, en curso para quien no configuró nada', () => {
-    const guardia = {
+    const turno_guardia = {
       estado: 'activa',
       asistente_id: 'asis-1',
       fecha: HOY,
@@ -75,11 +75,11 @@ describe('el umbral configurado cambia lo que se ve', () => {
 
     const conLosDeFabrica = umbralesDeLaPrestadora();
     const conQuinceMinutos = umbralesDeLaPrestadora({
-      escaladaCoordinador: { minutos_gracia_cierre_guardia: 15 },
+      escaladaCoordinador: { minutos_gracia_cierre_turno_guardia: 15 },
     });
 
-    expect(situacionDeGuardia(guardia, { ahora: AHORA, umbrales: conLosDeFabrica })).toBe(SITUACION.EN_CURSO);
-    expect(situacionDeGuardia(guardia, { ahora: AHORA, umbrales: conQuinceMinutos })).toBe(SITUACION.SIN_CERRAR);
+    expect(situacionDeTurnoGuardia(turno_guardia, { ahora: AHORA, umbrales: conLosDeFabrica })).toBe(SITUACION.EN_CURSO);
+    expect(situacionDeTurnoGuardia(turno_guardia, { ahora: AHORA, umbrales: conQuinceMinutos })).toBe(SITUACION.SIN_CERRAR);
   });
 
   it('un hueco de pasado mañana: urgente para quien avisa con cuarenta y ocho horas, todavía no para quien avisa con veinticuatro', () => {
@@ -95,7 +95,7 @@ describe('el umbral configurado cambia lo que se ve', () => {
     const conCuarentaYOcho = umbralesDeLaPrestadora({ mensajeSinCubrir: { horas_antes: 48 } });
     const conVeinticuatro = umbralesDeLaPrestadora({ mensajeSinCubrir: { horas_antes: 24 } });
 
-    expect(situacionDeGuardia(hueco, { ahora: AHORA, umbrales: conCuarentaYOcho })).toBe(SITUACION.HUECO_URGENTE);
-    expect(situacionDeGuardia(hueco, { ahora: AHORA, umbrales: conVeinticuatro })).toBe(SITUACION.HUECO);
+    expect(situacionDeTurnoGuardia(hueco, { ahora: AHORA, umbrales: conCuarentaYOcho })).toBe(SITUACION.HUECO_URGENTE);
+    expect(situacionDeTurnoGuardia(hueco, { ahora: AHORA, umbrales: conVeinticuatro })).toBe(SITUACION.HUECO);
   });
 });

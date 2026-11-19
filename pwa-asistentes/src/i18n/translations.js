@@ -19,15 +19,15 @@ export const T = {
       //
       // `falta_reporte` no está a propósito: esa frase lleva adentro los nombres de los
       // Pacientes cuyo reporte falta, y eso una búsqueda por motivo no lo hace. Vive en
-      // guardia_activa.cerrar_faltan_reportes y la arma GuardiaActiva.jsx.
+      // turno_guardia_activo.cerrar_faltan_reportes y la arma TurnoGuardiaActivo.jsx.
       motivos: {
         // La videollamada pedida en una Prestadora que no configuró dónde se hacen las suyas. La
         // pantalla no ofrece el botón; esto se lee si se llegó por otro camino.
         videollamada_no_configurada: 'Esta Prestadora todavía no configuró las videollamadas, así que por ahora la conversación sigue por escrito.',
-        falta_checkin: 'Esta guardia todavía no tiene el check-in marcado, así que no se puede cerrar.',
+        falta_checkin: 'Este turno de guardia todavía no tiene el check-in marcado, así que no se puede cerrar.',
         // La misma frase que ve quien todavía no intentó cerrar: es la misma regla, contada
         // antes o después del intento. Por eso hay un solo texto y no dos iguales.
-        continuidad: 'No puede cerrar esta guardia hasta que llegue el relevo. Si es urgente, avise al Coordinador.',
+        continuidad: 'No puede cerrar este turno de guardia hasta que llegue el relevo. Si es urgente, avise al Coordinador.',
         no_disponible: 'Esta función no está activada en esta Prestadora.',
         // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
         // problemas distintos y cada uno se sale de una manera: el enlace equivocado o
@@ -40,14 +40,14 @@ export const T = {
         // Los dos del nombre de usuario que se elige al activar la cuenta.
         usuario_en_uso: 'Ese usuario ya está en uso. Elija otro.',
         usuario_mal_escrito: 'Entre 4 y 12 caracteres. Letras sin tilde, números, punto, guion y guion bajo. Sin espacios.',
-        // Los de los turnos asignados que esperan respuesta.
+        // Los de los turnos de guardia asignados que esperan respuesta.
         asignacion_no_encontrada: 'Esta asignación ya no está disponible.',
         asignacion_ya_respondida: 'Usted ya respondió esta asignación.',
-        guardia_ya_cubierta: 'Este turno ya no está disponible.',
+        turno_guardia_ya_cubierto: 'Este turno de guardia ya no está disponible.',
         motivo_requerido: 'Elija un motivo.',
         detalle_requerido: 'Escriba el motivo.',
         // Los de los documentos del Asistente. Cada uno dice qué dato revisar.
-        documentos_bloquean: 'No puede aceptar este turno porque tiene documentos pendientes.',
+        documentos_bloquean: 'No puede aceptar este turno de guardia porque tiene documentos pendientes.',
         documento_no_encontrado: 'No se encontró el documento. Actualice la página.',
         documento_ya_vencido: 'Este documento ya no es válido. Suba uno más reciente.',
         fecha_invalida: 'La fecha no es válida. Revísela e intente nuevamente.',
@@ -96,7 +96,7 @@ export const T = {
       volver: 'Volver',
       pendiente_de_enviar: 'Guardado, pendiente de enviar',
       // Lo que quedó anotado en el teléfono y el backend rechazó. El motivo sale del catálogo de
-      // situaciones y se lee adentro de la guardia, que es donde hay lugar para decirlo entero.
+      // situaciones y se lee adentro del turno de guardia, que es donde hay lugar para decirlo entero.
       no_se_pudo_enviar: 'No se pudo enviar',
     },
     nav: {
@@ -104,36 +104,36 @@ export const T = {
       // modalidad de trabajo.
       mensajes: 'Mensajes',
       inicio: 'Inicio',
-      guardias: 'Guardias',
+      turnos_guardia: 'Turnos de guardia',
       servicio: 'Servicio',
       perfil: 'Perfil',
       cerrar_sesion: 'Cerrar sesión',
       // El nombre de la barra de abajo. Sin él, un lector de pantalla anuncia tres enlaces
       // sueltos y no una zona de navegación por la que se pueda saltar de una vez.
       menu_principal: 'Menú principal',
-      // El número que lleva la pestaña Guardias se ve y se entiende por dónde está; dicho en voz
+      // El número que lleva la pestaña Turnos de guardia se ve y se entiende por dónde está; dicho en voz
       // alta, un "3" solo no dice nada. Esta frase es la que se escucha.
-      sin_responder_una: '1 turno pendiente de respuesta',
-      sin_responder: '{n} turnos pendientes de respuesta',
+      sin_responder_una: '1 turno de guardia pendiente de respuesta',
+      sin_responder: '{n} turnos de guardia pendientes de respuesta',
     },
     barra: {
       rol: 'Asistente',
     },
     inicio: {
       hola: 'Hola',
-      proxima_guardia: 'Próxima guardia',
-      guardia_en_curso: 'Guardia en curso',
+      proxima_turno_guardia: 'Próximo turno de guardia',
+      turno_guardia_en_curso: 'Turno de guardia en curso',
       hoy: 'Hoy',
       registrar_inicio: 'Registrar inicio',
-      abrir_guardia: 'Abrir la guardia',
-      sin_proxima: 'No hay ninguna guardia programada.',
+      abrir_turno_guardia: 'Abrir turno de guardia',
+      sin_proxima: 'No hay ningún turno de guardia programado.',
       ver_asignaciones: 'Ver asignaciones sin responder',
     },
     servicio: {
       titulo: 'Servicio',
       sin_pacientes: 'No hay ningún Paciente asignado por el momento.',
-      sin_proxima: 'Sin guardias programadas',
-      ver_guardia: 'Ver la guardia',
+      sin_proxima: 'Sin turnos de guardia programados',
+      ver_turno_guardia: 'Ver turno de guardia',
     },
     // EL CHAT CON LA OTRA PUNTA DE MATCH. Lo dibuja `components/HiloDeMensajes.jsx`, que
     // es el mismo archivo en las dos aplicaciones, así que estas claves tienen que existir en las
@@ -241,9 +241,9 @@ export const T = {
       sacada: 'Acceso revocado.',
       error_baja: 'No se pudo revocar el acceso.',
     },
-    guardias: {
-      titulo: 'Guardias',
-      sin_guardias: 'No hay guardias asignadas por el momento.',
+    turnos_guardia: {
+      titulo: 'Turnos de guardia',
+      sin_turnos_guardia: 'No hay turnos de guardia asignados por el momento.',
       estado_programada: 'Programada',
       estado_activa: 'En curso',
       estado_completada: 'Completada',
@@ -253,18 +253,18 @@ export const T = {
       sin_cerrar: 'Sin cerrar',
       y_mas: 'y {n} más',
       sin_paciente: 'Sin Paciente asignado',
-      coberturas_titulo: 'Turnos que cubre',
+      coberturas_titulo: 'Turnos de guardia que cubre',
       cobertura_desde_hasta: 'Del {desde} al {hasta}',
       no_puedo_cubrirlo: 'No puedo cubrirlo',
-      confirmar_objecion: '¿Confirma que no puede cubrir este turno? Se le avisa a su Coordinador.',
+      confirmar_objecion: '¿Confirma que no puede cubrir este turno de guardia? Su Coordinador recibe un aviso.',
       objecion_enviada: 'Aviso enviado a su Coordinador.',
       dias: { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom' },
     },
-    // Los turnos que se le asignaron y todavía no respondió. Están en una pantalla aparte de
-    // "Mis Guardias" a propósito: un turno sin aceptar todavía no es un turno suyo.
+    // Los turnos de guardia que se le asignaron y todavía no respondió. Están en una pantalla aparte de
+    // "Turnos de guardia" a propósito: un turno de guardia sin aceptar todavía no es un turno de guardia suyo.
     asignaciones: {
       titulo: 'Asignaciones sin responder',
-      sin_asignaciones: 'No tiene turnos pendientes de respuesta.',
+      sin_asignaciones: 'No tiene turnos de guardia pendientes de respuesta.',
       aceptar: 'Aceptar',
       aceptando: 'Aceptando…',
       rechazar: 'Rechazar',
@@ -275,18 +275,18 @@ export const T = {
       detalle: 'Detalle',
       falta_motivo: 'Seleccione un motivo.',
       falta_detalle: 'Ingrese un detalle.',
-      aceptada: 'Turno aceptado.',
-      ver_el_turno: 'Ver turno',
+      aceptada: 'Turno de guardia aceptado.',
+      ver_el_turno_guardia: 'Ver turno de guardia',
       nivel_complejidad: 'Nivel de complejidad',
-      // La línea de arriba de la tarjeta de un turno fijo y la de un reemplazo.
-      turno_fijo: '{dias}, de {inicio} a {fin}',
-      reemplazo: 'Del {desde} al {hasta} · {n} turnos',
-      reemplazo_un_turno: 'Del {desde} al {hasta} · 1 turno',
-      reemplazo_sin_fin: 'A partir del {desde} · {n} turnos',
-      reemplazo_sin_fin_un_turno: 'A partir del {desde} · 1 turno',
+      // La línea de arriba de la tarjeta de un turno de guardia fijo y la de un reemplazo.
+      turno_guardia_fijo: '{dias}, de {inicio} a {fin}',
+      reemplazo: 'Del {desde} al {hasta} · {n} turnos de guardia',
+      reemplazo_un_turno_guardia: 'Del {desde} al {hasta} · 1 turno de guardia',
+      reemplazo_sin_fin: 'A partir del {desde} · {n} turnos de guardia',
+      reemplazo_sin_fin_un_turno_guardia: 'A partir del {desde} · 1 turno de guardia',
       dias: { lunes: 'lunes', martes: 'martes', miercoles: 'miércoles', jueves: 'jueves', viernes: 'viernes', sabado: 'sábado', domingo: 'domingo' },
     },
-    // La advertencia de que la dirección de esta guardia no es la de siempre. Lo dibuja
+    // La advertencia de que la dirección de este turno de guardia no es la de siempre. Lo dibuja
     // components/DomicilioTemporal.jsx, que es el mismo archivo en las dos aplicaciones, así
     // que estas dos claves existen igual en la del Cliente.
     domicilio: {
@@ -295,15 +295,15 @@ export const T = {
       abrir_en_mapa: 'Abrir {domicilio} en el mapa',
       ver_en_el_mapa: 'Ver en el mapa',
     },
-    guardia_activa: {
-      titulo: 'Guardia',
+    turno_guardia_activo: {
+      titulo: 'Turno de guardia',
       hacer_checkin: 'Marcar check-in',
       haciendo_checkin: 'Marcando check-in…',
-      hacer_checkout: 'Cerrar la guardia',
-      haciendo_checkout: 'Cerrando la guardia…',
-      cerrar_pregunta: '¿Cerrar la guardia? Quedan registrados la hora y el lugar de salida.',
+      hacer_checkout: 'Cerrar turno de guardia',
+      haciendo_checkout: 'Cerrando turno de guardia…',
+      cerrar_pregunta: '¿Cerrar el turno de guardia? Quedan registrados la hora y el lugar de salida.',
       cerrar_si: 'Sí, cerrar',
-      cerrar_ok: 'Guardia cerrada.',
+      cerrar_ok: 'Turno de guardia cerrado.',
       cerrar_falta_reporte: 'Falta el Reporte Diario.',
       cerrar_faltan_reportes: 'Falta el Reporte Diario de: {nombres}.',
       fuera_de_rango: 'El check-in se hizo lejos del domicilio del Paciente. Se registró igual y el Coordinador recibe un mensaje.',
@@ -322,14 +322,14 @@ export const T = {
       cargar_reporte: 'Cargar Reporte Diario',
       cargar_reporte_de: 'Cargar el Reporte Diario de {nombre}',
       ver_reportes_anteriores: 'Ver reportes anteriores',
-      // Cuando el turno cubre a más de una persona hay un botón igual por cada una. En la
+      // Cuando el turno de guardia cubre a más de una persona hay un botón igual por cada una. En la
       // pantalla se distinguen por el nombre que tienen arriba; dichos en voz alta serían
       // todos la misma frase, así que el nombre se dice adentro del botón.
       ver_reportes_anteriores_de: 'Ver reportes anteriores de {nombre}',
       tiempo_transcurrido: 'Tiempo desde el check-in',
       paciente: 'Paciente',
-      pacientes: 'Pacientes de este turno',
-      varios_pacientes: 'Esta guardia cubre a {n} Pacientes. Se marca un solo check-in para toda la guardia.',
+      pacientes: 'Pacientes de este turno de guardia',
+      varios_pacientes: 'Este turno de guardia cubre a {n} Pacientes. Marque un solo check-in para todo el turno de guardia.',
       domicilio: 'Domicilio',
       patologias: 'Patologías',
       tipo: 'Tipo de Asistente',
@@ -362,10 +362,10 @@ export const T = {
       motivo_salud: 'Salud',
       motivo_imprevisto_familiar: 'Imprevisto familiar',
       motivo_otro: 'Otro',
-      ya_llego: 'La llegada de esta guardia ya está marcada, así que este aviso no cambia nada.',
+      ya_llego: 'La llegada de este turno de guardia ya está marcada, así que este aviso no cambia nada.',
       sin_conexion: 'Sin conexión. Queda guardado en el teléfono y se envía solo cuando vuelva la señal.',
     },
-    // El botón de emergencia de la guardia en curso. Dos cosas se dicen sin rodeos: que esto no
+    // El botón de emergencia del turno de guardia en curso. Dos cosas se dicen sin rodeos: que esto no
     // reemplaza llamar a quien haya que llamar, y que sin señal todavía no se enteró nadie.
     emergencia: {
       boton: 'Avisar una emergencia',
@@ -380,12 +380,12 @@ export const T = {
       sin_conexion: 'Sin conexión. Avise por otro medio.',
       llamar_a_la_prestadora: 'Llamar a {{prestadora}}',
     },
-    // El rato de más: terminó el turno y el relevo no llegó. Los pasos de la búsqueda se cuentan
+    // El rato de más: terminó el turno de guardia y el relevo no llegó. Los pasos de la búsqueda se cuentan
     // sin ningún nombre, a propósito: lo que se contesta acá es «¿me están dejando sola?», y para
     // eso no hace falta decir quién faltó.
     extension: {
       titulo: 'Relevo todavía sin llegar',
-      desde: 'Su turno terminó a las {hora}. Desde esa hora queda registrado que sigue en el domicilio.',
+      desde: 'Su turno de guardia terminó a las {hora}. Desde esa hora queda registrado que sigue en el domicilio.',
       sigue_a_cargo: 'Permanezca en el domicilio hasta que llegue el relevo. Dejar sola a la persona cuidada es un riesgo para usted. Las horas de más quedan registradas.',
       busqueda: 'Cómo va la búsqueda del relevo:',
       pasos: {
@@ -395,7 +395,7 @@ export const T = {
         sin_novedades: 'Sin novedades por ahora.',
       },
     },
-    // El Relevo de emergencia: a mitad del turno, y no es el relevo que no llega.
+    // El Relevo de emergencia: a mitad del turno de guardia, y no es el relevo que no llega.
     relevo_emergencia: {
       boton: 'Relevo de emergencia',
       mantener: 'Mantenga presionado {segundos} segundos',
@@ -404,7 +404,7 @@ export const T = {
       avisado: 'Relevo pedido a las {hora}.',
       sin_conexion: 'Sin conexión. Avise por otro medio.',
     },
-    // El descanso adentro de una guardia larga. El texto dice con todas las letras que esto no es
+    // El descanso adentro de un turno de guardia largo. El texto dice con todas las letras que esto no es
     // una falta: sin esa frase, nadie aprieta el botón y el dato no existe.
     descanso: {
       boton_empezar: 'Empezar un descanso',
@@ -416,7 +416,7 @@ export const T = {
     // se puede leer el código QR se pide autorización, y si tampoco así, se entra igual eligiendo
     // un motivo. Los cinco motivos son un código técnico fijo, en el mismo
     // espíritu que errores.motivos — no un catálogo de la Prestadora.
-    pase_de_guardia: {
+    pase_de_turno_guardia: {
       titulo_checkin: 'Pase de guardia',
       titulo_checkout: 'Pase de guardia para el cierre',
       instrucciones: 'Pida que le muestren el código en la pantalla del teléfono y apunte la cámara. Lo puede mostrar el Cliente, o el Asistente que se va si hay relevo.',
@@ -427,7 +427,7 @@ export const T = {
       cerrar_igual: 'Cerrar igual',
       volver_al_codigo: 'Volver al código',
       esperando: 'Esperando la autorización…',
-      // El piso: la guardia nunca se traba.
+      // El piso: el turno de guardia nunca se traba.
       pedido_titulo: '¿Por qué no puede leer el código QR?',
       sin_comprobar_titulo: '¿Por qué no se pudo hacer el pase?',
       motivo_nadie_para_mostrar: 'No hay nadie que pueda mostrar el código QR',
@@ -487,7 +487,7 @@ export const T = {
     reporte: {
       titulo: 'Reporte Diario',
       titulo_de: 'Reporte Diario de {nombre}',
-      texto_libre_label: '¿Cómo estuvo la guardia? Cuéntelo con sus palabras',
+      texto_libre_label: '¿Cómo estuvo el turno de guardia? Cuéntelo con sus palabras',
       texto_libre_placeholder: 'El Paciente almorzó bien, tomó la medicación de las 14:00, estuvo tranquilo toda la tarde…',
       estructurar: 'Analizar con IA',
       estructurando: 'Analizando…',
@@ -653,7 +653,7 @@ export const T = {
       notificaciones_permiso_denegado: 'El permiso de notificaciones está denegado. Actívelo en la configuración del navegador.',
       notificaciones_error: 'No se pudieron activar las notificaciones. Intente nuevamente.',
       // El enlace a las calificaciones vive en Mi Perfil y no en la barra de abajo: la barra es
-      // para el trabajo del día —las guardias y las asignaciones—, y esto se mira cada tanto.
+      // para el trabajo del día —los turnos de guardia y las asignaciones—, y esto se mira cada tanto.
       ver_calificaciones: 'Ver las calificaciones',
       // El interruptor de disponibilidad. La explicación dice qué apaga y, sobre todo, qué no
       // apaga: nadie se pone "no disponible" si sospecha que puede perder el trabajo.
@@ -753,8 +753,8 @@ export const T = {
       falla_del_sistema: 'A server error occurred. Try again in a few minutes.',
       motivos: {
         videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
-        falta_checkin: 'This shift has no check-in yet, so it cannot be closed.',
-        continuidad: 'You cannot close this shift until your relief arrives. If it is urgent, notify the Coordinator.',
+        falta_checkin: 'This guard shift has no check-in yet, so it cannot be closed.',
+        continuidad: 'You cannot close this guard shift until your relief arrives. If it is urgent, notify the Coordinator.',
         no_disponible: 'This feature is not switched on at this Provider.',
         faltan_datos: 'Required data is missing. Check the form and try again.',
         password_debil: 'The password must be at least 8 characters long.',
@@ -766,10 +766,10 @@ export const T = {
         usuario_mal_escrito: 'Between 4 and 12 characters. Letters without accents, numbers, period, hyphen and underscore. No spaces.',
         asignacion_no_encontrada: 'This assignment is no longer available.',
         asignacion_ya_respondida: 'You have already responded to this assignment.',
-        guardia_ya_cubierta: 'This shift is no longer available.',
+        turno_guardia_ya_cubierto: 'This guard shift is no longer available.',
         motivo_requerido: 'Choose a reason.',
         detalle_requerido: 'Write the reason.',
-        documentos_bloquean: 'You cannot accept this shift because you have pending documents.',
+        documentos_bloquean: 'You cannot accept this guard shift because you have pending documents.',
         documento_no_encontrado: 'The document was not found. Refresh the page.',
         documento_ya_vencido: 'This document is no longer valid. Upload a more recent one.',
         fecha_invalida: 'The date is not valid. Check it and try again.',
@@ -810,32 +810,32 @@ export const T = {
     nav: {
       mensajes: 'Messages',
       inicio: 'Home',
-      guardias: 'Shifts',
+      turnos_guardia: 'Guard shifts',
       servicio: 'Service',
       perfil: 'Profile',
       cerrar_sesion: 'Log out',
       menu_principal: 'Main menu',
-      sin_responder_una: '1 shift pending response',
-      sin_responder: '{n} shifts pending response',
+      sin_responder_una: '1 guard shift pending response',
+      sin_responder: '{n} guard shifts pending response',
     },
     barra: {
       rol: 'Assistant',
     },
     inicio: {
       hola: 'Hello',
-      proxima_guardia: 'Next shift',
-      guardia_en_curso: 'Shift in progress',
+      proxima_turno_guardia: 'Next guard shift',
+      turno_guardia_en_curso: 'Guard shift in progress',
       hoy: 'Today',
       registrar_inicio: 'Record start',
-      abrir_guardia: 'Open the shift',
-      sin_proxima: 'There is no scheduled shift.',
+      abrir_turno_guardia: 'Open guard shift',
+      sin_proxima: 'There is no scheduled guard shift.',
       ver_asignaciones: 'View unanswered assignments',
     },
     servicio: {
       titulo: 'Service',
       sin_pacientes: 'There is no Patient assigned at the moment.',
-      sin_proxima: 'No scheduled shifts',
-      ver_guardia: 'See the shift',
+      sin_proxima: 'No scheduled guard shifts',
+      ver_turno_guardia: 'View guard shift',
     },
     chat: {
       titulo: 'Messages',
@@ -931,9 +931,9 @@ export const T = {
       sacada: 'Access revoked.',
       error_baja: 'Access could not be revoked.',
     },
-    guardias: {
-      titulo: 'Shifts',
-      sin_guardias: 'You have no shifts assigned right now.',
+    turnos_guardia: {
+      titulo: 'Guard shifts',
+      sin_turnos_guardia: 'You have no guard shifts assigned right now.',
       estado_programada: 'Scheduled',
       estado_activa: 'In progress',
       estado_completada: 'Completed',
@@ -943,16 +943,16 @@ export const T = {
       sin_cerrar: 'Not closed',
       y_mas: 'and {n} more',
       sin_paciente: 'No Patient assigned',
-      coberturas_titulo: 'Shifts you are covering',
+      coberturas_titulo: 'Guard shifts you are covering',
       cobertura_desde_hasta: 'From {desde} to {hasta}',
       no_puedo_cubrirlo: 'I cannot cover it',
-      confirmar_objecion: 'Confirm you cannot cover this shift? Your Coordinator will be notified.',
+      confirmar_objecion: 'Confirm you cannot cover this guard shift? Your Coordinator will be notified.',
       objecion_enviada: 'Your Coordinator has been notified.',
       dias: { lunes: 'Mon', martes: 'Tue', miercoles: 'Wed', jueves: 'Thu', viernes: 'Fri', sabado: 'Sat', domingo: 'Sun' },
     },
     asignaciones: {
       titulo: 'Unanswered assignments',
-      sin_asignaciones: 'You have no shifts pending response.',
+      sin_asignaciones: 'You have no guard shifts pending response.',
       aceptar: 'Accept',
       aceptando: 'Accepting…',
       rechazar: 'Decline',
@@ -963,14 +963,14 @@ export const T = {
       detalle: 'Detail',
       falta_motivo: 'Select a reason.',
       falta_detalle: 'Enter a detail.',
-      aceptada: 'Shift accepted.',
-      ver_el_turno: 'View shift',
+      aceptada: 'Guard shift accepted.',
+      ver_el_turno_guardia: 'View guard shift',
       nivel_complejidad: 'Complexity level',
-      turno_fijo: '{dias}, {inicio} to {fin}',
-      reemplazo: 'From {desde} to {hasta} · {n} shifts',
-      reemplazo_un_turno: 'From {desde} to {hasta} · 1 shift',
-      reemplazo_sin_fin: 'Starting {desde} · {n} shifts',
-      reemplazo_sin_fin_un_turno: 'Starting {desde} · 1 shift',
+      turno_guardia_fijo: '{dias}, {inicio} to {fin}',
+      reemplazo: 'From {desde} to {hasta} · {n} guard shifts',
+      reemplazo_un_turno_guardia: 'From {desde} to {hasta} · 1 guard shift',
+      reemplazo_sin_fin: 'Starting {desde} · {n} guard shifts',
+      reemplazo_sin_fin_un_turno_guardia: 'Starting {desde} · 1 guard shift',
       dias: { lunes: 'Monday', martes: 'Tuesday', miercoles: 'Wednesday', jueves: 'Thursday', viernes: 'Friday', sabado: 'Saturday', domingo: 'Sunday' },
     },
     domicilio: {
@@ -979,15 +979,15 @@ export const T = {
       abrir_en_mapa: 'Open {domicilio} on the map',
       ver_en_el_mapa: 'View on the map',
     },
-    guardia_activa: {
-      titulo: 'Shift',
+    turno_guardia_activo: {
+      titulo: 'Guard shift',
       hacer_checkin: 'Check in',
       haciendo_checkin: 'Checking in…',
-      hacer_checkout: 'Close the shift',
-      haciendo_checkout: 'Closing the shift…',
-      cerrar_pregunta: 'Close the shift? The time and place you leave from will be recorded.',
+      hacer_checkout: 'Close guard shift',
+      haciendo_checkout: 'Closing guard shift…',
+      cerrar_pregunta: 'Close the guard shift? The time and place you leave from will be recorded.',
       cerrar_si: 'Yes, close it',
-      cerrar_ok: 'Shift closed.',
+      cerrar_ok: 'Guard shift closed.',
       cerrar_falta_reporte: 'The Daily Report is missing.',
       cerrar_faltan_reportes: 'The Daily Report is missing for: {nombres}.',
       fuera_de_rango: 'Check-in was made far from the Patient\'s address. It was recorded anyway and the Coordinator gets a message.',
@@ -1003,8 +1003,8 @@ export const T = {
       ver_reportes_anteriores_de: 'View previous reports for {nombre}',
       tiempo_transcurrido: 'Time since check-in',
       paciente: 'Patient',
-      pacientes: 'Patients on this shift',
-      varios_pacientes: 'This shift covers {n} Patients. You check in once for the whole shift.',
+      pacientes: 'Patients on this guard shift',
+      varios_pacientes: 'This guard shift covers {n} Patients. Check in once for the whole guard shift.',
       domicilio: 'Address',
       patologias: 'Conditions',
       tipo: 'Assistant type',
@@ -1031,7 +1031,7 @@ export const T = {
       motivo_salud: 'Health',
       motivo_imprevisto_familiar: 'Family emergency',
       motivo_otro: 'Other',
-      ya_llego: 'Arrival for this shift is already recorded, so this notice changes nothing.',
+      ya_llego: 'Arrival for this guard shift is already recorded, so this notice changes nothing.',
       sin_conexion: 'No connection. It is saved on the phone and will be sent on its own once the signal is back.',
     },
     emergencia: {
@@ -1049,7 +1049,7 @@ export const T = {
     },
     extension: {
       titulo: 'Relief has not arrived yet',
-      desde: 'Your shift ended at {hora}. From that time on it is recorded that you are still at the home.',
+      desde: 'Your guard shift ended at {hora}. From that time on it is recorded that you are still at the home.',
       sigue_a_cargo: 'Stay at the home until the relief arrives. Leaving the person being cared for alone is a risk for you. The extra hours are recorded.',
       busqueda: 'How the search for a relief is going:',
       pasos: {
@@ -1073,7 +1073,7 @@ export const T = {
       en_curso: 'Resting since {hora}. Still available.',
       terminado: 'Rest period finished at {hora}.',
     },
-    pase_de_guardia: {
+    pase_de_turno_guardia: {
       titulo_checkin: 'Shift handover',
       titulo_checkout: 'Shift handover to close',
       instrucciones: 'Ask to be shown the code on the phone screen and point the camera at it. It can be shown by the Client, or by the Assistant who is leaving if there is a handover.',
@@ -1138,7 +1138,7 @@ export const T = {
     reporte: {
       titulo: 'Daily Report',
       titulo_de: "{nombre}'s Daily Report",
-      texto_libre_label: 'How did the shift go? Describe it in your own words',
+      texto_libre_label: 'How did the guard shift go? Describe it in your own words',
       texto_libre_placeholder: 'The Patient had a good lunch, took the 2:00 p.m. medication, was calm all afternoon…',
       estructurar: 'Analyze with AI',
       estructurando: 'Analyzing…',
@@ -1388,8 +1388,8 @@ export const T = {
       falla_del_sistema: 'Ocorreu um erro no servidor. Tente novamente em alguns minutos.',
       motivos: {
         videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
-        falta_checkin: 'Este plantão ainda não tem o check-in marcado, então não é possível encerrá-lo.',
-        continuidad: 'Não é possível encerrar este plantão até a substituição chegar. Se for urgente, avise o Coordenador.',
+        falta_checkin: 'Este turno de plantão ainda não tem o check-in marcado, então não é possível encerrá-lo.',
+        continuidad: 'Não é possível encerrar este turno de plantão até a substituição chegar. Se for urgente, avise o Coordenador.',
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
         faltan_datos: 'Faltam dados obrigatórios. Revise o formulário e tente novamente.',
         password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
@@ -1401,10 +1401,10 @@ export const T = {
         usuario_mal_escrito: 'Entre 4 e 12 caracteres. Letras sem acento, números, ponto, hífen e sublinhado. Sem espaços.',
         asignacion_no_encontrada: 'Esta atribuição não está mais disponível.',
         asignacion_ya_respondida: 'Você já respondeu a esta atribuição.',
-        guardia_ya_cubierta: 'Este plantão não está mais disponível.',
+        turno_guardia_ya_cubierto: 'Este turno de plantão não está mais disponível.',
         motivo_requerido: 'Escolha um motivo.',
         detalle_requerido: 'Escreva o motivo.',
-        documentos_bloquean: 'Não é possível aceitar este turno porque há documentos pendentes.',
+        documentos_bloquean: 'Não é possível aceitar este turno de plantão porque há documentos pendentes.',
         documento_no_encontrado: 'O documento não foi encontrado. Atualize a página.',
         documento_ya_vencido: 'Este documento não é mais válido. Envie um mais recente.',
         fecha_invalida: 'A data não é válida. Verifique-a e tente novamente.',
@@ -1445,32 +1445,32 @@ export const T = {
     nav: {
       mensajes: 'Mensagens',
       inicio: 'Início',
-      guardias: 'Plantões',
+      turnos_guardia: 'Turnos de plantão',
       servicio: 'Serviço',
       perfil: 'Perfil',
       cerrar_sesion: 'Sair',
       menu_principal: 'Menu principal',
-      sin_responder_una: '1 plantão pendente de resposta',
-      sin_responder: '{n} plantões pendentes de resposta',
+      sin_responder_una: '1 turno de plantão pendente de resposta',
+      sin_responder: '{n} turnos de plantão pendentes de resposta',
     },
     barra: {
       rol: 'Assistente',
     },
     inicio: {
       hola: 'Olá',
-      proxima_guardia: 'Próximo plantão',
-      guardia_en_curso: 'Plantão em andamento',
+      proxima_turno_guardia: 'Próximo turno de plantão',
+      turno_guardia_en_curso: 'Turno de plantão em andamento',
       hoy: 'Hoje',
       registrar_inicio: 'Registrar início',
-      abrir_guardia: 'Abrir o plantão',
-      sin_proxima: 'Não há nenhum plantão programado.',
+      abrir_turno_guardia: 'Abrir turno de plantão',
+      sin_proxima: 'Não há nenhum turno de plantão programado.',
       ver_asignaciones: 'Ver atribuições sem resposta',
     },
     servicio: {
       titulo: 'Serviço',
       sin_pacientes: 'Não há nenhum Paciente atribuído no momento.',
-      sin_proxima: 'Sem plantões programados',
-      ver_guardia: 'Ver o plantão',
+      sin_proxima: 'Sem turnos de plantão programados',
+      ver_turno_guardia: 'Ver turno de plantão',
     },
     chat: {
       titulo: 'Mensagens',
@@ -1566,9 +1566,9 @@ export const T = {
       sacada: 'Acesso revogado.',
       error_baja: 'Não foi possível revogar o acesso.',
     },
-    guardias: {
-      titulo: 'Plantões',
-      sin_guardias: 'Não há plantões atribuídos no momento.',
+    turnos_guardia: {
+      titulo: 'Turnos de plantão',
+      sin_turnos_guardia: 'Não há turnos de plantão atribuídos no momento.',
       estado_programada: 'Programado',
       estado_activa: 'Em andamento',
       estado_completada: 'Concluído',
@@ -1578,16 +1578,16 @@ export const T = {
       sin_cerrar: 'Sem encerrar',
       y_mas: 'e mais {n}',
       sin_paciente: 'Sem Paciente atribuído',
-      coberturas_titulo: 'Turnos que cobre',
+      coberturas_titulo: 'Turnos de plantão que cobre',
       cobertura_desde_hasta: 'De {desde} a {hasta}',
       no_puedo_cubrirlo: 'Não posso cobrir',
-      confirmar_objecion: 'Confirma que não pode cobrir este turno? O Coordenador será avisado.',
+      confirmar_objecion: 'Confirma que não pode cobrir este turno de plantão? O Coordenador recebe um aviso.',
       objecion_enviada: 'Aviso enviado ao Coordenador.',
       dias: { lunes: 'Seg', martes: 'Ter', miercoles: 'Qua', jueves: 'Qui', viernes: 'Sex', sabado: 'Sáb', domingo: 'Dom' },
     },
     asignaciones: {
       titulo: 'Atribuições sem resposta',
-      sin_asignaciones: 'Você não tem plantões pendentes de resposta.',
+      sin_asignaciones: 'Você não tem turnos de plantão pendentes de resposta.',
       aceptar: 'Aceitar',
       aceptando: 'Aceitando…',
       rechazar: 'Recusar',
@@ -1598,14 +1598,14 @@ export const T = {
       detalle: 'Detalhe',
       falta_motivo: 'Selecione um motivo.',
       falta_detalle: 'Insira um detalhe.',
-      aceptada: 'Plantão aceito.',
-      ver_el_turno: 'Ver plantão',
+      aceptada: 'Turno de plantão aceito.',
+      ver_el_turno_guardia: 'Ver turno de plantão',
       nivel_complejidad: 'Nível de complexidade',
-      turno_fijo: '{dias}, das {inicio} às {fin}',
-      reemplazo: 'De {desde} a {hasta} · {n} turnos',
-      reemplazo_un_turno: 'De {desde} a {hasta} · 1 turno',
-      reemplazo_sin_fin: 'A partir de {desde} · {n} turnos',
-      reemplazo_sin_fin_un_turno: 'A partir de {desde} · 1 turno',
+      turno_guardia_fijo: '{dias}, das {inicio} às {fin}',
+      reemplazo: 'De {desde} a {hasta} · {n} turnos de plantão',
+      reemplazo_un_turno_guardia: 'De {desde} a {hasta} · 1 turno de plantão',
+      reemplazo_sin_fin: 'A partir de {desde} · {n} turnos de plantão',
+      reemplazo_sin_fin_un_turno_guardia: 'A partir de {desde} · 1 turno de plantão',
       dias: { lunes: 'segunda-feira', martes: 'terça-feira', miercoles: 'quarta-feira', jueves: 'quinta-feira', viernes: 'sexta-feira', sabado: 'sábado', domingo: 'domingo' },
     },
     domicilio: {
@@ -1614,15 +1614,15 @@ export const T = {
       abrir_en_mapa: 'Abrir {domicilio} no mapa',
       ver_en_el_mapa: 'Ver no mapa',
     },
-    guardia_activa: {
-      titulo: 'Plantão',
+    turno_guardia_activo: {
+      titulo: 'Turno de plantão',
       hacer_checkin: 'Fazer check-in',
       haciendo_checkin: 'Fazendo check-in…',
-      hacer_checkout: 'Encerrar o plantão',
-      haciendo_checkout: 'Encerrando o plantão…',
-      cerrar_pregunta: 'Encerrar o plantão? Ficam registrados a hora e o lugar de saída.',
+      hacer_checkout: 'Encerrar turno de plantão',
+      haciendo_checkout: 'Encerrando turno de plantão…',
+      cerrar_pregunta: 'Encerrar o turno de plantão? Ficam registrados a hora e o lugar de saída.',
       cerrar_si: 'Sim, encerrar',
-      cerrar_ok: 'Plantão encerrado.',
+      cerrar_ok: 'Turno de plantão encerrado.',
       cerrar_falta_reporte: 'Falta o Relatório Diário.',
       cerrar_faltan_reportes: 'Falta o Relatório Diário de: {nombres}.',
       fuera_de_rango: 'O check-in foi feito longe do endereço do Paciente. Foi registrado mesmo assim e o Coordenador recebe uma mensagem.',
@@ -1638,8 +1638,8 @@ export const T = {
       ver_reportes_anteriores_de: 'Ver relatórios anteriores de {nombre}',
       tiempo_transcurrido: 'Tempo desde o check-in',
       paciente: 'Paciente',
-      pacientes: 'Pacientes deste turno',
-      varios_pacientes: 'Este plantão atende {n} Pacientes. Marca-se um único check-in para todo o plantão.',
+      pacientes: 'Pacientes deste turno de plantão',
+      varios_pacientes: 'Este turno de plantão atende {n} Pacientes. Marque um único check-in para todo o turno de plantão.',
       domicilio: 'Endereço',
       patologias: 'Condições',
       tipo: 'Tipo de Assistente',
@@ -1666,7 +1666,7 @@ export const T = {
       motivo_salud: 'Saúde',
       motivo_imprevisto_familiar: 'Imprevisto familiar',
       motivo_otro: 'Outro',
-      ya_llego: 'A chegada deste plantão já está marcada, então este aviso não muda nada.',
+      ya_llego: 'A chegada deste turno de plantão já está marcada, então este aviso não muda nada.',
       sin_conexion: 'Sem conexão. Fica salvo no telefone e é enviado sozinho quando o sinal voltar.',
     },
     emergencia: {
@@ -1684,7 +1684,7 @@ export const T = {
     },
     extension: {
       titulo: 'Rendição ainda não chegou',
-      desde: 'Seu plantão terminou às {hora}. A partir dessa hora fica registrado que continua no domicílio.',
+      desde: 'Seu turno de plantão terminou às {hora}. A partir dessa hora fica registrado que continua no domicílio.',
       sigue_a_cargo: 'Permaneça no domicílio até a rendição chegar. Deixar sozinha a pessoa cuidada é um risco para você. As horas a mais ficam registradas.',
       busqueda: 'Como vai a busca pela rendição:',
       pasos: {
@@ -1708,7 +1708,7 @@ export const T = {
       en_curso: 'Descansando desde as {hora}. Continua disponível.',
       terminado: 'Descanso terminado às {hora}.',
     },
-    pase_de_guardia: {
+    pase_de_turno_guardia: {
       titulo_checkin: 'Passagem de plantão',
       titulo_checkout: 'Passagem de plantão para encerrar',
       instrucciones: 'Peça que mostrem o código na tela do telefone e aponte a câmera. Pode mostrá-lo o Cliente, ou o Assistente que está saindo se houver rendição.',
@@ -1773,7 +1773,7 @@ export const T = {
     reporte: {
       titulo: 'Relatório Diário',
       titulo_de: 'Relatório Diário de {nombre}',
-      texto_libre_label: 'Como foi o plantão? Conte com suas palavras',
+      texto_libre_label: 'Como foi o turno de plantão? Conte com suas palavras',
       texto_libre_placeholder: 'O Paciente almoçou bem, tomou a medicação das 14:00, ficou tranquilo a tarde toda…',
       estructurar: 'Analisar com IA',
       estructurando: 'Analisando…',

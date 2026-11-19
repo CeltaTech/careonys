@@ -12,7 +12,7 @@ import { supabase } from '../lib/supabaseClient';
 import { fechaLimiteDeAviso } from '../lib/reglaVencimientos';
 import { documentosQueVencen } from '../lib/documentosQueVencen';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
-import { ESTADO_EN_CURSO } from '../lib/guardiaSinCerrar';
+import { ESTADO_EN_CURSO } from '../lib/turnoGuardiaSinCerrar';
 import { hoyISO } from '../lib/horarios';
 import { soloSinResolver } from '../lib/alertaSinResolver';
 import { contarPorModalidad, MODALIDADES, modalidadesDelAsistente } from '../lib/modalidades';
@@ -83,9 +83,9 @@ export function Dashboard() {
     filtros: { prestadora_id: prestadoraId },
     requiere: [prestadoraId],
   });
-  const [guardiasEnCurso, setGuardiasEnCurso] = useState(null);
-  const [guardiasPorModalidad, setGuardiasPorModalidad] = useState(null);
-  const [errorGuardias, setErrorGuardias] = useState(null);
+  const [turnosGuardiaEnCurso, setTurnosGuardiaEnCurso] = useState(null);
+  const [turnosGuardiaPorModalidad, setTurnosGuardiaPorModalidad] = useState(null);
+  const [errorTurnosGuardia, setErrorTurnosGuardia] = useState(null);
   const [vinculosPorModalidad, setVinculosPorModalidad] = useState(null);
   const [errorVinculos, setErrorVinculos] = useState(null);
   const [ausentesSinRelevo, setAusentesSinRelevo] = useState(null);
@@ -94,38 +94,38 @@ export function Dashboard() {
   const [alertasIaSinResolver, setAlertasIaSinResolver] = useState(null);
   const [errorAlertas, setErrorAlertas] = useState(null);
 
-  // Cuántas guardias están pasando ahora mismo, y de qué modalidad es cada una. De cada guardia
-  // viaja una sola columna —la modalidad—: de este número no se muestra ninguna guardia, así que
+  // Cuántos turnos de guardia están pasando ahora mismo, y de qué modalidad es cada una. De cada turno de guardia
+  // viaja una sola columna —la modalidad—: de este número no se muestra ningún turno de guardia, así que
   // traerlas enteras sería pasear por el navegador el domicilio y el Paciente de cada una para
   // descartarlos. Con esa columna sola salen el total y el desglose de una sola consulta, que es
   // lo mismo que hace el conteo de ausentes más abajo.
   //
   // El día es el de quien mira, igual que en la lista de Guardias, y el estado sale del punto
-  // único de verdad que ya usan las dos aplicaciones (`lib/guardiaSinCerrar.js`). Van las dos
-  // condiciones juntas a propósito: una guardia de ayer que sigue en curso no está pasando, es
+  // único de verdad que ya usan las dos aplicaciones (`lib/turnoGuardiaSinCerrar.js`). Van las dos
+  // condiciones juntas a propósito: un turno de guardia de ayer que sigue en curso no está pasando, es
   // una que nadie cerró, y eso se mira en otro lado —contarla acá diría que hay gente
   // trabajando donde no hay nadie.
-  const cargarGuardiasEnCurso = useCallback(async () => {
+  const cargarTurnosGuardiaEnCurso = useCallback(async () => {
     if (!prestadoraId) return;
-    setGuardiasEnCurso(null);
-    setGuardiasPorModalidad(null);
-    setErrorGuardias(null);
+    setTurnosGuardiaEnCurso(null);
+    setTurnosGuardiaPorModalidad(null);
+    setErrorTurnosGuardia(null);
 
     // `canal_modalidad` es un nombre guardado de antes y no se renombra (regla 13); de
     // `lib/modalidades.js` para afuera la cosa se llama modalidad.
     const { data, error } = await supabase
-      .from('guardias')
+      .from('turnos_guardia')
       .select('canal_modalidad')
       .eq('prestadora_id', prestadoraId)
       .eq('estado', ESTADO_EN_CURSO)
       .eq('fecha', hoyISO());
 
     if (error) {
-      setErrorGuardias(t.comun.error_generico);
+      setErrorTurnosGuardia(t.comun.error_generico);
       return;
     }
-    setGuardiasEnCurso(data?.length ?? 0);
-    setGuardiasPorModalidad(contarPorModalidad(data, (g) => g.canal_modalidad));
+    setTurnosGuardiaEnCurso(data?.length ?? 0);
+    setTurnosGuardiaPorModalidad(contarPorModalidad(data, (g) => g.canal_modalidad));
   }, [prestadoraId, t]);
 
   // Cuántas personas tienen hoy vínculo activo con la Prestadora, y en qué modalidad trabaja cada
@@ -158,9 +158,9 @@ export function Dashboard() {
   }, [desgloseModalidadHabilitado, prestadoraId, t]);
 
   useEffect(() => {
-    cargarGuardiasEnCurso();
+    cargarTurnosGuardiaEnCurso();
     cargarVinculosPorModalidad();
-  }, [cargarGuardiasEnCurso, cargarVinculosPorModalidad]);
+  }, [cargarTurnosGuardiaEnCurso, cargarVinculosPorModalidad]);
 
   const cargarAlertas = useCallback(async () => {
     if (!prestadoraId) return;
@@ -170,16 +170,16 @@ export function Dashboard() {
     setAlertasIaSinResolver(null);
     setErrorAlertas(null);
 
-    // Trae la modalidad de trabajo de cada incidente —columna `guardias.canal_modalidad`, un
+    // Trae la modalidad de trabajo de cada incidente —columna `turnos_guardia.canal_modalidad`, un
     // nombre viejo que no se renombra (regla 13)— para poder desglosar por
     // modalidad cuando la Prestadora tiene más de una activa (pendiente #85 ítem 3) sin
     // repetir la consulta — un solo punto de verdad para el conteo total y el desglose.
     const { data: filasAusentes, error: errorAusentes } = await supabase
       .from('incidentes_relevo')
-      .select('guardias!incidentes_relevo_entrante_tenant_fk(canal_modalidad)')
+      .select('turnos_guardia!incidentes_relevo_entrante_tenant_fk(canal_modalidad)')
       .eq('prestadora_id', prestadoraId)
       .is('resuelto_at', null)
-      .is('guardia_saliente_id', null);
+      .is('turno_guardia_saliente_id', null);
 
     // El plazo de preaviso y hasta qué día hay que mirar salen del mismo lugar que en el Estado
     // actual y en Documentación, así que los tres contadores dicen lo mismo (regla 12).
@@ -205,7 +205,7 @@ export function Dashboard() {
       return;
     }
     setAusentesSinRelevo(filasAusentes?.length ?? 0);
-    setAusentesPorModalidad(contarPorModalidad(filasAusentes, (fila) => fila.guardias?.canal_modalidad));
+    setAusentesPorModalidad(contarPorModalidad(filasAusentes, (fila) => fila.turnos_guardia?.canal_modalidad));
     setDocumentosPorVencer(documentosQueVencenYa.length);
     setAlertasIaSinResolver(countAlertasIa ?? 0);
   }, [prestadoraId, t]);
@@ -218,9 +218,9 @@ export function Dashboard() {
   // El desglose de vínculos no entra en la espera si la Prestadora tiene una sola modalidad: en
   // ese caso ni se consulta, y quedaría esperando algo que nunca va a llegar.
   const faltaElDesgloseDeVinculos = desgloseModalidadHabilitado && vinculosPorModalidad === null;
-  const estadoGeneral = estados.includes('error') || errorGuardias || errorVinculos
+  const estadoGeneral = estados.includes('error') || errorTurnosGuardia || errorVinculos
     ? 'error'
-    : estados.includes('cargando') || guardiasEnCurso === null || faltaElDesgloseDeVinculos
+    : estados.includes('cargando') || turnosGuardiaEnCurso === null || faltaElDesgloseDeVinculos
       ? 'cargando'
       : 'listo';
 
@@ -242,7 +242,7 @@ export function Dashboard() {
           postulaciones.error ||
           asistentes.error ||
           clientes.error ||
-          errorGuardias ||
+          errorTurnosGuardia ||
           errorVinculos
         }
         vacio={false}
@@ -250,16 +250,16 @@ export function Dashboard() {
           postulaciones.recargar();
           asistentes.recargar();
           clientes.recargar();
-          cargarGuardiasEnCurso();
+          cargarTurnosGuardiaEnCurso();
           cargarVinculosPorModalidad();
         }}
       >
         <div className="panel-grilla panel-kpis">
           {/* Va primero porque es lo único que está pasando ahora mismo, y lleva enlace porque la
               lista de Guardias abre en hoy. */}
-          <Link to="/guardias" className="panel-tarjeta panel-kpi">
-            <div className="panel-kpi-etiqueta">{t.dashboard.guardias_en_curso}</div>
-            <div className="panel-kpi-numero">{guardiasEnCurso}</div>
+          <Link to="/turnos-guardia" className="panel-tarjeta panel-kpi">
+            <div className="panel-kpi-etiqueta">{t.dashboard.turnos_guardia_en_curso}</div>
+            <div className="panel-kpi-numero">{turnosGuardiaEnCurso}</div>
           </Link>
           <div className="panel-tarjeta panel-kpi">
             <div className="panel-kpi-etiqueta">{t.dashboard.postulaciones_hoy}</div>
@@ -320,10 +320,10 @@ export function Dashboard() {
           una sola, cada dona repetiría el número de arriba. */}
       {desgloseModalidadHabilitado && (
         <div className="panel-grilla panel-columnas-3">
-          {guardiasPorModalidad && (
+          {turnosGuardiaPorModalidad && (
             <DonaPorModalidad
-              titulo={t.dashboard.guardias_en_curso}
-              cuentas={guardiasPorModalidad}
+              titulo={t.dashboard.turnos_guardia_en_curso}
+              cuentas={turnosGuardiaPorModalidad}
               modalidades={modalidades}
               nombreDeModalidad={nombreDeModalidad}
             />

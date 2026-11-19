@@ -8,7 +8,7 @@
 //
 // LA REGLA. Un Servicio puede tener varios Responsables de pagos a la vez. Cada uno rige desde un
 // día y, cuando deja de serlo, hasta otro, y cada uno firma su propio documento. Con la opción de
-// la Prestadora encendida, para programar guardias tienen que haber firmado todos los que rigen
+// la Prestadora encendida, para programar turnos de guardia tienen que haber firmado todos los que rigen
 // hoy. La factura sale a nombre del Contratante, salvo los días en que un Responsable de pagos
 // lleva la marca de que se le facture a él; la marca la lleva uno solo por día.
 //
@@ -175,7 +175,7 @@ BEGIN
     || v_r;
 
   -- 8. La opción encendida: con la firma del segundo solo faltan firmas; con las dos, no.
-  UPDATE public.prestadoras SET guardias_solo_con_firma_del_pagador = true WHERE id = '${PRESTADORA}';
+  UPDATE public.prestadoras SET turnos_guardia_solo_con_firma_del_pagador = true WHERE id = '${PRESTADORA}';
   ${documento(SEGUNDO, 'cerrado')}
   SET LOCAL ROLE authenticated;
   v_resultados := v_resultados || coalesce(public.falta_la_firma_del_pagador('${SERVICIO}')::text, 'nada');

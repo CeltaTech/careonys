@@ -40,10 +40,10 @@ Sesión persistente — no pedir login en cada visita.
 La aplicación abre en «Inicio» (`pwa-asistentes/src/pages/Inicio.jsx`): el saludo y una tarjeta
 con la guardia en curso o la próxima, con cuándo es, a quién atiende y un botón que la abre
 («Registrar inicio» o «Abrir la guardia»). La lista de guardias está aparte
-(`pwa-asistentes/src/pages/MisGuardias.jsx`). Cada tarjeta muestra los Pacientes, la fecha, la
+(`pwa-asistentes/src/pages/MisTurnosGuardia.jsx`). Cada tarjeta muestra los Pacientes, la fecha, la
 hora de inicio y de fin y el estado, sin dirección ni modalidad, con una marca cuando el domicilio
 de ese día es temporal y otra cuando la guardia quedó sin cerrar. El check-in se marca adentro de
-la guardia (`pwa-asistentes/src/pages/GuardiaActiva.jsx:552-558`).
+la guardia (`pwa-asistentes/src/pages/TurnoGuardiaActivo.jsx:552-558`).
 
 La lista trae hasta cien guardias del Asistente y deja afuera las que caen en una licencia y las
 pasadas que ya cubre una liquidación pagada; una guardia activa queda siempre
@@ -53,7 +53,7 @@ pasadas que ya cubre una liquidación pagada; una guardia activa queda siempre
 
 1. El Asistente toca «Marcar check-in» en la guardia al llegar al domicilio.
 2. La app pide permiso de geolocalización si no lo tiene.
-3. Registra `checkin_at` en `guardias`, y `checkin_lat`/`checkin_lng` sólo con el consentimiento
+3. Registra `checkin_at` en `turnos_guardia`, y `checkin_lat`/`checkin_lng` sólo con el consentimiento
    de seguimiento vigente (`backend/src/routes/appAsistentes.js:955-972`).
 4. Valida distancia contra el domicilio del paciente:
    - Dentro del rango → check-in exitoso, guardia pasa a `activa`.
@@ -70,7 +70,7 @@ Timer desde el check-in. Datos del paciente (nombre, patologías, medicación ha
 Botón "Ver reportes anteriores". Botón "Reporte de emergencia" (formulario
 simplificado + alerta inmediata al coordinador, separado del flujo normal de check-out).
 Botón "Check-out" a la vista cuando cada Paciente del turno tiene su Reporte Diario y la guardia no
-tiene `checkout_bloqueado` (`pwa-asistentes/src/pages/GuardiaActiva.jsx:615-623`). El backend
+tiene `checkout_bloqueado` (`pwa-asistentes/src/pages/TurnoGuardiaActivo.jsx:615-623`). El backend
 exige el check-in previo, el reporte de cada Paciente y que el protocolo de continuidad no haya
 bloqueado la salida, y pasa la guardia a `completada`; no compara contra ninguna cantidad de horas
 (`backend/src/routes/appAsistentes.js:2006-2081`).
@@ -80,7 +80,7 @@ bloqueado la salida, y pasa la guardia a `completada`; no compara contra ninguna
 **La palabra no aparece escrita en ninguna línea de la aplicación.** El botón, el formulario y los
 mensajes salen de `pwa-asistentes/src/i18n/translations.js` en los tres idiomas, como todo el resto.
 
-Se aprieta desde la Guardia Activa (`pwa-asistentes/src/components/EmergenciaEnGuardia.jsx`).
+Se aprieta desde la Guardia Activa (`pwa-asistentes/src/components/EmergenciaEnTurnoGuardia.jsx`).
 **No tiene lista de tipos para elegir**: se escribe qué está pasando y se manda.
 
 **Sale aunque no haya señal.** Es un tipo más de la cola sin conexión
@@ -91,8 +91,8 @@ La regla vive en `backend/src/utils/horaDelHecho.js` y la usan cuatro rutas: la 
 relevo de emergencia y el inicio y el fin del descanso (`backend/src/routes/appAsistentes.js:1255`,
 `:1364`, `:1695` y `:1740`).
 
-**Se guarda primero y se avisa después.** La fila queda en `emergencias_guardia`
-(`backend/src/routes/appAsistentes.js`, `POST /guardias/:id/emergencia`) y recién entonces sale el
+**Se guarda primero y se avisa después.** La fila queda en `emergencias_turno_guardia`
+(`backend/src/routes/appAsistentes.js`, `POST /turnos-guardia/:id/emergencia`) y recién entonces sale el
 mensaje al Coordinador, adentro de un `try`: si el envío falla, quien reportó igual recibe que salió
 bien —su acto ya está guardado— y la fila queda sin marca de notificada.
 
@@ -102,7 +102,7 @@ bien —su acto ya está guardado— y la fila queda sin marca de notificada.
 **El detalle no viaja por el canal público.** El mensaje inmediato dice que hay una emergencia, de
 qué guardia y de cuándo; el texto que escribió el Asistente es información sensible
 (`celtatech/CLAUDE.md`, «Seguridad, privacidad y auditoría») y se lee entrando al Panel, en «Emergencias»
-(`panel/src/pages/EmergenciasEnGuardia.jsx`, `backend/src/routes/panelEmergencias.js`). Ahí se
+(`panel/src/pages/EmergenciasEnTurnoGuardia.jsx`, `backend/src/routes/panelEmergencias.js`). Ahí se
 marca atendida con una nota de qué se hizo, y queda con nombre y hora.
 
 **Está afuera de la bandeja de alertas y de la de alertas tempranas**, y no es un descuido: esas
@@ -201,7 +201,7 @@ Dos reglas de fondo:
    relevo con tiempo y minimizar el impacto en el Paciente, en vez de reaccionar recién cuando
    la ausencia ya es un hecho. Son cuatro:
    - **Aviso telefónico previo**: el Coordinador registra que el Asistente llamó avisando que no
-     va a concurrir, con el motivo elegido de una lista (`motivos_aviso_previo_guardia`) y no
+     va a concurrir, con el motivo elegido de una lista (`motivos_aviso_previo_turno_guardia`) y no
      texto libre; la IA sugiere el motivo a partir de lo que se anotó
      (`backend/src/utils/motivoSugeridoDelAviso.js`).
    - **Aviso de demora del propio Asistente**, desde su aplicación.
@@ -217,7 +217,7 @@ Dos reglas de fondo:
 
    El tiempo de viaje se estima con una velocidad media única y la distancia en línea recta
    (`backend/src/utils/llegadaEstimada.js:7-17`). El medio de transporte se escribe como texto
-   libre en cada salida y queda en `guardias.medio_transporte`. La ubicación del Asistente se
+   libre en cada salida y queda en `turnos_guardia.medio_transporte`. La ubicación del Asistente se
    sigue durante el viaje, desde «Salgo ahora» hasta el check-in.
 
 ### Notificaciones
@@ -286,7 +286,7 @@ prestación, nombre del Asistente por guardia, campo de firma del Asistente, cam
 del afiliado/familiar (manual — firma digital queda para una etapa futura, no implementada).
 
 **Resumen mensual**: consolidado de guardias del período, totales agrupados por el valor
-real de `guardias.modalidad` que la Prestadora haya usado — sin catálogo cerrado de códigos
+real de `turnos_guardia.modalidad` que la Prestadora haya usado — sin catálogo cerrado de códigos
 (S4/F6/etc.), decisión explícita para no hardcodear una convención de una obra social en
 particular («Nunca hardcodear», en «Las reglas de desarrollo» de `celtatech/CLAUDE.md`).
 
@@ -298,5 +298,5 @@ se edita después; solo se anula (con motivo y auditoría) y se genera uno nuevo
 
 ## Datos y RLS
 
-Tablas `usuarios`, `asistentes`, `clientes`, `pacientes`, `guardias`, `reportes`, `alertas`,
+Tablas `usuarios`, `asistentes`, `clientes`, `pacientes`, `turnos_guardia`, `reportes`, `alertas`,
 `certificados`, con su esquema y sus políticas RLS en la base en vivo — no reproducir el SQL acá, esta PWA solo lee/escribe esas tablas ya definidas.

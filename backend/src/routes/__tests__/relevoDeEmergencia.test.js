@@ -9,11 +9,11 @@
  *      quien lo apretó recibe que salió bien. Su acto no depende de que el correo conteste, y la
  *      fila queda sin marca de notificada, que es lo que la deja al alcance de un reintento.
  *   2. QUE EL DETALLE SALGA POR UN CANAL PÚBLICO. Lo que escribió es información sensible
- *      (`celtatech/CLAUDE.md` §6): el aviso dice de qué guardia se trata y nada más.
+ *      (`celtatech/CLAUDE.md` §6): el aviso dice de qué turno de guardia se trata y nada más.
  *   3. QUE SE PUEDA PEDIR UNA SOLA VEZ, O SÓLO EN EL RATO DE MÁS. Se pide en cualquier momento de la
- *      guardia en curso y más de una vez; lo único que no se duplica es el reenvío de la cola.
- *   4. QUE CIERRE LA GUARDIA. No la toca: queda como estaba, con el relevo pedido.
- *   5. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA.
+ *      turno de guardia en curso y más de una vez; lo único que no se duplica es el reenvío de la cola.
+ *   4. QUE CIERRE EL TURNO DE GUARDIA. No la toca: queda como estaba, con el relevo pedido.
+ *   5. QUE UNA PRESTADORA ALCANCE EL TURNO DE GUARDIA DE OTRA.
  *   6. QUE SE PIERDA EL MOMENTO. El pedido puede quedar en la cola sin conexión, y esa demora es
  *      justamente el dato.
  *
@@ -32,8 +32,8 @@ const OTRA_PRESTADORA = '99999999-9999-4999-8999-999999999999';
 const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 // El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
 const LEGAJO = 'bbbbbbbb-bbbb-4bbb-8bbb-b0000000000b';
-const GUARDIA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
-const GUARDIA_DE_OTRA_PRESTADORA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const TURNO_GUARDIA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const TURNO_GUARDIA_DE_OTRA_PRESTADORA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const PACIENTE = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const EXTENSION = '22222222-2222-4222-8222-222222222222';
 
@@ -99,7 +99,7 @@ after(() => {
 });
 
 async function desdeElTelefono(id, cuerpo) {
-  const respuesta = await fetch(`${RAIZ}/api/app-asistentes/guardias/${id}/relevo-de-emergencia`, {
+  const respuesta = await fetch(`${RAIZ}/api/app-asistentes/turnos-guardia/${id}/relevo-de-emergencia`, {
     method: 'POST',
     headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
     body: JSON.stringify(cuerpo ?? {}),
@@ -107,7 +107,7 @@ async function desdeElTelefono(id, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-let guardiasEnLaBase;
+let turnosGuardiaEnLaBase;
 let extensionesEnLaBase;
 let relevosEnLaBase;
 
@@ -130,18 +130,18 @@ function filasQuePasanLosFiltros(url, filas) {
 
 const pedidos = () =>
   llamadas
-    .filter((l) => l.clave === 'POST /rest/v1/emergencias_guardia')
+    .filter((l) => l.clave === 'POST /rest/v1/emergencias_turno_guardia')
     .map((l) => (Array.isArray(l.cuerpo) ? l.cuerpo[0] : l.cuerpo));
-const marcas = () => llamadas.filter((l) => l.clave === 'PATCH /rest/v1/emergencias_guardia');
+const marcas = () => llamadas.filter((l) => l.clave === 'PATCH /rest/v1/emergencias_turno_guardia');
 
 const IDENTIFICADOR_DEL_TELEFONO = '77777777-7777-4777-8777-777777777777';
 
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
-  guardiasEnLaBase = [
+  turnosGuardiaEnLaBase = [
     {
-      id: GUARDIA,
+      id: TURNO_GUARDIA,
       prestadora_id: PRESTADORA,
       asistente_id: LEGAJO,
       paciente_id: PACIENTE,
@@ -153,7 +153,7 @@ beforeEach(() => {
       checkout_at: null,
     },
     {
-      id: GUARDIA_DE_OTRA_PRESTADORA,
+      id: TURNO_GUARDIA_DE_OTRA_PRESTADORA,
       prestadora_id: OTRA_PRESTADORA,
       asistente_id: LEGAJO,
       paciente_id: PACIENTE,
@@ -169,7 +169,7 @@ beforeEach(() => {
     {
       id: EXTENSION,
       prestadora_id: PRESTADORA,
-      guardia_id: GUARDIA,
+      turno_guardia_id: TURNO_GUARDIA,
       hasta_at: null,
     },
   ];
@@ -179,13 +179,13 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/guardias', ({ url }) => filasQuePasanLosFiltros(url, guardiasEnLaBase));
-  respuestas.set('GET /rest/v1/extensiones_de_turno', ({ url }) =>
+  respuestas.set('GET /rest/v1/turnos_guardia', ({ url }) => filasQuePasanLosFiltros(url, turnosGuardiaEnLaBase));
+  respuestas.set('GET /rest/v1/extensiones_de_turno_guardia', ({ url }) =>
     filasQuePasanLosFiltros(url, extensionesEnLaBase)
   );
-  respuestas.set('GET /rest/v1/emergencias_guardia', ({ url }) => filasQuePasanLosFiltros(url, relevosEnLaBase));
-  respuestas.set('POST /rest/v1/emergencias_guardia', () => [{ id: '33333333-3333-4333-8333-333333333333' }]);
-  respuestas.set('PATCH /rest/v1/emergencias_guardia', () => []);
+  respuestas.set('GET /rest/v1/emergencias_turno_guardia', ({ url }) => filasQuePasanLosFiltros(url, relevosEnLaBase));
+  respuestas.set('POST /rest/v1/emergencias_turno_guardia', () => [{ id: '33333333-3333-4333-8333-333333333333' }]);
+  respuestas.set('PATCH /rest/v1/emergencias_turno_guardia', () => []);
   // El aviso al Coordinador pasa por acá antes de salir. Sin configuración cargada el evento se
   // considera encendido, y el correo no sale porque en las pruebas no hay servidor de correo.
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => []);
@@ -195,7 +195,7 @@ beforeEach(() => {
 
 describe('pedir un Relevo de emergencia', () => {
   it('queda guardado como emergencia de la guardia, con el detalle, quién y la Prestadora', async () => {
-    const { estado, cuerpo } = await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+    const { estado, cuerpo } = await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     assert.ok(cuerpo.avisadoAt);
@@ -206,20 +206,20 @@ describe('pedir un Relevo de emergencia', () => {
     assert.equal(pedido.detalle, DETALLE);
     assert.equal(pedido.reportado_por, USUARIO);
     assert.equal(pedido.prestadora_id, PRESTADORA);
-    assert.equal(pedido.guardia_id, GUARDIA);
+    assert.equal(pedido.turno_guardia_id, TURNO_GUARDIA);
   });
 
   it('no cierra la guardia: no escribe nada en ella ni en la extensión', async () => {
-    await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+    await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
     const tocadas = llamadas.filter(
-      (l) => !l.clave.startsWith('GET ') && !l.clave.endsWith('/emergencias_guardia')
+      (l) => !l.clave.startsWith('GET ') && !l.clave.endsWith('/emergencias_turno_guardia')
     );
     assert.deepEqual(tocadas.map((l) => l.clave), []);
   });
 
   it('se pide en cualquier momento de la guardia, sin extensión abierta', async () => {
     extensionesEnLaBase = [];
-    const { estado } = await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+    const { estado } = await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
     assert.equal(estado, 200);
     assert.equal(pedidos().length, 1);
   });
@@ -229,12 +229,12 @@ describe('pedir un Relevo de emergencia', () => {
       {
         id: 'r-1',
         prestadora_id: PRESTADORA,
-        guardia_id: GUARDIA,
+        turno_guardia_id: TURNO_GUARDIA,
         cliente_uuid: '88888888-8888-4888-8888-888888888888',
         reportado_at: '2026-09-15T23:00:00Z',
       },
     ];
-    const { estado, cuerpo } = await desdeElTelefono(GUARDIA, {
+    const { estado, cuerpo } = await desdeElTelefono(TURNO_GUARDIA, {
       detalle: 'otra vez',
       clienteUuid: IDENTIFICADOR_DEL_TELEFONO,
     });
@@ -244,37 +244,37 @@ describe('pedir un Relevo de emergencia', () => {
   });
 
   it('el detalle es opcional: quien está en el medio de algo puede no poder escribir nada', async () => {
-    const { estado, cuerpo } = await desdeElTelefono(GUARDIA, {});
+    const { estado, cuerpo } = await desdeElTelefono(TURNO_GUARDIA, {});
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     assert.equal(pedidos()[0].detalle, null);
   });
 
   it('un detalle en blanco se guarda en blanco, no como texto vacío', async () => {
-    await desdeElTelefono(GUARDIA, { detalle: '   ' });
+    await desdeElTelefono(TURNO_GUARDIA, { detalle: '   ' });
     assert.equal(pedidos()[0].detalle, null);
   });
 
   it('un texto sin fin se recorta y el pedido sale igual', async () => {
-    await desdeElTelefono(GUARDIA, { detalle: 'a'.repeat(5000) });
+    await desdeElTelefono(TURNO_GUARDIA, { detalle: 'a'.repeat(5000) });
     assert.equal(pedidos()[0].detalle.length, 2000);
   });
 
   it('el momento en que pasó viaja con el pedido: el rato en la cola no se pierde', async () => {
     const ocurrio = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const { cuerpo } = await desdeElTelefono(GUARDIA, { detalle: DETALLE, ocurrido_at: ocurrio });
+    const { cuerpo } = await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE, ocurrido_at: ocurrio });
     assert.equal(cuerpo.avisadoAt, ocurrio);
     assert.equal(pedidos()[0].reportado_at, ocurrio);
   });
 
   it('una hora futura se descarta: es un reloj mal puesto, no un dato', async () => {
     const enUnRato = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    const { cuerpo } = await desdeElTelefono(GUARDIA, { detalle: DETALLE, ocurrido_at: enUnRato });
+    const { cuerpo } = await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE, ocurrido_at: enUnRato });
     assert.ok(Date.parse(cuerpo.avisadoAt) <= Date.now() + 1000);
   });
 
   it('el aviso al Coordinador sale en el mismo pedido, y la fila queda marcada', async () => {
-    await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+    await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/configuracion_notificaciones');
     assert.ok(consulta, 'el aviso al Coordinador tiene que salir en el momento');
     assert.ok(consulta.url.includes('evento=eq.relevo_de_emergencia'), consulta.url);
@@ -300,7 +300,7 @@ describe('pedir un Relevo de emergencia', () => {
     process.env.RESEND_API_KEY = 'clave-de-mentira';
     process.env.REMITENTE_AVISOS = 'avisos@ejemplo.test';
     try {
-      await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+      await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
       for (const cuerpoEnviado of salido) {
         assert.ok(!cuerpoEnviado.includes('descompuse'), 'el detalle no puede viajar en el aviso');
       }
@@ -330,7 +330,7 @@ describe('pedir un Relevo de emergencia', () => {
     respuestas.set('GET /rest/v1/configuracion_prestadora', () => [{ email: 'contacto@ejemplo.test' }]);
 
     try {
-      const { estado, cuerpo } = await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+      const { estado, cuerpo } = await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
       assert.equal(estado, 200);
       assert.equal(cuerpo.ok, true);
       assert.equal(pedidos().length, 1);
@@ -348,12 +348,12 @@ describe('pedir un Relevo de emergencia', () => {
       {
         id: 'r-1',
         prestadora_id: PRESTADORA,
-        guardia_id: GUARDIA,
+        turno_guardia_id: TURNO_GUARDIA,
         cliente_uuid: IDENTIFICADOR_DEL_TELEFONO,
         reportado_at: yaAvisado,
       },
     ];
-    const { estado, cuerpo } = await desdeElTelefono(GUARDIA, { clienteUuid: IDENTIFICADOR_DEL_TELEFONO });
+    const { estado, cuerpo } = await desdeElTelefono(TURNO_GUARDIA, { clienteUuid: IDENTIFICADOR_DEL_TELEFONO });
     assert.equal(estado, 200);
     assert.equal(cuerpo.yaRegistrado, true);
     assert.equal(cuerpo.avisadoAt, yaAvisado);
@@ -362,37 +362,37 @@ describe('pedir un Relevo de emergencia', () => {
   });
 
   it('la guardia que todavía no empezó no recibe el pedido', async () => {
-    guardiasEnLaBase[0].checkin_at = null;
-    const { estado, cuerpo } = await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+    turnosGuardiaEnLaBase[0].checkin_at = null;
+    const { estado, cuerpo } = await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
     assert.equal(estado, 404);
     assert.equal(cuerpo.motivo, 'no_encontrado');
     assert.equal(pedidos().length, 0);
   });
 
   it('la guardia ya cerrada tampoco, salvo que haya pasado antes de cerrar', async () => {
-    guardiasEnLaBase[0].checkout_at = '2026-09-16T06:05:00Z';
-    const despues = await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+    turnosGuardiaEnLaBase[0].checkout_at = '2026-09-16T06:05:00Z';
+    const despues = await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
     assert.equal(despues.estado, 404);
     assert.equal(pedidos().length, 0);
 
-    const antes = await desdeElTelefono(GUARDIA, { detalle: DETALLE, ocurrido_at: '2026-09-16T05:40:00Z' });
+    const antes = await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE, ocurrido_at: '2026-09-16T05:40:00Z' });
     assert.equal(antes.estado, 200);
     assert.equal(pedidos().length, 1);
   });
 
   it('la guardia de otra Prestadora no existe para este Asistente', async () => {
-    const { estado } = await desdeElTelefono(GUARDIA_DE_OTRA_PRESTADORA, { detalle: DETALLE });
+    const { estado } = await desdeElTelefono(TURNO_GUARDIA_DE_OTRA_PRESTADORA, { detalle: DETALLE });
     assert.equal(estado, 404);
     assert.equal(pedidos().length, 0);
   });
 
   it('la guardia y el pedido van con la credencial de quien lo aprieta, no con la llave de servicio', async () => {
-    await desdeElTelefono(GUARDIA, { detalle: DETALLE });
-    const deLaGuardia = llamadas.filter((l) =>
-      ['GET /rest/v1/guardias', 'GET /rest/v1/emergencias_guardia', 'POST /rest/v1/emergencias_guardia', 'PATCH /rest/v1/emergencias_guardia'].includes(l.clave)
+    await desdeElTelefono(TURNO_GUARDIA, { detalle: DETALLE });
+    const delTurnoGuardia = llamadas.filter((l) =>
+      ['GET /rest/v1/turnos_guardia', 'GET /rest/v1/emergencias_turno_guardia', 'POST /rest/v1/emergencias_turno_guardia', 'PATCH /rest/v1/emergencias_turno_guardia'].includes(l.clave)
     );
-    assert.ok(deLaGuardia.length >= 3);
-    for (const llamada of deLaGuardia) {
+    assert.ok(delTurnoGuardia.length >= 3);
+    for (const llamada of delTurnoGuardia) {
       assert.equal(llamada.credencial, sesionDePrueba(USUARIO), `${llamada.clave} no fue con la credencial de quien lo aprieta`);
     }
   });
@@ -403,8 +403,8 @@ describe('pedir un Relevo de emergencia', () => {
 // ============================================================================
 
 describe('la extensión que viaja con el turno', () => {
-  async function verElTurno() {
-    const respuesta = await fetch(`${RAIZ}/api/app-asistentes/guardias/${GUARDIA}`, {
+  async function verElTurnoGuardia() {
+    const respuesta = await fetch(`${RAIZ}/api/app-asistentes/turnos-guardia/${TURNO_GUARDIA}`, {
       headers: { Authorization: sesionDePrueba(USUARIO) },
     });
     return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -414,16 +414,16 @@ describe('la extensión que viaja con el turno', () => {
     // Lo que el resto de la pantalla del turno consulta y que acá no se mira: se contesta vacío
     // para que el pedido llegue entero hasta la extensión, que es lo que esta prueba vigila.
     for (const tabla of [
-      'guardia_pacientes',
+      'turno_guardia_pacientes',
       'pacientes',
       'reportes',
-      'descansos_guardia',
+      'descansos_turno_guardia',
       'tipos_asistente',
       'tipo_asistente_tareas',
       'tareas_catalogo',
       'configuracion_visibilidad_asistente',
       'incidentes_relevo',
-      'incidentes_turno_sin_cubrir',
+      'incidentes_turno_guardia_sin_cubrir',
       'escalones_de_alarma_avisados',
     ]) {
       respuestas.set(`GET /rest/v1/${tabla}`, () => []);
@@ -442,14 +442,14 @@ describe('la extensión que viaja con el turno', () => {
 
   it('sin extensión abierta no viaja nada: es lo normal en casi todos los turnos', async () => {
     extensionesEnLaBase = [];
-    const { estado, cuerpo } = await verElTurno();
+    const { estado, cuerpo } = await verElTurnoGuardia();
     assert.equal(estado, 200);
     assert.equal(cuerpo.extension, null);
   });
 
   it('con extensión abierta viaja desde cuándo y los pasos de la búsqueda, y nada del Relevo de emergencia', async () => {
     extensionesEnLaBase[0].desde_at = '2026-09-16T06:00:00.000Z';
-    const { estado, cuerpo } = await verElTurno();
+    const { estado, cuerpo } = await verElTurnoGuardia();
     assert.equal(estado, 200);
     assert.equal(cuerpo.extension.desdeAt, '2026-09-16T06:00:00.000Z');
     assert.deepEqual(Object.keys(cuerpo.extension).sort(), ['desdeAt', 'pasos']);
@@ -460,22 +460,22 @@ describe('la extensión que viaja con el turno', () => {
     extensionesEnLaBase[0].desde_at = '2026-09-16T06:00:00.000Z';
     // Expediente abierto y todavía sin ningún aviso enviado: decirle que ya avisaron sería mentir.
     respuestas.set('GET /rest/v1/incidentes_relevo', () => [{ id: 'inc-1', ultima_notificacion_at: null }]);
-    const sinAvisar = await verElTurno();
+    const sinAvisar = await verElTurnoGuardia();
     assert.deepEqual(sinAvisar.cuerpo.extension.pasos, ['sin_novedades']);
 
     respuestas.set('GET /rest/v1/incidentes_relevo', () => [
       { id: 'inc-1', ultima_notificacion_at: '2026-09-16T06:10:00.000Z' },
     ]);
-    const avisado = await verElTurno();
+    const avisado = await verElTurnoGuardia();
     assert.deepEqual(avisado.cuerpo.extension.pasos, ['coordinacion_avisada']);
   });
 
   it('no sale ningún nombre en lo que ve quien está esperando', async () => {
     extensionesEnLaBase[0].desde_at = '2026-09-16T06:00:00.000Z';
-    extensionesEnLaBase[0].relevo_guardia_id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
-    respuestas.set('GET /rest/v1/guardias', ({ url }) =>
+    extensionesEnLaBase[0].relevo_turno_guardia_id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    respuestas.set('GET /rest/v1/turnos_guardia', ({ url }) =>
       filasQuePasanLosFiltros(url, [
-        ...guardiasEnLaBase,
+        ...turnosGuardiaEnLaBase,
         {
           id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
           prestadora_id: PRESTADORA,
@@ -485,7 +485,7 @@ describe('la extensión que viaja con el turno', () => {
         },
       ])
     );
-    const { cuerpo } = await verElTurno();
+    const { cuerpo } = await verElTurnoGuardia();
     assert.deepEqual(cuerpo.extension.pasos, ['relevo_asignado']);
     assert.ok(!JSON.stringify(cuerpo.extension).includes('Inventada'));
     assert.ok(!JSON.stringify(cuerpo.extension).includes('otra-persona'));

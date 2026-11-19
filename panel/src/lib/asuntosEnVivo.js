@@ -17,6 +17,6 @@ export const ASUNTOS = {
   /** Cambió la lista de pedidos de autorización esperando a quien coordina. */
   PEDIDOS_DE_AUTORIZACION: 'pedidos_de_autorizacion',
 
-  /** Entró una emergencia desde una guardia, o se marcó atendida una que estaba esperando. */
+  /** Entró una emergencia desde un turno de guardia, o se marcó atendida una que estaba esperando. */
   EMERGENCIAS_SIN_ATENDER: 'emergencias_sin_atender',
 };

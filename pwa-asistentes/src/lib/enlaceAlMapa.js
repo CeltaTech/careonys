@@ -32,7 +32,7 @@ export function esAparatoDeApple(agente) {
  * El enlace que abre este lugar en el mapa del teléfono, o null si no hay nada que abrir.
  *
  * `lugar` es un Paciente, o cualquier objeto con `domicilio`, `lat` y `lng` — lo que devuelve
- * `domiciliosDeLaGuardia` sirve tal cual. Devolver null y no una cadena vacía es a propósito:
+ * `domiciliosDelTurnoGuardia` sirve tal cual. Devolver null y no una cadena vacía es a propósito:
  * quien llama tiene que poder dibujar el domicilio sin enlace, que es lo que corresponde cuando
  * la Prestadora apagó el dato o cuando todavía no hay dirección cargada.
  */

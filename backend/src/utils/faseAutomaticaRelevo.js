@@ -21,13 +21,13 @@ import { mensajeDelSistema } from '../i18n/avisos.js';
  * Acá no hay ningún orden escrito: si la fila del nivel no existe o no tiene orden cargado, no se
  * contacta a nadie y quien coordina se entera de por qué.
  *
- * SE LES ESCRIBE A TODOS JUNTOS, no de a uno esperando respuesta. La guardia ya empezó o está por
+ * SE LES ESCRIBE A TODOS JUNTOS, no de a uno esperando respuesta. El turno de guardia ya empezó o está por
  * empezar y el Paciente está sin nadie: preguntarle a uno, esperar y recién después preguntarle al
  * siguiente gasta justo lo único que no sobra. El orden igual se respeta, porque es el orden en
  * que la Prestadora quiere que aparezcan los candidatos, y quien queda nombrado por dos roles se
  * contacta una sola vez.
  *
- * EL FAMILIAR NO ENTRA ACÁ. Que un familiar cubra una guardia no es asignarle trabajo a alguien
+ * EL FAMILIAR NO ENTRA ACÁ. Que un familiar cubra un turno de guardia no es asignarle trabajo a alguien
  * del Padrón: es una excepción que una persona de la Prestadora autoriza y firma
  * (`excepciones_familiar_relevo`, con quién la autorizó y por qué motivo). El sistema no la puede
  * tomar por su cuenta. Si el orden de la Prestadora llega a ese rol, se le dice a quien coordina
@@ -92,13 +92,13 @@ async function personalDeEmergencia(prestadoraId) {
 }
 
 /**
- * Los suplentes: el Padrón activo, sin el que faltó y sin los que ya están en otra guardia a esa
+ * Los suplentes: el Padrón activo, sin el que faltó y sin los que ya están en otro turno de guardia a esa
  * misma hora.
  *
- * Que dos guardias se pisen no se decide restando horas acá: lo dice `seSuperponen()`, que sabe que
- * la guardia de noche termina al día siguiente (`utils/horarios.js`).
+ * Que dos turnos de guardia se pisen no se decide restando horas acá: lo dice `seSuperponen()`, que sabe que
+ * el turno de guardia de noche termina al día siguiente (`utils/horarios.js`).
  */
-async function suplentesDisponibles(prestadoraId, guardia) {
+async function suplentesDisponibles(prestadoraId, turno_guardia) {
   const { data: padron, error } = await supabase
     .from('asistentes')
     .select('id')
@@ -113,33 +113,33 @@ async function suplentesDisponibles(prestadoraId, guardia) {
 
   if (error) throw new Error(error.message);
 
-  const { data: guardiasDelDia, error: errorGuardias } = await supabase
-    .from('guardias')
+  const { data: turnosGuardiaDelDia, error: errorTurnosGuardia } = await supabase
+    .from('turnos_guardia')
     .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
     .eq('prestadora_id', prestadoraId)
     .neq('estado', 'cancelada')
     .not('asistente_id', 'is', null)
-    .in('fecha', [fechaAnterior(guardia.fecha), guardia.fecha]);
+    .in('fecha', [fechaAnterior(turno_guardia.fecha), turno_guardia.fecha]);
 
-  if (errorGuardias) throw new Error(errorGuardias.message);
+  if (errorTurnosGuardia) throw new Error(errorTurnosGuardia.message);
 
   const ocupados = new Set(
-    (guardiasDelDia ?? [])
-      .filter((otra) => otra.id !== guardia.id && seSuperponen(otra, guardia))
+    (turnosGuardiaDelDia ?? [])
+      .filter((otra) => otra.id !== turno_guardia.id && seSuperponen(otra, turno_guardia))
       .map((otra) => otra.asistente_id),
   );
 
   return (padron ?? [])
     .map((a) => a.id)
-    .filter((id) => id !== guardia.asistente_id && !ocupados.has(id));
+    .filter((id) => id !== turno_guardia.asistente_id && !ocupados.has(id));
 }
 
 /**
- * El día anterior al de la guardia.
+ * El día anterior al del turno de guardia.
  *
- * Se mira también ese día porque una guardia que empezó a las 22:00 sigue corriendo a las 02:00 del
- * día siguiente: buscando sólo por la fecha de la guardia entrante, quien está adentro de una
- * guardia de noche aparecería libre.
+ * Se mira también ese día porque un turno de guardia que empezó a las 22:00 sigue corriendo a las 02:00 del
+ * día siguiente: buscando sólo por la fecha del turno de guardia entrante, quien está adentro de una
+ * turno de guardia de noche aparecería libre.
  */
 function fechaAnterior(fechaISO) {
   const dia = new Date(`${fechaISO}T00:00:00`);
@@ -148,7 +148,7 @@ function fechaAnterior(fechaISO) {
 }
 
 /**
- * Sale a buscar quién cubre la guardia del incidente.
+ * Sale a buscar quién cubre el turno de guardia del incidente.
  *
  * @returns {Promise<{contactados: number, sinNivel: boolean, sinOrden: boolean, quedaElFamiliar: boolean}>}
  *   lo que hizo, para que quien llama se lo pueda contar a quien coordina. Este proceso no resuelve
@@ -169,18 +169,18 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
   const rolesPedidos = (nivel.orden_prioridad ?? []).filter(Boolean);
   if (rolesPedidos.length === 0) return { ...sinHacerNada, sinOrden: true };
 
-  const { data: guardia } = await supabase
-    .from('guardias')
+  const { data: turno_guardia } = await supabase
+    .from('turnos_guardia')
     .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
     .eq('prestadora_id', prestadoraId)
-    .eq('id', incidente.guardia_entrante_id)
+    .eq('id', incidente.turno_guardia_entrante_id)
     .single();
 
-  if (!guardia) return sinHacerNada;
+  if (!turno_guardia) return sinHacerNada;
 
   const porRol = await personalDeEmergencia(prestadoraId);
   if (rolesPedidos.includes('suplente')) {
-    porRol.set('suplente', await suplentesDisponibles(prestadoraId, guardia));
+    porRol.set('suplente', await suplentesDisponibles(prestadoraId, turno_guardia));
   }
 
   const destinatarios = aQuienesSeLesEscribe(
@@ -189,9 +189,9 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
   );
 
   const { titulo } = mensajeDelSistema('convocatoria_de_relevo', idioma, {
-    fecha: guardia.fecha,
-    horaInicio: guardia.hora_inicio,
-    horaFin: guardia.hora_fin,
+    fecha: turno_guardia.fecha,
+    horaInicio: turno_guardia.hora_inicio,
+    horaFin: turno_guardia.hora_fin,
   });
   // El cuerpo es el texto que escribió la Prestadora para ese nivel, tal cual. No se le agrega
   // nada ni se le reemplaza nada: es el mensaje que ella eligió mandarle a su gente, y el Panel

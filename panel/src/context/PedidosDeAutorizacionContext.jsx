@@ -12,7 +12,7 @@ import { mensajeDeError } from '../lib/errores';
    QUÉ RESUELVE. El diseño del pase de guardia (pendiente #113) pide que, cuando el Asistente
    está parado en la puerta y no puede leer el código QR, su pedido de autorización **aparezca en
    el momento** en el Panel: el Asistente llama a quien coordina, y quien coordina busca su
-   guardia en Guardias, donde aparece el botón «Autorizar ingreso». Si la lista sólo se
+   turno de guardia en Guardias, donde aparece el botón «Autorizar ingreso». Si la lista sólo se
    actualizara al entrar a Guardias, el botón no estaría cuando atiende la llamada con la
    página ya abierta.
 

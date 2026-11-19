@@ -56,17 +56,17 @@ export default function Facturas() {
             <Link
               key={f.factura_id}
               to={`/facturas/${f.factura_id}`}
-              className="guardia-card"
+              className="tarjeta"
             >
-              <div className="guardia-card-paciente">{periodoEnPalabras(f.periodo, locale)}</div>
+              <div className="tarjeta-paciente">{periodoEnPalabras(f.periodo, locale)}</div>
               {f.saldo !== undefined && (
-                <div className="guardia-card-detalle">
+                <div className="tarjeta-detalle">
                   {t.facturas.col_saldo}: {formatearImporte(f.saldo, f.moneda, locale)}
                   {' · '}
                   {traducirValor(t.facturas, `estado_${f.estado}`)}
                 </div>
               )}
-              <div className="guardia-card-detalle">
+              <div className="tarjeta-detalle">
                 {t.facturas.col_facturado}: {formatearImporte(f.monto_total, f.moneda, locale)}
                 {f.cobrado !== undefined && (
                   <>

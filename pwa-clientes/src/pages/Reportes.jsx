@@ -81,9 +81,9 @@ export default function Reportes() {
           const signos = veLosSignos ? signosDelReporte(r.signos_vitales) : [];
           const huboIncidente = typeof r.incidentes === 'string' && r.incidentes.trim() !== '';
           return (
-            <Link key={r.id} to={`/pacientes/${id}/reportes/${r.id}`} className="guardia-card">
-              <div className="guardia-card-paciente">{r.guardias?.fecha}</div>
-              <div className="guardia-card-detalle">{r.guardias?.asistentes?.nombre}</div>
+            <Link key={r.id} to={`/pacientes/${id}/reportes/${r.id}`} className="tarjeta">
+              <div className="tarjeta-paciente">{r.turnos_guardia?.fecha}</div>
+              <div className="tarjeta-detalle">{r.turnos_guardia?.asistentes?.nombre}</div>
 
               {/* La cara es un apoyo y va callada: al lado está el mismo ánimo escrito, que es lo
                   que lee en voz alta un lector de pantalla. */}

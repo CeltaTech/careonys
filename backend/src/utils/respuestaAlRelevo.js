@@ -1,9 +1,9 @@
-import { llegadaEstimadaDeGuardia } from './estimarLlegadaDeGuardia.js';
+import { llegadaEstimadaDeTurnoGuardia } from './estimarLlegadaDeTurnoGuardia.js';
 
 // Lo que contesta un Asistente consultado para un relevo, y en cuánto estima el GPS que llega.
 //
 // LA CUENTA NO ES NUEVA. Es la misma de la llegada estimada de quien ya marcó la salida
-// (`estimarLlegadaDeGuardia.js`): el punto desde el que contesta hace de punto de salida, y la hora
+// (`estimarLlegadaDeTurnoGuardia.js`): el punto desde el que contesta hace de punto de salida, y la hora
 // de salida es ahora. Dos cuentas para la misma pregunta darían dos números distintos para lo mismo.
 //
 // DEL PUNTO NO QUEDA NADA. Se usa para medir y se descarta: lo que se guarda son minutos.
@@ -21,17 +21,17 @@ export function respuestaValida({ respuesta, minutos }) {
 }
 
 /**
- * En cuántos minutos llegaría a la guardia desde el punto en que contestó, o `null` si no hay con
+ * En cuántos minutos llegaría al turno de guardia desde el punto en que contestó, o `null` si no hay con
  * qué medir —sin punto, sin coordenadas del domicilio del día—. Nunca se inventa un número.
  *
- * @param {object} db conexión del trabajo de la Prestadora: el consultado no está en esa guardia y
+ * @param {object} db conexión del trabajo de la Prestadora: el consultado no está en ese turno de guardia y
  *   la base no le deja verla
- * @param {object} guardia fila con `id`, `fecha` y `paciente_id`
+ * @param {object} turno de guardia fila con `id`, `fecha` y `paciente_id`
  */
-export async function minutosPorGps(db, prestadoraId, guardia, lat, lng, ahora = new Date()) {
+export async function minutosPorGps(db, prestadoraId, turno_guardia, lat, lng, ahora = new Date()) {
   if (typeof lat !== 'number' || typeof lng !== 'number') return null;
-  const estimada = await llegadaEstimadaDeGuardia(db, prestadoraId, {
-    ...guardia,
+  const estimada = await llegadaEstimadaDeTurnoGuardia(db, prestadoraId, {
+    ...turno_guardia,
     salida_checkin_at: ahora.toISOString(),
     salida_lat: lat,
     salida_lng: lng,

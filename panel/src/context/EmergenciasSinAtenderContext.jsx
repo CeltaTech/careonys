@@ -47,7 +47,7 @@ export function EmergenciasSinAtenderProvider({ children }) {
     enVueloRef.current = true;
     try {
       const { data, error: errorConsulta } = await informacionDeSalud
-        .from('emergencias_guardia')
+        .from('emergencias_turno_guardia')
         .select('id, reportado_at')
         .eq('prestadora_id', prestadoraId)
         .is('atendida_at', null)

@@ -591,7 +591,7 @@ describe('el detalle de una factura', () => {
       concepto: 'adicional',
       descripcion: 'Guardia adicional',
       cantidad: 2,
-      unidad: 'guardia',
+      unidad: 'turno_guardia',
       precio_unitario: 4000,
       monto: 8000,
       moneda: 'ARS',
@@ -615,10 +615,10 @@ describe('el detalle de una factura', () => {
   });
 });
 
-/** Una factura de 100.000 pactados, 2 guardias adicionales a 4.000 y un descuento del 10 %. */
+/** Una factura de 100.000 pactados, 2 turnos de guardia adicionales a 4.000 y un descuento del 10 %. */
 const ITEMS_DE_LA_FACTURA = [
   { id: 'i-1', descripcion: 'Guardias pactadas', cantidad: '1', unidad: null, precio_unitario: '100000.00', monto: '100000.00', moneda: 'ARS', concepto: 'pactado', descuento_id: null },
-  { id: 'i-2', descripcion: 'Guardia adicional', cantidad: '2', unidad: 'guardia', precio_unitario: '4000.00', monto: '8000.00', moneda: 'ARS', concepto: 'adicional', descuento_id: null },
+  { id: 'i-2', descripcion: 'Guardia adicional', cantidad: '2', unidad: 'turno_guardia', precio_unitario: '4000.00', monto: '8000.00', moneda: 'ARS', concepto: 'adicional', descuento_id: null },
   { id: 'i-3', descripcion: 'Descuento', cantidad: null, unidad: null, precio_unitario: null, monto: '-10800.00', moneda: 'ARS', concepto: 'descuento', descuento_id: 'd-1' },
 ];
 
@@ -1228,7 +1228,7 @@ const SERVICIO = '66666666-6666-4666-8666-666666666666';
 function baseConUnCliente({
   prestaciones = [],
   yaFacturadas = [],
-  guardias = [],
+  turnos_guardia = [],
   plazoDeLaPrestadora = null,
   plazoDelCliente = null,
   descuentos = [],
@@ -1254,9 +1254,9 @@ function baseConUnCliente({
   // Sin ninguna fila, paga quien contrata desde siempre.
   respuestas.set('GET /rest/v1/tramos_de_la_factura_del_servicio', () => pagadores);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
-  // Las guardias terminadas del período: con la medición de fábrica —lo pactado más el
+  // Los turnos de guardia terminados del período: con la medición de fábrica —lo pactado más el
   // excedente— y sin cantidad pactada, no cambian lo que se cobra.
-  respuestas.set('GET /rest/v1/guardias', () => guardias);
+  respuestas.set('GET /rest/v1/turnos_guardia', () => turnos_guardia);
   respuestas.set('GET /rest/v1/facturas_cliente', () => yaFacturadas);
   respuestas.set('POST /rest/v1/facturas_cliente', () => [{ id: FACTURA, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/facturas_cliente_items', () => []);
@@ -1285,8 +1285,8 @@ function contadores(nombrados) {
     sinPrestaciones: 0,
     sinVencimiento: 0,
     sinTerminar: 0,
-    guardiasSinAsignar: 0,
-    guardiasAmbiguas: 0,
+    turnosGuardiaSinAsignar: 0,
+    turnosGuardiaAmbiguos: 0,
     sinPrecio: 0,
     monedasMezcladas: 0,
     ...nombrados,
@@ -1597,12 +1597,12 @@ describe('generar las facturas de un período', () => {
 
   it('las condiciones del Servicio deciden qué se descuenta, y cada renglón dice qué es', async () => {
     baseConUnCliente({
-      prestaciones: [unaPrestacion({ configuracion: { cantidad_guardias: 4 } })],
-      guardias: [
-        { id: 'g1', fecha: '2026-08-03', servicio_id: SERVICIO, estado: 'completada', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, guardia_pacientes: [{ paciente_id: PACIENTE }] },
-        { id: 'g2', fecha: '2026-08-10', servicio_id: SERVICIO, estado: 'completada', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, guardia_pacientes: [{ paciente_id: PACIENTE }] },
-        { id: 'g3', fecha: '2026-08-17', servicio_id: SERVICIO, estado: 'ausente', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, guardia_pacientes: [{ paciente_id: PACIENTE }] },
-        { id: 'g4', fecha: '2026-08-24', servicio_id: SERVICIO, estado: 'cancelada', cancelacion_origen: 'cliente', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, guardia_pacientes: [{ paciente_id: PACIENTE }] },
+      prestaciones: [unaPrestacion({ configuracion: { cantidad_turnos_guardia: 4 } })],
+      turnos_guardia: [
+        { id: 'g1', fecha: '2026-08-03', servicio_id: SERVICIO, estado: 'completada', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, turno_guardia_pacientes: [{ paciente_id: PACIENTE }] },
+        { id: 'g2', fecha: '2026-08-10', servicio_id: SERVICIO, estado: 'completada', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, turno_guardia_pacientes: [{ paciente_id: PACIENTE }] },
+        { id: 'g3', fecha: '2026-08-17', servicio_id: SERVICIO, estado: 'ausente', cancelacion_origen: null, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, turno_guardia_pacientes: [{ paciente_id: PACIENTE }] },
+        { id: 'g4', fecha: '2026-08-24', servicio_id: SERVICIO, estado: 'cancelada', cancelacion_origen: 'cliente', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0, horas_extra: 0, turno_guardia_pacientes: [{ paciente_id: PACIENTE }] },
       ],
     });
     respuestas.set('GET /rest/v1/condiciones_comerciales_servicio', () => [
@@ -1611,8 +1611,8 @@ describe('generar las facturas de un período', () => {
 
     await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
 
-    const lasGuardias = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
-    assert.ok(decodeURIComponent(lasGuardias.url).includes('estado=in.(completada,ausente,cancelada)'));
+    const losTurnosGuardia = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
+    assert.ok(decodeURIComponent(losTurnosGuardia.url).includes('estado=in.(completada,ausente,cancelada)'));
     const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');
     assert.deepEqual(renglones.cuerpo.map((r) => [r.concepto, r.monto]), [
       ['pactado', 10000],

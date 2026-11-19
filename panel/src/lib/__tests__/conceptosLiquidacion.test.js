@@ -78,7 +78,7 @@ describe('loQueFaltaDelConcepto', () => {
   });
 
   it('los valores que la base no acepta se marcan como faltantes', () => {
-    const inventado = { ...IMPORTE_PROPIO, signo: 'multiplica', unidad: 'por_guardia' };
+    const inventado = { ...IMPORTE_PROPIO, signo: 'multiplica', unidad: 'por_turno_guardia' };
     expect(loQueFaltaDelConcepto(inventado)).toEqual(['signo', 'unidad']);
   });
 });

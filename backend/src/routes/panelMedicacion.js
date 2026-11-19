@@ -26,7 +26,7 @@ import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 // Aceptar, rechazar y cerrar la firma a mano pasan por funciones de la base que tocan sólo lo
 // suyo (`revisar_indicacion_medicacion`, `cerrar_firma_medicacion_con_documento_firmado`): quien coordina
 // revisa la indicación sin poder cambiarle el medicamento, la dosis ni la vía, y quién revisó sale
-// de la sesión. Quiénes tienen guardia con el Paciente lo contesta la base mirando todas las zonas.
+// de la sesión. Quiénes tienen turno de guardia con el Paciente lo contesta la base mirando todas las zonas.
 // El depósito sólo da enlaces y deja subir en la carpeta de la Prestadora de quien pide.
 
 export const panelMedicacionRouter = Router();

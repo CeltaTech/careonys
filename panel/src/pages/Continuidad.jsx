@@ -8,19 +8,19 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
-import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
+import { cargarPacientesDeTurnosGuardia, conPacientes, pacientesDeTurnoGuardia, textoDePacientes } from '../lib/pacientesDeTurnoGuardia';
 import { estaEnElPadron } from '../lib/candidatos';
-import { reasignarGuardia } from '../lib/reasignarGuardia';
+import { reasignarTurnoGuardia } from '../lib/reasignarTurnoGuardia';
 import { esAdminOSuperior } from '../lib/roles';
 import { usePermisos } from '../context/PermisosContext';
-import { AsignarConDocumentosModal } from './guardias/AsignarConDocumentosModal';
+import { AsignarConDocumentosModal } from './turnos_guardia/AsignarConDocumentosModal';
 import { laDioUnaPersona } from '../lib/fuentesAlertaTemprana';
 import { diaDelMomento, diasDeEspera, horaDelMomento } from '../lib/horarios';
 import { nombreMotivoGuardado } from '../lib/motivoDeCierre';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
-import { TurnosSinCubrirAbiertos } from '../components/continuidad/TurnosSinCubrirAbiertos';
+import { TurnosGuardiaSinCubrirAbiertos } from '../components/continuidad/TurnosGuardiaSinCubrirAbiertos';
 import { ConsentimientosVigentes } from '../components/continuidad/ConsentimientosVigentes';
 import { LaTomoYo } from '../components/continuidad/LaTomoYo';
 import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
@@ -28,7 +28,7 @@ import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
 import { ORIGENES } from '../lib/pacienteSolo';
 import { RegistrarConsentimiento, RegistrarFamiliarQueSeQuedo } from '../components/continuidad/LoQuePasoEnLaCasa';
 import '../styles/molde-paginas.css';
-import './seguimientoDeGuardias.css';
+import './seguimientoDeTurnosGuardia.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
@@ -119,7 +119,7 @@ export function Continuidad() {
         { data: excepcionesData, error: errorExcepciones },
       ] = await Promise.all([
         supabase.from('incidentes_relevo').select('*').eq('prestadora_id', prestadoraId).is('resuelto_at', null).order('iniciado_at', { ascending: true }),
-        supabase.from('alertas_tempranas_guardia').select('*').eq('prestadora_id', prestadoraId).is('resuelto_at', null).order('detectado_at', { ascending: true }),
+        supabase.from('alertas_tempranas_turno_guardia').select('*').eq('prestadora_id', prestadoraId).is('resuelto_at', null).order('detectado_at', { ascending: true }),
         supabase.from(VISTA_MENSAJES_DE_CIERRE).select('*').eq('prestadora_id', prestadoraId).is('visto_at', null).order('created_at', { ascending: true }),
         supabase.from(TABLA_EXCEPCIONES).select('*').eq('prestadora_id', prestadoraId).is('hasta_at', null).order('desde_at', { ascending: true }),
       ]);
@@ -131,29 +131,29 @@ export function Continuidad() {
       // El turno sale derecho de la fila. Antes se llegaba dando la vuelta por el incidente de
       // relevo, y esa vuelta dejó de servir cuando el hecho pasó a llegar también por los otros
       // dos caminos, que no abren ningún incidente.
-      const idsGuardias = Array.from(
+      const idsTurnosGuardia = Array.from(
         new Set([
-          ...(incidentesData ?? []).flatMap((i) => [i.guardia_entrante_id, i.guardia_saliente_id].filter(Boolean)),
-          ...(alertasData ?? []).map((a) => a.guardia_id),
-          ...(excepcionesData ?? []).map((e) => e.guardia_id).filter(Boolean),
+          ...(incidentesData ?? []).flatMap((i) => [i.turno_guardia_entrante_id, i.turno_guardia_saliente_id].filter(Boolean)),
+          ...(alertasData ?? []).map((a) => a.turno_guardia_id),
+          ...(excepcionesData ?? []).map((e) => e.turno_guardia_id).filter(Boolean),
         ]),
       );
 
-      const [{ data: guardiasData }, { data: coordinados, error: errorCoordinados }, pacientesPorGuardia] = await Promise.all([
-        idsGuardias.length
-          ? supabase.from('guardias').select('id, paciente_id, asistente_id, servicio_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin').in('id', idsGuardias)
+      const [{ data: turnosGuardiaData }, { data: coordinados, error: errorCoordinados }, pacientesPorTurnoGuardia] = await Promise.all([
+        idsTurnosGuardia.length
+          ? supabase.from('turnos_guardia').select('id, paciente_id, asistente_id, servicio_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin').in('id', idsTurnosGuardia)
           : Promise.resolve({ data: [] }),
         supabase.rpc('servicios_que_coordino'),
-        cargarPacientesDeGuardias(idsGuardias),
+        cargarPacientesDeTurnosGuardia(idsTurnosGuardia),
       ]);
       if (errorCoordinados) throw errorCoordinados;
 
       // Un turno puede cubrir a más de un Paciente. Se piden los nombres de todos: quien mira
       // esta pantalla está decidiendo a quién manda a una casa donde faltó alguien, y saber si
       // se quedó sin atender una persona o dos cambia la urgencia del asunto.
-      const idsPacientesGuardias = (guardiasData ?? []).flatMap((g) => pacientesDeGuardia(g, pacientesPorGuardia));
+      const idsPacientesTurnosGuardia = (turnosGuardiaData ?? []).flatMap((g) => pacientesDeTurnoGuardia(g, pacientesPorTurnoGuardia));
       const idsPacientesNotificaciones = (notificacionesData ?? []).map((n) => n.paciente_id);
-      const idsPacientes = Array.from(new Set([...idsPacientesGuardias, ...idsPacientesNotificaciones]));
+      const idsPacientes = Array.from(new Set([...idsPacientesTurnosGuardia, ...idsPacientesNotificaciones]));
 
       // El familiar que se quedó es una persona del Directorio, y el nombre no está
       // copiado en la fila: se lo busca cada vez, que es lo que permite que cambiarlo en el
@@ -175,10 +175,10 @@ export function Continuidad() {
       ]);
 
       const pacientesPorId = Object.fromEntries(conSusFichas(pacientesData).map((p) => [p.id, p.nombre]));
-      const guardiasPorId = Object.fromEntries(
-        conPacientes(guardiasData ?? [], pacientesPorGuardia, pacientesPorId).map((g) => [g.id, g]),
+      const turnosGuardiaPorId = Object.fromEntries(
+        conPacientes(turnosGuardiaData ?? [], pacientesPorTurnoGuardia, pacientesPorId).map((g) => [g.id, g]),
       );
-      const nombresDelTurno = (g) => (g ? textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas) : '—');
+      const nombresDelTurnoGuardia = (g) => (g ? textoDePacientes(g.pacientes_nombres, t.turnos_guardia.pacientes_y_mas) : '—');
       const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
 
       const filasNotificaciones = (notificacionesData ?? []).map((n) => ({
@@ -193,10 +193,10 @@ export function Continuidad() {
       );
 
       const filasExcepciones = (excepcionesData ?? []).map((e) => {
-        const g = guardiasPorId[e.guardia_id];
+        const g = turnosGuardiaPorId[e.turno_guardia_id];
         return {
           ...e,
-          paciente_nombre: nombresDelTurno(g),
+          paciente_nombre: nombresDelTurnoGuardia(g),
           familiar_nombre_visible: nombresDePersonas[e.familiar_persona_id] ?? null,
           dias_abierta: diasDeEspera(e.desde_at),
         };
@@ -205,12 +205,12 @@ export function Continuidad() {
       // Primero el turno que empezó antes: es la casa que lleva más rato esperando.
       const filas = (incidentesData ?? [])
         .map((i) => {
-          const g = guardiasPorId[i.guardia_entrante_id] ?? null;
+          const g = turnosGuardiaPorId[i.turno_guardia_entrante_id] ?? null;
           return {
             ...i,
-            guardia: g,
+            turno_guardia: g,
             servicio_id: g?.servicio_id ?? null,
-            paciente_nombre: nombresDelTurno(g),
+            paciente_nombre: nombresDelTurnoGuardia(g),
             pacientes: g?.pacientes ?? [],
             asistente_ausente_nombre: g ? asistentesPorId[g.asistente_id] || '—' : '—',
             orden: g ? `${g.fecha}T${g.hora_inicio}` : '',
@@ -219,10 +219,10 @@ export function Continuidad() {
         .sort((a, b) => a.orden.localeCompare(b.orden));
 
       const filasAlertas = (alertasData ?? []).map((a) => {
-        const g = guardiasPorId[a.guardia_id];
+        const g = turnosGuardiaPorId[a.turno_guardia_id];
         return {
           ...a,
-          paciente_nombre: nombresDelTurno(g),
+          paciente_nombre: nombresDelTurnoGuardia(g),
           asistente_nombre: g ? asistentesPorId[g.asistente_id] || '—' : '—',
           fecha: g?.fecha,
           horario: g ? `${g.hora_inicio} – ${g.hora_fin}` : '—',
@@ -247,7 +247,7 @@ export function Continuidad() {
     setActualizandoId(alerta.id);
     try {
       const { error: errorUpdate } = await supabase
-        .from('alertas_tempranas_guardia')
+        .from('alertas_tempranas_turno_guardia')
         .update({ resuelto_at: new Date().toISOString() })
         .eq('id', alerta.id);
       if (errorUpdate) throw errorUpdate;
@@ -280,7 +280,7 @@ export function Continuidad() {
   }
 
   // Cerrar una excepción es escribirle la fecha de fin, y nada más. No toca el incidente, que ya
-  // estaba resuelto, ni la guardia: dice que en esa casa volvió a haber personal de la
+  // estaba resuelto, ni el turno de guardia: dice que en esa casa volvió a haber personal de la
   // Prestadora, y a partir de ahí la excepción es historia y deja de pedir atención.
   async function cerrarExcepcion(excepcion) {
     if (!(await confirmarDestructivo(t.continuidad.excepciones_confirmar_cerrar))) return;
@@ -323,15 +323,15 @@ export function Continuidad() {
               <span className="panel-mini">
                 {con(t.continuidad.no_llego, {
                   asistente: i.asistente_ausente_nombre,
-                  dia: diaCorto(i.guardia?.fecha, locale),
-                  desde: hhmm(i.guardia?.hora_inicio),
-                  hasta: hhmm(i.guardia?.hora_fin),
+                  dia: diaCorto(i.turno_guardia?.fecha, locale),
+                  desde: hhmm(i.turno_guardia?.hora_inicio),
+                  hasta: hhmm(i.turno_guardia?.hora_fin),
                 })}
               </span>
               <span className="panel-mini">{haceCuanto(i.iniciado_at, t)}</span>
             </div>
             <div className="seguimiento-acciones">
-              {i.guardia && puedeResolver(i, usuario, serviciosQueCoordino, tomas) && (
+              {i.turno_guardia && puedeResolver(i, usuario, serviciosQueCoordino, tomas) && (
                 <Button onClick={() => setIncidenteResolviendo(i)} disabled={actualizandoId === i.id}>
                   {t.continuidad.resolver}
                 </Button>
@@ -435,7 +435,7 @@ export function Continuidad() {
       {/* Trae y recarga sus propios datos: no comparte ninguno con lo de arriba —mira los turnos
           sin nadie asignado, no las ausencias de quien sí lo estaba— y meterlo en la misma
           recarga ataría dos listas que no se enteran una de la otra. */}
-      <TurnosSinCubrirAbiertos />
+      <TurnosGuardiaSinCubrirAbiertos />
 
       <section className="panel-tarjeta">
         <div className="panel-tarjeta-titulo">
@@ -463,7 +463,7 @@ export function Continuidad() {
               {/* Cuánto lleva abierta, que es lo que dice cuál mirar primero. El día en que se
                   registró se dice aparte porque «hace tres días» y «el 12» contestan preguntas
                   distintas: una, si esto se está estirando; la otra, contra qué turno mirarlo. */}
-              <div className="panel-guardia-alerta">
+              <div className="panel-turno-guardia-alerta">
                 {e.dias_abierta === 0
                   ? t.continuidad.excepciones_abierta_hoy
                   : e.dias_abierta === 1
@@ -505,7 +505,7 @@ export function Continuidad() {
    familiar, o que el Cliente aceptó que el Paciente quede solo. El tipo de reemplazo no se elige: la base lo deduce de a quién se
    mandó, y anota sola quién resolvió y cuándo.
    La lista es la misma del turno vacante en Guardias —el Padrón, sin quien ya se fue—, y la
-   reasignación es la misma función: `lib/reasignarGuardia.js`. A quien ya está en otro turno a esa
+   reasignación es la misma función: `lib/reasignarTurnoGuardia.js`. A quien ya está en otro turno a esa
    hora lo rechaza la base. */
 function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
   const modal = useModalAccesible(onClose);
@@ -521,14 +521,14 @@ function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
   const [documentosPendientes, setDocumentosPendientes] = useState(null);
   const [asignandoIgual, setAsignandoIgual] = useState(false);
 
-  const guardia = incidente.guardia;
+  const turno_guardia = incidente.turno_guardia;
   const asistentesAsignables = useMemo(
-    () => (asistentes ?? []).filter((a) => estaEnElPadron(a) && a.id !== guardia?.asistente_id),
-    [asistentes, guardia?.asistente_id]
+    () => (asistentes ?? []).filter((a) => estaEnElPadron(a) && a.id !== turno_guardia?.asistente_id),
+    [asistentes, turno_guardia?.asistente_id]
   );
 
   const reasignar = (motivoExcepcion = null) =>
-    reasignarGuardia(guardia, asistenteId, guardia.fecha, t, motivo.trim(), motivoExcepcion);
+    reasignarTurnoGuardia(turno_guardia, asistenteId, turno_guardia.fecha, t, motivo.trim(), motivoExcepcion);
 
   async function mandarAsistente() {
     setGuardando(true);
@@ -573,7 +573,7 @@ function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
   if (forma === 'familiar') {
     return (
       <RegistrarFamiliarQueSeQuedo
-        guardiaId={guardia.id}
+        turnoGuardiaId={turno_guardia.id}
         origen={ORIGENES.RELEVO}
         incidenteId={incidente.id}
         onClose={onClose}
@@ -586,7 +586,7 @@ function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
   if (forma === 'solo') {
     return (
       <RegistrarConsentimiento
-        guardiaId={guardia.id}
+        turnoGuardiaId={turno_guardia.id}
         pacientes={incidente.pacientes.filter((p) => p?.id)}
         onClose={onClose}
         onGuardado={onResuelto}
@@ -620,7 +620,7 @@ function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
           value={asistenteId}
           onChange={(e) => setAsistenteId(e.target.value)}
         >
-          <option value="">{t.guardias.nueva_guardia.elegir}</option>
+          <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
           {asistentesAsignables.map((a) => (
             <option key={a.id} value={a.id}>{a.nombre}</option>
           ))}
@@ -658,7 +658,7 @@ function ResolverIncidente({ incidente, asistentes, onClose, onResuelto }) {
 
         <div className="seguimiento-otras-formas">
           <Button variant="secondary" onClick={loCubrioElCoordinador} disabled={guardando}>
-            {t.continuidad.turnos_vacios_cierre_lo_cubrio_la_coordinadora}
+            {t.continuidad.turnos_guardia_vacios_cierre_lo_cubrio_la_coordinadora}
           </Button>
           <Button variant="secondary" onClick={() => setForma('familiar')} disabled={guardando}>
             {t.continuidad.familiar_se_quedo_boton}

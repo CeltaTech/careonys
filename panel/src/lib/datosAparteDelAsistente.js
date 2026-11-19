@@ -20,7 +20,7 @@
  */
 
 /** Lo que hay que agregar al `select` para que la base traiga también los importes. */
-export const CAMPOS_PAGO = 'remuneraciones_asistente(unidad_medicion, valor_hora, valor_guardia, valor_semana, valor_hora_extra, frecuencia_pago)';
+export const CAMPOS_PAGO = 'remuneraciones_asistente(unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, frecuencia_pago)';
 
 /** Lo que hay que agregar al `select` para que la base traiga también lo reservado. */
 export const CAMPOS_RESERVADOS = 'datos_reservados_asistente(motivo_exclusion_directo, motivo_exclusion_intermediacion)';
@@ -58,7 +58,7 @@ export function conDatosAparte(asistente) {
     relacion_laboral_id: relacion?.relacion_laboral_id ?? columnas.relacion_laboral_id ?? null,
     unidad_medicion: pago?.unidad_medicion ?? null,
     valor_hora: pago?.valor_hora ?? null,
-    valor_guardia: pago?.valor_guardia ?? null,
+    valor_turno_guardia: pago?.valor_turno_guardia ?? null,
     valor_semana: pago?.valor_semana ?? null,
     valor_hora_extra: pago?.valor_hora_extra ?? null,
     // Cada cuánto cobra esta persona. Vacío quiere decir «lo que diga la Prestadora», y es lo

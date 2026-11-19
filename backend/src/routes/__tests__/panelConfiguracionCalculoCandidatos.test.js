@@ -12,7 +12,7 @@
  *     todos, el día que un valor de fábrica cambie, quien alguna vez abrió la pantalla y guardó
  *     sin tocar nada se queda con los viejos para siempre.
  *  3. Que entre un número absurdo. Un peso de −1000 esconde a alguien que sí puede tomar la
- *     guardia, con el mismo número con el que el sistema marca lo que de verdad bloquea.
+ *     turno de guardia, con el mismo número con el que el sistema marca lo que de verdad bloquea.
  *
  * Se levanta el router de verdad contra una base de mentira y se mira qué contesta y qué escribe.
  */
@@ -215,7 +215,7 @@ describe('guardar', () => {
 
   it('una clave que nadie puede tocar no llega a guardarse', async () => {
     // `ocupado` vale −1000 para mandar al fondo lo que ya está bloqueado. Si se pudiera tocar,
-    // se podría subir a la cabeza de la lista a alguien que no puede tomar la guardia.
+    // se podría subir a la cabeza de la lista a alguien que no puede tomar el turno de guardia.
     const { estado } = await guardar({ perfil: 'continuidad', pesos: { ocupado: 500 }, topes: {} });
     assert.equal(estado, 200);
     const escrito = loEscrito();

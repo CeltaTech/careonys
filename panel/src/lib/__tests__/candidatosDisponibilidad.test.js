@@ -5,7 +5,7 @@
  *
  * QUÉ SE PRUEBA ACÁ, Y POR QUÉ ESTO Y NO OTRA COSA. La regla tiene dos mitades y la que se
  * equivoca fácil es la segunda: quien se puso no disponible **sigue apareciendo** y **se le
- * puede asignar la guardia igual**. Una implementación que lo sacara de la lista, o que lo
+ * puede asignar el turno de guardia igual**. Una implementación que lo sacara de la lista, o que lo
  * marcara como bloqueado, pasaría cualquier prueba que sólo mirara "aparece el motivo".
  *
  * Qué daría con el sistema roto: si alguien cambiara el `suma(...)` por un `bloqueado = true`,
@@ -13,7 +13,7 @@
  * falla la primera.
  */
 import { describe, expect, it } from 'vitest';
-import { candidatosParaGuardia, estaDisponible, MOTIVO, topeSemanalDe } from '../candidatos';
+import { candidatosParaTurnoGuardia, estaDisponible, MOTIVO, topeSemanalDe } from '../candidatos';
 
 const HUECO = {
   id: 'g-1',
@@ -44,7 +44,7 @@ const NO_DISPONIBLE = {
 const SIN_EL_DATO = { id: 'a-3', nombre: 'Carla Prueba', estado: 'activo', canales: ['directa'] };
 
 const evaluar = (asistentes) =>
-  candidatosParaGuardia(HUECO, { asistentes, ahora: new Date('2026-09-18T10:00:00') });
+  candidatosParaTurnoGuardia(HUECO, { asistentes, ahora: new Date('2026-09-18T10:00:00') });
 
 const motivosEnContra = (candidato) => candidato.enContra.map((m) => m.clave);
 

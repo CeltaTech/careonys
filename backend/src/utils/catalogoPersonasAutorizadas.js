@@ -44,7 +44,7 @@ import { visibilidadDeFabrica } from './catalogoVisibilidad.js';
 export const CATALOGO_PERSONAS_AUTORIZADAS = [
   {
     clave: 'persona_autorizada_reportes',
-    descripcion: 'Leer los reportes de cada guardia',
+    descripcion: 'Leer los reportes de cada turno de guardia',
     ayuda: 'Es lo que el Asistente deja escrito cada vez que va: cómo pasó el día, qué comió, cómo durmió.',
     de_fabrica: true,
     interruptor: null,
@@ -64,15 +64,15 @@ export const CATALOGO_PERSONAS_AUTORIZADAS = [
     interruptor: 'cliente_medicacion_del_paciente',
   },
   {
-    clave: 'persona_autorizada_guardias',
-    descripcion: 'Ver la agenda de guardias',
+    clave: 'persona_autorizada_turnos_guardia',
+    descripcion: 'Ver la agenda de turnos de guardia',
     ayuda: 'Quién va, qué día y en qué horario, y quién fue cada día anterior.',
     de_fabrica: true,
     interruptor: null,
   },
   {
     clave: 'persona_autorizada_ubicacion_en_vivo',
-    descripcion: 'Ver en el mapa dónde está el Asistente durante la guardia',
+    descripcion: 'Ver en el mapa dónde está el Asistente durante el turno de guardia',
     ayuda: 'Negada, esa persona sigue viendo que el Asistente llegó y que se fue, pero no el recorrido.',
     de_fabrica: true,
     interruptor: 'cliente_ubicacion_en_vivo',

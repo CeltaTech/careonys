@@ -31,8 +31,8 @@ const ASISTENTE = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const ASISTENTE_DE_LA_OTRA = '88888888-8888-8888-8888-888888888888';
 const AUSENCIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const AUSENCIA_DE_LA_OTRA = '77777777-7777-7777-7777-777777777777';
-const GUARDIA = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
-const GUARDIA_DE_LA_OTRA = '66666666-6666-6666-6666-666666666666';
+const TURNO_GUARDIA = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+const TURNO_GUARDIA_DE_LA_OTRA = '66666666-6666-6666-6666-666666666666';
 
 const respuestas = new Map();
 let llamadas = [];
@@ -87,7 +87,7 @@ function hora(momento) {
 /** Lo que hay cargado en la base falsa, que el proceso recorre de a una Prestadora por vez. */
 let prestadorasEnLaBase;
 let ausenciasEnLaBase;
-let guardiasEnLaBase;
+let turnosGuardiaEnLaBase;
 
 /** De qué Prestadora es la consulta. Sin ese filtro la fila no sale: acá no hay RLS que valga. */
 function prestadoraPedida(filtros) {
@@ -109,15 +109,15 @@ function soloDeLaPrestadora(filtros, filas) {
  * después entra de a una, así que una ausencia de una Prestadora que no está cargada no se mira.
  */
 function escenario({
-  turnoEnHoras,
+  turnoGuardiaEnHoras,
   supoHaceHoras,
   prestadoraId = PRESTADORA,
   ausenciaId = AUSENCIA,
   asistenteId = ASISTENTE,
-  guardiaId = GUARDIA,
+  turnoGuardiaId = TURNO_GUARDIA,
   ...resto
 }) {
-  const inicio = enHoras(turnoEnHoras);
+  const inicio = enHoras(turnoGuardiaEnHoras);
   if (!prestadorasEnLaBase.some((p) => p.id === prestadoraId)) prestadorasEnLaBase.push({ id: prestadoraId });
   ausenciasEnLaBase.push({
     id: ausenciaId,
@@ -132,8 +132,8 @@ function escenario({
     aviso_ausencia_clase: null,
     ...resto,
   });
-  guardiasEnLaBase.push({
-    id: guardiaId,
+  turnosGuardiaEnLaBase.push({
+    id: turnoGuardiaId,
     prestadora_id: prestadoraId,
     asistente_id: asistenteId,
     paciente_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
@@ -185,11 +185,11 @@ beforeEach(() => {
   respuestas.clear();
   prestadorasEnLaBase = [];
   ausenciasEnLaBase = [];
-  guardiasEnLaBase = [];
+  turnosGuardiaEnLaBase = [];
 
   respuestas.set('GET /rest/v1/prestadoras', () => prestadorasEnLaBase);
   respuestas.set('GET /rest/v1/ausencias', (filtros) => soloDeLaPrestadora(filtros, ausenciasEnLaBase));
-  respuestas.set('GET /rest/v1/guardias', (filtros) => soloDeLaPrestadora(filtros, guardiasEnLaBase));
+  respuestas.set('GET /rest/v1/turnos_guardia', (filtros) => soloDeLaPrestadora(filtros, turnosGuardiaEnLaBase));
   // Apagado en la configuración de la Prestadora: el mensaje no sale por ningún lado y la prueba
   // igual ve cuál se pidió. Lo que se mira acá es la decisión, no el envío.
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => [{ activo: false }]);
@@ -199,29 +199,29 @@ beforeEach(() => {
 
 describe('cómo llega la falta', () => {
   it('avisada con tres días de margen sale como tarea', async () => {
-    escenario({ turnoEnHoras: 72, supoHaceHoras: 0 });
+    escenario({ turnoGuardiaEnHoras: 72, supoHaceHoras: 0 });
     await revisarAusenciasAvisadas();
     assert.equal(eventoAvisado(), 'ausencia_avisada_con_tiempo');
     assert.equal(loMarcado().aviso_ausencia_clase, 'con_tiempo');
   });
 
   it('con el turno empezando en dos horas sale como alarma', async () => {
-    escenario({ turnoEnHoras: 2, supoHaceHoras: 0 });
+    escenario({ turnoGuardiaEnHoras: 2, supoHaceHoras: 0 });
     await revisarAusenciasAvisadas();
     assert.equal(eventoAvisado(), 'ausencia_de_golpe');
     assert.equal(loMarcado().aviso_ausencia_clase, 'de_golpe');
   });
 
   it('la que no deja ningún turno sin nadie no avisa nada', async () => {
-    escenario({ turnoEnHoras: 2, supoHaceHoras: 0 });
-    guardiasEnLaBase = [];
+    escenario({ turnoGuardiaEnHoras: 2, supoHaceHoras: 0 });
+    turnosGuardiaEnLaBase = [];
     await revisarAusenciasAvisadas();
     assert.equal(eventoAvisado(), undefined, 'avisó por una ausencia que no deja ningún hueco');
     assert.equal(loMarcado(), undefined);
   });
 
   it('el turno que ya pasó hace días no se avisa: taparlo ya no sirve de nada', async () => {
-    escenario({ turnoEnHoras: -72, supoHaceHoras: 96 });
+    escenario({ turnoGuardiaEnHoras: -72, supoHaceHoras: 96 });
     await revisarAusenciasAvisadas();
     assert.equal(eventoAvisado(), undefined);
   });
@@ -230,7 +230,7 @@ describe('cómo llega la falta', () => {
 describe('cuándo se vuelve a avisar', () => {
   it('la que llegó con margen se dice una sola vez', async () => {
     escenario({
-      turnoEnHoras: 72,
+      turnoGuardiaEnHoras: 72,
       supoHaceHoras: 0,
       aviso_ausencia_at: enHoras(-12).toISOString(),
       aviso_ausencia_veces: 1,
@@ -245,7 +245,7 @@ describe('cuándo se vuelve a avisar', () => {
     // corrigió: avisaron hace un rato, no hace días. Callarla porque «ya se avisó» dejaría el
     // turno de esta tarde tratado como algo que puede esperar.
     escenario({
-      turnoEnHoras: 1,
+      turnoGuardiaEnHoras: 1,
       supoHaceHoras: 1,
       aviso_ausencia_at: new Date().toISOString(),
       aviso_ausencia_veces: 1,
@@ -258,7 +258,7 @@ describe('cuándo se vuelve a avisar', () => {
 
   it('la urgente no se repite antes de que pase el intervalo', async () => {
     escenario({
-      turnoEnHoras: 2,
+      turnoGuardiaEnHoras: 2,
       supoHaceHoras: 1,
       aviso_ausencia_at: enHoras(-0.5).toISOString(),
       aviso_ausencia_veces: 1,
@@ -270,7 +270,7 @@ describe('cuándo se vuelve a avisar', () => {
 
   it('la urgente vuelve a avisar pasado el intervalo', async () => {
     escenario({
-      turnoEnHoras: 2,
+      turnoGuardiaEnHoras: 2,
       supoHaceHoras: 5,
       aviso_ausencia_at: enHoras(-5).toISOString(),
       aviso_ausencia_veces: 3,
@@ -284,16 +284,16 @@ describe('cuándo se vuelve a avisar', () => {
 
 describe('cada Prestadora con lo suyo', () => {
   it('pregunta la configuración de la Prestadora de la ausencia, no de cualquiera', async () => {
-    escenario({ turnoEnHoras: 2, supoHaceHoras: 0, prestadoraId: OTRA_PRESTADORA });
+    escenario({ turnoGuardiaEnHoras: 2, supoHaceHoras: 0, prestadoraId: OTRA_PRESTADORA });
     await revisarAusenciasAvisadas();
     const pregunta = llamadas.find((l) => l.clave === 'GET /rest/v1/configuracion_ausencias');
     assert.equal(pregunta.filtros.get('prestadora_id'), `eq.${OTRA_PRESTADORA}`);
   });
 
   it('busca las guardias de esa Prestadora y sólo de los que faltan', async () => {
-    escenario({ turnoEnHoras: 2, supoHaceHoras: 0 });
+    escenario({ turnoGuardiaEnHoras: 2, supoHaceHoras: 0 });
     await revisarAusenciasAvisadas();
-    const pregunta = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
+    const pregunta = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
     assert.equal(pregunta.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
     assert.match(pregunta.filtros.get('asistente_id') ?? '', new RegExp(ASISTENTE));
   });
@@ -301,7 +301,7 @@ describe('cada Prestadora con lo suyo', () => {
   it('con otro número configurado, la misma falta cambia de clase', async () => {
     // El mismo turno a tres días: de fábrica es una tarea; para una Prestadora que quiere
     // enterarse con una semana de anticipación, es urgente.
-    escenario({ turnoEnHoras: 72, supoHaceHoras: 0 });
+    escenario({ turnoGuardiaEnHoras: 72, supoHaceHoras: 0 });
     respuestas.set('GET /rest/v1/configuracion_ausencias', () => [
       { regla: { horas_para_considerarla_con_tiempo: 168 } },
     ]);
@@ -313,14 +313,14 @@ describe('cada Prestadora con lo suyo', () => {
     // Una falta que se puede acomodar en tres días y otra que deja sin nadie el turno de dentro de
     // dos horas. Son de Prestadoras distintas: si el proceso las mezclara, una Coordinadora vería
     // el turno de la otra empresa.
-    escenario({ turnoEnHoras: 72, supoHaceHoras: 0 });
+    escenario({ turnoGuardiaEnHoras: 72, supoHaceHoras: 0 });
     escenario({
-      turnoEnHoras: 2,
+      turnoGuardiaEnHoras: 2,
       supoHaceHoras: 0,
       prestadoraId: OTRA_PRESTADORA,
       ausenciaId: AUSENCIA_DE_LA_OTRA,
       asistenteId: ASISTENTE_DE_LA_OTRA,
-      guardiaId: GUARDIA_DE_LA_OTRA,
+      turnoGuardiaId: TURNO_GUARDIA_DE_LA_OTRA,
     });
 
     await revisarAusenciasAvisadas();
@@ -351,7 +351,7 @@ describe('cada Prestadora con lo suyo', () => {
     );
 
     // Y los turnos de cada una se buscaron sólo con los ausentes de esa Prestadora.
-    for (const consulta of consultasA('guardias')) {
+    for (const consulta of consultasA('turnos_guardia')) {
       const asistentes = consulta.filtros.get('asistente_id') ?? '';
       const propio = prestadoraPedida(consulta.filtros) === PRESTADORA ? ASISTENTE : ASISTENTE_DE_LA_OTRA;
       const ajeno = propio === ASISTENTE ? ASISTENTE_DE_LA_OTRA : ASISTENTE;

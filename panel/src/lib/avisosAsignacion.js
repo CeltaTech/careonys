@@ -16,10 +16,10 @@
 // ----------------------------------------------------------------------------
 //
 // "¿Quién sirve para este hueco?" y "¿qué puede salir mal con este?" son dos preguntas
-// distintas, pero se contestan mirando exactamente lo mismo: si se pisa con otra guardia,
+// distintas, pero se contestan mirando exactamente lo mismo: si se pisa con otro turno de guardia,
 // cuánto va a descansar, cuántas horas lleva en la semana, qué documentos
 // vencen. Si esas cuentas estuvieran escritas dos veces, tarde o temprano dirían cosas
-// distintas sobre la misma persona y la misma guardia: la lista de candidatos mostrando a
+// distintas sobre la misma persona y el mismo turno de guardia: la lista de candidatos mostrando a
 // alguien arriba de todo y, dos clics después, un cartel diciendo que se pisa con otra
 // guardia. No rompe nada; solo hace que nadie vuelva a confiar en la pantalla.
 //
@@ -29,20 +29,20 @@
 // CLAUDE.md §7).
 //
 // Igual que `candidatos.js`, **no devuelve texto**: devuelve claves de traducción más los
-// valores a reemplazar, y la pantalla arma la frase con `t.guardias.avisos[clave]`.
+// valores a reemplazar, y la pantalla arma la frase con `t.turnos_guardia.avisos[clave]`.
 
-import { ausenciaQueTapa, ultimoDiaDeLaGuardia } from './ausenciaQueTapa';
+import { ausenciaQueTapa, ultimoDiaDelTurnoGuardia } from './ausenciaQueTapa';
 import {
   TOPES,
-  guardiasDeAsistente,
-  guardiaQueSePisa,
+  turnosGuardiaDeAsistente,
+  turnoGuardiaQueSePisa,
   descansoMasCorto,
   cargaSemanal,
   topeSemanalDe,
   documentoQueVencePrimero,
 } from './candidatos';
 
-/** Las claves de traducción que devuelve este archivo. Viven en `t.guardias.avisos`. */
+/** Las claves de traducción que devuelve este archivo. Viven en `t.turnos_guardia.avisos`. */
 export const ADVERTENCIA = {
   SUPERPOSICION: 'superposicion',
   AUSENCIA: 'ausencia',
@@ -58,29 +58,29 @@ const lista = (x) => (Array.isArray(x) ? x : []);
 /**
  * Qué puede salir mal si esta Guardia se le asigna a este Asistente.
  *
- * @param guardia      la fila de `guardias` que se va a asignar.
+ * @param guardia      la fila de `turnos_guardia` que se va a asignar.
  * @param asistenteId  a quién se le va a dar.
- * @param datos        `{ asistentes, guardias, ausencias, documentos }` — lo mismo
- *                     que recibe `candidatosParaGuardia`, para que la pantalla pase el mismo
+ * @param datos        `{ asistentes, turnos_guardia, ausencias, documentos }` — lo mismo
+ *                     que recibe `candidatosParaTurnoGuardia`, para que la pantalla pase el mismo
  *                     objeto en los dos lugares y no tenga que armar dos.
  * @param opciones     `{ topes }` — para pisar los topes sin tocar este archivo.
  *
  * @returns array de `{ clave, valores, grave }`. Vacío si está todo bien.
  *          Los graves vienen primero: es lo que hay que leer si se lee una sola línea.
  */
-export function advertenciasDeAsignacion(guardia, asistenteId, datos = {}, opciones = {}) {
-  if (!guardia || !asistenteId) return [];
+export function advertenciasDeAsignacion(turno_guardia, asistenteId, datos = {}, opciones = {}) {
+  if (!turno_guardia || !asistenteId) return [];
 
   const topes = { ...TOPES, ...(opciones.topes ?? {}) };
   const advertencias = [];
 
   const asistente =
     lista(datos.asistentes).find((a) => a.id === asistenteId) ?? { id: asistenteId };
-  const propias = guardiasDeAsistente(asistenteId, datos.guardias, guardia.id);
+  const propias = turnosGuardiaDeAsistente(asistenteId, datos.turnos_guardia, turno_guardia.id);
 
-  // --- 1. Se pisa con otra guardia. La única advertencia que siempre es grave: nadie puede estar en
+  // --- 1. Se pisa con otro turno de guardia. La única advertencia que siempre es grave: nadie puede estar en
   //        dos casas a la vez, así que asignar igual significa que alguien va a faltar a una.
-  const choque = guardiaQueSePisa(guardia, propias);
+  const choque = turnoGuardiaQueSePisa(turno_guardia, propias);
   if (choque) {
     advertencias.push({
       clave: ADVERTENCIA.SUPERPOSICION,
@@ -89,7 +89,7 @@ export function advertenciasDeAsignacion(guardia, asistenteId, datos = {}, opcio
     });
   }
 
-  // --- 1 bis. Hay una ausencia registrada que tapa esta guardia. Grave por el mismo motivo que
+  // --- 1 bis. Hay una ausencia registrada que tapa este turno de guardia. Grave por el mismo motivo que
   //        la superposición: según lo que está cargado, esa persona ese día no está, y asignarle
   //        el turno igual es contar con alguien que la agenda da por ausente.
   //
@@ -100,12 +100,12 @@ export function advertenciasDeAsignacion(guardia, asistenteId, datos = {}, opcio
   //        La advertencia no dice de qué ausencia se trata. El tipo ni siquiera llega hasta acá, a
   //        propósito: puede ser información de salud (`celtatech/CLAUDE.md` §6). Ver
   //        `ausenciaQueTapa.js`.
-  if (ausenciaQueTapa(asistenteId, datos.ausencias, guardia.fecha, ultimoDiaDeLaGuardia(guardia))) {
+  if (ausenciaQueTapa(asistenteId, datos.ausencias, turno_guardia.fecha, ultimoDiaDelTurnoGuardia(turno_guardia))) {
     advertencias.push({ clave: ADVERTENCIA.AUSENCIA, valores: {}, grave: true });
   }
 
   // --- 2. Descanso corto entre guardias.
-  const descanso = descansoMasCorto(guardia, propias);
+  const descanso = descansoMasCorto(turno_guardia, propias);
   if (descanso !== null && descanso < topes.horas_descanso_minimo) {
     advertencias.push({
       clave: ADVERTENCIA.DESCANSO,
@@ -114,10 +114,10 @@ export function advertenciasDeAsignacion(guardia, asistenteId, datos = {}, opcio
     });
   }
 
-  // --- 3. Se pasa del tope de horas de la semana. Se muestra el total con esta guardia
+  // --- 3. Se pasa del tope de horas de la semana. Se muestra el total con este turno de guardia
   //        incluida, que es el número que va a tener que justificar la Prestadora.
   const tope = topeSemanalDe(asistente, topes);
-  const carga = cargaSemanal(guardia, propias, topes);
+  const carga = cargaSemanal(turno_guardia, propias, topes);
   if (carga.conEsta > tope) {
     advertencias.push({
       clave: ADVERTENCIA.HORAS_EXTRA,
@@ -127,20 +127,20 @@ export function advertenciasDeAsignacion(guardia, asistenteId, datos = {}, opcio
   }
 
   // A partir de acá, la pregunta es siempre la misma: ¿este documento llega vivo hasta el final de
-  // la guardia? Por eso se compara contra el día en que la guardia TERMINA y no contra el día
-  // en que empieza: un documento que vence en el medio de una guardia de noche es exactamente el
+  // el turno de guardia? Por eso se compara contra el día en que el turno de guardia TERMINA y no contra el día
+  // en que empieza: un documento que vence en el medio de un turno de guardia de noche es exactamente el
   // caso que hay que avisar, y comparar contra el inicio lo dejaría pasar.
-  const ultimoDia = ultimoDiaDeLaGuardia(guardia);
+  const ultimoDia = ultimoDiaDelTurnoGuardia(turno_guardia);
 
-  // --- 4. Documentación que vence antes o durante la guardia.
+  // --- 4. Documentación que vence antes o durante el turno de guardia.
   const documento = documentoQueVencePrimero(asistenteId, datos.documentos);
   if (documento && documento.fecha_vencimiento <= ultimoDia) {
     advertencias.push({
       clave: ADVERTENCIA.DOCUMENTACION,
       valores: { fecha: documento.fecha_vencimiento },
-      // Grave si ya está vencido antes de que la guardia arranque: ahí no es "se le vence en el
+      // Grave si ya está vencido antes de que el turno de guardia arranque: ahí no es "se le vence en el
       // medio", es que trabaja el turno entero con el documento caído.
-      grave: documento.fecha_vencimiento < guardia.fecha,
+      grave: documento.fecha_vencimiento < turno_guardia.fecha,
     });
   }
 

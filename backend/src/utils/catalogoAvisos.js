@@ -40,10 +40,10 @@
 //                     de encendido sería ofrecer un apagado que el código no obedece.
 //
 // Dónde se emite cada uno:
-//   guardia_sin_cubrir             → utils/revisarGuardiasSinCubrir.js:100 (notificarCoordinador)
-//   guardia_sin_cerrar             → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
-//   guardia_sin_cerrar_grave       → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
-//   alerta_temprana_guardia        → utils/revisarNotificacionesCoordinador.js:65 (notificarCoordinador)
+//   turno_guardia_sin_cubrir             → utils/revisarTurnosGuardiaSinCubrir.js:100 (notificarCoordinador)
+//   turno_guardia_sin_cerrar             → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
+//   turno_guardia_sin_cerrar_grave       → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
+//   alerta_temprana_turno_guardia        → utils/revisarNotificacionesCoordinador.js:65 (notificarCoordinador)
 //   incidente_relevo_sin_resolver  → utils/revisarNotificacionesCoordinador.js:113, 143, 213
 //                                    (notificarCoordinador) + :160 mensaje al Cliente
 //   alerta_ia_nivel2               → utils/revisarAlertasIA.js:114 (notificarCoordinador)
@@ -52,8 +52,8 @@
 //   aviso_cierre_del_servicio      → utils/avisoAutomaticoDelCierreDelServicio.js (push, con respaldo WhatsApp)
 //   codigo_instruccion_personas_autorizadas     → utils/instruccionesPersonasAutorizadas.js (WhatsApp, con caída a correo)
 //   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
-//                                    al Cliente), pedido por routes/panelGuardias.js
-//   emergencia_en_guardia          → routes/appAsistentes.js (notificarCoordinador)
+//                                    al Cliente), pedido por routes/panelTurnosGuardia.js
+//   emergencia_en_turno_guardia          → routes/appAsistentes.js (notificarCoordinador)
 //   relevo_de_emergencia           → routes/appAsistentes.js y utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
 //   ausencia_avisada_con_tiempo    → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 //   ausencia_de_golpe              → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
@@ -71,8 +71,8 @@ import { admiteMensajeDeTexto, sePuedeElegirMensajeDeTexto } from './viaMensajeD
 
 export const CATALOGO_MENSAJES = [
   {
-    evento: 'guardia_sin_cubrir',
-    descripcion: 'Una guardia próxima sigue sin Asistente asignado',
+    evento: 'turno_guardia_sin_cubrir',
+    descripcion: 'Un turno de guardia próximo sigue sin Asistente asignado',
     admite_whatsapp: true,
     admite_cliente: false,
   },
@@ -130,8 +130,8 @@ export const CATALOGO_MENSAJES = [
     admite_cliente: false,
   },
   {
-    evento: 'guardia_sin_cerrar',
-    descripcion: 'Una guardia en curso pasó su hora de cierre y nadie la cerró',
+    evento: 'turno_guardia_sin_cerrar',
+    descripcion: 'Un turno de guardia en curso pasó su hora de cierre y nadie lo cerró',
     admite_whatsapp: true,
     // La Prestadora puede hacérselo llegar también al Cliente. Que la jornada figure abierta
     // es, la mayoría de las veces, un problema de la operación —el Asistente estuvo las ocho
@@ -141,8 +141,8 @@ export const CATALOGO_MENSAJES = [
     admite_cliente: true,
   },
   {
-    evento: 'guardia_sin_cerrar_grave',
-    descripcion: 'Una guardia lleva horas sin cerrarse y nadie lo resolvió',
+    evento: 'turno_guardia_sin_cerrar_grave',
+    descripcion: 'Un turno de guardia lleva horas sin cerrarse y nadie lo resolvió',
     admite_whatsapp: true,
     // Tiene su propio evento, y no es una repetición del anterior con otro texto. El de arriba
     // le llega a quien coordina el día; este le llega a quien tiene autoridad para resolver lo
@@ -152,11 +152,11 @@ export const CATALOGO_MENSAJES = [
     admite_cliente: true,
   },
   {
-    evento: 'alerta_temprana_guardia',
-    descripcion: 'Alerta temprana de posible ausencia en una guardia',
+    evento: 'alerta_temprana_turno_guardia',
+    descripcion: 'Alerta temprana de posible ausencia en un turno de guardia',
     admite_whatsapp: true,
     // Acá entra la salida sin entrada. Con el mensaje encendido, el Cliente se entera de que hay
-    // algo pendiente sobre la guardia de su Paciente; el motivo y de dónde salió la alerta son
+    // algo pendiente sobre el turno de guardia de su Paciente; el motivo y de dónde salió la alerta son
     // de adentro y no viajan.
     admite_cliente: true,
   },
@@ -185,7 +185,7 @@ export const CATALOGO_MENSAJES = [
   },
   {
     evento: 'aviso_rutina_asistente',
-    descripcion: 'Mensajes de rutina al Asistente: guardia asignada, mensaje del Coordinador, recordatorio de guardia próxima',
+    descripcion: 'Mensajes de rutina al Asistente: turno de guardia asignado, mensaje del Coordinador, recordatorio de turno de guardia próximo',
     admite_whatsapp: true,
     admite_cliente: false,
   },
@@ -197,7 +197,7 @@ export const CATALOGO_MENSAJES = [
   },
   {
     evento: 'cambio_de_asistente',
-    descripcion: 'Una guardia pasó a manos de otro Asistente',
+    descripcion: 'Un turno de guardia pasó a manos de otro Asistente',
     admite_whatsapp: true,
     // Al Cliente le cambia quién entra a su casa, así que este mensaje le llega de entrada, y la
     // Prestadora lo apaga en la pantalla de Avisos si trabaja de otra manera.
@@ -205,8 +205,8 @@ export const CATALOGO_MENSAJES = [
     cliente_por_defecto: true,
   },
   {
-    evento: 'emergencia_en_guardia',
-    descripcion: 'El Asistente avisó una emergencia desde una guardia en curso',
+    evento: 'emergencia_en_turno_guardia',
+    descripcion: 'El Asistente avisó una emergencia desde un turno de guardia en curso',
     admite_whatsapp: true,
     // No le llega al Cliente por esta puerta. Que haya pasado algo en la casa de su Paciente es
     // exactamente lo que un Cliente quiere saber, pero quién se lo dice y con qué palabras es una

@@ -22,7 +22,7 @@
  *      fila por el mismo viaje sólo le llena la pantalla.
  *
  * Y una que es la medida de todo esto: LA DETECCIÓN POR CÁLCULO LLEGA ANTES DE LA HORA DE INICIO.
- * Ahí están los minutos con los que la Prestadora puede cubrir la guardia; una alerta que aparece
+ * Ahí están los minutos con los que la Prestadora puede cubrir el turno de guardia; una alerta que aparece
  * cuando la hora ya pasó llega tarde para lo único que sirve.
  */
 import { strict as assert } from 'node:assert';
@@ -39,8 +39,8 @@ import { MINUTOS_DEMORA_POR_OMISION } from '../llegadaEstimada.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
-const GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-const GUARDIA_AJENA = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+const TURNO_GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const TURNO_GUARDIA_AJENA = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 const PACIENTE = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 
 // El domicilio del Paciente, y dos puntos de salida: uno a la vuelta de la esquina y otro a
@@ -85,7 +85,7 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 
 const { adentro } = await import('../../__tests__/adentroDeUnaPrestadora.js');
 const revisarLlegadasDemoradas = adentro((await import('../revisarLlegadasDemoradas.js')).revisarLlegadasDemoradas);
-const { llegadaEstimadaDeGuardia } = await import('../estimarLlegadaDeGuardia.js');
+const { llegadaEstimadaDeTurnoGuardia } = await import('../estimarLlegadaDeTurnoGuardia.js');
 const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
 const supabase = conexionDe();
 
@@ -106,12 +106,12 @@ function haceUnRato(minutos) {
   return new Date(Date.now() - minutos * 60 * 1000).toISOString();
 }
 
-/** Una guardia programada que empieza dentro de tantos minutos (negativo: ya empezó). */
-function guardiaQueEmpiezaEn(minutos, extra = {}) {
+/** Un turno de guardia programado que empieza dentro de tantos minutos (negativo: ya empezó). */
+function turnoGuardiaQueEmpiezaEn(minutos, extra = {}) {
   const inicio = new Date(Date.now() + minutos * 60 * 1000);
   const { fecha, hora } = enDosPartes(inicio);
   return {
-    id: GUARDIA,
+    id: TURNO_GUARDIA,
     prestadora_id: PRESTADORA,
     paciente_id: PACIENTE,
     fecha,
@@ -123,15 +123,15 @@ function guardiaQueEmpiezaEn(minutos, extra = {}) {
   };
 }
 
-/** Cuándo empieza, de verdad, una guardia de las de arriba. */
-function inicioDe(guardia) {
-  return new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
+/** Cuándo empieza, de verdad, un turno de guardia de las de arriba. */
+function inicioDe(turno_guardia) {
+  return new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
 }
 
-let guardiasEnLaBase;
+let turnosGuardiaEnLaBase;
 let alertasEnLaBase;
 let nivelesDeEscalada;
-/** Dónde se atiende al Paciente el día de la guardia, que puede no ser el del Legajo del Paciente. */
+/** Dónde se atiende al Paciente el día del turno de guardia, que puede no ser el del Legajo del Paciente. */
 let domicilioDelDia;
 
 function filaQuePasaLosFiltros(url, filas) {
@@ -161,13 +161,13 @@ function idsPedidos(url, campo) {
 /** Las alertas que el proceso anotó, en el orden en que las anotó. */
 function alertasAnotadas() {
   return llamadas
-    .filter((l) => l.clave === 'POST /rest/v1/alertas_tempranas_guardia')
+    .filter((l) => l.clave === 'POST /rest/v1/alertas_tempranas_turno_guardia')
     .map((l) => (Array.isArray(l.cuerpo) ? l.cuerpo[0] : l.cuerpo));
 }
 
-/** La consulta con la que el proceso fue a buscar las guardias. */
-function consultaDeGuardias() {
-  return llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
+/** La consulta con la que el proceso fue a buscar los turnos de guardia. */
+function consultaDeTurnosGuardia() {
+  return llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
 }
 
 beforeEach(() => {
@@ -175,24 +175,24 @@ beforeEach(() => {
   respuestas.clear();
   alertasEnLaBase = [];
   nivelesDeEscalada = [];
-  guardiasEnLaBase = [];
+  turnosGuardiaEnLaBase = [];
   domicilioDelDia = { ...DOMICILIO, es_temporal: false, motivo: null };
 
   respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/configuracion_escalada_relevo', () => nivelesDeEscalada);
-  respuestas.set('GET /rest/v1/guardias', ({ url }) => filaQuePasaLosFiltros(url, guardiasEnLaBase));
-  respuestas.set('GET /rest/v1/alertas_tempranas_guardia', ({ url }) =>
+  respuestas.set('GET /rest/v1/turnos_guardia', ({ url }) => filaQuePasaLosFiltros(url, turnosGuardiaEnLaBase));
+  respuestas.set('GET /rest/v1/alertas_tempranas_turno_guardia', ({ url }) =>
     filaQuePasaLosFiltros(url, alertasEnLaBase)
   );
-  respuestas.set('POST /rest/v1/alertas_tempranas_guardia', () => []);
-  // Contesta por las guardias que le preguntaron, y no por las que estén cargadas en la base
-  // falsa. La diferencia importa: las pruebas que llaman a la estimación con una guardia en la
-  // mano no cargan nada en `guardiasEnLaBase`, y una respuesta vacía las mandaba a la red de
-  // seguridad de `pacientesDeGuardia.js` —la columna vieja `guardias.paciente_id`—, o sea a
+  respuestas.set('POST /rest/v1/alertas_tempranas_turno_guardia', () => []);
+  // Contesta por los turnos de guardia que le preguntaron, y no por las que estén cargadas en la base
+  // falsa. La diferencia importa: las pruebas que llaman a la estimación con un turno de guardia en la
+  // mano no cargan nada en `turnosGuardiaEnLaBase`, y una respuesta vacía las mandaba a la red de
+  // seguridad de `pacientesDeTurnoGuardia.js` —la columna vieja `turnos_guardia.paciente_id`—, o sea a
   // probar un camino que no era el que decían probar.
-  respuestas.set('GET /rest/v1/guardia_pacientes', ({ url }) =>
-    idsPedidos(url, 'guardia_id').map((guardiaId) => ({
-      guardia_id: guardiaId,
+  respuestas.set('GET /rest/v1/turno_guardia_pacientes', ({ url }) =>
+    idsPedidos(url, 'turno_guardia_id').map((turnoGuardiaId) => ({
+      turno_guardia_id: turnoGuardiaId,
       // Las coordenadas viven en los datos del Paciente, no en su fila.
       pacientes: { id: PACIENTE, persona: { nombre_visible: 'Paciente de prueba', ...DOMICILIO } },
     }))
@@ -220,31 +220,31 @@ beforeEach(() => {
 
 describe('cálculo de llegada tardía — los minutos de aviso', () => {
   it('con la salida marcada lejos, la alerta se anota ANTES de la hora de inicio', async () => {
-    const guardia = guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(0), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng });
-    guardiasEnLaBase = [guardia];
+    const turno_guardia = turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(0), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng });
+    turnosGuardiaEnLaBase = [turno_guardia];
 
     await revisarLlegadasDemoradas();
 
     const [alerta] = alertasAnotadas();
     assert.ok(alerta, 'tiene que quedar anotada la llegada tardía');
     assert.equal(alerta.fuente, FUENTE_CALCULO_LLEGADA_TARDIA);
-    assert.equal(alerta.guardia_id, GUARDIA);
+    assert.equal(alerta.turno_guardia_id, TURNO_GUARDIA);
     assert.equal(alerta.prestadora_id, PRESTADORA);
 
     // Ésta es la medida de todo el mecanismo: cuántos minutos antes se enteró la Prestadora.
-    const minutosDeAnticipacion = (inicioDe(guardia).getTime() - new Date(alerta.detectado_at).getTime()) / 60000;
+    const minutosDeAnticipacion = (inicioDe(turno_guardia).getTime() - new Date(alerta.detectado_at).getTime()) / 60000;
     assert.ok(minutosDeAnticipacion > 0, `la alerta llegó ${minutosDeAnticipacion} minutos después de la hora de inicio`);
   });
 
   it('la cuenta no la reporta nadie: no lleva persona ni motivo', async () => {
-    guardiasEnLaBase = [
-      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(0), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng }),
+    turnosGuardiaEnLaBase = [
+      turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(0), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng }),
     ];
 
     await revisarLlegadasDemoradas();
 
     const [alerta] = alertasAnotadas();
-    // Poner ahí a la persona de la guardia diría que ella avisó, que es lo que no pasó.
+    // Poner ahí a la persona del turno de guardia diría que ella avisó, que es lo que no pasó.
     assert.equal(alerta.reportado_por, undefined);
     assert.equal(alerta.motivo, null);
     assert.equal(laDioUnaPersona(alerta.fuente), false);
@@ -252,8 +252,8 @@ describe('cálculo de llegada tardía — los minutos de aviso', () => {
   });
 
   it('quien sale a tiempo y de cerca no queda anotado', async () => {
-    guardiasEnLaBase = [
-      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(0), salida_lat: SALIDA_CERCA.lat, salida_lng: SALIDA_CERCA.lng }),
+    turnosGuardiaEnLaBase = [
+      turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(0), salida_lat: SALIDA_CERCA.lat, salida_lng: SALIDA_CERCA.lng }),
     ];
 
     await revisarLlegadasDemoradas();
@@ -263,8 +263,8 @@ describe('cálculo de llegada tardía — los minutos de aviso', () => {
   it('la cuenta se hace contra el domicilio que rige ese día, no contra el del Legajo del Paciente', async () => {
     // Mismo viaje corto, pero ese día se lo atiende en otro lado, a sesenta kilómetros.
     domicilioDelDia = { ...DOMICILIO_TEMPORAL, es_temporal: true, motivo: 'temporada en casa de un familiar' };
-    guardiasEnLaBase = [
-      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(0), salida_lat: SALIDA_CERCA.lat, salida_lng: SALIDA_CERCA.lng }),
+    turnosGuardiaEnLaBase = [
+      turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(0), salida_lat: SALIDA_CERCA.lat, salida_lng: SALIDA_CERCA.lng }),
     ];
 
     await revisarLlegadasDemoradas();
@@ -281,14 +281,14 @@ describe('cálculo de llegada tardía — los minutos de aviso', () => {
 
 describe('el margen lo decide la Prestadora, no el código', () => {
   it('el mismo viaje no se anota si la Prestadora tolera más minutos', async () => {
-    const guardia = guardiaQueEmpiezaEn(20, {
+    const turno_guardia = turnoGuardiaQueEmpiezaEn(20, {
       salida_checkin_at: haceUnRato(0),
       salida_lat: SALIDA_LEJOS.lat,
       salida_lng: SALIDA_LEJOS.lng,
     });
 
     // Primero con lo que trae de fábrica: se anota.
-    guardiasEnLaBase = [guardia];
+    turnosGuardiaEnLaBase = [turno_guardia];
     await revisarLlegadasDemoradas();
     assert.equal(alertasAnotadas().length, 1);
 
@@ -302,7 +302,7 @@ describe('el margen lo decide la Prestadora, no el código', () => {
 
   it('con varios niveles manda el primer escalón, el más chico', async () => {
     nivelesDeEscalada = [{ minutos_demora: 400 }, { minutos_demora: 5 }];
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(-30)];
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
 
     await revisarLlegadasDemoradas();
     // Empezó hace treinta minutos: con el escalón de cinco ya está vencida.
@@ -316,7 +316,7 @@ describe('el margen lo decide la Prestadora, no el código', () => {
 
 describe('ni aviso ni salida — la ausencia de todo, anotada como hecho', () => {
   it('pasada la hora con su margen y sin nada, queda el registro', async () => {
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(-(MINUTOS_DEMORA_POR_OMISION + 5))];
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-(MINUTOS_DEMORA_POR_OMISION + 5))];
 
     await revisarLlegadasDemoradas();
 
@@ -328,7 +328,7 @@ describe('ni aviso ni salida — la ausencia de todo, anotada como hecho', () =>
   });
 
   it('antes de que se cumpla el margen no se anota nada', async () => {
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(20)];
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(20)];
     await revisarLlegadasDemoradas();
     assert.equal(alertasAnotadas().length, 0);
   });
@@ -336,8 +336,8 @@ describe('ni aviso ni salida — la ausencia de todo, anotada como hecho', () =>
   it('quien marcó la salida nunca queda anotado como «ni aviso ni salida»', async () => {
     // Marcó la salida, pero el teléfono no pudo ubicarla: de ese viaje no se puede estimar nada.
     // No saber no es no haber avisado, y anotarle lo contrario sería escribir algo falso.
-    guardiasEnLaBase = [
-      guardiaQueEmpiezaEn(-60, { salida_checkin_at: haceUnRato(70), salida_lat: null, salida_lng: null }),
+    turnosGuardiaEnLaBase = [
+      turnoGuardiaQueEmpiezaEn(-60, { salida_checkin_at: haceUnRato(70), salida_lat: null, salida_lng: null }),
     ];
 
     await revisarLlegadasDemoradas();
@@ -345,7 +345,7 @@ describe('ni aviso ni salida — la ausencia de todo, anotada como hecho', () =>
   });
 
   it('una guardia de anteayer ya no se anota: cubrirla no sirve de nada', async () => {
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(-60 * 30)];
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-60 * 30)];
     await revisarLlegadasDemoradas();
     assert.equal(alertasAnotadas().length, 0);
   });
@@ -358,9 +358,9 @@ describe('ni aviso ni salida — la ausencia de todo, anotada como hecho', () =>
 describe('si alguien ya avisó, el sistema no agrega nada', () => {
   for (const fuente of [FUENTE_AVISO_DEMORA_ASISTENTE, FUENTE_AVISO_TELEFONICO]) {
     it(`con un aviso abierto de origen «${fuente}» no se anota nada nuevo`, async () => {
-      guardiasEnLaBase = [guardiaQueEmpiezaEn(-30)];
+      turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
       alertasEnLaBase = [
-        { guardia_id: GUARDIA, prestadora_id: PRESTADORA, fuente, resuelto_at: null },
+        { turno_guardia_id: TURNO_GUARDIA, prestadora_id: PRESTADORA, fuente, resuelto_at: null },
       ];
 
       await revisarLlegadasDemoradas();
@@ -369,11 +369,11 @@ describe('si alguien ya avisó, el sistema no agrega nada', () => {
   }
 
   it('el mismo origen no se anota dos veces por la misma guardia', async () => {
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(-30)];
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
     // Ya se anotó una vez y el Coordinador la resolvió: no vuelve a anotarse por lo mismo.
     alertasEnLaBase = [
       {
-        guardia_id: GUARDIA,
+        turno_guardia_id: TURNO_GUARDIA,
         prestadora_id: PRESTADORA,
         fuente: FUENTE_SIN_AVISO_NI_SALIDA,
         resuelto_at: haceUnRato(5),
@@ -385,10 +385,10 @@ describe('si alguien ya avisó, el sistema no agrega nada', () => {
   });
 
   it('una alerta resuelta de otro origen no impide anotar la que corresponde', async () => {
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(-30)];
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
     alertasEnLaBase = [
       {
-        guardia_id: GUARDIA,
+        turno_guardia_id: TURNO_GUARDIA,
         prestadora_id: PRESTADORA,
         fuente: FUENTE_CALCULO_LLEGADA_TARDIA,
         resuelto_at: haceUnRato(5),
@@ -402,8 +402,8 @@ describe('si alguien ya avisó, el sistema no agrega nada', () => {
   it('sin poder leer lo que ya está anotado no se anota nada', async () => {
     // Repetirle al Coordinador una alerta que ya existe le llena la pantalla de filas iguales, y
     // eso termina en un filtro del correo. Ante la duda, no se escribe.
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(-30)];
-    respuestas.set('GET /rest/v1/alertas_tempranas_guardia', () => undefined);
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
+    respuestas.set('GET /rest/v1/alertas_tempranas_turno_guardia', () => undefined);
 
     await revisarLlegadasDemoradas();
     assert.equal(alertasAnotadas().length, 0);
@@ -416,14 +416,14 @@ describe('si alguien ya avisó, el sistema no agrega nada', () => {
 
 describe('a quién mira este proceso', () => {
   it('la consulta va acotada a una Prestadora por vez', async () => {
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(-30)];
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
     await revisarLlegadasDemoradas();
-    assert.ok(consultaDeGuardias().url.includes(`prestadora_id=eq.${PRESTADORA}`), consultaDeGuardias().url);
+    assert.ok(consultaDeTurnosGuardia().url.includes(`prestadora_id=eq.${PRESTADORA}`), consultaDeTurnosGuardia().url);
   });
 
   it('la guardia de otra Prestadora no entra en la revisión de ésta', async () => {
-    guardiasEnLaBase = [
-      guardiaQueEmpiezaEn(-30, { id: GUARDIA_AJENA, prestadora_id: OTRA_PRESTADORA }),
+    turnosGuardiaEnLaBase = [
+      turnoGuardiaQueEmpiezaEn(-30, { id: TURNO_GUARDIA_AJENA, prestadora_id: OTRA_PRESTADORA }),
     ];
 
     await revisarLlegadasDemoradas();
@@ -431,9 +431,9 @@ describe('a quién mira este proceso', () => {
   });
 
   it('no mira guardias sin Asistente, ni guardias que ya marcaron la llegada', async () => {
-    guardiasEnLaBase = [guardiaQueEmpiezaEn(-30)];
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
     await revisarLlegadasDemoradas();
-    const { url } = consultaDeGuardias();
+    const { url } = consultaDeTurnosGuardia();
     // De los huecos sin cubrir se ocupa otro proceso, que sabe en qué punto está la búsqueda.
     assert.ok(url.includes('asistente_id=not.is.null'), url);
     assert.ok(url.includes('checkin_at=is.null'), url);
@@ -445,37 +445,37 @@ describe('a quién mira este proceso', () => {
 // La estimación, mirada de cerca
 // ============================================================================
 
-describe('estimarLlegadaDeGuardia — qué devuelve y qué no', () => {
+describe('estimarLlegadaDeTurnoGuardia — qué devuelve y qué no', () => {
   it('sin marca de salida no hay estimación, y eso se dice', async () => {
-    const estimada = await llegadaEstimadaDeGuardia(supabase, PRESTADORA, guardiaQueEmpiezaEn(20));
+    const estimada = await llegadaEstimadaDeTurnoGuardia(supabase, PRESTADORA, turnoGuardiaQueEmpiezaEn(20));
     assert.equal(estimada, null);
   });
 
   it('con salida marcada pero sin punto tampoco: no se inventa una hora', async () => {
-    const estimada = await llegadaEstimadaDeGuardia(
+    const estimada = await llegadaEstimadaDeTurnoGuardia(
       supabase,
       PRESTADORA,
-      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: null, salida_lng: null })
+      turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: null, salida_lng: null })
     );
     assert.equal(estimada, null);
   });
 
   it('con salida y punto devuelve una hora posterior a la salida', async () => {
     const salidaAt = haceUnRato(5);
-    const estimada = await llegadaEstimadaDeGuardia(
+    const estimada = await llegadaEstimadaDeTurnoGuardia(
       supabase,
       PRESTADORA,
-      guardiaQueEmpiezaEn(20, { salida_checkin_at: salidaAt, salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
+      turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: salidaAt, salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
     );
     assert.ok(estimada instanceof Date);
     assert.ok(estimada.getTime() > new Date(salidaAt).getTime());
   });
 
   it('lo que devuelve es una hora y nunca un punto: el lugar del que salió no viaja', async () => {
-    const estimada = await llegadaEstimadaDeGuardia(
+    const estimada = await llegadaEstimadaDeTurnoGuardia(
       supabase,
       PRESTADORA,
-      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
+      turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
     );
     // Es la garantía de que de acá no sale la ubicación de nadie hacia ninguna pantalla.
     assert.equal(typeof estimada.getTime(), 'number');
@@ -485,18 +485,18 @@ describe('estimarLlegadaDeGuardia — qué devuelve y qué no', () => {
 
   it('sin salida marcada ni siquiera se le pregunta a la base por el domicilio', async () => {
     llamadas = [];
-    await llegadaEstimadaDeGuardia(supabase, PRESTADORA, guardiaQueEmpiezaEn(20));
+    await llegadaEstimadaDeTurnoGuardia(supabase, PRESTADORA, turnoGuardiaQueEmpiezaEn(20));
     assert.equal(llamadas.length, 0);
   });
 
   it('sin Prestadora no hay estimación: un filtro vacío no acota nada', async () => {
     // El aislamiento lo sostiene el filtro, no la pantalla: preguntar por los Pacientes de una
-    // guardia sin decir de quién es sería una consulta que alcanza a cualquiera.
+    // turno de guardia sin decir de quién es sería una consulta que alcanza a cualquiera.
     llamadas = [];
-    const estimada = await llegadaEstimadaDeGuardia(
+    const estimada = await llegadaEstimadaDeTurnoGuardia(
       supabase,
       null,
-      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
+      turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
     );
     assert.equal(estimada, null);
     assert.equal(llamadas.length, 0);
@@ -504,12 +504,12 @@ describe('estimarLlegadaDeGuardia — qué devuelve y qué no', () => {
 
   it('los Pacientes de la guardia se piden acotados a esa Prestadora', async () => {
     llamadas = [];
-    await llegadaEstimadaDeGuardia(
+    await llegadaEstimadaDeTurnoGuardia(
       supabase,
       PRESTADORA,
-      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
+      turnoGuardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
     );
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/guardia_pacientes');
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/turno_guardia_pacientes');
     assert.ok(consulta, 'tiene que preguntar por los Pacientes de la guardia');
     assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
   });

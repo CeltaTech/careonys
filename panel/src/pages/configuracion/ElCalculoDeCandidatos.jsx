@@ -26,7 +26,7 @@ import '../../styles/molde-paginas.css';
 /**
  * Cómo ordena esta Prestadora la lista de quiénes pueden cubrir un hueco.
  *
- * QUÉ SE DECIDE ACÁ. Cuando hay una guardia sin Asistente, el sistema propone a quiénes conviene
+ * QUÉ SE DECIDE ACÁ. Cuando hay un turno de guardia sin Asistente, el sistema propone a quiénes conviene
  * llamar primero. Ese orden sale de cuánto pesa cada cosa: haber atendido antes a ese Paciente,
  * vivir cerca, llegar descansado, tener la semana casi llena. Hasta ahora esos números eran
  * iguales para toda Prestadora.

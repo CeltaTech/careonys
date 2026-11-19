@@ -20,7 +20,7 @@
 // copia que el backend necesita para saber qué consulta desviar, y `scripts/probar_aislamiento.mjs`
 // rompe si se despegan.
 export const TABLAS_DE_SALUD = new Set([
-  'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_guardia', 'hospitalizaciones_paciente',
+  'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_turno_guardia', 'hospitalizaciones_paciente',
   'indicaciones_medicacion', 'informacion_de_salud_del_paciente', 'informes_obra_social',
   'rangos_referencia_vitales', 'reportes', 'versiones_registro_clinico',
 ]);
@@ -31,7 +31,7 @@ const AGREGADOS = {
   vias_administracion: 'via_administracion_id',
   pacientes: 'paciente_id',
   clientes: 'cliente_id',
-  guardias: 'guardia_id',
+  turnos_guardia: 'turno_guardia_id',
 };
 
 // Lo que se pega nombrando la relación, cuando hay más de una entre las dos tablas: la relación dice
@@ -67,7 +67,7 @@ function partir(texto) {
   return partes;
 }
 
-// `id, medicamento, via:vias_administracion(clave), guardias!inner(fecha)` → columnas y agregados.
+// `id, medicamento, via:vias_administracion(clave), turnos_guardia!inner(fecha)` → columnas y agregados.
 function leerColumnas(seleccion) {
   const columnas = [];
   const agregados = [];
@@ -117,7 +117,7 @@ class ConsultaDeSalud {
     this.conteo = false;
     this.soloConteo = false;
     this.filtros = [];
-    this.deLaGuardia = [];
+    this.delTurnoGuardia = [];
     this.orden = [];
     this.limite = null;
     this.uno = null;
@@ -154,9 +154,9 @@ class ConsultaDeSalud {
   #filtro(columna, op, valor) {
     const [delante, detras] = String(columna).split('.');
     if (detras !== undefined) {
-      // Una condición sobre lo pegado: sólo la guardia, que la base sabe resolver.
-      if (delante !== 'guardias') throw new PedidoInvalido(`no sabe filtrar por ${columna}`);
-      this.deLaGuardia.push({ columna: detras, op, valor });
+      // Una condición sobre lo pegado: sólo el turno de guardia, que la base sabe resolver.
+      if (delante !== 'turnos_guardia') throw new PedidoInvalido(`no sabe filtrar por ${columna}`);
+      this.delTurnoGuardia.push({ columna: detras, op, valor });
     } else {
       this.filtros.push(op === 'is_null' || op === 'not_null' ? { columna, op } : { columna, op, valor });
     }
@@ -240,7 +240,7 @@ class ConsultaDeSalud {
     // Al agregar o modificar, sin columnas la base devuelve sólo el identificador: la fila entera se
     // pide con `*`.
     const devueltas = devolver ? (pedidas ?? ['*']) : null;
-    const filtros = this.deLaGuardia.length ? [...this.filtros, { guardia: this.deLaGuardia }] : this.filtros;
+    const filtros = this.delTurnoGuardia.length ? [...this.filtros, { turno_guardia: this.delTurnoGuardia }] : this.filtros;
 
     let filas;
     let conteo = null;

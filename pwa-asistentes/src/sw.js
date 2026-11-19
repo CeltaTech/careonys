@@ -11,7 +11,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Notificaciones push a Asistentes — docs/PRD_04_05_App_Servicio.md:115 (nueva guardia
+// Notificaciones push a Asistentes — docs/PRD_04_05_App_Servicio.md:115 (nuevo turno de guardia
 // asignada, mensajes del coordinador, recordatorios). El payload lo arma el backend
 // (backend/src/utils/push.js) como { titulo, cuerpo, url }.
 //

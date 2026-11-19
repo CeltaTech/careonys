@@ -193,8 +193,8 @@ const ESTADO_POR_MOTIVO = {
   reactivacion_usuario_en_uso: 409,
   reactivacion_correo_en_uso: 409,
   // Desactivar una cuenta con turnos de guardia por delante: primero se le quitan los turnos.
-  desactivacion_con_turnos_por_delante: 409,
-  desactivacion_con_turnos_sin_cerrar: 409,
+  desactivacion_con_turnos_guardia_por_delante: 409,
+  desactivacion_con_turnos_guardia_sin_cerrar: 409,
   via_de_telefono_no_disponible: 409,
   clave_actual_incorrecta: 400,
   no_puede_habilitar: 403,
@@ -235,13 +235,13 @@ const ESTADO_POR_MOTIVO = {
   // El Apoderado: el número fiscal que se escribió no es válido para ese país.
   numero_no_valido: 400,
   // La baja y la reactivación de un Servicio. El Servicio que no existe y el que es de otra
-  // Prestadora contestan lo mismo. Las guardias asignadas, la Lista de comprobación incompleta y el
+  // Prestadora contestan lo mismo. Los turnos de guardia asignados, la Lista de comprobación incompleta y el
   // estado que ya es el pedido son 409: el pedido está bien armado y choca con el estado de las
   // cosas. El motivo que no está en el catálogo o al que le falta el detalle es dato mal cargado.
   servicio_inexistente: 404,
   el_servicio_ya_esta_de_baja: 409,
   el_servicio_esta_vigente: 409,
-  el_servicio_tiene_guardias_asignadas: 409,
+  el_servicio_tiene_turnos_guardia_asignados: 409,
   faltan_comprobaciones_de_la_baja: 409,
   motivo_de_cierre_inexistente: 400,
   motivo_de_cierre_pide_detalle: 400,
@@ -282,7 +282,7 @@ export function responderError(res, error, estadoPorOmision = 500) {
   const cuerpo = error?.motivo ? { error: motivo, motivo } : { error: motivo };
   // Lo que la pantalla necesita para decir qué hacer: todos los motivos y los turnos de cada uno.
   if (error?.motivo && Array.isArray(error.motivos)) cuerpo.motivos = error.motivos;
-  if (error?.motivo && Array.isArray(error.turnos)) cuerpo.turnos = error.turnos;
+  if (error?.motivo && Array.isArray(error.turnos_guardia)) cuerpo.turnos_guardia = error.turnos_guardia;
   // Cuánto hay que esperar antes de volver a probar, para que la pantalla lo diga con el número.
   if (error?.motivo && Number.isInteger(error.minutos)) cuerpo.minutos = error.minutos;
   // Los nombres de los documentos que faltan, para que la pantalla diga cuáles.

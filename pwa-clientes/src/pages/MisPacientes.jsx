@@ -50,7 +50,7 @@ export default function MisPacientes() {
       {pacientes.map((p) => (
         <Link key={p.id} to={`/pacientes/${p.id}`} className="pwa-card">
           <div className="mini">{t.paciente.rotulo}</div>
-          <div className="guardia-card-paciente">{p.nombre}</div>
+          <div className="tarjeta-paciente">{p.nombre}</div>
           <div className="mini mini-abajo">{p.domicilio || '—'}</div>
           {/* Cuando el Paciente está pasando una temporada en otro lado, la dirección de arriba
               es la de ahora y no la habitual. Sin este renglón se leen igual. */}

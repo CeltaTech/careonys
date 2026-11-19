@@ -25,9 +25,9 @@ export default function TarjetaAcciones({ pacienteId }) {
     <section className="pwa-card" aria-labelledby="tarjeta-acciones">
       <h2 id="tarjeta-acciones">{t.paciente.acciones}</h2>
       <div className="pwa-acciones">
-        {base && seEntraA('guardias') && (
-          <Link to={`${base}/guardias`} className="btn">
-            {t.paciente.ver_guardias_de_la_semana}
+        {base && seEntraA('turnos_guardia') && (
+          <Link to={`${base}/turnos-guardia`} className="btn">
+            {t.paciente.ver_turnos_guardia_de_la_semana}
           </Link>
         )}
         {/* El chat y la vidriera cuelgan de la modalidad: donde la Prestadora no ofrece

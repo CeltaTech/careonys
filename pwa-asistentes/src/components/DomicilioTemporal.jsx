@@ -3,7 +3,7 @@
 // El Paciente tiene una sola dirección cargada, la habitual, y hay temporadas en que no
 // está ahí: el verano en la casa de un hijo, una internación, una mudanza mientras arreglan el
 // departamento. El backend resuelve eso solo — en `domicilio`, `lat` y `lng` manda la dirección
-// del día de esa guardia, la temporal si hay una vigente y si no la habitual — y agrega dos
+// del día de ese turno de guardia, la temporal si hay una vigente y si no la habitual — y agrega dos
 // campos para poder decirlo:
 //
 //   domicilio_es_temporal   sí o no
@@ -48,20 +48,20 @@ export function motivoDelDomicilio(paciente) {
 }
 
 /* Para una tarjeta de la lista, que no muestra direcciones y sí tiene que avisar que algo
-   cambió: ¿alguna de las personas de esta guardia está en otro lado? */
+   cambió: ¿alguna de las personas de este turno de guardia está en otro lado? */
 export function hayDomicilioTemporal(pacientes) {
   return (pacientes ?? []).some(domicilioEsTemporal);
 }
 
-/* Las direcciones distintas de una guardia, sin repetir. Un turno que cubre a un matrimonio
+/* Las direcciones distintas de un turno de guardia, sin repetir. Un turno de guardia que cubre a un matrimonio
    trae dos Pacientes con la misma dirección, y escribirla dos veces no informa nada.
    Devuelve objetos con los mismos campos del domicilio que trae un Paciente —incluidas `lat` y
-   `lng`, que son las del día de esa guardia—, así el resultado se le pasa igual que un Paciente
+   `lng`, que son las del día de ese turno de guardia—, así el resultado se le pasa igual que un Paciente
    a este componente y al que abre el mapa del teléfono.
    Cuando dos personas comparten dirección y solo una la tiene marcada como temporal, gana la
    marca, y entre dos marcadas gana la que trae motivo escrito: callarlo sería mandar a alguien
    a la casa equivocada por redondear. */
-export function domiciliosDeLaGuardia(pacientes) {
+export function domiciliosDelTurnoGuardia(pacientes) {
   const porDireccion = new Map();
   for (const paciente of pacientes ?? []) {
     const texto = textoDelDomicilio(paciente);
@@ -86,14 +86,14 @@ export function domiciliosDeLaGuardia(pacientes) {
  * El renglón que se pone abajo de una dirección cuando esa dirección es temporal.
  *
  * `paciente` es un Paciente, o cualquier objeto que traiga los tres campos del domicilio —lo
- * que devuelve `domiciliosDeLaGuardia` sirve tal cual. Devuelve null cuando no hay nada que
+ * que devuelve `domiciliosDelTurnoGuardia` sirve tal cual. Devuelve null cuando no hay nada que
  * avisar, así que se puede poner en cualquier pantalla sin preguntar antes.
  */
 export default function DomicilioTemporal({ paciente, t }) {
   if (!domicilioEsTemporal(paciente)) return null;
   const motivo = motivoDelDomicilio(paciente);
   return (
-    <p className="guardia-card-detalle">
+    <p className="tarjeta-detalle">
       <span className="badge badge-alerta">{t.domicilio.temporal}</span>{' '}
       {motivo || t.domicilio.sin_motivo}
     </p>

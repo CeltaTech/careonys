@@ -9,7 +9,7 @@
  *   1. HASTA DÓNDE SE CUBRE. Con fecha prevista por delante, o con la vuelta anotada, hasta la fecha
  *      de fin. Con la prevista pasada y sin vuelta, hasta pasado mañana: la cobertura sigue sin
  *      inventar un fin.
- *   2. DEVOLVER AL TITULAR mueve de vuelta las guardias programadas desde el día pedido, borra su
+ *   2. DEVOLVER AL TITULAR mueve de vuelta los turnos de guardia programados desde el día pedido, borra su
  *      constancia de sustitución y no toca las anteriores.
  *   3. EL TRABAJO PROGRAMADO VA DE A UNA PRESTADORA: cada consulta de coberturas sale atada a una.
  */
@@ -88,12 +88,12 @@ describe('hasta dónde se cubre', () => {
 
 describe('devolver al titular', () => {
   it('devuelve las guardias programadas desde el día pedido y borra su constancia', async () => {
-    respuestas.set('GET /rest/v1/guardias_cobertura', [
-      { id: 'f-1', guardia_original_id: 'g-pasada' },
-      { id: 'f-2', guardia_original_id: 'g-futura' },
+    respuestas.set('GET /rest/v1/turnos_guardia_cobertura', [
+      { id: 'f-1', turno_guardia_original_id: 'g-pasada' },
+      { id: 'f-2', turno_guardia_original_id: 'g-futura' },
     ]);
     // La base contesta sólo las que cumplen el filtro de fecha: la pasada no vuelve.
-    respuestas.set('GET /rest/v1/guardias', [{ id: 'g-futura' }]);
+    respuestas.set('GET /rest/v1/turnos_guardia', [{ id: 'g-futura' }]);
 
     const devueltas = await devolverAlTitular({
       db: supabase,
@@ -103,16 +103,16 @@ describe('devolver al titular', () => {
     });
 
     assert.deepEqual(devueltas, ['g-futura']);
-    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
     assert.equal(lectura.filtros.get('fecha'), 'gte.2026-10-10');
     assert.equal(lectura.filtros.get('estado'), 'eq.programada');
 
-    const cambios = llamadas.filter((l) => l.clave === 'PATCH /rest/v1/guardias');
+    const cambios = llamadas.filter((l) => l.clave === 'PATCH /rest/v1/turnos_guardia');
     assert.equal(cambios.length, 1);
     assert.deepEqual(cambios[0].cuerpo, { asistente_id: TITULAR });
     assert.equal(cambios[0].filtros.get('id'), 'eq.g-futura');
 
-    const borradas = llamadas.filter((l) => l.clave === 'DELETE /rest/v1/guardias_cobertura');
+    const borradas = llamadas.filter((l) => l.clave === 'DELETE /rest/v1/turnos_guardia_cobertura');
     assert.equal(borradas.length, 1);
     assert.equal(borradas[0].filtros.get('id'), 'eq.f-2');
   });
@@ -150,7 +150,7 @@ describe('el trabajo programado', () => {
 
     // La lista de a quiénes recorrer es lo único que sale sin Prestadora.
     const deLaPrestadora = llamadas.filter((l) => l.clave !== 'POST /rest/v1/rpc/prestadoras_a_recorrer');
-    assert.ok(deLaPrestadora.some((l) => l.clave === 'GET /rest/v1/guardias_cobertura'), 'no llegó a devolver al titular');
+    assert.ok(deLaPrestadora.some((l) => l.clave === 'GET /rest/v1/turnos_guardia_cobertura'), 'no llegó a devolver al titular');
     for (const llamada of deLaPrestadora) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
       assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);

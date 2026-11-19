@@ -34,8 +34,8 @@
 
 // Con extensión a propósito: este archivo se copia tal cual al backend, que corre en Node y ahí la
 // ruta sin extensión no resuelve.
-import { inicioDeGuardia } from './horarios.js';
-import { ausenciaQueTapaLaGuardia } from './ausenciaQueTapa.js';
+import { inicioDeTurnoGuardia } from './horarios.js';
+import { ausenciaQueTapaElTurnoGuardia } from './ausenciaQueTapa.js';
 
 /**
  * Los números con los que se decide si una ausencia llegó con tiempo. Valores de fábrica.
@@ -62,14 +62,14 @@ export const REGLA_QUE_SE_PUEDE_TOCAR = {
 /**
  * Cómo llegó la ausencia.
  *
- * `sin_turnos` no es un caso menor ni un error: es la ausencia que no deja ningún turno sin
+ * `sin_turnos_guardia` no es un caso menor ni un error: es la ausencia que no deja ningún turno sin
  * cubrir. Existe separada de las otras dos porque no hay nada que resolver, y tratarla como «con
  * tiempo» llenaría la pantalla de la Coordinadora de tareas que no son tareas.
  */
 export const COMO_LLEGO = {
   CON_TIEMPO: 'con_tiempo',
   DE_GOLPE: 'de_golpe',
-  SIN_TURNOS: 'sin_turnos',
+  SIN_TURNOS_GUARDIA: 'sin_turnos_guardia',
 };
 
 const MS_POR_HORA = 60 * 60 * 1000;
@@ -134,18 +134,18 @@ export function cuandoSeSupo(ausencia) {
  * supiera de la ausencia, que no son un hueco que haya que salir a tapar sino un turno que esa
  * persona ya estaba haciendo; y los que ya no están en pie, cancelados o pasados a otra persona.
  */
-export function turnosQueDejaSinNadie({ ausencia, guardias = [] } = {}) {
+export function turnosGuardiaQueDejaSinNadie({ ausencia, turnos_guardia = [] } = {}) {
   const supo = cuandoSeSupo(ausencia);
-  return (guardias ?? [])
-    .filter((guardia) => {
-      if (!guardia?.fecha || !guardia?.hora_inicio) return false;
-      if (guardia.asistente_id !== ausencia?.asistente_id) return false;
-      if (guardia.estado === 'cancelada') return false;
-      if (!ausenciaQueTapaLaGuardia(guardia, [ausencia])) return false;
-      if (supo && inicioDeGuardia(guardia).getTime() < supo.getTime()) return false;
+  return (turnos_guardia ?? [])
+    .filter((turno_guardia) => {
+      if (!turno_guardia?.fecha || !turno_guardia?.hora_inicio) return false;
+      if (turno_guardia.asistente_id !== ausencia?.asistente_id) return false;
+      if (turno_guardia.estado === 'cancelada') return false;
+      if (!ausenciaQueTapaElTurnoGuardia(turno_guardia, [ausencia])) return false;
+      if (supo && inicioDeTurnoGuardia(turno_guardia).getTime() < supo.getTime()) return false;
       return true;
     })
-    .sort((a, b) => inicioDeGuardia(a).getTime() - inicioDeGuardia(b).getTime());
+    .sort((a, b) => inicioDeTurnoGuardia(a).getTime() - inicioDeTurnoGuardia(b).getTime());
 }
 
 /**
@@ -156,38 +156,38 @@ export function turnosQueDejaSinNadie({ ausencia, guardias = [] } = {}) {
  *
  * @param {object} entrada
  * @param {object} entrada.ausencia Con `asistente_id`, `fecha_inicio`, `fecha_fin` y `avisada_en`.
- * @param {Array} entrada.guardias Turnos de esa persona. Los que no toca la ausencia se ignoran,
+ * @param {Array} entrada.turnos_guardia Turnos de guardia de esa persona. Los que no toca la ausencia se ignoran,
  *   así que se puede pasar la lista entera de la pantalla.
  * @param {object} entrada.regla Los números de esta Prestadora, de `reglaDeAvisoDe()`.
- * @returns {{como: string, horas: number|null, primerTurno: object|null, turnos: Array}}
+ * @returns {{como: string, horas: number|null, primerTurnoGuardia: object|null, turnos_guardia: Array}}
  *   `horas` es la anticipación sobre el primer turno afectado, negativa si ese turno ya había
  *   empezado cuando se supo.
  */
 export function comoLlegoLaAusencia({
   ausencia,
-  guardias = [],
+  turnos_guardia = [],
   regla = REGLA_DE_AVISO_DE_AUSENCIA,
 } = {}) {
-  const turnos = turnosQueDejaSinNadie({ ausencia, guardias });
-  if (!turnos.length) {
-    return { como: COMO_LLEGO.SIN_TURNOS, horas: null, primerTurno: null, turnos };
+  const turnos_guardia_sin_nadie = turnosGuardiaQueDejaSinNadie({ ausencia, turnos_guardia });
+  if (!turnos_guardia_sin_nadie.length) {
+    return { como: COMO_LLEGO.SIN_TURNOS_GUARDIA, horas: null, primerTurnoGuardia: null, turnos_guardia: turnos_guardia_sin_nadie };
   }
 
-  const primerTurno = turnos[0];
+  const primerTurnoGuardia = turnos_guardia_sin_nadie[0];
   const supo = cuandoSeSupo(ausencia);
   // Sin el momento en que se supo no hay cuenta posible, y suponer que se supo recién sería
   // inventar el dato que decide. Se trata como urgente: el error caro es el otro, dejar pasar en
   // silencio un turno que empieza esta tarde (CLAUDE.md §5, todo control falla cerrado).
   if (!supo) {
-    return { como: COMO_LLEGO.DE_GOLPE, horas: null, primerTurno, turnos };
+    return { como: COMO_LLEGO.DE_GOLPE, horas: null, primerTurnoGuardia, turnos_guardia: turnos_guardia_sin_nadie };
   }
 
-  const horas = (inicioDeGuardia(primerTurno).getTime() - supo.getTime()) / MS_POR_HORA;
+  const horas = (inicioDeTurnoGuardia(primerTurnoGuardia).getTime() - supo.getTime()) / MS_POR_HORA;
   const conTiempo = horas >= reglaDeAvisoDe(regla).horas_para_considerarla_con_tiempo;
   return {
     como: conTiempo ? COMO_LLEGO.CON_TIEMPO : COMO_LLEGO.DE_GOLPE,
     horas,
-    primerTurno,
-    turnos,
+    primerTurnoGuardia,
+    turnos_guardia: turnos_guardia_sin_nadie,
   };
 }

@@ -6,7 +6,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
-import { TurnosQueTraban } from '../../components/cuenta/TurnosQueTraban';
+import { TurnosGuardiaQueTraban } from '../../components/cuenta/TurnosGuardiaQueTraban';
 
 /* Desactivar a un Asistente desde su Legajo. La cuenta no se borra: se desactiva con su motivo,
    y queda en el Padrón entre los desactivados, de donde se la puede reactivar.
@@ -40,7 +40,7 @@ export function DesactivarAsistenteModal({ asistente, onClose, onDesactivado }) 
       onDesactivado();
     } catch (err) {
       if (Array.isArray(err.motivos) && err.motivos.length > 0) {
-        setTraban({ motivos: err.motivos, turnos: err.turnos ?? [] });
+        setTraban({ motivos: err.motivos, turnos_guardia: err.turnos_guardia ?? [] });
       } else {
         setError(mensajeDeError(err, t));
       }
@@ -53,7 +53,7 @@ export function DesactivarAsistenteModal({ asistente, onClose, onDesactivado }) 
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <p id={modal.idTitulo}>{tc.confirmar}</p>
         {error && <Alert variant="error">{error}</Alert>}
-        {traban && <TurnosQueTraban motivos={traban.motivos} turnos={traban.turnos} />}
+        {traban && <TurnosGuardiaQueTraban motivos={traban.motivos} turnos_guardia={traban.turnos_guardia} />}
         <FormField
           type="textarea"
           name="motivo-de-la-desactivacion"

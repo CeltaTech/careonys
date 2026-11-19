@@ -21,9 +21,9 @@ import { avisar } from '../lib/mensajeEmergente';
 
 function Estrellas({ cantidad, t }) {
   // Las estrellas dibujadas no se leen en voz alta —cinco símbolos seguidos no dicen nada—, así
-  // que al lado va la frase entera, que no se ve. Es el mismo patrón que el número de la pestaña Guardias.
+  // que al lado va la frase entera, que no se ve. Es el mismo patrón que el número de la pestaña Turnos de guardia.
   return (
-    <span className="guardia-card-paciente">
+    <span className="tarjeta-paciente">
       <span aria-hidden="true">{'★'.repeat(cantidad)}{'☆'.repeat(Math.max(0, 5 - cantidad))}</span>
       <span className="solo-lectores-pantalla">{con(t.calificaciones.estrellas, { n: cantidad })}</span>
     </span>
@@ -43,7 +43,7 @@ function Descargo({ calificacion, onGuardado, t, locale }) {
         <h3>{t.calificaciones.descargo_titulo}</h3>
         <p>{calificacion.descargo_asistente}</p>
         {calificacion.descargo_en && (
-          <p className="guardia-card-detalle">
+          <p className="tarjeta-detalle">
             {con(t.calificaciones.descargo_en, {
               fecha: new Date(calificacion.descargo_en).toLocaleDateString(locale, { dateStyle: 'short' }),
             })}
@@ -170,9 +170,9 @@ export default function MisCalificaciones() {
         <div className="estado-vacio" role="status">{t.calificaciones.sin_calificaciones}</div>
       ) : (
         calificaciones.map((calificacion) => (
-          <div key={calificacion.id} className="guardia-card">
+          <div key={calificacion.id} className="tarjeta">
             <Estrellas cantidad={Number(calificacion.estrellas) || 0} t={t} />
-            <div className="guardia-card-detalle">
+            <div className="tarjeta-detalle">
               {con(t.calificaciones.cuando, {
                 fecha: new Date(calificacion.created_at).toLocaleDateString(locale, { dateStyle: 'short' }),
               })}
@@ -180,7 +180,7 @@ export default function MisCalificaciones() {
             <p>{calificacion.comentario || t.calificaciones.sin_comentario}</p>
             {/* Que se vea o no en el perfil público cambia el peso de dejar un descargo, así
                 que se dice antes de ofrecerlo, no después. */}
-            <p className="guardia-card-detalle">
+            <p className="tarjeta-detalle">
               {calificacion.visible_publica
                 ? t.calificaciones.visible_publica
                 : t.calificaciones.no_visible_publica}

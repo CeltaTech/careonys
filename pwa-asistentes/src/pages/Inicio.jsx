@@ -5,11 +5,11 @@ import { useLocale } from '../i18n/LocaleContext';
 import { mensajeDeError } from '../lib/errores';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { hoyISO } from '../lib/horarios';
-import { guardiaQueSigue, estaEnCurso } from '../lib/proximaGuardia';
-import { nombresDeLaTarjeta, cuandoEsLaGuardia } from '../lib/nombresDeLaGuardia';
+import { turnoGuardiaQueSigue, estaEnCurso } from '../lib/proximaTurnoGuardia';
+import { nombresDeLaTarjeta, cuandoEsElTurnoGuardia } from '../lib/nombresDelTurnoGuardia';
 import { con } from '../lib/textos';
 
-// La primera pantalla: el saludo y la guardia que sigue. Las dos tarjetas piden sus datos por
+// La primera pantalla: el saludo y el turno de guardia que sigue. Las dos tarjetas piden sus datos por
 // separado, cada una con sus cuatro estados, para que una que falla no se lleve a la otra.
 export default function Inicio() {
   const { t } = useLocale();
@@ -19,9 +19,9 @@ export default function Inicio() {
   const [errorPerfil, setErrorPerfil] = useState('');
   const [pidiendoPerfil, setPidiendoPerfil] = useState(false);
 
-  const [guardias, setGuardias] = useState(null);
-  const [errorGuardias, setErrorGuardias] = useState('');
-  const [pidiendoGuardias, setPidiendoGuardias] = useState(false);
+  const [turnos_guardia, setTurnosGuardia] = useState(null);
+  const [errorTurnosGuardia, setErrorTurnosGuardia] = useState('');
+  const [pidiendoTurnosGuardia, setPidiendoTurnosGuardia] = useState(false);
 
   const pedirPerfil = useCallback(() => {
     setErrorPerfil('');
@@ -33,32 +33,32 @@ export default function Inicio() {
       .finally(() => setPidiendoPerfil(false));
   }, [t]);
 
-  const pedirGuardias = useCallback(() => {
-    setErrorGuardias('');
-    setPidiendoGuardias(true);
+  const pedirTurnosGuardia = useCallback(() => {
+    setErrorTurnosGuardia('');
+    setPidiendoTurnosGuardia(true);
     return api
-      .misGuardias()
-      .then(({ guardias: data }) => setGuardias(data ?? []))
-      .catch((e) => setErrorGuardias(mensajeDeError(e, t, 'cargar mis guardias')))
-      .finally(() => setPidiendoGuardias(false));
+      .misTurnosGuardia()
+      .then(({ turnos_guardia: data }) => setTurnosGuardia(data ?? []))
+      .catch((e) => setErrorTurnosGuardia(mensajeDeError(e, t, 'cargar mis turnos de guardia')))
+      .finally(() => setPidiendoTurnosGuardia(false));
   }, [t]);
 
   useEffect(() => {
     pedirPerfil();
-    pedirGuardias();
-  }, [pedirPerfil, pedirGuardias]);
+    pedirTurnosGuardia();
+  }, [pedirPerfil, pedirTurnosGuardia]);
 
-  // La lista cambia sin que el Asistente toque nada —una licencia esconde guardias, una vuelta
+  // La lista cambia sin que el Asistente toque nada —una licencia esconde turnos de guardia, una vuelta
   // anotada las devuelve—, así que se vuelve a pedir cada vez que vuelve a mirar el teléfono.
   useEffect(() => {
     const alVolverAMirar = () => {
-      if (document.visibilityState === 'visible') pedirGuardias();
+      if (document.visibilityState === 'visible') pedirTurnosGuardia();
     };
     document.addEventListener('visibilitychange', alVolverAMirar);
     return () => document.removeEventListener('visibilitychange', alVolverAMirar);
-  }, [pedirGuardias]);
+  }, [pedirTurnosGuardia]);
 
-  const siguiente = guardias ? guardiaQueSigue(guardias) : null;
+  const siguiente = turnos_guardia ? turnoGuardiaQueSigue(turnos_guardia) : null;
   const enCurso = estaEnCurso(siguiente);
 
   return (
@@ -88,27 +88,27 @@ export default function Inicio() {
       )}
 
       <section className="pwa-card">
-        <h2>{enCurso ? t.inicio.guardia_en_curso : t.inicio.proxima_guardia}</h2>
-        {errorGuardias && (
+        <h2>{enCurso ? t.inicio.turno_guardia_en_curso : t.inicio.proxima_turno_guardia}</h2>
+        {errorTurnosGuardia && (
           <div className="alert alert-error" role="alert">
-            {errorGuardias}
-            <button type="button" className="btn btn-secondary" onClick={pedirGuardias} disabled={pidiendoGuardias}>
+            {errorTurnosGuardia}
+            <button type="button" className="btn btn-secondary" onClick={pedirTurnosGuardia} disabled={pidiendoTurnosGuardia}>
               {t.comun.reintentar}
             </button>
           </div>
         )}
-        {guardias === null && !errorGuardias && (
+        {turnos_guardia === null && !errorTurnosGuardia && (
           <div className="estado-cargando" role="status">{t.comun.cargando}</div>
         )}
-        {guardias !== null && !siguiente && (
+        {turnos_guardia !== null && !siguiente && (
           <div className="estado-vacio" role="status">{t.inicio.sin_proxima}</div>
         )}
         {siguiente && (
           <>
-            <div className="pwa-card-dato">{cuandoEsLaGuardia(siguiente, t, hoyISO())}</div>
+            <div className="pwa-card-dato">{cuandoEsElTurnoGuardia(siguiente, t, hoyISO())}</div>
             <div className="mini mini-abajo">{nombresDeLaTarjeta(siguiente, t)}</div>
-            <Link to={`/guardias/${siguiente.id}`} className="btn btn-primary btn-full pwa-card-pie">
-              {enCurso ? t.inicio.abrir_guardia : t.inicio.registrar_inicio}
+            <Link to={`/turnos-guardia/${siguiente.id}`} className="btn btn-primary btn-full pwa-card-pie">
+              {enCurso ? t.inicio.abrir_turno_guardia : t.inicio.registrar_inicio}
             </Link>
           </>
         )}

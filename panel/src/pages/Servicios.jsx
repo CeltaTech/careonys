@@ -12,7 +12,7 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { mensajeDeError } from '../lib/errores';
 import { armarCsv, bajarCsv } from '../lib/exportarCsv';
 import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
-import { modalidadesDeGuardias, nombreDeModalidad } from './servicios/modalidadesDelServicio';
+import { modalidadesDeTurnosGuardia, nombreDeModalidad } from './servicios/modalidadesDelServicio';
 import './servicios/servicios.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 import { useAuth } from '../context/AuthContext';
@@ -21,13 +21,13 @@ import { esAdminOSuperior } from '../lib/roles';
 import { NuevoServicioModal } from './servicios/NuevoServicioModal';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
-// De las prestaciones salen qué incluye el Servicio y a quién cuida; de las guardias, a quién cuida
-// también y en qué modalidades trabaja, porque la modalidad la lleva cada guardia.
+// De las prestaciones salen qué incluye el Servicio y a quién cuida; de los turnos de guardia, a quién cuida
+// también y en qué modalidades trabaja, porque la modalidad la lleva cada turno de guardia.
 //
 // De qué Cliente es sale de `cliente_id`. Sus datos de contacto los trae `contactosDeClientes`.
 const CONSULTA =
   'id, etiqueta, estado, created_at, cliente_id, ' +
-  'prestaciones(id, tipo_servicio, paciente_id), guardias(paciente_id, canal_modalidad)';
+  'prestaciones(id, tipo_servicio, paciente_id), turnos_guardia(paciente_id, canal_modalidad)';
 
 const ESTADO_ACTIVO = 'vigente';
 
@@ -65,7 +65,7 @@ export function Servicios() {
     const idsPaciente = [
       ...new Set(
         (data ?? [])
-          .flatMap((s) => [...(s.prestaciones ?? []), ...(s.guardias ?? [])])
+          .flatMap((s) => [...(s.prestaciones ?? []), ...(s.turnos_guardia ?? [])])
           .map((r) => r.paciente_id)
           .filter(Boolean),
       ),
@@ -100,9 +100,9 @@ export function Servicios() {
     () =>
       filas.map((s) => {
         const prestaciones = s.prestaciones ?? [];
-        const guardias = s.guardias ?? [];
+        const turnos_guardia = s.turnos_guardia ?? [];
         const idsPaciente = [
-          ...new Set([...prestaciones, ...guardias].map((r) => r.paciente_id).filter(Boolean)),
+          ...new Set([...prestaciones, ...turnos_guardia].map((r) => r.paciente_id).filter(Boolean)),
         ];
         return {
           id: s.id,
@@ -111,7 +111,7 @@ export function Servicios() {
           pacientes: idsPaciente.map((idPaciente) => nombresPaciente[idPaciente] || '—'),
           cliente: clienteDelServicio(s, contactos).contacto?.nombre || '—',
           prestaciones: prestaciones.map((p) => p.tipo_servicio).filter(Boolean),
-          modalidades: modalidadesDeGuardias(guardias).map((m) => nombreDeModalidad(m, t)),
+          modalidades: modalidadesDeTurnosGuardia(turnos_guardia).map((m) => nombreDeModalidad(m, t)),
         };
       }),
     [filas, contactos, nombresPaciente, t],

@@ -4,7 +4,7 @@ import { enLaPrestadora } from '../db/connection.js';
 //
 // El catálogo vive en dos tablas y se lee siempre de la misma manera: primero el tipo,
 // después sus tres listas de tareas. Está acá adentro y no copiado en cada pantalla
-// porque es un catálogo, no un dato de cada guardia. Si mañana la Prestadora agrega una
+// porque es un catálogo, no un dato de cada turno de guardia. Si mañana la Prestadora agrega una
 // tarea, la ven todos a la vez (CLAUDE.md, «Ningún patrón repetido sin punto único de verdad»).
 //
 // Las tres clases: habilitada (es su trabajo), no incluida (no lo es, pero se le puede

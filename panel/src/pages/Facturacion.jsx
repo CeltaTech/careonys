@@ -115,8 +115,8 @@ function tramoEnLaDireccion({ desde, hasta }) {
    pasó: un contador en cero no se nombra. */
 const APARTE_DE_LA_GENERACION = [
   ['sinTerminar', 'sin_terminar'],
-  ['guardiasSinAsignar', 'guardias_sin_asignar'],
-  ['guardiasAmbiguas', 'guardias_ambiguas'],
+  ['turnosGuardiaSinAsignar', 'turnos_guardia_sin_asignar'],
+  ['turnosGuardiaAmbiguos', 'turnos_guardia_ambiguos'],
   ['sinPrecio', 'sin_precio'],
   ['monedasMezcladas', 'monedas_mezcladas'],
 ];

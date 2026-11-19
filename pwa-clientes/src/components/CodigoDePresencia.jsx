@@ -87,7 +87,7 @@ export default function CodigoDePresencia({ t, pedirCodigo }) {
 
   if (error) {
     return (
-      <div className="guardia-card">
+      <div className="tarjeta">
         <div className="alert alert-error" role="alert">{error}</div>
         <button type="button" className="btn btn-secondary btn-full" onClick={pedir} disabled={pidiendo}>
           {t.codigo_de_presencia.reintentar}
@@ -105,10 +105,10 @@ export default function CodigoDePresencia({ t, pedirCodigo }) {
   }
 
   return (
-    <div className="guardia-card">
-      <p className="guardia-card-detalle">{t.codigo_de_presencia.instrucciones}</p>
+    <div className="tarjeta">
+      <p className="tarjeta-detalle">{t.codigo_de_presencia.instrucciones}</p>
       {qrDataUrl && <img className="codigo-de-presencia-qr" src={qrDataUrl} alt={t.codigo_de_presencia.qr_alt} />}
-      <p className="guardia-card-detalle">
+      <p className="tarjeta-detalle">
         {restan > 0 ? t.codigo_de_presencia.se_renueva.replace('{segundos}', restan) : t.codigo_de_presencia.renovando}
       </p>
       <button type="button" className="btn btn-secondary btn-full" onClick={pedir} disabled={pidiendo}>

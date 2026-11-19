@@ -11,7 +11,7 @@ import '../../styles/molde-paginas.css';
 /* Si un Servicio puede programar guardias sin la firma del Responsable de pagos.
    ==========================================================================
 
-   Lo decide cada Prestadora. Encendida, la base rechaza programar una guardia o una serie en un
+   Lo decide cada Prestadora. Encendida, la base rechaza programar un turno de guardia o una serie en un
    Servicio que no tenga la firma vigente de su Responsable de pagos, y el detalle del Servicio
    lo avisa. Lo que ya estaba programado sigue igual. De fábrica está apagada. */
 export function LaFirmaDelResponsableDePagos() {
@@ -26,8 +26,8 @@ export function LaFirmaDelResponsableDePagos() {
     setEstado('cargando');
     setError(null);
     try {
-      const datos = await llamarApi('/guardias/firma-del-pagador');
-      setSoloConFirma(datos.guardias_solo_con_firma_del_pagador === true);
+      const datos = await llamarApi('/turnos-guardia/firma-del-pagador');
+      setSoloConFirma(datos.turnos_guardia_solo_con_firma_del_pagador === true);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -44,9 +44,9 @@ export function LaFirmaDelResponsableDePagos() {
     setError(null);
     setGuardado(false);
     try {
-      await llamarApi('/guardias/firma-del-pagador', {
+      await llamarApi('/turnos-guardia/firma-del-pagador', {
         method: 'PATCH',
-        body: JSON.stringify({ guardias_solo_con_firma_del_pagador: soloConFirma }),
+        body: JSON.stringify({ turnos_guardia_solo_con_firma_del_pagador: soloConFirma }),
       });
       setGuardado(true);
     } catch (err) {
@@ -68,7 +68,7 @@ export function LaFirmaDelResponsableDePagos() {
           <div className="molde-ancho">
             <FormField
               label={t.configuracion.servicios_firma_pagador_activa}
-              name="guardias_solo_con_firma_del_pagador"
+              name="turnos_guardia_solo_con_firma_del_pagador"
               type="checkbox"
               checked={soloConFirma}
               onChange={(e) => { setSoloConFirma(e.target.checked); setGuardado(false); }}

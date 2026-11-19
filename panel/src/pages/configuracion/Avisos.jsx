@@ -241,20 +241,20 @@ function TabNotificaciones() {
       </EstadoLista>
       </section>
       <TabAvisoDelCierreDelServicio />
-      <TabMensajeGuardiaSinCubrir />
-      <TabAvisoPrevioGuardia />
+      <TabMensajeTurnoGuardiaSinCubrir />
+      <TabAvisoPrevioTurnoGuardia />
       <TabCorreoDeLaPrestadora />
       <TabMensajeDeTexto />
     </>
   );
 }
 
-/* Cuánto antes se le recuerda a la Asistente su próxima guardia.
+/* Cuánto antes se le recuerda a la Asistente su próximo turno de guardia.
    ==========================================================================
 
    Estaba escrito fijo en una hora para todas las Prestadoras, y una hora no le sirve a todas:
    quien trabaja con guardias de doce horas quiere avisar la noche anterior. */
-function TabAvisoPrevioGuardia() {
+function TabAvisoPrevioTurnoGuardia() {
   const { t } = useLocale();
   const [minutos, setMinutos] = useState('');
   const [estado, setEstado] = useState('cargando');
@@ -266,8 +266,8 @@ function TabAvisoPrevioGuardia() {
     setEstado('cargando');
     setError(null);
     try {
-      const { minutos_aviso_previo_guardia } = await llamarApi('/aviso-previo-guardia');
-      setMinutos(minutos_aviso_previo_guardia);
+      const { minutos_aviso_previo_turno_guardia } = await llamarApi('/aviso-previo-turno-guardia');
+      setMinutos(minutos_aviso_previo_turno_guardia);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -283,7 +283,7 @@ function TabAvisoPrevioGuardia() {
     setGuardando(true);
     setError(null);
     try {
-      await llamarApi('/aviso-previo-guardia', {
+      await llamarApi('/aviso-previo-turno-guardia', {
         method: 'PATCH',
         body: JSON.stringify({ minutos: Number(minutos) }),
       });
@@ -298,7 +298,7 @@ function TabAvisoPrevioGuardia() {
   return (
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.aviso_previo_guardia_titulo}</h2>
+        <h2>{t.configuracion.aviso_previo_turno_guardia_titulo}</h2>
       </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         <>
@@ -306,8 +306,8 @@ function TabAvisoPrevioGuardia() {
           {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
           <div className="molde-formgrid">
             <FormField
-              label={t.configuracion.aviso_previo_guardia_minutos}
-              name="minutos_aviso_previo_guardia"
+              label={t.configuracion.aviso_previo_turno_guardia_minutos}
+              name="minutos_aviso_previo_turno_guardia"
               type="number"
               value={minutos}
               onChange={(e) => { setMinutos(e.target.value); setGuardado(false); }}
@@ -680,7 +680,7 @@ function TabAvisoDelCierreDelServicio() {
 // Los dos números del mensaje de guardia sin cubrir (pendiente #106). Mismo camino que
 // TabAvisoDelCierreDelServicio —el navegador escribe directo en la tabla y RLS decide si puede— en vez de
 // una ruta nueva del backend: es la misma clase de dato y no hay motivo para dos caminos.
-function TabMensajeGuardiaSinCubrir() {
+function TabMensajeTurnoGuardiaSinCubrir() {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const [config, setConfig] = useState(null);
@@ -692,7 +692,7 @@ function TabMensajeGuardiaSinCubrir() {
     setEstado('cargando');
     setError(null);
     const { data, error: errorConsulta } = await supabase
-      .from('configuracion_aviso_guardia_sin_cubrir')
+      .from('configuracion_aviso_turno_guardia_sin_cubrir')
       .select('*')
       .eq('prestadora_id', prestadoraId)
       .maybeSingle();
@@ -715,7 +715,7 @@ function TabMensajeGuardiaSinCubrir() {
   async function guardar() {
     setGuardando(true);
     setError(null);
-    const { error: errorUpsert } = await supabase.from('configuracion_aviso_guardia_sin_cubrir').upsert({
+    const { error: errorUpsert } = await supabase.from('configuracion_aviso_turno_guardia_sin_cubrir').upsert({
       prestadora_id: prestadoraId,
       activo: config.activo,
       horas_antes: Number(config.horas_antes),
@@ -732,7 +732,7 @@ function TabMensajeGuardiaSinCubrir() {
   return (
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.aviso_guardia_sin_cubrir_titulo}</h2>
+        <h2>{t.configuracion.aviso_turno_guardia_sin_cubrir_titulo}</h2>
       </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {config && (
@@ -740,22 +740,22 @@ function TabMensajeGuardiaSinCubrir() {
             {error && <Alert variant="error">{error}</Alert>}
             <div className="molde-formgrid">
             <FormField
-              label={t.configuracion.aviso_guardia_sin_cubrir_activo}
-              name="aviso_guardia_sin_cubrir_activo"
+              label={t.configuracion.aviso_turno_guardia_sin_cubrir_activo}
+              name="aviso_turno_guardia_sin_cubrir_activo"
               type="checkbox"
               checked={config.activo}
               onChange={(e) => setConfig((c) => ({ ...c, activo: e.target.checked }))}
             />
             <FormField
-              label={t.configuracion.aviso_guardia_sin_cubrir_horas_antes}
-              name="aviso_guardia_sin_cubrir_horas_antes"
+              label={t.configuracion.aviso_turno_guardia_sin_cubrir_horas_antes}
+              name="aviso_turno_guardia_sin_cubrir_horas_antes"
               type="number"
               value={config.horas_antes}
               onChange={(e) => setConfig((c) => ({ ...c, horas_antes: e.target.value }))}
             />
             <FormField
-              label={t.configuracion.aviso_guardia_sin_cubrir_horas_entre_avisos}
-              name="aviso_guardia_sin_cubrir_horas_entre_avisos"
+              label={t.configuracion.aviso_turno_guardia_sin_cubrir_horas_entre_avisos}
+              name="aviso_turno_guardia_sin_cubrir_horas_entre_avisos"
               type="number"
               value={config.horas_entre_avisos}
               onChange={(e) => setConfig((c) => ({ ...c, horas_entre_avisos: e.target.value }))}
@@ -809,7 +809,7 @@ function TabWhatsapp() {
 }
 
 // Cuántas horas sin mensajes dan por terminada una conversación que contestó una persona; pasadas,
-// el bot vuelve a contestar. Mismo camino que TabMensajeGuardiaSinCubrir: el navegador escribe
+// el bot vuelve a contestar. Mismo camino que TabMensajeTurnoGuardiaSinCubrir: el navegador escribe
 // directo en la tabla y RLS decide si puede. El valor de arranque lo pone la base, no esta pantalla.
 function TabWhatsappRespuestaAutomatica() {
   const { t } = useLocale();
@@ -1364,20 +1364,20 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
 }
 
 /* El tope de la espera del mensaje de guardia sin cerrar: un día entero, escrito como lo que es.
-   Más allá de un día el aviso deja de avisar —la guardia ya lleva una jornada abierta y nadie
+   Más allá de un día el aviso deja de avisar —el turno de guardia ya lleva una jornada abierta y nadie
    se enteró—, y la base rechaza igual cualquier número que se pase. Se comprueba también acá
    para que quien administra la Prestadora lea qué se esperaba en vez de una falla del sistema.
    El valor con el que arranca la espera no está escrito en ninguna parte del Panel: llega de
    la base con el resto de la configuración (`CLAUDE.md` §7, regla 1). */
 const MINUTOS_DE_UN_DIA = 24 * 60;
 
-const esperaGuardiaSinCerrarValida = (valor) => {
+const esperaTurnoGuardiaSinCerrarValida = (valor) => {
   const minutos = Number(valor);
   return Number.isInteger(minutos) && minutos > 0 && minutos <= MINUTOS_DE_UN_DIA;
 };
 
 /* El tope de la espera antes de que ese mismo mensaje escale: tres días enteros. Más allá de
-   ahí ya no hay nada que escalar, porque una guardia que lleva tres días abierta significa
+   ahí ya no hay nada que escalar, porque un turno de guardia que lleva tres días abierta significa
    un Cliente que hace tres días no sabe si a su Paciente lo cuidaron. La base rechaza igual
    cualquier número que se pase; se comprueba también acá por el mismo motivo que la espera de
    arriba, para que se lea qué se esperaba en vez de una falla del sistema. El valor con el
@@ -1482,18 +1482,18 @@ function TabWhatsappEscaladaCoordinador() {
   async function guardar() {
     // Nada se manda con una espera imposible: sin ella el mensaje de guardia sin cerrar no
     // llegaría nunca, que es justo lo que no puede pasar.
-    if (!esperaGuardiaSinCerrarValida(form.minutos_gracia_cierre_guardia)) {
+    if (!esperaTurnoGuardiaSinCerrarValida(form.minutos_gracia_cierre_turno_guardia)) {
       setGuardado(false);
-      setError(con(t.configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar_invalido, { maximo: MINUTOS_DE_UN_DIA }));
+      setError(con(t.configuracion.whatsapp_escalada_minutos_turno_guardia_sin_cerrar_invalido, { maximo: MINUTOS_DE_UN_DIA }));
       return;
     }
     // Ni con una escalada imposible: pasado ese plazo el mensaje sale una vez más, por el evento
-    // `guardia_sin_cerrar_grave`, hacia quien la Prestadora haya puesto en su propia lista de
+    // `turno_guardia_sin_cerrar_grave`, hacia quien la Prestadora haya puesto en su propia lista de
     // destinatarios — la gente con autoridad para resolverlo. Si el plazo no llega nunca, esa
     // segunda salida tampoco.
     if (!escaladaGraveSinCerrarValida(form.horas_antes_aviso_grave_sin_cerrar)) {
       setGuardado(false);
-      setError(con(t.configuracion.whatsapp_escalada_horas_guardia_sin_cerrar_grave_invalido, { maximo: HORAS_DE_TRES_DIAS }));
+      setError(con(t.configuracion.whatsapp_escalada_horas_turno_guardia_sin_cerrar_grave_invalido, { maximo: HORAS_DE_TRES_DIAS }));
       return;
     }
     // Los dos escalones de arriba se apagan dejando el campo vacío. Vacío está bien; lo que no
@@ -1524,7 +1524,7 @@ function TabWhatsappEscaladaCoordinador() {
           umbrales_premura: ordenados,
           fase_automatica_activa: form.fase_automatica_activa,
           minutos_antes_fase_automatica: Number(form.minutos_antes_fase_automatica),
-          minutos_gracia_cierre_guardia: Number(form.minutos_gracia_cierre_guardia),
+          minutos_gracia_cierre_turno_guardia: Number(form.minutos_gracia_cierre_turno_guardia),
           horas_antes_aviso_grave_sin_cerrar: Number(form.horas_antes_aviso_grave_sin_cerrar),
           minutos_antes_todos_los_coordinadores: enNumeroOApagado(form.minutos_antes_todos_los_coordinadores),
           minutos_antes_administracion: enNumeroOApagado(form.minutos_antes_administracion),
@@ -1638,14 +1638,14 @@ function TabWhatsappEscaladaCoordinador() {
               <EscaladaEnOrden form={form} />
             </div>
             <FormField
-              label={t.configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar}
-              name="minutos_gracia_cierre_guardia"
+              label={t.configuracion.whatsapp_escalada_minutos_turno_guardia_sin_cerrar}
+              name="minutos_gracia_cierre_turno_guardia"
               type="number"
-              value={form.minutos_gracia_cierre_guardia ?? ''}
-              onChange={(e) => set('minutos_gracia_cierre_guardia', e.target.value)}
+              value={form.minutos_gracia_cierre_turno_guardia ?? ''}
+              onChange={(e) => set('minutos_gracia_cierre_turno_guardia', e.target.value)}
             />
             <FormField
-              label={t.configuracion.whatsapp_escalada_horas_guardia_sin_cerrar_grave}
+              label={t.configuracion.whatsapp_escalada_horas_turno_guardia_sin_cerrar_grave}
               name="horas_antes_aviso_grave_sin_cerrar"
               type="number"
               value={form.horas_antes_aviso_grave_sin_cerrar ?? ''}

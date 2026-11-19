@@ -16,8 +16,8 @@ import { FormField } from '../../components/ui/FormField';
    ==========================================================================
 
    La hace la base en una sola operación (`dar_de_baja_el_servicio`): cierra la atención de todos
-   sus Pacientes, da de baja sus Prestaciones vigentes, cierra sus series y cancela las guardias
-   que no tienen Asistente. Si queda alguna guardia asignada, la baja no sale: primero se cancela o
+   sus Pacientes, da de baja sus Prestaciones vigentes, cierra sus series y cancela los turnos de guardia
+   que no tienen Asistente. Si queda algún turno de guardia asignado, la baja no sale: primero se cancela o
    se reasigna.
 
    Antes de darla, quien la da marca cada renglón de la Lista de comprobación que armó la
@@ -107,7 +107,7 @@ export function BajaDelServicioModal({ servicioId, onClose, onDadoDeBaja }) {
             disabled={dandoDeBaja || estadoMotivos !== 'listo'}
             error={faltaMotivo ? t.formularios.falta_un_dato_obligatorio : undefined}
           >
-            <option value="">{t.guardias.nueva_guardia.elegir}</option>
+            <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
             {motivos.map((m) => (
               <option key={m.id} value={m.id}>
                 {nombreMotivo(m, t)}

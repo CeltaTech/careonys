@@ -7,7 +7,7 @@ import { useMarca, useOfreceIntermediacion, useSeVe } from '../context/PerfilCon
 import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 
-// El Paciente que se está mirando, sacado de la dirección. Las pestañas Guardias y Servicio son
+// El Paciente que se está mirando, sacado de la dirección. Las pestañas Turnos de guardia y Servicio son
 // de un Paciente, así que necesitan saber de cuál.
 const PACIENTE_EN_LA_DIRECCION = /^\/pacientes\/([^/]+)/;
 // Inicio es la lista y la ficha de un Paciente; las pantallas que cuelgan de él no.
@@ -24,7 +24,7 @@ export default function Layout() {
   const { puedeVer } = usePersonasAutorizadas();
   const { pathname } = useLocation();
 
-  // Se recuerda el último Paciente abierto, para que Guardias y Servicio sigan apuntando a él
+  // Se recuerda el último Paciente abierto, para que Turnos de guardia y Servicio sigan apuntando a él
   // mientras se recorren las pantallas del Cliente entero, que no lo llevan en la dirección.
   const [pacienteId, setPacienteId] = useState(null);
   const enLaDireccion = pathname.match(PACIENTE_EN_LA_DIRECCION)?.[1] || null;
@@ -71,9 +71,9 @@ export default function Layout() {
         </NavLink>
         {/* La misma pregunta que hace la ruta: si contestaran distinto quedaría una pestaña que
             rebota. */}
-        {pantallaPermitida('guardias', seVe, puedeVer) && (
-          <NavLink to={destino('guardias')} className={paciente ? claseDeLaPestana : () => ''}>
-            {t.nav.guardias}
+        {pantallaPermitida('turnos_guardia', seVe, puedeVer) && (
+          <NavLink to={destino('turnos-guardia')} className={paciente ? claseDeLaPestana : () => ''}>
+            {t.nav.turnos_guardia}
           </NavLink>
         )}
         <NavLink to={destino('asistente')} className={paciente ? claseDeLaPestana : () => ''}>

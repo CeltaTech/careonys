@@ -53,9 +53,9 @@ function ContenidoInforme({ contenido, t }) {
   const modalidades = Object.entries(contenido.totales_por_modalidad || {});
   // Los informes ya validados guardan una foto del contenido de ese momento. Las fotos
   // anteriores al reparto de horas no traen estos dos datos, y se siguen mostrando igual:
-  // en aquel entonces una guardia cubría a un solo Paciente, así que no era compartida y las
-  // horas imputadas eran las de la guardia entera.
-  const hayGuardiaCompartida = (contenido.guardias || []).some((g) => (g.pacientes_en_el_turno || 1) > 1);
+  // en aquel entonces un turno de guardia cubría a un solo Paciente, así que no era compartida y las
+  // horas imputadas eran las del turno de guardia entero.
+  const hayTurnoGuardiaCompartido = (contenido.turnos_guardia || []).some((g) => (g.pacientes_en_el_turno_guardia || 1) > 1);
   return (
     <div className="informe-obra-social-contenido">
       <h3>{contenido.paciente.nombre}</h3>
@@ -70,13 +70,13 @@ function ContenidoInforme({ contenido, t }) {
 
       <h4>{t.informesObraSocial.totales_titulo}</h4>
       {modalidades.length === 0 ? (
-        <p className="molde-vacio">{t.informesObraSocial.sin_guardias}</p>
+        <p className="molde-vacio">{t.informesObraSocial.sin_turnos_guardia}</p>
       ) : (
         <table className="panel-tabla">
           <thead>
             <tr>
               <th>{t.informesObraSocial.col_modalidad_total}</th>
-              <th>{t.informesObraSocial.col_cantidad_guardias}</th>
+              <th>{t.informesObraSocial.col_cantidad_turnos_guardia}</th>
               <th>{t.informesObraSocial.col_horas_totales}</th>
             </tr>
           </thead>
@@ -84,7 +84,7 @@ function ContenidoInforme({ contenido, t }) {
             {modalidades.map(([modalidad, totales]) => (
               <tr key={modalidad}>
                 <td>{modalidad}</td>
-                <td>{totales.cantidad_guardias}</td>
+                <td>{totales.cantidad_turnos_guardia}</td>
                 <td>{totales.horas_totales.toFixed(1)}</td>
               </tr>
             ))}
@@ -103,12 +103,12 @@ function ContenidoInforme({ contenido, t }) {
               <th>{t.informesObraSocial.col_modalidad}</th>
               <th>{t.informesObraSocial.col_asistente}</th>
               <th>{t.informesObraSocial.col_estado}</th>
-              {hayGuardiaCompartida && <th>{t.informesObraSocial.col_horas_imputadas}</th>}
+              {hayTurnoGuardiaCompartido && <th>{t.informesObraSocial.col_horas_imputadas}</th>}
             </tr>
           </thead>
           <tbody>
-            {contenido.guardias.map((g, i) => {
-              const enElTurno = g.pacientes_en_el_turno || 1;
+            {contenido.turnos_guardia.map((g, i) => {
+              const enElTurnoGuardia = g.pacientes_en_el_turno_guardia || 1;
               return (
                 <tr key={i}>
                   <td>{g.fecha}</td>
@@ -116,13 +116,13 @@ function ContenidoInforme({ contenido, t }) {
                   <td>{g.hora_fin}</td>
                   <td>{g.modalidad}</td>
                   <td>{g.asistente_nombre || '—'}</td>
-                  <td>{traducirValor(t.guardias, `estado_${g.estado}`)}</td>
-                  {hayGuardiaCompartida && (
+                  <td>{traducirValor(t.turnos_guardia, `estado_${g.estado}`)}</td>
+                  {hayTurnoGuardiaCompartido && (
                     <td>
                       {(g.horas_imputadas ?? 0).toFixed(1)}
-                      {enElTurno > 1 && (
+                      {enElTurnoGuardia > 1 && (
                         <span className="informe-obra-social-compartida">
-                          {con(t.informesObraSocial.guardia_compartida, { n: enElTurno })}
+                          {con(t.informesObraSocial.turno_guardia_compartido, { n: enElTurnoGuardia })}
                         </span>
                       )}
                     </td>

@@ -28,7 +28,7 @@ export const INTERRUPTOR_DE_LA_PANTALLA = {
 // ningún caso especial escrito acá.
 //
 // Hay más pantallas acá que arriba porque hay cosas que la Prestadora no puede apagar —los
-// reportes, la agenda de guardias— y el titular sí le puede negar a una de sus personas autorizadas.
+// reportes, la agenda de turnos de guardia— y el titular sí le puede negar a una de sus personas autorizadas.
 //
 // Y como allá, acá van solamente las pantallas enteras. Lo que se apaga adentro de una pantalla
 // —el mapa en vivo, el botón de calificar, el de pedir medicación— se pregunta en el único lugar
@@ -39,7 +39,7 @@ export const ACCESO_DE_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA = {
   facturas: 'persona_autorizada_dinero',
   medicacion: 'persona_autorizada_medicacion',
   reportes: 'persona_autorizada_reportes',
-  guardias: 'persona_autorizada_guardias',
+  turnos_guardia: 'persona_autorizada_turnos_guardia',
 };
 
 /**

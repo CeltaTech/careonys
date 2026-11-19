@@ -3,9 +3,9 @@
  *
  *   npx vitest run src/lib/__tests__/liquidacionDelCliente.test.js
  *
- * Todos los datos son inventados. Qué daría con el sistema roto: si la guardia se cobrara con la
- * prestación de hoy y no con la vigente el día de la guardia, el cambio de precio a mitad de mes
- * daría otro total; si una guardia de dos Pacientes no repartiera las horas, la medición por hora
+ * Todos los datos son inventados. Qué daría con el sistema roto: si el turno de guardia se cobrara con la
+ * prestación de hoy y no con la vigente el día del turno de guardia, el cambio de precio a mitad de mes
+ * daría otro total; si un turno de guardia de dos Pacientes no repartiera las horas, la medición por hora
  * cobraría el doble.
  */
 import { describe, expect, it } from 'vitest';
@@ -24,11 +24,11 @@ const prestacion = (extra = {}) => ({
   moneda: 'ARS',
   vigente_desde: '2026-01-01',
   vigente_hasta: null,
-  configuracion: { cantidad_guardias: 4 },
+  configuracion: { cantidad_turnos_guardia: 4 },
   ...extra,
 });
 
-const guardia = (fecha, extra = {}) => ({
+const turno_guardia = (fecha, extra = {}) => ({
   id: `g-${fecha}`,
   fecha,
   servicio_id: SERVICIO,
@@ -44,7 +44,7 @@ describe('pactado más excedente', () => {
       periodo: PERIODO,
       medicion: 'pactado_mas_excedente',
       prestaciones: [prestacion()],
-      guardias: [guardia('2026-11-02'), guardia('2026-11-09')],
+      turnos_guardia: [turno_guardia('2026-11-02'), turno_guardia('2026-11-09')],
     });
     expect(r.renglones).toHaveLength(1);
     expect(r.renglones[0]).toMatchObject({ unidad: 'periodo', cantidad: 1, precio_unitario: 1000, monto: 1000, moneda: 'ARS' });
@@ -56,18 +56,18 @@ describe('pactado más excedente', () => {
       periodo: PERIODO,
       medicion: 'pactado_mas_excedente',
       prestaciones: [prestacion()],
-      guardias: [
-        guardia('2026-11-02'),
-        guardia('2026-11-09'),
-        guardia('2026-11-16'),
-        guardia('2026-11-23'),
-        guardia('2026-11-24', { horas_extra: 2 }),
-        guardia('2026-11-25'),
+      turnos_guardia: [
+        turno_guardia('2026-11-02'),
+        turno_guardia('2026-11-09'),
+        turno_guardia('2026-11-16'),
+        turno_guardia('2026-11-23'),
+        turno_guardia('2026-11-24', { horas_extra: 2 }),
+        turno_guardia('2026-11-25'),
       ],
     });
     const porUnidad = Object.fromEntries(r.renglones.map((x) => [x.unidad, x]));
-    expect(porUnidad.guardia).toMatchObject({ cantidad: 2, precio_unitario: 250, monto: 500 });
-    // 250 la guardia de 8 horas: la hora vale 31,25, y dos horas son 62,50.
+    expect(porUnidad.turno_guardia).toMatchObject({ cantidad: 2, precio_unitario: 250, monto: 500 });
+    // 250 el turno de guardia de 8 horas: la hora vale 31,25, y dos horas son 62,50.
     expect(porUnidad.hora_extra).toMatchObject({ cantidad: 2, precio_unitario: 31.25, monto: 62.5 });
     expect(r.total).toBe(1562.5);
   });
@@ -77,7 +77,7 @@ describe('pactado más excedente', () => {
       periodo: PERIODO,
       medicion: 'pactado_mas_excedente',
       prestaciones: [prestacion({ configuracion: {} })],
-      guardias: [guardia('2026-11-02')],
+      turnos_guardia: [turno_guardia('2026-11-02')],
     });
     expect(r.total).toBe(1000);
     expect(r.sinCantidadPactada).toEqual(['pre-1']);
@@ -90,7 +90,7 @@ describe('por hora', () => {
       periodo: PERIODO,
       medicion: 'hora',
       prestaciones: [prestacion({ precio_final: 10 })],
-      guardias: [guardia('2026-11-02'), guardia('2026-11-03', { horas: 12, horas_extra: 1.5 })],
+      turnos_guardia: [turno_guardia('2026-11-02'), turno_guardia('2026-11-03', { horas: 12, horas_extra: 1.5 })],
     });
     expect(r.renglones).toEqual([
       expect.objectContaining({ concepto: 'medido', unidad: 'hora', cantidad: 20, precio_unitario: 10, monto: 200 }),
@@ -104,7 +104,7 @@ describe('por hora', () => {
       periodo: PERIODO,
       medicion: 'hora',
       prestaciones: [prestacion({ precio_final: 10 }), prestacion({ id: 'pre-2', paciente_id: 'pac-2', precio_final: 10 })],
-      guardias: [guardia('2026-11-02', { pacientes: ['pac-1', 'pac-2'] })],
+      turnos_guardia: [turno_guardia('2026-11-02', { pacientes: ['pac-1', 'pac-2'] })],
     });
     expect(r.renglones.map((x) => x.cantidad)).toEqual([4, 4]);
     expect(r.total).toBe(80);
@@ -117,7 +117,7 @@ describe('por día de guardia', () => {
       periodo: PERIODO,
       medicion: 'dia_de_guardia',
       prestaciones: [prestacion({ precio_final: 100 })],
-      guardias: [guardia('2026-11-02'), guardia('2026-11-02', { id: 'otra' }), guardia('2026-11-10', { horas: 48 })],
+      turnos_guardia: [turno_guardia('2026-11-02'), turno_guardia('2026-11-02', { id: 'otra' }), turno_guardia('2026-11-10', { horas: 48 })],
     });
     expect(r.renglones[0]).toMatchObject({ unidad: 'dia_de_guardia', cantidad: 3, monto: 300 });
   });
@@ -132,7 +132,7 @@ describe('la prestación vigente el día de la guardia', () => {
         prestacion({ precio_final: 10, vigente_hasta: '2026-11-15' }),
         prestacion({ id: 'pre-nueva', precio_final: 20, vigente_desde: '2026-11-16' }),
       ],
-      guardias: [guardia('2026-11-10'), guardia('2026-11-20')],
+      turnos_guardia: [turno_guardia('2026-11-10'), turno_guardia('2026-11-20')],
     });
     expect(r.renglones.map((x) => [x.prestacion_id, x.monto])).toEqual([
       ['pre-1', 80],
@@ -148,10 +148,10 @@ describe('la prestación vigente el día de la guardia', () => {
         prestacion({ vigente_desde: '2026-11-10' }),
         prestacion({ id: 'pre-doble', vigente_desde: '2026-11-20' }),
       ],
-      guardias: [guardia('2026-11-05'), guardia('2026-11-25'), guardia('2026-11-12', { servicio_id: 'otro-servicio' })],
+      turnos_guardia: [turno_guardia('2026-11-05'), turno_guardia('2026-11-25'), turno_guardia('2026-11-12', { servicio_id: 'otro-servicio' })],
     });
-    expect(r.guardiasSinAsignar).toBe(2);
-    expect(r.guardiasAmbiguas).toBe(1);
+    expect(r.turnosGuardiaSinAsignar).toBe(2);
+    expect(r.turnosGuardiaAmbiguos).toBe(1);
     expect(r.total).toBe(0);
   });
 
@@ -160,7 +160,7 @@ describe('la prestación vigente el día de la guardia', () => {
       periodo: PERIODO,
       medicion: 'hora',
       prestaciones: [prestacion()],
-      guardias: [guardia('2026-12-01')],
+      turnos_guardia: [turno_guardia('2026-12-01')],
     });
     expect(r.renglones).toEqual([]);
   });
@@ -204,7 +204,7 @@ describe('el cambio de precio a mitad de período, en lo pactado', () => {
       periodo: PERIODO,
       medicion: 'pactado_mas_excedente',
       prestaciones: cadena(),
-      guardias: [],
+      turnos_guardia: [],
     });
     expect(r.renglones.map((x) => [x.prestacion_id, x.cantidad, x.monto])).toEqual([
       ['pre-1', 0.5, 500],
@@ -218,18 +218,18 @@ describe('el cambio de precio a mitad de período, en lo pactado', () => {
       periodo: PERIODO,
       medicion: 'pactado_mas_excedente',
       prestaciones: cadena(),
-      guardias: [
-        guardia('2026-11-02'),
-        guardia('2026-11-09'),
-        guardia('2026-11-17'),
-        guardia('2026-11-20'),
-        guardia('2026-11-24'),
-        guardia('2026-11-27'),
+      turnos_guardia: [
+        turno_guardia('2026-11-02'),
+        turno_guardia('2026-11-09'),
+        turno_guardia('2026-11-17'),
+        turno_guardia('2026-11-20'),
+        turno_guardia('2026-11-24'),
+        turno_guardia('2026-11-27'),
       ],
     });
     // Lo pactado de la cadena es 4 (la mitad de 4 más la mitad de 4): sobran dos, las últimas,
     // que caen en la prestación nueva y valen 2000 / 4 cada una.
-    const excedente = r.renglones.filter((x) => x.unidad === 'guardia');
+    const excedente = r.renglones.filter((x) => x.unidad === 'turno_guardia');
     expect(excedente).toEqual([expect.objectContaining({ prestacion_id: 'pre-nueva', cantidad: 2, precio_unitario: 500, monto: 1000 })]);
     expect(r.total).toBe(2500);
   });
@@ -239,11 +239,11 @@ describe('el cambio de precio a mitad de período, en lo pactado', () => {
       periodo: PERIODO,
       medicion: 'pactado_mas_excedente',
       prestaciones: cadena({ configuracion: {} }),
-      guardias: ['2026-11-02', '2026-11-05', '2026-11-09', '2026-11-12', '2026-11-17', '2026-11-27'].map((f) => guardia(f)),
+      turnos_guardia: ['2026-11-02', '2026-11-05', '2026-11-09', '2026-11-12', '2026-11-17', '2026-11-27'].map((f) => turno_guardia(f)),
     });
     // El primer eslabón sí tiene la cantidad, y aun así no se le cobra excedente: sin la del
     // segundo, lo pactado de la cadena no se puede saber.
-    expect(r.renglones.filter((x) => x.unidad === 'guardia')).toEqual([]);
+    expect(r.renglones.filter((x) => x.unidad === 'turno_guardia')).toEqual([]);
     expect(r.sinCantidadPactada.sort()).toEqual(['pre-1', 'pre-nueva']);
     expect(r.total).toBe(1500);
   });
@@ -263,75 +263,75 @@ describe('el cambio de precio a mitad de período, en lo pactado', () => {
    pactado, el de cuatro trabajadas y una ausente daría 750; si el precio pactado del adicional no
    se usara, el adicional daría 250. */
 describe('la medición que rige', () => {
-  const pactada = (guardias, condiciones = {}) =>
+  const pactada = (turnos_guardia, condiciones = {}) =>
     calcularLiquidacionDelCliente({
       periodo: PERIODO,
       condiciones: { medicion: 'pactado_mas_excedente', ...condiciones },
       prestaciones: [prestacion()],
-      guardias,
+      turnos_guardia,
     });
   const porConcepto = (r, concepto) => r.renglones.filter((x) => x.concepto === concepto);
-  const ausente = (fecha) => guardia(fecha, { estado: 'ausente' });
-  const canceladaPor = (origen) => (fecha) => guardia(fecha, { estado: 'cancelada', cancelacion_origen: origen });
+  const ausente = (fecha) => turno_guardia(fecha, { estado: 'ausente' });
+  const canceladaPor = (origen) => (fecha) => turno_guardia(fecha, { estado: 'cancelada', cancelacion_origen: origen });
 
   it('de fábrica descuenta lo no prestado por ausencia o por cancelación de la Prestadora, en un renglón aparte', () => {
-    const r = pactada([guardia('2026-11-02'), guardia('2026-11-09'), ausente('2026-11-16'), canceladaPor('prestadora')('2026-11-23')]);
+    const r = pactada([turno_guardia('2026-11-02'), turno_guardia('2026-11-09'), ausente('2026-11-16'), canceladaPor('prestadora')('2026-11-23')]);
     expect(porConcepto(r, 'pactado')).toEqual([expect.objectContaining({ unidad: 'periodo', monto: 1000 })]);
     expect(porConcepto(r, 'no_prestado')).toEqual([
-      expect.objectContaining({ unidad: 'guardia', cantidad: 2, precio_unitario: 250, monto: -500, moneda: 'ARS' }),
+      expect.objectContaining({ unidad: 'turno_guardia', cantidad: 2, precio_unitario: 250, monto: -500, moneda: 'ARS' }),
     ]);
     expect(r.total).toBe(500);
   });
 
   it('sin descontar lo no prestado, se cobra lo pactado entero', () => {
-    const r = pactada([guardia('2026-11-02'), ausente('2026-11-16')], { descuenta_lo_no_prestado: false });
+    const r = pactada([turno_guardia('2026-11-02'), ausente('2026-11-16')], { descuenta_lo_no_prestado: false });
     expect(porConcepto(r, 'no_prestado')).toEqual([]);
     expect(r.total).toBe(1000);
   });
 
   it('el descuento no pasa lo que falta para lo pactado', () => {
-    const r = pactada(['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23'].map((f) => guardia(f)).concat(ausente('2026-11-25')));
+    const r = pactada(['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23'].map((f) => turno_guardia(f)).concat(ausente('2026-11-25')));
     expect(porConcepto(r, 'no_prestado')).toEqual([]);
     expect(r.total).toBe(1000);
   });
 
   it('de fábrica la cancelada por el Cliente se cobra: cuenta como consumida de lo pactado', () => {
-    const tres = pactada([guardia('2026-11-02'), guardia('2026-11-09'), guardia('2026-11-16'), canceladaPor('cliente')('2026-11-23')]);
+    const tres = pactada([turno_guardia('2026-11-02'), turno_guardia('2026-11-09'), turno_guardia('2026-11-16'), canceladaPor('cliente')('2026-11-23')]);
     expect(tres.total).toBe(1000);
     expect(tres.renglones).toHaveLength(1);
     // Con cuatro trabajadas además de la cancelada, la última trabajada ya va de más.
-    const cuatro = pactada(['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-27'].map((f) => guardia(f)).concat(canceladaPor('cliente')('2026-11-23')));
-    expect(porConcepto(cuatro, 'adicional')).toEqual([expect.objectContaining({ unidad: 'guardia', cantidad: 1, monto: 250 })]);
+    const cuatro = pactada(['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-27'].map((f) => turno_guardia(f)).concat(canceladaPor('cliente')('2026-11-23')));
+    expect(porConcepto(cuatro, 'adicional')).toEqual([expect.objectContaining({ unidad: 'turno_guardia', cantidad: 1, monto: 250 })]);
   });
 
   it('si no se cobra la cancelada por el Cliente, se descuenta en su propio renglón, después de lo no prestado', () => {
-    const r = pactada([guardia('2026-11-02'), ausente('2026-11-09'), canceladaPor('cliente')('2026-11-16')], {
+    const r = pactada([turno_guardia('2026-11-02'), ausente('2026-11-09'), canceladaPor('cliente')('2026-11-16')], {
       cobra_cancelada_por_el_cliente: false,
     });
     expect(porConcepto(r, 'no_prestado')).toEqual([expect.objectContaining({ cantidad: 1, monto: -250 })]);
-    expect(porConcepto(r, 'cancelado_por_el_cliente')).toEqual([expect.objectContaining({ unidad: 'guardia', cantidad: 1, monto: -250 })]);
+    expect(porConcepto(r, 'cancelado_por_el_cliente')).toEqual([expect.objectContaining({ unidad: 'turno_guardia', cantidad: 1, monto: -250 })]);
     expect(r.total).toBe(500);
   });
 
   it('la guardia y la hora adicionales van al precio pactado para ellas, y sin él al proporcional', () => {
-    const guardias = ['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23']
-      .map((f) => guardia(f))
-      .concat(guardia('2026-11-27', { horas_extra: 2 }));
+    const turnos_guardia = ['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23']
+      .map((f) => turno_guardia(f))
+      .concat(turno_guardia('2026-11-27', { horas_extra: 2 }));
     const conPrecio = calcularLiquidacionDelCliente({
       periodo: PERIODO,
       condiciones: { medicion: 'pactado_mas_excedente' },
-      prestaciones: [prestacion({ precio_guardia_adicional: 375, precio_hora_adicional: 40 })],
-      guardias,
+      prestaciones: [prestacion({ precio_turno_guardia_adicional: 375, precio_hora_adicional: 40 })],
+      turnos_guardia,
     });
     expect(porConcepto(conPrecio, 'adicional')).toEqual([
-      expect.objectContaining({ unidad: 'guardia', cantidad: 1, precio_unitario: 375, monto: 375 }),
+      expect.objectContaining({ unidad: 'turno_guardia', cantidad: 1, precio_unitario: 375, monto: 375 }),
       expect.objectContaining({ unidad: 'hora_extra', cantidad: 2, precio_unitario: 40, monto: 80 }),
     ]);
     expect(conPrecio.total).toBe(1455);
-    // Sin precio pactado: la guardia vale 1000 / 4 = 250 y la hora de una guardia de 8, 31,25.
-    const sinPrecio = pactada(guardias);
+    // Sin precio pactado: el turno de guardia vale 1000 / 4 = 250 y la hora de un turno de guardia de 8, 31,25.
+    const sinPrecio = pactada(turnos_guardia);
     expect(porConcepto(sinPrecio, 'adicional')).toEqual([
-      expect.objectContaining({ unidad: 'guardia', cantidad: 1, precio_unitario: 250, monto: 250 }),
+      expect.objectContaining({ unidad: 'turno_guardia', cantidad: 1, precio_unitario: 250, monto: 250 }),
       expect.objectContaining({ unidad: 'hora_extra', cantidad: 2, monto: 62.5 }),
     ]);
     expect(sinPrecio.total).toBe(1312.5);
@@ -339,8 +339,8 @@ describe('la medición que rige', () => {
 
   it('sin cobrar adicionales, ni la guardia de más ni la hora extra suman', () => {
     const r = pactada(
-      ['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23'].map((f) => guardia(f)).concat(guardia('2026-11-27', { horas_extra: 2 })),
-      { cobra_guardias_adicionales: false, cobra_horas_adicionales: false }
+      ['2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23'].map((f) => turno_guardia(f)).concat(turno_guardia('2026-11-27', { horas_extra: 2 })),
+      { cobra_turnos_guardia_adicionales: false, cobra_horas_adicionales: false }
     );
     expect(porConcepto(r, 'adicional')).toEqual([]);
     expect(r.total).toBe(1000);
@@ -348,11 +348,11 @@ describe('la medición que rige', () => {
 
   it('por hora: la cancelada por el Cliente se cobra aparte si rige, y la ausente no se cobra', () => {
     const base = { periodo: PERIODO, prestaciones: [prestacion({ precio_final: 10 })] };
-    const guardias = [guardia('2026-11-02'), canceladaPor('cliente')('2026-11-03'), ausente('2026-11-04')];
-    const cobra = calcularLiquidacionDelCliente({ ...base, condiciones: { medicion: 'hora' }, guardias });
+    const turnos_guardia = [turno_guardia('2026-11-02'), canceladaPor('cliente')('2026-11-03'), ausente('2026-11-04')];
+    const cobra = calcularLiquidacionDelCliente({ ...base, condiciones: { medicion: 'hora' }, turnos_guardia });
     expect(porConcepto(cobra, 'cancelado_por_el_cliente')).toEqual([expect.objectContaining({ unidad: 'hora', cantidad: 8, monto: 80 })]);
     expect(cobra.total).toBe(160);
-    const noCobra = calcularLiquidacionDelCliente({ ...base, condiciones: { medicion: 'hora', cobra_cancelada_por_el_cliente: false }, guardias });
+    const noCobra = calcularLiquidacionDelCliente({ ...base, condiciones: { medicion: 'hora', cobra_cancelada_por_el_cliente: false }, turnos_guardia });
     expect(noCobra.total).toBe(80);
   });
 
@@ -361,7 +361,7 @@ describe('la medición que rige', () => {
       periodo: PERIODO,
       condiciones: { medicion: 'dia_de_guardia' },
       prestaciones: [prestacion({ precio_final: 100 })],
-      guardias: [guardia('2026-11-02'), canceladaPor('cliente')('2026-11-02'), canceladaPor('cliente')('2026-11-05')],
+      turnos_guardia: [turno_guardia('2026-11-02'), canceladaPor('cliente')('2026-11-02'), canceladaPor('cliente')('2026-11-05')],
     });
     expect(porConcepto(r, 'medido')).toEqual([expect.objectContaining({ cantidad: 1, monto: 100 })]);
     expect(porConcepto(r, 'cancelado_por_el_cliente')).toEqual([expect.objectContaining({ cantidad: 1, monto: 100 })]);
@@ -373,10 +373,10 @@ describe('la medición que rige', () => {
       medicion: 'pactado_mas_excedente',
       condiciones: { medicion: 'hora' },
       prestaciones: [prestacion({ precio_final: 10 })],
-      guardias: [guardia('2026-11-02'), guardia('2026-11-03', { estado: 'cancelada' }), guardia('2026-11-04', { estado: 'pausada' })],
+      turnos_guardia: [turno_guardia('2026-11-02'), turno_guardia('2026-11-03', { estado: 'cancelada' }), turno_guardia('2026-11-04', { estado: 'pausada' })],
     });
     expect(r.renglones).toEqual([expect.objectContaining({ concepto: 'medido', unidad: 'hora', cantidad: 8 })]);
-    expect(r.guardiasSinAsignar).toBe(0);
+    expect(r.turnosGuardiaSinAsignar).toBe(0);
   });
 });
 

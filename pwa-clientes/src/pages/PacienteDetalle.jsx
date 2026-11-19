@@ -49,27 +49,27 @@ export default function PacienteDetalle() {
     cargar();
   }, [id]);
 
-  const guardiaActiva = datos?.guardiaActiva;
-  // La guardia que viene es la única que puede estar en viaje: el mapa sigue al Asistente desde
+  const turnoGuardiaActivo = datos?.turnoGuardiaActivo;
+  // El turno de guardia que viene es el único que puede estar en viaje: el mapa sigue al Asistente desde
   // «Salgo ahora» hasta que escanea la entrada, y ahí el punto se borra.
-  const guardiaProxima = datos?.guardiaProxima;
-  const enViaje = Boolean(guardiaProxima?.salida_checkin_at);
-  const ubicacion = enViaje && veUbicacionEnVivo && guardiaProxima.ubicacion_actual_lat && guardiaProxima.ubicacion_actual_lng
-    ? { lat: guardiaProxima.ubicacion_actual_lat, lng: guardiaProxima.ubicacion_actual_lng, at: guardiaProxima.ubicacion_actual_at }
+  const turnoGuardiaProximo = datos?.turnoGuardiaProximo;
+  const enViaje = Boolean(turnoGuardiaProximo?.salida_checkin_at);
+  const ubicacion = enViaje && veUbicacionEnVivo && turnoGuardiaProximo.ubicacion_actual_lat && turnoGuardiaProximo.ubicacion_actual_lng
+    ? { lat: turnoGuardiaProximo.ubicacion_actual_lat, lng: turnoGuardiaProximo.ubicacion_actual_lng, at: turnoGuardiaProximo.ubicacion_actual_at }
     : null;
 
-  // Mientras hay una guardia por venir, la pantalla se vuelve a pedir cada tanto: así se entera
+  // Mientras hay un turno de guardia por venir, la pantalla se vuelve a pedir cada tanto: así se entera
   // de «Salgo ahora», de cada punto nuevo y de la llegada sin que el Cliente recargue. Se le pide
   // al backend y no a la base en vivo porque el backend manda sólo las columnas que este Cliente
-  // puede ver; la fila de la guardia lleva además el punto de salida, que no viaja a este teléfono.
+  // puede ver; la fila del turno de guardia lleva además el punto de salida, que no viaja a este teléfono.
   // Un refresco que falla deja lo último que se vio: la hora de la posición dice cuán vieja es.
   useEffect(() => {
-    if (!guardiaProxima?.id) return undefined;
+    if (!turnoGuardiaProximo?.id) return undefined;
     const reloj = setInterval(() => {
       api.paciente(id).then(setDatos).catch(() => {});
     }, CADA_CUANTO_SE_REFRESCA_MS);
     return () => clearInterval(reloj);
-  }, [guardiaProxima?.id, id]);
+  }, [turnoGuardiaProximo?.id, id]);
 
   useEffect(() => {
     if (!ubicacion) return undefined;
@@ -81,12 +81,12 @@ export default function PacienteDetalle() {
   if (datos === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   const { paciente, alertasActivas } = datos;
-  const guardia = guardiaActiva || guardiaProxima;
-  const asistente = guardia?.asistentes;
+  const turno_guardia = turnoGuardiaActivo || turnoGuardiaProximo;
+  const asistente = turno_guardia?.asistentes;
 
   // "En camino" es el rato entre que el Asistente sale de su casa y llega al domicilio:
   // hay hora de salida registrada y todavía no hay hora de llegada.
-  const enCamino = Boolean(guardia?.salida_checkin_at && !guardia?.checkin_at);
+  const enCamino = Boolean(turno_guardia?.salida_checkin_at && !turno_guardia?.checkin_at);
 
   return (
     <>
@@ -118,18 +118,18 @@ export default function PacienteDetalle() {
       )}
 
       <section className="pwa-card">
-        <h2>{guardiaActiva ? t.paciente.guardia_actual_titulo : t.paciente.guardia_proxima_titulo}</h2>
+        <h2>{turnoGuardiaActivo ? t.paciente.turno_guardia_actual_titulo : t.paciente.turno_guardia_proximo_titulo}</h2>
 
-        {!guardia && <div className="pwa-card-dato estado-vacio" role="status">{t.paciente.sin_guardia}</div>}
+        {!turno_guardia && <div className="pwa-card-dato estado-vacio" role="status">{t.paciente.sin_turno_guardia}</div>}
 
-        {guardia && (
+        {turno_guardia && (
           <>
             <div className="pwa-card-dato">
               {t.paciente.asistente_asignado}: {asistente?.nombre || t.paciente.sin_asistente}
               <div className="mini mini-abajo">
-                {guardia.fecha} · {guardia.hora_inicio?.slice(0, 5)} - {guardia.hora_fin?.slice(0, 5)}
+                {turno_guardia.fecha} · {turno_guardia.hora_inicio?.slice(0, 5)} - {turno_guardia.hora_fin?.slice(0, 5)}
               </div>
-              {guardiaActiva && !guardiaActiva.checkin_at && <div className="mini mini-abajo">{t.paciente.checkin_pendiente}</div>}
+              {turnoGuardiaActivo && !turnoGuardiaActivo.checkin_at && <div className="mini mini-abajo">{t.paciente.checkin_pendiente}</div>}
               {enCamino && <div className="mini mini-abajo">{t.paciente.en_camino}</div>}
               {/* A qué hora se estima que llega (pendiente #101). El punto del que salió el
                   Asistente es casi siempre su casa, y eso no viaja a este teléfono — el backend lo
@@ -141,14 +141,14 @@ export default function PacienteDetalle() {
 
                   Sin hora estimada —salida sin ubicación, o domicilio sin coordenadas— no se dibuja
                   nada. Inventar una hora es peor que no dar ninguna. */}
-              {enCamino && guardia.llegada_estimada_at && (
+              {enCamino && turno_guardia.llegada_estimada_at && (
                 <div className="mini mini-abajo">
-                  {t.paciente.llegada_estimada.replace('{hora}', horaDelMomento(guardia.llegada_estimada_at, locale))}
+                  {t.paciente.llegada_estimada.replace('{hora}', horaDelMomento(turno_guardia.llegada_estimada_at, locale))}
                 </div>
               )}
             </div>
             <div className="pwa-card-pie">
-              <span className="badge badge-ok">{traducirValor(t.guardias, `estado_${guardia.estado}`)}</span>
+              <span className="badge badge-ok">{traducirValor(t.turnos_guardia, `estado_${turno_guardia.estado}`)}</span>
             </div>
           </>
         )}
@@ -157,7 +157,7 @@ export default function PacienteDetalle() {
       {/* El mapa es del viaje: aparece con «Salgo ahora» y se va al escanear la entrada. Apagado,
           el Cliente sigue viendo que el Asistente está en camino y la hora estimada: lo que
           desaparece es el recorrido, el título incluido. */}
-      {!guardiaActiva && enViaje && veUbicacionEnVivo && (
+      {!turnoGuardiaActivo && enViaje && veUbicacionEnVivo && (
         <section className="pwa-card">
           <h2>{t.paciente.ubicacion_en_vivo}</h2>
           {ubicacion ? (
@@ -179,7 +179,7 @@ export default function PacienteDetalle() {
 
       {puedeVer('persona_autorizada_ficha_del_paciente') && <TarjetaSignosVitales pacienteId={id} />}
 
-      {/* Ver guardias va primero a propósito: arriba se ve una sola guardia, y la pregunta que
+      {/* Ver turnos de guardia va primero a propósito: arriba se ve un solo turno de guardia, y la pregunta que
           sigue siempre es qué pasa el resto de la semana. */}
       <TarjetaAcciones pacienteId={id} />
     </>

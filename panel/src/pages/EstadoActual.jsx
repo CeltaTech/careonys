@@ -13,7 +13,7 @@ import { con } from '../lib/textos';
 import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
 import { excepcionPorId, filtrarPorExcepcion, resumenDeExcepciones } from '../lib/excepciones';
 import { estaSinCubrir } from '../lib/cobertura';
-import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
+import { cargarPacientesDeTurnosGuardia, conPacientes, textoDePacientes } from '../lib/pacientesDeTurnoGuardia';
 import { hoyISO, sumarDias } from '../lib/horarios';
 import { documentosQueImpidenTrabajar } from '../lib/documentosQueImpidenTrabajar';
 import {
@@ -57,11 +57,11 @@ const INCIDENCIAS_A_LA_VISTA = 3;
 
 /* El estado guardado de un Servicio en pie, y el de una Guardia que ya no va a ocurrir. */
 const SERVICIO_EN_PIE = 'vigente';
-const GUARDIA_CANCELADA = 'cancelada';
+const TURNO_GUARDIA_CANCELADO = 'cancelada';
 
 /* Lo que se le pide a cada Servicio para la tabla y para el gráfico de modalidades. */
 const CONSULTA_SERVICIOS =
-  'id, etiqueta, estado, created_at, cliente_id, prestaciones(paciente_id), guardias(paciente_id, canal_modalidad)';
+  'id, etiqueta, estado, created_at, cliente_id, prestaciones(paciente_id), turnos_guardia(paciente_id, canal_modalidad)';
 
 /* Las excepciones que tienen renglón fijo en «Alertas importantes». Las demás aparecen sólo
    cuando tienen algo. */
@@ -159,7 +159,7 @@ function IconoAsistentes() {
   );
 }
 
-function IconoGuardias() {
+function IconoTurnosGuardia() {
   return (
     <svg viewBox="0 0 24 24" className="estado-actual-trazo-naranja" aria-hidden="true">
       <rect x="3.5" y="5" width="17" height="15" rx="2" />
@@ -253,7 +253,7 @@ export function EstadoActual() {
     const limiteDocumentos = fechaLimiteDeAviso(diasDePreaviso);
 
     const [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas, au, cp, cm] = await Promise.all([
-      supabase.from('guardias').select('*').eq('prestadora_id', prestadoraId).gte('fecha', desde).lte('fecha', hasta),
+      supabase.from('turnos_guardia').select('*').eq('prestadora_id', prestadoraId).gte('fecha', desde).lte('fecha', hasta),
       supabase.from('asistentes').select('id, estado').eq('prestadora_id', prestadoraId),
       supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).eq('prestadora_id', prestadoraId),
       documentosQueVencen({ prestadoraId, hasta: limiteDocumentos }).then(({ documentos, error }) => ({ data: documentos, error })),
@@ -264,11 +264,11 @@ export function EstadoActual() {
         .eq('prestadora_id', prestadoraId)
         .eq('estado', SERVICIO_EN_PIE)
         .order('created_at', { ascending: false }),
-      informacionDeSalud.from('emergencias_guardia').select('id', { count: 'exact', head: true }).is('atendida_at', null),
+      informacionDeSalud.from('emergencias_turno_guardia').select('id', { count: 'exact', head: true }).is('atendida_at', null),
       soloSinResolver(informacionDeSalud.from('alertas').select('id', { count: 'exact', head: true })),
       supabase
         .from('incidentes_relevo')
-        .select('id, guardia_saliente_id, iniciado_at, resuelto_at')
+        .select('id, turno_guardia_saliente_id, iniciado_at, resuelto_at')
         .eq('prestadora_id', prestadoraId)
         .order('iniciado_at', { ascending: false })
         .limit(INCIDENCIAS_A_LA_VISTA),
@@ -303,8 +303,8 @@ export function EstadoActual() {
     }
 
     const nombresPaciente = Object.fromEntries(conSusFichas(ps.data).map((p) => [p.id, p.nombre]));
-    const pacientesPorGuardia = await cargarPacientesDeGuardias((gs.data ?? []).map((g) => g.id));
-    const guardias = conPacientes(gs.data ?? [], pacientesPorGuardia, nombresPaciente);
+    const pacientesPorTurnoGuardia = await cargarPacientesDeTurnosGuardia((gs.data ?? []).map((g) => g.id));
+    const turnos_guardia = conPacientes(gs.data ?? [], pacientesPorTurnoGuardia, nombresPaciente);
 
     // Documentos: vencido es rojo, por vencer es naranja. La regla es la de Documentación.
     const porVencer = new Set();
@@ -319,14 +319,14 @@ export function EstadoActual() {
     }
 
     // Reportes que faltan, sólo sobre guardias terminadas.
-    const completadas = guardias.filter((g) => g.estado === 'completada');
+    const completadas = turnos_guardia.filter((g) => g.estado === 'completada');
     const sinReporte = new Set();
     if (completadas.length > 0) {
       const { data: reportes, error: errorReportes } = await informacionDeSalud
         .from('reportes')
-        .select('guardia_id, paciente_id')
+        .select('turno_guardia_id, paciente_id')
         .in(
-          'guardia_id',
+          'turno_guardia_id',
           completadas.map((g) => g.id),
         );
       if (errorReportes) {
@@ -334,13 +334,13 @@ export function EstadoActual() {
         setEstado('error');
         return;
       }
-      const hechosPorGuardia = new Map();
+      const hechosPorTurnoGuardia = new Map();
       for (const r of reportes ?? []) {
-        if (!hechosPorGuardia.has(r.guardia_id)) hechosPorGuardia.set(r.guardia_id, new Set());
-        hechosPorGuardia.get(r.guardia_id).add(r.paciente_id);
+        if (!hechosPorTurnoGuardia.has(r.turno_guardia_id)) hechosPorTurnoGuardia.set(r.turno_guardia_id, new Set());
+        hechosPorTurnoGuardia.get(r.turno_guardia_id).add(r.paciente_id);
       }
       for (const g of completadas) {
-        const hechos = hechosPorGuardia.get(g.id);
+        const hechos = hechosPorTurnoGuardia.get(g.id);
         const esperados = g.paciente_ids?.length ? g.paciente_ids : [];
         if (!hechos || esperados.some((id) => !hechos.has(id))) sinReporte.add(g.id);
       }
@@ -380,7 +380,7 @@ export function EstadoActual() {
     setDatos({
       hoy,
       documentosDeClientes: documentosDeClientes.map((d) => ({ ...d, nombre: nombresDeClientes[d.clienteId] })),
-      guardias,
+      turnos_guardia,
       servicios,
       contactos,
       nombresPaciente,
@@ -396,7 +396,7 @@ export function EstadoActual() {
       ctxExtra: {
         asistentesConDocumentoPorVencer: porVencer,
         asistentesConDocumentoVencido: vencidos,
-        guardiasSinReporte: sinReporte,
+        turnosGuardiaSinReporte: sinReporte,
         diasDePreaviso,
         asistentesConDocumentosPendientes: documentosPendientes,
       },
@@ -415,13 +415,13 @@ export function EstadoActual() {
     [datos, umbrales],
   );
 
-  const resumen = useMemo(() => (datos && ctx ? resumenDeExcepciones(datos.guardias, ctx) : []), [datos, ctx]);
+  const resumen = useMemo(() => (datos && ctx ? resumenDeExcepciones(datos.turnos_guardia, ctx) : []), [datos, ctx]);
 
   // Cobertura de hoy: sin las canceladas, que ya no van a ocurrir.
   const cobertura = useMemo(() => {
     if (!datos || !ctx) return null;
     const tarde = excepcionPorId(EXCEPCION_TARDE);
-    const deHoy = datos.guardias.filter((g) => g.fecha === datos.hoy && g.estado !== GUARDIA_CANCELADA);
+    const deHoy = datos.turnos_guardia.filter((g) => g.fecha === datos.hoy && g.estado !== TURNO_GUARDIA_CANCELADO);
     let sinCobertura = 0;
     let enRiesgo = 0;
     for (const g of deHoy) {
@@ -432,12 +432,12 @@ export function EstadoActual() {
     return { total, sinCobertura, enRiesgo, cubiertas: total - sinCobertura - enRiesgo };
   }, [datos, ctx]);
 
-  // Modalidad de cada Servicio: la de sus guardias. Un Servicio con guardias en dos modalidades
+  // Modalidad de cada Servicio: la de sus turnos de guardia. Un Servicio con guardias en dos modalidades
   // cuenta en las dos.
   const porModalidad = useMemo(() => {
     if (!datos) return [];
     const cuenta = contarPorModalidad(datos.servicios, (s) => [
-      ...new Set((s.guardias ?? []).map((g) => g.canal_modalidad).filter(Boolean)),
+      ...new Set((s.turnos_guardia ?? []).map((g) => g.canal_modalidad).filter(Boolean)),
     ]);
     const habilitadas = new Set(modalidades ?? []);
     return MODALIDADES.filter((m) => habilitadas.has(m) || cuenta[m] > 0).map((m) => ({
@@ -476,14 +476,14 @@ export function EstadoActual() {
   }
 
   const cantidadDe = (id) => resumen.find((r) => r.id === id)?.cantidad ?? 0;
-  // Cada aviso de guardias lleva a Guardias con esas mismas guardias y nada más: las que cuenta
+  // Cada aviso de guardias lleva a Guardias con esos mismos turnos de guardia y nada más: las que cuenta
   // `filtrarPorExcepcion`, que es la función con la que se contó, en el mismo rango de fechas.
-  const aLasGuardias = (id) => ({
-    a: `/guardias?desde=${datos.desde}&hasta=${datos.hasta}`,
+  const aLosTurnosGuardia = (id) => ({
+    a: `/turnos-guardia?desde=${datos.desde}&hasta=${datos.hasta}`,
     estado: {
       excepcion: id,
       parametros: excepcionPorId(id).parametros(ctx),
-      guardias: filtrarPorExcepcion(datos.guardias, id, ctx).map((g) => g.id),
+      turnos_guardia: filtrarPorExcepcion(datos.turnos_guardia, id, ctx).map((g) => g.id),
     },
   });
   const otrasExcepciones = resumen.filter((r) => !EXCEPCIONES_CON_RENGLON_PROPIO.has(r.id) && r.cantidad > 0);
@@ -529,17 +529,17 @@ export function EstadoActual() {
           textoEnlace={tx.ver_asistentes}
         />
         <Kpi
-          icono={<IconoGuardias />}
-          etiqueta={tx.kpi_guardias_hoy}
+          icono={<IconoTurnosGuardia />}
+          etiqueta={tx.kpi_turnos_guardia_hoy}
           numero={cobertura.total}
-          a="/guardias"
-          textoEnlace={tx.ver_guardias}
+          a="/turnos-guardia"
+          textoEnlace={tx.ver_turnos_guardia}
         />
         <Kpi
           icono={<IconoCobertura />}
           etiqueta={tx.kpi_cobertura}
           numero={cobertura.total > 0 ? `${pctCobertura}%` : '—'}
-          a="/guardias"
+          a="/turnos-guardia"
           textoEnlace={tx.ver_cobertura}
         />
       </div>
@@ -571,7 +571,7 @@ export function EstadoActual() {
                 {serviciosVisibles.map((s) => {
                   const idsPaciente = [
                     ...new Set(
-                      [...(s.prestaciones ?? []), ...(s.guardias ?? [])].map((x) => x.paciente_id).filter(Boolean),
+                      [...(s.prestaciones ?? []), ...(s.turnos_guardia ?? [])].map((x) => x.paciente_id).filter(Boolean),
                     ),
                   ];
                   const nombres = idsPaciente.map((id) => datos.nombresPaciente[id]).filter(Boolean);
@@ -581,7 +581,7 @@ export function EstadoActual() {
                       <td>
                         <b>{s.etiqueta || '—'}</b>
                       </td>
-                      <td>{textoDePacientes(nombres, t.guardias.pacientes_y_mas)}</td>
+                      <td>{textoDePacientes(nombres, t.turnos_guardia.pacientes_y_mas)}</td>
                       <td>{contacto?.nombre ?? '—'}</td>
                       <td>{(s.prestaciones ?? []).length}</td>
                       <td>
@@ -612,8 +612,8 @@ export function EstadoActual() {
         >
           <RenglonesDeEmergencias />
           <FilaAlerta
-            {...aLasGuardias(EXCEPCION_SIN_CUBRIR)}
-            titulo={tx.guardias_sin_cobertura}
+            {...aLosTurnosGuardia(EXCEPCION_SIN_CUBRIR)}
+            titulo={tx.turnos_guardia_sin_cobertura}
             detalle={tx.requieren_asignacion}
             cantidad={cantidadDe(EXCEPCION_SIN_CUBRIR)}
             tono={TONO.CRITICO}
@@ -641,7 +641,7 @@ export function EstadoActual() {
           {otrasExcepciones.map((exc) => (
             <FilaAlerta
               key={exc.id}
-              {...aLasGuardias(exc.id)}
+              {...aLosTurnosGuardia(exc.id)}
               titulo={con(tx[exc.claveEtiqueta], exc.parametros)}
               cantidad={exc.cantidad}
               tono={exc.critica ? TONO.CRITICO : TONO.ATENCION}
@@ -692,15 +692,15 @@ export function EstadoActual() {
         </Tarjeta>}
 
         <Tarjeta
-          titulo={tx.cobertura_guardias}
+          titulo={tx.cobertura_turnos_guardia}
           enlace={
-            <Link className="panel-enlace" to="/guardias">
+            <Link className="panel-enlace" to="/turnos-guardia">
               {tx.ver_analisis}
             </Link>
           }
         >
           {cobertura.total === 0 ? (
-            <Mensaje>{tx.sin_guardias_hoy}</Mensaje>
+            <Mensaje>{tx.sin_turnos_guardia_hoy}</Mensaje>
           ) : (
             <div className="panel-grafico">
               <div
@@ -740,7 +740,7 @@ export function EstadoActual() {
               return (
                 <Link key={i.id} className="panel-fila-alerta" to="/continuidad">
                   <div>
-                    <b>{i.guardia_saliente_id ? tx.incidencia_relevo : tx.incidencia_ausencia}</b>
+                    <b>{i.turno_guardia_saliente_id ? tx.incidencia_relevo : tx.incidencia_ausencia}</b>
                     <span className="panel-mini">{fecha(i.iniciado_at)}</span>
                   </div>
                   <span className={claseBadgeTono(abierta ? TONO.CRITICO : TONO.EXITO)}>

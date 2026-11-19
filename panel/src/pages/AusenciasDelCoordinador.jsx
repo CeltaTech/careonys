@@ -229,7 +229,7 @@ export function AusenciasDelCoordinador({ usuario, otrosCoordinadores }) {
             value={nueva.coordinador_que_cubre_id}
             onChange={(e) => setNueva((f) => ({ ...f, coordinador_que_cubre_id: e.target.value }))}
           >
-            <option value="">{t.guardias.nueva_guardia.elegir}</option>
+            <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
             {otrosCoordinadores.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </FormField>
           <FormField label={textos.fecha_inicio} name="inicio-coordinador" type="date" value={nueva.fecha_inicio} onChange={(e) => setNueva((f) => ({ ...f, fecha_inicio: e.target.value }))} required />

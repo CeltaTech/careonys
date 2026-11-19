@@ -12,7 +12,7 @@ import ClaveNueva from './pages/ClaveNueva';
 import RecuperarClave from './pages/RecuperarClave';
 import MisPacientes from './pages/MisPacientes';
 import PacienteDetalle from './pages/PacienteDetalle';
-import Guardias from './pages/Guardias';
+import TurnosGuardia from './pages/TurnosGuardia';
 import Reportes from './pages/Reportes';
 import ReporteDetalle from './pages/ReporteDetalle';
 import Alertas from './pages/Alertas';
@@ -118,15 +118,15 @@ function Rutas() {
         <Route index element={<Navigate to="/pacientes" replace />} />
         <Route path="pacientes" element={<MisPacientes />} />
         <Route path="pacientes/:id" element={<PacienteDetalle />} />
-        {/* La semana de guardias no va detrás de un interruptor de la Prestadora: saber quién
+        {/* La semana de turnos de guardia no va detrás de un interruptor de la Prestadora: saber quién
             viene y cuándo es para qué existe la aplicación del Cliente, no una función que una
             Prestadora elija ofrecer o no. El titular sí le puede negar la agenda a una de sus
             personas autorizadas, que es otra decisión y de otro. */}
         <Route
-          path="pacientes/:id/guardias"
+          path="pacientes/:id/turnos-guardia"
           element={
-            <PantallaPermitida pantalla="guardias">
-              <Guardias />
+            <PantallaPermitida pantalla="turnos_guardia">
+              <TurnosGuardia />
             </PantallaPermitida>
           }
         />

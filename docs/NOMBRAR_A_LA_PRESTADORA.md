@@ -120,7 +120,7 @@ El texto habla de algo que acá no se puede hacer.
 
 ## 6. La lista de tareas de la guardia está vacía
 
-**Ruta:** `guardia_activa.tareas_vacio`
+**Ruta:** `turno_guardia_activo.tareas_vacio`
 
 **Texto de hoy:**
 > La Prestadora todavía no cargó esta lista.
@@ -132,7 +132,7 @@ tarjeta del tipo de Asistente, en lugar de la lista de tareas.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/pages/GuardiaActiva.jsx:735`
+**Archivo:** `pwa-asistentes/src/pages/TurnoGuardiaActivo.jsx:735`
 
 **DECISIÓN:**
 
@@ -170,7 +170,7 @@ tarjeta del tipo de Asistente, en lugar de la lista de tareas.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/components/EmergenciaEnGuardia.jsx:91`
+**Archivo:** `pwa-asistentes/src/components/EmergenciaEnTurnoGuardia.jsx:91`
 
 **DECISIÓN:**
 
@@ -191,7 +191,7 @@ se muestran lo decide el servidor.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:42`
+**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurnoGuardia.jsx:42`
 
 **DECISIÓN:**
 
@@ -211,7 +211,7 @@ renglón de la lista de pasos.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurno.jsx:42`
+**Archivo:** `pwa-asistentes/src/components/ExtensionDeTurnoGuardia.jsx:42`
 
 **DECISIÓN:**
 
@@ -408,19 +408,19 @@ desarrollo independiente.
 
 ## 42. Quién canceló la guardia
 
-**Ruta:** `guardias.cancelo_prestadora`
+**Ruta:** `turnos_guardia.cancelo_prestadora`
 
 **Texto de hoy:**
 > Cancelada por la Prestadora
 
-**Dónde se ve:** Guardias de un Paciente (`/pacientes/:id/guardias`), etiqueta de la tarjeta de
+**Dónde se ve:** Guardias de un Paciente (`/pacientes/:id/turnos-guardia`), etiqueta de la tarjeta de
 cada guardia.
 
 **Qué lo dispara:** esa guardia fue cancelada y el origen de la cancelación es la empresa.
 
 **Quién lo lee:** el Cliente.
 
-**Archivo:** `pwa-clientes/src/pages/Guardias.jsx:110` — la clave se arma sola como
+**Archivo:** `pwa-clientes/src/pages/TurnosGuardia.jsx:110` — la clave se arma sola como
 `cancelo_${g.cancelacion_origen}`
 
 **DECISIÓN:**
@@ -1253,7 +1253,7 @@ de autor de cada mensaje saliente.
 
 ## 136. Quién canceló: la empresa
 
-**Ruta:** `guardias.detalle.cancelacion_origen_prestadora`
+**Ruta:** `turnos_guardia.detalle.cancelacion_origen_prestadora`
 
 **Texto de hoy:**
 > Prestadora
@@ -1265,8 +1265,8 @@ cancelar una guardia desde su detalle como al cancelar varias con la barra de ac
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/guardias/GuardiaAcciones.jsx:476` y
-`panel/src/pages/guardias/BarraAccionesMasivas.jsx:320`
+**Archivo:** `panel/src/pages/turnos_guardia/TurnoGuardiaAcciones.jsx:476` y
+`panel/src/pages/turnos_guardia/BarraAccionesMasivas.jsx:320`
 
 **DECISIÓN:**
 

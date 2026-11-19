@@ -28,7 +28,7 @@ import {
   seSuperponen,
 } from './facturaDelPeriodo.js';
 import { condicionDe, condicionesDe } from './condicionesDelCliente.js';
-import { horasEntre } from './horasDeGuardia.js';
+import { horasEntre } from './horasDeTurnoGuardia.js';
 import { FICHA_NOMBRE, conSusFichas } from './fichaDelPaciente.js';
 
 /** Un error de la base, con el código de respuesta que le corresponde. */
@@ -62,8 +62,8 @@ function agrupadoPorServicio(filas) {
  * @param {{desde: string, hasta: string}} p.tramo
  * @param {string|null} p.vencimientoDeLaTanda  La fecha escrita para toda la tanda, o vacío.
  * @param {string|null} [p.servicioId]  Sólo ese Servicio.
- * @returns {Promise<{generadas, sinPrestaciones, sinVencimiento, sinTerminar, guardiasSinAsignar,
- *   guardiasAmbiguas, sinPrecio, monedasMezcladas}>}
+ * @returns {Promise<{generadas, sinPrestaciones, sinVencimiento, sinTerminar, turnosGuardiaSinAsignar,
+ *   turnosGuardiaAmbiguos, sinPrecio, monedasMezcladas}>}
  */
 export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencimientoDeLaTanda = null, servicioId = null }) {
   const db = clienteDelPedido(req);
@@ -116,7 +116,7 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
         .from('condiciones_comerciales_servicio')
         .select(
           'servicio_id, dias_hasta_el_vencimiento, frecuencia_de_cobro, medicion, cobra_cancelada_por_el_cliente, '
-            + 'descuenta_lo_no_prestado, cobra_guardias_adicionales, cobra_horas_adicionales',
+            + 'descuenta_lo_no_prestado, cobra_turnos_guardia_adicionales, cobra_horas_adicionales',
         )
         .in('servicio_id', servicioIds),
     ),
@@ -155,29 +155,29 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
   if (pacienteIds.length > 0) {
     const { data, error } = await db
       .from('prestaciones')
-      .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda, vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id, precio_guardia_adicional, precio_hora_adicional')
+      .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda, vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id, precio_turno_guardia_adicional, precio_hora_adicional')
       .eq('estado', 'vigente')
       .in('paciente_id', pacienteIds);
     if (error) throw fallaDeLaBase(error);
     prestaciones = data || [];
   }
 
-  // El trabajo: las guardias de esos Servicios en esas fechas, con sus Pacientes. Entran las
+  // El trabajo: los turnos de guardia de esos Servicios en esas fechas, con sus Pacientes. Entran las
   // completadas, que se cobran, y las ausentes y las canceladas, que según las condiciones se
   // descuentan o se cobran; la cancelación dice quién la pidió. La pausada por internación no
   // entra. Las horas se cuentan con la misma regla que usa la Liquidación del Asistente.
-  let guardias = [];
+  let turnos_guardia = [];
   const serviciosConPeriodos = [...periodosDelServicio.keys()];
   if (serviciosConPeriodos.length > 0) {
     const { data, error } = await db
-      .from('guardias')
-      .select('id, fecha, servicio_id, estado, cancelacion_origen, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, guardia_pacientes(paciente_id)')
+      .from('turnos_guardia')
+      .select('id, fecha, servicio_id, estado, cancelacion_origen, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, turno_guardia_pacientes(paciente_id)')
       .in('estado', ['completada', 'ausente', 'cancelada'])
       .in('servicio_id', serviciosConPeriodos)
       .gte('fecha', primerDia)
       .lte('fecha', ultimoDia);
     if (error) throw fallaDeLaBase(error);
-    guardias = (data || []).map((g) => ({
+    turnos_guardia = (data || []).map((g) => ({
       id: g.id,
       fecha: String(g.fecha).slice(0, 10),
       servicio_id: g.servicio_id,
@@ -185,7 +185,7 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
       cancelacion_origen: g.cancelacion_origen ?? null,
       horas: horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin),
       horas_extra: Number(g.horas_extra) || 0,
-      pacientes: (g.guardia_pacientes || []).map((gp) => gp.paciente_id),
+      pacientes: (g.turno_guardia_pacientes || []).map((gp) => gp.paciente_id),
     }));
   }
 
@@ -206,15 +206,15 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
     );
 
   const porServicio = agrupadoPorServicio(prestaciones);
-  const guardiasPorServicio = agrupadoPorServicio(guardias);
+  const turnosGuardiaPorServicio = agrupadoPorServicio(turnos_guardia);
 
   const cuenta = {
     generadas: 0,
     sinPrestaciones: 0,
     sinVencimiento: 0,
     sinTerminar,
-    guardiasSinAsignar: 0,
-    guardiasAmbiguas: 0,
+    turnosGuardiaSinAsignar: 0,
+    turnosGuardiaAmbiguos: 0,
     sinPrecio: 0,
     monedasMezcladas: 0,
   };
@@ -235,11 +235,11 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
           medicion: condiciones.medicion,
           condiciones,
           prestaciones: porServicio.get(servicio.id) || [],
-          guardias: guardiasPorServicio.get(servicio.id) || [],
+          turnos_guardia: turnosGuardiaPorServicio.get(servicio.id) || [],
           nombresDePacientes,
         });
-        cuenta.guardiasSinAsignar += factura.guardiasSinAsignar;
-        cuenta.guardiasAmbiguas += factura.guardiasAmbiguas;
+        cuenta.turnosGuardiaSinAsignar += factura.turnosGuardiaSinAsignar;
+        cuenta.turnosGuardiaAmbiguos += factura.turnosGuardiaAmbiguos;
         cuenta.sinPrecio += factura.sinPrecio;
 
         if (factura.renglones.length === 0) {

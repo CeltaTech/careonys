@@ -168,8 +168,8 @@ dos variables viven en `variables.css`.
   agrupada contra uno u otro— y tres acercamientos —columnas de un día, de siete días o línea de
   tiempo de las 24 horas de un día—. Se reasigna arrastrando y soltando, con el arrastre nativo
   de HTML5 (`draggable`/`dragstart`/`dragover`/`drop`). Cada guardia es un chip
-  (`.grilla-chip`, en `panel/src/pages/guardias/GrillaGuardias.jsx`). `guardias.asistente_id` admite vacío sólo
-  en una guardia `programada` o `cancelada` (`guardias_sin_cubrir_estado_check`).
+  (`.grilla-chip`, en `panel/src/pages/turnos_guardia/GrillaTurnosGuardia.jsx`). `turnos_guardia.asistente_id` admite vacío sólo
+  en una guardia `programada` o `cancelada` (`turnos_guardia_sin_cubrir_estado_check`).
 - **Comunicación**: además del hilo por Asistente (dentro del Legajo del Asistente), existe una bandeja
   global en `/comunicacion` con lista de Asistentes ordenada por último mensaje a la
   izquierda y el hilo activo a la derecha. Ambas vistas comparten el mismo componente
@@ -202,14 +202,14 @@ decir "preste atención". Eso lo sabe un solo archivo.
 ## Estados visuales de guardias (Módulo 6 del Panel Admin)
 
 El acento lateral de cada chip de la grilla lo pone el tono de su situación: la pantalla le
-escribe `data-tono` con lo que resuelve `panel/src/lib/semaforoGuardia.js`, y `index.css`
+escribe `data-tono` con lo que resuelve `panel/src/lib/semaforoTurnoGuardia.js`, y `index.css`
 pinta el borde izquierdo con la variable de marca de ese tono:
 
 ```css
 .grilla-chip[data-tono='critico'] { border-left-color: var(--rojo-peligro); }
 ```
 
-`guardias.estado` admite seis valores (`guardias_estado_check`): `programada`, `activa`,
+`turnos_guardia.estado` admite seis valores (`turnos_guardia_estado_check`): `programada`, `activa`,
 `completada`, `cancelada`, `ausente` y `pausada`. `ausente` es distinto de `cancelada`. En cualquier
 badge de un estado de guardia se usa `claseBadge()` como en el resto del Panel.
 

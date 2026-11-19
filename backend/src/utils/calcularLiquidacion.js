@@ -233,7 +233,7 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
       base_unidad: baseUnidad,
       base_valor: baseValor,
       horas,
-      guardias_contadas: acumulado.guardias,
+      turnos_guardia_contados: acumulado.turnos_guardia,
       horas_extra: horasExtra,
       // El valor con el que se pagaron va en la foto: sin él, el importe no se puede volver a
       // explicar. Sin horas extra no hay valor que guardar, y guardar el del Legajo del Asistente diría que
@@ -254,28 +254,28 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
    Lo que se le cobra a un Cliente por un Servicio en un período.
    ==========================================================================
 
-   Llega todo leído: las prestaciones del Servicio, las guardias completadas del período con sus
+   Llega todo leído: las prestaciones del Servicio, los turnos de guardia completados del período con sus
    horas ya contadas, y la medición que rige (la resuelve `condicionesDelCliente.js`). Sale un
    renglón por cada cosa que se cobra, con cuántas unidades, de qué, a qué precio y en qué moneda.
 
    CADA GUARDIA SE COBRA CON LA PRESTACIÓN VIGENTE EL DÍA DE LA GUARDIA. Si el precio cambió a mitad
-   de período, la guardia de antes del cambio se cobra al precio de antes: es la escala vigente a la
-   fecha del hecho. La guardia va a la prestación de su mismo Servicio y del mismo Paciente.
-     - Si ninguna prestación estaba vigente ese día, la guardia queda sin cobrar y se cuenta en
-       `guardiasSinAsignar`.
+   de período, el turno de guardia de antes del cambio se cobra al precio de antes: es la escala vigente a la
+   fecha del hecho. El turno de guardia va a la prestación de su mismo Servicio y del mismo Paciente.
+     - Si ninguna prestación estaba vigente ese día, el turno de guardia queda sin cobrar y se cuenta en
+       `turnosGuardiaSinAsignar`.
      - Si había más de una, no se elige ninguna: queda sin cobrar y se cuenta en
-       `guardiasAmbiguas`. Elegir una sería inventar a qué precio se pactó.
+       `turnosGuardiaAmbiguos`. Elegir una sería inventar a qué precio se pactó.
 
    UNA GUARDIA QUE CUBRE A VARIOS PACIENTES reparte sus horas entre ellos, igual que en
-   `utils/horasDeGuardia.js`: la misma hora no se cobra dos veces. Como guardia y como día cuenta
+   `utils/horasDeTurnoGuardia.js`: la misma hora no se cobra dos veces. Como guardia y como día cuenta
    una vez para cada uno, porque cada uno tiene su prestación pactada.
 
    LAS TRES MEDICIONES
      - pactado_mas_excedente: el precio de la prestación entero, una vez por período en que la
-       prestación esté vigente aunque sea un día. Si la prestación dice cuántas guardias se
-       pactaron (`configuracion.cantidad_guardias`), cada guardia por encima se cobra a
-       precio / cantidad, y cada hora extra anotada a ese valor de la guardia / las horas de esa
-       guardia. Sin cantidad pactada no se cobra excedente y se avisa en `sinCantidadPactada`.
+       prestación esté vigente aunque sea un día. Si la prestación dice cuántos turnos de guardia se
+       pactaron (`configuracion.cantidad_turnos_guardia`), cada turno de guardia por encima se cobra a
+       precio / cantidad, y cada hora extra anotada a ese valor del turno de guardia / las horas de ese
+       turno de guardia. Sin cantidad pactada no se cobra excedente y se avisa en `sinCantidadPactada`.
 
    UN CAMBIO DE PRECIO A MITAD DE PERÍODO. El precio nuevo es otra prestación que dice a cuál
    reemplaza (`prestacion_anterior_id`), y las dos forman una cadena. En la medición por hora y por
@@ -283,12 +283,12 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
    pactada, la cadena se cobra una sola vez por período, y cada eslabón pone la parte de su precio
    que corresponde a sus días: precio × días del eslabón / días que la cadena cubre en el período.
    Una prestación sin cambios cubre todos sus días y se cobra entera, igual que antes. Lo pactado
-   se reparte de la misma forma (cantidad × la misma fracción, sumado y redondeado), y las
-   guardias por encima son las últimas, por fecha: cada una se cobra con el valor de la guardia
+   se reparte de la misma forma (cantidad × la misma fracción, sumado y redondeado), y los
+   turnos de guardia por encima son las últimas, por fecha: cada una se cobra con el valor del turno de guardia
    del eslabón vigente su día.
      - hora: cada hora trabajada, más las horas extra, al precio de la prestación.
-     - dia_de_guardia: cada día calendario en que hubo guardia, al precio de la prestación. Una
-       guardia de 48 horas cubre dos días.
+     - dia_de_guardia: cada día calendario en que hubo guardia, al precio de la prestación. Un
+       turno de guardia de 48 horas cubre dos días.
 
    NO INVENTA MONEDA. Cada renglón lleva la de su prestación. Si en el mismo Servicio hay
    prestaciones en dos monedas, `monedas` trae las dos y quien arma la factura decide no armarla:
@@ -296,7 +296,7 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
 
 export const UNIDADES_DEL_COBRO = Object.freeze({
   PERIODO: 'periodo',
-  GUARDIA: UNIDADES.GUARDIA,
+  TURNO_GUARDIA: UNIDADES.TURNO_GUARDIA,
   HORA: UNIDADES.HORA,
   HORA_EXTRA: 'hora_extra',
   DIA_DE_GUARDIA: 'dia_de_guardia',
@@ -334,7 +334,7 @@ function raizDeLaCadena(prestacion, porId) {
   return actual.id;
 }
 
-// El precio pactado de una guardia o una hora adicional: un número desde cero, o null si no hay.
+// El precio pactado de un turno de guardia o una hora adicional: un número desde cero, o null si no hay.
 function precioDelAdicional(valor) {
   if (valor === null || valor === undefined || valor === '') return null;
   const numero = Number(valor);
@@ -367,20 +367,20 @@ export const CONDICIONES_DE_CADA_MEDICION = Object.freeze({
   [MEDICIONES.PACTADO_MAS_EXCEDENTE]: Object.freeze([
     'descuenta_lo_no_prestado',
     'cobra_cancelada_por_el_cliente',
-    'cobra_guardias_adicionales',
+    'cobra_turnos_guardia_adicionales',
     'cobra_horas_adicionales',
   ]),
   [MEDICIONES.HORA]: Object.freeze(['cobra_cancelada_por_el_cliente', 'cobra_horas_adicionales']),
   [MEDICIONES.DIA_DE_GUARDIA]: Object.freeze(['cobra_cancelada_por_el_cliente']),
 });
 
-// Los estados de una guardia que entran en la cuenta. La que no dice estado es una completada,
+// Los estados de un turno de guardia que entran en la cuenta. La que no dice estado es una completada,
 // como antes de que la cuenta mirara las otras.
 const ESTADOS = Object.freeze({ COMPLETADA: 'completada', AUSENTE: 'ausente', CANCELADA: 'cancelada' });
 
-// Qué es una guardia para la cuenta: trabajada, no prestada por causa de la Prestadora o del
+// Qué es un turno de guardia para la cuenta: trabajada, no prestada por causa de la Prestadora o del
 // Asistente (propia), cancelada por el Cliente, o ninguna de las tres (no entra).
-function claseDeLaGuardia(g) {
+function claseDelTurnoGuardia(g) {
   const estado = g.estado ?? ESTADOS.COMPLETADA;
   if (estado === ESTADOS.COMPLETADA) return 'trabajada';
   if (estado === ESTADOS.AUSENTE) return 'propia';
@@ -400,8 +400,8 @@ const porFecha = (a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
  *   fábrica. Si traen `medicion`, ésa manda sobre el parámetro suelto.
  * - prestaciones: [{ id, paciente_id, servicio_id, tipo_servicio, precio_final, moneda,
  *   vigente_desde, vigente_hasta, configuracion, prestacion_anterior_id,
- *   precio_guardia_adicional, precio_hora_adicional }]. Los dos últimos son optativos: sin ellos,
- *   la guardia y la hora adicionales valen la parte proporcional del precio pactado.
+ *   precio_turno_guardia_adicional, precio_hora_adicional }]. Los dos últimos son optativos: sin ellos,
+ *   el turno de guardia y la hora adicionales valen la parte proporcional del precio pactado.
  * - guardias: [{ id, fecha, servicio_id, horas, horas_extra, pacientes: [paciente_id], estado,
  *   cancelacion_origen }]. Entran las completadas, las ausentes y las canceladas; una sin estado
  *   cuenta como completada.
@@ -419,7 +419,7 @@ export function calcularLiquidacionDelCliente({
   medicion: medicionSuelta,
   condiciones: condicionesQueLlegan,
   prestaciones = [],
-  guardias = [],
+  turnos_guardia = [],
   nombresDePacientes = new Map(),
   parte = null,
 }) {
@@ -427,8 +427,8 @@ export function calcularLiquidacionDelCliente({
     renglones: [],
     total: 0,
     monedas: [],
-    guardiasSinAsignar: 0,
-    guardiasAmbiguas: 0,
+    turnosGuardiaSinAsignar: 0,
+    turnosGuardiaAmbiguos: 0,
     sinCantidadPactada: [],
     sinPrecio: [],
     medicionDesconocida: false,
@@ -452,58 +452,58 @@ export function calcularLiquidacionDelCliente({
   }
   const cobraCanceladas = condiciones.cobra_cancelada_por_el_cliente === true;
   const descuentaPropias = condiciones.descuenta_lo_no_prestado === true;
-  const cobraGuardiasAdicionales = condiciones.cobra_guardias_adicionales === true;
+  const cobraTurnosGuardiaAdicionales = condiciones.cobra_turnos_guardia_adicionales === true;
   const cobraHorasAdicionales = condiciones.cobra_horas_adicionales === true;
 
   const delTramo = prestaciones.filter((p) => correEnElTramo(p, desde, hasta));
 
-  // Qué guardias le tocan a cada prestación, y con cuántas horas, separadas por clase.
+  // Qué turnos de guardia le tocan a cada prestación, y con cuántas horas, separadas por clase.
   const trabajo = new Map(delTramo.map((p) => [p.id, []]));
   const propias = new Map(delTramo.map((p) => [p.id, []]));
   const delCliente = new Map(delTramo.map((p) => [p.id, []]));
   const destino = { trabajada: trabajo, propia: propias, cliente: delCliente };
-  for (const g of guardias) {
+  for (const g of turnos_guardia) {
     if (!g?.fecha || g.fecha < desde || g.fecha > hasta) continue;
-    const clase = claseDeLaGuardia(g);
+    const clase = claseDelTurnoGuardia(g);
     if (!clase) continue;
     const pacientes = [...new Set((g.pacientes || []).filter(Boolean))];
     // Lo que no se pudo asignar se cuenta en la parte de su fecha, para no contarlo dos veces.
     const cuentaAca = enLaParte(g.fecha);
     if (pacientes.length === 0) {
-      if (cuentaAca) resultado.guardiasSinAsignar += 1;
+      if (cuentaAca) resultado.turnosGuardiaSinAsignar += 1;
       continue;
     }
-    const horasDeLaGuardia = Math.max(Number(g.horas) || 0, 0);
-    // Sólo la guardia trabajada tiene horas extra: la que no se prestó no tuvo ninguna.
-    const horasExtraDeLaGuardia = clase === 'trabajada' ? Math.max(Number(g.horas_extra) || 0, 0) : 0;
+    const horasDelTurnoGuardia = Math.max(Number(g.horas) || 0, 0);
+    // Sólo el turno de guardia trabajado tiene horas extra: la que no se prestó no tuvo ninguna.
+    const horasExtraDelTurnoGuardia = clase === 'trabajada' ? Math.max(Number(g.horas_extra) || 0, 0) : 0;
     for (const pacienteId of pacientes) {
       const candidatas = delTramo.filter(
         (p) => p.servicio_id === g.servicio_id && p.paciente_id === pacienteId && estaVigente(p, g.fecha)
       );
       if (candidatas.length === 0) {
-        if (cuentaAca) resultado.guardiasSinAsignar += 1;
+        if (cuentaAca) resultado.turnosGuardiaSinAsignar += 1;
         continue;
       }
       if (candidatas.length > 1) {
-        if (cuentaAca) resultado.guardiasAmbiguas += 1;
+        if (cuentaAca) resultado.turnosGuardiaAmbiguos += 1;
         continue;
       }
       destino[clase].get(candidatas[0].id).push({
         fecha: g.fecha,
-        horasDeLaGuardia,
-        horas: horasDeLaGuardia / pacientes.length,
-        horasExtra: horasExtraDeLaGuardia / pacientes.length,
+        horasDelTurnoGuardia,
+        horas: horasDelTurnoGuardia / pacientes.length,
+        horasExtra: horasExtraDelTurnoGuardia / pacientes.length,
       });
     }
   }
 
   /* Las cadenas de reemplazos: qué fracción del período pone cada eslabón y, en la medición
-     pactada, cuántas guardias de cada eslabón van de más y cuántas se descuentan.
+     pactada, cuántos turnos de guardia de cada eslabón van de más y cuántas se descuentan.
        - Lo consumido de lo pactado son las trabajadas, más las canceladas por el Cliente si se le
          cobran.
        - De más: las trabajadas que pasan lo pactado, las últimas por fecha.
        - Lo que falta para lo pactado se reparte primero entre las no prestadas por causa propia y
-         después entre las canceladas por el Cliente, las primeras por fecha. Una guardia que no
+         después entre las canceladas por el Cliente, las primeras por fecha. Un turno de guardia que no
          figura en ninguna de las dos no se descuenta: el precio del período es el pactado. */
   const porId = new Map(prestaciones.map((p) => [p.id, p]));
   const cadenas = new Map();
@@ -532,7 +532,7 @@ export function calcularLiquidacionDelCliente({
     );
 
     if (medicion !== MEDICIONES.PACTADO_MAS_EXCEDENTE) continue;
-    const cantidades = eslabones.map((p) => numeroPositivo(p.configuracion?.cantidad_guardias));
+    const cantidades = eslabones.map((p) => numeroPositivo(p.configuracion?.cantidad_turnos_guardia));
     if (cantidades.some((c) => !c)) {
       for (const p of eslabones) cadenaSinCantidad.add(p.id);
       continue;
@@ -585,39 +585,39 @@ export function calcularLiquidacionDelCliente({
         monto: redondear(signo * monto),
       });
     };
-    // Las guardias y las horas adicionales: al precio pactado para ellas, si lo hay; si no, a la
+    // Los turnos de guardia y las horas adicionales: al precio pactado para ellas, si lo hay; si no, a la
     // parte proporcional del precio pactado. La Prestadora lo cambia después en cada factura.
     const adicional = (unidad, cantidad, precioUnitario, monto = cantidad * precioUnitario) =>
       agregar(CONCEPTOS_DEL_COBRO.ADICIONAL, unidad, cantidad, precioUnitario, { monto });
-    const guardiaAdicional = precioDelAdicional(p.precio_guardia_adicional);
+    const turnoGuardiaAdicional = precioDelAdicional(p.precio_turno_guardia_adicional);
     const horaAdicional = precioDelAdicional(p.precio_hora_adicional);
 
     if (medicion === MEDICIONES.PACTADO_MAS_EXCEDENTE) {
       // Una fracción del período: la parte de los días que cubre este eslabón de su cadena.
       const fraccion = fraccionDeLaParte.get(p.id) ?? 1;
       agregar(CONCEPTOS_DEL_COBRO.PACTADO, UNIDADES_DEL_COBRO.PERIODO, fraccion, precio, { monto: precio * fraccion });
-      const pactadas = numeroPositivo(p.configuracion?.cantidad_guardias);
-      const tieneGuardias = suyas.length + deLaParte(propias).length + canceladasSuyas.length > 0;
+      const pactadas = numeroPositivo(p.configuracion?.cantidad_turnos_guardia);
+      const tieneTurnosGuardia = suyas.length + deLaParte(propias).length + canceladasSuyas.length > 0;
       if (!pactadas || cadenaSinCantidad.has(p.id)) {
-        if (tieneGuardias) resultado.sinCantidadPactada.push(p.id);
+        if (tieneTurnosGuardia) resultado.sinCantidadPactada.push(p.id);
       } else {
-        const valorDeLaGuardia = precio / pactadas;
-        if (cobraGuardiasAdicionales) adicional(UNIDADES_DEL_COBRO.GUARDIA, excedenteDe.get(p.id) ?? 0, guardiaAdicional ?? valorDeLaGuardia);
-        // Cada hora extra vale lo que vale una hora de su propia guardia.
+        const valorDelTurnoGuardia = precio / pactadas;
+        if (cobraTurnosGuardiaAdicionales) adicional(UNIDADES_DEL_COBRO.TURNO_GUARDIA, excedenteDe.get(p.id) ?? 0, turnoGuardiaAdicional ?? valorDelTurnoGuardia);
+        // Cada hora extra vale lo que vale una hora de su propio turno de guardia.
         let horasExtra = 0;
         let montoExtra = 0;
         for (const s of suyas) {
-          if (s.horasExtra > 0 && s.horasDeLaGuardia > 0) {
+          if (s.horasExtra > 0 && s.horasDelTurnoGuardia > 0) {
             horasExtra += s.horasExtra;
-            montoExtra += s.horasExtra * (valorDeLaGuardia / s.horasDeLaGuardia);
+            montoExtra += s.horasExtra * (valorDelTurnoGuardia / s.horasDelTurnoGuardia);
           }
         }
         if (cobraHorasAdicionales && horasExtra > 0) {
           if (horaAdicional !== null) adicional(UNIDADES_DEL_COBRO.HORA_EXTRA, horasExtra, horaAdicional);
           else adicional(UNIDADES_DEL_COBRO.HORA_EXTRA, horasExtra, montoExtra / horasExtra, montoExtra);
         }
-        agregar(CONCEPTOS_DEL_COBRO.NO_PRESTADO, UNIDADES_DEL_COBRO.GUARDIA, propiasDe.get(p.id) ?? 0, valorDeLaGuardia, { signo: -1 });
-        agregar(CONCEPTOS_DEL_COBRO.CANCELADO_POR_EL_CLIENTE, UNIDADES_DEL_COBRO.GUARDIA, delClienteDe.get(p.id) ?? 0, valorDeLaGuardia, { signo: -1 });
+        agregar(CONCEPTOS_DEL_COBRO.NO_PRESTADO, UNIDADES_DEL_COBRO.TURNO_GUARDIA, propiasDe.get(p.id) ?? 0, valorDelTurnoGuardia, { signo: -1 });
+        agregar(CONCEPTOS_DEL_COBRO.CANCELADO_POR_EL_CLIENTE, UNIDADES_DEL_COBRO.TURNO_GUARDIA, delClienteDe.get(p.id) ?? 0, valorDelTurnoGuardia, { signo: -1 });
       }
     } else if (medicion === MEDICIONES.HORA) {
       // Se cobra lo trabajado. Lo no prestado nunca se cobró, así que no hay nada que descontar.
@@ -632,7 +632,7 @@ export function calcularLiquidacionDelCliente({
       const diasDe = (lista) => {
         const dias = new Set();
         for (const s of lista) {
-          const cubre = Math.max(Math.ceil(s.horasDeLaGuardia / HORAS_DE_UN_DIA), 1);
+          const cubre = Math.max(Math.ceil(s.horasDelTurnoGuardia / HORAS_DE_UN_DIA), 1);
           for (let i = 0; i < cubre; i += 1) dias.add(diaSiguiente(s.fecha, i));
         }
         return dias;
@@ -640,7 +640,7 @@ export function calcularLiquidacionDelCliente({
       const trabajados = diasDe(suyas);
       agregar(CONCEPTOS_DEL_COBRO.MEDIDO, UNIDADES_DEL_COBRO.DIA_DE_GUARDIA, trabajados.size, precio);
       if (cobraCanceladas) {
-        // Un día que ya se cobra por una guardia trabajada no se cobra otra vez.
+        // Un día que ya se cobra por un turno de guardia trabajado no se cobra otra vez.
         const soloCancelados = [...diasDe(canceladasSuyas)].filter((d) => !trabajados.has(d));
         agregar(CONCEPTOS_DEL_COBRO.CANCELADO_POR_EL_CLIENTE, UNIDADES_DEL_COBRO.DIA_DE_GUARDIA, soloCancelados.length, precio);
       }

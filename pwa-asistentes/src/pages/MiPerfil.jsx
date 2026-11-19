@@ -78,7 +78,7 @@ export default function MiPerfil() {
   }
 
   // En qué horarios suele estar disponible. La cambia él cuando quiere; quien coordina la ve al
-  // asignar guardias. Como con el interruptor, lo que queda marcado es lo que contestó el backend.
+  // asignar turnos de guardia. Como con el interruptor, lo que queda marcado es lo que contestó el backend.
   const horariosGuardados = Array.isArray(perfil?.disponibilidad) ? perfil.disponibilidad : [];
   const horariosCambiaron =
     horarios.length !== horariosGuardados.length || horarios.some((c) => !horariosGuardados.includes(c));

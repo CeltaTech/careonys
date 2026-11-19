@@ -998,7 +998,7 @@ estén no se escribe código de producción de ninguno.
 cubra, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o
 dos, una por tiempo conocido y otra indefinida—.
 
-**25. Claude Code** — **Lo guardado que es un turno pasa a llamarse turno.** La tabla `guardias`
+**25. Claude Code** — **Todo nombre guardado que es un turno de guardia pasa a llamarse turno de guardia**, nunca «turno» a secas, para que no se confunda con un turno de otra cosa. La tabla `guardias`
 guarda turnos: cada fila lleva una Asistente, un día, un horario y su check-in y su check-out. La
 guardia completa es la Prestación con su cronograma. El Desarrollador decidió renombrar, para que
 el nombre guardado no mezcle los dos niveles. Se hace antes del paso 27, que ya escribe con los
@@ -1006,14 +1006,13 @@ nombres nuevos, y en este orden:
 
 1. **Inventario de cada nombre guardado que dice «guardia»**, en la base en vivo: hoy son 13
    tablas, 30 columnas, 22 funciones y 44 políticas, además de unos 200 archivos del backend, del
-   Panel y de las dos aplicaciones. Cada nombre se clasifica por lo que guarda: si es un turno, se
-   renombra; si es la guardia como Prestación, queda. Lo que no se pueda clasificar sin dudas se le
+   Panel y de las dos aplicaciones. Cada nombre se clasifica por lo que guarda: si es un turno de
+   guardia —también los que hoy dicen «turno» a secas—, se renombra; si es la guardia como Prestación, queda. Lo que no se pueda clasificar sin dudas se le
    muestra al Desarrollador con el caso concreto.
-2. **Plan de la mudanza**, con la lista de nombres viejos y nuevos, mostrado al Desarrollador para
-   aprobarlo.
+2. **Lista de nombres viejos y nuevos**, que queda escrita en la migración.
 3. **Una sola migración** renombra tablas, columnas, funciones y políticas, y el programa se cambia
    en el mismo conjunto de cambios, para que nada quede apuntando a un nombre que ya no existe.
-   El inventario revisa también los textos visibles: donde hablan de un turno, dicen «turno».
+   El inventario revisa también los textos visibles: donde hablan de un turno de guardia, lo dicen.
 
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
 

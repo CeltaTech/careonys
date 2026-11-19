@@ -110,18 +110,6 @@ de una Prestadora no lee nada de otra.
 
 ### El acto de armar un Servicio
 
-**26. Usted** — Y una que aparece al cruzar el acto con la regla del producto: **el Responsable de
-pagos.** La regla dice que quien asume la obligación de pagar queda definido recién cuando firma, y
-que eso tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este
-acto.
-
-El Responsable de pagos que desiste se anota con su fecha de fin, y la factura sigue saliendo a
-nombre del Contratante.
-
-**La prueba del enlace por correo para leer y firmar el documento del Responsable de pagos** tiene hecho el
-primer punto, el envío del enlace: en la base hay un consentimiento cerrado con el enlace, y su
-envío figura aceptado. Los otros tres puntos esperan el «sí» del Desarrollador, uno por uno.
-
 **27.** Construir el acto, en este orden. Cada paso deja el sistema funcionando:
 
 1. **Los días y horarios de la Prestación pasan a ser un dato.** En la Ficha del cliente, en

@@ -143,6 +143,10 @@ programar guardias tienen que haber firmado todos los que rigen hoy. La factura 
 Contratante. La indicación «Facturar a su nombre» va en un solo Responsable de pagos por día, y el
 sistema no deja ponerla en dos. Con la opción apagada y sin la indicación, nada cambia.
 
+El envío del documento por correo para que el Responsable de pagos lo lea y lo firme se probó
+entero el 8 de noviembre de 2026: llegó el correo, el enlace abrió el documento, el botón «Firmar»
+dejó la firma registrada y apareció «Descargar».
+
 ## Cómo se comprobó
 
 Pasaron las 2507 pruebas del backend, las 889 del Panel, las 6 de la aplicación de los Clientes y las 41

@@ -9,6 +9,15 @@ necesitaban una pantalla nueva. Ninguna pantalla nueva salió.
 
 ## Lo que se hizo
 
+**Paso 25, el nombre «turno de guardia».** Todo lo guardado que es un turno de guardia ya se llama
+turno de guardia, nunca «turno» a secas ni «guardia»: las tablas, las columnas, las funciones, las
+reglas de acceso de la base, los tipos de aviso, las claves de los textos, el backend, el Panel y
+las dos aplicaciones. La guardia como Prestación conserva su nombre. Se cambió todo junto, en una
+sola publicación de la base y del programa, para que nada quede apuntando a un nombre viejo. Las
+dos protecciones de la base que no dejan tocar un aviso atendido ni un texto propio se apartaron
+sólo durante el cambio de nombre y quedaron encendidas otra vez. Además, las tareas automáticas
+del backend ahora esperan a que se carguen los textos antes de su primera vuelta.
+
 **Paso 13, la clave de cada Prestadora para los datos de otros servicios.** Las contraseñas que
 una Prestadora carga para conectar otros servicios, como WhatsApp o su software de facturación,
 ya no se guardan en la caja de Supabase. Ahora se guardan cifradas con una clave propia de cada
@@ -154,6 +163,12 @@ de la aplicación de los Asistentes, y las tres construyen sin error. La prueba 
 cuenta de las Prestadoras de demostración pasó: ninguna ve datos de otra. La base reconstruida
 desde cero coincide con el esquema escrito. Las 6 migraciones nuevas están aplicadas en la base en
 la nube, y también las 4 de los pasos 121, 123, 124 y 125.
+
+El cambio de nombre del paso 25 se probó en la base local con dos avisos inventados, uno atendido y
+otro pendiente, cargados antes de la migración: los dos quedaron con el tipo nuevo y las dos
+protecciones encendidas. Pasaron las 2539 pruebas del backend, y la prueba de aislamiento entre las
+dos Prestadoras de demostración no encontró ningún dato cruzado. En la base en la nube la migración
+está aplicada, el aviso atendido tiene el tipo nuevo y la tabla vieja ya no existe.
 
 No se corrieron las tres comprobaciones que entran con la contraseña de las Prestadoras de
 demostración, porque esa contraseña la tiene usted.

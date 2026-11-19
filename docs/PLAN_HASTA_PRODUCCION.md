@@ -116,7 +116,9 @@ de una Prestadora no lee nada de otra.
    Prestaciones del Paciente, los dos casilleros de texto libre
    (`panel/src/pages/clientes/PrestacionesPaciente.jsx:83-84`) pasan a la forma de la serie: días
    marcados, hora de inicio, hora de fin, y más de un renglón. Se guardan en tabla propia que apunta a
-   la Prestación, no adentro de `prestaciones.configuracion`.
+   la Prestación, no adentro de `prestaciones.configuracion`. Cada serie de guardias apunta a la
+   Prestación que cubre, y de ella sale de qué es la guardia: el aviso del hueco y la sugerencia de
+   Asistentes lo leen de ahí, aunque todavía no haya nadie asignado.
 2. **Una sola función hace la cuenta**: recibe un Servicio y un período y contesta qué horarios
    pactados no cubre ninguna serie vigente, con su día y su horario. Resuelve que una serie cubra a
    varios Pacientes, que un horario lo cubran dos series, que una serie pausada no cuente y que una
@@ -954,14 +956,13 @@ falta; la cuenta es directa, los horarios pactados menos los que cubren las seri
 sobra es el hueco, con su día y su horario; y la cuenta corre en tres momentos: al armar o cambiar
 una serie, al suspender o cancelar una, y en el pasaje diario que ya extiende las series.
 
-**Lo que se carga son cuatro niveles que no se mezclan:**
+**Lo que se carga son tres niveles que no se mezclan, y la guardia es una clase de Prestación:**
 
 | | Qué es | Ejemplo |
 |---|---|---|
 | **Servicio** | el acuerdo entero | cuidado domiciliario, por tiempo indeterminado |
-| **Prestación** | cada cosa del acuerdo, con su precio y sus propios días y horarios | el cuidado por horas; aparte, la kinesiología |
-| **Guardia** | el cuidado a cubrir, con sus días y su horario —una franja acotada o las 24 horas los 7 días—, y de qué es | la de cuidados: los 7 días, de 00:00 a 24:00. Aparte, la de enfermería, de 8 a 14 los martes |
-| **Turno de guardia** | la parte que cubre una Asistente, hasta que le entrega las responsabilidades a quien la releva o al Cliente | tres turnos de ocho horas, tres personas |
+| **Prestación** | cada cosa del acuerdo, con su precio. Si es una guardia, lleva su cronograma de días y horarios —una franja acotada o las 24 horas los 7 días—, que se anota una sola vez | la guardia de cuidados: los 7 días, de 00:00 a 24:00. Aparte, la guardia de enfermería, de 8 a 14 los martes, y la kinesiología |
+| **Turno de guardia** | la parte del cronograma que cubre una Asistente, hasta que le entrega las responsabilidades a quien la releva o al Cliente | tres turnos de ocho horas, tres personas |
 
 **La palabra «tramo» no se usa para los días y horarios de una Prestación**, porque en el producto ya
 nombra otra cosa: los renglones de premura con los que se le insiste al Coordinador y el período
@@ -997,19 +998,11 @@ estén no se escribe código de producción de ninguno.
 cubra, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o
 dos, una por tiempo conocido y otra indefinida—.
 
-**25. Usted** — Y dos sobre lo guardado, que salen de los cuatro niveles de la tabla de arriba:
-
-- **La tabla `guardias` guarda turnos**, no guardias: cada fila lleva una Asistente, un día, un
-  horario y su check-in y su check-out. El nivel de la guardia completa, el período que se reparte
-  entre varias, **no tiene tabla**. ¿Se deja el nombre como está, entendiendo que una fila es un
-  turno, o se renombra? Renombrar es una mudanza de datos sobre `guardias`, `series_guardias` y todo
-  lo que las nombra, así que lo decide usted.
-- **De qué es una guardia no está guardado en ninguna parte.** Un Servicio incluye varias —de
-  cuidados, de enfermería, de lo que se haya acordado—, y el tipo hoy lo lleva únicamente la persona
-  que la cubre, en su Legajo. Así que la guardia se deduce de quién la cubre, **y mientras no haya
-  nadie asignado no dice qué hace falta ahí**. Sin eso, el aviso del hueco puede decir que falta
-  cubrir un horario pero no de qué, y la sugerencia de Asistentes no tiene contra qué comparar. ¿El
-  tipo pasa a la guardia?
+**25. Usted** — Una sobre lo guardado, que sale de los niveles de la tabla de arriba: **la tabla
+`guardias` guarda turnos**, no guardias: cada fila lleva una Asistente, un día, un horario y su
+check-in y su check-out. La guardia completa es la Prestación con su cronograma. ¿Se deja el nombre
+como está, entendiendo que una fila es un turno, o se renombra? Renombrar es una mudanza de datos
+sobre `guardias`, `series_guardias` y todo lo que las nombra, así que lo decide usted.
 
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
 

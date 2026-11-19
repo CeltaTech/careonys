@@ -666,3 +666,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el glosario y los documentos llamaban «Pagador» a quien asume la obligación de pagar un Servicio.
 - **Qué dice ahora:** en todo lo que se lee —interfaz, documentos y glosario— se dice «Responsable de pagos». «Pagador» queda sólo como nombre interno en el programa y en la base, y no se renombra nada guardado.
 - **Motivo:** el Desarrollador lo decidió así: *«me gusta mas responsable de pagos que pagador»*, y *«sólo deja de verse: por dentro sigue diciendo «Pagador», y el glosario anota que es el nombre interno de «Responsable de pagos»»*.
+
+## La guardia es una clase de Prestación
+
+- **Qué decía antes:** el glosario trataba a la Guardia como un nivel aparte de la Prestación, con sus propios días y horarios.
+- **Qué dice ahora:** el Servicio es el acuerdo entre la Prestadora y el Cliente por una o varias Prestaciones a un precio acordado. Una Prestación que es una guardia se organiza según un cronograma de días y horarios y, si hace falta, en turnos que cubren distintas personas. Los días y horarios se anotan una sola vez, en la Prestación.
+- **Motivo:** el Desarrollador lo definió así, y con la Guardia aparte el mismo horario quedaba anotado dos veces.

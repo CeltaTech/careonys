@@ -18,6 +18,12 @@ dos protecciones de la base que no dejan tocar un aviso atendido ni un texto pro
 sólo durante el cambio de nombre y quedaron encendidas otra vez. Además, las tareas automáticas
 del backend ahora esperan a que se carguen los textos antes de su primera vuelta.
 
+Dos defectos que aparecieron al revisar el paso 27 quedaron corregidos. La ficha de un Servicio no
+abría en la nube: pedía el apellido de los usuarios del Panel, un dato que no existe, y por eso no
+se podía asignar el Coordinador. Y la configuración del aviso de turno de guardia sin cubrir había
+quedado con el nombre viejo en las dos Prestadoras de demostración: el sistema no la encontraba y
+usaba los valores de fábrica. Ya tiene el nombre nuevo.
+
 **Paso 13, la clave de cada Prestadora para los datos de otros servicios.** Las contraseñas que
 una Prestadora carga para conectar otros servicios, como WhatsApp o su software de facturación,
 ya no se guardan en la caja de Supabase. Ahora se guardan cifradas con una clave propia de cada
@@ -169,6 +175,11 @@ otro pendiente, cargados antes de la migración: los dos quedaron con el tipo nu
 protecciones encendidas. Pasaron las 2539 pruebas del backend, y la prueba de aislamiento entre las
 dos Prestadoras de demostración no encontró ningún dato cruzado. En la base en la nube la migración
 está aplicada, el aviso atendido tiene el tipo nuevo y la tabla vieja ya no existe.
+
+Los dos defectos del paso 27: pasaron las 901 pruebas del Panel, la base local se reconstruyó desde
+cero sin error, y en la nube los dos avisos tienen el nombre nuevo y no queda ninguno con el viejo.
+La ficha del Servicio no se abrió en el Panel publicado, porque para eso hay que entrar con un
+usuario de demostración, y ese acceso lo tiene usted.
 
 No se corrieron las tres comprobaciones que entran con la contraseña de las Prestadoras de
 demostración, porque esa contraseña la tiene usted.

@@ -91,7 +91,7 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
           .eq('cuenta_desactivada', false)
           .order('apellido'),
         idsUsuarios.length
-          ? supabase.from('usuarios').select('id, nombre, apellido').in('id', idsUsuarios)
+          ? supabase.from('usuarios').select('id, nombre').in('id', idsUsuarios)
           : Promise.resolve({ data: [], error: null }),
       ]);
       for (const respuesta of [delEquipo, todas, usuarios]) {

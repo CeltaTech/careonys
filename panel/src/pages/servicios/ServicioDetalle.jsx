@@ -133,11 +133,11 @@ export function ServicioDetalle() {
         .eq('prestadora_id', prestadoraId),
       supabase
         .from('usuarios')
-        .select('id, nombre, apellido')
+        .select('id, nombre')
         .eq('prestadora_id', prestadoraId)
         .eq('rol', 'coordinador')
         .is('desactivada_en', null)
-        .order('apellido'),
+        .order('nombre'),
       supabase.rpc('falta_la_firma_del_pagador', { p_servicio: id }),
     ]);
 
@@ -186,7 +186,7 @@ export function ServicioDetalle() {
 
     setServicio(s);
     setCoordinadores(
-      (coord.data ?? []).map((u) => ({ id: u.id, nombre: `${u.apellido ?? ''} ${u.nombre ?? ''}`.trim() || '—' })),
+      (coord.data ?? []).map((u) => ({ id: u.id, nombre: (u.nombre ?? '').trim() || '—' })),
     );
     setContactos(mapaContactos);
     setPrestaciones(pr.data ?? []);

@@ -110,40 +110,161 @@ de una Prestadora no lee nada de otra.
 
 ### El acto de armar un Servicio
 
-**27.** Construir el acto, en este orden. Cada paso deja el sistema funcionando:
+**27.** Construir el acto, en este orden. Cada paso deja el sistema funcionando. Lo que dice cada
+punto se comprobó contra el código y la base en la nube; los números de la base son de la nube:
+15 Servicios, ninguno con Coordinador; 0 Prestaciones; 0 series; 151 turnos de guardia sueltos.
 
-1. **Los días y horarios de la Prestación pasan a ser un dato.** En la Ficha del cliente, en
-   Prestaciones del Paciente, los dos casilleros de texto libre
-   (`panel/src/pages/clientes/PrestacionesPaciente.jsx:83-84`) pasan a la forma de la serie: días
-   marcados, hora de inicio, hora de fin, y más de un renglón. Se guardan en tabla propia que apunta a
-   la Prestación, no adentro de `prestaciones.configuracion`. Cada serie de guardias apunta a la
-   Prestación que cubre, y de ella sale de qué es la guardia: el aviso del hueco y la sugerencia de
-   Asistentes lo leen de ahí, aunque todavía no haya nadie asignado.
-2. **Una sola función hace la cuenta**: recibe un Servicio y un período y contesta qué horarios
-   pactados no cubre ninguna serie vigente, con su día y su horario. Resuelve que una serie cubra a
-   varios Pacientes, que un horario lo cubran dos series, que una serie pausada no cuente y que una
-   serie sin fecha de fin cubra hacia adelante sin límite.
-3. **La cuenta corre en los tres momentos**: al crear o cambiar una serie, al suspender o cancelar
-   una —también en las cascadas de cierre y de hospitalización—, y en el pasaje diario de
-   `backend/src/utils/generacionSeriesTurnoGuardia.js`. El hueco avisa por el catálogo de avisos que ya
-   existe. El texto del aviso es el del paso 24.
-4. **Clientes › Servicios deja de ser de sólo lectura**: el Servicio dice qué períodos cubre, en qué
-   zona —elegida de los lugares cargados—, quién lo realiza y quién lo coordina.
-5. **Modificar, pausar, suspender y cancelar, total o parcialmente**: el horario y los días de una
-   serie se editan sin cancelarla, y las acciones alcanzan una sola serie o un solo horario pactado,
-   con fecha de vuelta opcional y con el motivo del catálogo. «Parcial» es la palabra que ya usa la
-   cancelación de un turno suelto.
-6. **La zona entra en el cálculo de candidatas** (`panel/src/lib/candidatos.js`): acepta trabajar en
-   el lugar del Paciente. La distancia en línea recta se queda como está.
-7. **La sugerencia de quién coordina**: por dónde tiene centrada su carga cada Coordinador y qué tan
-   grande es, contado desde `servicios.coordinador_id`. La asignación, la habilitación y las cargas
-   pendientes ya están hechas.
-8. **Los tres criterios de sugerencia que faltan**: capacidad para las tareas del Servicio
-   (`tareas_del_servicio`, que `candidatos.js` no lee), los antecedentes de la Asistente y el acuerdo
-   económico. Los dos últimos necesitan datos que hoy no se guardan.
+1. **Los días y horarios de la Prestación pasan a ser un dato.**
+   - **Hoy:** en la Ficha del cliente, en Prestaciones del Paciente, hay dos casilleros de texto
+     libre, días y horario (`panel/src/pages/clientes/PrestacionesPaciente.jsx:83-84`). Se guardan
+     adentro de `prestaciones.configuracion`, junto con la cantidad de turnos de guardia, que la
+     liquidación sí lee (`backend/src/utils/calcularLiquidacion.js:535` y `:599`). Por eso
+     `configuracion` se queda; salen sólo los días y el horario.
+   - **Propuesta:** una tabla propia, `horarios_de_la_prestacion`, con un renglón por cada franja:
+     días marcados, hora de inicio, hora de fin. Nace con su Prestadora, con clave `uuid` y con RLS
+     en la misma migración.
+   - **Cada serie dice qué Prestación cubre.** No alcanza una columna en la serie: una Prestación es
+     de un solo Paciente y una serie puede cubrir a varios, como un matrimonio. Va una tabla puente,
+     `series_turnos_guardia_prestaciones`, y la base rechaza que la Prestación y la serie sean de
+     Servicios distintos. De ahí leen el aviso del hueco y la sugerencia de Asistentes de qué es la
+     guardia, aunque todavía no haya nadie asignado.
+   - **Cuando una Prestación se reemplaza por otra** —un cambio de precio—, sus horarios pasan a la
+     nueva. Hoy eso ocurre en cuatro lugares: el cambio de precio del Panel y las tres funciones de
+     la base que ajustan precios por índice. Las cuatro copian los horarios con la misma función.
+   - **El motor de formularios declarados no se usa en este punto.** Existe, pero no lo usa ninguna
+     pantalla, tiene 0 formularios cargados, no tiene un tipo de casillero para la hora ni para los
+     días de la semana, y no conoce la Prestación. La pantalla se arma con los casilleros de la
+     ventana de crear una serie, que ya piden exactamente eso. Si usted prefiere que este punto
+     estrene el motor, hay que agregarle esos dos tipos de casillero primero.
+   - **De paso:** el comentario guardado de la base sobre la columna del Servicio en las series dice
+     que puede quedar vacía, y la base no lo permite. Se corrige.
+
+2. **Una sola función hace la cuenta del hueco.**
+   - **Hoy no existe nada parecido.**
+   - **Propuesta:** una función de la base recibe un Servicio y un período, y contesta qué horarios
+     pactados no cubre ninguna serie vigente, con su Paciente, su Prestación, su día y su horario.
+     Lee sólo dentro de la Prestadora de quien la llama.
+   - **Serie vigente** quiere decir: activa, y con la fecha adentro de su vigencia. Una serie sin
+     fecha de fin cubre hacia adelante sin límite. Una pausada o cancelada no cuenta.
+   - Resuelve que una serie cubra a varios Pacientes y que un mismo horario lo cubran dos series
+     sumadas, por ejemplo de 0 a 8 y de 8 a 24.
+   - **Lo decide usted:** si un turno de guardia suelto, creado a mano para un día, tapa el hueco de
+     ese día. Propuesta: sí, porque ese día hay alguien.
+
+3. **La cuenta corre en los tres momentos.**
+   - **Hoy crear una serie no pasa por el servidor:** el Panel la escribe directo en la tabla
+     (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:252`). Así no hay dónde hacer la
+     cuenta. El alta de la serie pasa a una función de la base, que crea la serie, sus turnos y hace
+     la cuenta en una sola operación.
+   - **Los momentos que ya existen se enganchan acá:** crear una serie, la baja del Servicio, la
+     internación del Paciente y el pasaje diario. Editar, pausar, suspender y cancelar una serie no
+     existen todavía: los construye el punto 5, y cada uno llama a la misma cuenta al construirse.
+   - **El aviso entra por el catálogo de avisos que ya existe**, como uno más, y no se puede apagar:
+     usted fijó que un hueco invisible no existe. Su texto va en los tres idiomas, en los mensajes
+     del sistema, y es el del paso 24.
+   - **Un hueco se avisa una vez.** Se guarda qué hueco ya se avisó, para que los tres momentos no
+     repitan el mismo aviso; si el hueco se cubre y vuelve a abrirse, se avisa de nuevo.
+   - **Tres defectos del pasaje diario se corrigen en este punto,** porque la cuenta se apoya en él:
+     - Corre tantas veces por día como Prestadoras al cuadrado: la tarea ya recorre todas las
+       Prestadoras, y se la programó adentro de otra vuelta por todas
+       (`backend/src/server.js:279` y `backend/src/utils/generacionSeriesTurnoGuardia.js:36`).
+       Hoy hay pocas Prestadoras y no se nota; con cien serían diez mil vueltas por día.
+     - Genera los turnos a partir del último turno que existe. Una serie que vuelve de una pausa
+       larga generaría turnos con fechas pasadas.
+     - Calcula el día con la hora universal y no con la de la Prestadora. Entre las 21 y las 24 de
+       Argentina ya cree que es el día siguiente.
+   - **Y un defecto de la internación:** al internar a un Paciente se pausan sus series buscando
+     por una columna que guarda un solo Paciente y está en retiro. Si la serie es de un matrimonio y
+     el internado es el segundo, la serie no se pausa. Pasa a buscar por la tabla que guarda todos
+     los Pacientes de la serie.
+
+4. **La ficha del Servicio dice qué períodos cubre, en qué zona y quién lo realiza.**
+   - **Hoy:** el Servicio no está adentro de la ficha del Cliente: tiene su propia sección en el
+     menú, con su lista y su ficha. Ya se puede crear, dar de baja y reactivar, con el permiso de
+     gestionar Servicios, que de fábrica es sólo de la administración. Ya se le asigna el
+     Coordinador, y sin Coordinador no se pueden crear turnos de guardia. El Servicio guarda sólo
+     Cliente, etiqueta, estado y Coordinador: no tiene período ni zona.
+   - **Período:** el Servicio guarda desde cuándo y hasta cuándo, y el hasta puede quedar vacío,
+     que es la duración indeterminada. Se carga al crearlo y se cambia en la ficha.
+   - **Zona:** se elige de las zonas cargadas, y la lista de lugares de cada zona sale de la base.
+     Hoy hay 4 zonas cargadas en la nube y ningún lugar adentro de ellas, así que la lista va a
+     aparecer vacía hasta que cada Prestadora cargue los suyos.
+   - **Lo decide usted:** qué quiere decir «quién lo realiza». En el producto hay dos cosas que
+     encajan. Una es el equipo: los Asistentes que trabajan en el Servicio, que la ficha ya muestra.
+     La otra es la modalidad: si responde la Prestadora o el Cliente, que hoy sale de cada turno de
+     guardia y no del Servicio. Propuesta: la modalidad, guardada en el Servicio, porque el equipo
+     ya está a la vista.
+
+5. **Modificar, pausar, suspender y cancelar, total o parcialmente.**
+   - **Hoy:** una serie no se puede editar, ni pausar, ni cancelar desde ninguna pantalla. Sólo la
+     cancelan la baja del Servicio y la pausan la internación. No guarda fecha de vuelta, ni motivo,
+     ni quién lo hizo.
+   - **Editar:** el horario y los días de una serie se cambian sin cancelarla, desde una fecha. Los
+     turnos ya pasados y los ya asignados no se tocan; los futuros sin asignar se rehacen.
+   - **Pausar y suspender:** con fecha de vuelta opcional, motivo y quién lo hizo. Si son una
+     acción o dos lo contesta el paso 24.
+   - **Alcance:** la acción alcanza al Servicio entero, a una Prestación, a una serie o a un solo
+     horario pactado.
+   - **Motivos:** salen del catálogo de motivos que ya usa la cancelación de un turno. Hoy no tiene
+     ningún motivo para series, ni para pausar o suspender: se cargan de fábrica en cada
+     Prestadora.
+   - **El «parcial» que existe hoy no sirve de modelo.** La cancelación de un turno suelto deja
+     elegir entre total y parcial, pero ningún cálculo lo lee: es una marca sin efecto. Propuesta:
+     se reemplaza por el alcance de este punto.
+   - **Tres defectos que se corrigen en este punto:**
+     - Al terminar la internación se reactivan todas las series y turnos pausados del Paciente,
+       también los que pausó otra persona y los turnos de los días que ya pasaron. Pasa a reactivar
+       sólo lo que pausó la internación, y nada del pasado.
+     - La baja del Servicio cancela las series activas y deja vivas las pausadas. Si el Paciente
+       estaba internado, al terminar la internación la serie vuelve a generar turnos de un Servicio
+       dado de baja. Pasa a cancelar también las pausadas.
+     - La internación no mira si el Servicio sigue vigente. Pasa a mirarlo.
+
+6. **La zona entra en el cálculo de candidatas.**
+   - **Hoy la lista de candidatas no aparece en ninguna pantalla.** El cálculo existe
+     (`panel/src/lib/candidatos.js:386`) y su configuración tiene pantalla, pero ninguna pantalla
+     de asignación lo llama. Mira el Padrón, la continuidad, si está libre a esa hora, la modalidad,
+     las ausencias, si se marcó disponible, los documentos, las horas por semana, el descanso entre
+     turnos y la distancia en línea recta. No mira la zona.
+   - **Propuesta:** la base dice si la Asistente acepta trabajar en el lugar del Paciente, sea su
+     domicilio o un domicilio temporal vigente. Si el Paciente o la Asistente no tienen lugar
+     cargado, el criterio no opina. Hoy en la nube ningún Paciente tiene lugar y ninguna Asistente
+     tiene lugares elegidos.
+   - **La lista vuelve a una pantalla:** la de asignar una Asistente a un turno de guardia, con la
+     configuración que ya existe.
+   - **El nivel de complejidad entra en la misma pasada**, como dice el paso de más abajo sobre el
+     mismo archivo. Es información de salud: no viaja al Panel, la base contesta sólo si la
+     Asistente alcanza o no.
+
+7. **La sugerencia de quién coordina.**
+   - **Hoy:** la asignación del Coordinador ya existe en la ficha del Servicio y sólo la hace la
+     administración. Sin Coordinador no se crean turnos de guardia. Un Servicio que crea un
+     Coordinador nace coordinado por él. Las cargas pendientes de aprobación tienen su pantalla.
+     Nada sugiere un Coordinador. En la nube hay un solo Coordinador activo y ningún Servicio
+     coordinado, así que hoy no se puede crear ningún turno de guardia en ninguna Prestadora.
+   - **Propuesta:** al asignar, la lista de Coordinadores viene ordenada por cuántos Servicios
+     tiene cada uno y por si su carga queda en la zona del Servicio. La cuenta la hace la base,
+     sólo para la administración. El sistema sugiere y la administración elige.
+
+8. **Los tres criterios de sugerencia que faltan.**
+   - **Capacidad para las tareas del Servicio.** Las tareas acordadas de cada Servicio se guardan
+     (hoy 0 en la nube), y qué puede hacer cada tipo de Asistente también: habilitada, no incluida
+     o prohibida. El cálculo de candidatas no lo lee. Además hay un defecto: la tarea prohibida
+     traba sólo al cargar las tareas acordadas, no al asignar el turno. Hoy se puede asignar un
+     cuidador a un Servicio con tareas acordadas para enfermería. Pasa a trabarse al asignar, que
+     es lo único que la regla de las tres clases de tarea bloquea; la no incluida sólo avisa.
+   - **Antecedentes de la Asistente.** Los datos sí se guardan: calificaciones, ausencias, llegadas
+     tarde, horas extra e incidentes de relevo. **Lo decide usted:** cuáles cuentan y de qué
+     período. Propuesta: calificaciones, ausencias sin aviso y llegadas tarde, de los últimos seis
+     meses, con el período en la configuración del cálculo.
+   - **Acuerdo económico.** Lo que cobra cada Asistente se guarda. Falta saber si aceptó ese monto
+     para este Servicio. **Lo decide usted:** si la Asistente acepta el monto de cada Servicio, o si
+     alcanza con comparar contra lo que tiene cargado. El Coordinador no ve remuneraciones: la
+     comparación la hace la base y contesta sólo si encaja o no.
 
 El acto no trae convertidor de los días y horarios escritos a mano, porque no hay datos reales que
-convertir, y no toca las dos aplicaciones de teléfono, que no escriben ninguna de estas tablas.
+convertir: en la nube hay 0 Prestaciones. No toca las dos aplicaciones de teléfono, que no escriben
+ninguna de estas tablas.
 
 **28.** **Lo que ve cada uno se recorta a lo que necesita para trabajar**, y se cumple en la base y
 en el backend, que hoy filtra sólo por Prestadora.
@@ -936,19 +1057,19 @@ la ruta. En el Legajo del Asistente, la pestaña de evaluaciones sigue la misma 
 **Va acá porque es la columna del producto**, y porque media docena de pasos de más abajo lo dan por
 hecho sin que exista: a quién se le presenta una Asistente nueva, contra qué se asigna una guardia,
 quién responde por un Servicio y qué se le factura a quién son preguntas que no se pueden contestar
-mientras armar un Servicio no sea un acto con su pantalla. **Y va después de la mudanza** porque el
-primer paso se dibuja desde una declaración de formulario y se sirve de las listas de opciones por
-Prestadora, que es lo que quedó construido allá.
+mientras armar un Servicio no sea un acto con su pantalla. **Y va después de la mudanza** porque se
+sirve de las listas de opciones por Prestadora, que es lo que quedó construido allá.
 
 **Lo que pidió usted son cuatro cosas:** que un Servicio pueda tener duración indeterminada; que
 no exista un hueco invisible; que se pueda pausar, suspender, modificar y cancelar, en forma total o
 parcial; y que use las zonas que ya están cargadas.
 
 **Lo que ya funciona y no se rehace:** la serie sin fecha de fin, que se extiende sola
-(`extenderSeriesTurnoGuardiaAbiertas`, en `backend/src/utils/generacionSeriesTurnoGuardia.js`); el cierre del
-Servicio; los seis mecanismos de aviso; la estructura de zonas (`lugares`, `zona_lugares`,
-`asistente_lugares`, `usuario_lugares`); y la cancelación parcial de un turno suelto
-(`turnos_guardia.cancelacion_alcance`).
+(`extenderSeriesTurnoGuardiaAbiertas`, en `backend/src/utils/generacionSeriesTurnoGuardia.js`), con
+los tres defectos que corrige el punto 3; el alta, la baja y la reactivación del Servicio; la
+asignación del Coordinador y la regla de que sin Coordinador no hay turnos de guardia; los seis
+mecanismos de aviso; y la estructura de zonas (`zonas_cobertura`, `lugares`, `zona_lugares`,
+`asistente_lugares`, `usuario_lugares`).
 
 **Lo que usted fijó sobre cómo se resuelve:** los días y el horario de la Prestación se cargan igual
 que en una serie —días marcados, hora de inicio, hora de fin—, con más de un renglón cuando haga
@@ -975,24 +1096,25 @@ títulos:
   configuración por Prestadora. Las alertas tempranas las enciende o apaga cada Prestadora, una por
   una (sección «El Paciente nunca queda solo»), y el aviso del hueco no puede ser de ésas: usted
   fijó que un hueco invisible no existe.
-- **La sugerencia de Asistentes no mira la zona.** El cálculo —`panel/src/lib/candidatos.js`— no
-  nombra zonas; sí mira la distancia en línea recta hasta la casa del Paciente, cuando las dos
-  ubicaciones están cargadas. **Y más abajo hay otro paso sobre ese mismo archivo**,
-  el del nivel de complejidad. Los dos se hacen en una sola pasada.
-- **El acuerdo económico como criterio de sugerencia necesita un dato que no existe**: para que la
-  sugerencia mire si la Asistente está de acuerdo con los montos y los plazos, esos montos tienen
-  que estar guardados, y hoy ninguna tabla de Asistentes los tiene.
+- **La sugerencia de Asistentes no mira la zona, y no aparece en ninguna pantalla.** El cálculo
+  —`panel/src/lib/candidatos.js`— no nombra zonas; sí mira la distancia en línea recta hasta la
+  casa del Paciente, cuando las dos ubicaciones están cargadas. Ninguna pantalla de asignación lo
+  llama. **Y más abajo hay otro paso sobre ese mismo archivo**, el del nivel de complejidad. Los
+  dos se hacen en una sola pasada.
+- **El acuerdo económico como criterio de sugerencia necesita un dato que falta**: lo que cobra
+  cada Asistente sí se guarda, pero no si aceptó ese monto para un Servicio.
 - **Un coordinador de sólo lectura no puede ser el asignado.** Más abajo se pregunta cómo entra un
   Pagador que sólo consulta, y una de las salidas propuestas es un Coordinador de sólo lectura.
   Quien tiene el Servicio asignado arma el equipo: si esa salida se elige, tiene que decir que ese
   rol nunca queda como responsable de un Servicio.
 - **La ventana de crear un turno ya exige elegir el Servicio**
-  (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:170`), pero todavía pide todos los Pacientes que
+  (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:177`), pero todavía pide todos los Pacientes que
   la base le deja ver a quien la abre, sin recortarlos al Servicio elegido. Cuando el turno cuelgue
   del Servicio esa ventana cambia de raíz.
 
-**23. Usted** — Aprobar los ocho pasos del paso 27, que todavía no están aprobados. Hasta que lo
-estén no se escribe código de producción de ninguno.
+**23. Usted** — Aprobar los ocho pasos del paso 27, que todavía no están aprobados, junto con lo
+que en cada uno dice «Lo decide usted». Hasta que lo estén no se escribe código de producción de
+ninguno.
 
 **24. Usted** — Dos respuestas: qué dice el aviso cuando queda un horario pactado sin nadie que lo
 cubra, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o

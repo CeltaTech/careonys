@@ -672,3 +672,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el glosario trataba a la Guardia como un nivel aparte de la Prestación, con sus propios días y horarios.
 - **Qué dice ahora:** el Servicio es el acuerdo entre la Prestadora y el Cliente por una o varias Prestaciones a un precio acordado. Una Prestación que es una guardia se organiza según un cronograma de días y horarios y, si hace falta, en turnos que cubren distintas personas. Los días y horarios se anotan una sola vez, en la Prestación.
 - **Motivo:** el Desarrollador lo definió así, y con la Guardia aparte el mismo horario quedaba anotado dos veces.
+
+## Lo guardado que es un turno se llama turno
+
+- **Qué decía antes:** la tabla de turnos de guardia se llamaba «guardias», y quedaba en duda si se renombraba.
+- **Qué dice ahora:** todo nombre guardado que es un turno pasa a llamarse turno; lo que es la guardia como Prestación queda.
+- **Motivo:** el Desarrollador lo decidió para que el nombre guardado no mezcle la guardia con el turno.

@@ -203,12 +203,16 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **Zona:** se elige de las zonas cargadas, y la lista de lugares de cada zona sale de la base.
      Hoy hay 4 zonas cargadas en la nube y ningún lugar adentro de ellas, así que la lista va a
      aparecer vacía hasta que cada Prestadora cargue los suyos.
-   - **Lo decide usted:** qué quiere decir «quién lo realiza». El Servicio existe sólo en la
-     prestación directa, así que la modalidad no es una opción. Quedan dos cosas que encajan. Una es
-     el equipo: los Asistentes que trabajan en el Servicio, que la ficha ya muestra. La otra es si
-     cada Prestación la cubre la Prestadora con sus Asistentes o una empresa subcontratada con su
-     propio personal. El glosario ya tiene esa palabra, pero la base no guarda ninguna empresa
-     subcontratada.
+   - **Quién lo realiza:** los Asistentes que van a cubrir el Servicio. Usted lo fijó así: la
+     administración, cuando arma el Servicio, dice quién lo va a realizar y quién lo va a
+     coordinar, y el sistema le sugiere a quién.
+   - **Hoy** el equipo de la ficha se arma solo con quienes ya tienen turnos de guardia en el
+     Servicio, y la coordinación lo corrige después sumando o sacando Asistentes. Un Servicio recién
+     armado no tiene turnos de guardia, así que aparece sin equipo.
+   - **Pasa a ser:** al armar el Servicio, la administración suma a los Asistentes que lo van a
+     realizar, con la misma corrección a mano que ya existe, y con las sugerencias de los cinco
+     criterios del punto 8. La lista que se arma sola se conserva: quien empieza a tener turnos de
+     guardia aparece igual.
 
 5. **Modificar, pausar, suspender y cancelar, total o parcialmente.**
    - **Hoy:** un turno de guardia recurrente no se puede editar, ni pausar, ni cancelar desde

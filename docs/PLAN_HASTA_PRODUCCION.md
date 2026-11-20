@@ -210,8 +210,9 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      Servicio, y la coordinación lo corrige después sumando o sacando Asistentes. Un Servicio recién
      armado no tiene turnos de guardia, así que aparece sin equipo.
    - **Pasa a ser:** al armar el Servicio, la administración suma a los Asistentes que lo van a
-     realizar, con la misma corrección a mano que ya existe, y con las sugerencias de los cinco
-     criterios del punto 8. La lista que se arma sola se conserva: quien empieza a tener turnos de
+     realizar, con la misma corrección a mano que ya existe. El sistema le sugiere por zona, por
+     tareas, por capacidad, por antecedentes y por acuerdo económico; los tres que faltan son los
+     del punto 8. La lista que se arma sola se conserva: quien empieza a tener turnos de
      guardia aparece igual.
 
 5. **Modificar, pausar, suspender y cancelar, total o parcialmente.**

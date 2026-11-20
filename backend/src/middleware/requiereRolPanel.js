@@ -5,6 +5,7 @@ import {
   registrarBorradoDeDatos,
   registrarEntradaAlPanel,
 } from '../utils/registroDeActividad.js';
+import { antesDeResponder } from '../utils/antesDeResponder.js';
 
 // EL PERMISO DE ACCESO, DE ESTE LADO.
 //
@@ -32,7 +33,8 @@ const METODOS_MUTACION = ['POST', 'PUT', 'PATCH', 'DELETE'];
 // Con la credencial del trabajo de la Prestadora donde se entró, y no con la de la persona:
 // `auditoria_de_accesos` no tiene política que deje escribir a una persona, y no debe tenerla
 // —quien está siendo auditado no escribe su propia auditoría—. La base acota la escritura a esa
-// Prestadora. Si falla, queda en el registro del servidor y el pedido sigue.
+// Prestadora. Si falla, queda en el registro del servidor. Devuelve si quedó escrita: quien llama
+// decide si el pedido sigue igual.
 async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }) {
   try {
     const { error } = await enLaPrestadora(prestadoraId, 'auditoría del permiso de acceso', (db) => db
@@ -43,9 +45,14 @@ async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }
         tipo_evento: tipoEvento,
         detalle,
       }));
-    if (error) console.error('Error registrando la auditoría del acceso:', error.message);
+    if (error) {
+      console.error('Error registrando la auditoría del acceso:', error.message);
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error('Error registrando la auditoría del acceso:', error.message);
+    return false;
   }
 }
 
@@ -200,34 +207,43 @@ export async function requiereRolPanel(req, res, next) {
   //
   // Se anota cualquier borrado del Panel que haya terminado bien, sin importar de qué pantalla
   // venga: es lo único que asegura que la ruta que se escriba mañana quede registrada sin que
-  // nadie se acuerde de agregarla. Va después de que la respuesta salió, para no anotar un
-  // borrado que en realidad falló.
+  // nadie se acuerde de agregarla. Se anota cuando la ruta ya terminó, para no anotar un borrado
+  // que en realidad falló, y antes de que salga la respuesta, para que no quede ninguna escritura
+  // suelta: quien borró recibe la respuesta con el renglón ya escrito.
+  //
+  // No falla cerrado. Cuando se sabe si el borrado salió bien, el dato ya no está: contestar que
+  // falló haría creer que sigue ahí. Anotarlo antes tampoco sirve, porque dejaría escrito un
+  // borrado que la ruta todavía puede rechazar. Si la escritura falla, queda en el registro del
+  // servidor.
   //
   // Se saltea cuando la propia ruta ya dejó un renglón con mejor nombre: dar de baja una cuenta
   // del Panel es un cambio de membresía, y decirlo dos veces —una con su nombre y otra como
   // «borrado»— hace el registro más difícil de leer, no más completo.
   if (req.method === 'DELETE') {
-    res.on('finish', () => {
+    antesDeResponder(res, async () => {
       if (res.statusCode >= 200 && res.statusCode < 300 && faltaRegistrar(res)) {
-        registrarBorradoDeDatos(req.usuarioPanel, req.method, req.originalUrl)
-          .catch((error) => console.error('Error registrando el borrado de datos:', error.message));
+        await registrarBorradoDeDatos(req.usuarioPanel, req.method, req.originalUrl);
       }
     });
   }
 
-  // Todo lo que el rol técnico cambia adentro de una Prestadora queda anotado en la auditoría de
-  // los accesos.
+  // TODO LO QUE EL ROL TÉCNICO CAMBIA ADENTRO DE UNA PRESTADORA QUEDA ANOTADO, O NO SE HACE.
+  //
+  // Es el único renglón que deja el cambio: lo que la ruta escribe con el trabajo de la Prestadora
+  // no tiene persona, y el disparador de `auditoria_de_accesos` no lo ve. Por eso se anota antes
+  // de que la ruta corra, y si no se pudo anotar, la ruta no corre. Anotarlo después no alcanza:
+  // el cambio ya estaría hecho y sin constancia. El renglón dice qué se pidió cambiar, aunque la
+  // ruta después lo rechace: para quien audita, un intento sobra antes que un cambio falte.
   if (conPermisoDeAcceso && METODOS_MUTACION.includes(req.method)) {
-    res.on('finish', () => {
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        registrarAuditoria({
-          adminId: sesion.id,
-          prestadoraId,
-          tipoEvento: 'mutacion',
-          detalle: { metodo: req.method, ruta: req.originalUrl },
-        });
-      }
+    const anotado = await registrarAuditoria({
+      adminId: sesion.id,
+      prestadoraId,
+      tipoEvento: 'mutacion',
+      detalle: { metodo: req.method, ruta: req.originalUrl },
     });
+    if (!anotado) {
+      return res.status(503).json({ error: 'No se pudo dejar constancia del cambio. Intente nuevamente.' });
+    }
   }
 
   next();

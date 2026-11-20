@@ -1,4 +1,5 @@
 import { enLaPrestadora } from '../db/connection.js';
+import { antesDeResponder } from './antesDeResponder.js';
 
 // EL PUNTO UNICO DE VERDAD PARA ESCRIBIR EL REGISTRO DE ACTIVIDAD.
 //
@@ -175,13 +176,14 @@ export function registrarExportacion(usuario, metodo, ruta) {
 }
 
 // Se monta en cada ruta que entrega una descarga, despues de la comprobacion de sesion. Anota
-// cuando la respuesta salio bien, y no antes: un pedido rechazado no se llevo nada.
+// cuando la ruta termino bien, y no antes: un pedido rechazado no se llevo nada. Y lo anota antes
+// de que salga el archivo, para que ninguna escritura quede suelta despues de la respuesta.
 // `quienPide` dice de donde sale la persona; por defecto, la sesion del Panel.
 export function anotarExportacion(quienPide = (req) => req.usuarioPanel) {
   return (req, res, next) => {
-    res.on('finish', () => {
+    antesDeResponder(res, async () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        registrarExportacion(quienPide(req), req.method, req.originalUrl);
+        await registrarExportacion(quienPide(req), req.method, req.originalUrl);
       }
     });
     next();

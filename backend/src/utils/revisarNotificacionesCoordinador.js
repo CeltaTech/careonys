@@ -16,6 +16,7 @@ import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 import { notificaClientePorDefecto } from './catalogoAvisos.js';
+import { diaEnLaZona, momentoEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 
 // Insistencia al Coordinador según premura, con coordinador de respaldo si no hay
 // reacción, parametrizado por prestadora
@@ -62,11 +63,20 @@ async function recorrerLasConfiguraciones(revisar) {
   // El idioma se pregunta una vez por Prestadora y no una por mensaje: todos los que salen en esta
   // vuelta los lee la misma gente, la del Panel de esa Prestadora.
   for (const config of configuraciones) {
+    // La hora de los turnos de guardia es la de la casa del Paciente, no la del servidor: se leen
+    // en la zona de la Prestadora. Sin zona, esa Prestadora no se revisa en esta vuelta.
+    let zona;
+    try {
+      zona = await zonaDeLaPrestadora(supabase, config.prestadora_id);
+    } catch (e) {
+      console.error(`Error leyendo la zona horaria (prestadora ${config.prestadora_id}):`, e.message);
+      continue;
+    }
     const idioma = await idiomaDeLaPrestadora(supabase, config.prestadora_id);
     // Cuánto dura hacerse cargo de una alarma también se pregunta una vez por Prestadora: es el
     // mismo número para todas las clases de alarma que siguen.
     const reglaDeLasTomas = await reglaDeLaToma(config.prestadora_id);
-    await revisar(config, ahora, idioma, reglaDeLasTomas);
+    await revisar({ ...config, zona }, ahora, idioma, reglaDeLasTomas);
   }
 }
 
@@ -94,6 +104,7 @@ async function revisarTurnosGuardiaSinCerrar(config, ahora, idioma, reglaDeLasTo
     coordinador_backup_id: backupId,
     minutos_gracia_cierre_turno_guardia: minutosDeGracia,
     horas_antes_aviso_grave_sin_cerrar: horasAntesDeEscalar,
+    zona,
   } = config;
 
   // Sin margen configurado no se avisa nada. La columna tiene valor por defecto, así que esto
@@ -109,7 +120,7 @@ async function revisarTurnosGuardiaSinCerrar(config, ahora, idioma, reglaDeLasTo
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activa')
     .is('cerrada_at', null)
-    .lte('fecha', fechaISO(ahora));
+    .lte('fecha', diaEnLaZona(ahora, zona));
 
   if (error) {
     console.error(`Error consultando guardias sin cerrar (prestadora ${prestadoraId}):`, error.message);
@@ -146,7 +157,7 @@ async function revisarTurnosGuardiaSinCerrar(config, ahora, idioma, reglaDeLasTo
 
   await unaPorUna(turnos_guardia, 'guardia sin cerrar', async (turno_guardia) => {
     if (tomadas.has(turno_guardia.id)) return;
-    const fin = finDelTurnoGuardia(turno_guardia);
+    const fin = finDelTurnoGuardia(turno_guardia, zona);
     if (!fin) return;
 
     // El plazo que la Prestadora eligió todavía no venció: el turno de guardia recién terminó y el
@@ -299,10 +310,16 @@ export async function unaPorUna(alarmas, clase, revisarUna) {
 // acá, porque esa resta tiene un caso que no se ve a simple vista: un turno de guardia de 08:00 a 08:00
 // dura veinticuatro horas, no cero, y una de 20:00 a 06:00 cruza la medianoche. Esa regla vive
 // en un solo lugar (utils/horasDeTurnoGuardia.js, regla 12 de CLAUDE.md §7).
-function finDelTurnoGuardia(turno_guardia) {
+//
+// Las horas son las de la casa del Paciente, así que el inicio se lee en la zona de la Prestadora.
+function finDelTurnoGuardia(turno_guardia, zona) {
   if (!turno_guardia.fecha || !turno_guardia.hora_inicio || !turno_guardia.hora_fin) return null;
-  const inicio = new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
-  if (Number.isNaN(inicio.getTime())) return null;
+  let inicio;
+  try {
+    inicio = momentoEnLaZona(turno_guardia.fecha, turno_guardia.hora_inicio, zona);
+  } catch {
+    return null;
+  }
   return new Date(inicio.getTime() + horasEntre(turno_guardia.hora_inicio, turno_guardia.hora_fin, turno_guardia.dias_hasta_el_fin) * MS_POR_HORA);
 }
 
@@ -339,7 +356,7 @@ const TURNO_GUARDIA_QUE_NO_SE_PUDO_LEER = { fecha: '—', horaInicio: '—', hor
 // La Prestadora es obligatoria y va primero: una lista de identificadores no dice de quién es cada
 // uno, y preguntar por ellos sin nombrarla alcanzaría turnos de guardia de otra Organización
 // (`celtatech\CLAUDE.md` §5).
-async function datosDeLosTurnosGuardia(prestadoraId, turnoGuardiaIds) {
+async function datosDeLosTurnosGuardia(prestadoraId, turnoGuardiaIds, zona) {
   const ids = [...new Set((turnoGuardiaIds ?? []).filter(Boolean))];
   const mapa = new Map();
   if (ids.length === 0) return mapa;
@@ -367,18 +384,10 @@ async function datosDeLosTurnosGuardia(prestadoraId, turnoGuardiaIds) {
       horaInicio: turno_guardia.hora_inicio,
       horaFin: turno_guardia.hora_fin,
       pacientes: (pacientesPorTurnoGuardia.get(turno_guardia.id) ?? []).map((p) => p.nombre),
-      fin: finDelTurnoGuardia(turno_guardia),
+      fin: finDelTurnoGuardia(turno_guardia, zona),
     });
   }
   return mapa;
-}
-
-// La fecha de un momento tal como la guarda la base (`2026-08-22`), en hora local.
-// `toISOString()` a secas daría la fecha en UTC, que en horario argentino cambia de día tres
-// horas antes de tiempo.
-function fechaISO(momento) {
-  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 10);
 }
 
 async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
@@ -408,7 +417,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
     tipo: TIPOS_DE_ALARMA.ALERTA_TEMPRANA,
   });
 
-  const turnos_guardia = await datosDeLosTurnosGuardia(prestadoraId, (alertas ?? []).map((a) => a.turno_guardia_id));
+  const turnos_guardia = await datosDeLosTurnosGuardia(prestadoraId, (alertas ?? []).map((a) => a.turno_guardia_id), config.zona);
 
   await unaPorUna(alertas ?? [], 'alerta temprana', async (alerta) => {
     if (tomadas.has(alerta.id)) return;
@@ -519,7 +528,7 @@ async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
     tipo: TIPOS_DE_ALARMA.EMERGENCIA,
   });
 
-  const turnos_guardia = await datosDeLosTurnosGuardia(prestadoraId, emergencias.map((e) => e.turno_guardia_id));
+  const turnos_guardia = await datosDeLosTurnosGuardia(prestadoraId, emergencias.map((e) => e.turno_guardia_id), config.zona);
 
   await unaPorUna(emergencias, 'emergencia', async (emergencia) => {
     if (tomadas.has(emergencia.id)) return;
@@ -598,7 +607,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
     tipo: TIPOS_DE_ALARMA.INCIDENTE_RELEVO,
   });
 
-  const turnos_guardia = await datosDeLosTurnosGuardia(prestadoraId, (incidentes ?? []).map((i) => i.turno_guardia_entrante_id));
+  const turnos_guardia = await datosDeLosTurnosGuardia(prestadoraId, (incidentes ?? []).map((i) => i.turno_guardia_entrante_id), config.zona);
 
   await unaPorUna(incidentes ?? [], 'incidente de relevo', async (incidente) => {
     const turno_guardia = turnos_guardia.get(incidente.turno_guardia_entrante_id) ?? TURNO_GUARDIA_QUE_NO_SE_PUDO_LEER;

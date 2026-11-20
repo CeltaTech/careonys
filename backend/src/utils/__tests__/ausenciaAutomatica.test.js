@@ -21,11 +21,18 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
+// El servidor de verdad cuenta en hora universal. La prueba corre igual, sea cual sea el reloj de
+// la máquina, y la Prestadora está en Argentina, tres horas atrás: así se ve si la hora del turno
+// se lee en la zona de la Prestadora o en la del servidor.
+process.env.TZ = 'UTC';
+const ZONA = 'America/Argentina/Buenos_Aires';
+
 const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 const TURNO_GUARDIA = '11111111-1111-1111-1111-111111111111';
 const TURNO_GUARDIA_ANTERIOR = '22222222-2222-2222-2222-222222222222';
 
 const CONFIGURACION = 'GET /rest/v1/configuracion_ausencia_automatica';
+const PRESTADORAS = 'GET /rest/v1/prestadoras';
 const TURNOS_GUARDIA = 'GET /rest/v1/turnos_guardia';
 const MARCAR = 'PATCH /rest/v1/turnos_guardia';
 const LISTA = 'GET /rest/v1/turno_guardia_pacientes';
@@ -99,10 +106,12 @@ beforeEach(() => {
   respuestas.clear();
   llamadas = [];
   anotados = [];
+  respuestas.set(PRESTADORAS, [{ zona_horaria: ZONA }]);
 });
 
-// Una hora después de que el turno tenía que empezar.
-const AHORA = new Date(2026, 2, 1, 9, 0, 0);
+// Las 09:00 de Argentina: una hora después de que el turno de las 08:00 tenía que empezar. En
+// hora universal ya son las 12:00.
+const AHORA = new Date('2026-03-01T12:00:00Z');
 
 /** Un turno asignado que a esta hora ya debería tener la llegada marcada. */
 const turnoGuardiaSinLlegada = { id: TURNO_GUARDIA, paciente_id: 'paciente-columna', fecha: '2026-03-01', hora_inicio: '08:00' };
@@ -130,7 +139,7 @@ describe('la detección automática de ausencia', () => {
 
     assert.deepEqual(
       [...new Set(llamadas.map((l) => l.clave))].sort(),
-      [CONFIGURACION, INCIDENTE, LISTA, MARCAR, TURNOS_GUARDIA].sort(),
+      [CONFIGURACION, INCIDENTE, LISTA, MARCAR, PRESTADORAS, TURNOS_GUARDIA].sort(),
     );
     for (const llamada of llamadas) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
@@ -156,13 +165,25 @@ describe('la detección automática de ausencia', () => {
     assert.equal(saliente.filtros.get('paciente_id'), 'in.(paciente-1,paciente-2)');
   });
 
-  it('dentro de la tolerancia no marca a nadie', async () => {
+  it('dentro de la tolerancia no marca a nadie, contada en la hora de la Prestadora', async () => {
+    // Allá son las 09:00 y el turno empezó a las 08:00: con 90 minutos de tolerancia, todavía
+    // está a tiempo. Leída la hora del turno en la del servidor, ya estaría cuatro horas tarde.
     respuestas.set(CONFIGURACION, [{ minutos_tolerancia_checkin: 90 }]);
     respuestas.set(TURNOS_GUARDIA, [turnoGuardiaSinLlegada]);
 
     await revisarLasAusenciasDeUnaPrestadora(PRESTADORA, AHORA);
 
-    assert.deepEqual(llamadas.map((l) => l.clave), [CONFIGURACION, TURNOS_GUARDIA]);
+    assert.deepEqual(llamadas.map((l) => l.clave), [CONFIGURACION, PRESTADORAS, TURNOS_GUARDIA]);
+  });
+
+  it('sin la zona horaria de la Prestadora no marca a nadie', async () => {
+    respuestas.set(CONFIGURACION, [{ minutos_tolerancia_checkin: 15 }]);
+    respuestas.set(PRESTADORAS, [{ zona_horaria: null }]);
+    respuestas.set(TURNOS_GUARDIA, [turnoGuardiaSinLlegada]);
+
+    await revisarLasAusenciasDeUnaPrestadora(PRESTADORA, AHORA);
+
+    assert.deepEqual(llamadas.map((l) => l.clave), [CONFIGURACION, PRESTADORAS]);
   });
 
   it('si la Prestadora la apagó, no busca turnos', async () => {

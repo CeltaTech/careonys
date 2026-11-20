@@ -37,6 +37,12 @@ import {
 } from '../fuentesAlertaTemprana.js';
 import { MINUTOS_DEMORA_POR_OMISION } from '../llegadaEstimada.js';
 
+// El servidor de verdad cuenta en hora universal y la Prestadora está en Argentina, tres horas
+// atrás. Los turnos de guardia se cargan en la hora de la Prestadora: si el proceso la leyera en
+// la del servidor, cada turno le quedaría corrido tres horas y las cuentas de abajo darían mal.
+process.env.TZ = 'UTC';
+const ZONA = 'America/Argentina/Buenos_Aires';
+
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
 const TURNO_GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
@@ -93,13 +99,23 @@ after(() => {
   baseFalsa.close();
 });
 
-/** La fecha y la hora tal como las guarda la base, en hora local. */
+/** La fecha y la hora tal como las guarda la base, en la hora de la Prestadora. */
 function enDosPartes(momento) {
-  const dosCifras = (n) => String(n).padStart(2, '0');
-  return {
-    fecha: `${momento.getFullYear()}-${dosCifras(momento.getMonth() + 1)}-${dosCifras(momento.getDate())}`,
-    hora: `${dosCifras(momento.getHours())}:${dosCifras(momento.getMinutes())}:${dosCifras(momento.getSeconds())}`,
-  };
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: ZONA,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(momento)
+      .map(({ type, value }) => [type, value])
+  );
+  return { fecha: `${partes.year}-${partes.month}-${partes.day}`, hora: `${partes.hour}:${partes.minute}:${partes.second}` };
 }
 
 function haceUnRato(minutos) {
@@ -123,9 +139,9 @@ function turnoGuardiaQueEmpiezaEn(minutos, extra = {}) {
   };
 }
 
-/** Cuándo empieza, de verdad, un turno de guardia de las de arriba. */
+/** Cuándo empieza, de verdad, un turno de guardia de las de arriba. Argentina está siempre tres horas atrás. */
 function inicioDe(turno_guardia) {
-  return new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
+  return new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}-03:00`);
 }
 
 let turnosGuardiaEnLaBase;
@@ -178,7 +194,7 @@ beforeEach(() => {
   turnosGuardiaEnLaBase = [];
   domicilioDelDia = { ...DOMICILIO, es_temporal: false, motivo: null };
 
-  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, zona_horaria: ZONA }]);
   respuestas.set('GET /rest/v1/configuracion_escalada_relevo', () => nivelesDeEscalada);
   respuestas.set('GET /rest/v1/turnos_guardia', ({ url }) => filaQuePasaLosFiltros(url, turnosGuardiaEnLaBase));
   respuestas.set('GET /rest/v1/alertas_tempranas_turno_guardia', ({ url }) =>
@@ -415,6 +431,22 @@ describe('si alguien ya avisó, el sistema no agrega nada', () => {
 // ============================================================================
 
 describe('a quién mira este proceso', () => {
+  it('sin la zona horaria de la Prestadora no revisa sus turnos de guardia', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, zona_horaria: null }]);
+    turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
+    const avisarDeVerdad = console.error;
+    const anotados = [];
+    console.error = (...partes) => anotados.push(partes.join(' '));
+    try {
+      await revisarLlegadasDemoradas();
+    } finally {
+      console.error = avisarDeVerdad;
+    }
+    assert.equal(consultaDeTurnosGuardia(), undefined);
+    assert.equal(alertasAnotadas().length, 0);
+    assert.equal(anotados.length, 1, anotados.join('\n'));
+  });
+
   it('la consulta va acotada a una Prestadora por vez', async () => {
     turnosGuardiaEnLaBase = [turnoGuardiaQueEmpiezaEn(-30)];
     await revisarLlegadasDemoradas();

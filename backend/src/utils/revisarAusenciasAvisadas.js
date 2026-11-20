@@ -11,6 +11,7 @@ import {
   reglaDeAvisoDe,
 } from './avisoDeAusencia.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
+import { diaEnLaZona, inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
 
 // Mensaje a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta.
 //
@@ -49,14 +50,15 @@ const EVENTO_POR_CLASE = {
 };
 
 // Cada consulta nombra además la Prestadora para la que trabaja.
-export async function revisarAusenciasAvisadas() {
-  const ahora = new Date();
-  const desde = fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA));
-  const hasta = fechaISO(new Date(ahora.getTime() + DIAS_HACIA_ADELANTE * MS_POR_DIA));
-
+//
+// Los días y las horas se cuentan en la zona horaria de la Prestadora, no en la del servidor, que
+// cuenta en hora universal: un turno de las 08:00 de Argentina se leía como de las 05:00, y la
+// pregunta por la vuelta salía el último día de la ausencia, entre las 21 y las 24. Sin zona, esa Prestadora no se
+// revisa.
+export async function revisarAusenciasAvisadas(ahora = new Date()) {
   const { data: prestadoras, error } = await supabase
     .from('prestadoras')
-    .select('id')
+    .select('id, zona_horaria')
     .eq('estado', 'certificada');
 
   if (error) {
@@ -64,12 +66,21 @@ export async function revisarAusenciasAvisadas() {
     return;
   }
 
-  for (const { id: prestadoraId } of prestadoras ?? []) {
-    await revisarPrestadora({ prestadoraId, desde, hasta, ahora });
+  for (const { id: prestadoraId, zona_horaria: zona } of prestadoras ?? []) {
+    let desde;
+    let hasta;
+    try {
+      desde = diaEnLaZona(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA), zona);
+      hasta = diaEnLaZona(new Date(ahora.getTime() + DIAS_HACIA_ADELANTE * MS_POR_DIA), zona);
+    } catch (e) {
+      console.error(`Sin zona horaria válida no se revisan las ausencias (prestadora ${prestadoraId}):`, e.message);
+      continue;
+    }
+    await revisarPrestadora({ prestadoraId, zona, desde, hasta, ahora });
   }
 }
 
-async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
+async function revisarPrestadora({ prestadoraId, zona, desde, hasta, ahora }) {
   // Las que todavía pueden dejar un turno sin nadie: empezaron o empiezan dentro de la ventana, y
   // no terminaron antes de ayer. Una sin vuelta anotada sigue vigente aunque su fecha prevista
   // haya pasado (`finEfectivoDeLaAusencia`, utils/ausenciaQueTapa.js).
@@ -103,7 +114,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
   const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
-  await preguntarLaVuelta({ prestadoraId, ausencias: todas, regla, idioma, ahora });
+  await preguntarLaVuelta({ prestadoraId, ausencias: todas, regla, idioma, hoy: diaEnLaZona(ahora, zona), ahora });
 
   const ausencias = todas.filter((a) => a.asistente_id);
   if (!ausencias.length) return;
@@ -152,7 +163,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
     // de tareas que no son tareas.
     if (como === COMO_LLEGO.SIN_TURNOS_GUARDIA) continue;
 
-    const inicio = new Date(`${primerTurnoGuardia.fecha}T${primerTurnoGuardia.hora_inicio}`);
+    const inicio = inicioDeTurnoGuardiaEnLaZona(primerTurnoGuardia, zona);
     // Ya pasó el plazo en que taparlo servía de algo.
     if (inicio.getTime() < ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA) continue;
 
@@ -202,8 +213,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
  * Por un Asistente se le pregunta a quien coordina; por un Coordinador, a la administración. Son dos
  * mensajes distintos para que la Prestadora pueda mandar cada uno a quien corresponde.
  */
-async function preguntarLaVuelta({ prestadoraId, ausencias, regla, idioma, ahora }) {
-  const hoy = fechaISO(ahora);
+async function preguntarLaVuelta({ prestadoraId, ausencias, regla, idioma, hoy, ahora }) {
   const vencidas = ausencias.filter((a) =>
     !a.fecha_vuelta_real && a.fecha_fin < hoy
     && necesitaNotificar({
@@ -294,11 +304,4 @@ async function nombresDeAsistentes(ids, prestadoraId) {
   }
   for (const fila of data ?? []) nombres.set(fila.id, fila.nombre);
   return nombres;
-}
-
-// La fecha de un momento como la guarda la base (`2026-08-07`), en hora local. `toISOString()` a
-// secas daría la fecha en UTC, que en horario argentino cambia de día tres horas antes de tiempo.
-function fechaISO(momento) {
-  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 10);
 }

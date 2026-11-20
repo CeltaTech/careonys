@@ -1,4 +1,14 @@
-import { finDeTurnoGuardia, inicioDeTurnoGuardia } from './horarios.js';
+import { finDeTurnoGuardiaEnLaZona, inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
+
+// Las horas del turno son de reloj de la casa del Paciente, y se leen en la zona horaria de la
+// Prestadora. El servidor cuenta en hora universal: sin zona no hay cuenta posible, y se corta
+// en vez de suponer una.
+function exigirZona(zona) {
+  if (!zona) throw new Error('Falta la zona horaria de la Prestadora.');
+  return zona;
+}
+const finDe = (turno_guardia, zona) => finDeTurnoGuardiaEnLaZona(turno_guardia, exigirZona(zona));
+const inicioDe = (turno_guardia, zona) => inicioDeTurnoGuardiaEnLaZona(turno_guardia, exigirZona(zona));
 
 /* Cuándo una Asistente quedó de más, y qué se le puede contar de la búsqueda.
    ==========================================================================
@@ -23,14 +33,14 @@ import { finDeTurnoGuardia, inicioDeTurnoGuardia } from './horarios.js';
  * que esto viene a mirar. Uno que ya había arrancado antes del final no es un relevo, es un turno
  * que se pisa con éste, y de eso se ocupa la programación.
  */
-export function laQueSigue(turno_guardia, candidatas) {
-  const final = finDeTurnoGuardia(turno_guardia);
+export function laQueSigue(turno_guardia, candidatas, zona) {
+  const final = finDe(turno_guardia, zona);
   let elegida = null;
   let arranqueElegido = null;
 
   for (const candidata of candidatas ?? []) {
     if (candidata?.id === turno_guardia.id) continue;
-    const arranque = inicioDeTurnoGuardia(candidata);
+    const arranque = inicioDe(candidata, zona);
     if (arranque < final) continue;
     if (arranqueElegido === null || arranque < arranqueElegido) {
       elegida = candidata;
@@ -54,10 +64,10 @@ export function laQueSigue(turno_guardia, candidatas) {
  * margen que cada Prestadora configuró; sumar minutos de gracia en este lugar los contaría dos
  * veces y le restaría horas a la que se quedó.
  */
-export function laExtensionCorresponde({ turno_guardia, relevo, ahora }) {
+export function laExtensionCorresponde({ turno_guardia, relevo, ahora, zona }) {
   if (!turno_guardia?.checkin_at) return false;
   if (turno_guardia.checkout_at) return false;
-  if (finDeTurnoGuardia(turno_guardia) > ahora) return false;
+  if (finDe(turno_guardia, zona) > ahora) return false;
   return !relevo?.checkin_at;
 }
 

@@ -5,6 +5,7 @@ import { pacientesDeTurnosGuardia } from './pacientesDeTurnoGuardia.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
+import { diaEnLaZona, inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
 
 // Mensaje al Coordinador cuando se viene un turno de guardia que todavía no tiene a nadie
 // (pendiente #106, docs/PLAN_HASTA_PRODUCCION.md).
@@ -38,7 +39,7 @@ const MS_POR_HORA = 60 * 60 * 1000;
 export async function revisarTurnosGuardiaSinCubrir() {
   const { data: prestadoras, error } = await supabase
     .from('prestadoras')
-    .select('id')
+    .select('id, zona_horaria')
     .eq('estado', 'certificada');
 
   if (error) {
@@ -48,12 +49,18 @@ export async function revisarTurnosGuardiaSinCubrir() {
 
   const ahora = new Date();
 
-  for (const { id: prestadoraId } of prestadoras ?? []) {
-    await revisarPrestadora(prestadoraId, ahora);
+  for (const { id: prestadoraId, zona_horaria: zona } of prestadoras ?? []) {
+    // La hora del turno es la de la casa del Paciente. Sin la zona de la Prestadora no se avisa
+    // nada: el mensaje saldría horas corrido.
+    if (!zona) {
+      console.error(`La Prestadora ${prestadoraId} no tiene zona horaria: no se revisan los turnos de guardia sin cubrir.`);
+      continue;
+    }
+    await revisarPrestadora(prestadoraId, ahora, zona);
   }
 }
 
-async function revisarPrestadora(prestadoraId, ahora) {
+async function revisarPrestadora(prestadoraId, ahora, zona) {
   const { data: config, error: errorConfig } = await supabase
     .from('configuracion_aviso_turno_guardia_sin_cubrir')
     .select('horas_antes, horas_entre_avisos, activo')
@@ -86,8 +93,8 @@ async function revisarPrestadora(prestadoraId, ahora) {
     .eq('prestadora_id', prestadoraId)
     .is('asistente_id', null)
     .eq('estado', 'programada')
-    .gte('fecha', fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * 24 * MS_POR_HORA)))
-    .lte('fecha', fechaISO(new Date(limite.getTime() + 24 * MS_POR_HORA)));
+    .gte('fecha', diaEnLaZona(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * 24 * MS_POR_HORA), zona))
+    .lte('fecha', diaEnLaZona(new Date(limite.getTime() + 24 * MS_POR_HORA), zona));
 
   if (error) {
     console.error(`Error consultando guardias sin cubrir (prestadora ${prestadoraId}):`, error.message);
@@ -126,7 +133,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
   }
 
   for (const turno_guardia of turnos_guardia ?? []) {
-    const inicio = new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
+    const inicio = inicioDeTurnoGuardiaEnLaZona(turno_guardia, zona);
 
     // Todavía falta más que la anticipación configurada: no es momento de molestar.
     if (inicio.getTime() > limite.getTime()) continue;
@@ -168,12 +175,4 @@ async function revisarPrestadora(prestadoraId, ahora) {
       console.error(`Error marcando el aviso de guardia sin cubrir (${turno_guardia.id}):`, errorUpdate.message);
     }
   }
-}
-
-// La fecha de un momento en el formato en que la guarda la base (`2026-08-07`), en hora
-// local. `toISOString()` a secas daría la fecha en UTC, que en horario argentino cambia de
-// día tres horas antes de tiempo.
-function fechaISO(momento) {
-  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 10);
 }

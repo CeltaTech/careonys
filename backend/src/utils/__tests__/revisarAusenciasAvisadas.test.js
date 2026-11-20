@@ -118,7 +118,7 @@ function escenario({
   ...resto
 }) {
   const inicio = enHoras(turnoGuardiaEnHoras);
-  if (!prestadorasEnLaBase.some((p) => p.id === prestadoraId)) prestadorasEnLaBase.push({ id: prestadoraId });
+  if (!prestadorasEnLaBase.some((p) => p.id === prestadoraId)) prestadorasEnLaBase.push({ id: prestadoraId, zona_horaria: 'America/Argentina/Buenos_Aires' });
   ausenciasEnLaBase.push({
     id: ausenciaId,
     prestadora_id: prestadoraId,

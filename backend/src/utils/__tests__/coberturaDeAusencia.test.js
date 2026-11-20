@@ -25,6 +25,15 @@ const COBERTURA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const respuestas = new Map();
 let llamadas = [];
 
+/**
+ * La Prestadora certificada, y su zona horaria cuando se la piden sola: esa consulta espera una
+ * fila y no una lista.
+ */
+function prestadoraEnBuenosAires(filtros) {
+  if (filtros.get('select') === 'zona_horaria') return { zona_horaria: 'America/Argentina/Buenos_Aires' };
+  return [{ id: PRESTADORA }];
+}
+
 /** Lo que dice adentro una credencial, o `null` si no se puede leer. */
 function leerCredencial(autorizacion) {
   try {
@@ -120,7 +129,7 @@ describe('devolver al titular', () => {
 
 describe('el trabajo programado', () => {
   it('lee las coberturas de la Prestadora que recibe, y de ninguna otra', async () => {
-    respuestas.set('GET /rest/v1/prestadoras', [{ id: PRESTADORA }]);
+    respuestas.set('GET /rest/v1/prestadoras', prestadoraEnBuenosAires);
 
     await extenderCoberturasDeAusencia(PRESTADORA);
 
@@ -129,7 +138,7 @@ describe('el trabajo programado', () => {
   });
 
   it('todo va con la credencial del trabajo de esa Prestadora', async () => {
-    respuestas.set('GET /rest/v1/prestadoras', [{ id: PRESTADORA }]);
+    respuestas.set('GET /rest/v1/prestadoras', prestadoraEnBuenosAires);
     respuestas.set('GET /rest/v1/coberturas_de_ausencia', [
       {
         id: COBERTURA,

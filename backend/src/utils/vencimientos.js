@@ -6,6 +6,7 @@ import { ESTADO_VISIBLE, estadoVisible } from './estadoDelDocumento.js';
 import { avisarDocumentoAlAsistente } from './avisoDeDocumento.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { diaEnLaZona } from './relojDeLaPrestadora.js';
 
 const TRABAJO = 'vencimientos de documentos';
 const EVENTO_VENCIMIENTO_DOCUMENTO = 'vencimiento_documento_asistente';
@@ -26,15 +27,18 @@ const CLAVE_POR_CLASE = {
 //
 // Trabaja en una sola Prestadora, la que le pasa `programar` en server.js, con la credencial del
 // trabajo de esa Prestadora: la base sólo le contesta lo suyo.
-export async function revisarVencimientos(prestadoraId) {
+//
+// "Hoy" es el día de la Prestadora, en su zona horaria: el servidor cuenta en hora universal, y entre
+// las 21 y las 24 de Argentina ya estaría en el día siguiente.
+export async function revisarVencimientos(prestadoraId, ahora = new Date()) {
   exigirLaPrestadora(prestadoraId, 'revisarVencimientos');
-  await enLaPrestadora(prestadoraId, TRABAJO, (db) => revisarLaPrestadora(prestadoraId, db));
+  await enLaPrestadora(prestadoraId, TRABAJO, (db) => revisarLaPrestadora(prestadoraId, db, ahora));
 }
 
-async function revisarLaPrestadora(prestadoraId, db) {
+async function revisarLaPrestadora(prestadoraId, db, ahora) {
   const { data: prestadora, error: errorPrestadora } = await db
     .from('prestadoras')
-    .select('dias_aviso_vencimiento_documentos')
+    .select('dias_aviso_vencimiento_documentos, zona_horaria')
     .eq('id', prestadoraId)
     .maybeSingle();
   if (errorPrestadora) {
@@ -42,11 +46,24 @@ async function revisarLaPrestadora(prestadoraId, db) {
     return;
   }
 
+  // Sin la zona no se sabe qué día es para ella: no se revisa nada antes que avisar con el día corrido.
+  if (!prestadora?.zona_horaria) {
+    console.error(`${TRABAJO}: la Prestadora ${prestadoraId} no tiene zona horaria`);
+    return;
+  }
+  let hoy;
+  try {
+    hoy = diaEnLaZona(ahora, prestadora.zona_horaria);
+  } catch (err) {
+    console.error(`${TRABAJO}: la zona horaria de ${prestadoraId} no sirve:`, err.message);
+    return;
+  }
+
   // Con cuántos días avisa esta Prestadora y hasta qué día hay que mirar: la misma cuenta que
   // hacen el Panel y la aplicación del Asistente, en `reglaVencimientos.js`.
   const diasAviso = prestadora?.dias_aviso_vencimiento_documentos ?? DIAS_AVISO_POR_DEFECTO;
   const anticipacion = ventanaDeAviso(diasAviso);
-  const limiteISO = fechaLimiteDeAviso(anticipacion);
+  const limiteISO = fechaLimiteDeAviso(anticipacion, hoy);
 
   // La vista ya deja afuera los tipos apagados, los Legajos borrados y los documentos que no se le
   // piden a ese Asistente, y trae sólo el último que cargó de cada tipo.
@@ -82,7 +99,7 @@ async function revisarLaPrestadora(prestadoraId, db) {
   const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
 
   await avisarALaPrestadora(prestadoraId, idioma, anticipacion, aAvisar, activos);
-  await avisarALosAsistentes(db, prestadoraId, idioma, diasAviso, aAvisar);
+  await avisarALosAsistentes(db, prestadoraId, idioma, diasAviso, aAvisar, hoy);
 }
 
 // Un mensaje por tipo de documento. El nombre del tipo viene del catálogo de la Prestadora y sale
@@ -117,8 +134,7 @@ async function avisarALaPrestadora(prestadoraId, idioma, anticipacion, documento
 }
 
 // Al teléfono de cada Asistente, una vez por documento y por clase.
-async function avisarALosAsistentes(db, prestadoraId, idioma, diasAviso, documentos) {
-  const hoy = new Date();
+async function avisarALosAsistentes(db, prestadoraId, idioma, diasAviso, documentos, hoy) {
   const conClase = documentos
     .map((d) => {
       const estado = estadoVisible(d, diasAviso, hoy);

@@ -6,6 +6,7 @@ import { enviarPushCliente } from './push.js';
 import { medicacionVigenteDelPaciente } from './medicacionIndicaciones.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { diaEnLaZona } from './relojDeLaPrestadora.js';
 
 // Lo que vale mientras la Prestadora no haya elegido otra cosa. Son los mismos valores que
 // tienen por defecto las columnas de `configuracion_alertas_ia` en la base: están escritos en
@@ -46,10 +47,14 @@ async function configuracionAlertasIA(prestadoraId) {
 // appAsistentes.js en vez de por este cron, así que analizarPaciente queda exportado).
 // Las dos corren adentro del trabajo de una sola Prestadora —la tarea, de a una por vez; el disparo
 // inmediato, adentro de `enLaPrestadora`—, así que la base no les deja ver ninguna otra.
-export async function revisarAlertasIA() {
+//
+// La medicación vigente se mira con el día de la Prestadora, en su zona horaria: el servidor cuenta
+// en hora universal, y entre las 21 y las 24 de Argentina ya estaría en el día siguiente. Sin la
+// zona no se sabe qué día es para ella, y esa Prestadora no se revisa.
+export async function revisarAlertasIA(ahora = new Date()) {
   const { data: prestadoras, error } = await supabase
     .from('prestadoras')
-    .select('id')
+    .select('id, zona_horaria')
     .eq('estado', 'certificada');
 
   if (error) {
@@ -57,12 +62,20 @@ export async function revisarAlertasIA() {
     return;
   }
 
-  for (const { id: prestadoraId } of prestadoras ?? []) {
-    await revisarPrestadora(prestadoraId);
+  for (const { id: prestadoraId, zona_horaria: zona } of prestadoras ?? []) {
+    let hoy;
+    try {
+      if (!zona) throw new Error('no tiene zona horaria');
+      hoy = diaEnLaZona(ahora, zona);
+    } catch (err) {
+      console.error(`IA Nivel 2: la Prestadora ${prestadoraId} no se revisa:`, err.message);
+      continue;
+    }
+    await revisarPrestadora(prestadoraId, hoy);
   }
 }
 
-async function revisarPrestadora(prestadoraId) {
+async function revisarPrestadora(prestadoraId, hoy) {
   const { data: pacientes, error } = await supabase
     .from('pacientes')
     .select('id, ultimo_analisis_ia_at')
@@ -86,13 +99,14 @@ async function revisarPrestadora(prestadoraId) {
     const { data: hayNuevos } = await query;
     if (!hayNuevos?.length) continue;
 
-    await analizarPaciente(paciente.id, prestadoraId);
+    await analizarPaciente(paciente.id, prestadoraId, hoy);
   }
 }
 
 // Analiza los últimos N reportes de un Paciente y persiste una alerta si corresponde. Se
 // reutiliza tanto desde el cron nocturno como desde el disparo inmediato por palabra clave.
-export async function analizarPaciente(pacienteId, prestadoraId) {
+// `hoy` es el día de la Prestadora con que se mira la medicación vigente; lo pasa la tarea nocturna.
+export async function analizarPaciente(pacienteId, prestadoraId, hoy = null) {
   const { data: paciente } = await supabase
     .from('pacientes')
     .select('cliente_id, salud:informacion_de_salud_del_paciente(patologias)')
@@ -103,7 +117,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   const salud = Array.isArray(paciente.salud) ? paciente.salud[0] : paciente.salud;
 
   // La IA analiza la medicación vigente real, derivada de indicaciones_medicacion.
-  const medicacionVigente = await medicacionVigenteDelPaciente(supabase, prestadoraId, pacienteId);
+  const medicacionVigente = await medicacionVigenteDelPaciente(supabase, prestadoraId, pacienteId, hoy);
 
   const configuracion = await configuracionAlertasIA(prestadoraId);
 

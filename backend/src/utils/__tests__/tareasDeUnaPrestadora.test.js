@@ -84,7 +84,7 @@ beforeEach(() => {
   llamadas = [];
   anotados = [];
   respuestas.set(RECORRER, TRES);
-  respuestas.set(PRESTADORAS, [{ id: TRES[0], estado: 'certificada', dias_aviso_vencimiento_documentos: 30 }]);
+  respuestas.set(PRESTADORAS, [{ id: TRES[0], estado: 'certificada', dias_aviso_vencimiento_documentos: 30, zona_horaria: 'America/Argentina/Buenos_Aires' }]);
 });
 
 /** Cada trabajo, con la tabla que lee una vez por Prestadora. */

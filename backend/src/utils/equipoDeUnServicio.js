@@ -1,3 +1,4 @@
+import { diaEnLaZona } from './relojDeLaPrestadora.js';
 import { supabase } from '../db/connection.js';
 import {
   equipoDelServicio,
@@ -35,17 +36,19 @@ const MS_POR_DIA = 24 * 60 * 60 * 1000;
  * @param {object} entrada.regla Los números ya resueltos por `reglaDeEquipoDe()`. Si falta, se
  *   leen de la configuración de esa Prestadora.
  * @param {Date} entrada.ahora
+ * @param {string} entrada.zona La zona horaria de la Prestadora. Es obligatoria: el servidor
+ *   cuenta en hora universal, y sin zona no se puede saber qué día es en la casa del Paciente.
  * @returns {Promise<{asistentes: Array, coordinadores: Array, cubrenFrancos: Array}>}
  *   Cada Asistente lleva `nombre`; cada coordinador, `nombre` y `email`. El correo es lo que
  *   permite escribirle a quien coordina este Servicio y no al destino general de la Prestadora.
  */
-export async function equipoDeUnServicio({ servicioId, prestadoraId, regla = null, ahora = new Date() }) {
+export async function equipoDeUnServicio({ servicioId, prestadoraId, regla = null, ahora = new Date(), zona = null }) {
   const vacio = { asistentes: [], coordinadores: [], cubrenFrancos: [] };
   if (!servicioId) return vacio;
 
   const reglaFinal = regla ?? reglaDeEquipoDe(await configuracionDeEquipo(prestadoraId));
   const [turnos_guardia, series, decisiones, coordinadorDelServicio] = await Promise.all([
-    turnosGuardiaDelServicio({ servicioId, prestadoraId, regla: reglaFinal, ahora }),
+    turnosGuardiaDelServicio({ servicioId, prestadoraId, regla: reglaFinal, ahora, zona }),
     seriesDelServicio({ servicioId, prestadoraId }),
     decisionesDelEquipo({ servicioId, prestadoraId }),
     coordinadorDe({ servicioId, prestadoraId }),
@@ -106,9 +109,10 @@ async function configuracionDeEquipo(prestadoraId) {
  *
  * Se piden de la ventana configurada; el recorte fino lo hace después `equipoDelServicio()`.
  */
-async function turnosGuardiaDelServicio({ servicioId, prestadoraId, regla, ahora }) {
+async function turnosGuardiaDelServicio({ servicioId, prestadoraId, regla, ahora, zona }) {
   const dias = Math.max(regla.dias_hacia_atras, REGLA_QUE_SE_PUEDE_TOCAR.dias_hacia_atras.minimo);
-  const desde = fechaISO(new Date(ahora.getTime() - dias * MS_POR_DIA));
+  const momento = new Date(ahora.getTime() - dias * MS_POR_DIA);
+  const desde = diaEnLaZona(momento, zona);
   const { data, error } = await supabase
     .from('turnos_guardia')
     .select('id, servicio_id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado')
@@ -193,11 +197,4 @@ async function nombresDeUsuarios(ids, prestadoraId) {
   }
   for (const fila of data ?? []) nombres.set(fila.id, fila.nombre);
   return nombres;
-}
-
-// La fecha de un momento como la guarda la base (`2026-08-07`), en hora local. `toISOString()` a
-// secas daría la fecha en UTC, que en horario argentino cambia de día tres horas antes de tiempo.
-function fechaISO(momento) {
-  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 10);
 }

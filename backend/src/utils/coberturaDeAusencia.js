@@ -3,6 +3,7 @@ import { estaCertificada, exigirLaPrestadora } from './prestadoraCertificada.js'
 import { cubrirTurnoGuardiaConSustituto } from './cubrirTurnoGuardia.js';
 import { finEfectivoDeLaAusencia } from './ausenciaQueTapa.js';
 import { hoyISO, sumarDias } from './horarios.js';
+import { diaEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 
 /* La cobertura de un turno fijo durante una ausencia
    ==================================================
@@ -180,13 +181,18 @@ export async function aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId, s
  * El trabajo programado: vuelve a aplicar cada cobertura vigente de una sola Prestadora, la que le
  * pasa `programar` en server.js, y sólo si está certificada. Va con la credencial del trabajo de
  * esa Prestadora, que la base acota a ella.
+ *
+ * «Hoy» es el día del reloj de la Prestadora, no el del servidor. El servidor cuenta en hora
+ * universal: entre las 21 y las 24 de Argentina ya es mañana para él, y el turno de esa noche
+ * se le devolvía al titular ausente. Sin zona horaria la Prestadora no se procesa.
  */
-export async function extenderCoberturasDeAusencia(prestadoraId, hoy = hoyISO()) {
+export async function extenderCoberturasDeAusencia(prestadoraId, ahora = new Date()) {
   exigirLaPrestadora(prestadoraId, 'extenderCoberturasDeAusencia');
   if (!(await estaCertificada(prestadoraId))) return;
-  await enLaPrestadora(prestadoraId, 'extender las coberturas de ausencia', (db) =>
-    extenderLasDeUnaPrestadora(db, prestadoraId, hoy),
-  );
+  await enLaPrestadora(prestadoraId, 'extender las coberturas de ausencia', async (db) => {
+    const hoy = diaEnLaZona(ahora, await zonaDeLaPrestadora(db, prestadoraId));
+    await extenderLasDeUnaPrestadora(db, prestadoraId, hoy);
+  });
 }
 
 async function extenderLasDeUnaPrestadora(db, prestadoraId, hoy) {

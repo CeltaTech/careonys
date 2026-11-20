@@ -1,7 +1,8 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { estaCertificada, exigirLaPrestadora } from './prestadoraCertificada.js';
 import { idsDePacientesDeTurnoGuardia } from './pacientesDeTurnoGuardia.js';
-import { finDeTurnoGuardia, sumarDias } from './horarios.js';
+import { sumarDias } from './fechas.js';
+import { diaEnLaZona, finDeTurnoGuardiaEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 import {
   cuandoTermino,
   laExtensionCorresponde,
@@ -35,8 +36,6 @@ import {
    Trabaja en una sola Prestadora, la que le pasa `programar` en server.js, y sólo si está
    certificada, con la credencial del trabajo de esa Prestadora, que la base acota a ella. */
 
-const MS_POR_DIA = 24 * 60 * 60 * 1000;
-
 // Hasta dónde se mira hacia atrás al traer los turnos abiertos. Un turno de 72 horas empieza tres
 // días antes de terminar, y todavía uno más para el caso que quedó abierto de ayer.
 const DIAS_HACIA_ATRAS = 4;
@@ -55,6 +54,16 @@ export function revisarLasExtensionesDeUnaPrestadora(prestadoraId, ahora) {
 }
 
 async function revisarPrestadora({ db, prestadoraId, ahora }) {
+  // Las horas del turno son las de la casa del Paciente, y el servidor cuenta en hora universal: sin
+  // la zona de la Prestadora no se revisa nada, porque se abrirían extensiones tres horas antes.
+  let zona;
+  try {
+    zona = await zonaDeLaPrestadora(db, prestadoraId);
+  } catch (e) {
+    console.error(`Error leyendo la zona horaria para las extensiones (prestadora ${prestadoraId}):`, e.message);
+    return;
+  }
+
   const { data: turnos_guardia, error } = await db
     .from('turnos_guardia')
     .select(
@@ -62,8 +71,8 @@ async function revisarPrestadora({ db, prestadoraId, ahora }) {
     )
     .eq('prestadora_id', prestadoraId)
     .not('checkin_at', 'is', null)
-    .gte('fecha', fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA)))
-    .lte('fecha', fechaISO(ahora));
+    .gte('fecha', sumarDias(diaEnLaZona(ahora, zona), -DIAS_HACIA_ATRAS))
+    .lte('fecha', diaEnLaZona(ahora, zona));
 
   if (error) {
     console.error(`Error consultando turnos para las extensiones (prestadora ${prestadoraId}):`, error.message);
@@ -77,7 +86,7 @@ async function revisarPrestadora({ db, prestadoraId, ahora }) {
   if (abiertas === null) return;
 
   for (const turno_guardia of turnos_guardia ?? []) {
-    await revisarUnTurnoGuardia({ db, turno_guardia, prestadoraId, extension: abiertas.get(turno_guardia.id) ?? null, ahora });
+    await revisarUnTurnoGuardia({ db, turno_guardia, prestadoraId, extension: abiertas.get(turno_guardia.id) ?? null, ahora, zona });
   }
 
   // Las abiertas cuyo turno ya no aparece en la ventana de arriba: se cerraron solas cuando la
@@ -89,8 +98,8 @@ async function revisarPrestadora({ db, prestadoraId, ahora }) {
   }
 }
 
-async function revisarUnTurnoGuardia({ db, turno_guardia, prestadoraId, extension, ahora }) {
-  const relevo = await buscarElRelevo({ db, turno_guardia, prestadoraId });
+async function revisarUnTurnoGuardia({ db, turno_guardia, prestadoraId, extension, ahora, zona }) {
+  const relevo = await buscarElRelevo({ db, turno_guardia, prestadoraId, zona });
 
   if (extension) {
     if (!laExtensionTermino({ turno_guardia, relevo })) {
@@ -105,8 +114,8 @@ async function revisarUnTurnoGuardia({ db, turno_guardia, prestadoraId, extensio
     return;
   }
 
-  if (!laExtensionCorresponde({ turno_guardia, relevo, ahora })) return;
-  await abrir({ db, turno_guardia, relevo });
+  if (!laExtensionCorresponde({ turno_guardia, relevo, ahora, zona })) return;
+  await abrir({ db, turno_guardia, relevo, zona });
 }
 
 /**
@@ -122,7 +131,7 @@ async function revisarUnTurnoGuardia({ db, turno_guardia, prestadoraId, extensio
  * Sólo hacen falta los identificadores de los Pacientes, y salen de la lista del turno sin pasar
  * por sus datos: así cuentan todos los del turno, cualquiera sea el estado de sus datos.
  */
-async function buscarElRelevo({ db, turno_guardia, prestadoraId }) {
+async function buscarElRelevo({ db, turno_guardia, prestadoraId, zona }) {
   let pacienteIds;
   try {
     pacienteIds = await idsDePacientesDeTurnoGuardia(db, prestadoraId, turno_guardia);
@@ -150,7 +159,7 @@ async function buscarElRelevo({ db, turno_guardia, prestadoraId }) {
   }
 
   const filas = (data ?? []).map((fila) => fila.turnos_guardia).filter(Boolean);
-  return laQueSigue(turno_guardia, filas);
+  return laQueSigue(turno_guardia, filas, zona);
 }
 
 async function extensionesAbiertas(db, prestadoraId) {
@@ -173,14 +182,14 @@ async function extensionesAbiertas(db, prestadoraId) {
   return porTurnoGuardia;
 }
 
-async function abrir({ db, turno_guardia, relevo }) {
+async function abrir({ db, turno_guardia, relevo, zona }) {
   const { error } = await db.from('extensiones_de_turno_guardia').insert({
     prestadora_id: turno_guardia.prestadora_id,
     turno_guardia_id: turno_guardia.id,
     relevo_turno_guardia_id: relevo?.id ?? null,
     // La hora en que su turno terminaba, no la hora en que este proceso pasó. La diferencia son
     // los minutos que el proceso tardó en darse cuenta, y esos minutos ella los estuvo adentro.
-    desde_at: finDeTurnoGuardia(turno_guardia).toISOString(),
+    desde_at: finDeTurnoGuardiaEnLaZona(turno_guardia, zona).toISOString(),
   });
 
   if (error) {
@@ -221,9 +230,3 @@ async function anotarElRelevo({ db, extension, prestadoraId, relevoId }) {
   }
 }
 
-// La fecha de un momento como la guarda la base (`2026-09-16`), en hora local. `toISOString()` a
-// secas daría la fecha en UTC, que en horario argentino cambia de día tres horas antes de tiempo.
-function fechaISO(momento) {
-  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 10);
-}

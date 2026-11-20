@@ -21,6 +21,11 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
+// El servidor de verdad cuenta en hora universal y la Prestadora está en Argentina, tres horas
+// atrás: así se ve si la hora del turno se lee en la zona de la Prestadora o en la del servidor.
+process.env.TZ = 'UTC';
+const ZONA = 'America/Argentina/Buenos_Aires';
+
 const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 
 const PRESTADORAS = 'GET /rest/v1/prestadoras';
@@ -98,11 +103,11 @@ beforeEach(() => {
 
 describe('los avisos de rutina a la Asistente', () => {
   it('todo lo de cada Prestadora se lee con la credencial del trabajo de esa Prestadora', async () => {
-    respuestas.set(PRESTADORAS, [{ minutos_aviso_previo_turno_guardia: 30 }]);
+    respuestas.set(PRESTADORAS, [{ minutos_aviso_previo_turno_guardia: 30, zona_horaria: ZONA }]);
     respuestas.set(TURNOS_GUARDIA, []);
     respuestas.set(MENSAJES, []);
 
-    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date(2026, 2, 1, 12, 0, 0));
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T12:00:00Z'));
 
     assert.deepEqual(
       llamadas.map((l) => l.clave),
@@ -116,9 +121,65 @@ describe('los avisos de rutina a la Asistente', () => {
   });
 
   it('si no puede leer la anticipación, no sigue', async () => {
-    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date(2026, 2, 1, 12, 0, 0));
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T12:00:00Z'));
 
     assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS]);
+    assert.equal(anotados.length, 1);
+  });
+});
+
+describe('el recordatorio de turno próximo se mide en la hora de la Prestadora', () => {
+  /** Un turno de las 08:00 de Argentina, que en hora universal empieza a las 11:00. */
+  const turnoDeLasOcho = {
+    id: '11111111-1111-1111-1111-111111111111',
+    asistente_id: '55555555-5555-5555-5555-555555555555',
+    fecha: '2026-03-01',
+    hora_inicio: '08:00',
+    hora_fin: '16:00',
+    dias_hasta_el_fin: 0,
+    estado: 'programada',
+    checkin_at: null,
+  };
+
+  /** Las dos lecturas de turnos van a la misma ruta: el recordatorio es la que mira su marca. */
+  function turnosParaElRecordatorio(turnos) {
+    return (llamada) => (llamada.filtros.has('push_recordatorio_enviado_at') ? turnos : []);
+  }
+
+  it('a las 04:45 de Argentina el turno de las 08:00 todavía no entra en la anticipación', async () => {
+    // En hora universal son las 07:45. Leída la hora del turno en la del servidor, el turno
+    // empezaría en 15 minutos y saldría el recordatorio tres horas antes de tiempo.
+    respuestas.set(PRESTADORAS, [{ minutos_aviso_previo_turno_guardia: 30, zona_horaria: ZONA }]);
+    respuestas.set(TURNOS_GUARDIA, turnosParaElRecordatorio([turnoDeLasOcho]));
+    respuestas.set(MENSAJES, []);
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T07:45:00Z'));
+
+    assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA]);
+  });
+
+  it('a las 07:45 de Argentina el turno de las 08:00 entra en la anticipación', async () => {
+    // En hora universal son las 10:45. Leída la hora del turno en la del servidor, el turno
+    // ya habría empezado y el recordatorio no saldría nunca.
+    respuestas.set(PRESTADORAS, [{ minutos_aviso_previo_turno_guardia: 30, zona_horaria: ZONA }]);
+    respuestas.set(TURNOS_GUARDIA, turnosParaElRecordatorio([turnoDeLasOcho]));
+    respuestas.set(MENSAJES, []);
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T10:45:00Z'));
+
+    // Pasado el filtro, sigue a buscar las licencias y el idioma antes de mandar: alcanza con ver
+    // que siguió más allá de las cuatro lecturas de siempre.
+    assert.ok(llamadas.length > 4, `no siguió hacia el envío: ${llamadas.map((l) => l.clave).join(', ')}`);
+  });
+
+  it('sin la zona horaria de la Prestadora no manda recordatorios de turno próximo', async () => {
+    respuestas.set(PRESTADORAS, [{ minutos_aviso_previo_turno_guardia: 30, zona_horaria: null }]);
+    respuestas.set(TURNOS_GUARDIA, turnosParaElRecordatorio([turnoDeLasOcho]));
+    respuestas.set(MENSAJES, []);
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T10:45:00Z'));
+
+    assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES]);
     assert.equal(anotados.length, 1);
   });
 });

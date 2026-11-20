@@ -5,6 +5,7 @@ import {
   FUENTE_CALCULO_LLEGADA_TARDIA,
   FUENTE_SIN_AVISO_NI_SALIDA,
 } from './fuentesAlertaTemprana.js';
+import { diaEnLaZona, inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
 
 // Lo que el sistema anota solo cuando nadie apretó nada (pendiente #101).
 //
@@ -44,7 +45,7 @@ const DIAS_HACIA_ATRAS = 1;
 export async function revisarLlegadasDemoradas() {
   const { data: prestadoras, error } = await supabase
     .from('prestadoras')
-    .select('id')
+    .select('id, zona_horaria')
     .eq('estado', 'certificada');
 
   if (error) {
@@ -53,12 +54,18 @@ export async function revisarLlegadasDemoradas() {
   }
 
   const ahora = new Date();
-  for (const { id: prestadoraId } of prestadoras ?? []) {
-    await revisarPrestadora(prestadoraId, ahora);
+  for (const { id: prestadoraId, zona_horaria: zona } of prestadoras ?? []) {
+    // La hora del turno es la de la casa del Paciente. Sin la zona de la Prestadora no se anota
+    // nada: la alerta saldría horas corrida.
+    if (!zona) {
+      console.error(`La Prestadora ${prestadoraId} no tiene zona horaria: no se revisan las llegadas demoradas.`);
+      continue;
+    }
+    await revisarPrestadora(prestadoraId, ahora, zona);
   }
 }
 
-async function revisarPrestadora(prestadoraId, ahora) {
+async function revisarPrestadora(prestadoraId, ahora, zona) {
   // El margen lo decide cada Prestadora en sus niveles de escalada. Sin niveles cargados vale el
   // valor de arranque de `llegadaEstimada.js`, que no es una regla del producto: es con lo que
   // funciona quien todavía no configuró nada.
@@ -86,8 +93,8 @@ async function revisarPrestadora(prestadoraId, ahora) {
     .eq('estado', 'programada')
     .not('asistente_id', 'is', null)
     .is('checkin_at', null)
-    .gte('fecha', fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * 24 * MS_POR_HORA)))
-    .lte('fecha', fechaISO(new Date(ahora.getTime() + 24 * MS_POR_HORA)));
+    .gte('fecha', diaEnLaZona(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * 24 * MS_POR_HORA), zona))
+    .lte('fecha', diaEnLaZona(new Date(ahora.getTime() + 24 * MS_POR_HORA), zona));
 
   if (errorTurnosGuardia) {
     console.error(`Error consultando guardias para las llegadas demoradas (prestadora ${prestadoraId}):`, errorTurnosGuardia.message);
@@ -110,8 +117,12 @@ async function revisarPrestadora(prestadoraId, ahora) {
     // Alguien ya avisó, o el sistema ya anotó algo que sigue sin resolverse: no se agrega nada.
     if (anotadas.abiertas > 0) continue;
 
-    const inicio = new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
-    if (Number.isNaN(inicio.getTime())) continue;
+    let inicio;
+    try {
+      inicio = inicioDeTurnoGuardiaEnLaZona(turno_guardia, zona);
+    } catch {
+      continue;
+    }
     // Ya pasó el plazo en que cubrirla servía de algo.
     if (inicio.getTime() < ahora.getTime() - DIAS_HACIA_ATRAS * 24 * MS_POR_HORA) continue;
 
@@ -186,12 +197,4 @@ async function alertasYaAnotadas(prestadoraId, turnoGuardiaIds) {
     if (fila.fuente) anotadas.fuentes.add(fila.fuente);
   }
   return porTurnoGuardia;
-}
-
-// La fecha de un momento tal como la guarda la base (`2026-09-09`), en hora local.
-// `toISOString()` a secas daría la fecha en UTC, que en horario argentino cambia de día tres
-// horas antes de tiempo.
-function fechaISO(momento) {
-  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 10);
 }

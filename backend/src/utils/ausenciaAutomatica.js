@@ -1,6 +1,7 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from './marcarAusente.js';
 import { exigirLaPrestadora } from './prestadoraCertificada.js';
+import { inicioDeTurnoGuardiaEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 
 // Detección automática de ausencia (pendiente #20 de docs/PLAN_HASTA_PRODUCCION.md, diseñado con el
 // Desarrollador el 2026-07-12): reemplaza al botón manual "marcar ausente" de
@@ -35,6 +36,16 @@ export function revisarLasAusenciasDeUnaPrestadora(prestadoraId, ahora) {
     if (!config) return;
     const minutosTolerancia = config.minutos_tolerancia_checkin;
 
+    // La hora del turno es la de la casa del Paciente: se lee en la zona de la Prestadora, no en la
+    // del servidor. Sin zona no se marca a nadie, porque se marcaría a deshora.
+    let zona;
+    try {
+      zona = await zonaDeLaPrestadora(db, prestadoraId);
+    } catch (e) {
+      console.error(`Error leyendo la zona horaria (prestadora ${prestadoraId}):`, e.message);
+      return;
+    }
+
     // `.not('asistente_id', 'is', null)` no es un detalle: un turno de guardia sin cubrir también
     // llega a su hora sin que nadie marque llegada, pero eso no es una ausencia — no hay
     // nadie que haya faltado. Sin este filtro, cada hueco de la agenda se marcaría como
@@ -53,7 +64,7 @@ export function revisarLasAusenciasDeUnaPrestadora(prestadoraId, ahora) {
     }
 
     for (const turno_guardia of turnos_guardia ?? []) {
-      const inicioEsperado = new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
+      const inicioEsperado = inicioDeTurnoGuardiaEnLaZona(turno_guardia, zona);
       const limiteAusencia = new Date(inicioEsperado.getTime() + minutosTolerancia * 60_000);
       if (ahora < limiteAusencia) continue;
 

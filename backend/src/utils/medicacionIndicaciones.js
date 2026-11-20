@@ -6,8 +6,11 @@
 // Cada función entra con la conexión que recibe, que va primero. Detrás va `prestadoraId`, sin
 // valor por defecto, como en el resto del archivo: quien llama puede pasar la llave maestra, que se
 // saltea la protección por fila, y ahí lo único que separa una Prestadora de otra es este filtro.
-export async function medicacionVigenteDelPaciente(db, prestadoraId, pacienteId) {
-  const hoyISO = new Date().toISOString().slice(0, 10);
+//
+// `hoy` es el día de la Prestadora (`2026-08-01`). Lo pasa la tarea programada, que corre en hora
+// universal y lo saca de la zona horaria de la Prestadora; sin él se toma el día en hora universal.
+export async function medicacionVigenteDelPaciente(db, prestadoraId, pacienteId, hoy = null) {
+  const hoyISO = hoy ?? new Date().toISOString().slice(0, 10);
   const { data } = await db
     .from('indicaciones_medicacion')
     .select('id, medicamento, dosis, frecuencia, via_administracion_id, via:vias_administracion(clave), fecha_desde, fecha_hasta')

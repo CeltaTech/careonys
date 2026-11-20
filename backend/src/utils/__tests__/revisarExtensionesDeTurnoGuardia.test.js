@@ -16,6 +16,9 @@
  * Se levanta la base de mentira igual que `generacionSeriesTurnoGuardia.test.js`. Datos inventados, como
  * manda CLAUDE.md §6.
  */
+// El servidor cuenta en hora universal: la prueba también, para que dé igual en cualquier máquina.
+process.env.TZ = 'UTC';
+
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
@@ -31,6 +34,8 @@ const ABIERTAS = 'GET /rest/v1/extensiones_de_turno_guardia';
 const ABRIR = 'POST /rest/v1/extensiones_de_turno_guardia';
 const CERRAR = 'PATCH /rest/v1/extensiones_de_turno_guardia';
 const FICHAS = 'GET /rest/v1/pacientes';
+const PRESTADORAS = 'GET /rest/v1/prestadoras';
+const ZONA = 'America/Argentina/Buenos_Aires';
 
 /**
  * Qué contesta la base a cada `MÉTODO /ruta`: un valor, o una función que recibe la llamada y
@@ -97,6 +102,7 @@ after(() => {
 
 beforeEach(() => {
   respuestas.clear();
+  respuestas.set(PRESTADORAS, [{ zona_horaria: ZONA }]);
   llamadas = [];
   anotados = [];
 });
@@ -141,7 +147,7 @@ describe('la revisión de las extensiones de turno', () => {
 
     assert.deepEqual(
       [...new Set(llamadas.map((l) => l.clave))].sort(),
-      [ABIERTAS, ABRIR, CERRAR, LISTA, TURNOS_GUARDIA].sort(),
+      [ABIERTAS, ABRIR, CERRAR, LISTA, PRESTADORAS, TURNOS_GUARDIA].sort(),
     );
     for (const llamada of llamadas) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
@@ -174,5 +180,69 @@ describe('la revisión de las extensiones de turno', () => {
 
     const relevo = llamadas.find((l) => l.clave === LISTA && l.filtros.get('select').includes('turnos_guardia!inner'));
     assert.equal(relevo.filtros.get('paciente_id'), 'in.(paciente-columna)');
+  });
+});
+
+// El turno de las 08:00 a las 16:00 del 1 de marzo es de la casa del Paciente, en Argentina: termina
+// a las 19:00 en hora universal. Leído con la hora del servidor terminaría tres horas antes.
+describe('las horas del turno se leen en la zona de la Prestadora', () => {
+  it('a las 14:30 de Argentina el turno de 08:00 a 16:00 todavía no terminó: no se abre extensión', async () => {
+    respuestas.set(TURNOS_GUARDIA, [turnoGuardiaVencido()]);
+    respuestas.set(LISTA, lista({ pacientes: ['paciente-1'] }));
+    respuestas.set(ABIERTAS, []);
+    respuestas.set(ABRIR, []);
+
+    await revisarLasExtensionesDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T17:30:00Z'));
+
+    assert.ok(!llamadas.some((l) => l.clave === ABRIR), 'abrió una extensión antes del final del turno');
+  });
+
+  it('la extensión empieza a las 16:00 de Argentina, no a las 16:00 de hora universal', async () => {
+    respuestas.set(TURNOS_GUARDIA, [turnoGuardiaVencido()]);
+    respuestas.set(LISTA, lista({ pacientes: ['paciente-1'] }));
+    respuestas.set(ABIERTAS, []);
+    respuestas.set(ABRIR, []);
+
+    await revisarLasExtensionesDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T19:30:00Z'));
+
+    assert.equal(llamadas.find((l) => l.clave === ABRIR)?.cuerpo.desde_at, '2026-03-01T19:00:00.000Z');
+  });
+
+  it('el relevo que arranca a las 16:00 de Argentina cuenta como relevo', async () => {
+    respuestas.set(TURNOS_GUARDIA, [turnoGuardiaVencido()]);
+    respuestas.set(
+      LISTA,
+      lista({
+        pacientes: ['paciente-1'],
+        relevos: [{ turnos_guardia: { id: 'relevo-1', fecha: '2026-03-01', hora_inicio: '16:00', asistente_id: 'asistente-2', checkin_at: null } }],
+      }),
+    );
+    respuestas.set(ABIERTAS, []);
+    respuestas.set(ABRIR, []);
+
+    await revisarLasExtensionesDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T19:30:00Z'));
+
+    assert.equal(llamadas.find((l) => l.clave === ABRIR)?.cuerpo.relevo_turno_guardia_id, 'relevo-1');
+  });
+
+  it('a las 22:30 de Argentina los turnos se buscan hasta ese día, no hasta el siguiente', async () => {
+    respuestas.set(TURNOS_GUARDIA, []);
+    respuestas.set(ABIERTAS, []);
+
+    await revisarLasExtensionesDeUnaPrestadora(PRESTADORA, new Date('2026-03-02T01:30:00Z'));
+
+    const consulta = llamadas.find((l) => l.clave === TURNOS_GUARDIA);
+    assert.deepEqual(consulta.filtros.getAll('fecha').sort(), ['gte.2026-02-25', 'lte.2026-03-01']);
+  });
+
+  it('sin la zona de la Prestadora no se revisa nada', async () => {
+    respuestas.set(PRESTADORAS, [{ zona_horaria: null }]);
+    respuestas.set(TURNOS_GUARDIA, [turnoGuardiaVencido()]);
+    respuestas.set(ABIERTAS, []);
+
+    await revisarLasExtensionesDeUnaPrestadora(PRESTADORA, new Date('2026-03-02T12:00:00Z'));
+
+    assert.ok(!llamadas.some((l) => l.clave === TURNOS_GUARDIA), 'revisó los turnos sin saber la zona');
+    assert.equal(anotados.length, 1);
   });
 });

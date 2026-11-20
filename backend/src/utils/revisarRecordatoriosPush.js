@@ -6,6 +6,7 @@ import { configuracionEvento } from './email.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { turnosGuardiaEnLicenciaAdentro } from './turnoGuardiaDeLicencia.js';
+import { inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
 
 // Recorre los 3 eventos de push a Asistentes listados en
 // docs/PRD_04_05_App_Servicio.md:115 ("Nuevo turno de guardia asignado, mensajes del coordinador,
@@ -75,7 +76,7 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
   return enLaPrestadora(prestadoraId, 'revisar los avisos al Asistente', async (db) => {
     const { data: prestadora, error } = await db
       .from('prestadoras')
-      .select('minutos_aviso_previo_turno_guardia')
+      .select('minutos_aviso_previo_turno_guardia, zona_horaria')
       .eq('id', prestadoraId)
       .maybeSingle();
     if (error) {
@@ -85,7 +86,13 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
     const minutosAntes = prestadora?.minutos_aviso_previo_turno_guardia ?? MINUTOS_ANTES_RECORDATORIO;
     await revisarTurnosGuardiaAsignados(db, prestadoraId);
     await revisarMensajesCoordinador(db, prestadoraId);
-    await revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutosAntes, ahora);
+    // El recordatorio se mide contra la hora del turno, que es la de la casa del Paciente. Sin la
+    // zona de la Prestadora no se manda: saldría horas corrido.
+    if (!prestadora?.zona_horaria) {
+      console.error(`La Prestadora ${prestadoraId} no tiene zona horaria: no se revisan los recordatorios de turno próximo.`);
+      return;
+    }
+    await revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutosAntes, ahora, prestadora.zona_horaria);
   });
 }
 
@@ -160,7 +167,7 @@ async function revisarMensajesCoordinador(db, prestadoraId) {
   }
 }
 
-async function revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutosAntes, ahora) {
+async function revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutosAntes, ahora, zona) {
   const { data: turnos_guardia, error } = await db
     .from('turnos_guardia')
     .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, checkin_at')
@@ -178,7 +185,7 @@ async function revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutos
 
   const limite = new Date(ahora.getTime() + minutosAntes * 60_000);
   const proximas = turnos_guardia.filter((turno_guardia) => {
-    const inicio = new Date(`${turno_guardia.fecha}T${turno_guardia.hora_inicio}`);
+    const inicio = inicioDeTurnoGuardiaEnLaZona(turno_guardia, zona);
     return inicio.getTime() <= limite.getTime() && inicio.getTime() >= ahora.getTime();
   });
   if (!proximas.length) return;

@@ -8,10 +8,9 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
   CIERRES,
   REGLA_QUE_SE_PUEDE_TOCAR,
-  elTurnoGuardiaYaEsGrave,
-  horasHastaElTurnoGuardia,
   reglaDelIncidenteDe,
 } from './incidenteTurnoGuardiaSinCubrir.js';
+import { diaEnLaZona, inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
 import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
 import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { escalonesYaAvisados, escalarSiCorresponde, minutosDesde } from './avisosDeEscalon.js';
@@ -51,7 +50,8 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // Corre como tarea programada, adentro del trabajo de una sola Prestadora por vez
 // (`paraCadaPrestadora`, en `server.js`): la base no le deja ver ninguna otra.
 
-const MS_POR_DIA = 24 * 60 * 60 * 1000;
+const MS_POR_HORA = 60 * 60 * 1000;
+const MS_POR_DIA = 24 * MS_POR_HORA;
 
 // Cuánto se sigue mirando un turno después de su hora de inicio. El incidente ya abierto no se
 // cierra solo cuando pasa este plazo —sigue abierto hasta que alguien diga cómo terminó—; lo que
@@ -66,12 +66,10 @@ const EVENTO = 'incidente_turno_guardia_sin_cubrir';
 
 export async function revisarIncidentesTurnoGuardiaSinCubrir() {
   const ahora = new Date();
-  const desde = fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA));
-  const hasta = fechaISO(new Date(ahora.getTime() + DIAS_HACIA_ADELANTE * MS_POR_DIA));
 
   const { data: prestadoras, error } = await supabase
     .from('prestadoras')
-    .select('id')
+    .select('id, zona_horaria')
     .eq('estado', 'certificada');
 
   if (error) {
@@ -79,12 +77,24 @@ export async function revisarIncidentesTurnoGuardiaSinCubrir() {
     return;
   }
 
-  for (const { id: prestadoraId } of prestadoras ?? []) {
-    await revisarPrestadora({ prestadoraId, desde, hasta, ahora });
+  for (const { id: prestadoraId, zona_horaria: zona } of prestadoras ?? []) {
+    // Los turnos se cargan con la hora de la casa del Paciente: los días de la ventana y el
+    // momento en que empieza cada turno se leen en la zona de la Prestadora, no en la del
+    // servidor. Sin zona, la Prestadora no se revisa: avisar a deshora es peor que esperar.
+    let desde;
+    let hasta;
+    try {
+      desde = diaEnLaZona(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA), zona);
+      hasta = diaEnLaZona(new Date(ahora.getTime() + DIAS_HACIA_ADELANTE * MS_POR_DIA), zona);
+    } catch (e) {
+      console.error(`Error leyendo la zona horaria para el incidente de turno sin cubrir (prestadora ${prestadoraId}):`, e.message);
+      continue;
+    }
+    await revisarPrestadora({ prestadoraId, desde, hasta, ahora, zona });
   }
 }
 
-async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
+async function revisarPrestadora({ prestadoraId, desde, hasta, ahora, zona }) {
   const { data: turnos_guardia, error: errorTurnosGuardia } = await supabase
     .from('turnos_guardia')
     .select('id, servicio_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
@@ -182,9 +192,9 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
     // El que ya tiene incidente se sigue recordando mientras siga sin nadie, aunque falte mucho:
     // la alarma la abrió alguien que ya sabía que el turno tenía un problema.
     const yaAbierto = porTurnoGuardia.has(turno_guardia.id) && !turno_guardia.asistente_id && turno_guardia.estado === 'programada';
-    if (!yaAbierto && !elTurnoGuardiaYaEsGrave({ turno_guardia, regla, ahora })) continue;
+    const horas = horasHastaElTurnoGuardia(turno_guardia, ahora, zona);
+    if (!yaAbierto && !elTurnoGuardiaYaEsGrave({ turno_guardia, regla, horas })) continue;
 
-    const horas = horasHastaElTurnoGuardia(turno_guardia, ahora);
     // Ya pasó el plazo en que taparlo servía de algo: no se abre uno nuevo.
     const yaNoSePuedeTapar = horas !== null && horas < -DIAS_HACIA_ATRAS * 24;
 
@@ -217,6 +227,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
             horas,
             veces: (incidente.veces_recordado ?? 0) + 1,
             ahora,
+            zona,
           })
         ).mensaje.texto,
       yaSalieron: escalonesQueSalieron,
@@ -233,7 +244,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
       continue;
     }
 
-    await recordar({ incidente, turno_guardia, prestadoraId, idioma, horas, ahora });
+    await recordar({ incidente, turno_guardia, prestadoraId, idioma, horas, ahora, zona });
   }
 }
 
@@ -315,7 +326,7 @@ async function abrirIncidente({ turno_guardia, prestadoraId }) {
  * Vive aparte porque lo piden dos: el recordatorio, que se lo manda a quien coordina, y el
  * escalón, que le manda lo mismo a más gente. El escalón no cuenta otra cosa.
  */
-async function armarElRecordatorio({ turno_guardia, prestadoraId, idioma, horas, veces, ahora }) {
+async function armarElRecordatorio({ turno_guardia, prestadoraId, idioma, horas, veces, ahora, zona }) {
   let pacientes = [];
   try {
     pacientes = (await pacientesDeTurnosGuardia(supabase, prestadoraId, [turno_guardia], `id, ${FICHA_NOMBRE}`)).get(turno_guardia.id) ?? [];
@@ -327,6 +338,7 @@ async function armarElRecordatorio({ turno_guardia, prestadoraId, idioma, horas,
     servicioId: turno_guardia.servicio_id,
     prestadoraId,
     ahora,
+    zona,
   });
 
   return {
@@ -345,7 +357,7 @@ async function armarElRecordatorio({ turno_guardia, prestadoraId, idioma, horas,
   };
 }
 
-async function recordar({ incidente, turno_guardia, prestadoraId, idioma, horas, ahora }) {
+async function recordar({ incidente, turno_guardia, prestadoraId, idioma, horas, ahora, zona }) {
   const veces = (incidente.veces_recordado ?? 0) + 1;
   const { destinatarios, mensaje: texto } = await armarElRecordatorio({
     turno_guardia,
@@ -354,6 +366,7 @@ async function recordar({ incidente, turno_guardia, prestadoraId, idioma, horas,
     horas,
     veces,
     ahora,
+    zona,
   });
 
   if (!destinatarios.length) {
@@ -389,8 +402,8 @@ async function recordar({ incidente, turno_guardia, prestadoraId, idioma, horas,
  * El equipo es del Servicio del turno, aunque el turno cubra a más de un Paciente —un matrimonio,
  * una residencia—: lo atiende un solo equipo.
  */
-async function aQuienSeLeAvisa({ servicioId, prestadoraId, ahora }) {
-  const equipo = await equipoDeUnServicio({ servicioId, prestadoraId, ahora });
+async function aQuienSeLeAvisa({ servicioId, prestadoraId, ahora, zona }) {
+  const equipo = await equipoDeUnServicio({ servicioId, prestadoraId, ahora, zona });
   const nombres = (lista) => [...new Set(lista.map((a) => a.nombre).filter(Boolean))];
   return {
     destinatarios: [...new Set(equipo.coordinadores.map((c) => c.email).filter(Boolean))],
@@ -399,9 +412,34 @@ async function aQuienSeLeAvisa({ servicioId, prestadoraId, ahora }) {
   };
 }
 
-// La fecha de un momento como la guarda la base (`2026-08-07`), en hora local. `toISOString()` a
-// secas daría la fecha en UTC, que en horario argentino cambia de día tres horas antes de tiempo.
-function fechaISO(momento) {
-  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 10);
+/**
+ * Cuántas horas faltan para que este turno empiece, con su hora leída en la zona de la
+ * Prestadora. Negativo si ya empezó; `null` si al turno le falta la fecha o la hora.
+ *
+ * Es la misma cuenta que `horasHastaElTurnoGuardia` de `incidenteTurnoGuardiaSinCubrir.js`, que es
+ * copia del Panel y lee la hora en el aparato de quien mira. En el servidor ese aparato cuenta en
+ * hora universal, y el turno de las 08:00 de Argentina quedaba tres horas antes de tiempo.
+ */
+function horasHastaElTurnoGuardia(turno_guardia, ahora, zona) {
+  if (!turno_guardia?.fecha || !turno_guardia?.hora_inicio) return null;
+  let inicio;
+  try {
+    inicio = inicioDeTurnoGuardiaEnLaZona(turno_guardia, zona);
+  } catch {
+    return null;
+  }
+  return (inicio.getTime() - ahora.getTime()) / MS_POR_HORA;
+}
+
+/**
+ * Si este turno ya es grave y tiene que tener un incidente abierto: sin nadie asignado, en pie y
+ * dentro de las horas que decidió la Prestadora. Las tres condiciones son las de
+ * `elTurnoGuardiaYaEsGrave` del Panel; acá las horas llegan ya contadas en la zona de la Prestadora.
+ */
+function elTurnoGuardiaYaEsGrave({ turno_guardia, regla, horas }) {
+  if (!turno_guardia) return false;
+  if (turno_guardia.asistente_id) return false;
+  if (turno_guardia.estado !== 'programada') return false;
+  if (horas === null) return false;
+  return horas <= reglaDelIncidenteDe(regla).horas_para_abrirlo;
 }

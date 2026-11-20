@@ -203,17 +203,21 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **Zona:** se elige de las zonas cargadas, y la lista de lugares de cada zona sale de la base.
      Hoy hay 4 zonas cargadas en la nube y ningún lugar adentro de ellas, así que la lista va a
      aparecer vacía hasta que cada Prestadora cargue los suyos.
-   - **Quién lo realiza:** los Asistentes que van a cubrir el Servicio. Usted lo fijó así: la
-     administración, cuando arma el Servicio, dice quién lo va a realizar y quién lo va a
-     coordinar, y el sistema le sugiere a quién.
+   - **Quién lo realiza:** los Asistentes que van a cubrir el Servicio. La administración nombra al
+     Coordinador, y el Coordinador arma el equipo. El Coordinador se ocupa de todo el manejo
+     operativo del Servicio; en lo económico y en lo legal asiste a la administración. La
+     administración puede revisar y vetar las decisiones del Coordinador, pero no está obligada a
+     hacerlo.
    - **Hoy** el equipo de la ficha se arma solo con quienes ya tienen turnos de guardia en el
-     Servicio, y la coordinación lo corrige después sumando o sacando Asistentes. Un Servicio recién
-     armado no tiene turnos de guardia, así que aparece sin equipo.
-   - **Pasa a ser:** al armar el Servicio, la administración suma a los Asistentes que lo van a
+     Servicio. Después lo corrigen a mano, sumando o sacando Asistentes, el Coordinador del Servicio
+     con el permiso de modificar los Asistentes del Servicio, o la administración. Un Servicio
+     recién armado no tiene turnos de guardia, así que aparece sin equipo. No existe ninguna forma
+     de que la administración vete una decisión del Coordinador.
+   - **Pasa a ser:** al armar el Servicio, el Coordinador suma a los Asistentes que lo van a
      realizar, con la misma corrección a mano que ya existe. El sistema le sugiere por zona, por
-     tareas, por capacidad, por antecedentes y por acuerdo económico; los tres que faltan son los
-     del punto 8. La lista que se arma sola se conserva: quien empieza a tener turnos de
-     guardia aparece igual.
+     compatibilidad con las tareas, por capacidad para realizarlas, por antecedentes y por acuerdo
+     económico; la zona es el punto 6 y las otras cuatro, el punto 8. La lista que se arma sola se
+     conserva: quien empieza a tener turnos de guardia aparece igual.
 
 5. **Modificar, pausar, suspender y cancelar, total o parcialmente.**
    - **Hoy:** un turno de guardia recurrente no se puede editar, ni pausar, ni cancelar desde
@@ -268,7 +272,7 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      tiene cada uno y por si su carga queda en la zona del Servicio. La cuenta la hace la base,
      sólo para la administración. El sistema sugiere y la administración elige.
 
-8. **Los tres criterios de sugerencia que faltan.**
+8. **Los criterios de sugerencia que faltan, además de la zona.**
    - **Capacidad para las tareas del Servicio.** Las tareas acordadas de cada Servicio se guardan
      (hoy 0 en la nube), y qué puede hacer cada tipo de Asistente también: habilitada, no incluida
      o prohibida. El cálculo de candidatas no lo lee. Además hay un defecto: la tarea prohibida

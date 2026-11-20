@@ -304,8 +304,16 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      cargado, por hora, por turno de guardia o por semana. La postulación pide el honorario
      pretendido, y no pasa al Legajo. La Prestación guarda sólo el precio al Cliente: nada dice
      cuánto se le paga a la Asistente por ese Servicio, así que hoy no hay contra qué comparar.
-     **Lo decide usted:** si el pago a la Asistente es siempre el de su Legajo, o si puede ser
-     distinto en cada Servicio. El Coordinador
+     Decidido: el valor del Legajo es el que la Asistente pretende, y se actualiza por un índice o
+     a pedido de ella. La Prestadora puede proponerle otro valor en cada Servicio y negociarlo. El
+     criterio compara el valor del Servicio con el que la Asistente pretende.
+     - **Hoy:** el valor del Legajo es uno solo por Asistente, sin fecha desde la que rige y sin
+       historia, y el índice sólo actualiza el precio al Cliente.
+     - **Propuesta:** el valor del Legajo guarda desde qué fecha rige cada monto, como pide la
+       regla de calcular a la escala vigente a la fecha del hecho, y el ajuste por índice reusa el
+       mismo mecanismo que ya actualiza el precio al Cliente. El valor de cada Servicio para cada
+       Asistente se guarda aparte, con su moneda.
+     - **Lo decide usted:** si el sistema registra la negociación o guarda sólo el valor final. El Coordinador
      no ve remuneraciones: la comparación la hace la base y contesta sólo si encaja o no.
 
 El acto no trae convertidor de los días y horarios escritos hoy a mano en la Prestación, porque no hay datos reales que

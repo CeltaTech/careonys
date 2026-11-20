@@ -235,6 +235,15 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      suspensión es una interrupción larga o sin fecha, por un problema, una sanción o un cambio de
      planes, hasta que se resuelva una condición o se tome una decisión final. Las dos guardan
      motivo y quién lo hizo. Hoy existe sólo la pausa, y la usa únicamente la internación.
+   - **La internación del Paciente tiene tres salidas**, y quien la registra elige una:
+     - **El Servicio se suspende** hasta que el Paciente vuelve al domicilio.
+     - **El Servicio se muda al domicilio temporal**, el hospital o la clínica, hasta que el
+       Paciente vuelve al domicilio.
+     - **El Servicio sigue en el domicilio habitual**, porque ahí hay otro Paciente que cuidar.
+     - **Hoy** existen las dos primeras: sin domicilio temporal la internación pausa los turnos de
+       guardia del Paciente, y con domicilio temporal los deja como están. La primera pasa de pausa
+       a suspensión. La tercera no existe: es el caso del matrimonio del defecto de la internación,
+       en el punto «La cuenta corre en los tres momentos».
    - **Alcance:** la acción alcanza al Servicio entero, a una Prestación, a un turno de guardia
      recurrente o a un solo turno de guardia.
    - **Motivos:** salen del catálogo de motivos que ya usa la cancelación de un turno. Hoy no tiene
@@ -246,7 +255,7 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **Tres defectos que se corrigen en este punto:**
      - Al terminar la internación se reactivan todos los turnos de guardia, recurrentes y sueltos,
        pausados del Paciente, también los que pausó otra persona y los de los días que ya pasaron. Pasa a reactivar
-       sólo lo que pausó la internación, y nada del pasado.
+       sólo los turnos de guardia que suspendió la internación, y ninguno del pasado.
      - La baja del Servicio cancela los turnos de guardia recurrentes activos y deja vivos los
        pausados. Si el Paciente estaba internado, al terminar la internación el turno de guardia
        recurrente vuelve a generar turnos de guardia de un Servicio dado de baja. Pasa a cancelar
@@ -1174,9 +1183,6 @@ títulos:
   (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:177`), pero todavía pide todos los Pacientes que
   la base le deja ver a quien la abre, sin recortarlos al Servicio elegido. Cuando el turno cuelgue
   del Servicio esa ventana cambia de raíz.
-
-**24. Usted** — Si la internación del Paciente pausa o suspende sus turnos de guardia. Hoy los
-pausa, sin fecha de vuelta, y los retoma al terminar la internación.
 
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
 

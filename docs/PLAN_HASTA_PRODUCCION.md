@@ -1175,6 +1175,9 @@ títulos:
   la base le deja ver a quien la abre, sin recortarlos al Servicio elegido. Cuando el turno cuelgue
   del Servicio esa ventana cambia de raíz.
 
+**24. Usted** — Si la internación del Paciente pausa o suspende sus turnos de guardia. Hoy los
+pausa, sin fecha de vuelta, y los retoma al terminar la internación.
+
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
 
 

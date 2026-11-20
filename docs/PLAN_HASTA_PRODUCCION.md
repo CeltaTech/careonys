@@ -289,8 +289,9 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **Capacidad para realizarlas.** Para tener la capacidad de realizar una tarea, la Asistente
      tiene que contar con la Especialidad adecuada. El Legajo guarda las Especialidades de la
      Asistente, del catálogo de su tipo: hoy 11 Especialidades en la nube y 50 asignadas. Hoy
-     ninguna tarea dice qué Especialidad pide. Propuesta: cada tarea del catálogo de su tipo dice
-     qué Especialidad pide, o ninguna; el cálculo de candidatas compara las tareas acordadas del
+     ninguna tarea dice qué Especialidad pide. Decidido: cada tarea del catálogo de su tipo puede
+     pedir una Especialidad, y no es obligatorio; sin Especialidad pedida, alcanza con el tipo. En
+     el Legajo tampoco es obligatoria: hoy 5 Asistentes no tienen ninguna. El cálculo de candidatas compara las tareas acordadas del
      Servicio contra las Especialidades del Legajo. La postulación pide además experiencia
      clínica, estudios y años de experiencia, y nada de eso pasa al Legajo al incorporar al
      aspirante.

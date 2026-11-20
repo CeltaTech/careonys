@@ -1,5 +1,5 @@
 import { enLaPrestadora } from '../db/connection.js';
-import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
+import { estaCertificada, exigirLaPrestadora } from './prestadoraCertificada.js';
 import { enviarPushAsistente } from './push.js';
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
@@ -10,8 +10,8 @@ import { turnosGuardiaEnLicenciaAdentro } from './turnoGuardiaDeLicencia.js';
 // Recorre los 3 eventos de push a Asistentes listados en
 // docs/PRD_04_05_App_Servicio.md:115 ("Nuevo turno de guardia asignado, mensajes del coordinador,
 // recordatorios"). Mismo patrón de "ya notificado" que revisarNotificacionesCoordinador.js:
-// cada evento tiene su propia columna *_enviado_at, se manda una sola vez, y el cron corre
-// cada pocos minutos recorriendo TODAS las prestadoras por igual.
+// cada evento tiene su propia columna *_enviado_at, se manda una sola vez, y el trabajo corre
+// cada pocos minutos, una vez por cada Prestadora certificada.
 
 // Cuánto antes se le recuerda a la Asistente su próximo turno de guardia, mientras la Prestadora no
 // haya elegido otra cosa. Es el mismo valor que la columna `prestadoras.minutos_aviso_previo_turno_guardia`
@@ -62,17 +62,12 @@ export async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, envia
   }
 }
 
-// Se recorre de a una Prestadora por vez, y cada una con la credencial del trabajo de esa
-// Prestadora, que la base acota a ella. Con cuánta anticipación se avisa lo elige cada Prestadora.
-export async function revisarRecordatoriosPush() {
-  const ahora = new Date();
-  for (const prestadoraId of await prestadorasCertificadas()) {
-    try {
-      await revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora);
-    } catch (error) {
-      console.error(`Error revisando los avisos al Asistente (prestadora ${prestadoraId}):`, error.message);
-    }
-  }
+// Trabaja en una sola Prestadora, la que le pasa `programar` en server.js, y sólo si está
+// certificada. Con cuánta anticipación se avisa lo elige cada Prestadora.
+export async function revisarRecordatoriosPush(prestadoraId, ahora = new Date()) {
+  exigirLaPrestadora(prestadoraId, 'revisarRecordatoriosPush');
+  if (!(await estaCertificada(prestadoraId))) return;
+  await revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora);
 }
 
 /** Lo de una sola Prestadora, con la credencial del trabajo de esa Prestadora. */

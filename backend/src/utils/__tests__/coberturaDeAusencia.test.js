@@ -11,7 +11,7 @@
  *      inventar un fin.
  *   2. DEVOLVER AL TITULAR mueve de vuelta los turnos de guardia programados desde el día pedido, borra su
  *      constancia de sustitución y no toca las anteriores.
- *   3. EL TRABAJO PROGRAMADO VA DE A UNA PRESTADORA: cada consulta de coberturas sale atada a una.
+ *   3. EL TRABAJO PROGRAMADO TRABAJA EN LA PRESTADORA QUE RECIBE: cada consulta sale atada a ella.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -119,22 +119,16 @@ describe('devolver al titular', () => {
 });
 
 describe('el trabajo programado', () => {
-  it('lee las coberturas de a una Prestadora', async () => {
-    respuestas.set('POST /rest/v1/rpc/prestadoras_a_recorrer', [PRESTADORA, '99999999-9999-9999-9999-999999999999']);
-    respuestas.set('GET /rest/v1/prestadoras', [{ id: 'certificada' }]);
+  it('lee las coberturas de la Prestadora que recibe, y de ninguna otra', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', [{ id: PRESTADORA }]);
 
-    await extenderCoberturasDeAusencia();
+    await extenderCoberturasDeAusencia(PRESTADORA);
 
     const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/coberturas_de_ausencia');
-    assert.equal(lecturas.length, 2);
-    assert.deepEqual(
-      lecturas.map((l) => l.filtros.get('prestadora_id')),
-      [`eq.${PRESTADORA}`, 'eq.99999999-9999-9999-9999-999999999999'],
-    );
+    assert.deepEqual(lecturas.map((l) => l.filtros.get('prestadora_id')), [`eq.${PRESTADORA}`]);
   });
 
-  it('cada Prestadora se trabaja con la credencial del trabajo de esa Prestadora', async () => {
-    respuestas.set('POST /rest/v1/rpc/prestadoras_a_recorrer', [PRESTADORA]);
+  it('todo va con la credencial del trabajo de esa Prestadora', async () => {
     respuestas.set('GET /rest/v1/prestadoras', [{ id: PRESTADORA }]);
     respuestas.set('GET /rest/v1/coberturas_de_ausencia', [
       {
@@ -146,10 +140,9 @@ describe('el trabajo programado', () => {
       },
     ]);
 
-    await extenderCoberturasDeAusencia();
+    await extenderCoberturasDeAusencia(PRESTADORA);
 
-    // La lista de a quiénes recorrer es lo único que sale sin Prestadora.
-    const deLaPrestadora = llamadas.filter((l) => l.clave !== 'POST /rest/v1/rpc/prestadoras_a_recorrer');
+    const deLaPrestadora = llamadas;
     assert.ok(deLaPrestadora.some((l) => l.clave === 'GET /rest/v1/turnos_guardia_cobertura'), 'no llegó a devolver al titular');
     for (const llamada of deLaPrestadora) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);

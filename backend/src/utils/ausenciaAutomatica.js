@@ -1,6 +1,6 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from './marcarAusente.js';
-import { prestadorasConAusenciaAutomatica } from './prestadorasDeLaIntermediacion.js';
+import { exigirLaPrestadora } from './prestadoraCertificada.js';
 
 // Detección automática de ausencia (pendiente #20 de docs/PLAN_HASTA_PRODUCCION.md, diseñado con el
 // Desarrollador el 2026-07-12): reemplaza al botón manual "marcar ausente" de
@@ -9,17 +9,12 @@ import { prestadorasConAusenciaAutomatica } from './prestadorasDeLaIntermediacio
 // server.js) porque, a diferencia de revisarVencimientos (una vez por día alcanza), acá el
 // margen de tolerancia se mide en minutos.
 //
-// Recorre las Prestadoras que la tienen encendida de a una, y cada una con la credencial del
-// trabajo de esa Prestadora, que la base acota a ella.
-export async function revisarAusenciasAutomaticas() {
-  const ahora = new Date();
-  for (const prestadoraId of await prestadorasConAusenciaAutomatica()) {
-    try {
-      await revisarLasAusenciasDeUnaPrestadora(prestadoraId, ahora);
-    } catch (error) {
-      console.error(`Error revisando las ausencias automáticas (prestadora ${prestadoraId}):`, error.message);
-    }
-  }
+// Trabaja en una sola Prestadora, la que le pasa `programar` en server.js, con la credencial del
+// trabajo de esa Prestadora, que la base acota a ella. Si la Prestadora no la tiene encendida, no
+// hace nada.
+export async function revisarAusenciasAutomaticas(prestadoraId, ahora = new Date()) {
+  exigirLaPrestadora(prestadoraId, 'revisarAusenciasAutomaticas');
+  await revisarLasAusenciasDeUnaPrestadora(prestadoraId, ahora);
 }
 
 /** Lo de una sola Prestadora, con la credencial del trabajo de esa Prestadora. */
@@ -36,7 +31,7 @@ export function revisarLasAusenciasDeUnaPrestadora(prestadoraId, ahora) {
       console.error(`Error consultando configuracion_ausencia_automatica (prestadora ${prestadoraId}):`, errorConfig.message);
       return;
     }
-    // Se apagó entre la lista y ahora: no se marca a nadie.
+    // La Prestadora no la tiene encendida: no se marca a nadie.
     if (!config) return;
     const minutosTolerancia = config.minutos_tolerancia_checkin;
 

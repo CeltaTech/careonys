@@ -1,5 +1,5 @@
 import { enLaPrestadora } from '../db/connection.js';
-import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
+import { estaCertificada, exigirLaPrestadora } from './prestadoraCertificada.js';
 import { cubrirTurnoGuardiaConSustituto } from './cubrirTurnoGuardia.js';
 import { finEfectivoDeLaAusencia } from './ausenciaQueTapa.js';
 import { hoyISO, sumarDias } from './horarios.js';
@@ -177,20 +177,16 @@ export async function aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId, s
 }
 
 /**
- * El trabajo programado: vuelve a aplicar cada cobertura vigente, de a una Prestadora por vez y con
- * la credencial del trabajo de esa Prestadora, que la base acota a ella.
+ * El trabajo programado: vuelve a aplicar cada cobertura vigente de una sola Prestadora, la que le
+ * pasa `programar` en server.js, y sólo si está certificada. Va con la credencial del trabajo de
+ * esa Prestadora, que la base acota a ella.
  */
-export async function extenderCoberturasDeAusencia() {
-  const hoy = hoyISO();
-  for (const prestadoraId of await prestadorasCertificadas()) {
-    try {
-      await enLaPrestadora(prestadoraId, 'extender las coberturas de ausencia', (db) =>
-        extenderLasDeUnaPrestadora(db, prestadoraId, hoy),
-      );
-    } catch (error) {
-      console.error(`[coberturaDeAusencia] no se pudieron extender las coberturas (prestadora ${prestadoraId}):`, error.message);
-    }
-  }
+export async function extenderCoberturasDeAusencia(prestadoraId, hoy = hoyISO()) {
+  exigirLaPrestadora(prestadoraId, 'extenderCoberturasDeAusencia');
+  if (!(await estaCertificada(prestadoraId))) return;
+  await enLaPrestadora(prestadoraId, 'extender las coberturas de ausencia', (db) =>
+    extenderLasDeUnaPrestadora(db, prestadoraId, hoy),
+  );
 }
 
 async function extenderLasDeUnaPrestadora(db, prestadoraId, hoy) {

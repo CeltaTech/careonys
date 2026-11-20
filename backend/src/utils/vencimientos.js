@@ -1,4 +1,5 @@
-import { paraCadaPrestadora } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
+import { exigirLaPrestadora } from './prestadoraCertificada.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { DIAS_AVISO_POR_DEFECTO, fechaLimiteDeAviso, ventanaDeAviso } from './reglaVencimientos.js';
 import { ESTADO_VISIBLE, estadoVisible } from './estadoDelDocumento.js';
@@ -23,10 +24,11 @@ const CLAVE_POR_CLASE = {
 //   «vencido»—. Lo que ya se le mandó queda anotado en `avisos_de_documento_enviados`, y la base
 //   no deja anotarlo dos veces.
 //
-// De a una Prestadora por vez, con la credencial del trabajo sin persona: la base sólo le
-// contesta lo de esa Prestadora.
-export async function revisarVencimientos() {
-  await paraCadaPrestadora(TRABAJO, revisarLaPrestadora);
+// Trabaja en una sola Prestadora, la que le pasa `programar` en server.js, con la credencial del
+// trabajo de esa Prestadora: la base sólo le contesta lo suyo.
+export async function revisarVencimientos(prestadoraId) {
+  exigirLaPrestadora(prestadoraId, 'revisarVencimientos');
+  await enLaPrestadora(prestadoraId, TRABAJO, (db) => revisarLaPrestadora(prestadoraId, db));
 }
 
 async function revisarLaPrestadora(prestadoraId, db) {

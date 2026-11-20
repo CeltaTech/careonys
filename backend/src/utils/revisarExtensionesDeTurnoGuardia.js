@@ -1,5 +1,5 @@
 import { enLaPrestadora } from '../db/connection.js';
-import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
+import { estaCertificada, exigirLaPrestadora } from './prestadoraCertificada.js';
 import { idsDePacientesDeTurnoGuardia } from './pacientesDeTurnoGuardia.js';
 import { finDeTurnoGuardia, sumarDias } from './horarios.js';
 import {
@@ -32,8 +32,8 @@ import {
    ordena. Lo que este proceso hace es que el rato que se quedó exista escrito, porque hasta ahora
    no existía en ningún lado y esas horas son suyas.
 
-   Recorre las Prestadoras de a una, y cada una con la credencial del trabajo de esa Prestadora,
-   que la base acota a ella. */
+   Trabaja en una sola Prestadora, la que le pasa `programar` en server.js, y sólo si está
+   certificada, con la credencial del trabajo de esa Prestadora, que la base acota a ella. */
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
@@ -41,15 +41,10 @@ const MS_POR_DIA = 24 * 60 * 60 * 1000;
 // días antes de terminar, y todavía uno más para el caso que quedó abierto de ayer.
 const DIAS_HACIA_ATRAS = 4;
 
-export async function revisarExtensionesDeTurnoGuardia() {
-  const ahora = new Date();
-  for (const prestadoraId of await prestadorasCertificadas()) {
-    try {
-      await revisarLasExtensionesDeUnaPrestadora(prestadoraId, ahora);
-    } catch (error) {
-      console.error(`Error revisando las extensiones (prestadora ${prestadoraId}):`, error.message);
-    }
-  }
+export async function revisarExtensionesDeTurnoGuardia(prestadoraId, ahora = new Date()) {
+  exigirLaPrestadora(prestadoraId, 'revisarExtensionesDeTurnoGuardia');
+  if (!(await estaCertificada(prestadoraId))) return;
+  await revisarLasExtensionesDeUnaPrestadora(prestadoraId, ahora);
 }
 
 /** Lo de una sola Prestadora, con la credencial del trabajo de esa Prestadora. */

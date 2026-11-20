@@ -258,12 +258,12 @@ function programar(tarea, cadaMs, { conLaPrestadora = false } = {}) {
 }
 
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
-programar(revisarVencimientos, UN_DIA_MS);
+programar(revisarVencimientos, UN_DIA_MS, { conLaPrestadora: true });
 
 // Margen de tolerancia se mide en minutos (no en días como los vencimientos), por eso
 // corre cada 5 minutos en vez de una vez por día.
 const CINCO_MINUTOS_MS = 5 * 60 * 1000;
-programar(revisarAusenciasAutomaticas, CINCO_MINUTOS_MS);
+programar(revisarAusenciasAutomaticas, CINCO_MINUTOS_MS, { conLaPrestadora: true });
 
 // Insistencia de Coordinador (punto 5, docs/PRD_06_WhatsApp_IA.md) — corre con la misma
 // cadencia que revisarAusenciasAutomaticas porque también se mide en minutos, no en días.
@@ -281,7 +281,7 @@ programar(extenderSeriesTurnoGuardiaAbiertas, UN_DIA_MS, { conLaPrestadora: true
 
 // Push a Asistentes (nuevo turno de guardia asignado, mensajes del coordinador, recordatorios) —
 // docs/PRD_04_05_App_Servicio.md:115. Misma cadencia que revisarAusenciasAutomaticas.
-programar(revisarRecordatoriosPush, CINCO_MINUTOS_MS);
+programar(revisarRecordatoriosPush, CINCO_MINUTOS_MS, { conLaPrestadora: true });
 
 // IA Nivel 2 (Alertas por patrones) — job nocturno, docs/AI_PROMPTS.md:43. Misma cadencia
 // que revisarVencimientos (se mide en días, no minutos); el disparo inmediato por palabra
@@ -308,7 +308,7 @@ programar(revisarAusenciasAvisadas, CINCO_MINUTOS_MS);
 // La cobertura de un turno fijo sigue a la ausencia: si se corre la fecha prevista o se anota la
 // vuelta, cubre lo que entró y le devuelve al titular lo que salió. Si pasó la fecha y nadie dijo
 // nada, la va estirando de a poco mientras tanto.
-programar(extenderCoberturasDeAusencia, CINCO_MINUTOS_MS);
+programar(extenderCoberturasDeAusencia, CINCO_MINUTOS_MS, { conLaPrestadora: true });
 
 // El turno que llega sin nadie abre un incidente que queda abierto hasta que una persona diga cómo
 // terminó. El mensaje de arriba mira los mismos turnos, pero avisa y se termina; éste deja constancia
@@ -326,7 +326,7 @@ programar(revisarLlegadasDemoradas, CINCO_MINUTOS_MS);
 // más y hasta cuándo: no avisa nada —de que falta el relevo ya se enteró quien coordina— y no
 // decide nada. Corre seguido porque lo que mira son minutos, y porque su pantalla necesita saber
 // que quedó de más apenas pasa la hora.
-programar(revisarExtensionesDeTurnoGuardia, CINCO_MINUTOS_MS);
+programar(revisarExtensionesDeTurnoGuardia, CINCO_MINUTOS_MS, { conLaPrestadora: true });
 
 // El recordatorio del enlace de activación que sigue sin usarse. La espera se cuenta en días, pero
 // se mira cada hora para que el recordatorio no llegue casi un día tarde.

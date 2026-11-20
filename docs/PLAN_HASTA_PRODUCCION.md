@@ -192,17 +192,18 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      de guardia recurrente es de un matrimonio y el internado es el segundo, no se pausa. Pasa a
      buscar por la tabla que guarda todos los Pacientes del turno de guardia recurrente.
 
-4. **La ficha del Servicio dice qué períodos cubre, en qué zona y quién lo realiza.**
+4. **La ficha del Servicio dice qué períodos cubre, en qué lugar y quién lo realiza.**
    - **Hoy:** el Servicio no está adentro de la ficha del Cliente: tiene su propia sección en el
      menú, con su lista y su ficha. Ya se puede crear, dar de baja y reactivar, con el permiso de
      gestionar Servicios, que de fábrica es sólo de la administración. Ya se le asigna el
      Coordinador, y sin Coordinador no se pueden crear turnos de guardia. El Servicio guarda sólo
-     Cliente, etiqueta, estado y Coordinador: no tiene período ni zona.
+     Cliente, etiqueta, estado y Coordinador: no tiene período ni lugar.
    - **Período:** el Servicio guarda desde cuándo y hasta cuándo, y el hasta puede quedar vacío,
      que es la duración indeterminada. Se carga al crearlo y se cambia en la ficha.
-   - **Zona:** se elige de las zonas cargadas, y la lista de lugares de cada zona sale de la base.
-     Hoy hay 4 zonas cargadas en la nube y ningún lugar adentro de ellas, así que la lista va a
-     aparecer vacía hasta que cada Prestadora cargue los suyos.
+   - **Lugar:** el Servicio se presta donde está el Paciente, así que su lugar es el del domicilio
+     del Paciente, o el del domicilio temporal vigente. No se elige aparte. La zona ya no es un
+     criterio: en Configuración quedó sólo como atajo para marcar de una vez todos los lugares que
+     abarca. Hoy la nube no tiene ningún lugar cargado.
    - **Quién lo realiza:** los Asistentes que van a cubrir el Servicio. La administración nombra al
      Coordinador, y el Coordinador arma el equipo. El Coordinador se ocupa de todo el manejo
      operativo del Servicio; en lo económico y en lo legal asiste a la administración. La
@@ -214,9 +215,10 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      recién armado no tiene turnos de guardia, así que aparece sin equipo. No existe ninguna forma
      de que la administración vete una decisión del Coordinador.
    - **Pasa a ser:** al armar el Servicio, el Coordinador suma a los Asistentes que lo van a
-     realizar, con la misma corrección a mano que ya existe. El sistema le sugiere por zona, por
+     realizar, con la misma corrección a mano que ya existe. El sistema le sugiere por lugar, por
      compatibilidad con las tareas, por capacidad para realizarlas, por antecedentes y por acuerdo
-     económico; la zona es el punto 6 y las otras cuatro, el punto 8. La lista que se arma sola se
+     económico; el lugar es el punto «El lugar entra en el cálculo de candidatas» y los otros
+     cuatro, el punto «Los criterios de sugerencia que faltan». La lista que se arma sola se
      conserva: quien empieza a tener turnos de guardia aparece igual.
 
 5. **Modificar, pausar, suspender y cancelar, total o parcialmente.**
@@ -246,16 +248,20 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
        también los pausados.
      - La internación no mira si el Servicio sigue vigente. Pasa a mirarlo.
 
-6. **La zona entra en el cálculo de candidatas.**
+6. **El lugar entra en el cálculo de candidatas.**
    - **Hoy la lista de candidatas no aparece en ninguna pantalla.** El cálculo existe
      (`panel/src/lib/candidatos.js:386`) y su configuración tiene pantalla, pero ninguna pantalla
      de asignación lo llama. Mira el Padrón, la continuidad, si está libre a esa hora, la modalidad,
      las ausencias, si se marcó disponible, los documentos, las horas por semana, el descanso entre
-     turnos y la distancia en línea recta. No mira la zona.
+     turnos y la distancia en línea recta. No mira el lugar.
+   - **Legajo:** guarda «Dónde acepta trabajar», que se elige de la lista de lugares de la
+     Prestadora. Hoy en la nube ninguna de las 46 Asistentes tiene lugares elegidos.
+   - **Reclutamiento:** la postulación pide los lugares escritos a mano y una distancia máxima, y
+     ninguno de los dos pasa al Legajo al incorporar al aspirante. Es el defecto «Al incorporar un
+     aspirante se pierden datos», más abajo en este plan.
    - **Propuesta:** la base dice si la Asistente acepta trabajar en el lugar del Paciente, sea su
      domicilio o un domicilio temporal vigente. Si el Paciente o la Asistente no tienen lugar
-     cargado, el criterio no opina. Hoy en la nube ningún Paciente tiene lugar y ninguna Asistente
-     tiene lugares elegidos.
+     cargado, el criterio no opina.
    - **La lista vuelve a una pantalla:** la de asignar una Asistente a un turno de guardia, con la
      configuración que ya existe.
    - **El nivel de complejidad entra en la misma pasada**, como dice el paso de más abajo sobre el
@@ -269,24 +275,33 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      Nada sugiere un Coordinador. En la nube hay un solo Coordinador activo y ningún Servicio
      coordinado, así que hoy no se puede crear ningún turno de guardia en ninguna Prestadora.
    - **Propuesta:** al asignar, la lista de Coordinadores viene ordenada por cuántos Servicios
-     tiene cada uno y por si su carga queda en la zona del Servicio. La cuenta la hace la base,
+     tiene cada uno y por si el lugar del Servicio está entre los lugares que cubre. La cuenta la hace la base,
      sólo para la administración. El sistema sugiere y la administración elige.
 
-8. **Los criterios de sugerencia que faltan, además de la zona.**
-   - **Capacidad para las tareas del Servicio.** Las tareas acordadas de cada Servicio se guardan
-     (hoy 0 en la nube), y qué puede hacer cada tipo de Asistente también: habilitada, no incluida
-     o prohibida. El cálculo de candidatas no lo lee. Además hay un defecto: la tarea prohibida
-     traba sólo al cargar las tareas acordadas, no al asignar el turno. Hoy se puede asignar un
-     cuidador a un Servicio con tareas acordadas para enfermería. Pasa a trabarse al asignar, que
-     es lo único que la regla de las tres clases de tarea bloquea; la no incluida sólo avisa.
-   - **Antecedentes de la Asistente.** Los datos sí se guardan: calificaciones, ausencias, llegadas
-     tarde, horas extra e incidentes de relevo. **Lo decide usted:** cuáles cuentan y de qué
-     período. Propuesta: calificaciones, ausencias sin aviso y llegadas tarde, de los últimos seis
-     meses, con el período en la configuración del cálculo.
-   - **Acuerdo económico.** Lo que cobra cada Asistente se guarda. Falta saber si aceptó ese monto
-     para este Servicio. **Lo decide usted:** si la Asistente acepta el monto de cada Servicio, o si
-     alcanza con comparar contra lo que tiene cargado. El Coordinador no ve remuneraciones: la
-     comparación la hace la base y contesta sólo si encaja o no.
+8. **Los criterios de sugerencia que faltan, además del lugar.**
+   - **Compatibilidad con las tareas.** El Legajo guarda el tipo de Asistente, y cada tipo dice qué
+     tareas tiene habilitadas, no incluidas o prohibidas. Las tareas acordadas de cada Servicio se
+     guardan (hoy 0 en la nube). El cálculo de candidatas no lo lee. Además hay un defecto: la
+     tarea prohibida traba sólo al cargar las tareas acordadas, no al asignar el turno. Hoy se
+     puede asignar un cuidador a un Servicio con tareas acordadas para enfermería. Pasa a trabarse
+     al asignar, que es lo único que la regla de las tres clases de tarea bloquea; la no incluida
+     sólo avisa.
+   - **Capacidad para realizarlas.** El Legajo guarda las Especialidades de la Asistente, del
+     catálogo de su tipo: hoy 11 Especialidades en la nube y 50 asignadas. Pero ni el Servicio ni
+     el Paciente dicen qué Especialidad hace falta: el Paciente sólo tiene sus patologías y su
+     nivel de complejidad. La postulación pide además experiencia clínica, estudios y años de
+     experiencia, y nada de eso pasa al Legajo al incorporar al aspirante. **Lo decide usted:**
+     contra qué se compara la capacidad.
+   - **Antecedentes de la Asistente.** El Legajo guarda calificaciones, ausencias, llegadas tarde,
+     horas extra e incidentes de relevo, y las referencias laborales que trae la postulación. La
+     experiencia laboral de la postulación no pasa al Legajo. **Lo decide usted:** cuáles cuentan y
+     de qué período. Propuesta: calificaciones, ausencias sin aviso y llegadas tarde, de los
+     últimos seis meses, con el período en la configuración del cálculo.
+   - **Acuerdo económico.** El Legajo guarda lo que cobra cada Asistente: hoy 38 de 46 lo tienen
+     cargado. La postulación pide el honorario pretendido, y no pasa al Legajo. Falta saber si la
+     Asistente aceptó el monto de este Servicio. **Lo decide usted:** si la Asistente acepta el
+     monto de cada Servicio, o si alcanza con comparar contra lo que tiene cargado. El Coordinador
+     no ve remuneraciones: la comparación la hace la base y contesta sólo si encaja o no.
 
 El acto no trae convertidor de los días y horarios escritos hoy a mano en la Prestación, porque no hay datos reales que
 convertir: en la nube hay 0 Prestaciones. No toca las dos aplicaciones de teléfono, que no escriben

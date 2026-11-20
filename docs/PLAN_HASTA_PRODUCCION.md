@@ -174,7 +174,9 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      uno llama a la misma cuenta al construirse.
    - **El aviso entra por el catálogo de avisos que ya existe**, como uno más, y no se puede apagar:
      usted fijó que no puede haber una guardia sin cubrir que nadie vea. Su texto va en los tres
-     idiomas, en los mensajes del sistema, y es el del paso 24.
+     idiomas, en los mensajes del sistema, con el mismo molde que el del turno de guardia sin
+     cubrir. El asunto es «Guardia sin cubrir», y el cuerpo, «Guardia del {{fecha}}, de
+     {{horaInicio}} a {{horaFin}}, para {{pacientes}}. Ningún turno de guardia la cubre.»
    - **La guardia sin cubrir se avisa una vez.** Se guarda qué día y horario ya se avisó, para
      que los tres momentos no repitan el mismo aviso; si se cubre y vuelve a quedar sin cubrir, se
      avisa de nuevo.
@@ -1170,13 +1172,8 @@ títulos:
   la base le deja ver a quien la abre, sin recortarlos al Servicio elegido. Cuando el turno cuelgue
   del Servicio esa ventana cambia de raíz.
 
-**23. Usted** — Aprobar los ocho pasos del paso 27, que todavía no están aprobados, junto con lo
-que en cada uno dice «Lo decide usted». Hasta que lo estén no se escribe código de producción de
-ninguno.
-
-**24. Usted** — Dos respuestas: qué dice el aviso cuando queda una guardia sin cubrir, sin ningún
-turno de guardia creado, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o
-dos, una por tiempo conocido y otra indefinida—.
+**24. Usted** — Si «suspender» es distinto de «pausar»: una sola acción con fecha de vuelta
+opcional, o dos, una por tiempo conocido y otra indefinida.
 
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
 

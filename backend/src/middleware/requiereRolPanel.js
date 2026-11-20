@@ -181,12 +181,20 @@ export async function requiereRolPanel(req, res, next) {
   // está de verla entrar, y acá pasan todos. La función se ocupa de que no quede un renglón por
   // pedido, y de no interrumpir el trabajo si la escritura falla.
   //
+  // Se espera a que termine antes de seguir con el pedido. Así la entrada queda anotada antes que
+  // lo que esa persona haga en el mismo pedido, y ninguna escritura queda suelta después de la
+  // respuesta: una escritura suelta llegaba a la base en cualquier momento posterior, y en las
+  // pruebas caía adentro del caso siguiente. Cuesta una escritura por cuenta y por ventana; los
+  // demás pedidos vuelven enseguida, sin tocar la base.
+  //
   // Esto es del registro de la Prestadora, no de la auditoría de los accesos: son dos
   // preguntas distintas y viven en dos tablas distintas, `auditoria_de_accesos` y
   // `registro_actividad`.
-  registrarEntradaAlPanel(req.usuarioPanel).catch((error) => {
+  try {
+    await registrarEntradaAlPanel(req.usuarioPanel);
+  } catch (error) {
     console.error('Error registrando la entrada al Panel:', error.message);
-  });
+  }
 
   // EL BORRADO DE DATOS, PARA TODAS LAS RUTAS A LA VEZ.
   //

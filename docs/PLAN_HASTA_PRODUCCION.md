@@ -127,7 +127,7 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      turno de guardia recurrente: una Prestación es de un solo Paciente y un turno de guardia
      recurrente puede cubrir a varios, como un matrimonio. Va una tabla puente,
      `series_turnos_guardia_prestaciones`, y la base rechaza que la Prestación y el turno de guardia
-     recurrente sean de Servicios distintos. De ahí leen el aviso del cronograma sin cubrir y la
+     recurrente sean de Servicios distintos. De ahí leen el aviso de la guardia sin cubrir y la
      sugerencia de Asistentes de qué es la guardia, aunque todavía no haya nadie asignado.
    - **Cuando una Prestación se reemplaza por otra** —un cambio de precio—, sus horarios pasan a la
      nueva. Hoy eso ocurre en cuatro lugares: el cambio de precio del Panel y las tres funciones de
@@ -140,13 +140,13 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **De paso:** el comentario guardado de la base sobre la columna del Servicio en los turnos de
      guardia recurrentes dice que puede quedar vacía, y la base no lo permite. Se corrige.
 
-2. **Una sola función encuentra el cronograma sin cubrir.**
-   - **El cronograma sin cubrir** son los días y horarios del cronograma de una guardia que no tienen
-     ningún turno de guardia creado. No es el turno vacante: el turno vacante existe y le falta el
+2. **Una sola función encuentra las guardias sin cubrir.**
+   - **La guardia sin cubrir** es la guardia del cronograma, o la parte de ella, que no tiene ningún
+     turno de guardia creado. No es el turno vacante: el turno vacante existe y le falta el
      Asistente; acá no hay turno de guardia.
    - **Hoy no existe nada parecido.**
    - **Propuesta:** una función de la base recibe un Servicio y un período, y contesta qué días y
-     horarios del cronograma no cubre ningún turno de guardia recurrente vigente, con su Paciente,
+     horarios del cronograma de guardias no cubre ningún turno de guardia recurrente vigente, con su Paciente,
      su Prestación, su día y su horario. Lee sólo dentro de la Prestadora de quien la llama.
    - **Turno de guardia recurrente vigente** quiere decir: activo, y con la fecha adentro de su
      vigencia. Uno sin fecha de fin cubre hacia adelante sin límite. Uno pausado o cancelado no
@@ -166,9 +166,9 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      cancelar un turno de guardia recurrente no existen todavía: los construye el punto 5, y cada
      uno llama a la misma cuenta al construirse.
    - **El aviso entra por el catálogo de avisos que ya existe**, como uno más, y no se puede apagar:
-     usted fijó que no puede haber cronograma sin cubrir que nadie vea. Su texto va en los tres
+     usted fijó que no puede haber una guardia sin cubrir que nadie vea. Su texto va en los tres
      idiomas, en los mensajes del sistema, y es el del paso 24.
-   - **El cronograma sin cubrir se avisa una vez.** Se guarda qué día y horario ya se avisó, para
+   - **La guardia sin cubrir se avisa una vez.** Se guarda qué día y horario ya se avisó, para
      que los tres momentos no repitan el mismo aviso; si se cubre y vuelve a quedar sin cubrir, se
      avisa de nuevo.
    - **Tres defectos del pasaje diario se corrigen en este punto,** porque la cuenta se apoya en él:
@@ -1070,7 +1070,7 @@ mientras armar un Servicio no sea un acto con su pantalla. **Y va después de la
 sirve de las listas de opciones por Prestadora, que es lo que quedó construido allá.
 
 **Lo que pidió usted son cuatro cosas:** que un Servicio pueda tener duración indeterminada; que
-no quede cronograma sin cubrir que nadie vea; que se pueda pausar, suspender, modificar y cancelar, en forma total o
+no quede una guardia sin cubrir que nadie vea; que se pueda pausar, suspender, modificar y cancelar, en forma total o
 parcial; y que use las zonas que ya están cargadas.
 
 **Lo que ya funciona y no se rehace:** el turno de guardia recurrente sin fecha de fin, que se
@@ -1084,17 +1084,18 @@ mecanismos de aviso; y la estructura de zonas (`zonas_cobertura`, `lugares`, `zo
 **Lo que usted fijó sobre cómo se resuelve:** el cronograma de la Prestación se carga igual que un
 turno de guardia recurrente —días marcados, hora de inicio, hora de fin—, con más de un renglón
 cuando haga falta; la cuenta es directa, el cronograma menos lo que cubren los turnos de guardia
-recurrentes vigentes, y lo que sobra es el cronograma sin cubrir, con su día y su horario; y la
+recurrentes vigentes, y lo que sobra son las guardias sin cubrir, con su día y su horario; y la
 cuenta corre en tres momentos: al armar o cambiar un turno de guardia recurrente, al suspender o
 cancelar uno, y en el pasaje diario que ya los extiende.
 
-**Lo que se carga son tres niveles que no se mezclan, y la guardia es una clase de Prestación:**
+**Lo que se carga son cuatro niveles que no se mezclan:**
 
 | | Qué es | Ejemplo |
 |---|---|---|
 | **Servicio** | el acuerdo entero | cuidado domiciliario, por tiempo indeterminado |
-| **Prestación** | cada cosa del acuerdo, con su precio. Si es una guardia, lleva su cronograma de días y horarios —una franja acotada o las 24 horas los 7 días—, que se anota una sola vez | la guardia de cuidados: los 7 días, de 00:00 a 24:00. Aparte, la guardia de enfermería, de 8 a 14 los martes, y la kinesiología |
-| **Turno de guardia** | la parte del cronograma que cubre una Asistente, hasta que le entrega las responsabilidades a quien la releva o al Cliente | tres turnos de ocho horas, tres personas |
+| **Prestación** | cada cosa del acuerdo, con su precio. Si se cubre con la presencia de un Asistente, lleva su cronograma de guardias —una franja acotada o las 24 horas los 7 días—, que se anota una sola vez | los cuidados: los 7 días, de 00:00 a 24:00. Aparte, la enfermería, de 8 a 14 los martes, y la kinesiología |
+| **Guardia** | cada uno de los días y horarios del cronograma de guardias | la guardia del lunes, la del martes, la del fin de semana |
+| **Turno de guardia** | la parte de una guardia que cubre una Asistente, hasta que le entrega las responsabilidades a quien la releva o al Cliente | tres turnos de ocho horas, tres personas |
 
 **La palabra «tramo» no se usa para los días y horarios de una Prestación**, porque en el producto ya
 nombra otra cosa: los renglones de premura con los que se le insiste al Coordinador y el período
@@ -1103,10 +1104,10 @@ liquidado.
 **Contra qué choca este acto en el resto de la lista.** Son cinco, y ninguno se ve leyendo los
 títulos:
 
-- **El aviso del cronograma sin cubrir no es pieza nueva: entra por el catálogo de avisos que ya existe**, con su
+- **El aviso de la guardia sin cubrir no es pieza nueva: entra por el catálogo de avisos que ya existe**, con su
   configuración por Prestadora. Las alertas tempranas las enciende o apaga cada Prestadora, una por
-  una (sección «El Paciente nunca queda solo»), y el aviso del cronograma sin cubrir no puede ser
-  de ésas: usted fijó que no puede haber cronograma sin cubrir que nadie vea.
+  una (sección «El Paciente nunca queda solo»), y el aviso de la guardia sin cubrir no puede ser
+  de ésas: usted fijó que no puede haber una guardia sin cubrir que nadie vea.
 - **La sugerencia de Asistentes no mira la zona, y no aparece en ninguna pantalla.** El cálculo
   —`panel/src/lib/candidatos.js`— no nombra zonas; sí mira la distancia en línea recta hasta la
   casa del Paciente, cuando las dos ubicaciones están cargadas. Ninguna pantalla de asignación lo
@@ -1127,8 +1128,8 @@ títulos:
 que en cada uno dice «Lo decide usted». Hasta que lo estén no se escribe código de producción de
 ninguno.
 
-**24. Usted** — Dos respuestas: qué dice el aviso cuando quedan días y horarios del cronograma sin
-ningún turno de guardia que los cubra, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o
+**24. Usted** — Dos respuestas: qué dice el aviso cuando queda una guardia sin cubrir, sin ningún
+turno de guardia creado, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o
 dos, una por tiempo conocido y otra indefinida—.
 
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
@@ -1522,9 +1523,9 @@ diciendo nada.
 - **El barrido del tuteo alcanza pantallas que todavía no están escritas** —el formulario de
   postulación, lo que falta de las dos aplicaciones—. No se barre dos veces: la regla queda
   escrita y cada pantalla nueva nace cumpliéndola.
-- **Un cartel ya fijó el molde del aviso del cronograma sin cubrir.** En las guardias sin cerrar usted escribió que
-  si hay algo se muestra «y si corresponde a la pantalla también cómo se solucionan». El aviso del
-  cronograma sin cubrir, más arriba, es el mismo caso y sigue sin redactar: el criterio ya está dado.
+- **Un cartel ya fijó el molde del aviso de la guardia sin cubrir.** En las guardias sin cerrar usted escribió que
+  si hay algo se muestra «y si corresponde a la pantalla también cómo se solucionan». El aviso dla
+  guardia sin cubrir, más arriba, es el mismo caso y sigue sin redactar: el criterio ya está dado.
 
 **Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
 la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.

@@ -112,7 +112,7 @@ de una Prestadora no lee nada de otra.
 
 **27.** Construir el acto, en este orden. Cada paso deja el sistema funcionando. Lo que dice cada
 punto se comprobó contra el código y la base en la nube; los números de la base son de la nube:
-15 Servicios, ninguno con Coordinador; 0 Prestaciones; 0 series; 151 turnos de guardia sueltos.
+15 Servicios, ninguno con Coordinador; 0 Prestaciones; 0 turnos de guardia recurrentes; 151 turnos de guardia sueltos.
 
 1. **Los días y horarios de la Prestación pasan a ser un dato.**
    - **Hoy:** en la Ficha del cliente, en Prestaciones del Paciente, hay dos casilleros de texto
@@ -123,60 +123,67 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **Propuesta:** una tabla propia, `horarios_de_la_prestacion`, con un renglón por cada franja:
      días marcados, hora de inicio, hora de fin. Nace con su Prestadora, con clave `uuid` y con RLS
      en la misma migración.
-   - **Cada serie dice qué Prestación cubre.** No alcanza una columna en la serie: una Prestación es
-     de un solo Paciente y una serie puede cubrir a varios, como un matrimonio. Va una tabla puente,
-     `series_turnos_guardia_prestaciones`, y la base rechaza que la Prestación y la serie sean de
-     Servicios distintos. De ahí leen el aviso del hueco y la sugerencia de Asistentes de qué es la
-     guardia, aunque todavía no haya nadie asignado.
+   - **Cada turno de guardia recurrente dice qué Prestación cubre.** No alcanza una columna en el
+     turno de guardia recurrente: una Prestación es de un solo Paciente y un turno de guardia
+     recurrente puede cubrir a varios, como un matrimonio. Va una tabla puente,
+     `series_turnos_guardia_prestaciones`, y la base rechaza que la Prestación y el turno de guardia
+     recurrente sean de Servicios distintos. De ahí leen el aviso del cronograma sin cubrir y la
+     sugerencia de Asistentes de qué es la guardia, aunque todavía no haya nadie asignado.
    - **Cuando una Prestación se reemplaza por otra** —un cambio de precio—, sus horarios pasan a la
      nueva. Hoy eso ocurre en cuatro lugares: el cambio de precio del Panel y las tres funciones de
      la base que ajustan precios por índice. Las cuatro copian los horarios con la misma función.
    - **El motor de formularios declarados no se usa en este punto.** Existe, pero no lo usa ninguna
      pantalla, tiene 0 formularios cargados, no tiene un tipo de casillero para la hora ni para los
      días de la semana, y no conoce la Prestación. La pantalla se arma con los casilleros de la
-     ventana de crear una serie, que ya piden exactamente eso. Si usted prefiere que este punto
+     ventana de crear un turno de guardia recurrente, que ya piden exactamente eso. Si usted prefiere que este punto
      estrene el motor, hay que agregarle esos dos tipos de casillero primero.
-   - **De paso:** el comentario guardado de la base sobre la columna del Servicio en las series dice
-     que puede quedar vacía, y la base no lo permite. Se corrige.
+   - **De paso:** el comentario guardado de la base sobre la columna del Servicio en los turnos de
+     guardia recurrentes dice que puede quedar vacía, y la base no lo permite. Se corrige.
 
-2. **Una sola función hace la cuenta del hueco.**
+2. **Una sola función encuentra el cronograma sin cubrir.**
+   - **El cronograma sin cubrir** son los días y horarios del cronograma de una guardia que no tienen
+     ningún turno de guardia creado. No es el turno vacante: el turno vacante existe y le falta el
+     Asistente; acá no hay turno de guardia.
    - **Hoy no existe nada parecido.**
-   - **Propuesta:** una función de la base recibe un Servicio y un período, y contesta qué horarios
-     pactados no cubre ninguna serie vigente, con su Paciente, su Prestación, su día y su horario.
-     Lee sólo dentro de la Prestadora de quien la llama.
-   - **Serie vigente** quiere decir: activa, y con la fecha adentro de su vigencia. Una serie sin
-     fecha de fin cubre hacia adelante sin límite. Una pausada o cancelada no cuenta.
-   - Resuelve que una serie cubra a varios Pacientes y que un mismo horario lo cubran dos series
-     sumadas, por ejemplo de 0 a 8 y de 8 a 24.
-   - **Lo decide usted:** si un turno de guardia suelto, creado a mano para un día, tapa el hueco de
-     ese día. Propuesta: sí, porque ese día hay alguien.
+   - **Propuesta:** una función de la base recibe un Servicio y un período, y contesta qué días y
+     horarios del cronograma no cubre ningún turno de guardia recurrente vigente, con su Paciente,
+     su Prestación, su día y su horario. Lee sólo dentro de la Prestadora de quien la llama.
+   - **Turno de guardia recurrente vigente** quiere decir: activo, y con la fecha adentro de su
+     vigencia. Uno sin fecha de fin cubre hacia adelante sin límite. Uno pausado o cancelado no
+     cuenta.
+   - Resuelve que un turno de guardia recurrente cubra a varios Pacientes, y que un mismo día del
+     cronograma lo cubran dos turnos de guardia recurrentes sumados, por ejemplo de 0 a 8 y de 8 a 24.
+   - **Lo decide usted:** si un turno de guardia suelto, creado a mano para un día, cubre el
+     cronograma de ese día. Propuesta: sí, porque ese día hay alguien.
 
 3. **La cuenta corre en los tres momentos.**
-   - **Hoy crear una serie no pasa por el servidor:** el Panel la escribe directo en la tabla
-     (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:252`). Así no hay dónde hacer la
-     cuenta. El alta de la serie pasa a una función de la base, que crea la serie, sus turnos y hace
-     la cuenta en una sola operación.
-   - **Los momentos que ya existen se enganchan acá:** crear una serie, la baja del Servicio, la
-     internación del Paciente y el pasaje diario. Editar, pausar, suspender y cancelar una serie no
-     existen todavía: los construye el punto 5, y cada uno llama a la misma cuenta al construirse.
+   - **Hoy crear un turno de guardia recurrente no pasa por el servidor:** el Panel lo escribe
+     directo en la tabla (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:252`). Así no
+     hay dónde hacer la cuenta. El alta pasa a una función de la base, que crea el turno de guardia
+     recurrente, los turnos de guardia de cada día y hace la cuenta en una sola operación.
+   - **Los momentos que ya existen se enganchan acá:** crear un turno de guardia recurrente, la baja
+     del Servicio, la internación del Paciente y el pasaje diario. Editar, pausar, suspender y
+     cancelar un turno de guardia recurrente no existen todavía: los construye el punto 5, y cada
+     uno llama a la misma cuenta al construirse.
    - **El aviso entra por el catálogo de avisos que ya existe**, como uno más, y no se puede apagar:
-     usted fijó que un hueco invisible no existe. Su texto va en los tres idiomas, en los mensajes
-     del sistema, y es el del paso 24.
-   - **Un hueco se avisa una vez.** Se guarda qué hueco ya se avisó, para que los tres momentos no
-     repitan el mismo aviso; si el hueco se cubre y vuelve a abrirse, se avisa de nuevo.
+     usted fijó que no puede haber cronograma sin cubrir que nadie vea. Su texto va en los tres
+     idiomas, en los mensajes del sistema, y es el del paso 24.
+   - **El cronograma sin cubrir se avisa una vez.** Se guarda qué día y horario ya se avisó, para
+     que los tres momentos no repitan el mismo aviso; si se cubre y vuelve a quedar sin cubrir, se
+     avisa de nuevo.
    - **Tres defectos del pasaje diario se corrigen en este punto,** porque la cuenta se apoya en él:
      - Corre tantas veces por día como Prestadoras al cuadrado: la tarea ya recorre todas las
        Prestadoras, y se la programó adentro de otra vuelta por todas
        (`backend/src/server.js:279` y `backend/src/utils/generacionSeriesTurnoGuardia.js:36`).
        Hoy hay pocas Prestadoras y no se nota; con cien serían diez mil vueltas por día.
-     - Genera los turnos a partir del último turno que existe. Una serie que vuelve de una pausa
-       larga generaría turnos con fechas pasadas.
+     - Genera los turnos de guardia a partir del último que existe. Un turno de guardia recurrente
+       que vuelve de una pausa larga generaría turnos de guardia con fechas pasadas.
      - Calcula el día con la hora universal y no con la de la Prestadora. Entre las 21 y las 24 de
        Argentina ya cree que es el día siguiente.
-   - **Y un defecto de la internación:** al internar a un Paciente se pausan sus series buscando
-     por una columna que guarda un solo Paciente y está en retiro. Si la serie es de un matrimonio y
-     el internado es el segundo, la serie no se pausa. Pasa a buscar por la tabla que guarda todos
-     los Pacientes de la serie.
+   - **Y un defecto de la internación:** al internar a un Paciente se pausan sus turnos de guardia
+     recurrentes buscando por una columna que guarda un solo Paciente y está en retiro. Si el turno
+     de guardia recurrente es de un matrimonio y el internado es el segundo, no se pausa. Pasa a
+     buscar por la tabla que guarda todos los Pacientes del turno de guardia recurrente.
 
 4. **La ficha del Servicio dice qué períodos cubre, en qué zona y quién lo realiza.**
    - **Hoy:** el Servicio no está adentro de la ficha del Cliente: tiene su propia sección en el
@@ -196,28 +203,30 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      ya está a la vista.
 
 5. **Modificar, pausar, suspender y cancelar, total o parcialmente.**
-   - **Hoy:** una serie no se puede editar, ni pausar, ni cancelar desde ninguna pantalla. Sólo la
-     cancelan la baja del Servicio y la pausan la internación. No guarda fecha de vuelta, ni motivo,
-     ni quién lo hizo.
-   - **Editar:** el horario y los días de una serie se cambian sin cancelarla, desde una fecha. Los
-     turnos ya pasados y los ya asignados no se tocan; los futuros sin asignar se rehacen.
+   - **Hoy:** un turno de guardia recurrente no se puede editar, ni pausar, ni cancelar desde
+     ninguna pantalla. Sólo lo cancela la baja del Servicio y lo pausa la internación. No guarda
+     fecha de vuelta, ni motivo, ni quién lo hizo.
+   - **Editar:** los días y el horario de un turno de guardia recurrente se cambian sin cancelarlo,
+     desde una fecha. Los turnos de guardia ya pasados y los ya asignados no se tocan; los turnos
+     vacantes futuros se rehacen.
    - **Pausar y suspender:** con fecha de vuelta opcional, motivo y quién lo hizo. Si son una
      acción o dos lo contesta el paso 24.
-   - **Alcance:** la acción alcanza al Servicio entero, a una Prestación, a una serie o a un solo
-     horario pactado.
+   - **Alcance:** la acción alcanza al Servicio entero, a una Prestación, a un turno de guardia
+     recurrente o a un solo turno de guardia.
    - **Motivos:** salen del catálogo de motivos que ya usa la cancelación de un turno. Hoy no tiene
-     ningún motivo para series, ni para pausar o suspender: se cargan de fábrica en cada
+     ningún motivo para turnos de guardia recurrentes, ni para pausar o suspender: se cargan de fábrica en cada
      Prestadora.
    - **El «parcial» que existe hoy no sirve de modelo.** La cancelación de un turno suelto deja
      elegir entre total y parcial, pero ningún cálculo lo lee: es una marca sin efecto. Propuesta:
      se reemplaza por el alcance de este punto.
    - **Tres defectos que se corrigen en este punto:**
-     - Al terminar la internación se reactivan todas las series y turnos pausados del Paciente,
-       también los que pausó otra persona y los turnos de los días que ya pasaron. Pasa a reactivar
+     - Al terminar la internación se reactivan todos los turnos de guardia, recurrentes y sueltos,
+       pausados del Paciente, también los que pausó otra persona y los de los días que ya pasaron. Pasa a reactivar
        sólo lo que pausó la internación, y nada del pasado.
-     - La baja del Servicio cancela las series activas y deja vivas las pausadas. Si el Paciente
-       estaba internado, al terminar la internación la serie vuelve a generar turnos de un Servicio
-       dado de baja. Pasa a cancelar también las pausadas.
+     - La baja del Servicio cancela los turnos de guardia recurrentes activos y deja vivos los
+       pausados. Si el Paciente estaba internado, al terminar la internación el turno de guardia
+       recurrente vuelve a generar turnos de guardia de un Servicio dado de baja. Pasa a cancelar
+       también los pausados.
      - La internación no mira si el Servicio sigue vigente. Pasa a mirarlo.
 
 6. **La zona entra en el cálculo de candidatas.**
@@ -272,8 +281,8 @@ en el backend, que hoy filtra sólo por Prestadora.
 La base ya recorta a la Coordinadora a sus Servicios
 (`interno.coordina_el_servicio`, `supabase/schemas/careonys.sql:1206`): los Servicios
 que coordina y los de quien cubre por ausencia; los Clientes que los contratan y sus Pacientes, con
-su información de salud, medicación, alertas, rangos vitales y personas autorizadas; y las guardias
-y series de esos Servicios con todo lo que cuelga de ellas. Una alarma tomada le deja ver esa
+su información de salud, medicación, alertas, rangos vitales y personas autorizadas; y los turnos
+de guardia, sueltos y recurrentes, de esos Servicios con todo lo que cuelga de ellas. Una alarma tomada le deja ver esa
 guardia. El equipo del Servicio muestra como Coordinador a quien lo coordina. Las tomas
 de alarma y las reasignaciones por emergencia se leen sólo de lo que ve; WhatsApp, por zona del
 Asistente; y los archivos de prescripciones, documento firmado y autorizaciones de monitoreo, sólo de
@@ -1061,21 +1070,23 @@ mientras armar un Servicio no sea un acto con su pantalla. **Y va después de la
 sirve de las listas de opciones por Prestadora, que es lo que quedó construido allá.
 
 **Lo que pidió usted son cuatro cosas:** que un Servicio pueda tener duración indeterminada; que
-no exista un hueco invisible; que se pueda pausar, suspender, modificar y cancelar, en forma total o
+no quede cronograma sin cubrir que nadie vea; que se pueda pausar, suspender, modificar y cancelar, en forma total o
 parcial; y que use las zonas que ya están cargadas.
 
-**Lo que ya funciona y no se rehace:** la serie sin fecha de fin, que se extiende sola
+**Lo que ya funciona y no se rehace:** el turno de guardia recurrente sin fecha de fin, que se
+extiende solo
 (`extenderSeriesTurnoGuardiaAbiertas`, en `backend/src/utils/generacionSeriesTurnoGuardia.js`), con
 los tres defectos que corrige el punto 3; el alta, la baja y la reactivación del Servicio; la
 asignación del Coordinador y la regla de que sin Coordinador no hay turnos de guardia; los seis
 mecanismos de aviso; y la estructura de zonas (`zonas_cobertura`, `lugares`, `zona_lugares`,
 `asistente_lugares`, `usuario_lugares`).
 
-**Lo que usted fijó sobre cómo se resuelve:** los días y el horario de la Prestación se cargan igual
-que en una serie —días marcados, hora de inicio, hora de fin—, con más de un renglón cuando haga
-falta; la cuenta es directa, los horarios pactados menos los que cubren las series vigentes, y lo que
-sobra es el hueco, con su día y su horario; y la cuenta corre en tres momentos: al armar o cambiar
-una serie, al suspender o cancelar una, y en el pasaje diario que ya extiende las series.
+**Lo que usted fijó sobre cómo se resuelve:** el cronograma de la Prestación se carga igual que un
+turno de guardia recurrente —días marcados, hora de inicio, hora de fin—, con más de un renglón
+cuando haga falta; la cuenta es directa, el cronograma menos lo que cubren los turnos de guardia
+recurrentes vigentes, y lo que sobra es el cronograma sin cubrir, con su día y su horario; y la
+cuenta corre en tres momentos: al armar o cambiar un turno de guardia recurrente, al suspender o
+cancelar uno, y en el pasaje diario que ya los extiende.
 
 **Lo que se carga son tres niveles que no se mezclan, y la guardia es una clase de Prestación:**
 
@@ -1092,10 +1103,10 @@ liquidado.
 **Contra qué choca este acto en el resto de la lista.** Son cinco, y ninguno se ve leyendo los
 títulos:
 
-- **El aviso del hueco no es pieza nueva: entra por el catálogo de avisos que ya existe**, con su
+- **El aviso del cronograma sin cubrir no es pieza nueva: entra por el catálogo de avisos que ya existe**, con su
   configuración por Prestadora. Las alertas tempranas las enciende o apaga cada Prestadora, una por
-  una (sección «El Paciente nunca queda solo»), y el aviso del hueco no puede ser de ésas: usted
-  fijó que un hueco invisible no existe.
+  una (sección «El Paciente nunca queda solo»), y el aviso del cronograma sin cubrir no puede ser
+  de ésas: usted fijó que no puede haber cronograma sin cubrir que nadie vea.
 - **La sugerencia de Asistentes no mira la zona, y no aparece en ninguna pantalla.** El cálculo
   —`panel/src/lib/candidatos.js`— no nombra zonas; sí mira la distancia en línea recta hasta la
   casa del Paciente, cuando las dos ubicaciones están cargadas. Ninguna pantalla de asignación lo
@@ -1116,8 +1127,8 @@ títulos:
 que en cada uno dice «Lo decide usted». Hasta que lo estén no se escribe código de producción de
 ninguno.
 
-**24. Usted** — Dos respuestas: qué dice el aviso cuando queda un horario pactado sin nadie que lo
-cubra, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o
+**24. Usted** — Dos respuestas: qué dice el aviso cuando quedan días y horarios del cronograma sin
+ningún turno de guardia que los cubra, y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta opcional, o
 dos, una por tiempo conocido y otra indefinida—.
 
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
@@ -1511,9 +1522,9 @@ diciendo nada.
 - **El barrido del tuteo alcanza pantallas que todavía no están escritas** —el formulario de
   postulación, lo que falta de las dos aplicaciones—. No se barre dos veces: la regla queda
   escrita y cada pantalla nueva nace cumpliéndola.
-- **Un cartel ya fijó el molde del aviso del hueco.** En las guardias sin cerrar usted escribió que
+- **Un cartel ya fijó el molde del aviso del cronograma sin cubrir.** En las guardias sin cerrar usted escribió que
   si hay algo se muestra «y si corresponde a la pantalla también cómo se solucionan». El aviso del
-  hueco pactado, más arriba, es el mismo caso y sigue sin redactar: el criterio ya está dado.
+  cronograma sin cubrir, más arriba, es el mismo caso y sigue sin redactar: el criterio ya está dado.
 
 **Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
 la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.

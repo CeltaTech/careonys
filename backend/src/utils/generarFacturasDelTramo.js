@@ -168,8 +168,8 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
 
   // El trabajo: los turnos de guardia de esos Servicios en esas fechas, con sus Pacientes. Entran las
   // completadas, que se cobran, y las ausentes y las canceladas, que según las condiciones se
-  // descuentan o se cobran; la cancelación dice quién la pidió. La pausada por internación no
-  // entra. Las horas se cuentan con la misma regla que usa la Liquidación del Asistente.
+  // descuentan o se cobran; la cancelación dice quién la pidió. La pausada y la suspendida no
+  // entran. Las horas se cuentan con la misma regla que usa la Liquidación del Asistente.
   let turnos_guardia = [];
   const serviciosConPeriodos = [...periodosDelServicio.keys()];
   if (serviciosConPeriodos.length > 0) {

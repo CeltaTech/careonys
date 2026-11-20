@@ -8,6 +8,8 @@ import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import { ElegirAsistente } from '../../components/turnos_guardia/ElegirAsistente';
+import { hoyISO } from '../../lib/horarios';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
@@ -36,7 +38,11 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
   const [enCurso, setEnCurso] = useState(null);
 
   const [datos, setDatos] = useState(null);
-  const [candidatas, setCandidatas] = useState([]);
+  const [yaEstan, setYaEstan] = useState([]);
+  // Los turnos de guardia que vienen y todavía no tienen Asistente. Contra ellos se ordenan las
+  // sugerencias de a quién sumar: lugar, horario, carga, antecedentes. Un Servicio recién armado no
+  // tiene ninguno, y entonces la lista ofrece a todo el Padrón sin orden de preferencia.
+  const [idsVacantes, setIdsVacantes] = useState([]);
   const [aSumar, setASumar] = useState('');
 
   const explicar = useCallback((falla) => mensajeDeError(falla, t, 'equipo_servicio'), [t]);
@@ -78,28 +84,20 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
 
       const idsAsistentes = [...new Set([...equipo.asistentes, ...equipo.afuera].map((a) => a.asistente_id))];
       const idsUsuarios = [...new Set(equipo.coordinadores.map((c) => c.usuario_id))];
-      const [delEquipo, todas, usuarios] = await Promise.all([
+      const [delEquipo, usuarios] = await Promise.all([
         idsAsistentes.length
           ? supabase.from('asistentes').select('id, nombre, apellido').in('id', idsAsistentes)
           : Promise.resolve({ data: [], error: null }),
-        // Para el desplegable de «sumar a alguien». La vista recorta lo que un Coordinador puede
-        // ver de una Asistente; acá alcanza con el nombre.
-        supabase
-          .from('asistentes')
-          .select('id, nombre, apellido')
-          .eq('prestadora_id', servicio.prestadora_id)
-          .eq('cuenta_desactivada', false)
-          .order('apellido'),
         idsUsuarios.length
           ? supabase.from('usuarios').select('id, nombre').in('id', idsUsuarios)
           : Promise.resolve({ data: [], error: null }),
       ]);
-      for (const respuesta of [delEquipo, todas, usuarios]) {
+      for (const respuesta of [delEquipo, usuarios]) {
         if (respuesta.error) throw respuesta.error;
       }
 
       const nombre = (p) => `${p.apellido ?? ''} ${p.nombre ?? ''}`.trim();
-      const porId = new Map([...(todas.data ?? []), ...(delEquipo.data ?? [])].map((a) => [a.id, a]));
+      const porId = new Map((delEquipo.data ?? []).map((a) => [a.id, a]));
       const nombresDeUsuario = new Map((usuarios.data ?? []).map((u) => [u.id, nombre(u)]));
 
       setDatos({
@@ -108,8 +106,13 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
         nombreDeUsuario: (id) => nombresDeUsuario.get(id) || '—',
       });
 
-      const yaEstan = new Set([...equipo.asistentes, ...equipo.afuera].map((a) => a.asistente_id));
-      setCandidatas((todas.data ?? []).filter((a) => !yaEstan.has(a.id)));
+      setYaEstan(idsAsistentes);
+      const hoy = hoyISO();
+      setIdsVacantes(
+        (turnos_guardia.data ?? [])
+          .filter((tg) => !tg.asistente_id && tg.estado === 'programada' && tg.fecha >= hoy)
+          .map((tg) => tg.id)
+      );
       setEstado('listo');
     } catch (falla) {
       setError(explicar(falla));
@@ -241,19 +244,20 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
                 </table>
               )}
 
-              {puedeEditar && candidatas.length > 0 && (
+              {/* Sumar a alguien, con la lista de sugerencias: primero quienes mejor cubren los
+                  turnos de guardia vacantes del Servicio, con sus advertencias al lado del nombre.
+                  Quien ya está en el equipo, o quedó afuera a mano, no se ofrece. */}
+              {puedeEditar && (
                 <>
-                  <div className="molde-campo">
-                    <label htmlFor="equipo-sumar">{e.sumar}</label>
-                    <select id="equipo-sumar" value={aSumar} onChange={(ev) => setASumar(ev.target.value)}>
-                      <option value="">—</option>
-                      {candidatas.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {`${a.apellido ?? ''} ${a.nombre ?? ''}`.trim()}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <ElegirAsistente
+                    idsHuecos={idsVacantes}
+                    excluir={yaEstan}
+                    name="equipo-sumar"
+                    label={e.sumar}
+                    value={aSumar}
+                    onChange={(id) => setASumar(id)}
+                    disabled={enCurso !== null}
+                  />
                   <div className="molde-acciones">
                     <Button
                       variant="secondary"

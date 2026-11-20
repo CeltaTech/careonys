@@ -61,7 +61,6 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
   // terminaría con la mitad de sus cancelaciones sin motivo, y el ahorro de clics se pagaría
   // el día que alguien tenga que explicar por qué se cayeron veinte guardias.
   const [origen, setOrigen] = useState('');
-  const [alcance, setAlcance] = useState('');
   // Y por qué se cancela, que es lo que después deja saber quién lo decidió y con qué razón. Sale
   // del catálogo de la Prestadora, igual que en el detalle de un turno de guardia: la vía rápida no guarda
   // menos que la lenta.
@@ -114,8 +113,7 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
     (accion === 'cancelar'
       && Boolean(motivoElegido)
       && (!motivoElegido.pide_detalle || Boolean(detalle.trim()))
-      && Boolean(origen)
-      && Boolean(alcance));
+      && Boolean(origen));
 
   // Un adelanto de lo que va a pasar, calculado sobre el primer turno de guardia marcado.
   // Es la única razón por la que este componente usa `horarios.js`: no guarda nada, solo
@@ -150,7 +148,8 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
     if (cual === 'cancelar') {
       return {
         origen,
-        alcance,
+        // Lo que se marcó en la grilla son turnos de guardia sueltos: cada cancelación alcanza a uno.
+        alcance: 'turno_guardia',
         motivoId,
         detalle: motivoElegido?.pide_detalle ? detalle.trim() : null,
       };
@@ -304,8 +303,8 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
                 />
               )}
 
-              {/* Las mismas dos preguntas que hace el detalle de un turno de guardia, con las mismas
-                  palabras: son la misma decisión, no dos parecidas. */}
+              {/* La misma pregunta que hace el detalle de un turno de guardia, con las mismas
+                  palabras: es la misma decisión, no dos parecidas. */}
               <FormField
                 label={t.turnos_guardia.detalle.cancelacion_origen}
                 name="masiva_cancelacion_origen"
@@ -320,21 +319,6 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
                 <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
                 <option value="cliente">{t.turnos_guardia.detalle.cancelacion_origen_cliente}</option>
                 <option value="prestadora">{t.turnos_guardia.detalle.cancelacion_origen_prestadora}</option>
-              </FormField>
-              <FormField
-                label={t.turnos_guardia.detalle.cancelacion_alcance}
-                name="masiva_cancelacion_alcance"
-                type="select"
-                value={alcance}
-                onChange={(e) => {
-                  setResultado(null);
-                  setAlcance(e.target.value);
-                }}
-                disabled={enCurso}
-              >
-                <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
-                <option value="parcial">{t.turnos_guardia.detalle.cancelacion_alcance_parcial}</option>
-                <option value="total">{t.turnos_guardia.detalle.cancelacion_alcance_total}</option>
               </FormField>
             </>
           )}

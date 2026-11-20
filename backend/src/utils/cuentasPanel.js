@@ -788,22 +788,47 @@ export async function crearClienteImportado({
 // Si lo crea un Coordinador, el Servicio nace coordinado por él. Lo comercial —con el Contratante
 // del Cliente ya anotado— lo crea la base junto con el Servicio.
 export async function crearServicioDelCliente(db, {
-  prestadoraId, clienteId, etiqueta, coordinadorId,
+  prestadoraId, clienteId, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
 }) {
   const nombre = String(etiqueta ?? '').trim();
   if (!prestadoraId || !clienteId || !nombre) throw new ErrorConMotivo('faltan_datos');
+  const periodo = periodoDelServicio({ vigenteDesde, vigenteHasta });
   const { data, error } = await db
     .from('servicios')
     .insert({
       prestadora_id: prestadoraId,
       etiqueta: nombre,
       cliente_id: clienteId,
+      ...periodo,
       ...(coordinadorId ? { coordinador_id: coordinadorId, coordinador_asignado_por: coordinadorId } : {}),
     })
     .select('id')
     .single();
   if (error) throw new Error(error.message);
   return data.id;
+}
+
+const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+function esFechaValida(valor) {
+  if (!FECHA_ISO.test(valor)) return false;
+  const fecha = new Date(`${valor}T00:00:00Z`);
+  return !Number.isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 10) === valor;
+}
+
+// El período del Servicio que se está creando. Las dos fechas son optativas: sin el primer día, la
+// base pone el de hoy; sin el último, el Servicio es de duración indeterminada. Si vienen, tienen
+// que ser fechas reales y el último día no puede ser anterior al primero.
+export function periodoDelServicio({ vigenteDesde, vigenteHasta } = {}) {
+  const desde = vigenteDesde ? String(vigenteDesde).trim() : '';
+  const hasta = vigenteHasta ? String(vigenteHasta).trim() : '';
+  if (desde && !esFechaValida(desde)) throw new ErrorConMotivo('dato_invalido');
+  if (hasta && !esFechaValida(hasta)) throw new ErrorConMotivo('dato_invalido');
+  if (desde && hasta && hasta < desde) throw new ErrorConMotivo('dato_invalido');
+  return {
+    ...(desde ? { vigente_desde: desde } : {}),
+    ...(hasta ? { vigente_hasta: hasta } : {}),
+  };
 }
 
 // Un Cliente nuevo con su primer Servicio, desde Servicios del Panel. Quien contrata y el Paciente
@@ -813,11 +838,13 @@ export async function crearServicioDelCliente(db, {
 // Si esa persona ya contrata en esta Prestadora para ese mismo Paciente, el Cliente ya existe y no
 // se crea otro: se lo elige de la lista.
 export async function crearClienteConServicio(db, {
-  prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId,
+  prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
 }) {
   if (!prestadoraId || !contratantePersonaId || !pacientePersonaId || !String(etiqueta ?? '').trim()) {
     throw new ErrorConMotivo('faltan_datos');
   }
+  // El período se revisa antes de crear la cuenta, para no crearla y deshacerla por una fecha mal.
+  periodoDelServicio({ vigenteDesde, vigenteHasta });
 
   const { data: fichas, error: errorFichas } = await db
     .from('personas')
@@ -870,7 +897,7 @@ export async function crearClienteConServicio(db, {
     if (errorPaciente) throw new Error(errorPaciente.message);
 
     const servicioId = await crearServicioDelCliente(db, {
-      prestadoraId, clienteId, etiqueta, coordinadorId,
+      prestadoraId, clienteId, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
     });
     return { clienteId, servicioId, numeroCliente: clienteNuevo.numero_cliente };
   } catch (error) {

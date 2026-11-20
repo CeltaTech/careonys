@@ -16,6 +16,7 @@ import {
   identidadDelAsistente,
   errorDeLaIdentidad,
   crearServicioDelCliente,
+  periodoDelServicio,
   crearClienteConServicio,
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
@@ -448,8 +449,11 @@ async function servicioDelPedido(req) {
 // una persona por sí misma.
 panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_servicios'), exigirConfiguracionInicial, async (req, res) => {
   try {
-    const { clienteId, contratantePersonaId, pacientePersonaId, etiqueta } = req.body ?? {};
+    const {
+      clienteId, contratantePersonaId, pacientePersonaId, etiqueta, vigenteDesde, vigenteHasta,
+    } = req.body ?? {};
     if (!String(etiqueta ?? '').trim()) throw new ErrorConMotivo('faltan_datos');
+    periodoDelServicio({ vigenteDesde, vigenteHasta });
     // Un Coordinador que crea un Servicio queda coordinándolo.
     const coordinadorId = req.usuarioPanel?.rol === 'coordinador' ? req.usuarioPanel.id : null;
 
@@ -469,6 +473,8 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
         clienteId: cliente.id,
         etiqueta,
         coordinadorId,
+        vigenteDesde,
+        vigenteHasta,
       }));
       return res.json({ ok: true, servicioId, clienteId: cliente.id });
     }
@@ -476,7 +482,9 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
     const prestadoraId = req.usuarioPanel?.prestadoraId;
     if (!prestadoraId || !contratantePersonaId || !pacientePersonaId) throw new ErrorConMotivo('faltan_datos');
     const alta = await enLaPrestadora(prestadoraId, 'alta de Cliente con Servicio', (db) =>
-      crearClienteConServicio(db, { prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId }));
+      crearClienteConServicio(db, {
+        prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
+      }));
     res.json({ ok: true, servicioId: alta.servicioId, clienteId: alta.clienteId });
   } catch (error) {
     responderError(res, error);

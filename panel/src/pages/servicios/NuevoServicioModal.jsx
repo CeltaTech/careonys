@@ -19,7 +19,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 // El valor del casillero de Cliente que dice que el Cliente nace junto con el Servicio.
 const CLIENTE_NUEVO = 'nuevo';
 
-const ORDEN_DE_LOS_CASILLEROS = ['cliente', 'contratante', 'paciente', 'etiqueta'];
+const ORDEN_DE_LOS_CASILLEROS = ['cliente', 'contratante', 'paciente', 'etiqueta', 'vigente_hasta'];
 
 /* El alta de un Servicio.
    ==========================================================================
@@ -43,6 +43,10 @@ export function NuevoServicioModal({ onClose, onCreado }) {
   const [contratante, setContratante] = useState(null);
   const [paciente, setPaciente] = useState(null);
   const [etiqueta, setEtiqueta] = useState('');
+  // El período del Servicio. Sin el primer día la base pone el de hoy; sin el último, la duración
+  // es indeterminada.
+  const [vigenteDesde, setVigenteDesde] = useState('');
+  const [vigenteHasta, setVigenteHasta] = useState('');
   // Para qué casillero se está cargando una persona nueva: 'contratante', 'paciente' o null.
   const [fichaPara, setFichaPara] = useState(null);
   // Cambia cada vez que se carga una persona, para que las listas vuelvan a pedirle las personas a la base.
@@ -83,11 +87,17 @@ export function NuevoServicioModal({ onClose, onCreado }) {
     if (esNuevo && !contratante) avisos.contratante = true;
     if (esNuevo && !paciente) avisos.paciente = true;
     if (!etiqueta.trim()) avisos.etiqueta = true;
+    if (vigenteDesde && vigenteHasta && vigenteHasta < vigenteDesde) avisos.vigente_hasta = true;
     return avisos;
   }
 
   const avisos = intentado ? avisosEnPantalla() : {};
-  const avisoDe = (casillero) => (avisos[casillero] ? t.formularios.falta_un_dato_obligatorio : undefined);
+  const avisoDe = (casillero) => {
+    if (!avisos[casillero]) return undefined;
+    return casillero === 'vigente_hasta'
+      ? t.servicios.periodo.hasta_antes_del_desde
+      : t.formularios.falta_un_dato_obligatorio;
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -109,11 +119,14 @@ export function NuevoServicioModal({ onClose, onCreado }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${data.session?.access_token}`,
         },
-        body: JSON.stringify(
-          esNuevo
-            ? { contratantePersonaId: contratante, pacientePersonaId: paciente, etiqueta: etiqueta.trim() }
-            : { clienteId: cliente, etiqueta: etiqueta.trim() },
-        ),
+        body: JSON.stringify({
+          ...(esNuevo
+            ? { contratantePersonaId: contratante, pacientePersonaId: paciente }
+            : { clienteId: cliente }),
+          etiqueta: etiqueta.trim(),
+          vigenteDesde: vigenteDesde || null,
+          vigenteHasta: vigenteHasta || null,
+        }),
       });
       const resultado = await respuesta.json();
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
@@ -186,6 +199,25 @@ export function NuevoServicioModal({ onClose, onCreado }) {
               onChange={(e) => setEtiqueta(e.target.value)}
               disabled={guardando}
               error={avisoDe('etiqueta')}
+            />
+
+            <FormField
+              label={t.servicios.periodo.desde}
+              name="vigente_desde"
+              type="date"
+              value={vigenteDesde}
+              onChange={(e) => setVigenteDesde(e.target.value)}
+              disabled={guardando}
+            />
+
+            <FormField
+              label={t.servicios.periodo.hasta_opcional}
+              name="vigente_hasta"
+              type="date"
+              value={vigenteHasta}
+              onChange={(e) => setVigenteHasta(e.target.value)}
+              disabled={guardando}
+              error={avisoDe('vigente_hasta')}
             />
 
             <div className="panel-modal-acciones">

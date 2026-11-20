@@ -23,6 +23,8 @@ import { PagosDelServicio } from './PagosDelServicio';
 import { BajaDelServicioModal } from './BajaDelServicioModal';
 import { ReactivarElServicioModal } from './ReactivarElServicioModal';
 import { EquipoDelServicio } from './EquipoDelServicio';
+import { CoberturaDelServicio } from './CoberturaDelServicio';
+import { CoberturaModal } from './CoberturaModal';
 import './servicios.css';
 
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
@@ -61,6 +63,8 @@ export function ServicioDetalle() {
   const veLosPagos = puedeEditarPagos || puedeRegistrarConsentimiento;
   const gestionaServicios = esAdmin || puede('gestionar_servicios');
   const modificaAsistentes = esAdmin || puede('modificar_asistentes_del_servicio');
+  // La pausa, la suspensión o la cancelación de una Prestación, mientras su ventana está abierta.
+  const [accionPrestacion, setAccionPrestacion] = useState(null);
   const [viendoEquipo, setViendoEquipo] = useState(false);
   const [dandoDeBaja, setDandoDeBaja] = useState(false);
   const [reactivando, setReactivando] = useState(false);
@@ -93,7 +97,7 @@ export function ServicioDetalle() {
     const { data: s, error: fallaServicio } = await supabase
       .from('servicios')
       // De qué Cliente es sale de `cliente_id`; sus datos de contacto los trae `contactosDeClientes`.
-      .select('id, prestadora_id, etiqueta, estado, created_at, cliente_id, coordinador_id')
+      .select('id, prestadora_id, etiqueta, estado, created_at, cliente_id, coordinador_id, vigente_desde, vigente_hasta')
       .eq('id', id)
       .single();
 
@@ -288,6 +292,10 @@ export function ServicioDetalle() {
   const puedeAgregarPrestacion = servicio.estado === ESTADO_ACTIVO && Boolean(cliente.ruta);
   const turnosGuardiaVisibles = turnos_guardia.slice(0, TURNOS_GUARDIA_A_MOSTRAR);
   const nombreCoordinador = coordinadores.find((c) => c.id === servicio.coordinador_id)?.nombre || '—';
+  // Pausar, suspender y cancelar la cobertura: la administración o el Coordinador que coordina este
+  // Servicio. Es el mismo corte que hace la base.
+  const gestionaCobertura = esAdmin || (usuario?.rol === 'coordinador' && Boolean(servicio.coordinador_id) && servicio.coordinador_id === usuario?.id);
+  const coberturaEditable = gestionaCobertura && servicio.estado === ESTADO_ACTIVO;
 
   const pestanas = [
     ['resumen', d.tab_resumen],
@@ -417,6 +425,13 @@ export function ServicioDetalle() {
                 </>
               )}
             </div>
+            <CoberturaDelServicio
+              servicio={servicio}
+              prestaciones={prestaciones}
+              cambiaElPeriodo={gestionaServicios}
+              gestionaCobertura={gestionaCobertura}
+              onCambio={recargar}
+            />
           </div>
         )}
 
@@ -433,6 +448,7 @@ export function ServicioDetalle() {
                     <th>{d.col_precio}</th>
                     <th>{d.col_estado}</th>
                     <th>{d.col_nota}</th>
+                    {coberturaEditable && <th>{t.servicios.cobertura.col_cobertura}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -445,12 +461,40 @@ export function ServicioDetalle() {
                         <span className={claseBadge(p.estado)}>{traducirValor(t.servicios, `estado_${p.estado}`)}</span>
                       </td>
                       <td>{p.nota || '—'}</td>
+                      {coberturaEditable && (
+                        <td>
+                          {p.estado === 'vigente' && (
+                            <div className="panel-filtros">
+                              {['pausa', 'suspension', 'cancelacion'].map((tipo) => (
+                                <Button key={tipo} variant="secondary" onClick={() => setAccionPrestacion({ tipo, prestacion: p })}>
+                                  {t.servicios.cobertura[tipo === 'pausa' ? 'pausar' : tipo === 'suspension' ? 'suspender' : 'cancelar']}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ))}
+
+        {accionPrestacion && (
+          <CoberturaModal
+            tipo={accionPrestacion.tipo}
+            alcance="prestacion"
+            servicioId={servicio.id}
+            prestacionId={accionPrestacion.prestacion.id}
+            titulo={`${t.servicios.cobertura.alcance_prestacion} · ${accionPrestacion.prestacion.tipo_servicio}`}
+            onClose={() => setAccionPrestacion(null)}
+            onHecho={() => {
+              setAccionPrestacion(null);
+              recargar();
+            }}
+          />
+        )}
 
         {tab === 'tareas' && (
           <TareasDelServicio

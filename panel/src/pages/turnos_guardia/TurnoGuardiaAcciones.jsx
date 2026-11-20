@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useNombreConDisponibilidad } from '../../hooks/useNombreConDisponibilidad';
 import { supabase } from '../../lib/supabaseClient';
@@ -19,6 +19,9 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { DescansosDelTurnoGuardia } from './DescansosDelTurnoGuardia';
 import { yaEmpezo } from '../../lib/moverTurnoGuardia';
+import { esAdminOSuperior } from '../../lib/roles';
+import { CoberturaModal } from '../servicios/CoberturaModal';
+import { EditarRecurrenteModal } from '../servicios/EditarRecurrenteModal';
 
 // Qué se resuelve en esta pantalla y en qué estado queda. Es el nombre guardado de la tabla, y con
 // él salen los motivos del catálogo de la Prestadora y se escribe la resolución. El estado se nombra
@@ -40,7 +43,6 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
   const { filas: motivosAvisoPrevio } = useMotivosAvisoPrevio(prestadoraId);
   const [medioTransporte, setMedioTransporte] = useState('');
   const [cancelacionOrigen, setCancelacionOrigen] = useState('');
-  const [cancelacionAlcance, setCancelacionAlcance] = useState('');
   // Los motivos de esta Prestadora para cancelar una Guardia. En qué estado queda la Guardia lo dice
   // el motivo elegido, así que acá no hay ninguna lista de estados escrita.
   const {
@@ -71,6 +73,29 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
   const [motivoEmergencia, setMotivoEmergencia] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState(null);
+
+  // La pausa, la suspensión o la cancelación de este turno de guardia o de su recurrente, y el
+  // cambio de días y horario del recurrente. Mientras una de esas ventanas está abierta, ésta no se
+  // dibuja: nunca dos ventanas una encima de la otra.
+  const [accionCobertura, setAccionCobertura] = useState(null);
+  // La cobertura la gestiona la administración o el Coordinador que coordina el Servicio. La base
+  // aplica el mismo corte; esto sólo decide si se muestran los botones.
+  const esAdministracion = esAdminOSuperior(usuario?.rol);
+  const [coordinaElServicio, setCoordinaElServicio] = useState(false);
+  useEffect(() => {
+    if (esAdministracion || usuario?.rol !== 'coordinador' || !turno_guardia.servicio_id) return undefined;
+    let vigente = true;
+    supabase.rpc('servicios_que_coordino').then(({ data, error: errorCoordinados }) => {
+      if (vigente && !errorCoordinados) setCoordinaElServicio((data ?? []).includes(turno_guardia.servicio_id));
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [esAdministracion, usuario?.rol, turno_guardia.servicio_id]);
+  const gestionaCobertura = Boolean(turno_guardia.servicio_id) && (esAdministracion || coordinaElServicio);
+  // Un solo turno de guardia se pausa o se suspende mientras no empezó.
+  const interrumpeEsteTurnoGuardia = gestionaCobertura && turno_guardia.estado === 'programada' && !yaEmpezo(turno_guardia);
+  const gestionaElRecurrente = gestionaCobertura && Boolean(turno_guardia.serie_id);
 
   /* A quién se le puede pasar este turno de guardia: solo quien sigue en el Padrón.
      La lista que llega por `asistentes` es el Padrón entero a propósito —la misma consulta le
@@ -181,7 +206,8 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
 
     await actualizar({
       cancelacion_origen: cancelacionOrigen,
-      cancelacion_alcance: cancelacionAlcance,
+      // Desde esta pantalla se cancela este turno de guardia y nada más.
+      cancelacion_alcance: 'turno_guardia',
     });
   }
 
@@ -317,6 +343,30 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
     { clave: 'momento_llegada', at: turno_guardia.checkin_at },
     { clave: 'momento_checkout', at: turno_guardia.checkout_at },
   ];
+
+  async function coberturaHecha() {
+    setAccionCobertura(null);
+    await onActualizada?.();
+  }
+
+  if (accionCobertura?.tipo === 'editar_recurrente') {
+    return <EditarRecurrenteModal serieId={turno_guardia.serie_id} onClose={() => setAccionCobertura(null)} onHecho={coberturaHecha} />;
+  }
+  if (accionCobertura) {
+    const esDelRecurrente = accionCobertura.alcance === 'turno_guardia_recurrente';
+    return (
+      <CoberturaModal
+        tipo={accionCobertura.tipo}
+        alcance={accionCobertura.alcance}
+        servicioId={turno_guardia.servicio_id}
+        serieId={esDelRecurrente ? turno_guardia.serie_id : null}
+        turnoGuardiaId={esDelRecurrente ? null : turno_guardia.id}
+        titulo={esDelRecurrente ? t.servicios.cobertura.el_recurrente : t.servicios.cobertura.este_turno_guardia}
+        onClose={() => setAccionCobertura(null)}
+        onHecho={coberturaHecha}
+      />
+    );
+  }
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
@@ -477,17 +527,6 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
               <option value="cliente">{t.turnos_guardia.detalle.cancelacion_origen_cliente}</option>
               <option value="prestadora">{t.turnos_guardia.detalle.cancelacion_origen_prestadora}</option>
             </FormField>
-            <FormField
-              label={t.turnos_guardia.detalle.cancelacion_alcance}
-              name="cancelacion_alcance"
-              type="select"
-              value={cancelacionAlcance}
-              onChange={(e) => setCancelacionAlcance(e.target.value)}
-            >
-              <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
-              <option value="parcial">{t.turnos_guardia.detalle.cancelacion_alcance_parcial}</option>
-              <option value="total">{t.turnos_guardia.detalle.cancelacion_alcance_total}</option>
-            </FormField>
             <Button
               variant="secondary"
               onClick={handleCancelar}
@@ -496,7 +535,6 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
                 || !motivoCancelacion
                 || (motivoCancelacion.pide_detalle && !cancelacionDetalle.trim())
                 || !cancelacionOrigen
-                || !cancelacionAlcance
               }
             >
               {t.turnos_guardia.detalle.cancelar_turno_guardia}
@@ -555,6 +593,40 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
             <Button variant="secondary" onClick={handleMarcarAusente} disabled={procesando}>
               {t.turnos_guardia.detalle.marcar_ausente}
             </Button>
+          </div>
+        )}
+
+        {interrumpeEsteTurnoGuardia && (
+          <div className="panel-resultado-calculo">
+            <h3>{t.servicios.cobertura.este_turno_guardia}</h3>
+            <div className="panel-filtros">
+              <Button variant="secondary" onClick={() => setAccionCobertura({ tipo: 'pausa', alcance: 'turno_guardia' })} disabled={procesando}>
+                {t.servicios.cobertura.pausar}
+              </Button>
+              <Button variant="secondary" onClick={() => setAccionCobertura({ tipo: 'suspension', alcance: 'turno_guardia' })} disabled={procesando}>
+                {t.servicios.cobertura.suspender}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {gestionaElRecurrente && (
+          <div className="panel-resultado-calculo">
+            <h3>{t.servicios.cobertura.el_recurrente}</h3>
+            <div className="panel-filtros">
+              <Button variant="secondary" onClick={() => setAccionCobertura({ tipo: 'editar_recurrente' })} disabled={procesando}>
+                {t.servicios.cobertura.editar_recurrente}
+              </Button>
+              <Button variant="secondary" onClick={() => setAccionCobertura({ tipo: 'pausa', alcance: 'turno_guardia_recurrente' })} disabled={procesando}>
+                {t.servicios.cobertura.pausar}
+              </Button>
+              <Button variant="secondary" onClick={() => setAccionCobertura({ tipo: 'suspension', alcance: 'turno_guardia_recurrente' })} disabled={procesando}>
+                {t.servicios.cobertura.suspender}
+              </Button>
+              <Button variant="secondary" onClick={() => setAccionCobertura({ tipo: 'cancelacion', alcance: 'turno_guardia_recurrente' })} disabled={procesando}>
+                {t.servicios.cobertura.cancelar}
+              </Button>
+            </div>
           </div>
         )}
 

@@ -13,7 +13,7 @@ import { finEfectivoDeLaAusencia } from './ausenciaQueTapa.js';
 /**
  * Los tres estados que una ausencia deja descubiertos. Son los turnos que todavía se van a
  * prestar: el programado, el que está corriendo en este momento —una ausencia puede empezar hoy— y
- * el pausado, porque la pausa es del servicio del Paciente y el día que se reanude la persona
+ * el pausado y el suspendido, porque la pausa o la suspensión es del servicio del Paciente y el día que se reanude la persona
  * sigue sin estar.
  *
  * Los otros tres no se tocan, y por el mismo motivo los tres: ya pasaron. Un turno de guardia completado
@@ -21,7 +21,7 @@ import { finEfectivoDeLaAusencia } from './ausenciaQueTapa.js';
  * fue. Ninguna de las tres tiene nada que cubrir, y meterlas en la lista haría aparecer un
  * sustituto para un día que terminó.
  */
-export const ESTADOS_QUE_UNA_AUSENCIA_DEJA_SIN_ASISTENTE = ['programada', 'activa', 'pausada'];
+export const ESTADOS_QUE_UNA_AUSENCIA_DEJA_SIN_ASISTENTE = ['programada', 'activa', 'pausada', 'suspendida'];
 
 /**
  * Los identificadores de los turnos de guardia que quedan afectadas por el rango de una ausencia.

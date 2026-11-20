@@ -70,7 +70,9 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const [institucionHosp, setInstitucionHosp] = useState('');
   const [motivoHosp, setMotivoHosp] = useState('');
   const [fechaInicioHosp, setFechaInicioHosp] = useState(hoyISO);
-  const [continuanHosp, setContinuanHosp] = useState(false);
+  // Qué pasa con el Servicio mientras dura la internación: se suspende, se muda a la institución,
+  // o sigue en el domicilio de siempre porque ahí se atiende a otro Paciente.
+  const [formaHosp, setFormaHosp] = useState('');
   const [domicilioHosp, setDomicilioHosp] = useState(DOMICILIO_VACIO);
   const [guardandoHosp, setGuardandoHosp] = useState(false);
   const [intentadoHosp, setIntentadoHosp] = useState(false);
@@ -98,7 +100,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
       supabase.rpc('domicilio_del_paciente_en', { p_paciente_id: paciente.id, p_fecha: hoyISO() }),
       informacionDeSalud
         .from('hospitalizaciones_paciente')
-        .select('id, institucion, fecha_inicio')
+        .select('id, institucion, fecha_inicio, forma')
         .eq('paciente_id', paciente.id)
         .is('fecha_fin', null)
         .maybeSingle(),
@@ -230,7 +232,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     setInstitucionHosp('');
     setMotivoHosp('');
     setFechaInicioHosp(hoyISO());
-    setContinuanHosp(false);
+    setFormaHosp('');
     setDomicilioHosp(DOMICILIO_VACIO);
     setIntentadoHosp(false);
     setErrorHosp(null);
@@ -239,8 +241,9 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   const faltasHosp = {
     institucion: !institucionHosp.trim(),
     fecha_inicio: !fechaInicioHosp,
-    calle: continuanHosp && !domicilioHosp.calle.trim(),
-    lugar_id: continuanHosp && !domicilioHosp.lugar_id,
+    forma: !formaHosp,
+    calle: formaHosp === 'muda' && !domicilioHosp.calle.trim(),
+    lugar_id: formaHosp === 'muda' && !domicilioHosp.lugar_id,
   };
   const errorHospDe = (campo) =>
     intentadoHosp && faltasHosp[campo] ? t.formularios.falta_un_dato_obligatorio : null;
@@ -257,7 +260,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     setGuardandoHosp(true);
     setErrorHosp(null);
 
-    const partes = continuanHosp ? partesParaGuardar(domicilioHosp) : null;
+    const partes = formaHosp === 'muda' ? partesParaGuardar(domicilioHosp) : null;
     const ubicacion = partes ? await coordenadasDeDomicilio(partes) : null;
 
     const { error: errorRegistro } = await supabase.rpc('registrar_hospitalizacion', {
@@ -274,6 +277,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
             motivo: institucionHosp.trim(),
           }
         : null,
+      p_forma: formaHosp,
     });
 
     setGuardandoHosp(false);
@@ -288,9 +292,10 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
   }
 
   async function handleCerrarHospitalizacion() {
-    // Sólo se pregunta cuando hay guardias en pausa, que vuelven a correr al cerrar.
-    const continuaban = periodos.some((p) => p.hospitalizacion_id === hospitalizacionActiva.id);
-    if (!continuaban && !(await confirmarDestructivo(t.domicilios_temporales.confirmar_cierre_hospitalizacion))) return;
+    // Sólo se pregunta cuando la internación suspendió el Servicio: al cerrarla, los turnos de
+    // guardia que ella suspendió vuelven a programarse.
+    const suspendia = hospitalizacionActiva.forma === 'suspende';
+    if (suspendia && !(await confirmarDestructivo(t.domicilios_temporales.confirmar_cierre_hospitalizacion))) return;
 
     setCerrandoHosp(true);
     setErrorHosp(null);
@@ -404,14 +409,22 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                         </div>
                         <div className="molde-ancho">
                           <FormField
-                            label={t.domicilios_temporales.hospitalizacion_continuan}
-                            name="continuan_hosp"
-                            type="checkbox"
-                            checked={continuanHosp}
-                            onChange={(e) => setContinuanHosp(e.target.checked)}
-                          />
+                            label={t.domicilios_temporales.hospitalizacion_forma}
+                            name="forma_hosp"
+                            type="select"
+                            required
+                            value={formaHosp}
+                            onChange={(e) => setFormaHosp(e.target.value)}
+                            disabled={guardandoHosp}
+                            error={errorHospDe('forma')}
+                          >
+                            <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
+                            <option value="suspende">{t.domicilios_temporales.hospitalizacion_forma_suspende}</option>
+                            <option value="muda">{t.domicilios_temporales.hospitalizacion_forma_muda}</option>
+                            <option value="sigue">{t.domicilios_temporales.hospitalizacion_forma_sigue}</option>
+                          </FormField>
                         </div>
-                        {continuanHosp && (
+                        {formaHosp === 'muda' && (
                           <>
                             <div className="molde-ancho">
                               <CamposDeDomicilio

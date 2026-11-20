@@ -38,7 +38,7 @@ import { moverTurnoGuardiaAOtroPaciente, quienTieneElTurnoGuardia } from './asig
 const VISTAS = ['asistente', 'paciente'];
 
 /** Los estados de un turno de guardia que todavía no empezó. Cualquier otro cuenta como empezada. */
-const SIN_EMPEZAR = ['programada', 'pausada', 'cancelada'];
+const SIN_EMPEZAR = ['programada', 'pausada', 'suspendida', 'cancelada'];
 
 /**
  * Si el turno de guardia ya empezó: tiene el check-in, o su estado ya no es uno de antes de empezar

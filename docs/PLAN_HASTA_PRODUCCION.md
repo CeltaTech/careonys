@@ -235,7 +235,10 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      suspensión es una interrupción larga o sin fecha, por un problema, una sanción o un cambio de
      planes, hasta que se resuelva una condición o se tome una decisión final. Las dos guardan
      motivo y quién lo hizo. Hoy existe sólo la pausa, y la usa únicamente la internación.
-   - **La internación del Paciente tiene tres salidas**, y quien la registra elige una:
+   - **La internación la determina un médico, y el sistema no la gestiona.** Lo que se gestiona
+     es qué pasa con el Servicio mientras el Paciente está internado, salvo que el Cliente decida
+     dar de baja el Servicio a causa de la internación. Mientras dura, el Servicio sigue una de
+     tres formas:
      - **El Servicio se suspende** hasta que el Paciente vuelve al domicilio.
      - **El Servicio se muda al domicilio temporal**, el hospital o la clínica, hasta que el
        Paciente vuelve al domicilio.

@@ -134,7 +134,7 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      Prestación es de un solo Paciente y un turno de guardia puede cubrir a varios, como un
      matrimonio, así que pertenece a una guardia de cada Prestación. Va una tabla puente, y la base
      rechaza que el turno de guardia y la guardia sean de Servicios distintos. De ahí leen el aviso
-     de la guardia sin cubrir y la sugerencia de Asistentes de qué es la guardia, aunque todavía no
+     del turno sin cubrir y la sugerencia de Asistentes de qué es la guardia, aunque todavía no
      haya nadie asignado.
    - **Cuando una Prestación se reemplaza por otra** —un cambio de precio—, su cronograma de guardias pasa a
      la nueva. Hoy eso ocurre en cuatro lugares: el cambio de precio del Panel y las tres funciones de
@@ -147,8 +147,8 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **De paso:** el comentario guardado de la base sobre la columna del Servicio en los turnos de
      guardia recurrentes dice que puede quedar vacía, y la base no lo permite. Se corrige.
 
-2. **Una sola función encuentra las guardias sin cubrir.**
-   - **La guardia sin cubrir** es la guardia del cronograma, o la parte de ella, que no tiene ningún
+2. **Una sola función encuentra los turnos sin cubrir.**
+   - **El turno sin cubrir** es la guardia del cronograma, o la parte de ella, que no tiene ningún
      turno de guardia creado. No es el turno vacante: el turno vacante existe y le falta el
      Asistente; acá no hay turno de guardia.
    - **Hoy no existe nada parecido.**
@@ -173,11 +173,11 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      cancelar un turno de guardia recurrente no existen todavía: los construye el punto 5, y cada
      uno llama a la misma cuenta al construirse.
    - **El aviso entra por el catálogo de avisos que ya existe**, como uno más, y no se puede apagar:
-     usted fijó que no puede haber una guardia sin cubrir que nadie vea. Su texto va en los tres
-     idiomas, en los mensajes del sistema, con el mismo molde que el del turno de guardia sin
-     cubrir. El asunto es «Guardia sin cubrir», y el cuerpo, «Guardia del {{fecha}}, de
-     {{horaInicio}} a {{horaFin}}, para {{pacientes}}. Ningún turno de guardia la cubre.»
-   - **La guardia sin cubrir se avisa una vez.** Se guarda qué día y horario ya se avisó, para
+     usted fijó que no puede haber un turno sin cubrir que nadie vea. Su texto va en los tres
+     idiomas, en los mensajes del sistema. El asunto es «Turno sin cubrir», o «Turnos sin cubrir»
+     cuando el aviso trae más de uno, y el cuerpo, «El turno de la guardia correspondiente a
+     {{pacientes}} del día {{fecha}}, de {{horaInicio}} a {{horaFin}} se halla sin cobertura.»
+   - **El turno sin cubrir se avisa una vez.** Se guarda qué día y horario ya se avisó, para
      que los tres momentos no repitan el mismo aviso; si se cubre y vuelve a quedar sin cubrir, se
      avisa de nuevo.
    - **Tres defectos del pasaje diario se corrigen en este punto,** porque la cuenta se apoya en él:
@@ -230,8 +230,11 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **Editar:** los días y el horario de un turno de guardia recurrente se cambian sin cancelarlo,
      desde una fecha. Los turnos de guardia ya pasados y los ya asignados no se tocan; los turnos
      vacantes futuros se rehacen.
-   - **Pausar y suspender:** con fecha de vuelta opcional, motivo y quién lo hizo. Si son una
-     acción o dos lo contesta el paso 24.
+   - **Pausar y suspender son dos acciones distintas**, y las separa la intención. La pausa es una
+     detención breve, con fecha de vuelta, para retomar el turno de guardia tal como estaba. La
+     suspensión es una interrupción larga o sin fecha, por un problema, una sanción o un cambio de
+     planes, hasta que se resuelva una condición o se tome una decisión final. Las dos guardan
+     motivo y quién lo hizo. Hoy existe sólo la pausa, y la usa únicamente la internación.
    - **Alcance:** la acción alcanza al Servicio entero, a una Prestación, a un turno de guardia
      recurrente o a un solo turno de guardia.
    - **Motivos:** salen del catálogo de motivos que ya usa la cancelación de un turno. Hoy no tiene
@@ -1118,7 +1121,7 @@ mientras armar un Servicio no sea un acto con su pantalla. **Y va después de la
 sirve de las listas de opciones por Prestadora, que es lo que quedó construido allá.
 
 **Lo que pidió usted son cuatro cosas:** que un Servicio pueda tener duración indeterminada; que
-no quede una guardia sin cubrir que nadie vea; que se pueda pausar, suspender, modificar y cancelar, en forma total o
+no quede un turno sin cubrir que nadie vea; que se pueda pausar, suspender, modificar y cancelar, en forma total o
 parcial; y que use las zonas que ya están cargadas.
 
 **Lo que ya funciona y no se rehace:** el turno de guardia recurrente sin fecha de fin, que se
@@ -1132,7 +1135,7 @@ mecanismos de aviso; y la estructura de zonas (`zonas_cobertura`, `lugares`, `zo
 **Lo que usted fijó sobre cómo se resuelve:** el cronograma de la Prestación se carga igual que un
 turno de guardia recurrente —días marcados, hora de inicio, hora de fin—, con más de un renglón
 cuando haga falta; la cuenta es directa, el cronograma menos lo que cubren los turnos de guardia
-recurrentes vigentes, y lo que sobra son las guardias sin cubrir, con su día y su horario; y la
+recurrentes vigentes, y lo que sobra son los turnos sin cubrir, con su día y su horario; y la
 cuenta corre en tres momentos: al armar o cambiar un turno de guardia recurrente, al suspender o
 cancelar uno, y en el pasaje diario que ya los extiende.
 
@@ -1152,10 +1155,10 @@ liquidado.
 **Contra qué choca este acto en el resto de la lista.** Son cinco, y ninguno se ve leyendo los
 títulos:
 
-- **El aviso de la guardia sin cubrir no es pieza nueva: entra por el catálogo de avisos que ya existe**, con su
+- **El aviso del turno sin cubrir no es pieza nueva: entra por el catálogo de avisos que ya existe**, con su
   configuración por Prestadora. Las alertas tempranas las enciende o apaga cada Prestadora, una por
-  una (sección «El Paciente nunca queda solo»), y el aviso de la guardia sin cubrir no puede ser
-  de ésas: usted fijó que no puede haber una guardia sin cubrir que nadie vea.
+  una (sección «El Paciente nunca queda solo»), y el aviso del turno sin cubrir no puede ser
+  de ésas: usted fijó que no puede haber un turno sin cubrir que nadie vea.
 - **La sugerencia de Asistentes no mira la zona, y no aparece en ninguna pantalla.** El cálculo
   —`panel/src/lib/candidatos.js`— no nombra zonas; sí mira la distancia en línea recta hasta la
   casa del Paciente, cuando las dos ubicaciones están cargadas. Ninguna pantalla de asignación lo
@@ -1171,9 +1174,6 @@ títulos:
   (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:177`), pero todavía pide todos los Pacientes que
   la base le deja ver a quien la abre, sin recortarlos al Servicio elegido. Cuando el turno cuelgue
   del Servicio esa ventana cambia de raíz.
-
-**24. Usted** — Si «suspender» es distinto de «pausar»: una sola acción con fecha de vuelta
-opcional, o dos, una por tiempo conocido y otra indefinida.
 
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
 
@@ -1566,9 +1566,6 @@ diciendo nada.
 - **El barrido del tuteo alcanza pantallas que todavía no están escritas** —el formulario de
   postulación, lo que falta de las dos aplicaciones—. No se barre dos veces: la regla queda
   escrita y cada pantalla nueva nace cumpliéndola.
-- **Un cartel ya fijó el molde del aviso de la guardia sin cubrir.** En las guardias sin cerrar usted escribió que
-  si hay algo se muestra «y si corresponde a la pantalla también cómo se solucionan». El aviso dla
-  guardia sin cubrir, más arriba, es el mismo caso y sigue sin redactar: el criterio ya está dado.
 
 **Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
 la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.

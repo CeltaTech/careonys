@@ -297,9 +297,9 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      aspirante.
    - **Antecedentes de la Asistente.** El Legajo guarda calificaciones, ausencias, llegadas tarde,
      horas extra e incidentes de relevo, y las referencias laborales que trae la postulación. La
-     experiencia laboral de la postulación no pasa al Legajo. **Lo decide usted:** cuáles cuentan y
-     de qué período. Propuesta: calificaciones, ausencias sin aviso y llegadas tarde, de los
-     últimos seis meses, con el período en la configuración del cálculo.
+     experiencia laboral de la postulación no pasa al Legajo. Decidido: cuentan las
+     calificaciones, las ausencias sin aviso y las llegadas tarde de los últimos seis meses, con el
+     período en la configuración del cálculo para que cada Prestadora lo cambie.
    - **Acuerdo económico.** El Legajo guarda lo que cobra cada Asistente: hoy 38 de 46 lo tienen
      cargado. La postulación pide el honorario pretendido, y no pasa al Legajo. Falta saber si la
      Asistente aceptó el monto de este Servicio. **Lo decide usted:** si la Asistente acepta el

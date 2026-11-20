@@ -2,7 +2,7 @@ import { enLaPrestadora } from '../db/connection.js';
 import { estaCertificada, exigirLaPrestadora } from './prestadoraCertificada.js';
 import { cubrirTurnoGuardiaConSustituto } from './cubrirTurnoGuardia.js';
 import { finEfectivoDeLaAusencia } from './ausenciaQueTapa.js';
-import { hoyISO, sumarDias } from './horarios.js';
+import { sumarDias } from './horarios.js';
 import { diaEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 
 /* La cobertura de un turno fijo durante una ausencia
@@ -33,8 +33,17 @@ import { diaEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 
 const DIAS_DE_MARGEN_SI_SIGUE_ABIERTA = 2;
 
+// «Hoy» lo pasa siempre quien llama: es el día del reloj de la Prestadora (`relojDeLaPrestadora.js`),
+// nunca el del servidor, que cuenta en hora universal. Sin ese día, corta.
+function exigirHoy(hoy) {
+  if (typeof hoy !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(hoy)) {
+    throw new Error('coberturaDeAusencia: falta el día de hoy de la Prestadora');
+  }
+}
+
 /** El último día que hay que cubrir de una ausencia, contando desde hoy. */
-export function hastaDondeCubrir(ausencia, hoy = hoyISO()) {
+export function hastaDondeCubrir(ausencia, hoy) {
+  exigirHoy(hoy);
   return finEfectivoDeLaAusencia(ausencia, hoy) ?? sumarDias(hoy, DIAS_DE_MARGEN_SI_SIGUE_ABIERTA);
 }
 
@@ -42,7 +51,8 @@ export function hastaDondeCubrir(ausencia, hoy = hoyISO()) {
  * Cubre los turnos de guardia de la serie que caen en la ausencia y devuelve al titular las que quedaron
  * afuera. Devuelve `{ cubiertas, devueltas }`, cada una con los identificadores de los turnos de guardia.
  */
-export async function aplicarCobertura({ db, cobertura, ausencia, hoy = hoyISO() }) {
+export async function aplicarCobertura({ db, cobertura, ausencia, hoy }) {
+  exigirHoy(hoy);
   const prestadoraId = cobertura.prestadora_id;
   const titularId = ausencia.asistente_id;
   const desde = ausencia.fecha_inicio > hoy ? ausencia.fecha_inicio : hoy;
@@ -144,9 +154,10 @@ export async function devolverAlTitular({ db, cobertura, titularId, desde }) {
 /**
  * El sustituto aceptó el reemplazo: se aplican sus coberturas de esa ausencia. Ya respondió que
  * sí, así que los turnos de guardia que pasan a su nombre se dan por avisadas y no le llega un mensaje por
- * cada día. Devuelve los turnos de guardia que quedaron cubiertos.
+ * cada día. Devuelve los turnos de guardia que quedaron cubiertos. `hoy` es el día de la Prestadora.
  */
-export async function aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId, sustitutoId }) {
+export async function aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId, sustitutoId, hoy }) {
+  exigirHoy(hoy);
   const { data: coberturas, error } = await db
     .from('coberturas_de_ausencia')
     .select('id, prestadora_id, ausencia_id, serie_id, asistente_sustituto_id, motivo, motivo_detalle, costo_adicional, ausencias(id, asistente_id, fecha_inicio, fecha_fin, fecha_vuelta_real)')
@@ -166,7 +177,7 @@ export async function aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId, s
     const ausencia = cobertura.ausencias;
     if (!ausencia?.asistente_id) continue;
     titularId = ausencia.asistente_id;
-    const resultado = await aplicarCobertura({ db, cobertura, ausencia });
+    const resultado = await aplicarCobertura({ db, cobertura, ausencia, hoy });
     cubiertas.push(...resultado.cubiertas);
   }
 

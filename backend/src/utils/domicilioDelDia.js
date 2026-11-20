@@ -152,11 +152,13 @@ export async function pacientesConDomicilioDelDia(db, turno_guardia, pacientes) 
  * El Cliente no está mirando un turno: está mirando a los suyos, y lo que pregunta es dónde
  * se los está atendiendo ahora. Por eso acá la fecha es la de hoy y no la de ningún turno de guardia.
  *
- * El día se saca igual que en todo el resto del backend, con la fecha del servidor; no hay una
- * hora por Prestadora en ningún lado del producto todavía, y resolverlo acá solo para esta
- * pantalla dejaría dos criterios de "hoy" conviviendo.
+ * «Hoy» es el día del reloj de la Prestadora (`relojDeLaPrestadora.js`), y lo pasa siempre
+ * quien llama: el del servidor cuenta en hora universal, y de noche en Argentina ya es mañana.
+ * Sin ese día, corta.
  */
-export async function pacientesConDomicilioDeHoy(db, pacientes) {
-  const hoy = new Date().toISOString().slice(0, 10);
+export async function pacientesConDomicilioDeHoy(db, pacientes, hoy) {
+  if (typeof hoy !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(hoy)) {
+    throw new Error('pacientesConDomicilioDeHoy: falta el día de hoy de la Prestadora');
+  }
   return pacientesConDomicilioDelDia(db, { fecha: hoy }, pacientes);
 }

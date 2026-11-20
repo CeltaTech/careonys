@@ -86,16 +86,21 @@ export const FUNCION_QUE_HABILITA_EL_ORDEN = 'ranking_plataforma';
  * @param tipo          el tipo de Asistente, como lo devuelve `tareasDelTipo.js`, o `null`.
  * @param documentacion lo que devolvió `estadoDocumentalParaElCliente`, o `null` si no se informa.
  * @param calificacion  `{ promedio, cuantas }`, o `null` si esta Prestadora no muestra calificaciones.
- * @param ahora         desde cuándo se cuenta la antigüedad (la prueba manda una fecha fija).
+ * @param hoy           el día de hoy de la Prestadora (`2026-09-15`), sacado de su zona horaria con
+ *                      `relojDeLaPrestadora.js`. Lo pasa siempre quien llama: con él se cuenta la
+ *                      antigüedad, y el día del servidor cuenta en hora universal.
  */
 export function perfilPublicoDeAsistente({
   asistente,
   tipo = null,
   documentacion = null,
   calificacion = null,
-  ahora = new Date(),
+  hoy,
 } = {}) {
   if (!asistente?.id) return null;
+  if (typeof hoy !== 'string' || !DIA.test(hoy)) {
+    throw new Error('perfilPublicoDeAsistente: falta el día de hoy de la Prestadora');
+  }
 
   return {
     id: asistente.id,
@@ -114,7 +119,7 @@ export function perfilPublicoDeAsistente({
     tipo: tipo ? { id: tipo.id, clave: tipo.clave ?? null, nombre: tipo.nombre ?? null, prestadora_id: tipo.prestadora_id ?? null } : null,
     // Cuánto hace que trabaja, en meses. Es un hecho comprobable y no una opinión, y por eso
     // se puede decir sin que sea una calificación encubierta.
-    antiguedad_meses: mesesDesde(asistente.fecha_alta, ahora),
+    antiguedad_meses: mesesDesde(asistente.fecha_alta, hoy),
     // La insignia de verificación es exactamente lo que ya se le cuenta al Cliente que
     // contrató: cuentas y palabras de estado, nunca el nombre de un documento
     // (`estadoDocumentalParaElCliente.js`).
@@ -173,14 +178,20 @@ export function ordenarPool(perfiles, { orden = ORDEN.NEUTRO, semilla = '' } = {
   });
 }
 
-/** Meses enteros entre la fecha de alta y hoy. `null` si no hay fecha. */
-function mesesDesde(fechaAlta, ahora) {
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Meses enteros entre el día de alta y hoy, contados con los dos días tal como están escritos
+ * (`2024-03-15`), sin pasar por ningún reloj. `null` si no hay fecha.
+ */
+function mesesDesde(fechaAlta, hoy) {
   if (!fechaAlta) return null;
-  const desde = new Date(fechaAlta);
-  if (Number.isNaN(desde.getTime())) return null;
-  const meses =
-    (ahora.getFullYear() - desde.getFullYear()) * 12 + (ahora.getMonth() - desde.getMonth());
-  const ajuste = ahora.getDate() < desde.getDate() ? 1 : 0;
+  const alta = String(fechaAlta).slice(0, 10);
+  if (!DIA.test(alta)) return null;
+  const [anioAlta, mesAlta, diaAlta] = alta.split('-').map(Number);
+  const [anioHoy, mesHoy, diaHoy] = hoy.split('-').map(Number);
+  const meses = (anioHoy - anioAlta) * 12 + (mesHoy - mesAlta);
+  const ajuste = diaHoy < diaAlta ? 1 : 0;
   return Math.max(0, meses - ajuste);
 }
 

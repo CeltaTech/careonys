@@ -17,7 +17,7 @@
  * opción no se mirara, la carga apagada contesta 201.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
@@ -43,7 +43,7 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     // Las subidas al depósito llevan un nombre que pone el sistema: se las atiende por la carpeta.
     const clave = ruta.startsWith(DEPOSITO) ? `${req.method} ${DEPOSITO}*` : `${req.method} ${ruta}`;
-    llamadas.push({ clave, ruta, url: req.url, cuerpo: crudo });
+    llamadas.push({ clave, ruta, url: req.url, cuerpo: crudo, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ url: req.url }) : preparada;
@@ -136,7 +136,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/configuracion_visibilidad_app', () => visibilidad);
-  respuestas.set('GET /rest/v1/prestadoras', () => [{ dias_aviso_vencimiento_documentos: 30 }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ dias_aviso_vencimiento_documentos: 30, zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   // La vista contesta sólo el tipo que se le pregunta, como la base.
   respuestas.set('GET /rest/v1/documentos_pedidos_al_asistente', ({ url }) => {
     const pedido = new URL(url, 'http://interno').searchParams.get('tipo_documento_id');
@@ -229,5 +229,45 @@ describe('el Asistente manda un documento', () => {
     assert.equal(cuerpo.fecha, '2020-01-01');
     assert.equal(subidas().length, 0);
     assert.equal(insertados().length, 0);
+  });
+});
+
+describe('el día de hoy es el de la Prestadora, no el del reloj del servidor', () => {
+  // A las 20 en hora universal del 1 de marzo, en Kiritimati ya es 2 de marzo.
+  beforeEach(() => {
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ dias_aviso_vencimiento_documentos: 0, zona_horaria: 'Pacific/Kiritimati' }]);
+  });
+  afterEach(() => mock.timers.reset());
+
+  it('un documento que venció ayer en la Prestadora se ve vencido', async () => {
+    pedidos[0] = { ...pedidos[0], documento_id: DOCUMENTO, estado: 'aprobado', fecha_vencimiento: '2026-03-01' };
+    const { estado, cuerpo } = await pedir();
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.documentos[0].estado_visible, 'vencido');
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras');
+    assert.equal(lectura.credencial, sesionDePrueba(USUARIO));
+  });
+
+  it('al abrir un documento que venció ayer en la Prestadora se ve vencido', async () => {
+    pedidos[0] = { ...pedidos[0], documento_id: DOCUMENTO, estado: 'aprobado', fecha_vencimiento: '2026-03-01' };
+    respuestas.set('GET /rest/v1/documentos_asistente', () => []);
+    const { estado, cuerpo } = await pedir(`/tipo/${TIPO}`);
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
+    assert.equal(cuerpo.estado_visible, 'vencido');
+  });
+
+  it('uno que venció ayer en la Prestadora no entra', async () => {
+    const { estado, cuerpo } = await mandar({ tipo_documento_id: TIPO, fecha_vencimiento: '2026-03-01' });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'documento_ya_vencido');
+    assert.equal(insertados().length, 0);
+  });
+
+  it('sin la zona de la Prestadora no se muestra nada y se avisa', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ dias_aviso_vencimiento_documentos: 0, zona_horaria: null }]);
+    const { estado, cuerpo } = await pedir();
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
   });
 });

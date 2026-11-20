@@ -59,7 +59,7 @@ import {
 import { direccionDeVideollamada } from '../utils/videollamada.js';
 import { abrirElContactoDeUnAsistente, comoEstaElContacto } from '../utils/contactoDelAsistente.js';
 import { MODALIDAD } from '../utils/modalidades.js';
-import { diaISO } from '../utils/reglaVencimientos.js';
+import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 
 export const appClientesRouter = Router();
 
@@ -154,7 +154,9 @@ async function pacienteDelCliente(db, pacienteId, req) {
     // La dirección que se muestra es la de hoy, no la de los datos del Paciente, y la decide la
     // base. Va acá adentro y no en cada pantalla para que ninguna se olvide: todas las pantallas
     // del Cliente que muestran un Paciente pasan por esta función.
-    const [conDomicilio] = await pacientesConDomicilioDeHoy(dbTrabajo, [conSuFicha(data)]);
+    // «Hoy» es el día de la Prestadora, leído con la conexión de quien pide.
+    const hoy = await hoyEnLaPrestadora(db, delCliente.prestadora_id);
+    const [conDomicilio] = await pacientesConDomicilioDeHoy(dbTrabajo, [conSuFicha(data)], hoy);
     return conDomicilio;
   });
 }
@@ -390,7 +392,9 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
       // no la de sus datos — es la misma respuesta que ve el Asistente en su teléfono,
       // escrita una sola vez en la base («ningún patrón repetido sin punto único de verdad»).
       const conFicha = conSusFichas(data).sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
-      return pacientesConDomicilioDeHoy(dbTrabajo, conFicha);
+      // «Hoy» es el día de la Prestadora, leído con la conexión de quien pide.
+      const hoy = await hoyEnLaPrestadora(db, delCliente[0].prestadora_id);
+      return pacientesConDomicilioDeHoy(dbTrabajo, conFicha, hoy);
     });
   } catch (err) {
     return responderError(res, err);
@@ -407,7 +411,12 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
 appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDelCliente(db, req.params.id, req);
+  let paciente;
+  try {
+    paciente = await pacienteDelCliente(db, req.params.id, req);
+  } catch (e) {
+    return responderError(res, e);
+  }
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -423,8 +432,10 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     && await alcanzaLaInformacionDeSalud(db, paciente.id);
   let resumen;
   try {
+    // "Hoy" es el día de la Prestadora, en su zona horaria, leída con la sesión de quien pide.
+    const hoy = await hoyEnLaPrestadora(db, paciente.prestadora_id);
     resumen = await enLaPrestadora(paciente.prestadora_id, 'la pantalla del Paciente', (dbTrabajo) =>
-      resumenDelPaciente(dbTrabajo, paciente, { ...visibilidad, cliente_alertas_de_la_revision: verAlertas })
+      resumenDelPaciente(dbTrabajo, paciente, { ...visibilidad, cliente_alertas_de_la_revision: verAlertas }, hoy)
     );
   } catch (e) {
     return responderError(res, e);
@@ -457,7 +468,7 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
 });
 
 /** El turno de guardia de ahora o la que sigue, cuándo llega quien ya salió, y las alertas sin resolver. */
-async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
+async function resumenDelPaciente(dbTrabajo, paciente, visibilidad, hoy) {
   // Con el turno de guardia empezado el mapa ya no va: el punto del viaje se borra al llegar, y del turno
   // no se guardan coordenadas. El Cliente ve que llegó (`checkin_at`) y quién es.
   const columnasTurnoGuardiaActivo = 'id, fecha, hora_inicio, hora_fin, estado, checkin_at, asistente_id, asistentes(nombre, foto_url)';
@@ -490,7 +501,7 @@ async function resumenDelPaciente(dbTrabajo, paciente, visibilidad) {
       .select(columnasTurnoGuardiaProximo)
       .eq('paciente_id', paciente.id)
       .eq('estado', 'programada')
-      .gte('fecha', new Date().toISOString().slice(0, 10))
+      .gte('fecha', hoy)
       .order('fecha', { ascending: true })
       .order('hora_inicio', { ascending: true })
       .limit(1)
@@ -570,15 +581,26 @@ async function nombresDeAsistentes(prestadoraId, asistenteIds) {
 appClientesRouter.get('/pacientes/:id/turnos-guardia', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_turnos_guardia'), async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDelCliente(db, req.params.id, req);
+  let paciente;
+  try {
+    paciente = await pacienteDelCliente(db, req.params.id, req);
+  } catch (e) {
+    return responderError(res, e);
+  }
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  // Si el día no viene o viene mal escrito se usa el del servidor. Es un plan B, no el camino
-  // normal: sirve para que un pedido roto muestre una semana razonable en vez de un error, y
-  // como mucho se corre un día en las horas del borde.
-  const dia = esFechaISO(req.query.dia) ? req.query.dia : new Date().toISOString().slice(0, 10);
+  // Si el día no viene o viene mal escrito se usa el de hoy de la Prestadora, en su zona horaria:
+  // un pedido roto muestra la semana de hoy en vez de un error.
+  let dia = req.query.dia;
+  if (!esFechaISO(dia)) {
+    try {
+      dia = await hoyEnLaPrestadora(db, paciente.prestadora_id);
+    } catch (e) {
+      return responderError(res, e);
+    }
+  }
   const semana = semanaQueContiene(dia);
 
   // Se pregunta por `turno_guardia_pacientes` y no por `turnos_guardia.paciente_id`: la tabla del medio es
@@ -693,7 +715,12 @@ function categoriasDelReporte(vitales) {
 appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_reportes'), async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDelCliente(db, req.params.id, req);
+  let paciente;
+  try {
+    paciente = await pacienteDelCliente(db, req.params.id, req);
+  } catch (e) {
+    return responderError(res, e);
+  }
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -756,7 +783,12 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
 appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_reportes'), async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDelCliente(db, req.params.id, req);
+  let paciente;
+  try {
+    paciente = await pacienteDelCliente(db, req.params.id, req);
+  } catch (e) {
+    return responderError(res, e);
+  }
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -811,7 +843,12 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
 
 appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible('cliente_alertas_de_la_revision'), exigeDePersonasAutorizadas('persona_autorizada_alertas'), async (req, res) => {
   const db = clienteDelPedido(req);
-  const paciente = await pacienteDelCliente(db, req.params.id, req);
+  let paciente;
+  try {
+    paciente = await pacienteDelCliente(db, req.params.id, req);
+  } catch (e) {
+    return responderError(res, e);
+  }
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -849,7 +886,7 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 // ============================================================================
 
 /** El turno de guardia que tiene a alguien en la casa ahora, o si no hay ninguna, la próxima con Asistente. */
-async function turnoGuardiaEnCursoOProximo(dbTrabajo, pacienteId) {
+async function turnoGuardiaEnCursoOProximo(dbTrabajo, pacienteId, hoy) {
   const { data: enCurso, error } = await dbTrabajo
     .from('turnos_guardia')
     .select('id, estado, asistente_id')
@@ -868,7 +905,7 @@ async function turnoGuardiaEnCursoOProximo(dbTrabajo, pacienteId) {
     .eq('paciente_id', pacienteId)
     .eq('estado', 'programada')
     .not('asistente_id', 'is', null)
-    .gte('fecha', new Date().toISOString().slice(0, 10))
+    .gte('fecha', hoy)
     .order('fecha', { ascending: true })
     .order('hora_inicio', { ascending: true })
     .limit(1)
@@ -880,7 +917,12 @@ async function turnoGuardiaEnCursoOProximo(dbTrabajo, pacienteId) {
 appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDelCliente(db, req.params.id, req);
+  let paciente;
+  try {
+    paciente = await pacienteDelCliente(db, req.params.id, req);
+  } catch (e) {
+    return responderError(res, e);
+  }
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -897,9 +939,12 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
   let certificado;
   let documentos;
   let diasAviso;
+  // El día de hoy, en la zona horaria de la Prestadora y leído con la sesión de quien pide.
+  let hoy;
   try {
+    hoy = await hoyEnLaPrestadora(db, paciente.prestadora_id);
     ({ turno_guardia, asistente, certificado, documentos, diasAviso } = await enLaPrestadora(paciente.prestadora_id, 'el Asistente del Paciente', async (dbTrabajo) => {
-      const vigente = await turnoGuardiaEnCursoOProximo(dbTrabajo, paciente.id);
+      const vigente = await turnoGuardiaEnCursoOProximo(dbTrabajo, paciente.id, hoy);
       if (!vigente?.asistente_id) return { turno_guardia: vigente };
       const [
         { data: ficha, error: errorFicha },
@@ -963,6 +1008,7 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
   const documentacion = estadoDocumentalParaElCliente({
     documentos: documentos || [],
     diasAviso: diasAviso ?? undefined,
+    ahora: hoy,
   });
 
   // Las calificaciones anteriores solo se piden si esta Prestadora deja calificar. Donde la
@@ -1431,7 +1477,7 @@ async function exigeVidriera() {
  * solo. Dos consultas para toda la lista y no dos por persona: con veinte perfiles serían
  * cuarenta viajes a la base para contestar una pantalla.
  */
-async function documentacionDeVarios(dbTrabajo, asistenteIds) {
+async function documentacionDeVarios(dbTrabajo, asistenteIds, hoy) {
   if (!asistenteIds.length) return new Map();
 
   // Con el trabajo de la Prestadora: los documentos no tienen política que deje leerlos a un
@@ -1456,6 +1502,7 @@ async function documentacionDeVarios(dbTrabajo, asistenteIds) {
       estadoDocumentalParaElCliente({
         documentos: (documentos || []).filter((d) => d.asistente_id === id),
         diasAviso: prestadora?.dias_aviso_vencimiento_documentos ?? undefined,
+        ahora: hoy,
       })
     );
   }
@@ -1497,6 +1544,8 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
     await exigeVidriera();
     const prestadoraId = req.usuarioCliente.prestadoraId;
     const visibilidad = await visibilidadDelPedido(req);
+    // El día de hoy, en la zona horaria de la Prestadora y leído con la sesión de quien pide.
+    const hoy = await hoyEnLaPrestadora(clienteDelPedido(req), prestadoraId);
 
     // Las opciones de los filtros salen del pool y no de una lista escrita: un lugar en el que
     // no trabaja nadie no se ofrece, porque elegirlo devolvería siempre vacío.
@@ -1532,7 +1581,7 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
 
       const ids = delPool.map((a) => a.id);
       const [docs, califs] = await Promise.all([
-        documentacionDeVarios(dbTrabajo, ids),
+        documentacionDeVarios(dbTrabajo, ids, hoy),
         calificacionesDeVarios(dbTrabajo, ids, visibilidad),
       ]);
       return { asistentes: delPool, documentacion: docs, calificaciones: califs };
@@ -1549,6 +1598,7 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
         tipo: tipos.get(asistente.tipo_asistente_id) || null,
         documentacion: documentacion.get(asistente.id) || null,
         calificacion: calificaciones.get(asistente.id) || null,
+        hoy,
       })
     );
 
@@ -1556,7 +1606,7 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
     const orden = porCalificacion ? ORDEN.CALIFICACION : ORDEN.NEUTRO;
 
     res.json({
-      asistentes: ordenarPool(perfiles, { orden, semilla: diaISO(new Date()) }),
+      asistentes: ordenarPool(perfiles, { orden, semilla: hoy }),
       // Viaja para que la pantalla pueda decir en qué orden está mirando, y no prometa uno
       // que no existe.
       orden,
@@ -1573,6 +1623,8 @@ appClientesRouter.get('/intermediacion/asistentes/:id', requiereRolCliente, asyn
     await exigeVidriera();
     const prestadoraId = req.usuarioCliente.prestadoraId;
     const visibilidad = await visibilidadDelPedido(req);
+    // El día de hoy, en la zona horaria de la Prestadora y leído con la sesión de quien pide.
+    const hoy = await hoyEnLaPrestadora(clienteDelPedido(req), prestadoraId);
 
     // Se busca adentro del pool y no en la tabla entera: quien no está en la vidriera no tiene
     // perfil público, aunque alguien pruebe la dirección con su identificador.
@@ -1586,7 +1638,7 @@ appClientesRouter.get('/intermediacion/asistentes/:id', requiereRolCliente, asyn
       if (!delPool) return null;
 
       const [docs, califs] = await Promise.all([
-        documentacionDeVarios(dbTrabajo, [delPool.id]),
+        documentacionDeVarios(dbTrabajo, [delPool.id], hoy),
         calificacionesDeVarios(dbTrabajo, [delPool.id], visibilidad),
       ]);
 
@@ -1628,6 +1680,7 @@ appClientesRouter.get('/intermediacion/asistentes/:id', requiereRolCliente, asyn
         tipo: tipos.get(asistente.tipo_asistente_id) || null,
         documentacion: documentacion.get(asistente.id) || null,
         calificacion: calificaciones.get(asistente.id) || null,
+        hoy,
       }),
       opiniones,
     });

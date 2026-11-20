@@ -8,7 +8,7 @@ import {
 } from './codigoDeUnSoloUso.js';
 import { MOTIVOS_SIN_COMPROBAR, MOTIVOS_DEL_PEDIDO } from './motivosSinComprobar.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
-import { sumarDias } from './fechas.js';
+import { diaEnLaZona, finDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
 
 // Cómo se comprueba que el Asistente está realmente en el domicilio cuando marca la llegada y
 // cuando cierra (pendiente #113). El GPS sigue diciendo dónde está el teléfono; esto dice que
@@ -258,16 +258,22 @@ async function guardarComprobacion(db, fila) {
 }
 
 /**
- * ¿Hoy cae adentro de este turno de guardia? Se cuenta del día anterior al de inicio al siguiente al del
- * fin, porque el servidor cuenta el día en hora universal y la Prestadora en la suya: un turno de guardia
- * que empieza a las 22 en Buenos Aires ya es «mañana» para el servidor. Un día de margen alcanza
- * para cualquier huso, y deja afuera los turnos de guardia de otros días.
+ * ¿Hoy cae adentro de este turno de guardia? «Hoy» es el día del reloj de la Prestadora
+ * (`relojDeLaPrestadora.js`), y lo pasa siempre quien llama: el del servidor cuenta en hora
+ * universal y un turno de guardia que empieza a las 22 en Buenos Aires ya es «mañana» para él.
+ * Vale desde el día de inicio hasta el día en que termina, los dos leídos en la zona de la
+ * Prestadora; los turnos de guardia de otros días quedan afuera. Sin día o sin zona, contesta que no.
  */
-export function esTurnoGuardiaDeHoy(turno_guardia, hoy = new Date().toISOString().slice(0, 10)) {
-  if (!turno_guardia?.fecha) return false;
-  const desde = sumarDias(turno_guardia.fecha, -1);
-  const hasta = sumarDias(turno_guardia.fecha, (Number(turno_guardia.dias_hasta_el_fin) || 0) + 1);
-  return hoy >= desde && hoy <= hasta;
+export function esTurnoGuardiaDeHoy(turno_guardia, hoy, zona) {
+  if (!turno_guardia?.fecha || !turno_guardia?.hora_inicio || !turno_guardia?.hora_fin) return false;
+  if (typeof hoy !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(hoy)) return false;
+  let hasta;
+  try {
+    hasta = diaEnLaZona(finDeTurnoGuardiaEnLaZona(turno_guardia, zona), zona);
+  } catch {
+    return false;
+  }
+  return hoy >= turno_guardia.fecha && hoy <= hasta;
 }
 
 /**
@@ -279,13 +285,15 @@ export function esTurnoGuardiaDeHoy(turno_guardia, hoy = new Date().toISOString(
  * llegada no traba nada: el camino de «pido autorización» y el de «entro igual con un motivo»
  * están siempre a un botón de distancia.
  */
-async function resolverCodigo(db, { turno_guardia, codigo }) {
+async function resolverCodigo(db, { turno_guardia, codigo, zona }) {
   const texto = String(codigo ?? '').trim();
   if (!texto) throw new ErrorConMotivo('faltan_datos', 'Falta el código');
 
   // El código de esa casa vale para el turno de guardia de hoy, no para una de otro día: si no, quien tiene
   // un turno de guardia el mes que viene con ese Paciente marcaría con él una llegada que no es.
-  if (!esTurnoGuardiaDeHoy(turno_guardia)) {
+  // La zona la lee la ruta con la conexión de quien pide. Sin ella no hay «hoy»: corta.
+  if (!zona) throw new Error('resolverCodigo: falta la zona horaria de la Prestadora');
+  if (!esTurnoGuardiaDeHoy(turno_guardia, diaEnLaZona(new Date(), zona), zona)) {
     throw new ErrorConMotivo('codigo_incorrecto', 'El código no corresponde a nadie de este domicilio');
   }
 
@@ -328,12 +336,12 @@ async function resolverCodigo(db, { turno_guardia, codigo }) {
  *
  * Devuelve `{ estado, medio }`.
  */
-export async function registrarComprobacion({ turno_guardia, momento, lat, lng, comprobacion }) {
+export async function registrarComprobacion({ turno_guardia, momento, lat, lng, comprobacion, zona }) {
   return enLaPrestadora(turno_guardia?.prestadora_id, 'Comprobar una llegada o una salida', (db) =>
-    registrarCon(db, { turno_guardia, momento, lat, lng, comprobacion }));
+    registrarCon(db, { turno_guardia, momento, lat, lng, comprobacion, zona }));
 }
 
-async function registrarCon(db, { turno_guardia, momento, lat, lng, comprobacion }) {
+async function registrarCon(db, { turno_guardia, momento, lat, lng, comprobacion, zona }) {
   const yaHay = await comprobacionCon(db, { prestadoraId: turno_guardia.prestadora_id, turnoGuardiaId: turno_guardia.id, momento });
   if (yaHay?.estado === 'comprobada') {
     return { estado: 'comprobada', medio: yaHay.medio };
@@ -350,7 +358,7 @@ async function registrarCon(db, { turno_guardia, momento, lat, lng, comprobacion
   };
 
   if (comprobacion?.codigo) {
-    const { medio, sujetoTipo, sujetoId } = await resolverCodigo(db, { turno_guardia, codigo: comprobacion.codigo });
+    const { medio, sujetoTipo, sujetoId } = await resolverCodigo(db, { turno_guardia, codigo: comprobacion.codigo, zona });
     await guardarComprobacion(db, {
       ...base,
       estado: 'comprobada',

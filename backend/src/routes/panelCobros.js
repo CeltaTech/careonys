@@ -41,6 +41,7 @@ import { DATOS_PARA_FACTURAR } from '../utils/datosParaFacturar.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { anularPendientesDeQuienYaNoEs } from '../utils/consentimientoPagador.js';
 import { requierePermiso } from '../utils/permisos.js';
+import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 
 /* Lo que el Cliente pagó, anotado; y el saldo, que es una resta.
    ==========================================================================
@@ -1133,6 +1134,15 @@ panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, as
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
 
+  // Sin fecha, la corrección es de hoy: el día de la Prestadora, en su zona horaria, leído con la
+  // sesión de quien pide.
+  let hoy;
+  try {
+    hoy = await hoyEnLaPrestadora(db, factura.prestadora_id);
+  } catch (e) {
+    return responderError(res, e);
+  }
+
   // Con el trabajo de la Prestadora, porque la base no le da a `authenticated` permiso de alta en
   // `correcciones_factura_cliente`. La factura ya la dejó ver la credencial de quien pide, y la
   // Prestadora que se escribe es la de esa factura.
@@ -1149,7 +1159,7 @@ panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, as
           comprobante_tipo: String(cuerpo.comprobante_tipo).trim(),
           comprobante_numero: String(cuerpo.comprobante_numero ?? '').trim() || null,
           motivo: String(cuerpo.motivo).trim(),
-          fecha: cuerpo.fecha ?? new Date().toISOString().slice(0, 10),
+          fecha: cuerpo.fecha ?? hoy,
           registrada_por: req.usuarioPanel.id,
         })
         .select()
@@ -1206,13 +1216,22 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEsta
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
 
+  // Sin fecha, el cobro es de hoy: el día de la Prestadora, en su zona horaria, leído con la sesión
+  // de quien pide.
+  let hoy;
+  try {
+    hoy = await hoyEnLaPrestadora(db, factura.prestadora_id);
+  } catch (e) {
+    return responderError(res, e);
+  }
+
   const { data, error } = await db
     .from('cobros_cliente')
     .insert({
       prestadora_id: factura.prestadora_id,
       factura_id: factura.id,
       monto: aDosDecimales(cuerpo.monto),
-      fecha_cobro: cuerpo.fecha_cobro ?? new Date().toISOString().slice(0, 10),
+      fecha_cobro: cuerpo.fecha_cobro ?? hoy,
       medio: cuerpo.medio,
       origen: 'panel',
       referencia_externa: cuerpo.referencia_externa || null,
@@ -1379,6 +1398,15 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
     return responderError(res, e);
   }
 
+  // Un cobro sin fecha es de hoy: el día de la Prestadora, en su zona horaria, leído con la sesión
+  // de quien pide. Una vez por lote.
+  let hoy;
+  try {
+    hoy = await hoyEnLaPrestadora(clienteDelPedido(req), prestadoraId);
+  } catch (e) {
+    return responderError(res, e);
+  }
+
   const resultados = [];
   const facturasTocadas = new Set();
   // Dentro del mismo lote también puede venir la misma referencia dos veces.
@@ -1419,7 +1447,7 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
         prestadora_id: ubicacion.factura.prestadora_id,
         factura_id: ubicacion.factura.id,
         monto: aDosDecimales(cobro.monto),
-        fecha_cobro: cobro.fecha_cobro ?? new Date().toISOString().slice(0, 10),
+        fecha_cobro: cobro.fecha_cobro ?? hoy,
         medio: cobro.medio,
         origen,
         referencia_externa: referencia,

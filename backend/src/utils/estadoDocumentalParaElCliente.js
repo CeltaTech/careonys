@@ -47,12 +47,13 @@ export const RESUMEN_DOCUMENTAL = {
  * @param documentos  un renglón por documento que se le pide, como los da la vista
  *                    `documentos_pedidos_al_asistente`: `[{ estado, fecha_vencimiento }]`.
  * @param diasAviso   la ventana de preaviso de la Prestadora.
- * @param ahora       desde cuándo se cuenta (la prueba manda una fecha fija).
+ * @param ahora       el día de hoy de la Prestadora, sacado de su zona horaria con
+ *                    `relojDeLaPrestadora.js`. Lo pasa siempre quien llama.
  */
 export function estadoDocumentalParaElCliente({
   documentos = [],
   diasAviso = DIAS_AVISO_POR_DEFECTO,
-  ahora = new Date(),
+  ahora,
 } = {}) {
   let alDia = 0;
   let porVencer = 0;

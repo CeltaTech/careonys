@@ -55,6 +55,9 @@ function baseCon({ responsables, consentimientos, emails }) {
           if (tabla === 'personas') {
             return { data: { id: filtros.id, nombre_visible: `Persona ${filtros.id.slice(0, 4)}`, email: emails[filtros.id] ?? null }, error: null };
           }
+          if (tabla === 'prestadoras') {
+            return { data: { zona_horaria: 'America/Argentina/Buenos_Aires' }, error: null };
+          }
           return { data: null, error: null };
         },
         then(resolver) {

@@ -21,10 +21,11 @@
  * protocolo de continuidad de guardia.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { verificadorDelCodigo } from '../../utils/codigoDeUnSoloUso.js';
+import { diaEnLaZona } from '../../utils/relojDeLaPrestadora.js';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import { respuestaDeSalud, traducirPedidoDeSalud } from '../../__tests__/saludEnLaBaseFalsa.js';
@@ -63,7 +64,7 @@ const baseFalsa = createServer((req, res) => {
     // Lo de salud llega por las funciones que anotan: se lo mira como el pedido directo que reemplaza.
     const deSalud = traducirPedidoDeSalud(clave, cuerpo);
     if (deSalud) ({ clave, url, cuerpo } = deSalud);
-    llamadas.push({ clave, url, cuerpo, porLaFuncion: deSalud?.porLaFuncion });
+    llamadas.push({ clave, url, cuerpo, porLaFuncion: deSalud?.porLaFuncion, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     let valor = typeof preparada === 'function' ? preparada({ cuerpo, url }) : preparada;
@@ -205,8 +206,8 @@ beforeEach(() => {
     prestadora_id: PRESTADORA,
     asistente_id: LEGAJO,
     paciente_id: PACIENTE,
-    // El código QR vale sólo para el turno de guardia de hoy.
-    fecha: new Date().toISOString().slice(0, 10),
+    // El código QR vale sólo para el turno de guardia de hoy, y hoy es el día de la Prestadora.
+    fecha: diaEnLaZona(new Date(), 'America/Argentina/Buenos_Aires'),
     hora_inicio: '08:00',
     hora_fin: '20:00',
     modalidad: 'con_retiro',
@@ -218,6 +219,7 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   respuestas.set('GET /rest/v1/turnos_guardia', () => [turnoGuardiaActual]);
   respuestas.set('PATCH /rest/v1/turnos_guardia', () => [{ id: TURNO_GUARDIA }]);
   respuestas.set('GET /rest/v1/turno_guardia_pacientes', turnoGuardiaPacientesRespuesta);
@@ -887,5 +889,49 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
     assert.equal(cuerpo.motivo, 'continuidad');
     assert.equal(turnoGuardiaMarcado(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
+  });
+});
+
+describe('el código vale para el turno de guardia del día de la Prestadora, no del reloj del servidor', () => {
+  // A las 20 en hora universal del 1 de marzo, en Kiritimati ya es 2 de marzo a las 10.
+  beforeEach(() => {
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'Pacific/Kiritimati' }]);
+    codigosEnPantalla = [
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
+    ];
+  });
+  afterEach(() => mock.timers.reset());
+
+  it('el código vale para el turno de guardia de hoy en la Prestadora, y la zona se lee con la sesión', async () => {
+    turnoGuardiaActual = { ...turnoGuardiaActual, fecha: '2026-03-02' };
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
+      lat: LAT, lng: LNG, comprobacion: { codigo: '123456' },
+    });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.comprobacion, 'comprobada');
+    const zona = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras');
+    assert.equal(zona.credencial, sesionDePrueba(USUARIO), 'la zona se leyó con otra conexión');
+  });
+
+  it('el turno de guardia de ayer en la Prestadora no acepta el código', async () => {
+    turnoGuardiaActual = { ...turnoGuardiaActual, fecha: '2026-03-01' };
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
+      lat: LAT, lng: LNG, comprobacion: { codigo: '123456' },
+    });
+    assert.notEqual(estado, 200);
+    assert.equal(cuerpo.motivo, 'codigo_incorrecto');
+    assert.equal(turnoGuardiaMarcado(), false);
+  });
+
+  it('sin la zona de la Prestadora no marca la llegada con código y avisa', async () => {
+    turnoGuardiaActual = { ...turnoGuardiaActual, fecha: '2026-03-02' };
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: null }]);
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkin`, {
+      lat: LAT, lng: LNG, comprobacion: { codigo: '123456' },
+    });
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
+    assert.equal(turnoGuardiaMarcado(), false);
   });
 });

@@ -17,8 +17,15 @@ export const ESTADO_VISIBLE = {
   VENCIDO: 'vencido',
 };
 
+// «Hoy» lo pasa siempre quien llama: es el día del reloj de la Prestadora
+// (`relojDeLaPrestadora.js`), nunca el del servidor, que cuenta en hora universal. Sin él, corta.
+function exigirHoy(hoy, quien) {
+  if (!hoy) throw new Error(`${quien}: falta el día de hoy de la Prestadora`);
+}
+
 /** El estado que se muestra: el de la base, y si está aprobado, el que dice su vencimiento. */
-export function estadoVisible(fila, diasAviso, hoy = new Date()) {
+export function estadoVisible(fila, diasAviso, hoy) {
+  exigirHoy(hoy, 'estadoVisible');
   const estado = fila?.estado ?? ESTADO_VISIBLE.FALTA;
   if (estado !== ESTADO_VISIBLE.APROBADO) return estado;
   const vencimiento = estadoDeVencimiento(diasParaVencer(fila.fecha_vencimiento, hoy), diasAviso);
@@ -34,7 +41,8 @@ export function estaEnviado(fila) {
 }
 
 /** ¿Este documento vale hoy? Aprobado y sin vencer. */
-export function estaAlDia(fila, hoy = new Date()) {
+export function estaAlDia(fila, hoy) {
+  exigirHoy(hoy, 'estaAlDia');
   if (fila?.estado !== ESTADO_VISIBLE.APROBADO) return false;
   const dias = diasParaVencer(fila.fecha_vencimiento, hoy);
   return dias === null || dias >= 0;
@@ -107,7 +115,8 @@ export function fechasDelDocumento(tipo, cuerpo) {
  *   que ya no alcanza es hoy menos el plazo, menos un día.
  * - Con la fecha que figura en el documento: el reemplazo tiene que ser posterior a ese vencimiento.
  */
-export function llegaVencido(tipo, fechas, hoy = new Date()) {
+export function llegaVencido(tipo, fechas, hoy) {
+  exigirHoy(hoy, 'llegaVencido');
   const dia = diaISO(hoy);
   if (tipo.vencimiento === 'plazo_desde_emision') {
     const vence = correrDia(fechas.fecha_emision, tipo.periodo_cantidad, tipo.periodo_unidad);

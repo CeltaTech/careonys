@@ -9,7 +9,7 @@
  * cada credencial lo decide la base, no esta prueba.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
@@ -90,7 +90,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA, tipo_asistente_id: 'tipo-1' }]);
   respuestas.set('GET /rest/v1/turno_guardia_pacientes', () => (atiende ? [{ turno_guardia_id: 'g1' }] : []));
-  respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR', zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   respuestas.set('GET /rest/v1/indicaciones_medicacion', ({ url }) => (url.includes('prescripcion_archivo_url')
     ? [{ id: ORDEN, prescripcion_archivo_url: `${PRESTADORA}/receta.pdf` }]
     : [{ id: ORDEN, medicamento: 'Inventado', via_administracion_id: VIA, via: { clave: 'oral' } }]));
@@ -138,5 +138,32 @@ describe('las órdenes de medicación del Asistente', () => {
     const { estado, cuerpo } = await pedir(`/${PACIENTE}`);
     assert.notEqual(estado, 200);
     assert.equal(cuerpo.ordenes, undefined);
+  });
+});
+
+describe('las órdenes vigentes son las del día de la Prestadora, no las del reloj del servidor', () => {
+  // A las 20 en hora universal del 1 de marzo, en Kiritimati ya es 2 de marzo.
+  beforeEach(() => {
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR', zona_horaria: 'Pacific/Kiritimati' }]);
+  });
+  afterEach(() => mock.timers.reset());
+
+  it('pregunta por las órdenes vigentes el día de la Prestadora', async () => {
+    const { estado } = await pedir(`/${PACIENTE}`);
+    assert.equal(estado, 200);
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/indicaciones_medicacion' && l.url.includes('fecha_desde'));
+    assert.ok(lectura.url.includes('fecha_desde=lte.2026-03-02'), lectura.url);
+    assert.ok(lectura.url.includes('fecha_hasta.gte.2026-03-02'), lectura.url);
+    const zona = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras' && l.url.includes('zona_horaria'));
+    assert.equal(zona.credencial, SESION, 'la zona se leyó con otra credencial');
+  });
+
+  it('sin la zona de la Prestadora no entrega ninguna orden y avisa', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR', zona_horaria: null }]);
+    const { estado, cuerpo } = await pedir(`/${PACIENTE}`);
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/indicaciones_medicacion'), false);
   });
 });

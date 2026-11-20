@@ -3,6 +3,7 @@ import { enviarPushAsistente } from './push.js';
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
 import { seSuperponen } from './horarios.js';
+import { sumarDias } from './fechas.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 
 /*
@@ -142,9 +143,9 @@ async function suplentesDisponibles(prestadoraId, turno_guardia) {
  * turno de guardia de noche aparecería libre.
  */
 function fechaAnterior(fechaISO) {
-  const dia = new Date(`${fechaISO}T00:00:00`);
-  dia.setDate(dia.getDate() - 1);
-  return dia.toISOString().slice(0, 10);
+  // La cuenta es de días escritos, sin reloj: con la medianoche del servidor, en una zona
+  // adelantada a la hora universal el día anterior salía dos días antes.
+  return sumarDias(fechaISO, -1);
 }
 
 /**

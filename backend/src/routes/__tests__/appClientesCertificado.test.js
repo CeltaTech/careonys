@@ -15,7 +15,7 @@
  * otra que no sea el trabajo de esta Prestadora, o con el teléfono viajando, las comprobaciones de abajo fallan. Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
@@ -32,11 +32,14 @@ const respuestas = new Map();
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
-  req.on('data', () => {});
+  let crudo = '';
+  req.on('data', (parte) => {
+    crudo += parte;
+  });
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, autorizacion: req.headers.authorization });
+    llamadas.push({ clave, url: req.url, autorizacion: req.headers.authorization, cuerpo: crudo ? JSON.parse(crudo) : null });
 
     const preparada = respuestas.get(clave);
     // Lo que esta prueba no prepara contesta vacío: acá se mira con qué filtros se consultó una
@@ -97,6 +100,7 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', { id: USUARIO });
   respuestas.set('GET /rest/v1/usuarios', [{ rol: 'cliente', prestadora_id: PRESTADORA }]);
+  respuestas.set('GET /rest/v1/prestadoras', [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   respuestas.set('GET /rest/v1/clientes', [{ id: CLIENTE }]);
   respuestas.set('GET /rest/v1/pacientes', [
     { id: PACIENTE, cliente_id: CLIENTE, prestadora_id: PRESTADORA, persona: { nombre_visible: 'Persona Inventada' } },
@@ -198,5 +202,58 @@ describe('los datos del Paciente que ve el Cliente', () => {
     for (const parte of ['calle', 'numero', 'lat', 'lng']) {
       assert.ok(!url.includes(parte), `se pidió ${parte}: ${url}`);
     }
+  });
+});
+
+describe('el día de hoy que ve el Cliente es el de la Prestadora, no el del reloj del servidor', () => {
+  // A las 20 en hora universal del domingo 1 de marzo, en Kiritimati ya es el lunes 2 de marzo.
+  beforeEach(() => {
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+    respuestas.set('GET /rest/v1/prestadoras', [{ zona_horaria: 'Pacific/Kiritimati' }]);
+  });
+  afterEach(() => mock.timers.reset());
+
+  /** Que la zona de la Prestadora se haya leído con la sesión de quien pide. */
+  function zonaLeidaConLaSesion() {
+    const zona = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras' && decodeURIComponent(l.url).includes('zona_horaria'));
+    assert.ok(zona, 'no se leyó la zona de la Prestadora');
+    assert.equal(zona.autorizacion, credencial, 'la zona se leyó con otra conexión');
+  }
+
+  it('la próxima guardia se busca desde el día de hoy de la Prestadora', async () => {
+    respuestas.set('GET /rest/v1/turnos_guardia', ({ url }) =>
+      (url.includes('estado=eq.activa') ? [] : [{ id: 'g-2', estado: 'programada', asistente_id: ASISTENTE }]));
+    const { estado } = await pedir(`/pacientes/${PACIENTE}/asistente`);
+    assert.equal(estado, 200);
+    const proxima = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia' && l.url.includes('estado=eq.programada'));
+    assert.ok(proxima.url.includes('fecha=gte.2026-03-02'), proxima.url);
+    zonaLeidaConLaSesion();
+  });
+
+  it('sin día pedido, la semana de guardias es la que contiene el día de hoy de la Prestadora', async () => {
+    const { estado, cuerpo } = await pedir(`/pacientes/${PACIENTE}/turnos-guardia`);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.desde, '2026-03-02');
+    zonaLeidaConLaSesion();
+  });
+
+  it('el domicilio de la lista de Pacientes es el del día de hoy de la Prestadora', async () => {
+    respuestas.set('GET /rest/v1/pacientes', [
+      { id: PACIENTE, cliente_id: CLIENTE, prestadora_id: PRESTADORA, persona: { nombre_visible: 'Persona Inventada', calle: 'Calle Inventada' } },
+    ]);
+    const { estado } = await pedir('/pacientes');
+    assert.equal(estado, 200);
+    const domicilio = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/domicilios_de_pacientes_en');
+    assert.ok(domicilio, 'no se preguntó el domicilio');
+    assert.equal(domicilio.cuerpo.p_fecha, '2026-03-02');
+    zonaLeidaConLaSesion();
+  });
+
+  it('sin la zona de la Prestadora no muestra la próxima guardia y avisa', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', [{ zona_horaria: null }]);
+    const { estado, cuerpo } = await pedir(`/pacientes/${PACIENTE}/asistente`);
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/turnos_guardia'), false);
   });
 });

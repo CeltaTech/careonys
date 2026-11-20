@@ -3,6 +3,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { enLaPrestadora, clienteDelPedido } from '../db/connection.js';
 import { esAdminOSuperior } from '../utils/roles.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 import {
   registrarActividadSinFalta,
   ACCION_CONSULTA_DEL_REGISTRO_DE_ACCESOS,
@@ -224,7 +225,8 @@ async function elAnioPorBorrar(req) {
   if (error) throw error;
   const fila = Array.isArray(data) ? data[0] : data;
   if (!fila?.anio || !fila?.se_borra_el || !fila?.preaviso_el) return null;
-  const hoy = new Date().toISOString().slice(0, 10);
+  // El día de hoy, en la zona horaria de la Prestadora y leído con la sesión de quien pide.
+  const hoy = await hoyEnLaPrestadora(clienteDelPedido(req), req.usuarioPanel.prestadoraId);
   if (hoy < fila.preaviso_el || hoy >= fila.se_borra_el) return null;
   return fila;
 }

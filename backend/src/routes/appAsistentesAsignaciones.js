@@ -5,7 +5,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 import { errorDeDocumentos } from '../utils/erroresDeDocumentos.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
 import { aplicarReemplazoAceptado } from '../utils/coberturaDeAusencia.js';
-import { hoyISO } from '../utils/horarios.js';
+import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 
 // ============================================================================
 // Los turnos de guardia que se le asignaron al Asistente y todavía no respondió.
@@ -118,11 +118,15 @@ async function aplicarLoAceptado(req) {
       .maybeSingle();
     if (!asignacion) return;
 
+    // El día de hoy, en la zona horaria de la Prestadora y leído con la sesión de quien pide. Sin
+    // zona no se aplica nada: la respuesta ya quedó guardada y el error va al registro.
+    const hoy = await hoyEnLaPrestadora(clienteDelPedido(req), prestadoraId);
+
     let turnoGuardiaIds = [];
     let anterior = null;
     if (asignacion.ausencia_id) {
       const { cubiertas, titularId } = await enLaPrestadora(prestadoraId, 'aplicar el reemplazo aceptado', (db) =>
-        aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId: asignacion.ausencia_id, sustitutoId: asistenteId }),
+        aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId: asignacion.ausencia_id, sustitutoId: asistenteId, hoy }),
       );
       turnoGuardiaIds = cubiertas;
       anterior = titularId;
@@ -132,7 +136,7 @@ async function aplicarLoAceptado(req) {
         .select('id')
         .eq('serie_id', asignacion.serie_id)
         .eq('asistente_id', asistenteId)
-        .gte('fecha', hoyISO());
+        .gte('fecha', hoy);
       turnoGuardiaIds = (data ?? []).map((g) => g.id);
       anterior = asignacion.asistente_anterior_id;
     }

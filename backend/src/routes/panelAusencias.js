@@ -8,7 +8,7 @@ import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { hastaDondeCubrir } from '../utils/coberturaDeAusencia.js';
 import { avisarAsignacionDeAusencia } from '../utils/avisoAsignacionDeTurnoGuardia.js';
-import { hoyISO } from '../utils/horarios.js';
+import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 
 // CON LA CREDENCIAL DE QUIEN PIDE. La base decide qué ausencias alcanza: el Administrador, todas
 // las de su Prestadora; quien coordina, las de los Asistentes de su zona
@@ -190,7 +190,13 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
     .maybeSingle();
   if (!sustituto) return res.status(404).json({ error: 'No se encontró ese Asistente' });
 
-  const hoy = hoyISO();
+  // El día de hoy, en la zona horaria de la Prestadora y leído con la sesión de quien pide.
+  let hoy;
+  try {
+    hoy = await hoyEnLaPrestadora(db, ausencia.prestadora_id);
+  } catch (e) {
+    return responderError(res, e);
+  }
   const desde = ausencia.fecha_inicio > hoy ? ausencia.fecha_inicio : hoy;
   const hasta = hastaDondeCubrir(ausencia, hoy);
   if (desde > hasta) return res.json({ turno_guardia_ids: [] });

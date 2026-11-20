@@ -19,7 +19,7 @@
  * prueba `scripts/probar_aislamiento.mjs` contra una base de verdad.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
@@ -165,6 +165,7 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => true);
   // De fábrica la cobranza la sigue este sistema, que es lo que hace la mayoría. Las pruebas del
   // caso conectado pisan esta respuesta.
@@ -1874,5 +1875,68 @@ describe('a nombre de quién sale lo que se manda a facturar', () => {
     const { estado, cuerpo } = await pedir('GET', '/para-facturar?periodo=2026-08');
     assert.equal(estado, 200, JSON.stringify(cuerpo));
     assert.equal(cuerpo[0].facturar_a_nombre, 'Contratante de prueba');
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// El día de hoy es el de la Prestadora, no el del reloj del servidor
+// ---------------------------------------------------------------------------------------
+
+describe('el día de un cobro o una corrección sin fecha', () => {
+  // A las 20 en hora universal del 1 de marzo, en Kiritimati ya es 2 de marzo.
+  beforeEach(() => {
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'Pacific/Kiritimati' }]);
+    respuestas.set('GET /rest/v1/facturas_cliente', () => [FACTURA_EN_LA_BASE]);
+    respuestas.set('POST /rest/v1/cobros_cliente', (cuerpo) => [{ id: 'c-1', ...cuerpo }]);
+    respuestas.set('POST /rest/v1/correcciones_factura_cliente', (cuerpo) => [{ id: 'k-1', ...cuerpo }]);
+    respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
+    respuestas.set('GET /rest/v1/cobros_cliente', () => []);
+  });
+  afterEach(() => mock.timers.reset());
+
+  it('un cobro sin fecha queda con el día de la Prestadora', async () => {
+    const { estado } = await pedir('POST', `/facturas/${FACTURA}/cobros`, { monto: 40000, medio: 'transferencia' });
+    assert.equal(estado, 200);
+    const insercion = llamadas.find((l) => l.clave === 'POST /rest/v1/cobros_cliente');
+    assert.equal(insercion.cuerpo.fecha_cobro, '2026-03-02');
+  });
+
+  it('una corrección sin fecha queda con el día de la Prestadora', async () => {
+    const { estado } = await pedir('POST', `/facturas/${FACTURA}/correcciones`, {
+      sentido: 'resta',
+      monto: 100,
+      comprobante_tipo: 'Nota de crédito A',
+      motivo: 'error inventado',
+    });
+    assert.equal(estado, 200);
+    const insercion = llamadas.find((l) => l.clave === 'POST /rest/v1/correcciones_factura_cliente');
+    assert.equal(insercion.cuerpo.fecha, '2026-03-02');
+  });
+
+  it('un cobro que llega en un lote sin fecha queda con el día de la Prestadora', async () => {
+    const { estado } = await pedir('POST', '/entrada', {
+      origen: 'api',
+      cobros: [{ factura_id: FACTURA, monto: 40000, medio: 'transferencia', referencia_externa: 'REC-K1' }],
+    });
+    assert.equal(estado, 200);
+    const insercion = llamadas.find((l) => l.clave === 'POST /rest/v1/cobros_cliente');
+    const fila = Array.isArray(insercion.cuerpo) ? insercion.cuerpo[0] : insercion.cuerpo;
+    assert.equal(fila.fecha_cobro, '2026-03-02');
+  });
+
+  it('sin la zona de la Prestadora no se anota nada y se avisa', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: null }]);
+    const { estado, cuerpo } = await pedir('POST', `/facturas/${FACTURA}/cobros`, { monto: 40000, medio: 'transferencia' });
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/cobros_cliente'), false);
+  });
+
+  it('la zona se lee con la sesión de quien pide', async () => {
+    await pedir('POST', `/facturas/${FACTURA}/cobros`, { monto: 40000, medio: 'transferencia' });
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras');
+    assert.ok(lectura, 'no leyó la zona de la Prestadora');
+    assert.equal(lectura.credencial, credencialEnviada);
   });
 });

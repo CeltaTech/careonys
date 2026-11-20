@@ -11,7 +11,7 @@ import { nombreDelLugar } from './catalogoDeLugares.js';
 import { domicilioEscrito, partesDelDomicilio, partesDeUnRenglon } from './domicilioEscrito.js';
 import { cuentaDeLaFila } from './cuentaDeLaFila.js';
 import { generoEscrito } from './generoEscrito.js';
-import { inicioDeTurnoGuardia } from './horarios.js';
+import { inicioDeTurnoGuardiaEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -177,9 +177,13 @@ export async function desactivarCuenta(userId, { prestadoraId, motivo } = {}) {
 export const MOTIVO_TURNOS_GUARDIA_POR_DELANTE = 'desactivacion_con_turnos_guardia_por_delante';
 export const MOTIVO_TURNOS_GUARDIA_SIN_CERRAR = 'desactivacion_con_turnos_guardia_sin_cerrar';
 
-export function motivoDelTurnoGuardiaQueTraba(turno_guardia, ahora = new Date()) {
+//
+// La hora de inicio del turno es la de la casa del Paciente: se lee en la zona horaria de la
+// Prestadora. Leída con la hora del servidor, que cuenta en hora universal, un turno de las 08:00
+// de Argentina empezaba a las 05:00 de allá. Sin zona, corta.
+export function motivoDelTurnoGuardiaQueTraba(turno_guardia, zona, ahora = new Date()) {
   if (turno_guardia.tipo === 'serie') return MOTIVO_TURNOS_GUARDIA_POR_DELANTE;
-  const empezo = Boolean(turno_guardia.checkin_at) || !(inicioDeTurnoGuardia(turno_guardia) > ahora);
+  const empezo = Boolean(turno_guardia.checkin_at) || !(inicioDeTurnoGuardiaEnLaZona(turno_guardia, zona) > ahora);
   return empezo ? MOTIVO_TURNOS_GUARDIA_SIN_CERRAR : MOTIVO_TURNOS_GUARDIA_POR_DELANTE;
 }
 
@@ -187,8 +191,11 @@ export function motivoDelTurnoGuardiaQueTraba(turno_guardia, ahora = new Date())
 // adentro de la Prestadora del trabajo. Si la lista no se pudo leer, el error sigue diciendo que hay
 // turnos por delante, sin la lista.
 export async function errorPorTurnosGuardiaSinTerminar(userId, prestadoraId, ahora = new Date()) {
-  const { data, error } = await enLaPrestadora(prestadoraId, 'turnos que traban la desactivación', () =>
-    supabase.rpc('turnos_guardia_que_traban_la_desactivacion', { p_usuario: userId }));
+  // La zona se lee con la misma conexión de esa Prestadora que trae los turnos.
+  const { data, error, zona } = await enLaPrestadora(prestadoraId, 'turnos que traban la desactivación', async () => ({
+    ...(await supabase.rpc('turnos_guardia_que_traban_la_desactivacion', { p_usuario: userId })),
+    zona: await zonaDeLaPrestadora(supabase, prestadoraId),
+  }));
   if (error) console.error('No se pudieron leer los turnos que traban la desactivación:', error.message);
 
   const turnos_guardia = (data ?? []).map((turno_guardia) => ({
@@ -198,7 +205,7 @@ export async function errorPorTurnosGuardiaSinTerminar(userId, prestadoraId, aho
     hora_inicio: turno_guardia.hora_inicio,
     hora_fin: turno_guardia.hora_fin,
     cliente: turno_guardia.cliente,
-    motivo: motivoDelTurnoGuardiaQueTraba(turno_guardia, ahora),
+    motivo: motivoDelTurnoGuardiaQueTraba(turno_guardia, zona, ahora),
   }));
   const motivos = [MOTIVO_TURNOS_GUARDIA_POR_DELANTE, MOTIVO_TURNOS_GUARDIA_SIN_CERRAR]
     .filter((motivo) => turnos_guardia.some((turno_guardia) => turno_guardia.motivo === motivo));

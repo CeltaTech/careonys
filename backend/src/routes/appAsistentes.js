@@ -56,7 +56,7 @@ import { identificadorDelTelefono, filaDeEsteMensaje } from '../utils/reenvioDeL
 import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
 import { notificarCoordinador } from '../utils/whatsapp.js';
 import { devolverAlTitular } from '../utils/coberturaDeAusencia.js';
-import { hoyISO } from '../utils/horarios.js';
+import { hoyEnLaPrestadora, zonaDeLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 import { respuestaValida, minutosPorGps } from '../utils/respuestaAlRelevo.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
@@ -950,8 +950,13 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkin', requiereRolAsistente, to
   // código a la Prestadora, o entrar con un motivo, y ese último camino nunca falla.
   let comprobacion;
   try {
+    // El código vale sólo para el turno de guardia de hoy, y «hoy» es el de la Prestadora: su
+    // zona se lee con la conexión de quien pide.
+    const zona = comprobacionPedida?.codigo
+      ? await zonaDeLaPrestadora(clienteDelPedido(req), turno_guardia.prestadora_id)
+      : null;
     comprobacion = await registrarComprobacion({
-      turno_guardia, momento: 'checkin', lat, lng, comprobacion: comprobacionPedida,
+      turno_guardia, momento: 'checkin', lat, lng, comprobacion: comprobacionPedida, zona,
     });
   } catch (e) {
     return responderError(res, e);
@@ -1592,7 +1597,10 @@ appAsistentesRouter.post('/consultas-de-relevo/:id/respuesta', requiereRolAsiste
 appAsistentesRouter.get('/coberturas', requiereRolAsistente, async (req, res) => {
   const { prestadoraId, asistenteId } = req.usuarioAsistente;
   let data;
+  // El día de hoy, en la zona horaria de la Prestadora y leído con la sesión de quien pide.
+  let hoy;
   try {
+    hoy = await hoyEnLaPrestadora(clienteDelPedido(req), prestadoraId);
     data = await enLaPrestadora(prestadoraId, 'ver las coberturas del Asistente', async (db) => {
       const { data: filas, error } = await db
         .from('coberturas_de_ausencia')
@@ -1607,7 +1615,6 @@ appAsistentesRouter.get('/coberturas', requiereRolAsistente, async (req, res) =>
     return responderError(res, e);
   }
 
-  const hoy = hoyISO();
   const coberturas = (data ?? [])
     .filter((c) => c.ausencias && (!c.ausencias.fecha_vuelta_real || c.ausencias.fecha_vuelta_real > hoy))
     .map((c) => ({
@@ -1625,6 +1632,8 @@ appAsistentesRouter.post('/coberturas/:id/objecion', requiereRolAsistente, async
   const { prestadoraId, asistenteId } = req.usuarioAsistente;
   let resultado;
   try {
+    // Desde hoy de la Prestadora, en su zona horaria y leído con la sesión de quien pide.
+    const hoy = await hoyEnLaPrestadora(clienteDelPedido(req), prestadoraId);
     resultado = await enLaPrestadora(prestadoraId, 'objetar la cobertura', async (db) => {
       const { data: cobertura, error } = await db
         .from('coberturas_de_ausencia')
@@ -1646,7 +1655,7 @@ appAsistentesRouter.post('/coberturas/:id/objecion', requiereRolAsistente, async
         db,
         cobertura,
         titularId: cobertura.ausencias.asistente_id,
-        desde: hoyISO(),
+        desde: hoy,
       });
       return 'objetada';
     });
@@ -1988,7 +1997,10 @@ appAsistentesRouter.post('/turnos-guardia/:id/reporte/confirmar', requiereRolAsi
         // revisar a todos los del turno porque el texto no decía de quién hablaba; ahora lo
         // dice, y levantar una alerta sobre alguien que no era es ruido que le hace perder
         // confianza al Cliente en las alertas que sí importan.
-        await analizarPaciente(paciente.id, turno_guardia.prestadora_id);
+        // La medicación vigente se mira con el día de hoy de la Prestadora, en su zona horaria y
+        // leído con la sesión de quien pide.
+        const hoy = await hoyEnLaPrestadora(clienteDelPedido(req), turno_guardia.prestadora_id);
+        await analizarPaciente(paciente.id, turno_guardia.prestadora_id, hoy);
       }
     }).catch((err) => console.error('Error en análisis inmediato de IA Nivel 2:', err.message));
   }
@@ -2056,8 +2068,13 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, t
   // un motivo» está siempre disponible.
   let comprobacion;
   try {
+    // El código vale sólo para el turno de guardia de hoy, y «hoy» es el de la Prestadora: su
+    // zona se lee con la conexión de quien pide.
+    const zona = comprobacionPedida?.codigo
+      ? await zonaDeLaPrestadora(clienteDelPedido(req), turno_guardia.prestadora_id)
+      : null;
     comprobacion = await registrarComprobacion({
-      turno_guardia, momento: 'checkout', lat, lng, comprobacion: comprobacionPedida,
+      turno_guardia, momento: 'checkout', lat, lng, comprobacion: comprobacionPedida, zona,
     });
   } catch (e) {
     return responderError(res, e);

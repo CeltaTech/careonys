@@ -135,3 +135,15 @@ export async function zonaDeLaPrestadora(db, prestadoraId) {
   if (!data?.zona_horaria) throw new Error('zonaDeLaPrestadora: la Prestadora no tiene zona horaria');
   return data.zona_horaria;
 }
+
+/**
+ * El día de hoy de la Prestadora (`2026-08-20`), para las rutas que usan las personas.
+ *
+ * En una ruta, `db` es la conexión de quien pide (`clienteDelPedido(req)`), nunca otra: la base
+ * sólo le deja leer la zona de su propia Prestadora. Falla cerrado igual que `zonaDeLaPrestadora`:
+ * sin zona, o con una que no existe, corta, y la ruta contesta el error del catálogo en vez de
+ * mostrar el día de la hora universal.
+ */
+export async function hoyEnLaPrestadora(db, prestadoraId, ahora = new Date()) {
+  return diaEnLaZona(ahora, await zonaDeLaPrestadora(db, prestadoraId));
+}

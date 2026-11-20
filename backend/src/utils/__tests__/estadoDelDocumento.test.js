@@ -58,6 +58,19 @@ describe('enviado y al día', () => {
     assert.equal(estaAlDia({ estado: 'aprobado', fecha_vencimiento: '2026-09-15' }, HOY), true);
     assert.equal(estaAlDia({ estado: 'aprobado', fecha_vencimiento: '2026-09-14' }, HOY), false);
   });
+
+  it('con el día de la Prestadora: el día escrito manda, no el reloj del servidor', () => {
+    // A las 22 del 14 en Argentina el servidor ya está en el 15; la Prestadora sigue en el 14.
+    assert.notEqual(estadoVisible({ estado: 'aprobado', fecha_vencimiento: '2026-09-14' }, 0, '2026-09-14'), 'vencido');
+    assert.equal(estadoVisible({ estado: 'aprobado', fecha_vencimiento: '2026-09-14' }, 0, '2026-09-15'), 'vencido');
+  });
+
+  it('sin el día de hoy de la Prestadora corta, en vez de contar con el del servidor', () => {
+    const aprobado = { estado: 'aprobado', fecha_vencimiento: '2026-09-14' };
+    assert.throws(() => estadoVisible(aprobado, 30));
+    assert.throws(() => estaAlDia(aprobado));
+    assert.throws(() => llegaVencido({ vencimiento: 'fecha_del_documento' }, { fecha_vencimiento: '2026-09-14' }));
+  });
 });
 
 describe('las fechas', () => {

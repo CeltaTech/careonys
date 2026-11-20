@@ -29,7 +29,7 @@ import {
   promedioDeCalificaciones,
 } from '../perfilPublicoDeAsistente.js';
 
-const HOY = new Date('2026-09-15T10:00:00');
+const HOY = '2026-09-15';
 
 /** Un Legajo del Asistente entero, como el que tiene la base. Datos inventados. */
 const ASISTENTE_COMPLETO = {
@@ -53,7 +53,7 @@ const ASISTENTE_COMPLETO = {
 
 describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
   it('el dato de contacto no sale, aunque el Legajo lo traiga entero', () => {
-    const perfil = perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO, ahora: HOY });
+    const perfil = perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO, hoy: HOY });
     const salida = JSON.stringify(perfil);
 
     for (const campo of NUNCA_SALEN) {
@@ -76,12 +76,24 @@ describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
     const perfil = perfilPublicoDeAsistente({
       asistente: ASISTENTE_COMPLETO,
       tipo: { id: 't-1', clave: 'enfermero', nombre: null, prestadora_id: null },
-      ahora: HOY,
+      hoy: HOY,
     });
     assert.equal(perfil.nombre, 'Rosa Giménez');
     assert.deepEqual(perfil.zonas, ['Caballito', 'Flores']);
     assert.equal(perfil.tipo.clave, 'enfermero');
     assert.equal(perfil.antiguedad_meses, 30);
+  });
+
+  it('la antigüedad se cuenta con el día de la Prestadora, no con el reloj del servidor', () => {
+    // Alta el 15 de marzo: el 14 de septiembre de la Prestadora todavía no cumplió los 30 meses.
+    const antes = perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO, hoy: '2026-09-14' });
+    const justo = perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO, hoy: '2026-09-15' });
+    assert.equal(antes.antiguedad_meses, 29);
+    assert.equal(justo.antiguedad_meses, 30);
+  });
+
+  it('sin el día de hoy de la Prestadora corta, en vez de contar con el del servidor', () => {
+    assert.throws(() => perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO }));
   });
 
   it('la insignia de verificación repite lo que ya se le cuenta al Cliente, sin nombrar documentos', () => {
@@ -92,7 +104,7 @@ describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
         documentosExigidos: 3,
         alDia: 3,
       },
-      ahora: HOY,
+      hoy: HOY,
     });
     assert.equal(perfil.verificacion.documentacion, 'al_dia');
     assert.equal(perfil.verificacion.documentos_exigidos, 3);
@@ -101,7 +113,7 @@ describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
   });
 
   it('sin estado documental no se inventa ninguna insignia', () => {
-    const perfil = perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO, ahora: HOY });
+    const perfil = perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO, hoy: HOY });
     assert.equal(perfil.verificacion, null);
   });
 });

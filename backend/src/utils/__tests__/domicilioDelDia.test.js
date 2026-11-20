@@ -314,11 +314,13 @@ describe('lo que no se pidió, no se completa', () => {
 
 describe('lo que ve el Cliente, que mira hoy y no un turno', () => {
   // El Cliente no entra a un turno de guardia: entra a ver a los suyos. La pregunta que hace su
-  // aplicación es "¿dónde lo están atendiendo ahora?", y la fecha la pone el backend.
-  const hoy = () => new Date().toISOString().slice(0, 10);
+  // aplicación es "¿dónde lo están atendiendo ahora?", y la fecha la pone el backend: el día de
+  // hoy de la Prestadora, que le pasa la ruta. Es un día inventado, lejos del día del servidor.
+  const HOY_DE_LA_PRESTADORA = '2031-01-15';
+  const hoy = () => HOY_DE_LA_PRESTADORA;
 
   it('pregunta por el día de hoy, no por ninguna fecha de guardia', async () => {
-    const [paciente] = await pacientesConDomicilioDeHoy(db, [conDireccion(PACIENTE_UNO)]);
+    const [paciente] = await pacientesConDomicilioDeHoy(db, [conDireccion(PACIENTE_UNO)], hoy());
 
     assert.equal(preguntas.length, 1);
     assert.equal(preguntas[0].cuerpo.p_fecha, hoy());
@@ -328,7 +330,7 @@ describe('lo que ve el Cliente, que mira hoy y no un turno', () => {
   it('si hoy cae adentro de una temporada, el Cliente ve esa dirección y el motivo', async () => {
     temporales = [{ ...EL_VERANO_EN_LA_CASA_DEL_HIJO, fecha_inicio: hoy(), fecha_fin: null }];
 
-    const [paciente] = await pacientesConDomicilioDeHoy(db, [conDireccion(PACIENTE_UNO)]);
+    const [paciente] = await pacientesConDomicilioDeHoy(db, [conDireccion(PACIENTE_UNO)], hoy());
 
     assert.equal(paciente.domicilio, 'Los Aromos 15, Pinamar');
     assert.equal(paciente.domicilio_es_temporal, true);
@@ -341,7 +343,7 @@ describe('lo que ve el Cliente, que mira hoy y no un turno', () => {
     const pacientes = await pacientesConDomicilioDeHoy(db, [
       conDireccion(PACIENTE_UNO),
       conDireccion(PACIENTE_DOS),
-    ]);
+    ], hoy());
 
     assert.equal(preguntas.length, 1);
     assert.deepEqual(
@@ -354,7 +356,12 @@ describe('lo que ve el Cliente, que mira hoy y no un turno', () => {
   });
 
   it('un Cliente sin Pacientes no le pregunta nada a la base', async () => {
-    assert.deepEqual(await pacientesConDomicilioDeHoy(db, []), []);
+    assert.deepEqual(await pacientesConDomicilioDeHoy(db, [], hoy()), []);
+    assert.equal(preguntas.length, 0);
+  });
+
+  it('sin el día de hoy de la Prestadora corta, en vez de preguntar por el del servidor', async () => {
+    await assert.rejects(() => pacientesConDomicilioDeHoy(db, [conDireccion(PACIENTE_UNO)]));
     assert.equal(preguntas.length, 0);
   });
 });

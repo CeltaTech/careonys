@@ -14,7 +14,7 @@
  * prueba la base, no esta prueba.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
@@ -100,6 +100,7 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/rpc/turnos_guardia_asignados_sin_responder', () => [TURNO_GUARDIA_SIN_RESPONDER]);
   respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => TURNO_GUARDIA);
@@ -349,5 +350,38 @@ describe('el turno fijo', () => {
     const { estado } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
     assert.equal(estado, 200);
     assert.equal(llamadas.filter((l) => quienLlamo(l)?.role === 'trabajo_sin_persona').length, 0);
+  });
+});
+
+describe('el día de hoy, al aceptar un turno fijo que era de otro', () => {
+  const ANTERIOR = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+  afterEach(() => mock.timers.reset());
+
+  beforeEach(() => {
+    respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => null);
+    respuestas.set('GET /rest/v1/asignaciones_de_turno_guardia', () => [{
+      id: 'asignacion-1', estado: 'sin_responder', serie_id: 'serie-1', ausencia_id: null, asistente_anterior_id: ANTERIOR,
+    }]);
+    respuestas.set('GET /rest/v1/turnos_guardia', () => []);
+  });
+
+  it('los turnos que pasan a su nombre se cuentan desde el día de la Prestadora, no el del servidor', async () => {
+    // Las 20 del 1 de marzo en hora universal: en Kiritimati ya es el 2 de marzo.
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'Pacific/Kiritimati' }]);
+    const { estado } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
+    assert.equal(estado, 200);
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
+    assert.ok(lectura, 'no se buscaron los turnos de la serie');
+    assert.ok(lectura.url.includes('fecha=gte.2026-03-02'), `se contó desde otro día: ${lectura.url}`);
+    const zona = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras');
+    assert.equal(zona.credencial, SESION, 'la zona no se leyó con la sesión del Asistente');
+  });
+
+  it('sin zona horaria no se pasa ningún turno, y nada se cuenta con el reloj del servidor', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: null }]);
+    const { estado } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
+    assert.equal(estado, 200);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/turnos_guardia'), false);
   });
 });

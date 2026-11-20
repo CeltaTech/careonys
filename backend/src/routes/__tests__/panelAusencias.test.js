@@ -16,7 +16,7 @@
  * Datos inventados, como manda CLAUDE.md §6.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
@@ -216,5 +216,46 @@ describe('el enlace temporal del certificado', () => {
 
     assert.equal(estado, 404);
     assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
+  });
+});
+
+describe('cubrir una ausencia desde el día de hoy de la Prestadora', () => {
+  const SUSTITUTO = '55555555-5555-5555-5555-555555555555';
+
+  async function cubrir() {
+    const respuesta = await fetch(`${DIRECCION}/${AUSENCIA}/cobertura`, {
+      method: 'POST',
+      headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ asistente_sustituto_id: SUSTITUTO }),
+    });
+    return { estado: respuesta.status, cuerpo: await respuesta.json() };
+  }
+
+  // A las 20 en hora universal del 1 de marzo, en Kiritimati ya es 2 de marzo.
+  beforeEach(() => {
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+    ausenciasEnLaBase(unaAusencia({ fecha_inicio: '2026-02-20', fecha_fin: '2026-03-10', fecha_vuelta_real: null }));
+    respuestas.set('GET /rest/v1/asistentes', () => [{ id: SUSTITUTO }]);
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'Pacific/Kiritimati' }]);
+    respuestas.set('GET /rest/v1/turnos_guardia', () => []);
+    respuestas.set('GET /rest/v1/coberturas_de_ausencia', () => []);
+  });
+  afterEach(() => mock.timers.reset());
+
+  it('los turnos de guardia a cubrir empiezan el día de hoy de la Prestadora', async () => {
+    const { estado } = await cubrir();
+    assert.equal(estado, 200);
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
+    assert.ok(consulta.url.includes('fecha=gte.2026-03-02'), consulta.url);
+    const zona = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras');
+    assert.equal(zona.credencial, sesionDePrueba(USUARIO));
+  });
+
+  it('sin la zona de la Prestadora no se cubre nada y se avisa', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: null }]);
+    const { estado, cuerpo } = await cubrir();
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/turnos_guardia'), false);
   });
 });

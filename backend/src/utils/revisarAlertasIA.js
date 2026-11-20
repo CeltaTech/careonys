@@ -105,8 +105,9 @@ async function revisarPrestadora(prestadoraId, hoy) {
 
 // Analiza los últimos N reportes de un Paciente y persiste una alerta si corresponde. Se
 // reutiliza tanto desde el cron nocturno como desde el disparo inmediato por palabra clave.
-// `hoy` es el día de la Prestadora con que se mira la medicación vigente; lo pasa la tarea nocturna.
-export async function analizarPaciente(pacienteId, prestadoraId, hoy = null) {
+// `hoy` es el día de la Prestadora con que se mira la medicación vigente: lo pasa siempre quien
+// llama, la tarea nocturna o la ruta del reporte, y sin él corta.
+export async function analizarPaciente(pacienteId, prestadoraId, hoy) {
   const { data: paciente } = await supabase
     .from('pacientes')
     .select('cliente_id, salud:informacion_de_salud_del_paciente(patologias)')

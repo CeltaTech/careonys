@@ -29,6 +29,7 @@ import {
 } from './facturaDelPeriodo.js';
 import { condicionDe, condicionesDe } from './condicionesDelCliente.js';
 import { horasEntre } from './horasDeTurnoGuardia.js';
+import { hoyEnLaPrestadora } from './relojDeLaPrestadora.js';
 import { FICHA_NOMBRE, conSusFichas } from './fichaDelPaciente.js';
 
 /** Un error de la base, con el código de respuesta que le corresponde. */
@@ -82,7 +83,10 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
   const reglaDeLaPrestadora = respuesta.data?.regla ?? null;
   const plazoDeLaPrestadora = reglaDeLaPrestadora?.dias_hasta_el_vencimiento ?? null;
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  // El día de emisión y el de corte de los períodos son los del reloj de la Prestadora, leído con
+  // la conexión de quien pide: con el del servidor, de noche en Argentina la factura salía fechada
+  // mañana. Sin zona, corta.
+  const hoy = await hoyEnLaPrestadora(db, prestadoraId);
 
   // Los pendientes de conformidad no los devuelve la base, y no se facturan. Del Cliente salen
   // los nombres de sus Pacientes para los renglones; la factura es de cada Servicio.

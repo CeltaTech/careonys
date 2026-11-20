@@ -6,6 +6,7 @@ import { clienteDelPedido } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { errorDeDocumentos } from '../utils/erroresDeDocumentos.js';
 import { estadoVisible } from '../utils/estadoDelDocumento.js';
+import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 import { avisarDocumentoAlAsistente } from '../utils/avisoDeDocumento.js';
 import {
   DEPOSITO_DE_DOCUMENTOS,
@@ -119,7 +120,8 @@ panelDocumentosAsistenteRouter.get('/asistente/:asistenteId', async (req, res) =
     const organismoPorId = new Map(organismos.map((o) => [o.id, o]));
 
     const diasAviso = await diasAvisoDe(db, asistente.prestadora_id);
-    const hoy = new Date();
+    // «Hoy» es el día del reloj de la Prestadora, no el del servidor, que cuenta en hora universal.
+    const hoy = await hoyEnLaPrestadora(db, asistente.prestadora_id);
 
     const documentos = (pedidos ?? []).map((p) => {
       const cargado = p.documento_id ? porId.get(p.documento_id) : null;

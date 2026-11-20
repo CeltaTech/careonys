@@ -32,6 +32,7 @@ let turnosGuardiaQueTraban = [];
 let asistenteExiste = true;
 let coordinadorConElPermiso = false;
 let asistenteASuCargo = true;
+let zonaDeLaPrestadora = 'America/Argentina/Buenos_Aires';
 const ASISTENTE = '55555555-5555-4555-8555-555555555555';
 
 const DESACTIVADA = {
@@ -102,6 +103,11 @@ const baseFalsa = createServer((req, res) => {
     if (clave === 'POST /rest/v1/rpc/turnos_guardia_que_traban_la_desactivacion') {
       respuesta = credencial?.role === 'trabajo_sin_persona' ? turnosGuardiaQueTraban : [];
     }
+    // La zona horaria la lee el trabajo de la Prestadora, junto con los turnos que traban.
+    if (clave === 'GET /rest/v1/prestadoras') {
+      const fila = credencial?.role === 'trabajo_sin_persona' && zonaDeLaPrestadora ? { zona_horaria: zonaDeLaPrestadora } : null;
+      respuesta = unoSolo ? fila : (fila ? [fila] : []);
+    }
     if (clave === 'POST /rest/v1/rpc/reactivar_la_cuenta') {
       if (choqueAlReactivar) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -159,6 +165,7 @@ beforeEach(() => {
   asistenteExiste = true;
   coordinadorConElPermiso = false;
   asistenteASuCargo = true;
+  zonaDeLaPrestadora = 'America/Argentina/Buenos_Aires';
 });
 
 async function pedir(metodo, ruta, cuerpo) {
@@ -419,6 +426,15 @@ describe('la baja de un Asistente', () => {
     assert.equal(cuerpo.turnos_guardia.length, 2);
   });
 
+  it('sin zona horaria de la Prestadora contesta la falla del sistema, sin lista inventada', async () => {
+    conTurnosGuardiaPorDelante = true;
+    turnosGuardiaQueTraban = [POR_DELANTE];
+    zonaDeLaPrestadora = null;
+    const { estado, cuerpo } = await pedir('POST', RUTA, { motivo: 'Motivo inventado' });
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
+  });
+
   it('un coordinador sin el permiso no desactiva a un Asistente', async () => {
     rolDeQuienLlama = 'coordinador';
     const { estado } = await pedir('POST', RUTA, { motivo: 'Motivo inventado' });
@@ -479,21 +495,32 @@ describe('la baja de un Asistente', () => {
 
 describe('qué hacer con cada turno que traba', async () => {
   const { motivoDelTurnoGuardiaQueTraba } = await import('../../utils/cuentasPanel.js');
-  const AHORA = new Date('2027-03-10T12:00:00');
+  // Las 09:00 de Buenos Aires.
+  const ZONA = 'America/Argentina/Buenos_Aires';
+  const AHORA = new Date('2027-03-10T12:00:00Z');
   it('el que no empezó se reasigna', () => {
-    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-11', hora_inicio: '08:00:00' }, AHORA),
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-11', hora_inicio: '08:00:00' }, ZONA, AHORA),
       'desactivacion_con_turnos_guardia_por_delante');
   });
   it('el que ya pasó se cierra', () => {
-    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-09', hora_inicio: '08:00:00' }, AHORA),
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-09', hora_inicio: '08:00:00' }, ZONA, AHORA),
       'desactivacion_con_turnos_guardia_sin_cerrar');
   });
   it('el que tiene llegada registrada se cierra, aunque la hora de inicio no haya llegado', () => {
-    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-10', hora_inicio: '13:00:00', checkin_at: '2027-03-10T11:50:00Z' }, AHORA),
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-10', hora_inicio: '13:00:00', checkin_at: '2027-03-10T11:50:00Z' }, ZONA, AHORA),
       'desactivacion_con_turnos_guardia_sin_cerrar');
   });
   it('una serie vigente se reasigna', () => {
-    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'serie', fecha: '2027-01-01', hora_inicio: '08:00:00' }, AHORA),
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'serie', fecha: '2027-01-01', hora_inicio: '08:00:00' }, ZONA, AHORA),
       'desactivacion_con_turnos_guardia_por_delante');
+  });
+  it('la hora de inicio se lee en la zona de la Prestadora, no en la del servidor', () => {
+    // Las 08:00 de Tokio del 10 son las 23:00 universales del 9: a las 00:00 universales del 10 ya
+    // empezó. Leída con la hora del servidor, todavía faltaban horas.
+    assert.equal(motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-10', hora_inicio: '08:00:00' }, 'Asia/Tokyo', new Date('2027-03-10T00:00:00Z')),
+      'desactivacion_con_turnos_guardia_sin_cerrar');
+  });
+  it('sin zona horaria corta', () => {
+    assert.throws(() => motivoDelTurnoGuardiaQueTraba({ tipo: 'turno_guardia', fecha: '2027-03-10', hora_inicio: '08:00:00' }, null, AHORA));
   });
 });

@@ -20,7 +20,7 @@
  * arranca sin la llave maestra, así que una lectura que volviera a ella fallaría al pedirla.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
@@ -153,6 +153,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', (url) => (url.searchParams.get('select') === 'id,nombre'
     ? USUARIOS.filter((u) => `eq.${u.prestadora_id}` === url.searchParams.get('prestadora_id'))
     : [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]));
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   respuestas.set('GET /rest/v1/pacientes', (url) => PACIENTES.filter((p) => p.prestadora_id === prestadoraDelUsuario
     && url.searchParams.get('cliente_id') === `eq.${p.cliente_id}`));
   respuestas.set('GET /rest/v1/consultas_a_hce', (url) => {
@@ -497,6 +498,34 @@ describe('el año del registro de accesos que se va a borrar', () => {
     const { estado, cuerpo } = await pedir('/renglones');
     assert.ok(estado >= 500, `contestó ${estado}`);
     assert.equal(cuerpo.accesos, undefined);
+  });
+
+  describe('el día del preaviso es el de la Prestadora, no el del reloj del servidor', () => {
+    // A las 20 en hora universal del 1 de marzo, en Kiritimati ya es 2 de marzo: el día del preaviso.
+    beforeEach(() => {
+      mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+      rolDelUsuario = 'admin_prestadora';
+      prestadoraDelUsuario = PRESTADORA_A;
+      respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'Pacific/Kiritimati' }]);
+      respuestas.set('POST /rest/v1/rpc/consultas_a_hce_por_vencer', () => [
+        { anio: 2023, desde: '2023-01-01T00:00:00Z', hasta: '2024-01-01T00:00:00Z', se_borra_el: '2026-05-01', preaviso_el: '2026-03-02', notificacion_el: '2026-04-01' },
+      ]);
+    });
+    afterEach(() => mock.timers.reset());
+
+    it('el día del preaviso en la Prestadora ya se avisa', async () => {
+      const { estado, cuerpo } = await pedir();
+      assert.equal(estado, 200);
+      assert.deepEqual(cuerpo, { anio: 2023, se_borra_el: '2026-05-01' });
+      assert.notEqual(credencialDe('GET /rest/v1/prestadoras').role, 'trabajo_sin_persona', 'la zona se leyó sin la sesión');
+    });
+
+    it('sin la zona de la Prestadora no se contesta y se avisa', async () => {
+      respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: null }]);
+      const { estado, cuerpo } = await pedir();
+      assert.equal(estado, 500);
+      assert.equal(cuerpo.error, 'falla_del_sistema');
+    });
   });
 });
 

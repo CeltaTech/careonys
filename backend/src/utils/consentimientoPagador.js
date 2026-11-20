@@ -8,6 +8,7 @@ import { textosDeFabrica } from './textosDeFabrica.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 import { frase } from '../i18n/mensajesDelSistema.js';
 import { fraseDeLaFirma } from './fraseDeLaFirma.js';
+import { hoyEnLaPrestadora } from './relojDeLaPrestadora.js';
 
 // Todo lo que le pasa al consentimiento de cada Responsable de pagos: se carga, se cierra con el
 // documento firmado, o se anula porque se cargó otro.
@@ -475,7 +476,8 @@ export async function documentosDelPagador({ db, servicioId, prestadoraId, pagad
     .eq('servicio_id', servicioId);
 
   const porTipo = new Map((cargados ?? []).map((fila) => [fila.tipo_documento_id, fila]));
-  const hoy = new Date().toISOString().slice(0, 10);
+  // Vencido se mide contra el día del reloj de la Prestadora, no el del servidor.
+  const hoy = await hoyEnLaPrestadora(db, prestadoraId);
 
   return (tipos ?? []).map((tipo) => {
     const cargado = porTipo.get(tipo.id) ?? null;

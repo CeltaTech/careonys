@@ -16,7 +16,7 @@
  * sin renglón; si observar aceptara un motivo vacío, contesta 200.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
@@ -40,7 +40,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ url: req.url }) : preparada;
@@ -280,5 +280,39 @@ describe('la prórroga de gracia', () => {
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'tipo_de_documento_invalido');
     assert.ok(!JSON.stringify(cuerpo).includes('foreign key'));
+  });
+});
+
+describe('el vencimiento que ve la administración es el del día de la Prestadora', () => {
+  // A las 20 en hora universal del 1 de marzo, en Kiritimati ya es 2 de marzo.
+  beforeEach(() => {
+    mock.timers.enable({ apis: ['Date'], now: new Date('2026-03-01T20:00:00Z') });
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ dias_aviso_vencimiento_documentos: 0, idioma: 'es-AR', zona_horaria: 'Pacific/Kiritimati' }]);
+    respuestas.set('GET /rest/v1/documentos_pedidos_al_asistente', () => [{
+      tipo_documento_id: TIPO,
+      nombre: 'Documento inventado',
+      impide_trabajar: true,
+      documento_id: null,
+      estado: 'aprobado',
+      fecha_vencimiento: '2026-03-01',
+      motivo_observacion: null,
+      gracia_hasta: null,
+    }]);
+  });
+  afterEach(() => mock.timers.reset());
+
+  it('un documento que venció ayer en la Prestadora se ve vencido', async () => {
+    const { estado, cuerpo } = await llamar(`/asistente/${ASISTENTE}`);
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
+    assert.equal(cuerpo.documentos[0].estado_visible, 'vencido');
+    const zona = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras' && l.url.includes('zona_horaria'));
+    assert.equal(zona.credencial, sesionDePrueba(USUARIO));
+  });
+
+  it('sin la zona de la Prestadora no se muestra nada y se avisa', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ dias_aviso_vencimiento_documentos: 0, idioma: 'es-AR', zona_horaria: null }]);
+    const { estado, cuerpo } = await llamar(`/asistente/${ASISTENTE}`);
+    assert.equal(estado, 500);
+    assert.equal(cuerpo.error, 'falla_del_sistema');
   });
 });

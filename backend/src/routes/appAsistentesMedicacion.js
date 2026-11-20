@@ -7,6 +7,7 @@ import { alcanzaLaInformacionDeSalud } from '../utils/alcanceDeLaSalud.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): órdenes de medicación de solo lectura para el
 // Asistente asignado — nunca muestra una vía que este Asistente en particular no está
@@ -30,10 +31,12 @@ async function ordenesDelAsistente(req) {
   // comprobación de arriba deja pasar cualquier turno de guardia suyo con ese Paciente.
   if (!(await alcanzaLaInformacionDeSalud(clienteDelPedido(req), req.params.pacienteId))) return null;
 
+  // Vigentes hoy: el día de la Prestadora, en su zona horaria y leído con la sesión de quien pide.
+  const hoy = await hoyEnLaPrestadora(clienteDelPedido(req), req.usuarioAsistente.prestadoraId);
   const indicaciones = await enLaPrestadora(
     req.usuarioAsistente.prestadoraId,
     'medicación que ve el Asistente',
-    (trabajo) => medicacionVigenteDelPaciente(trabajo, req.usuarioAsistente.prestadoraId, req.params.pacienteId),
+    (trabajo) => medicacionVigenteDelPaciente(trabajo, req.usuarioAsistente.prestadoraId, req.params.pacienteId, hoy),
   );
 
   // Las prohibiciones de su tipo las lee el Asistente con su credencial.
@@ -64,7 +67,12 @@ async function recetasDe(prestadoraId, ids) {
 }
 
 appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVisible('asistente_medicacion_del_paciente'), async (req, res) => {
-  const ordenes = await ordenesDelAsistente(req);
+  let ordenes;
+  try {
+    ordenes = await ordenesDelAsistente(req);
+  } catch (error) {
+    return responderError(res, error);
+  }
   if (!ordenes) return res.status(404).json({ error: 'Paciente no encontrado' });
   const recetas = await recetasDe(req.usuarioAsistente.prestadoraId, ordenes.map((o) => o.id));
 
@@ -87,7 +95,12 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVis
 // preparado al abrir el turno de guardia se vence antes de que lo usen. Lo pide la credencial del
 // Asistente, y el depósito sólo se lo da si atiende a ese Paciente.
 appAsistentesMedicacionRouter.get('/:pacienteId/receta/:indicacionId', requiereRolAsistente, exigeVisible('asistente_medicacion_del_paciente'), async (req, res) => {
-  const ordenes = await ordenesDelAsistente(req);
+  let ordenes;
+  try {
+    ordenes = await ordenesDelAsistente(req);
+  } catch (error) {
+    return responderError(res, error);
+  }
   const orden = ordenes?.find((o) => o.id === req.params.indicacionId);
   if (!orden) return res.status(404).json({ error: 'Receta no encontrada' });
   const ruta = (await recetasDe(req.usuarioAsistente.prestadoraId, [orden.id])).get(orden.id);

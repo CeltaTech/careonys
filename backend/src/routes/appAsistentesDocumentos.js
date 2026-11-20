@@ -4,6 +4,7 @@ import { clienteDelPedido } from '../db/connection.js';
 import { exigeVisible, visibilidadDelPedido } from '../utils/visibilidadPrestadora.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { estaEnviado, estadoVisible, llegaVencido } from '../utils/estadoDelDocumento.js';
+import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 import {
   DEPOSITO_DE_DOCUMENTOS,
   errorDeLaBase,
@@ -74,7 +75,8 @@ appAsistentesDocumentosRouter.get('/', async (req, res) => {
     if (error) throw error;
 
     const diasAviso = await diasAvisoDe(db, prestadoraId);
-    const hoy = new Date();
+    // «Hoy» es el día del reloj de la Prestadora, no el del servidor, que cuenta en hora universal.
+    const hoy = await hoyEnLaPrestadora(db, prestadoraId);
     const documentos = (pedidos ?? []).map((p) => ({
       tipo_documento_id: p.tipo_documento_id,
       nombre: p.nombre,
@@ -160,7 +162,7 @@ appAsistentesDocumentosRouter.get('/tipo/:tipoDocumentoId', async (req, res) => 
       organismos,
       documento_id: pedido.documento_id,
       estado: pedido.estado,
-      estado_visible: estadoVisible(pedido, diasAviso),
+      estado_visible: estadoVisible(pedido, diasAviso, await hoyEnLaPrestadora(db, prestadoraId)),
       motivo_observacion: pedido.motivo_observacion,
       fecha_vencimiento: pedido.fecha_vencimiento,
       numero: ultimo?.numero ?? null,
@@ -204,7 +206,8 @@ appAsistentesDocumentosRouter.post('/', exigeVisible(OPCION_DE_CARGA), recibirDo
       cuerpo,
     });
 
-    const vencido = llegaVencido(tipo, fechas);
+    // «Hoy» es el día del reloj de la Prestadora, no el del servidor, que cuenta en hora universal.
+    const vencido = llegaVencido(tipo, fechas, await hoyEnLaPrestadora(db, asistente.prestadora_id));
     if (vencido) {
       const error = new ErrorConMotivo('documento_ya_vencido');
       error.fecha = vencido.fecha;

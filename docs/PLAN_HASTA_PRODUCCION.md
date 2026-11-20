@@ -301,9 +301,11 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      calificaciones, las ausencias sin aviso y las llegadas tarde de los últimos seis meses, con el
      período en la configuración del cálculo para que cada Prestadora lo cambie.
    - **Acuerdo económico.** El Legajo guarda lo que cobra cada Asistente: hoy 38 de 46 lo tienen
-     cargado. La postulación pide el honorario pretendido, y no pasa al Legajo. Falta saber si la
-     Asistente aceptó el monto de este Servicio. **Lo decide usted:** si la Asistente acepta el
-     monto de cada Servicio, o si alcanza con comparar contra lo que tiene cargado. El Coordinador
+     cargado, por hora, por turno de guardia o por semana. La postulación pide el honorario
+     pretendido, y no pasa al Legajo. La Prestación guarda sólo el precio al Cliente: nada dice
+     cuánto se le paga a la Asistente por ese Servicio, así que hoy no hay contra qué comparar.
+     **Lo decide usted:** si el pago a la Asistente es siempre el de su Legajo, o si puede ser
+     distinto en cada Servicio. El Coordinador
      no ve remuneraciones: la comparación la hace la base y contesta sólo si encaja o no.
 
 El acto no trae convertidor de los días y horarios escritos hoy a mano en la Prestación, porque no hay datos reales que

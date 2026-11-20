@@ -309,11 +309,12 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      criterio compara el valor del Servicio con el que la Asistente pretende.
      - **Hoy:** el valor del Legajo es uno solo por Asistente, sin fecha desde la que rige y sin
        historia, y el índice sólo actualiza el precio al Cliente.
-     - **Propuesta:** el valor del Legajo guarda desde qué fecha rige cada monto, como pide la
-       regla de calcular a la escala vigente a la fecha del hecho, y el ajuste por índice reusa el
-       mismo mecanismo que ya actualiza el precio al Cliente. El valor de cada Servicio para cada
-       Asistente se guarda aparte, con su moneda.
-     - **Lo decide usted:** si el sistema registra la negociación o guarda sólo el valor final. El Coordinador
+     - **Decidido:** el valor del Legajo guarda desde qué fecha rige cada monto, como pide la
+       regla de calcular a la escala vigente a la fecha del hecho. El ajuste por índice del Legajo
+       reusa el mecanismo que ya actualiza el precio al Cliente, y es configurable por Prestadora
+       igual que ése: qué índice, o ninguno, y si se aplica solo o con revisión previa. Del valor
+       de cada Servicio para cada Asistente se guarda sólo el valor final de la negociación, con
+       su moneda, aparte del Legajo. El Coordinador
      no ve remuneraciones: la comparación la hace la base y contesta sólo si encaja o no.
 
 El acto no trae convertidor de los días y horarios escritos hoy a mano en la Prestación, porque no hay datos reales que

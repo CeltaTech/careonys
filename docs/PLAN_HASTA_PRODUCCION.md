@@ -114,13 +114,13 @@ de una Prestadora no lee nada de otra.
 punto se comprobó contra el código y la base en la nube; los números de la base son de la nube:
 15 Servicios, ninguno con Coordinador; 0 Prestaciones; 0 turnos de guardia recurrentes; 151 turnos de guardia sueltos.
 
-1. **Los días y horarios de la Prestación pasan a ser un dato.**
+1. **El cronograma de guardias de la Prestación pasa a ser un dato.**
    - **Hoy:** en la Ficha del cliente, en Prestaciones del Paciente, hay dos casilleros de texto
      libre, días y horario (`panel/src/pages/clientes/PrestacionesPaciente.jsx:83-84`). Se guardan
      adentro de `prestaciones.configuracion`, junto con la cantidad de turnos de guardia, que la
      liquidación sí lee (`backend/src/utils/calcularLiquidacion.js:535` y `:599`). Por eso
      `configuracion` se queda; salen sólo los días y el horario.
-   - **Propuesta:** una tabla propia, `horarios_de_la_prestacion`, con un renglón por cada franja:
+   - **Propuesta:** una tabla propia, `cronograma_de_guardias`, con un renglón por cada guardia:
      días marcados, hora de inicio, hora de fin. Nace con su Prestadora, con clave `uuid` y con RLS
      en la misma migración.
    - **Cada turno de guardia recurrente dice qué Prestación cubre.** No alcanza una columna en el
@@ -129,9 +129,9 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      `series_turnos_guardia_prestaciones`, y la base rechaza que la Prestación y el turno de guardia
      recurrente sean de Servicios distintos. De ahí leen el aviso de la guardia sin cubrir y la
      sugerencia de Asistentes de qué es la guardia, aunque todavía no haya nadie asignado.
-   - **Cuando una Prestación se reemplaza por otra** —un cambio de precio—, sus horarios pasan a la
-     nueva. Hoy eso ocurre en cuatro lugares: el cambio de precio del Panel y las tres funciones de
-     la base que ajustan precios por índice. Las cuatro copian los horarios con la misma función.
+   - **Cuando una Prestación se reemplaza por otra** —un cambio de precio—, su cronograma de guardias pasa a
+     la nueva. Hoy eso ocurre en cuatro lugares: el cambio de precio del Panel y las tres funciones de
+     la base que ajustan precios por índice. Las cuatro copian el cronograma con la misma función.
    - **El motor de formularios declarados no se usa en este punto.** Existe, pero no lo usa ninguna
      pantalla, tiene 0 formularios cargados, no tiene un tipo de casillero para la hora ni para los
      días de la semana, y no conoce la Prestación. La pantalla se arma con los casilleros de la
@@ -153,8 +153,8 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      cuenta.
    - Resuelve que un turno de guardia recurrente cubra a varios Pacientes, y que un mismo día del
      cronograma lo cubran dos turnos de guardia recurrentes sumados, por ejemplo de 0 a 8 y de 8 a 24.
-   - **Lo decide usted:** si un turno de guardia suelto, creado a mano para un día, cubre el
-     cronograma de ese día. Propuesta: sí, porque ese día hay alguien.
+   - **Lo decide usted:** si un turno de guardia suelto, creado a mano para un día, cubre la
+     guardia de ese día. Propuesta: sí, porque ese día hay alguien.
 
 3. **La cuenta corre en los tres momentos.**
    - **Hoy crear un turno de guardia recurrente no pasa por el servidor:** el Panel lo escribe
@@ -271,7 +271,7 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      alcanza con comparar contra lo que tiene cargado. El Coordinador no ve remuneraciones: la
      comparación la hace la base y contesta sólo si encaja o no.
 
-El acto no trae convertidor de los días y horarios escritos a mano, porque no hay datos reales que
+El acto no trae convertidor de los días y horarios escritos hoy a mano en la Prestación, porque no hay datos reales que
 convertir: en la nube hay 0 Prestaciones. No toca las dos aplicaciones de teléfono, que no escriben
 ninguna de estas tablas.
 

@@ -121,14 +121,21 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      liquidación sí lee (`backend/src/utils/calcularLiquidacion.js:535` y `:599`). Por eso
      `configuracion` se queda; salen sólo los días y el horario.
    - **Propuesta:** una tabla propia, `cronograma_de_guardias`, con un renglón por cada guardia:
-     días marcados, hora de inicio, hora de fin. Nace con su Prestadora, con clave `uuid` y con RLS
-     en la misma migración.
-   - **Cada turno de guardia recurrente dice qué Prestación cubre.** No alcanza una columna en el
-     turno de guardia recurrente: una Prestación es de un solo Paciente y un turno de guardia
-     recurrente puede cubrir a varios, como un matrimonio. Va una tabla puente,
-     `series_turnos_guardia_prestaciones`, y la base rechaza que la Prestación y el turno de guardia
-     recurrente sean de Servicios distintos. De ahí leen el aviso de la guardia sin cubrir y la
-     sugerencia de Asistentes de qué es la guardia, aunque todavía no haya nadie asignado.
+     días marcados, hora de inicio, hora de fin. Una guardia también puede ser de una sola fecha,
+     como la noche de más que pide el Cliente después de una operación. Nace con su Prestadora, con
+     clave `uuid` y con RLS en la misma migración.
+   - **Usted fijó el orden: primero se carga la Prestación con su cronograma de guardias, y el
+     turno de guardia se crea siempre dentro de una guardia de ese cronograma.** Hoy la ventana de
+     crear un turno de guardia pide el Servicio, los Pacientes, la fecha y el horario, y ninguna
+     Prestación (`panel/src/pages/turnos_guardia/NuevoTurnoGuardiaModal.jsx:168-186`). Pasa a pedir
+     la guardia, y la base rechaza el turno de guardia, suelto o recurrente, que no esté dentro de
+     una guardia del cronograma.
+   - **Cada turno de guardia dice a qué guardias pertenece.** No alcanza una columna: una
+     Prestación es de un solo Paciente y un turno de guardia puede cubrir a varios, como un
+     matrimonio, así que pertenece a una guardia de cada Prestación. Va una tabla puente, y la base
+     rechaza que el turno de guardia y la guardia sean de Servicios distintos. De ahí leen el aviso
+     de la guardia sin cubrir y la sugerencia de Asistentes de qué es la guardia, aunque todavía no
+     haya nadie asignado.
    - **Cuando una Prestación se reemplaza por otra** —un cambio de precio—, su cronograma de guardias pasa a
      la nueva. Hoy eso ocurre en cuatro lugares: el cambio de precio del Panel y las tres funciones de
      la base que ajustan precios por índice. Las cuatro copian el cronograma con la misma función.
@@ -146,15 +153,15 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      Asistente; acá no hay turno de guardia.
    - **Hoy no existe nada parecido.**
    - **Propuesta:** una función de la base recibe un Servicio y un período, y contesta qué días y
-     horarios del cronograma de guardias no cubre ningún turno de guardia recurrente vigente, con su Paciente,
+     horarios del cronograma de guardias no cubre ningún turno de guardia, suelto o recurrente vigente, con su Paciente,
      su Prestación, su día y su horario. Lee sólo dentro de la Prestadora de quien la llama.
    - **Turno de guardia recurrente vigente** quiere decir: activo, y con la fecha adentro de su
      vigencia. Uno sin fecha de fin cubre hacia adelante sin límite. Uno pausado o cancelado no
      cuenta.
    - Resuelve que un turno de guardia recurrente cubra a varios Pacientes, y que un mismo día del
      cronograma lo cubran dos turnos de guardia recurrentes sumados, por ejemplo de 0 a 8 y de 8 a 24.
-   - **Lo decide usted:** si un turno de guardia suelto, creado a mano para un día, cubre la
-     guardia de ese día. Propuesta: sí, porque ese día hay alguien.
+   - **El turno de guardia suelto cubre la guardia en la que se creó**, porque siempre se crea
+     adentro de una.
 
 3. **La cuenta corre en los tres momentos.**
    - **Hoy crear un turno de guardia recurrente no pasa por el servidor:** el Panel lo escribe

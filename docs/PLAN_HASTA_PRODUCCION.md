@@ -203,11 +203,12 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **Zona:** se elige de las zonas cargadas, y la lista de lugares de cada zona sale de la base.
      Hoy hay 4 zonas cargadas en la nube y ningún lugar adentro de ellas, así que la lista va a
      aparecer vacía hasta que cada Prestadora cargue los suyos.
-   - **Lo decide usted:** qué quiere decir «quién lo realiza». En el producto hay dos cosas que
-     encajan. Una es el equipo: los Asistentes que trabajan en el Servicio, que la ficha ya muestra.
-     La otra es la modalidad: si responde la Prestadora o el Cliente, que hoy sale de cada turno de
-     guardia y no del Servicio. Propuesta: la modalidad, guardada en el Servicio, porque el equipo
-     ya está a la vista.
+   - **Lo decide usted:** qué quiere decir «quién lo realiza». El Servicio existe sólo en la
+     prestación directa, así que la modalidad no es una opción. Quedan dos cosas que encajan. Una es
+     el equipo: los Asistentes que trabajan en el Servicio, que la ficha ya muestra. La otra es si
+     cada Prestación la cubre la Prestadora con sus Asistentes o una empresa subcontratada con su
+     propio personal. El glosario ya tiene esa palabra, pero la base no guarda ninguna empresa
+     subcontratada.
 
 5. **Modificar, pausar, suspender y cancelar, total o parcialmente.**
    - **Hoy:** un turno de guardia recurrente no se puede editar, ni pausar, ni cancelar desde

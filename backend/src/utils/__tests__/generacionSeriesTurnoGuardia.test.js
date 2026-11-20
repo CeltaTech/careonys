@@ -254,9 +254,11 @@ describe('cuántas veces por día corre la generación', () => {
     await assert.rejects(() => extenderSeriesTurnoGuardiaAbiertas(undefined, MEDIODIA));
   });
 
-  it('server.js la programa recibiendo la Prestadora', () => {
+  it('server.js la programa adentro del pasaje diario, recibiendo la Prestadora', () => {
     const servidor = readFileSync(new URL('../../server.js', import.meta.url), 'utf8');
-    assert.match(servidor, /programar\(extenderSeriesTurnoGuardiaAbiertas,[^)]*conLaPrestadora: true/);
+    assert.match(servidor, /programar\(pasajeDiarioDeTurnosGuardia,[^)]*conLaPrestadora: true/);
+    const pasaje = readFileSync(new URL('../pasajeDiarioDeTurnosGuardia.js', import.meta.url), 'utf8');
+    assert.match(pasaje, /generar = extenderSeriesTurnoGuardiaAbiertas/);
   });
 });
 

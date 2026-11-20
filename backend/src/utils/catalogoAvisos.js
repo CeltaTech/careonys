@@ -41,6 +41,7 @@
 //
 // Dónde se emite cada uno:
 //   turno_guardia_sin_cubrir             → utils/revisarTurnosGuardiaSinCubrir.js:100 (notificarCoordinador)
+//   turno_sin_cubrir               → utils/avisoTurnosSinCubrir.js (notificarCoordinador, uno por Servicio)
 //   turno_guardia_sin_cerrar             → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
 //   turno_guardia_sin_cerrar_grave       → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
 //   alerta_temprana_turno_guardia        → utils/revisarNotificacionesCoordinador.js:65 (notificarCoordinador)
@@ -234,6 +235,17 @@ export const CATALOGO_MENSAJES = [
     admite_cliente: false,
     // El Cliente lo está esperando en la pantalla para poder seguir. Acá se elige por qué canal
     // sale: con plantilla aprobada va por WhatsApp, y si no, por correo.
+    se_puede_apagar: false,
+  },
+  {
+    // No es el turno vacante de `turno_guardia_sin_cubrir`: aquel turno de guardia existe y le falta
+    // el Asistente; acá una guardia del cronograma no tiene ningún turno de guardia creado.
+    evento: 'turno_sin_cubrir',
+    descripcion: 'Una guardia del cronograma de un Servicio no tiene ningún turno de guardia que la cubra',
+    admite_whatsapp: true,
+    admite_cliente: false,
+    // No puede haber un turno sin cubrir que nadie vea. La configuración elige por qué canal sale y
+    // a qué dirección, nunca si sale.
     se_puede_apagar: false,
   },
 ];

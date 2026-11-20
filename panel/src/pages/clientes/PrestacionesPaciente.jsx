@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { CronogramaDeGuardias } from './CronogramaDeGuardias';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { hoyISO } from '../../lib/horarios';
@@ -80,8 +81,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   // adicional al precio proporcional del pactado.
   const [precioTurnoGuardiaAdicional, setPrecioTurnoGuardiaAdicional] = useState('');
   const [precioHoraAdicional, setPrecioHoraAdicional] = useState('');
-  const [dias, setDias] = useState('');
-  const [horario, setHorario] = useState('');
   const [cantidadTurnosGuardia, setCantidadTurnosGuardia] = useState('');
   const [feriados, setFeriados] = useState(false);
   const [viajes, setViajes] = useState(false);
@@ -98,6 +97,9 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [errorForm, setErrorForm] = useState(null);
   // Los avisos al pie de cada casillero aparecen recién al apretar Guardar.
   const [intentoGuardar, setIntentoGuardar] = useState(false);
+
+  // La Prestación cuyo cronograma de guardias está abierto, o null.
+  const [cronogramaDe, setCronogramaDe] = useState(null);
 
   const [marcandoRevisado, setMarcandoRevisado] = useState(null);
   const [errorRevision, setErrorRevision] = useState(null);
@@ -261,8 +263,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     } else {
       setTipoServicioEscrito(anterior.tipo_servicio || '');
     }
-    setDias(c.dias ?? '');
-    setHorario(c.horario ?? '');
     setCantidadTurnosGuardia(c.cantidad_turnos_guardia ?? '');
     setFeriados(Boolean(c.feriados));
     setViajes(Boolean(c.viajes));
@@ -290,8 +290,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setPrecioEscrito('');
     setPrecioTurnoGuardiaAdicional('');
     setPrecioHoraAdicional('');
-    setDias('');
-    setHorario('');
     setCantidadTurnosGuardia('');
     setFeriados(false);
     setViajes(false);
@@ -327,8 +325,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       paciente_id: paciente.id,
       ...columnas,
       configuracion: {
-        dias,
-        horario,
         cantidad_turnos_guardia: cantidadTurnosGuardia,
         feriados,
         viajes,
@@ -353,6 +349,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
     setGuardando(false);
     cerrarForm();
+    // Con un cambio de precio, el cronograma abierto puede ser el de la Prestación reemplazada.
+    setCronogramaDe(null);
     recargar();
   }
 
@@ -445,6 +443,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                                 {t.prestaciones.cambiar_precio}
                               </Button>
                             )}
+                            {sePuedeCambiarElPrecio(p) && cronogramaDe?.id !== p.id && (
+                              <Button variant="secondary" onClick={() => setCronogramaDe(p)}>
+                                {t.prestaciones.cronograma.titulo}
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -453,6 +456,15 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                 </table>
               )}
             </section>
+
+            {cronogramaDe && (
+              <CronogramaDeGuardias
+                key={cronogramaDe.id}
+                prestacion={cronogramaDe}
+                prestadoraId={prestadoraId}
+                onCerrar={() => setCronogramaDe(null)}
+              />
+            )}
 
             {mostrandoForm && (
               <section className="panel-tarjeta">
@@ -592,8 +604,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     </>
                   )}
 
-                  <FormField label={t.prestaciones.dias} name="dias" value={dias} onChange={(e) => setDias(e.target.value)} />
-                  <FormField label={t.prestaciones.horario} name="horario" value={horario} onChange={(e) => setHorario(e.target.value)} />
                   <FormField
                     label={t.prestaciones.cantidad_turnos_guardia}
                     name="cantidad_turnos_guardia"

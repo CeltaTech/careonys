@@ -496,6 +496,18 @@ const ARMADORES = {
     ].filter(Boolean).join('\n'),
   }),
 
+  // Un aviso por Servicio con todos sus turnos sin cubrir, un renglón por turno. Los Pacientes que
+  // comparten el mismo día y horario ya vienen juntos en un solo renglón.
+  turno_sin_cubrir: (t, d) => ({
+    asunto: t(segunCantidad('turno_sin_cubrir.asunto', d.turnos.length)),
+    texto: d.turnos.map((turno) => t('turno_sin_cubrir.cuerpo', {
+      pacientes: pacientesDe(t, turno.pacientes),
+      fecha: turno.fecha,
+      horaInicio: turno.horaInicio,
+      horaFin: turno.horaFin,
+    })).join('\n'),
+  }),
+
   incidente_turno_guardia_sin_cubrir: (t, d) => ({
     asunto: t(d.yaEmpezo
       ? 'incidente_turno_guardia_sin_cubrir.asunto_ya_empezo'

@@ -7618,9 +7618,28 @@ BEGIN
      WHERE d.hospitalizacion_id = p_hospitalizacion
        AND (d.fecha_fin IS NULL OR d.fecha_fin > greatest(p_fecha, d.fecha_inicio));
   ELSE
-    UPDATE turnos_guardia SET estado = 'programada' WHERE paciente_id = v_paciente AND estado = 'pausada';
-    UPDATE series_turnos_guardia SET estado = 'activa' WHERE paciente_id = v_paciente AND estado = 'pausada';
+    -- Vuelve lo que la internación había pausado, buscado por la lista de Pacientes de cada turno
+    -- de guardia y de cada serie. Lo que además atiende a otro Paciente que sigue internado sin
+    -- domicilio temporal queda pausado: su internación todavía no terminó.
+    UPDATE turnos_guardia g SET estado = 'programada'
+     WHERE g.estado = 'pausada'
+       AND EXISTS (SELECT 1 FROM turno_guardia_pacientes tp
+                    WHERE tp.turno_guardia_id = g.id AND tp.paciente_id = v_paciente)
+       AND NOT EXISTS (SELECT 1 FROM turno_guardia_pacientes tp
+                         JOIN hospitalizaciones_paciente h ON h.paciente_id = tp.paciente_id AND h.fecha_fin IS NULL
+                        WHERE tp.turno_guardia_id = g.id AND tp.paciente_id <> v_paciente
+                          AND NOT EXISTS (SELECT 1 FROM domicilios_temporales_paciente d WHERE d.hospitalizacion_id = h.id));
+    UPDATE series_turnos_guardia s SET estado = 'activa'
+     WHERE s.estado = 'pausada'
+       AND EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
+                    WHERE sp.serie_id = s.id AND sp.paciente_id = v_paciente)
+       AND NOT EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
+                         JOIN hospitalizaciones_paciente h ON h.paciente_id = sp.paciente_id AND h.fecha_fin IS NULL
+                        WHERE sp.serie_id = s.id AND sp.paciente_id <> v_paciente
+                          AND NOT EXISTS (SELECT 1 FROM domicilios_temporales_paciente d WHERE d.hospitalizacion_id = h.id));
   END IF;
+
+  PERFORM interno.anotar_turnos_sin_cubrir();
 END;
 $$;
 
@@ -8291,6 +8310,8 @@ BEGIN
   PERFORM set_config('careonys.cambio_de_estado_del_servicio', '', true);
 
   PERFORM interno.anotar_deuda_de_la_baja(v_baja);
+
+  PERFORM interno.anotar_turnos_sin_cubrir();
 
   RETURN v_baja;
 END;
@@ -10241,10 +10262,17 @@ BEGIN
   PERFORM interno.anotar_lo_que_se_leyo('hospitalizaciones_paciente', ARRAY[p_paciente], 'registrar_hospitalizacion');
 
   IF p_domicilio IS NULL THEN
-    UPDATE turnos_guardia SET estado = 'pausada'
-     WHERE paciente_id = p_paciente AND estado = 'programada' AND fecha >= p_fecha_inicio;
-    UPDATE series_turnos_guardia SET estado = 'pausada'
-     WHERE paciente_id = p_paciente AND estado = 'activa';
+    -- Se pausa todo lo que atiende a este Paciente, buscado por la lista de Pacientes de cada
+    -- turno de guardia y de cada serie, y no sólo por el primero de la lista.
+    UPDATE turnos_guardia g SET estado = 'pausada'
+     WHERE g.estado = 'programada' AND g.fecha >= p_fecha_inicio
+       AND EXISTS (SELECT 1 FROM turno_guardia_pacientes tp
+                    WHERE tp.turno_guardia_id = g.id AND tp.paciente_id = p_paciente);
+    UPDATE series_turnos_guardia s SET estado = 'pausada'
+     WHERE s.estado = 'activa'
+       AND EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
+                    WHERE sp.serie_id = s.id AND sp.paciente_id = p_paciente);
+    PERFORM interno.anotar_turnos_sin_cubrir();
   ELSE
     v_d := jsonb_populate_record(NULL::domicilios_temporales_paciente, p_domicilio);
     INSERT INTO domicilios_temporales_paciente
@@ -16684,7 +16712,7 @@ COMMENT ON COLUMN "public"."series_turnos_guardia"."paciente_id" IS 'EN RETIRO. 
 
 
 
-COMMENT ON COLUMN "public"."series_turnos_guardia"."servicio_id" IS 'De qué Servicio son los turnos de guardia de esta serie. Vacío mientras la serie no cuelgue de ninguno: hay trabajo que se hace y se factura sin Servicio armado.';
+COMMENT ON COLUMN "public"."series_turnos_guardia"."servicio_id" IS 'De qué Servicio son los turnos de guardia de esta serie. Es obligatorio: toda serie cuelga de un Servicio, y sus turnos de guardia lo copian de acá.';
 
 
 
@@ -33992,3 +34020,654 @@ REVOKE ALL ON FUNCTION public.marcar_factura_al_responsable(uuid, boolean) FROM 
 GRANT EXECUTE ON FUNCTION public.agregar_responsable_de_pagos(uuid, uuid, text, date, boolean) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.terminar_responsable_de_pagos(uuid, date) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.marcar_factura_al_responsable(uuid, boolean) TO authenticated, service_role;
+
+
+-- ============================================================================
+-- El cronograma de guardias de cada Prestación, la regla de que todo turno de guardia nace
+-- adentro de una guardia, y la cuenta de los turnos sin cubrir.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION "interno"."dia_de_la_semana"("p_fecha" "date") RETURNS "text"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+  SELECT (ARRAY['lunes','martes','miercoles','jueves','viernes','sabado','domingo'])[extract(isodow FROM p_fecha)::int]
+$$;
+
+ALTER FUNCTION "interno"."dia_de_la_semana"("p_fecha" "date") OWNER TO "postgres";
+
+COMMENT ON FUNCTION "interno"."dia_de_la_semana"("p_fecha" "date") IS 'El nombre del día de la semana de una fecha, escrito como lo guardan los cronogramas y las series: lunes, martes, miercoles, jueves, viernes, sabado, domingo.';
+
+
+CREATE TABLE IF NOT EXISTS "public"."cronograma_de_guardias" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "prestacion_id" bigint NOT NULL,
+    "dias_semana" "text"[],
+    "fecha" "date",
+    "hora_inicio" time without time zone NOT NULL,
+    "hora_fin" time without time zone NOT NULL,
+    "dias_hasta_el_fin" smallint DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "cronograma_de_guardias_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "cronograma_de_guardias_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id"),
+    CONSTRAINT "cronograma_de_guardias_prestacion_id_fkey" FOREIGN KEY ("prestacion_id") REFERENCES "public"."prestaciones"("id") ON DELETE CASCADE,
+    CONSTRAINT "cronograma_de_guardias_dias_o_fecha" CHECK ((("dias_semana" IS NULL) <> ("fecha" IS NULL))),
+    CONSTRAINT "cronograma_de_guardias_dias_validos" CHECK ((("dias_semana" IS NULL) OR (("cardinality"("dias_semana") > 0) AND ("dias_semana" <@ ARRAY['lunes'::"text", 'martes'::"text", 'miercoles'::"text", 'jueves'::"text", 'viernes'::"text", 'sabado'::"text", 'domingo'::"text"])))),
+    CONSTRAINT "cronograma_de_guardias_dias_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
+    CONSTRAINT "cronograma_de_guardias_dura_algo" CHECK ((("dias_hasta_el_fin" > 0) OR ("hora_fin" > "hora_inicio")))
+);
+
+ALTER TABLE "public"."cronograma_de_guardias" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."cronograma_de_guardias" IS 'El cronograma de guardias de una Prestación: una fila por guardia. Una guardia se repite en los días de la semana marcados, o es de una sola fecha. Todo turno de guardia nace adentro de una guardia de este cronograma.';
+COMMENT ON COLUMN "public"."cronograma_de_guardias"."dias_hasta_el_fin" IS 'Cuántos días después del día de inicio termina la guardia: 0 el mismo día; 1 al siguiente, como la de 22:00 a 06:00 o la de 24 horas de 08:00 a 08:00.';
+
+CREATE INDEX IF NOT EXISTS "cronograma_de_guardias_prestacion_idx" ON "public"."cronograma_de_guardias" USING "btree" ("prestacion_id");
+
+ALTER TABLE "public"."cronograma_de_guardias" ENABLE ROW LEVEL SECURITY;
+
+-- Lo gestiona quien gestiona la Prestación: la condición es la política de la Prestación, que se
+-- evalúa sola al consultarla adentro de esta política.
+CREATE POLICY "panel_gestiona_el_cronograma_de_guardias" ON "public"."cronograma_de_guardias" TO "authenticated"
+  USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1 FROM "public"."prestaciones" "p" WHERE (("p"."id" = "cronograma_de_guardias"."prestacion_id") AND ("p"."prestadora_id" = "cronograma_de_guardias"."prestadora_id"))))))
+  WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1 FROM "public"."prestaciones" "p" WHERE (("p"."id" = "cronograma_de_guardias"."prestacion_id") AND ("p"."prestadora_id" = "cronograma_de_guardias"."prestadora_id"))))));
+
+CREATE POLICY "el_trabajo_lee_el_cronograma_de_guardias" ON "public"."cronograma_de_guardias" FOR SELECT TO "trabajo_sin_persona"
+  USING (("prestadora_id" = "interno"."prestadora_actual"()));
+
+GRANT SELECT, INSERT, DELETE ON TABLE "public"."cronograma_de_guardias" TO "authenticated";
+GRANT SELECT ON TABLE "public"."cronograma_de_guardias" TO "trabajo_sin_persona";
+GRANT ALL ON TABLE "public"."cronograma_de_guardias" TO "service_role";
+
+
+CREATE TABLE IF NOT EXISTS "public"."turno_guardia_guardias" (
+    "turno_guardia_id" "uuid" NOT NULL,
+    "guardia_id" "uuid" NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "turno_guardia_guardias_pkey" PRIMARY KEY ("turno_guardia_id", "guardia_id"),
+    CONSTRAINT "turno_guardia_guardias_turno_guardia_id_fkey" FOREIGN KEY ("turno_guardia_id") REFERENCES "public"."turnos_guardia"("id") ON DELETE CASCADE,
+    CONSTRAINT "turno_guardia_guardias_guardia_id_fkey" FOREIGN KEY ("guardia_id") REFERENCES "public"."cronograma_de_guardias"("id"),
+    CONSTRAINT "turno_guardia_guardias_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id")
+);
+
+ALTER TABLE "public"."turno_guardia_guardias" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."turno_guardia_guardias" IS 'A qué guardias del cronograma pertenece cada turno de guardia: una por cada Paciente que atiende, porque cada Prestación es de un solo Paciente. La escribe sólo la base.';
+
+CREATE INDEX IF NOT EXISTS "turno_guardia_guardias_guardia_idx" ON "public"."turno_guardia_guardias" USING "btree" ("guardia_id");
+
+ALTER TABLE "public"."turno_guardia_guardias" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "panel_lee_las_guardias_de_los_turnos_guardia" ON "public"."turno_guardia_guardias" FOR SELECT TO "authenticated"
+  USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id"))));
+
+CREATE POLICY "el_trabajo_lee_las_guardias_de_los_turnos_guardia" ON "public"."turno_guardia_guardias" FOR SELECT TO "trabajo_sin_persona"
+  USING (("prestadora_id" = "interno"."prestadora_actual"()));
+
+GRANT SELECT ON TABLE "public"."turno_guardia_guardias" TO "authenticated";
+GRANT SELECT ON TABLE "public"."turno_guardia_guardias" TO "trabajo_sin_persona";
+GRANT ALL ON TABLE "public"."turno_guardia_guardias" TO "service_role";
+
+
+-- Cada día del período en que cae alguna guardia de las Prestaciones vigentes de un Servicio, con
+-- el momento exacto en que empieza y en que termina, en la hora de la Prestadora. Es el único
+-- lugar que sabe leer el cronograma: lo usan la regla de que el turno de guardia nace adentro de
+-- una guardia y la cuenta de los turnos sin cubrir.
+CREATE OR REPLACE FUNCTION "interno"."guardias_en_fechas"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_desde" "date", "p_hasta" "date") RETURNS TABLE("guardia_id" "uuid", "prestacion_id" bigint, "paciente_id" "uuid", "fecha" "date", "inicio" timestamp without time zone, "fin" timestamp without time zone)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT c.id, p.id, p.paciente_id, d.fecha,
+         d.fecha + c.hora_inicio,
+         (d.fecha + c.dias_hasta_el_fin::int) + c.hora_fin
+    FROM (SELECT p_desde + i AS fecha FROM generate_series(0, p_hasta - p_desde) AS i) d
+    JOIN prestaciones p
+      ON p.prestadora_id = p_prestadora
+     AND p.servicio_id = p_servicio
+     AND (p_paciente IS NULL OR p.paciente_id = p_paciente)
+     AND p.estado = 'vigente'
+     AND p.vigente_desde <= d.fecha
+     AND (p.vigente_hasta IS NULL OR d.fecha <= p.vigente_hasta)
+    JOIN cronograma_de_guardias c
+      ON c.prestacion_id = p.id
+     AND (c.fecha = d.fecha OR interno.dia_de_la_semana(d.fecha) = ANY (c.dias_semana))
+$$;
+
+ALTER FUNCTION "interno"."guardias_en_fechas"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
+
+
+-- La guardia del cronograma de ese Paciente, en ese Servicio, que contiene entero el tramo de un
+-- turno de guardia. Nada si no hay ninguna.
+CREATE OR REPLACE FUNCTION "interno"."guardia_que_contiene"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) RETURNS "uuid"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT o.guardia_id
+    FROM interno.guardias_en_fechas(p_prestadora, p_servicio, p_paciente, p_fecha - 3, p_fecha) o
+   WHERE o.inicio <= p_fecha + p_hora_inicio
+     AND interno.dia_en_que_termina_turno_guardia(p_fecha, p_hora_inicio, p_hora_fin, p_dias_hasta_el_fin) + p_hora_fin <= o.fin
+   ORDER BY o.inicio DESC, o.guardia_id
+   LIMIT 1
+$$;
+
+ALTER FUNCTION "interno"."guardia_que_contiene"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) OWNER TO "postgres";
+
+
+-- Anota a qué guardia pertenece un turno de guardia por uno de sus Pacientes, o lo rechaza si
+-- queda afuera del cronograma.
+CREATE OR REPLACE FUNCTION "interno"."anotar_la_guardia_del_turno_guardia"("p_turno_guardia" "uuid", "p_paciente" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_turno   turnos_guardia%ROWTYPE;
+  v_guardia uuid;
+BEGIN
+  SELECT * INTO v_turno FROM turnos_guardia WHERE id = p_turno_guardia;
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+  v_guardia := interno.guardia_que_contiene(v_turno.prestadora_id, v_turno.servicio_id, p_paciente,
+                                             v_turno.fecha, v_turno.hora_inicio, v_turno.hora_fin,
+                                             v_turno.dias_hasta_el_fin);
+  IF v_guardia IS NULL THEN
+    RAISE EXCEPTION 'turno_guardia_fuera_del_cronograma' USING ERRCODE = 'P0001';
+  END IF;
+  INSERT INTO turno_guardia_guardias (turno_guardia_id, guardia_id, prestadora_id)
+  VALUES (p_turno_guardia, v_guardia, v_turno.prestadora_id)
+  ON CONFLICT DO NOTHING;
+END;
+$$;
+
+ALTER FUNCTION "interno"."anotar_la_guardia_del_turno_guardia"("p_turno_guardia" "uuid", "p_paciente" "uuid") OWNER TO "postgres";
+
+
+-- Al sumarle, cambiarle o quitarle un Paciente a un turno de guardia.
+CREATE OR REPLACE FUNCTION "interno"."guardia_del_paciente_del_turno_guardia"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  IF TG_OP IN ('UPDATE', 'DELETE') THEN
+    DELETE FROM turno_guardia_guardias b
+     USING cronograma_de_guardias c, prestaciones p
+     WHERE b.turno_guardia_id = OLD.turno_guardia_id
+       AND c.id = b.guardia_id
+       AND p.id = c.prestacion_id
+       AND p.paciente_id = OLD.paciente_id;
+  END IF;
+  IF TG_OP IN ('INSERT', 'UPDATE') THEN
+    PERFORM interno.anotar_la_guardia_del_turno_guardia(NEW.turno_guardia_id, NEW.paciente_id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+ALTER FUNCTION "interno"."guardia_del_paciente_del_turno_guardia"() OWNER TO "postgres";
+
+CREATE OR REPLACE TRIGGER "turno_guardia_dentro_del_cronograma" AFTER INSERT OR DELETE OR UPDATE ON "public"."turno_guardia_pacientes" FOR EACH ROW EXECUTE FUNCTION "interno"."guardia_del_paciente_del_turno_guardia"();
+
+
+-- Al cambiarle al turno de guardia el día, el horario o el Servicio, se vuelve a buscar su guardia
+-- por cada uno de sus Pacientes.
+CREATE OR REPLACE FUNCTION "interno"."rehacer_las_guardias_del_turno_guardia"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_paciente uuid;
+BEGIN
+  IF (NEW.fecha, NEW.hora_inicio, NEW.hora_fin, NEW.dias_hasta_el_fin, NEW.servicio_id)
+     IS NOT DISTINCT FROM (OLD.fecha, OLD.hora_inicio, OLD.hora_fin, OLD.dias_hasta_el_fin, OLD.servicio_id) THEN
+    RETURN NULL;
+  END IF;
+  DELETE FROM turno_guardia_guardias WHERE turno_guardia_id = NEW.id;
+  FOR v_paciente IN SELECT tp.paciente_id FROM turno_guardia_pacientes tp WHERE tp.turno_guardia_id = NEW.id LOOP
+    PERFORM interno.anotar_la_guardia_del_turno_guardia(NEW.id, v_paciente);
+  END LOOP;
+  RETURN NULL;
+END;
+$$;
+
+ALTER FUNCTION "interno"."rehacer_las_guardias_del_turno_guardia"() OWNER TO "postgres";
+
+CREATE OR REPLACE TRIGGER "turno_guardia_dentro_del_cronograma" AFTER UPDATE OF "fecha", "hora_inicio", "hora_fin", "dias_hasta_el_fin", "servicio_id" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."rehacer_las_guardias_del_turno_guardia"();
+
+
+-- Un turno de guardia y su guardia son del mismo Servicio y de la misma Prestadora.
+CREATE OR REPLACE FUNCTION "interno"."guardia_del_mismo_servicio"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+      FROM turnos_guardia t
+      JOIN cronograma_de_guardias c ON c.id = NEW.guardia_id
+      JOIN prestaciones p ON p.id = c.prestacion_id
+     WHERE t.id = NEW.turno_guardia_id
+       AND p.servicio_id = t.servicio_id
+       AND p.prestadora_id = t.prestadora_id
+       AND c.prestadora_id = t.prestadora_id
+       AND NEW.prestadora_id = t.prestadora_id
+  ) THEN
+    RAISE EXCEPTION 'guardia_de_otro_servicio' USING ERRCODE = 'P0001';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+ALTER FUNCTION "interno"."guardia_del_mismo_servicio"() OWNER TO "postgres";
+
+CREATE OR REPLACE TRIGGER "guardia_del_mismo_servicio" BEFORE INSERT OR UPDATE ON "public"."turno_guardia_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."guardia_del_mismo_servicio"();
+
+
+-- Una guardia que ya tiene turnos de guardia no se borra.
+CREATE OR REPLACE FUNCTION "interno"."guardia_con_turnos_guardia_no_se_borra"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM turno_guardia_guardias b WHERE b.guardia_id = OLD.id) THEN
+    RAISE EXCEPTION 'guardia_con_turnos_guardia' USING ERRCODE = 'P0001';
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+ALTER FUNCTION "interno"."guardia_con_turnos_guardia_no_se_borra"() OWNER TO "postgres";
+
+CREATE OR REPLACE TRIGGER "guardia_con_turnos_guardia_no_se_borra" BEFORE DELETE ON "public"."cronograma_de_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."guardia_con_turnos_guardia_no_se_borra"();
+
+
+-- Al reemplazar una Prestación por otra, sea en el Panel o por un ajuste por índice, el
+-- cronograma de guardias pasa a la nueva, y los turnos de guardia desde el día en que rige la
+-- nueva quedan colgados de las guardias copiadas. Es un disparador: los cuatro lugares que
+-- reemplazan una Prestación copian el cronograma con esta misma función.
+CREATE OR REPLACE FUNCTION "interno"."copiar_el_cronograma_de_la_prestacion_anterior"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_vieja cronograma_de_guardias%ROWTYPE;
+  v_nueva uuid;
+BEGIN
+  FOR v_vieja IN SELECT * FROM cronograma_de_guardias c WHERE c.prestacion_id = NEW.prestacion_anterior_id LOOP
+    INSERT INTO cronograma_de_guardias (prestadora_id, prestacion_id, dias_semana, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)
+    VALUES (NEW.prestadora_id, NEW.id, v_vieja.dias_semana, v_vieja.fecha, v_vieja.hora_inicio, v_vieja.hora_fin, v_vieja.dias_hasta_el_fin)
+    RETURNING id INTO v_nueva;
+
+    UPDATE turno_guardia_guardias b
+       SET guardia_id = v_nueva
+      FROM turnos_guardia t
+     WHERE b.guardia_id = v_vieja.id
+       AND t.id = b.turno_guardia_id
+       AND t.fecha >= NEW.vigente_desde;
+  END LOOP;
+  RETURN NULL;
+END;
+$$;
+
+ALTER FUNCTION "interno"."copiar_el_cronograma_de_la_prestacion_anterior"() OWNER TO "postgres";
+
+CREATE OR REPLACE TRIGGER "copiar_el_cronograma_de_la_prestacion_anterior" AFTER INSERT ON "public"."prestaciones" FOR EACH ROW WHEN (("new"."prestacion_anterior_id" IS NOT NULL)) EXECUTE FUNCTION "interno"."copiar_el_cronograma_de_la_prestacion_anterior"();
+
+
+-- La cuenta de los turnos sin cubrir: cada guardia del cronograma de un Servicio en el período,
+-- menos lo que cubren los turnos de guardia recurrentes vigentes y los turnos de guardia sueltos
+-- de ese Paciente. Lo que queda es el turno sin cubrir. Momentos en la hora de la Prestadora.
+CREATE OR REPLACE FUNCTION "interno"."turnos_sin_cubrir"("p_prestadora" "uuid", "p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") RETURNS TABLE("prestacion_id" bigint, "guardia_id" "uuid", "paciente_id" "uuid", "inicio" timestamp without time zone, "fin" timestamp without time zone)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT o.prestacion_id, o.guardia_id, o.paciente_id, lower(h.hueco), upper(h.hueco)
+    FROM interno.guardias_en_fechas(p_prestadora, p_servicio, NULL, p_desde, p_hasta) o
+   CROSS JOIN LATERAL (
+     SELECT tsmultirange(tsrange(o.inicio, o.fin))
+            - COALESCE(range_agg(c.tramo) FILTER (WHERE c.tramo IS NOT NULL), '{}'::tsmultirange) AS huecos
+       FROM (
+         -- Los turnos de guardia recurrentes vigentes: activos y con el día adentro de su vigencia.
+         SELECT CASE WHEN x.fin > x.ini THEN tsrange(x.ini, x.fin) END AS tramo
+           FROM series_turnos_guardia s
+           JOIN series_turnos_guardia_pacientes sp ON sp.serie_id = s.id AND sp.paciente_id = o.paciente_id
+          CROSS JOIN LATERAL (SELECT o.fecha + i AS dia FROM generate_series(-3, 3) AS i) d
+          CROSS JOIN LATERAL (
+            SELECT d.dia + s.hora_inicio AS ini,
+                   interno.dia_en_que_termina_turno_guardia(d.dia, s.hora_inicio, s.hora_fin, s.dias_hasta_el_fin) + s.hora_fin AS fin
+          ) x
+          WHERE s.prestadora_id = p_prestadora
+            AND s.servicio_id = p_servicio
+            AND s.estado = 'activa'
+            AND s.vigente_desde <= d.dia
+            AND (s.vigente_hasta IS NULL OR d.dia <= s.vigente_hasta)
+            AND interno.dia_de_la_semana(d.dia) = ANY (s.dias_semana)
+         UNION ALL
+         -- Los turnos de guardia sueltos que no están cancelados ni pausados.
+         SELECT CASE WHEN x.fin > x.ini THEN tsrange(x.ini, x.fin) END
+           FROM turnos_guardia t
+           JOIN turno_guardia_pacientes tp ON tp.turno_guardia_id = t.id AND tp.paciente_id = o.paciente_id
+          CROSS JOIN LATERAL (
+            SELECT t.fecha + t.hora_inicio AS ini,
+                   interno.dia_en_que_termina_turno_guardia(t.fecha, t.hora_inicio, t.hora_fin, t.dias_hasta_el_fin) + t.hora_fin AS fin
+          ) x
+          WHERE t.prestadora_id = p_prestadora
+            AND t.servicio_id = p_servicio
+            AND t.serie_id IS NULL
+            AND t.estado NOT IN ('cancelada', 'pausada')
+            AND t.fecha BETWEEN o.fecha - 3 AND o.fecha + 3
+       ) c
+   ) cuenta
+   CROSS JOIN LATERAL unnest(cuenta.huecos) AS h(hueco)
+$$;
+
+ALTER FUNCTION "interno"."turnos_sin_cubrir"("p_prestadora" "uuid", "p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."turnos_sin_cubrir"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") RETURNS TABLE("prestacion_id" bigint, "guardia_id" "uuid", "paciente_id" "uuid", "fecha" "date", "hora_inicio" time without time zone, "hora_fin" time without time zone, "dias_hasta_el_fin" smallint)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+#variable_conflict use_column
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+BEGIN
+  IF v_prest IS NULL OR p_servicio IS NULL
+     OR NOT EXISTS (SELECT 1 FROM servicios s WHERE s.id = p_servicio AND s.prestadora_id = v_prest)
+     OR NOT (interno.es_superadmin() OR interno.es_admin_prestadora() OR interno.coordina_el_servicio(p_servicio)
+             OR COALESCE(auth.jwt() ->> 'role', '') = 'trabajo_sin_persona') THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
+    RAISE EXCEPTION 'periodo_invalido' USING ERRCODE = '22023';
+  END IF;
+  IF p_hasta - p_desde > 400 THEN
+    RAISE EXCEPTION 'periodo_demasiado_largo' USING ERRCODE = '22023';
+  END IF;
+
+  RETURN QUERY
+  SELECT u.prestacion_id, u.guardia_id, u.paciente_id,
+         u.inicio::date, u.inicio::time, u.fin::time,
+         (u.fin::date - u.inicio::date)::smallint
+    FROM interno.turnos_sin_cubrir(v_prest, p_servicio, p_desde, p_hasta) u
+   ORDER BY u.inicio, u.paciente_id, u.guardia_id;
+END;
+$$;
+
+ALTER FUNCTION "public"."turnos_sin_cubrir"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
+
+COMMENT ON FUNCTION "public"."turnos_sin_cubrir"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") IS 'Qué días y horarios del cronograma de guardias de un Servicio no cubre ningún turno de guardia, suelto o recurrente vigente, con su Paciente y su Prestación. Sólo dentro de la Prestadora de quien llama.';
+
+
+CREATE TABLE IF NOT EXISTS "public"."turnos_sin_cubrir_avisados" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "servicio_id" "uuid" NOT NULL,
+    "guardia_id" "uuid" NOT NULL,
+    "paciente_id" "uuid" NOT NULL,
+    "inicio" timestamp without time zone NOT NULL,
+    "fin" timestamp without time zone NOT NULL,
+    "detectado_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "avisado_at" timestamp with time zone,
+    "resuelto_at" timestamp with time zone,
+    CONSTRAINT "turnos_sin_cubrir_avisados_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "turnos_sin_cubrir_avisados_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id"),
+    CONSTRAINT "turnos_sin_cubrir_avisados_servicio_id_fkey" FOREIGN KEY ("servicio_id") REFERENCES "public"."servicios"("id") ON DELETE CASCADE,
+    CONSTRAINT "turnos_sin_cubrir_avisados_guardia_id_fkey" FOREIGN KEY ("guardia_id") REFERENCES "public"."cronograma_de_guardias"("id") ON DELETE CASCADE,
+    CONSTRAINT "turnos_sin_cubrir_avisados_paciente_id_fkey" FOREIGN KEY ("paciente_id") REFERENCES "public"."pacientes"("id") ON DELETE CASCADE,
+    CONSTRAINT "turnos_sin_cubrir_avisados_dura_algo" CHECK (("fin" > "inicio"))
+);
+
+ALTER TABLE "public"."turnos_sin_cubrir_avisados" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."turnos_sin_cubrir_avisados" IS 'Los turnos sin cubrir que la base anotó para avisar. Cada uno se avisa una vez; si se cubre queda resuelto, y si vuelve a quedar sin cubrir se anota de nuevo. Inicio y fin van en la hora de la Prestadora.';
+
+CREATE UNIQUE INDEX IF NOT EXISTS "turnos_sin_cubrir_avisados_uno_abierto" ON "public"."turnos_sin_cubrir_avisados" USING "btree" ("guardia_id", "paciente_id", "inicio", "fin") WHERE ("resuelto_at" IS NULL);
+CREATE INDEX IF NOT EXISTS "turnos_sin_cubrir_avisados_pendientes_idx" ON "public"."turnos_sin_cubrir_avisados" USING "btree" ("prestadora_id") WHERE (("avisado_at" IS NULL) AND ("resuelto_at" IS NULL));
+
+ALTER TABLE "public"."turnos_sin_cubrir_avisados" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "el_trabajo_lee_los_turnos_sin_cubrir" ON "public"."turnos_sin_cubrir_avisados" FOR SELECT TO "trabajo_sin_persona"
+  USING (("prestadora_id" = "interno"."prestadora_actual"()));
+
+CREATE POLICY "el_trabajo_marca_los_turnos_sin_cubrir_avisados" ON "public"."turnos_sin_cubrir_avisados" FOR UPDATE TO "trabajo_sin_persona"
+  USING (("prestadora_id" = "interno"."prestadora_actual"()))
+  WITH CHECK (("prestadora_id" = "interno"."prestadora_actual"()));
+
+GRANT SELECT ON TABLE "public"."turnos_sin_cubrir_avisados" TO "trabajo_sin_persona";
+GRANT UPDATE ("avisado_at") ON TABLE "public"."turnos_sin_cubrir_avisados" TO "trabajo_sin_persona";
+GRANT ALL ON TABLE "public"."turnos_sin_cubrir_avisados" TO "service_role";
+
+
+-- Rehace la cuenta en todos los Servicios vigentes de la Prestadora de la sesión, desde tres días
+-- atrás, porque una guardia de 72 horas puede seguir corriendo, hasta el horizonte de generación,
+-- y anota los turnos sin cubrir nuevos. Los anotados que ya no faltan, o que ya terminaron, quedan
+-- resueltos. Devuelve cuántos quedan pendientes de avisar.
+CREATE OR REPLACE FUNCTION "interno"."anotar_turnos_sin_cubrir"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest      uuid := interno.prestadora_actual();
+  v_ahora      timestamp without time zone;
+  v_hoy        date;
+  v_horizonte  integer;
+  v_pendientes integer;
+BEGIN
+  IF v_prest IS NULL THEN
+    RETURN 0;
+  END IF;
+  SELECT now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(p.id), p.dias_generacion_series_turno_guardia
+    INTO v_ahora, v_horizonte
+    FROM prestadoras p
+   WHERE p.id = v_prest;
+  IF NOT FOUND THEN
+    RETURN 0;
+  END IF;
+  v_hoy := v_ahora::date;
+
+  WITH actuales AS (
+    SELECT s.id AS servicio_id, u.guardia_id, u.paciente_id, u.inicio, u.fin
+      FROM servicios s
+     CROSS JOIN LATERAL interno.turnos_sin_cubrir(v_prest, s.id, v_hoy - 3, v_hoy + COALESCE(v_horizonte, 0)) u
+     WHERE s.prestadora_id = v_prest
+       AND s.estado = 'vigente'
+       AND u.fin > v_ahora
+  ), resueltos AS (
+    UPDATE turnos_sin_cubrir_avisados a
+       SET resuelto_at = now()
+     WHERE a.prestadora_id = v_prest
+       AND a.resuelto_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM actuales x
+                        WHERE x.guardia_id = a.guardia_id AND x.paciente_id = a.paciente_id
+                          AND x.inicio = a.inicio AND x.fin = a.fin)
+    RETURNING a.id
+  )
+  INSERT INTO turnos_sin_cubrir_avisados (prestadora_id, servicio_id, guardia_id, paciente_id, inicio, fin)
+  SELECT v_prest, x.servicio_id, x.guardia_id, x.paciente_id, x.inicio, x.fin
+    FROM actuales x
+  ON CONFLICT DO NOTHING;
+
+  SELECT count(*)::integer INTO v_pendientes
+    FROM turnos_sin_cubrir_avisados a
+   WHERE a.prestadora_id = v_prest AND a.avisado_at IS NULL AND a.resuelto_at IS NULL;
+  RETURN v_pendientes;
+END;
+$$;
+
+ALTER FUNCTION "interno"."anotar_turnos_sin_cubrir"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."anotar_turnos_sin_cubrir_de_la_prestadora"() RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  IF interno.prestadora_actual() IS NULL OR COALESCE(auth.jwt() ->> 'role', '') <> 'trabajo_sin_persona' THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  RETURN interno.anotar_turnos_sin_cubrir();
+END;
+$$;
+
+ALTER FUNCTION "public"."anotar_turnos_sin_cubrir_de_la_prestadora"() OWNER TO "postgres";
+
+COMMENT ON FUNCTION "public"."anotar_turnos_sin_cubrir_de_la_prestadora"() IS 'El pasaje diario: rehace la cuenta de turnos sin cubrir de la Prestadora y devuelve cuántos quedan pendientes de avisar. Sólo la llama el trabajo sin persona.';
+
+
+-- Cuántos días de turnos de guardia se generan por delante en la Prestadora de la sesión.
+CREATE OR REPLACE FUNCTION "interno"."dias_de_generacion_de_la_prestadora"() RETURNS integer
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT p.dias_generacion_series_turno_guardia::integer FROM prestadoras p WHERE p.id = interno.prestadora_actual()
+$$;
+
+ALTER FUNCTION "interno"."dias_de_generacion_de_la_prestadora"() OWNER TO "postgres";
+
+
+-- El alta del turno de guardia recurrente: la serie, sus Pacientes, los turnos de guardia de cada
+-- día hasta el horizonte de la Prestadora con sus Pacientes, y la cuenta de turnos sin cubrir. Todo
+-- junto o nada. Corre con los permisos de quien llama.
+CREATE OR REPLACE FUNCTION "public"."crear_turno_guardia_recurrente"("p_servicio" "uuid", "p_pacientes" "uuid"[], "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer, "p_modalidad" "text", "p_vigente_desde" "date", "p_vigente_hasta" "date" DEFAULT NULL::"date") RETURNS "uuid"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest     uuid := interno.prestadora_actual();
+  v_pacientes uuid[];
+  v_dias      text[];
+  v_hi        time without time zone;
+  v_hf        time without time zone;
+  v_fin       smallint := COALESCE(p_dias_hasta_el_fin, 0)::smallint;
+  v_ahora     timestamp without time zone;
+  v_hoy       date;
+  v_horizonte integer;
+  v_desde     date;
+  v_hasta     date;
+  v_serie     uuid;
+  v_turno     uuid;
+  v_fecha     date;
+  v_dia       text;
+  v_paciente  uuid;
+BEGIN
+  IF v_prest IS NULL THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+
+  -- Sin repetidos y en el orden en que vinieron: el primero es el principal.
+  v_pacientes := ARRAY(SELECT u.x FROM unnest(p_pacientes) WITH ORDINALITY AS u(x, n)
+                        WHERE u.x IS NOT NULL GROUP BY u.x ORDER BY min(u.n));
+  IF cardinality(v_pacientes) = 0 THEN
+    RAISE EXCEPTION 'faltan_pacientes' USING ERRCODE = 'P0001';
+  END IF;
+  v_dias := ARRAY(SELECT DISTINCT d.x FROM unnest(p_dias_semana) AS d(x) WHERE d.x IS NOT NULL);
+  IF cardinality(v_dias) = 0 THEN
+    RAISE EXCEPTION 'faltan_dias_de_la_semana' USING ERRCODE = 'P0001';
+  END IF;
+  IF p_hora_inicio IS NULL OR p_hora_fin IS NULL OR p_vigente_desde IS NULL THEN
+    RAISE EXCEPTION 'falta_un_dato' USING ERRCODE = '23502';
+  END IF;
+  v_hi := p_hora_inicio::time;
+  v_hf := p_hora_fin::time;
+
+  v_ahora := now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest);
+  v_hoy := v_ahora::date;
+  v_horizonte := COALESCE(interno.dias_de_generacion_de_la_prestadora(), 0);
+
+  INSERT INTO series_turnos_guardia (prestadora_id, servicio_id, paciente_id, dias_semana, hora_inicio, hora_fin,
+                                     dias_hasta_el_fin, modalidad, vigente_desde, vigente_hasta)
+  VALUES (v_prest, p_servicio, v_pacientes[1], v_dias, v_hi, v_hf, v_fin, p_modalidad, p_vigente_desde, p_vigente_hasta)
+  RETURNING id INTO v_serie;
+
+  INSERT INTO series_turnos_guardia_pacientes (serie_id, paciente_id, prestadora_id)
+  SELECT v_serie, x, v_prest FROM unnest(v_pacientes[2:]) AS x
+  ON CONFLICT DO NOTHING;
+
+  -- Cada día de la semana elegido tiene que caer adentro del cronograma, para cada Paciente, la
+  -- primera vez que le toca. Se mira aunque esa fecha quede más allá del horizonte y todavía no se
+  -- genere ningún turno de guardia.
+  FOREACH v_dia IN ARRAY v_dias LOOP
+    v_fecha := NULL;
+    SELECT d::date INTO v_fecha
+      FROM generate_series(greatest(p_vigente_desde, v_hoy), greatest(p_vigente_desde, v_hoy) + 6, interval '1 day') AS d
+     WHERE interno.dia_de_la_semana(d::date) = v_dia
+     LIMIT 1;
+    IF v_fecha IS NULL OR (p_vigente_hasta IS NOT NULL AND v_fecha > p_vigente_hasta) THEN
+      CONTINUE;
+    END IF;
+    FOREACH v_paciente IN ARRAY v_pacientes LOOP
+      IF interno.guardia_que_contiene(v_prest, p_servicio, v_paciente, v_fecha, v_hi, v_hf, v_fin) IS NULL THEN
+        RAISE EXCEPTION 'turno_guardia_fuera_del_cronograma' USING ERRCODE = 'P0001';
+      END IF;
+    END LOOP;
+  END LOOP;
+
+  -- Los turnos de guardia: desde hoy si el turno todavía no empezó, si no desde mañana; nunca antes
+  -- del día desde el que rige la serie; hasta el horizonte o el último día de la serie.
+  v_desde := greatest(p_vigente_desde, CASE WHEN v_hi > v_ahora::time THEN v_hoy ELSE v_hoy + 1 END);
+  v_hasta := v_hoy + v_horizonte;
+  IF p_vigente_hasta IS NOT NULL AND p_vigente_hasta < v_hasta THEN
+    v_hasta := p_vigente_hasta;
+  END IF;
+
+  IF v_desde <= v_hasta THEN
+    FOR v_fecha IN
+      SELECT d::date FROM generate_series(v_desde, v_hasta, interval '1 day') AS d
+       WHERE interno.dia_de_la_semana(d::date) = ANY (v_dias)
+    LOOP
+      INSERT INTO turnos_guardia (prestadora_id, serie_id, paciente_id, fecha, hora_inicio, hora_fin,
+                                  dias_hasta_el_fin, modalidad)
+      VALUES (v_prest, v_serie, v_pacientes[1], v_fecha, v_hi, v_hf, v_fin, p_modalidad)
+      RETURNING id INTO v_turno;
+
+      INSERT INTO turno_guardia_pacientes (turno_guardia_id, paciente_id, prestadora_id)
+      SELECT v_turno, x, v_prest FROM unnest(v_pacientes[2:]) AS x
+      ON CONFLICT DO NOTHING;
+    END LOOP;
+  END IF;
+
+  PERFORM interno.anotar_turnos_sin_cubrir();
+
+  RETURN v_serie;
+END;
+$$;
+
+ALTER FUNCTION "public"."crear_turno_guardia_recurrente"("p_servicio" "uuid", "p_pacientes" "uuid"[], "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer, "p_modalidad" "text", "p_vigente_desde" "date", "p_vigente_hasta" "date") OWNER TO "postgres";
+
+
+REVOKE ALL ON FUNCTION "interno"."dia_de_la_semana"("p_fecha" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."guardias_en_fechas"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_desde" "date", "p_hasta" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."guardia_que_contiene"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."anotar_la_guardia_del_turno_guardia"("p_turno_guardia" "uuid", "p_paciente" "uuid") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."guardia_del_paciente_del_turno_guardia"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."rehacer_las_guardias_del_turno_guardia"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."guardia_del_mismo_servicio"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."guardia_con_turnos_guardia_no_se_borra"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."copiar_el_cronograma_de_la_prestacion_anterior"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."turnos_sin_cubrir"("p_prestadora" "uuid", "p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."anotar_turnos_sin_cubrir"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."dias_de_generacion_de_la_prestadora"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "public"."turnos_sin_cubrir"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "public"."anotar_turnos_sin_cubrir_de_la_prestadora"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "public"."crear_turno_guardia_recurrente"("p_servicio" "uuid", "p_pacientes" "uuid"[], "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer, "p_modalidad" "text", "p_vigente_desde" "date", "p_vigente_hasta" "date") FROM PUBLIC, "anon";
+
+-- Lo que llaman las funciones que corren con los permisos de quien las usa: el alta del recurrente,
+-- la internación, el fin de la internación y la baja del Servicio.
+GRANT ALL ON FUNCTION "interno"."dia_de_la_semana"("p_fecha" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."dia_de_la_semana"("p_fecha" "date") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."guardia_que_contiene"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."guardia_que_contiene"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) TO "service_role";
+GRANT ALL ON FUNCTION "interno"."anotar_turnos_sin_cubrir"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."anotar_turnos_sin_cubrir"() TO "trabajo_sin_persona";
+GRANT ALL ON FUNCTION "interno"."anotar_turnos_sin_cubrir"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."dias_de_generacion_de_la_prestadora"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."dias_de_generacion_de_la_prestadora"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."turnos_sin_cubrir"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."turnos_sin_cubrir"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") TO "trabajo_sin_persona";
+GRANT ALL ON FUNCTION "public"."turnos_sin_cubrir"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") TO "service_role";
+GRANT ALL ON FUNCTION "public"."anotar_turnos_sin_cubrir_de_la_prestadora"() TO "trabajo_sin_persona";
+GRANT ALL ON FUNCTION "public"."anotar_turnos_sin_cubrir_de_la_prestadora"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."crear_turno_guardia_recurrente"("p_servicio" "uuid", "p_pacientes" "uuid"[], "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer, "p_modalidad" "text", "p_vigente_desde" "date", "p_vigente_hasta" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."crear_turno_guardia_recurrente"("p_servicio" "uuid", "p_pacientes" "uuid"[], "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer, "p_modalidad" "text", "p_vigente_desde" "date", "p_vigente_hasta" "date") TO "service_role";

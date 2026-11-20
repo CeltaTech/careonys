@@ -107,6 +107,12 @@ const DATOS = {
     busqueda: { sinResponder: false, rechazos: 2 },
     veces: 1,
   },
+  turno_sin_cubrir: {
+    turnos: [
+      { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00', pacientes: ['Elena', 'Aníbal'] },
+      { fecha: '2026-10-08', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] },
+    ],
+  },
   incidente_turno_guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 12, veces: 2,

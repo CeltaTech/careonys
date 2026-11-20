@@ -561,6 +561,38 @@ INSERT INTO public.prestaciones (
    25000.00, 25000.00, 'Una jornada semanal. Se dio de baja a pedido del Cliente.',
    'de_baja', CURRENT_DATE - 45, NULL);
 
+-- Antes de la Prestación por hora que arranca la semana que viene, Héctor tuvo otra igual que
+-- termina el día anterior: sin ella, los turnos de guardia de ayer, hoy y mañana de su Servicio
+-- quedarían afuera de todo cronograma y la base los rechazaría. Y Alberto, que vive con Elena,
+-- tiene su propia Prestación en el Servicio de ella, porque cada Prestación es de un solo Paciente.
+INSERT INTO public.prestaciones (
+  prestadora_id, servicio_id, paciente_id, tipo_servicio, precio_final,
+  precio_lista_snapshot, nota, estado, vigente_desde, vigente_hasta
+) VALUES
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000002',
+   '50000000-0000-4000-8000-000000000002', 'Cuidado de adultos mayores — Por hora',
+   3500.00, 3500.00, 'Seis horas por la mañana, hasta que arranque la nueva.',
+   'vigente', CURRENT_DATE - 30, CURRENT_DATE + 6),
+  ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000001',
+   '50000000-0000-4000-8000-000000000004', 'Cuidado de adultos mayores — Guardia de 12',
+   38000.00, 38000.00, 'Comparte la visita con Elena.',
+   'vigente', CURRENT_DATE - 120, NULL);
+
+-- El cronograma de guardias: todos los días de la semana, en el horario que cubren los turnos de
+-- guardia de más abajo. Kinesiología y limpieza no tienen guardias.
+INSERT INTO public.cronograma_de_guardias (prestadora_id, prestacion_id, dias_semana, hora_inicio, hora_fin, dias_hasta_el_fin)
+SELECT p.prestadora_id, p.id,
+       ARRAY['lunes','martes','miercoles','jueves','viernes','sabado','domingo'],
+       h.hora_inicio, h.hora_fin, h.dias
+  FROM public.prestaciones p
+  JOIN (VALUES ('60000000-0000-4000-8000-000000000001'::uuid, TIME '08:00', TIME '20:00', 0::smallint),
+               ('60000000-0000-4000-8000-000000000002'::uuid, TIME '06:00', TIME '13:00', 0::smallint),
+               ('60000000-0000-4000-8000-000000000003'::uuid, TIME '08:00', TIME '08:00', 1::smallint))
+       AS h(servicio_id, hora_inicio, hora_fin, dias)
+    ON h.servicio_id = p.servicio_id
+ WHERE p.prestadora_id = '11111111-1111-4111-8111-111111111111'
+   AND (p.tipo_servicio LIKE 'Cuidado de adultos mayores%');
+
 
 -- ----------------------------------------------------------------------------
 -- 5. Ocho guardias repartidas entre ayer, hoy y mañana
@@ -574,14 +606,14 @@ INSERT INTO public.prestaciones (
 -- ----------------------------------------------------------------------------
 INSERT INTO public.turnos_guardia (
   id, prestadora_id, servicio_id, asistente_id, paciente_id, coordinador_id,
-  fecha, hora_inicio, hora_fin, modalidad, estado, canal_modalidad,
+  fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, canal_modalidad,
   checkin_at, checkout_at
 ) VALUES
   -- Ayer: una terminada de punta a punta.
   ('70000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
    '50000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE - 1, '08:00', '16:00', 'presencial', 'completada', 'directa',
+   CURRENT_DATE - 1, '08:00', '16:00', 0, 'presencial', 'completada', 'directa',
    (CURRENT_DATE - 1 + TIME '08:03') AT TIME ZONE 'America/Argentina/Buenos_Aires',
    (CURRENT_DATE - 1 + TIME '16:05') AT TIME ZONE 'America/Argentina/Buenos_Aires'),
 
@@ -589,14 +621,14 @@ INSERT INTO public.turnos_guardia (
   ('70000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
    '50000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE - 1, '07:00', '13:00', 'presencial', 'ausente', 'directa',
+   CURRENT_DATE - 1, '07:00', '13:00', 0, 'presencial', 'ausente', 'directa',
    NULL, NULL),
 
   -- Hoy temprano: terminada.
   ('70000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
    '50000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE, '06:00', '10:00', 'presencial', 'completada', 'directa',
+   CURRENT_DATE, '06:00', '10:00', 0, 'presencial', 'completada', 'directa',
    (CURRENT_DATE + TIME '06:01') AT TIME ZONE 'America/Argentina/Buenos_Aires',
    (CURRENT_DATE + TIME '10:02') AT TIME ZONE 'America/Argentina/Buenos_Aires'),
 
@@ -604,7 +636,7 @@ INSERT INTO public.turnos_guardia (
   ('70000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
    '50000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE, '08:00', '16:00', 'presencial', 'activa', 'directa',
+   CURRENT_DATE, '08:00', '16:00', 0, 'presencial', 'activa', 'directa',
    (CURRENT_DATE + TIME '08:02') AT TIME ZONE 'America/Argentina/Buenos_Aires',
    NULL),
 
@@ -612,29 +644,30 @@ INSERT INTO public.turnos_guardia (
   ('70000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
    '50000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE, '16:00', '22:00', 'presencial', 'programada', 'intermediacion',
+   CURRENT_DATE, '16:00', '22:00', 0, 'presencial', 'programada', 'intermediacion',
    NULL, NULL),
 
-  -- Hoy a la noche: SIN CUBRIR. Nadie tiene asignada esta guardia todavía.
+  -- Hoy a la noche: SIN CUBRIR. Nadie tiene asignada esta guardia todavía. Termina
+  -- mañana a las seis: por eso lleva un día hasta el fin.
   -- Es el caso que estrena la migración de "guardia sin cubrir" y el que hace
   -- aparecer el aviso en la pantalla de Estado actual.
   ('70000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000003', NULL,
    '50000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE, '22:00', '06:00', 'presencial', 'programada', 'intermediacion',
+   CURRENT_DATE, '22:00', '06:00', 1, 'presencial', 'programada', 'intermediacion',
    NULL, NULL),
 
   -- Mañana: dos programadas, para que la vista de la semana no quede vacía.
   ('70000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
    '50000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE + 1, '08:00', '16:00', 'presencial', 'programada', 'directa',
+   CURRENT_DATE + 1, '08:00', '16:00', 0, 'presencial', 'programada', 'directa',
    NULL, NULL),
 
   ('70000000-0000-4000-8000-000000000008', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
    '50000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE + 1, '07:00', '13:00', 'presencial', 'programada', 'directa',
+   CURRENT_DATE + 1, '07:00', '13:00', 0, 'presencial', 'programada', 'directa',
    NULL, NULL),
 
   -- Pasado mañana: ASIGNADA SIN RESPONDER. Se le asignó a Ana, que todavía no
@@ -644,7 +677,7 @@ INSERT INTO public.turnos_guardia (
   ('70000000-0000-4000-8000-000000000009', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000001', NULL,
    '50000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE + 2, '08:00', '16:00', 'presencial', 'programada', 'directa',
+   CURRENT_DATE + 2, '08:00', '16:00', 0, 'presencial', 'programada', 'directa',
    NULL, NULL);
 
 -- La asignación, todavía sin responder. Ana trabaja en prestación directa, que es
@@ -1165,6 +1198,20 @@ INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, coordinad
 VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos',
         '50000000-0000-4000-8000-000000000002');
+
+-- Lo vendido en ese Servicio, con su cronograma de guardias: todo turno de guardia nace adentro de
+-- una guardia del cronograma.
+INSERT INTO public.prestaciones (prestadora_id, servicio_id, paciente_id, tipo_servicio, precio_final,
+                                 precio_lista_snapshot, estado, vigente_desde)
+VALUES ('22222222-2222-4222-8222-222222222222', '70000000-0000-4000-8000-000000000001',
+        '60000000-0000-4000-8000-000000000001', 'Cuidado diurno', 30000.00, 30000.00,
+        'vigente', CURRENT_DATE - 30);
+
+INSERT INTO public.cronograma_de_guardias (prestadora_id, prestacion_id, dias_semana, hora_inicio, hora_fin)
+SELECT p.prestadora_id, p.id, ARRAY['lunes','martes','miercoles','jueves','viernes','sabado','domingo'],
+       TIME '08:00', TIME '16:00'
+  FROM public.prestaciones p
+ WHERE p.servicio_id = '70000000-0000-4000-8000-000000000001';
 
 -- Con Asistente asignado, por el mismo motivo que el Paciente lleva Cliente: un
 -- Asistente sin Guardias no ve nada, y una prueba contra la nada no prueba nada.

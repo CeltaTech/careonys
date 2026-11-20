@@ -131,6 +131,7 @@ const DATOS_MINIMOS = {
   borrado_del_registro_de_accesos_notificacion: { anio: '2023', fecha: '1/1/2027', dias: '30' },
   documento_para_firmar: { link: 'https://ejemplo/documento', producto: 'un producto' },
   origen_de_alerta: { fuente: 'aviso_telefonico' },
+  turno_sin_cubrir: { turnos: [{ fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00', pacientes: ['Elena', 'Aníbal'] }] },
   turno_guardia_sin_cerrar: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     asistente: 'Marta', minutosDeAtraso: 40, salidaMarcada: true, veces: 2,

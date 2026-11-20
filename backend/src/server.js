@@ -50,7 +50,7 @@ import { paraCadaPrestadora } from './db/connection.js';
 import { revisarVencimientos } from './utils/vencimientos.js';
 import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
 import { revisarNotificacionesCoordinador, revisarEmergenciasSinTomar } from './utils/revisarNotificacionesCoordinador.js';
-import { extenderSeriesTurnoGuardiaAbiertas } from './utils/generacionSeriesTurnoGuardia.js';
+import { pasajeDiarioDeTurnosGuardia } from './utils/pasajeDiarioDeTurnosGuardia.js';
 import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
 import { revisarTurnosGuardiaSinCubrir } from './utils/revisarTurnosGuardiaSinCubrir.js';
 import { revisarAusenciasAvisadas } from './utils/revisarAusenciasAvisadas.js';
@@ -274,10 +274,10 @@ programar(revisarNotificacionesCoordinador, CINCO_MINUTOS_MS);
 const UN_MINUTO_MS = 60 * 1000;
 programar(revisarEmergenciasSinTomar, UN_MINUTO_MS);
 
-// Renovación automática del horizonte de guardias de series abiertas (pendiente #18 punto 2,
-// docs/PLAN_HASTA_PRODUCCION.md) — se mide en días, misma cadencia que revisarVencimientos.
-// Recibe la Prestadora: la tarea trabaja sólo en ésa, una vez por Prestadora por día.
-programar(extenderSeriesTurnoGuardiaAbiertas, UN_DIA_MS, { conLaPrestadora: true });
+// El pasaje diario de los turnos de guardia: genera los turnos de guardia de los recurrentes hasta
+// el horizonte y después rehace la cuenta de turnos sin cubrir y avisa, en ese orden. Recibe la
+// Prestadora: trabaja sólo en ésa, una vez por Prestadora por día.
+programar(pasajeDiarioDeTurnosGuardia, UN_DIA_MS, { conLaPrestadora: true });
 
 // Push a Asistentes (nuevo turno de guardia asignado, mensajes del coordinador, recordatorios) —
 // docs/PRD_04_05_App_Servicio.md:115. Misma cadencia que revisarAusenciasAutomaticas.

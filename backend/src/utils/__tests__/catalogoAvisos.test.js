@@ -78,6 +78,25 @@ describe('mezclarMensajesConCatalogo', () => {
     assert.equal(sePuedeApagar(mensajeDelCatalogo('codigo_instruccion_personas_autorizadas')), false);
   });
 
+  it('el turno sin cubrir no se apaga, admite WhatsApp y no le llega al Cliente', () => {
+    const turno = mensajeDelCatalogo('turno_sin_cubrir');
+    assert.equal(turno.evento, 'turno_sin_cubrir');
+    assert.equal(sePuedeApagar(turno), false);
+    assert.equal(turno.admite_whatsapp, true);
+    assert.equal(turno.admite_cliente, false);
+    assert.equal(notificaClientePorDefecto(turno), false);
+
+    const [mezclado] = mezclarMensajesConCatalogo([
+      { evento: 'turno_sin_cubrir', emails: [], activo: false },
+    ]).filter((m) => m.evento === 'turno_sin_cubrir');
+    assert.equal(mezclado.activo, true);
+  });
+
+  it('el turno vacante sigue siendo otro aviso, y se puede apagar', () => {
+    assert.notEqual(mensajeDelCatalogo('turno_guardia_sin_cubrir'), mensajeDelCatalogo('turno_sin_cubrir'));
+    assert.equal(sePuedeApagar(mensajeDelCatalogo('turno_guardia_sin_cubrir')), true);
+  });
+
   it('los avisos que no se apagan salen apagados de la mezcla como encendidos', () => {
     const mezclados = mezclarMensajesConCatalogo([
       { evento: 'codigo_instruccion_personas_autorizadas', emails: [], activo: false },

@@ -1,519 +1,492 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useNombreConDisponibilidad } from '../../hooks/useNombreConDisponibilidad';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { EstadoLista } from '../../components/layout/EstadoLista';
+import { CasillerosDeHorario } from '../../components/turnos_guardia/CasillerosDeHorario';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
-import { serviciosParaClientes } from '../../lib/serviciosDelPaciente';
 import { mensajeDeError } from '../../lib/errores';
 import { asignarSerie, asignarTurnoGuardia } from '../../lib/asignarTurnoGuardia';
-import { horasDeTurnoGuardia } from '../../lib/horarios';
+import { hoyISO } from '../../lib/horarios';
+import { fechaVisible } from '../../lib/fechaVisible';
+import {
+  DIAS_SEMANA,
+  alternarGuardia,
+  cabeEnTodas,
+  diasEnComun,
+  guardiasParaElRecurrente,
+  guardiasParaLaFecha,
+  horaCorta,
+  pacientesDeLasGuardias,
+} from '../../lib/cronogramaDeGuardias';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { FICHA_DOMICILIO, conSusFichas } from '../../lib/fichaDelPaciente';
 import { palabrasDelDomicilio } from '../../lib/partesDeDomicilio';
 
-const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-/** Hasta dónde se generan los turnos de guardia de una serie que no tiene fecha de fin, mientras la consulta
- *  de más abajo todavía no trajo el número. No es el valor de fábrica: ése lo decide la Prestadora
- *  y vive en la base, en el `DEFAULT 90` de `prestadoras.dias_generacion_series_turno_guardia`. Acá está
- *  sólo para que la ventana no arranque con un horizonte vacío durante ese instante. Si alguna vez
- *  los dos números se separan, manda el de la base. */
-const DIAS_GENERACION_SIN_VIGENCIA_HASTA_DE_RESGUARDO = 90;
+const TERMINA = ['termina_mismo_dia', 'termina_dia_siguiente', 'termina_dos_dias', 'termina_tres_dias'];
 
+// El orden de los casilleros en el formulario, para saltar al primero que falte.
+const ORDEN_DE_LOS_CASILLEROS = ['servicio_id', 'fecha', 'vigente_desde', 'guardias', 'modalidad', 'dias_semana', 'hora_inicio', 'hora_fin'];
+
+/**
+ * El alta de un turno de guardia. Todo turno de guardia nace adentro de una guardia del
+ * cronograma de una Prestación: primero se elige el Servicio, después una o más de sus guardias
+ * —una por Prestación—, y de ellas salen los Pacientes, el horario y los días. El horario se
+ * puede achicar, no agrandar. La base vuelve a controlarlo todo al guardar.
+ */
 export function NuevoTurnoGuardiaModal({ onClose, onCreada }) {
   const modal = useModalAccesible(onClose);
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const textos = t.turnos_guardia.nuevo_turno_guardia;
   const nombreConHorarios = useNombreConDisponibilidad();
   const prestadoraId = usePrestadoraActual();
   const [esSerie, setEsSerie] = useState(false);
   const [asistentes, setAsistentes] = useState([]);
   const [pacientes, setPacientes] = useState([]);
-  const [diasGeneracion, setDiasGeneracion] = useState(DIAS_GENERACION_SIN_VIGENCIA_HASTA_DE_RESGUARDO);
-  const [asistenteId, setAsistenteId] = useState('');
-  // A quiénes atiende el turno. Es una lista y no un valor suelto porque un turno de guardia puede
-  // cubrir a más de una persona: un matrimonio en su casa, o un grupo en un asilo.
-  const [pacienteIds, setPacienteIds] = useState([]);
-  // De qué Servicio es el turno. Es lo que hace que después se pueda facturar y que la pantalla
-  // del Servicio muestre sus turnos de guardia: sin esto el turno de guardia nace suelta.
   const [servicios, setServicios] = useState([]);
+  const [estadoListas, setEstadoListas] = useState('cargando');
+  const [errorListas, setErrorListas] = useState(null);
+  const [asistenteId, setAsistenteId] = useState('');
+  // De qué Servicio es el turno. Es lo que hace que después se pueda facturar y que la pantalla
+  // del Servicio muestre sus turnos de guardia.
   const [servicioId, setServicioId] = useState('');
+  // Las guardias del cronograma de las Prestaciones de ese Servicio, cada una con su Prestación.
+  const [guardias, setGuardias] = useState([]);
+  const [estadoGuardias, setEstadoGuardias] = useState('listo');
+  const [errorGuardias, setErrorGuardias] = useState(null);
+  const [elegidas, setElegidas] = useState([]);
   const [modalidad, setModalidad] = useState('');
   const [horaInicio, setHoraInicio] = useState('');
   const [horaFin, setHoraFin] = useState('');
-  // Cuántos días después de la fecha termina el turno: 0 el mismo día, 1 al siguiente, y así. Es
-  // lo que permite los turnos de guardia de 24, 48 y 72 horas que cubre una sola Asistente. De fábrica
-  // arranca en 0, que es el turno corriente.
   const [diasHastaElFin, setDiasHastaElFin] = useState('0');
   const [fecha, setFecha] = useState('');
   const [diasSemana, setDiasSemana] = useState([]);
   const [vigenteDesde, setVigenteDesde] = useState('');
   const [vigenteHasta, setVigenteHasta] = useState('');
   const [guardando, setGuardando] = useState(false);
-
-  // Cuánto dura el turno con lo que hay elegido hasta ahora. La cuenta la hace `horarios.js`, que
-  // es donde vive para todo el producto: escrita acá sería una copia que se despega.
-  const duracionEnHoras = useMemo(() => {
-    if (!horaInicio || !horaFin) return null;
-    const horas = horasDeTurnoGuardia({
-      fecha: '2000-01-01', // un día cualquiera: cuánto dura no depende de qué día sea
-      hora_inicio: horaInicio,
-      hora_fin: horaFin,
-      dias_hasta_el_fin: Number(diasHastaElFin),
-    });
-    return Number.isFinite(horas) && horas > 0 ? Math.round(horas * 100) / 100 : null;
-  }, [horaInicio, horaFin, diasHastaElFin]);
   const [error, setError] = useState(null);
+  // Los avisos al pie de cada casillero aparecen recién al apretar Crear.
+  const [intentoGuardar, setIntentoGuardar] = useState(false);
 
-  useEffect(() => {
+  const cargarListas = useCallback(async () => {
     if (!prestadoraId) return;
-    async function cargarListas() {
-      const [
-        { data: asistentesData },
-        { data: pacientesData },
-        { data: prestadoraData },
-        { data: serviciosData },
-      ] = await Promise.all([
-        // Un turno de guardia nuevo solo se le puede dar a quien sigue en el Padrón. Esta lista no
-        // muestra a nadie, solo llena el desplegable de quién la toma, así que se filtra en la
-        // consulta. El valor sale de `ESTADO_ACTIVO`, la misma constante que contesta
-        // `estaEnElPadron`, y no escrito a mano acá: si mañana la Prestadora suma otra forma de
-        // seguir en el Padrón, esta puerta no puede quedarse con la regla vieja
-        // (regla 12 de CLAUDE.md §7).
-        supabase.from('asistentes').select('id, nombre, disponibilidad').eq('prestadora_id', prestadoraId).eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).order('nombre'),
-        // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al
-        // lado del nombre es lo que hace evidente que ese turno los cubre a los dos.
-        // `cliente_id` viene porque es lo que decide qué Servicios se le pueden ofrecer al
-        // turno: un Servicio sólo factura Pacientes de quien lo contrató.
-        supabase
-          .from('pacientes')
-          .select(`id, cliente_id, ${FICHA_DOMICILIO}`)
-          .eq('prestadora_id', prestadoraId)
-          .is('deleted_at', null),
-        supabase.from('prestadoras').select('dias_generacion_series_turno_guardia').eq('id', prestadoraId).single(),
-        supabase
-          .from('servicios')
-          .select('id, etiqueta, cliente_id')
-          .eq('prestadora_id', prestadoraId)
-          .eq('estado', 'vigente')
-          // Sin Coordinador el Servicio no está habilitado y la base rechaza sus turnos de guardia.
-          .not('coordinador_id', 'is', null)
-          .order('etiqueta'),
-      ]);
-      setAsistentes(asistentesData ?? []);
-      // El nombre está en los datos de la persona, así que el orden se pone acá y no en la consulta.
-      setPacientes(
-        conSusFichas(pacientesData, palabrasDelDomicilio(t)).sort((a, b) =>
-          (a.nombre ?? '').localeCompare(b.nombre ?? ''),
-        ),
-      );
-      setServicios(serviciosData ?? []);
-      if (prestadoraData?.dias_generacion_series_turno_guardia) {
-        setDiasGeneracion(prestadoraData.dias_generacion_series_turno_guardia);
-      }
+    setEstadoListas('cargando');
+    setErrorListas(null);
+    const [asistentesResp, pacientesResp, serviciosResp] = await Promise.all([
+      // Un turno de guardia nuevo sólo se le puede dar a quien sigue en el Padrón. El valor sale
+      // de `ESTADO_ACTIVO`, la misma constante que contesta `estaEnElPadron`.
+      supabase.from('asistentes').select('id, nombre, disponibilidad').eq('prestadora_id', prestadoraId).eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).order('nombre'),
+      // Sólo para nombrar a los Pacientes de las guardias elegidas, con su domicilio al lado.
+      supabase
+        .from('pacientes')
+        .select(`id, ${FICHA_DOMICILIO}`)
+        .eq('prestadora_id', prestadoraId)
+        .is('deleted_at', null),
+      supabase
+        .from('servicios')
+        .select('id, etiqueta')
+        .eq('prestadora_id', prestadoraId)
+        .eq('estado', 'vigente')
+        // Sin Coordinador el Servicio no está habilitado y la base rechaza sus turnos de guardia.
+        .not('coordinador_id', 'is', null)
+        .order('etiqueta'),
+    ]);
+    const falla = asistentesResp.error || pacientesResp.error || serviciosResp.error;
+    if (falla) {
+      setErrorListas(mensajeDeError(falla, t));
+      setEstadoListas('error');
+      return;
     }
-    cargarListas();
+    setAsistentes(asistentesResp.data ?? []);
+    setPacientes(conSusFichas(pacientesResp.data, palabrasDelDomicilio(t)));
+    setServicios(serviciosResp.data ?? []);
+    setEstadoListas('listo');
   }, [prestadoraId, t]);
 
-  // Qué Servicios se le pueden ofrecer a este turno. La regla es la de la base y sale del mismo
-  // archivo que usa el alta de Prestaciones, para que no haya dos versiones de lo mismo: se
-  // muestra solamente lo que la base va a aceptar, y para todos los Pacientes que el turno
-  // cubre. Si el turno junta gente de Clientes distintas, un Servicio contratado por un Cliente
-  // no le sirve a nadie más y la lista sale vacía a propósito.
-  const serviciosDisponibles = useMemo(
-    () => serviciosParaClientes(
-      servicios,
-      pacienteIds.map((id) => pacientes.find((p) => p.id === id)?.cliente_id ?? null),
-    ),
-    [pacienteIds, pacientes, servicios],
+  useEffect(() => {
+    cargarListas();
+  }, [cargarListas]);
+
+  const cargarGuardias = useCallback(async () => {
+    if (!servicioId) {
+      setGuardias([]);
+      setEstadoGuardias('listo');
+      return;
+    }
+    setEstadoGuardias('cargando');
+    setErrorGuardias(null);
+    const { data, error: errorCarga } = await supabase
+      .from('cronograma_de_guardias')
+      .select(
+        'id, prestacion_id, dias_semana, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, prestaciones!inner(id, servicio_id, paciente_id, tipo_servicio, estado, vigente_desde, vigente_hasta)',
+      )
+      .eq('prestaciones.servicio_id', servicioId)
+      .order('created_at');
+    if (errorCarga) {
+      setErrorGuardias(mensajeDeError(errorCarga, t));
+      setEstadoGuardias('error');
+      return;
+    }
+    setGuardias(data ?? []);
+    setEstadoGuardias('listo');
+  }, [servicioId, t]);
+
+  useEffect(() => {
+    setElegidas([]);
+    cargarGuardias();
+  }, [cargarGuardias]);
+
+  // Las guardias que le sirven a este turno: las del día elegido, o las que se repiten por día de
+  // la semana desde el arranque del recurrente. En los dos casos, de una Prestación vigente ese día.
+  const disponibles = useMemo(
+    () => (esSerie ? guardiasParaElRecurrente(guardias, vigenteDesde || hoyISO()) : guardiasParaLaFecha(guardias, fecha)),
+    [esSerie, guardias, vigenteDesde, fecha],
   );
 
-  // Cambiar de Paciente puede dejar elegido un Servicio que ya no corresponde. Se limpia solo,
-  // porque si no se manda algo que la base rechaza y el mensaje no explica por qué.
+  // Cambiar la fecha o pasar a recurrente puede dejar elegida una guardia que ya no corresponde.
   useEffect(() => {
-    if (servicioId && !serviciosDisponibles.some((s) => s.id === servicioId)) {
-      setServicioId('');
-    }
-  }, [servicioId, serviciosDisponibles]);
+    setElegidas((prev) => {
+      const quedan = prev.filter((g) => disponibles.some((d) => d.id === g.id));
+      return quedan.length === prev.length ? prev : quedan;
+    });
+  }, [disponibles]);
 
-  function togglePaciente(id) {
-    setPacienteIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  const pacienteIds = useMemo(() => pacientesDeLasGuardias(elegidas), [elegidas]);
+  const pacientePorId = useMemo(() => new Map(pacientes.map((p) => [p.id, p])), [pacientes]);
+  const diasDeLasGuardias = useMemo(() => diasEnComun(elegidas), [elegidas]);
+
+  function elegirGuardia(guardia) {
+    const nuevas = alternarGuardia(elegidas, guardia);
+    setElegidas(nuevas);
+    // El horario y los días se completan con los de la guardia recién elegida; después se pueden
+    // achicar.
+    if (nuevas.some((g) => g.id === guardia.id)) {
+      setHoraInicio(horaCorta(guardia.hora_inicio));
+      setHoraFin(horaCorta(guardia.hora_fin));
+      setDiasHastaElFin(String(guardia.dias_hasta_el_fin ?? 0));
+    }
   }
 
-  function toggleDia(dia) {
+  // Los días del recurrente se completan con los que tienen todas las guardias elegidas; después
+  // se pueden desmarcar.
+  useEffect(() => {
+    if (esSerie) setDiasSemana(diasDeLasGuardias);
+  }, [esSerie, diasDeLasGuardias]);
+
+  function alternarDia(dia) {
     setDiasSemana((prev) => (prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia]));
   }
 
-  function generarFechasSerie(desde, hasta, dias) {
-    const diaIndices = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };
-    const indicesElegidos = dias.map((d) => diaIndices[d]);
-    const fechaInicio = new Date(`${desde}T00:00:00`);
-    const fechaFin = hasta
-      ? new Date(`${hasta}T00:00:00`)
-      : new Date(fechaInicio.getTime() + diasGeneracion * 24 * 60 * 60 * 1000);
-    const fechas = [];
-    for (let f = fechaInicio; f <= fechaFin; f = new Date(f.getTime() + 24 * 60 * 60 * 1000)) {
-      if (indicesElegidos.includes(f.getDay())) {
-        fechas.push(f.toISOString().slice(0, 10));
-      }
-    }
-    return fechas;
+  // El aviso de cada casillero. Se calcula siempre y se muestra sólo después de apretar Crear: así
+  // desaparece en cuanto el dato se completa.
+  const falta = t.formularios.falta_un_dato_obligatorio;
+  const avisos = {};
+  if (!servicioId) avisos.servicio_id = textos.error_sin_servicio;
+  if (!esSerie && !fecha) avisos.fecha = falta;
+  if (esSerie && !vigenteDesde) avisos.vigente_desde = falta;
+  if (servicioId && elegidas.length === 0) avisos.guardias = textos.error_sin_guardias;
+  if (!modalidad.trim()) avisos.modalidad = falta;
+  if (esSerie && diasSemana.length === 0) avisos.dias_semana = textos.error_dias_semana;
+  else if (esSerie && diasSemana.some((d) => !diasDeLasGuardias.includes(d))) avisos.dias_semana = textos.error_dia_fuera_de_la_guardia;
+  if (!horaInicio) avisos.hora_inicio = falta;
+  if (!horaFin) avisos.hora_fin = falta;
+  else if (horaInicio && elegidas.length > 0 && !cabeEnTodas({ hora_inicio: horaInicio, hora_fin: horaFin, dias_hasta_el_fin: Number(diasHastaElFin) }, elegidas)) {
+    avisos.hora_fin = textos.error_horario_fuera_de_la_guardia;
   }
+  const avisoDe = (campo) => (intentoGuardar ? avisos[campo] : undefined);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
-
-    if (pacienteIds.length === 0) {
-      setError(t.turnos_guardia.nuevo_turno_guardia.error_sin_pacientes);
-      return;
-    }
-
-    // Sin Servicio el turno nace suelto: no se puede facturar, no aparece en la pantalla del
-    // Servicio, y el día que se cierre la atención de ese Paciente el cierre no lo alcanza y
-    // queda un turno programado de algo que ya no se presta. Por eso es obligatorio.
-    if (!servicioId) {
-      setError(t.turnos_guardia.nuevo_turno_guardia.error_sin_servicio);
-      return;
-    }
-
-    if (esSerie && diasSemana.length === 0) {
-      setError(t.turnos_guardia.nuevo_turno_guardia.error_dias_semana);
+    setIntentoGuardar(true);
+    const primero = ORDEN_DE_LOS_CASILLEROS.find((campo) => avisos[campo]);
+    if (primero) {
+      document.getElementById(`field-${primero}`)?.focus();
       return;
     }
 
     setGuardando(true);
+    // El primero de la lista es el Paciente principal del turno de guardia.
+    const [principal, ...resto] = pacienteIds;
 
-    // La columna `paciente_id` está en retiro pero todavía la leen muchas pantallas, así que
-    // se le escribe el primero de la lista. Un disparador de la base se encarga de que ese
-    // Paciente quede también en `turno_guardia_pacientes`; acá se agregan los demás.
-    // Ver el disparador `sincronizar_paciente_principal` de `turnos_guardia`.
-    const [primero, ...resto] = pacienteIds;
-
-    if (!esSerie) {
-      const { data: turno_guardia, error: errorInsert } = await supabase
-        .from('turnos_guardia')
-        .insert({
-          prestadora_id: prestadoraId,
-          // Nace sin nadie y se asigna después: queda esperando que el Asistente lo acepte.
-          asistente_id: null,
-          paciente_id: primero,
-          servicio_id: servicioId,
-          fecha,
-          hora_inicio: horaInicio,
-          hora_fin: horaFin,
-          dias_hasta_el_fin: Number(diasHastaElFin),
-          modalidad,
-        })
-        .select('id')
-        .single();
-
-      if (errorInsert) {
+    if (esSerie) {
+      // La serie, sus Pacientes y sus turnos de guardia los arma la base, todo junto o nada.
+      const { data: serieId, error: errorSerie } = await supabase.rpc('crear_turno_guardia_recurrente', {
+        p_servicio: servicioId,
+        p_pacientes: pacienteIds,
+        p_dias_semana: DIAS_SEMANA.filter((d) => diasSemana.includes(d)),
+        p_hora_inicio: horaInicio,
+        p_hora_fin: horaFin,
+        p_dias_hasta_el_fin: Number(diasHastaElFin),
+        p_modalidad: modalidad,
+        p_vigente_desde: vigenteDesde,
+        p_vigente_hasta: vigenteHasta || null,
+      });
+      if (errorSerie) {
         setGuardando(false);
-        setError(mensajeDeError(errorInsert, t));
+        setError(mensajeDeError(errorSerie, t));
         return;
       }
-
-      if (resto.length > 0) {
-        const { error: errorPacientes } = await supabase.from('turno_guardia_pacientes').insert(
-          resto.map((id) => ({
-            turno_guardia_id: turno_guardia.id,
-            paciente_id: id,
-            prestadora_id: prestadoraId,
-          })),
-        );
-        if (errorPacientes) {
-          setGuardando(false);
-          setError(mensajeDeError(errorPacientes, t));
-          return;
-        }
-      }
-
-      // El turno ya existe. Si la asignación no pasa, queda sin asignar y se dice por qué: volver
-      // a guardar crearía otro igual.
-      // Si la frenaron los documentos, se devuelve cómo repetirla con el motivo de la excepción.
-      const { error: errorAsignar, documentosPendientes } = asistenteId
-        ? await asignarTurnoGuardia(turno_guardia.id, asistenteId, t)
-        : { error: null, documentosPendientes: null };
-
+      // El turno recurrente ya existe, sin nadie. Se le asigna igual que un turno: queda
+      // esperando que el Asistente lo acepte, una sola vez para todos sus días.
+      const { error: errorAsignarSerie } = asistenteId ? await asignarSerie(serieId, asistenteId, t) : { error: null };
       setGuardando(false);
-      onCreada(
-        errorAsignar,
-        documentosPendientes
-          ? { documentos: documentosPendientes, reintentar: (motivo) => asignarTurnoGuardia(turno_guardia.id, asistenteId, t, motivo) }
-          : null,
-      );
+      onCreada(errorAsignarSerie);
       return;
     }
 
-    const { data: serie, error: errorSerie } = await supabase
-      .from('series_turnos_guardia')
+    const { data: turnoGuardia, error: errorInsert } = await supabase
+      .from('turnos_guardia')
       .insert({
         prestadora_id: prestadoraId,
-        paciente_id: primero,
+        // Nace sin nadie y se asigna después: queda esperando que el Asistente lo acepte.
+        asistente_id: null,
+        paciente_id: principal,
         servicio_id: servicioId,
-        dias_semana: diasSemana,
+        fecha,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
         dias_hasta_el_fin: Number(diasHastaElFin),
         modalidad,
-        vigente_desde: vigenteDesde,
-        vigente_hasta: vigenteHasta || null,
       })
-      .select()
+      .select('id')
       .single();
 
-    if (errorSerie) {
+    if (errorInsert) {
       setGuardando(false);
-      setError(mensajeDeError(errorSerie, t));
+      setError(mensajeDeError(errorInsert, t));
       return;
     }
 
     if (resto.length > 0) {
-      const { error: errorPacientesSerie } = await supabase.from('series_turnos_guardia_pacientes').insert(
+      const { error: errorPacientes } = await supabase.from('turno_guardia_pacientes').insert(
         resto.map((id) => ({
-          serie_id: serie.id,
+          turno_guardia_id: turnoGuardia.id,
           paciente_id: id,
           prestadora_id: prestadoraId,
         })),
       );
-      if (errorPacientesSerie) {
+      if (errorPacientes) {
         setGuardando(false);
-        setError(mensajeDeError(errorPacientesSerie, t));
+        setError(mensajeDeError(errorPacientes, t));
         return;
       }
     }
 
-    // El Servicio no se repite acá: lo copia la base desde la serie, para que los turnos de guardia que
-    // genera esta pantalla y las que genera el backend de noche salgan iguales sin que la regla
-    // esté escrita dos veces. Ver el disparador `trg_servicio_de_la_serie` de `turnos_guardia`.
-    const fechas = generarFechasSerie(vigenteDesde, vigenteHasta, diasSemana);
-    const filasTurnosGuardia = fechas.map((f) => ({
-      prestadora_id: prestadoraId,
-      serie_id: serie.id,
-      paciente_id: primero,
-      fecha: f,
-      hora_inicio: horaInicio,
-      hora_fin: horaFin,
-      dias_hasta_el_fin: Number(diasHastaElFin),
-      modalidad,
-    }));
-
-    const { data: turnosGuardiaCreados, error: errorTurnosGuardia } = await supabase
-      .from('turnos_guardia')
-      .insert(filasTurnosGuardia)
-      .select('id');
-
-    if (errorTurnosGuardia) {
-      setGuardando(false);
-      setError(mensajeDeError(errorTurnosGuardia, t));
-      return;
-    }
-
-    // Cada fecha de la serie es un turno de guardia distinta, y cada una lleva su propia lista de a
-    // quiénes atiende. No alcanza con cargarla una vez en la serie.
-    if (resto.length > 0 && turnosGuardiaCreados?.length > 0) {
-      const filasPacientes = turnosGuardiaCreados.flatMap((g) =>
-        resto.map((id) => ({
-          turno_guardia_id: g.id,
-          paciente_id: id,
-          prestadora_id: prestadoraId,
-        })),
-      );
-      const { error: errorPacientesTurnosGuardia } = await supabase
-        .from('turno_guardia_pacientes')
-        .insert(filasPacientes);
-      if (errorPacientesTurnosGuardia) {
-        setGuardando(false);
-        setError(mensajeDeError(errorPacientesTurnosGuardia, t));
-        return;
-      }
-    }
-
-    // El turno fijo ya existe, sin nadie. Se le asigna igual que un turno: queda esperando que el
-    // Asistente lo acepte, una sola vez para todos sus días. Si no pasa, se dice por qué.
-    const { error: errorAsignarSerie } = asistenteId
-      ? await asignarSerie(serie.id, asistenteId, t)
-      : { error: null };
+    // El turno ya existe. Si la asignación no pasa, queda sin asignar y se dice por qué: volver a
+    // guardar crearía otro igual. Si la frenaron los documentos, se devuelve cómo repetirla.
+    const { error: errorAsignar, documentosPendientes } = asistenteId
+      ? await asignarTurnoGuardia(turnoGuardia.id, asistenteId, t)
+      : { error: null, documentosPendientes: null };
 
     setGuardando(false);
-    onCreada(errorAsignarSerie);
+    onCreada(
+      errorAsignar,
+      documentosPendientes
+        ? { documentos: documentosPendientes, reintentar: (motivo) => asignarTurnoGuardia(turnoGuardia.id, asistenteId, t, motivo) }
+        : null,
+    );
   }
+
+  const nombreDelPaciente = (id) => pacientePorId.get(id)?.nombre ?? '—';
+  const renglonDeGuardia = (g) =>
+    textos.guardia_renglon
+      .replace('{paciente}', nombreDelPaciente(g.prestaciones?.paciente_id))
+      .replace('{prestacion}', g.prestaciones?.tipo_servicio ?? '—')
+      .replace(
+        '{cuando}',
+        g.fecha
+          ? fechaVisible(g.fecha, locale)
+          : DIAS_SEMANA.filter((d) => (g.dias_semana ?? []).includes(d)).map((d) => textos.dias[d]).join(', '),
+      )
+      .replace('{inicio}', horaCorta(g.hora_inicio))
+      .replace('{fin}', horaCorta(g.hora_fin))
+      .replace('{termina}', textos[TERMINA[g.dias_hasta_el_fin] ?? TERMINA[0]]);
+
+  // Sin el día elegido todavía no hay qué mostrar: la lista de guardias depende de él.
+  const faltaElDia = esSerie ? false : !fecha;
+  const mensajeSinGuardias =
+    guardias.length === 0 ? textos.sin_guardias : esSerie ? textos.sin_guardias_recurrentes : textos.sin_guardias_en_la_fecha;
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.turnos_guardia.nuevo_turno_guardia.titulo}</h2>
+        <h2 id={modal.idTitulo}>{textos.titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 
-        <form onSubmit={handleSubmit}>
-          <FormField
-            label={t.turnos_guardia.nuevo_turno_guardia.es_serie}
-            name="es_serie"
-            type="checkbox"
-            checked={esSerie}
-            onChange={(e) => setEsSerie(e.target.checked)}
-          />
-
-          {/* El Asistente dejó de ser obligatorio: un turno de guardia puede crearse sin nadie todavía.
-              Es el caso más común de una Prestadora — se sabe que el martes hay que cubrir a
-              este Paciente antes de saber quién lo va a hacer. */}
-          <FormField
-            label={t.turnos_guardia.nuevo_turno_guardia.asistente}
-            name="asistente_id"
-            type="select"
-            value={asistenteId}
-            onChange={(e) => setAsistenteId(e.target.value)}
-          >
-            <option value="">{t.turnos_guardia.nuevo_turno_guardia.sin_asistente}</option>
-            {asistentes.map((a) => (
-              <option key={a.id} value={a.id}>{nombreConHorarios(a)}</option>
-            ))}
-          </FormField>
-          {/* Una lista de marcar y no un desplegable: el desplegable deja elegir uno solo, y
-              acá el turno puede cubrir a varios. */}
-          <div className="form-field">
-            <label>
-              {t.turnos_guardia.nuevo_turno_guardia.pacientes}
-              <span className="required">*</span>
-            </label>
-            <div className="panel-lista-pacientes">
-              {pacientes.map((p) => (
-                <label key={p.id}>
-                  <input
-                    type="checkbox"
-                    checked={pacienteIds.includes(p.id)}
-                    onChange={() => togglePaciente(p.id)}
-                  />
-                  <span>
-                    {p.nombre}
-                    {p.domicilio && <small>{p.domicilio}</small>}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <FormField
-            label={t.turnos_guardia.nuevo_turno_guardia.servicio}
-            name="servicio_id"
-            type="select"
-            required
-            value={servicioId}
-            onChange={(e) => setServicioId(e.target.value)}
-          >
-            <option value="">—</option>
-            {serviciosDisponibles.map((s) => (
-              <option key={s.id} value={s.id}>{s.etiqueta || s.id}</option>
-            ))}
-          </FormField>
-
-          <FormField
-            label={t.turnos_guardia.nuevo_turno_guardia.modalidad}
-            name="modalidad"
-            required
-            placeholder={t.turnos_guardia.nuevo_turno_guardia.modalidad_placeholder}
-            value={modalidad}
-            onChange={(e) => setModalidad(e.target.value)}
-          />
-
-          <FormField
-            label={t.turnos_guardia.nuevo_turno_guardia.hora_inicio}
-            name="hora_inicio"
-            type="time"
-            required
-            value={horaInicio}
-            onChange={(e) => setHoraInicio(e.target.value)}
-          />
-
-          <FormField
-            label={t.turnos_guardia.nuevo_turno_guardia.hora_fin}
-            name="hora_fin"
-            type="time"
-            required
-            value={horaFin}
-            onChange={(e) => setHoraFin(e.target.value)}
-          />
-
-          {/* Hasta cuándo va el turno se elige, no se deduce. El turno de guardia de fin de semana —entra
-              el sábado a la mañana y entrega el lunes a la mañana, cubriendo los francos de
-              quienes trabajan de lunes a viernes— es de las más comunes del rubro, y comparando
-              dos horas de reloj no hay forma de distinguirla de una de veinticuatro horas. */}
-          <FormField
-            label={t.turnos_guardia.nuevo_turno_guardia.termina}
-            name="dias_hasta_el_fin"
-            type="select"
-            value={diasHastaElFin}
-            onChange={(e) => setDiasHastaElFin(e.target.value)}
-          >
-            <option value="0">{t.turnos_guardia.nuevo_turno_guardia.termina_mismo_dia}</option>
-            <option value="1">{t.turnos_guardia.nuevo_turno_guardia.termina_dia_siguiente}</option>
-            <option value="2">{t.turnos_guardia.nuevo_turno_guardia.termina_dos_dias}</option>
-            <option value="3">{t.turnos_guardia.nuevo_turno_guardia.termina_tres_dias}</option>
-          </FormField>
-          {/* Cuánto dura, dicho en horas, al lado de donde se elige: es el único lugar donde un
-              error de carga se ve antes de guardarlo. */}
-          {duracionEnHoras !== null && (
-            <p className="panel-explicacion">
-              {duracionEnHoras === 1 ? t.turnos_guardia.nuevo_turno_guardia.duracion_uno : t.turnos_guardia.nuevo_turno_guardia.duracion.replace('{horas}', duracionEnHoras)}
-            </p>
-          )}
-
-          {!esSerie && (
+        <EstadoLista estado={estadoListas} error={errorListas} recargar={cargarListas}>
+          <form onSubmit={handleSubmit} noValidate>
             <FormField
-              label={t.turnos_guardia.nuevo_turno_guardia.fecha}
-              name="fecha"
-              type="date"
-              required
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
+              label={textos.es_serie}
+              name="es_serie"
+              type="checkbox"
+              checked={esSerie}
+              onChange={(e) => setEsSerie(e.target.checked)}
+              disabled={guardando}
             />
-          )}
 
-          {esSerie && (
-            <>
+            {/* El Asistente no es obligatorio: se sabe que el martes hay que cubrir a este
+                Paciente antes de saber quién lo va a hacer. */}
+            <FormField
+              label={textos.asistente}
+              name="asistente_id"
+              type="select"
+              value={asistenteId}
+              onChange={(e) => setAsistenteId(e.target.value)}
+              disabled={guardando}
+            >
+              <option value="">{textos.sin_asistente}</option>
+              {asistentes.map((a) => (
+                <option key={a.id} value={a.id}>{nombreConHorarios(a)}</option>
+              ))}
+            </FormField>
+
+            <FormField
+              label={textos.servicio}
+              name="servicio_id"
+              type="select"
+              required
+              value={servicioId}
+              onChange={(e) => setServicioId(e.target.value)}
+              error={avisoDe('servicio_id')}
+              disabled={guardando}
+            >
+              <option value="">—</option>
+              {servicios.map((s) => (
+                <option key={s.id} value={s.id}>{s.etiqueta || s.id}</option>
+              ))}
+            </FormField>
+
+            {!esSerie && (
+              <FormField
+                label={textos.fecha}
+                name="fecha"
+                type="date"
+                required
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                error={avisoDe('fecha')}
+                disabled={guardando}
+              />
+            )}
+
+            {esSerie && (
+              <>
+                <FormField
+                  label={textos.vigente_desde}
+                  name="vigente_desde"
+                  type="date"
+                  required
+                  value={vigenteDesde}
+                  onChange={(e) => setVigenteDesde(e.target.value)}
+                  error={avisoDe('vigente_desde')}
+                  disabled={guardando}
+                />
+                <FormField
+                  label={textos.vigente_hasta}
+                  name="vigente_hasta"
+                  type="date"
+                  value={vigenteHasta}
+                  onChange={(e) => setVigenteHasta(e.target.value)}
+                  disabled={guardando}
+                />
+              </>
+            )}
+
+            {servicioId && !faltaElDia && (
               <div className="form-field">
-                <label>{t.turnos_guardia.nuevo_turno_guardia.dias_semana}</label>
-                <div className="panel-filtros">
-                  {DIAS_SEMANA.map((dia) => (
-                    <label key={dia} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <input type="checkbox" checked={diasSemana.includes(dia)} onChange={() => toggleDia(dia)} />
-                      {t.turnos_guardia.nuevo_turno_guardia.dias[dia]}
-                    </label>
+                <label id="field-guardias-etiqueta">
+                  {textos.guardias}
+                  <span className="required">*</span>
+                </label>
+                <EstadoLista
+                  estado={estadoGuardias}
+                  error={errorGuardias}
+                  recargar={cargarGuardias}
+                  vacio={disponibles.length === 0}
+                  mensajeVacio={mensajeSinGuardias}
+                >
+                  <div
+                    className="panel-lista-pacientes"
+                    role="group"
+                    aria-labelledby="field-guardias-etiqueta"
+                    aria-describedby={avisoDe('guardias') ? 'field-guardias-error' : undefined}
+                  >
+                    {disponibles.map((g, i) => (
+                      <label key={g.id}>
+                        <input
+                          id={i === 0 ? 'field-guardias' : undefined}
+                          type="checkbox"
+                          checked={elegidas.some((e) => e.id === g.id)}
+                          onChange={() => elegirGuardia(g)}
+                          disabled={guardando}
+                        />
+                        <span>{renglonDeGuardia(g)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </EstadoLista>
+                {avisoDe('guardias') && <span className="form-error" id="field-guardias-error">{avisoDe('guardias')}</span>}
+              </div>
+            )}
+
+            {pacienteIds.length > 0 && (
+              <div className="form-field">
+                <label>{textos.pacientes}</label>
+                <div className="panel-lista-pacientes">
+                  {pacienteIds.map((id) => (
+                    <span key={id}>
+                      {nombreDelPaciente(id)}
+                      {pacientePorId.get(id)?.domicilio && <small>{pacientePorId.get(id).domicilio}</small>}
+                    </span>
                   ))}
                 </div>
               </div>
+            )}
 
-              <FormField
-                label={t.turnos_guardia.nuevo_turno_guardia.vigente_desde}
-                name="vigente_desde"
-                type="date"
-                required
-                value={vigenteDesde}
-                onChange={(e) => setVigenteDesde(e.target.value)}
-              />
+            <FormField
+              label={textos.modalidad}
+              name="modalidad"
+              required
+              placeholder={textos.modalidad_placeholder}
+              value={modalidad}
+              onChange={(e) => setModalidad(e.target.value)}
+              error={avisoDe('modalidad')}
+              disabled={guardando}
+            />
 
-              <FormField
-                label={t.turnos_guardia.nuevo_turno_guardia.vigente_hasta}
-                name="vigente_hasta"
-                type="date"
-                value={vigenteHasta}
-                onChange={(e) => setVigenteHasta(e.target.value)}
-              />
-            </>
-          )}
+            <CasillerosDeHorario
+              diasSemana={esSerie ? diasSemana : undefined}
+              onAlternarDia={esSerie ? alternarDia : undefined}
+              horaInicio={horaInicio}
+              onHoraInicio={setHoraInicio}
+              horaFin={horaFin}
+              onHoraFin={setHoraFin}
+              diasHastaElFin={diasHastaElFin}
+              onDiasHastaElFin={setDiasHastaElFin}
+              errores={{
+                dias_semana: avisoDe('dias_semana'),
+                hora_inicio: avisoDe('hora_inicio'),
+                hora_fin: avisoDe('hora_fin'),
+              }}
+              disabled={guardando}
+            />
 
-          <div className="panel-modal-acciones">
-            <Button variant="secondary" type="button" onClick={onClose} disabled={guardando}>
-              {t.comun.cancelar}
-            </Button>
-            <Button type="submit" disabled={guardando || !servicioId}>
-              {guardando ? t.turnos_guardia.nuevo_turno_guardia.creando : t.turnos_guardia.nuevo_turno_guardia.crear}
-            </Button>
-          </div>
-        </form>
+            <div className="panel-modal-acciones">
+              <Button variant="secondary" type="button" onClick={onClose} disabled={guardando}>
+                {t.comun.cancelar}
+              </Button>
+              <Button type="submit" disabled={guardando}>
+                {guardando ? textos.creando : textos.crear}
+              </Button>
+            </div>
+          </form>
+        </EstadoLista>
       </div>
     </div>
   );

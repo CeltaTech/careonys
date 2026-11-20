@@ -1,7 +1,7 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { sumarDias } from './fechas.js';
 import { pacientesDeSeries, anotarPacientesEnTurnosGuardia } from './pacientesDeTurnoGuardia.js';
-import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
+import { diaYHoraEnLaZona } from './relojDeLaPrestadora.js';
 
 /** Cuántos días de guardias se generan por delante cuando la consulta no trajo el número. No es el
  *  valor de fábrica: ése lo decide la Prestadora y vive en la base, en el `DEFAULT 90` de
@@ -11,11 +11,11 @@ import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
 const DIAS_GENERACION_DE_RESGUARDO = 90;
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
-function generarFechasFaltantes(desdeExclusiveISO, hastaInclusiveISO, diasSemana) {
+/** Las fechas entre los dos días, los dos incluidos, que caen en alguno de los días de la semana. */
+function generarFechasFaltantes(desdeInclusiveISO, hastaInclusiveISO, diasSemana) {
   const diaIndices = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };
   const indicesElegidos = diasSemana.map((d) => diaIndices[d]);
-  const inicio = new Date(`${desdeExclusiveISO}T00:00:00Z`);
-  inicio.setUTCDate(inicio.getUTCDate() + 1);
+  const inicio = new Date(`${desdeInclusiveISO}T00:00:00Z`);
   const fin = new Date(`${hastaInclusiveISO}T00:00:00Z`);
   const fechas = [];
   for (let f = inicio; f <= fin; f = new Date(f.getTime() + UN_DIA_MS)) {
@@ -27,32 +27,43 @@ function generarFechasFaltantes(desdeExclusiveISO, hastaInclusiveISO, diasSemana
 // Mantiene siempre `dias_generacion_series_turno_guardia` días de guardias concretas generadas por
 // delante de "hoy" para cada serie abierta (`vigente_hasta IS NULL`) — sin esto, la generación
 // única que hace NuevoTurnoGuardiaModal.jsx al crear la serie deja de producir turnos de guardia nuevos en
-// silencio pasado ese horizonte. Proceso 100% interno, nunca visible en ninguna pantalla. Corre
-// una vez por día (ver server.js), de a una Prestadora por vez y con la credencial del trabajo de
-// esa Prestadora, que la base acota a ella.
-export async function extenderSeriesTurnoGuardiaAbiertas() {
-  const hoyISO = new Date().toISOString().slice(0, 10);
-
-  for (const prestadoraId of await prestadorasCertificadas()) {
-    try {
-      await extenderLasSeriesDeUnaPrestadora(prestadoraId, hoyISO);
-    } catch (error) {
-      console.error(`Error extendiendo las series de guardias de ${prestadoraId}:`, error.message);
-    }
-  }
+// silencio pasado ese horizonte. Proceso 100% interno, nunca visible en ninguna pantalla.
+//
+// UNA PRESTADORA POR LLAMADA. La recorrida de todas las Prestadoras la hace `programar` en
+// server.js, que llama esta tarea una vez por cada una y le pasa cuál es. La tarea no vuelve a
+// recorrerlas: si lo hiciera, con tres Prestadoras correría nueve veces por día.
+//
+// "HOY" ES EL DE LA PRESTADORA, no el del servidor: sale de su zona horaria.
+export async function extenderSeriesTurnoGuardiaAbiertas(prestadoraId, ahora = new Date()) {
+  // Sin Prestadora no hay a quién generarle nada, y callarlo escondería que se la programó mal.
+  if (!prestadoraId) throw new Error('extenderSeriesTurnoGuardiaAbiertas: falta la Prestadora');
+  await extenderLasSeriesDeUnaPrestadora(prestadoraId, ahora);
 }
 
 /** Lo de una sola Prestadora, con la credencial del trabajo de esa Prestadora. */
-export function extenderLasSeriesDeUnaPrestadora(prestadoraId, hoyISO) {
+export function extenderLasSeriesDeUnaPrestadora(prestadoraId, ahora = new Date()) {
   return enLaPrestadora(prestadoraId, 'extender las series de guardias', (db) =>
-    extenderLasDeUnaPrestadora(db, prestadoraId, hoyISO),
+    extenderLasDeUnaPrestadora(db, prestadoraId, ahora),
   );
 }
 
-async function extenderLasDeUnaPrestadora(db, prestadoraId, hoyISO) {
+/**
+ * El primer día en que una serie puede recibir un turno de guardia nuevo. Nunca antes de hoy, para
+ * que una serie que vuelve de una pausa larga no genere turnos de guardia en fechas que ya pasaron;
+ * hoy sólo si el turno todavía no empezó en la hora de la Prestadora; y nunca antes del día desde
+ * el que rige la serie.
+ */
+export function primerDiaAGenerar({ ultimaFecha, hoy, horaAhora, horaInicio, vigenteDesde }) {
+  const candidatos = [String(horaInicio ?? '').slice(0, 5) > horaAhora ? hoy : sumarDias(hoy, 1)];
+  if (ultimaFecha) candidatos.push(sumarDias(ultimaFecha, 1));
+  if (vigenteDesde) candidatos.push(String(vigenteDesde).slice(0, 10));
+  return candidatos.sort().at(-1);
+}
+
+async function extenderLasDeUnaPrestadora(db, prestadoraId, ahora) {
   const { data: prestadora, error: errorPrestadora } = await db
     .from('prestadoras')
-    .select('dias_generacion_series_turno_guardia')
+    .select('estado, dias_generacion_series_turno_guardia, zona_horaria')
     .eq('id', prestadoraId)
     .maybeSingle();
 
@@ -61,12 +72,24 @@ async function extenderLasDeUnaPrestadora(db, prestadoraId, hoyISO) {
     return;
   }
 
+  // Sólo las Prestadoras certificadas, como hasta ahora: la que no lo está no genera nada.
+  if (prestadora?.estado !== 'certificada') return;
+
+  let hoyISO;
+  let horaAhora;
+  try {
+    ({ dia: hoyISO, hora: horaAhora } = diaYHoraEnLaZona(ahora, prestadora.zona_horaria));
+  } catch (e) {
+    console.error(`La zona horaria de ${prestadoraId} no sirve, no se generan turnos de guardia:`, e.message);
+    return;
+  }
+
   const horizonte = prestadora?.dias_generacion_series_turno_guardia ?? DIAS_GENERACION_DE_RESGUARDO;
   const limiteISO = sumarDias(hoyISO, horizonte);
 
   const { data: series, error: errorSeries } = await db
     .from('series_turnos_guardia')
-    .select('id, asistente_id, paciente_id, dias_semana, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad')
+    .select('id, asistente_id, paciente_id, dias_semana, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, vigente_desde')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activa')
     .is('vigente_hasta', null);
@@ -104,10 +127,16 @@ async function extenderLasDeUnaPrestadora(db, prestadoraId, hoyISO) {
       continue;
     }
 
-    const desdeExclusive = ultimaTurnoGuardia?.fecha ?? hoyISO;
-    if (desdeExclusive >= limiteISO) continue;
+    const desde = primerDiaAGenerar({
+      ultimaFecha: ultimaTurnoGuardia?.fecha ?? null,
+      hoy: hoyISO,
+      horaAhora,
+      horaInicio: serie.hora_inicio,
+      vigenteDesde: serie.vigente_desde,
+    });
+    if (desde > limiteISO) continue;
 
-    const fechasFaltantes = generarFechasFaltantes(desdeExclusive, limiteISO, serie.dias_semana);
+    const fechasFaltantes = generarFechasFaltantes(desde, limiteISO, serie.dias_semana);
     if (fechasFaltantes.length === 0) continue;
 
     // El Servicio no se copia acá: lo copia la base desde la serie, en el mismo lugar donde lo

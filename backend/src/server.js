@@ -276,7 +276,8 @@ programar(revisarEmergenciasSinTomar, UN_MINUTO_MS);
 
 // Renovación automática del horizonte de guardias de series abiertas (pendiente #18 punto 2,
 // docs/PLAN_HASTA_PRODUCCION.md) — se mide en días, misma cadencia que revisarVencimientos.
-programar(extenderSeriesTurnoGuardiaAbiertas, UN_DIA_MS);
+// Recibe la Prestadora: la tarea trabaja sólo en ésa, una vez por Prestadora por día.
+programar(extenderSeriesTurnoGuardiaAbiertas, UN_DIA_MS, { conLaPrestadora: true });
 
 // Push a Asistentes (nuevo turno de guardia asignado, mensajes del coordinador, recordatorios) —
 // docs/PRD_04_05_App_Servicio.md:115. Misma cadencia que revisarAusenciasAutomaticas.

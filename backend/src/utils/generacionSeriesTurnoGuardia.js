@@ -25,7 +25,8 @@ function generarFechasFaltantes(desdeInclusiveISO, hastaInclusiveISO, diasSemana
 }
 
 // Mantiene siempre `dias_generacion_series_turno_guardia` días de guardias concretas generadas por
-// delante de "hoy" para cada serie abierta (`vigente_hasta IS NULL`) — sin esto, la generación
+// delante de "hoy" para cada serie que sigue rigiendo: la que no tiene último día y la que lo tiene
+// de hoy en adelante, porque el Servicio termina ese día. Sin esto, la generación
 // única que hace NuevoTurnoGuardiaModal.jsx al crear la serie deja de producir turnos de guardia nuevos en
 // silencio pasado ese horizonte. Proceso 100% interno, nunca visible en ninguna pantalla.
 //
@@ -60,6 +61,15 @@ export function primerDiaAGenerar({ ultimaFecha, hoy, horaAhora, horaInicio, vig
   return candidatos.sort().at(-1);
 }
 
+/**
+ * El último día en que una serie puede recibir un turno de guardia nuevo: el horizonte de la
+ * Prestadora, o antes si la serie termina antes.
+ */
+export function ultimoDiaAGenerar({ limite, vigenteHasta }) {
+  const hasta = vigenteHasta ? String(vigenteHasta).slice(0, 10) : null;
+  return hasta && hasta < limite ? hasta : limite;
+}
+
 async function extenderLasDeUnaPrestadora(db, prestadoraId, ahora) {
   const { data: prestadora, error: errorPrestadora } = await db
     .from('prestadoras')
@@ -89,10 +99,10 @@ async function extenderLasDeUnaPrestadora(db, prestadoraId, ahora) {
 
   const { data: series, error: errorSeries } = await db
     .from('series_turnos_guardia')
-    .select('id, asistente_id, paciente_id, dias_semana, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, vigente_desde')
+    .select('id, asistente_id, paciente_id, dias_semana, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, vigente_desde, vigente_hasta')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activa')
-    .is('vigente_hasta', null);
+    .or(`vigente_hasta.is.null,vigente_hasta.gte.${hoyISO}`);
 
   if (errorSeries) {
     console.error(`Error consultando series abiertas de ${prestadoraId}:`, errorSeries.message);
@@ -134,9 +144,10 @@ async function extenderLasDeUnaPrestadora(db, prestadoraId, ahora) {
       horaInicio: serie.hora_inicio,
       vigenteDesde: serie.vigente_desde,
     });
-    if (desde > limiteISO) continue;
+    const hasta = ultimoDiaAGenerar({ limite: limiteISO, vigenteHasta: serie.vigente_hasta });
+    if (desde > hasta) continue;
 
-    const fechasFaltantes = generarFechasFaltantes(desde, limiteISO, serie.dias_semana);
+    const fechasFaltantes = generarFechasFaltantes(desde, hasta, serie.dias_semana);
     if (fechasFaltantes.length === 0) continue;
 
     // El Servicio no se copia acá: lo copia la base desde la serie, en el mismo lugar donde lo

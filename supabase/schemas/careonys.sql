@@ -3625,7 +3625,7 @@ BEGIN
 
   -- Todavía no empezó.
   IF COALESCE(OLD.checkin_at, NEW.checkin_at) IS NULL
-     AND OLD.estado IN ('programada', 'pausada', 'cancelada') THEN
+     AND OLD.estado IN ('programada', 'pausada', 'suspendida', 'cancelada') THEN
     RETURN NEW;
   END IF;
 
@@ -3744,7 +3744,7 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_guardia_asignados_del_servicio"("p_
       WHERE g.servicio_id = p_servicio
         AND g.prestadora_id = interno.prestadora_actual()
         AND g.asistente_id IS NOT NULL
-        AND g.estado IN ('programada', 'activa', 'pausada'))
+        AND g.estado IN ('programada', 'activa'))
     +
     (SELECT count(*) FROM series_turnos_guardia sg
       WHERE sg.servicio_id = p_servicio
@@ -5947,7 +5947,7 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_guardia_que_traban_la_desactivacion
     LEFT JOIN personas pe ON pe.id = p.persona_id
    WHERE a.usuario_id = p_usuario
      AND a.prestadora_id = p_prestadora
-     AND s.estado IN ('activa', 'pausada')
+     AND s.estado = 'activa'
      AND (s.vigente_hasta IS NULL OR s.vigente_hasta >= current_date - 1)
    ORDER BY 3, 4;
 $$;
@@ -7598,6 +7598,9 @@ DECLARE
   v_antes    text := coalesce(current_setting('careonys.lectura_de_salud', true), '');
   v_paciente uuid;
   v_inicio   date;
+  v_fin      date;
+  v_forma    text;
+  v_hoy      date;
 BEGIN
   PERFORM set_config('careonys.lectura_de_salud', 'anotada', true);
   UPDATE hospitalizaciones_paciente h
@@ -7605,38 +7608,23 @@ BEGIN
    WHERE h.id = p_hospitalizacion
      AND h.prestadora_id = interno.prestadora_actual()
      AND h.fecha_fin IS NULL
-  RETURNING h.paciente_id, h.fecha_inicio INTO v_paciente, v_inicio;
+  RETURNING h.paciente_id, h.fecha_inicio, h.fecha_fin, h.forma INTO v_paciente, v_inicio, v_fin, v_forma;
   PERFORM set_config('careonys.lectura_de_salud', v_antes, true);
   IF v_paciente IS NULL THEN
     RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
   END IF;
   PERFORM interno.anotar_lo_que_se_leyo('hospitalizaciones_paciente', ARRAY[v_paciente], 'cerrar_hospitalizacion');
 
-  IF EXISTS (SELECT 1 FROM domicilios_temporales_paciente d WHERE d.hospitalizacion_id = p_hospitalizacion) THEN
+  IF v_forma = 'muda' THEN
     UPDATE domicilios_temporales_paciente d
        SET fecha_fin = greatest(p_fecha, d.fecha_inicio)
      WHERE d.hospitalizacion_id = p_hospitalizacion
        AND (d.fecha_fin IS NULL OR d.fecha_fin > greatest(p_fecha, d.fecha_inicio));
-  ELSE
-    -- Vuelve lo que la internación había pausado, buscado por la lista de Pacientes de cada turno
-    -- de guardia y de cada serie. Lo que además atiende a otro Paciente que sigue internado sin
-    -- domicilio temporal queda pausado: su internación todavía no terminó.
-    UPDATE turnos_guardia g SET estado = 'programada'
-     WHERE g.estado = 'pausada'
-       AND EXISTS (SELECT 1 FROM turno_guardia_pacientes tp
-                    WHERE tp.turno_guardia_id = g.id AND tp.paciente_id = v_paciente)
-       AND NOT EXISTS (SELECT 1 FROM turno_guardia_pacientes tp
-                         JOIN hospitalizaciones_paciente h ON h.paciente_id = tp.paciente_id AND h.fecha_fin IS NULL
-                        WHERE tp.turno_guardia_id = g.id AND tp.paciente_id <> v_paciente
-                          AND NOT EXISTS (SELECT 1 FROM domicilios_temporales_paciente d WHERE d.hospitalizacion_id = h.id));
-    UPDATE series_turnos_guardia s SET estado = 'activa'
-     WHERE s.estado = 'pausada'
-       AND EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
-                    WHERE sp.serie_id = s.id AND sp.paciente_id = v_paciente)
-       AND NOT EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
-                         JOIN hospitalizaciones_paciente h ON h.paciente_id = sp.paciente_id AND h.fecha_fin IS NULL
-                        WHERE sp.serie_id = s.id AND sp.paciente_id <> v_paciente
-                          AND NOT EXISTS (SELECT 1 FROM domicilios_temporales_paciente d WHERE d.hospitalizacion_id = h.id));
+  ELSIF v_forma = 'suspende' THEN
+    -- Vuelve sólo lo que esta internación suspendió, desde el día siguiente al alta y nunca antes
+    -- de hoy: lo pasado queda como quedó.
+    v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(interno.prestadora_actual()))::date;
+    PERFORM interno.levantar_lo_de_la_internacion(p_hospitalizacion, greatest(v_hoy, v_fin + 1));
   END IF;
 
   PERFORM interno.anotar_turnos_sin_cubrir();
@@ -8301,12 +8289,25 @@ BEGIN
   UPDATE series_turnos_guardia
      SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelado_at = now()
    WHERE servicio_id = p_servicio AND estado = 'activa';
+  -- Lo pausado y lo suspendido también se cancela: la baja no deja nada esperando volver.
   UPDATE turnos_guardia
-     SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelacion_alcance = 'total'
-   WHERE servicio_id = p_servicio AND estado = 'programada' AND asistente_id IS NULL;
+     SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelacion_alcance = 'servicio',
+         interrupcion_id = NULL
+   WHERE servicio_id = p_servicio
+     AND ((estado = 'programada' AND asistente_id IS NULL) OR estado IN ('pausada', 'suspendida'));
+
+  -- Las pausas y las suspensiones abiertas del Servicio terminan con la baja.
+  UPDATE interrupciones_de_cobertura
+     SET levantada_desde = greatest(desde, (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(prestadora_id))::date),
+         levantada_at = now(), levantada_por = interno.usuario_de_la_sesion()
+   WHERE servicio_id = p_servicio AND tipo IN ('pausa', 'suspension') AND levantada_at IS NULL;
 
   PERFORM set_config('careonys.cambio_de_estado_del_servicio', p_servicio::text, true);
-  UPDATE servicios SET estado = 'de_baja' WHERE id = p_servicio;
+  UPDATE servicios
+     SET estado = 'de_baja',
+         vigente_hasta = greatest(vigente_desde,
+                                  (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(prestadora_id))::date)
+   WHERE id = p_servicio;
   PERFORM set_config('careonys.cambio_de_estado_del_servicio', '', true);
 
   PERFORM interno.anotar_deuda_de_la_baja(v_baja);
@@ -9910,7 +9911,8 @@ BEGIN
   RETURNING id INTO v_reactivacion;
 
   PERFORM set_config('careonys.cambio_de_estado_del_servicio', p_servicio::text, true);
-  UPDATE servicios SET estado = 'vigente' WHERE id = p_servicio;
+  -- Reactivado, el Servicio vuelve a tener duración indeterminada hasta que se le ponga otro fin.
+  UPDATE servicios SET estado = 'vigente', vigente_hasta = NULL WHERE id = p_servicio;
   PERFORM set_config('careonys.cambio_de_estado_del_servicio', '', true);
 
   RETURN v_reactivacion;
@@ -10229,7 +10231,7 @@ $$;
 ALTER FUNCTION "public"."registrar_autorizacion_signos_vitales_del_titular"("p_usuario" "uuid", "p_paciente" "uuid", "p_idioma" "text", "p_verificador" "text", "p_archivo" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb") RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb", "p_forma" "text" DEFAULT NULL::"text") RETURNS "uuid"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -10238,6 +10240,7 @@ DECLARE
   v_prestadora uuid;
   v_id         uuid := gen_random_uuid();
   v_d          domicilios_temporales_paciente;
+  v_forma      text := coalesce(p_forma, CASE WHEN p_domicilio IS NULL THEN 'suspende' ELSE 'muda' END);
 BEGIN
   SELECT p.prestadora_id INTO v_prestadora
     FROM pacientes p
@@ -10246,34 +10249,28 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
   END IF;
-  IF nullif(btrim(coalesce(p_institucion, '')), '') IS NULL OR p_fecha_inicio IS NULL THEN
+  IF nullif(btrim(coalesce(p_institucion, '')), '') IS NULL OR p_fecha_inicio IS NULL
+     OR (v_forma = 'muda' AND p_domicilio IS NULL) THEN
     RAISE EXCEPTION 'falta_un_dato' USING ERRCODE = '23502';
+  END IF;
+  -- Tres formas: el Servicio se suspende, se muda al domicilio temporal, o sigue en el domicilio
+  -- habitual porque ahí atiende a otro Paciente.
+  IF v_forma NOT IN ('suspende', 'muda', 'sigue') OR (v_forma <> 'muda' AND p_domicilio IS NOT NULL) THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
   END IF;
 
   -- El identificador se arma acá y no se lee de vuelta: quien no alcanza la información de salud
   -- del Paciente puede registrar la internación, pero no leerla.
   PERFORM set_config('careonys.lectura_de_salud', 'anotada', true);
   INSERT INTO hospitalizaciones_paciente
-    (id, prestadora_id, paciente_id, institucion, motivo, fecha_inicio, registrado_por)
+    (id, prestadora_id, paciente_id, institucion, motivo, fecha_inicio, registrado_por, forma)
   VALUES
     (v_id, v_prestadora, p_paciente, btrim(p_institucion), nullif(btrim(coalesce(p_motivo, '')), ''),
-     p_fecha_inicio, interno.usuario_de_la_sesion());
+     p_fecha_inicio, interno.usuario_de_la_sesion(), v_forma);
   PERFORM set_config('careonys.lectura_de_salud', v_antes, true);
   PERFORM interno.anotar_lo_que_se_leyo('hospitalizaciones_paciente', ARRAY[p_paciente], 'registrar_hospitalizacion');
 
-  IF p_domicilio IS NULL THEN
-    -- Se pausa todo lo que atiende a este Paciente, buscado por la lista de Pacientes de cada
-    -- turno de guardia y de cada serie, y no sólo por el primero de la lista.
-    UPDATE turnos_guardia g SET estado = 'pausada'
-     WHERE g.estado = 'programada' AND g.fecha >= p_fecha_inicio
-       AND EXISTS (SELECT 1 FROM turno_guardia_pacientes tp
-                    WHERE tp.turno_guardia_id = g.id AND tp.paciente_id = p_paciente);
-    UPDATE series_turnos_guardia s SET estado = 'pausada'
-     WHERE s.estado = 'activa'
-       AND EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
-                    WHERE sp.serie_id = s.id AND sp.paciente_id = p_paciente);
-    PERFORM interno.anotar_turnos_sin_cubrir();
-  ELSE
+  IF v_forma = 'muda' THEN
     v_d := jsonb_populate_record(NULL::domicilios_temporales_paciente, p_domicilio);
     INSERT INTO domicilios_temporales_paciente
       (prestadora_id, paciente_id, hospitalizacion_id, domicilio, calle, numero, piso, unidad,
@@ -10281,14 +10278,18 @@ BEGIN
     VALUES
       (v_prestadora, p_paciente, v_id, v_d.domicilio, v_d.calle, v_d.numero, v_d.piso, v_d.unidad,
        v_d.lugar_id, v_d.codigo_postal, v_d.lat, v_d.lng, v_d.motivo, p_fecha_inicio);
+  ELSIF v_forma = 'suspende' THEN
+    -- Se suspende cada Servicio vigente que atiende a este Paciente.
+    PERFORM interno.suspender_por_la_internacion(v_id);
   END IF;
 
+  PERFORM interno.anotar_turnos_sin_cubrir();
   RETURN v_id;
 END;
 $$;
 
 
-ALTER FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb") OWNER TO "postgres";
+ALTER FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb", "p_forma" "text") OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."resoluciones" (
@@ -10861,7 +10862,38 @@ begin
     (p_prestadora_id, 'asignaciones_de_turno_guardia', 'rechazada',
      'Distancia al domicilio', 'Distance to the home', 'Distância até o domicílio', false, 40),
     (p_prestadora_id, 'asignaciones_de_turno_guardia', 'rechazada',
-     'Otro', 'Other', 'Outro', true, 99)
+     'Otro', 'Other', 'Outro', true, 99),
+    -- Por qué se pausa la cobertura: una interrupción breve, con día de vuelta.
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'pausa',
+     'Vacaciones o viaje del Paciente', 'Patient holiday or trip', 'Férias ou viagem do Paciente', false, 10),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'pausa',
+     'Un familiar se ocupa del Paciente', 'A relative is looking after the Patient', 'Um familiar cuida do Paciente', false, 20),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'pausa',
+     'Pedido del Cliente', 'Client request', 'Pedido do Cliente', false, 30),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'pausa',
+     'Otro motivo', 'Other reason', 'Outro motivo', true, 99),
+    -- Por qué se suspende la cobertura: una interrupción larga o sin día de vuelta.
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'suspension',
+     'Pedido del Cliente', 'Client request', 'Pedido do Cliente', false, 10),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'suspension',
+     'Cambio de planes del Cliente', 'Change of plans by the Client', 'Mudança de planos do Cliente', false, 20),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'suspension',
+     'Atraso en los pagos', 'Late payments', 'Atraso nos pagamentos', false, 30),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'suspension',
+     'A la espera de una decisión', 'Awaiting a decision', 'Aguardando uma decisão', false, 40),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'suspension',
+     'Otro motivo', 'Other reason', 'Outro motivo', true, 99),
+    -- Por qué se cancela, desde una fecha, un turno de guardia recurrente o una Prestación.
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'cancelacion',
+     'El Cliente lo dio de baja', 'The Client cancelled it', 'O Cliente cancelou', false, 10),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'cancelacion',
+     'Cambió el cronograma del Paciente', 'The Patient schedule changed', 'O cronograma do Paciente mudou', false, 20),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'cancelacion',
+     'Terminó la atención', 'The care ended', 'O atendimento terminou', false, 30),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'cancelacion',
+     'Se había cargado por error', 'It had been entered by mistake', 'Tinha sido cadastrado por engano', false, 40),
+    (p_prestadora_id, 'interrupciones_de_cobertura', 'cancelacion',
+     'Otro motivo', 'Other reason', 'Outro motivo', true, 99)
   on conflict do nothing;
 end;
 $$;
@@ -14525,8 +14557,9 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     "horas_extra" numeric(5,2) DEFAULT 0 NOT NULL,
     "horas_extra_motivo" "text",
     "llegada_tarde" boolean DEFAULT false NOT NULL,
+    "interrupcion_id" "uuid",
     CONSTRAINT "turnos_guardia_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
-    CONSTRAINT "turnos_guardia_cancelacion_alcance_check" CHECK (("cancelacion_alcance" = ANY (ARRAY['parcial'::"text", 'total'::"text"]))),
+    CONSTRAINT "turnos_guardia_cancelacion_alcance_check" CHECK (("cancelacion_alcance" = ANY (ARRAY['servicio'::"text", 'prestacion'::"text", 'turno_guardia_recurrente'::"text", 'turno_guardia'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelacion_alcance" IS NULL)))),
     CONSTRAINT "turnos_guardia_cancelacion_origen_check" CHECK (("cancelacion_origen" = ANY (ARRAY['cliente'::"text", 'prestadora'::"text"]))),
     CONSTRAINT "turnos_guardia_cerrado_origen_check" CHECK (("cerrada_origen" = ANY (ARRAY['asistente'::"text", 'panel'::"text"]))),
@@ -14535,10 +14568,11 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     CONSTRAINT "turnos_guardia_cierre_por_el_panel_exige_persona_y_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'panel'::"text") OR (("cerrada_por" IS NOT NULL) AND ("cerrada_motivo" IS NOT NULL) AND ("btrim"("cerrada_motivo") <> ''::"text")))),
     CONSTRAINT "turnos_guardia_cierre_rastro_completo" CHECK (((("cerrada_at" IS NULL) AND ("cerrada_origen" IS NULL) AND ("cerrada_por" IS NULL) AND ("cerrada_motivo" IS NULL)) OR (("cerrada_at" IS NOT NULL) AND ("cerrada_origen" IS NOT NULL)))),
     CONSTRAINT "turnos_guardia_dios_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
-    CONSTRAINT "turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['programada'::"text", 'activa'::"text", 'completada'::"text", 'cancelada'::"text", 'ausente'::"text", 'pausada'::"text"]))),
+    CONSTRAINT "turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['programada'::"text", 'activa'::"text", 'completada'::"text", 'cancelada'::"text", 'ausente'::"text", 'pausada'::"text", 'suspendida'::"text"]))),
+    CONSTRAINT "turnos_guardia_interrupcion_check" CHECK ((("interrupcion_id" IS NULL) OR ("estado" = ANY (ARRAY['pausada'::"text", 'suspendida'::"text"])))),
     CONSTRAINT "turnos_guardia_horos_extra_con_motivo" CHECK ((("horas_extra" = (0)::numeric) OR (("horas_extra_motivo" IS NOT NULL) AND ("btrim"("horas_extra_motivo") <> ''::"text")))),
     CONSTRAINT "turnos_guardia_horos_extra_no_negativas" CHECK (("horas_extra" >= (0)::numeric)),
-    CONSTRAINT "turnos_guardia_sin_cubrir_estado_check" CHECK ((("asistente_id" IS NOT NULL) OR ("estado" = ANY (ARRAY['programada'::"text", 'cancelada'::"text"])))),
+    CONSTRAINT "turnos_guardia_sin_cubrir_estado_check" CHECK ((("asistente_id" IS NOT NULL) OR ("estado" = ANY (ARRAY['programada'::"text", 'cancelada'::"text", 'pausada'::"text", 'suspendida'::"text"])))),
     CONSTRAINT "turnos_guardia_sin_cubrir_sin_marcas_check" CHECK ((("asistente_id" IS NOT NULL) OR (("checkin_at" IS NULL) AND ("checkout_at" IS NULL) AND ("salida_checkin_at" IS NULL))))
 );
 
@@ -14644,11 +14678,16 @@ CREATE TABLE IF NOT EXISTS "public"."hospitalizaciones_paciente" (
     "fecha_inicio" "date" DEFAULT CURRENT_DATE NOT NULL,
     "fecha_fin" "date",
     "registrado_por" "uuid" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "forma" "text" NOT NULL,
+    CONSTRAINT "hospitalizaciones_paciente_forma_check" CHECK (("forma" = ANY (ARRAY['suspende'::"text", 'muda'::"text", 'sigue'::"text"])))
 );
 
 
 ALTER TABLE "public"."hospitalizaciones_paciente" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."hospitalizaciones_paciente"."forma" IS 'Qué pasa con el Servicio mientras dura la internación: suspende (el Servicio se suspende), muda (el Servicio se muda al domicilio temporal en la institución) o sigue (el Servicio sigue en el domicilio habitual).';
 
 
 CREATE TABLE IF NOT EXISTS "public"."importaciones_prestadora" (
@@ -16697,7 +16736,7 @@ CREATE TABLE IF NOT EXISTS "public"."series_turnos_guardia" (
     CONSTRAINT "series_turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelado_at" IS NULL)))),
     CONSTRAINT "series_turnos_guardia_cancelacion_origen_check" CHECK (("cancelacion_origen" = ANY (ARRAY['cliente'::"text", 'prestadora'::"text"]))),
     CONSTRAINT "series_turnos_guardia_dias_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
-    CONSTRAINT "series_turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['activa'::"text", 'cancelada'::"text", 'pausada'::"text"])))
+    CONSTRAINT "series_turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['activa'::"text", 'cancelada'::"text"])))
 );
 
 
@@ -16745,11 +16784,22 @@ CREATE TABLE IF NOT EXISTS "public"."servicios" (
     "coordinador_id" "uuid",
     "coordinador_asignado_por" "uuid",
     "coordinador_asignado_en" timestamp with time zone,
-    CONSTRAINT "servicios_estado_check" CHECK (("estado" = ANY (ARRAY['vigente'::"text", 'de_baja'::"text"])))
+    "vigente_desde" "date" NOT NULL,
+    "vigente_hasta" "date",
+    CONSTRAINT "servicios_estado_check" CHECK (("estado" = ANY (ARRAY['vigente'::"text", 'de_baja'::"text"]))),
+    CONSTRAINT "servicios_periodo_check" CHECK ((("vigente_hasta" IS NULL) OR ("vigente_hasta" >= "vigente_desde")))
 );
 
 
 ALTER TABLE "public"."servicios" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."servicios"."vigente_desde" IS 'Primer día del período del Servicio. Si no viene al crearlo, la base pone el día de hoy en la zona horaria de la Prestadora.';
+
+
+
+COMMENT ON COLUMN "public"."servicios"."vigente_hasta" IS 'Último día del período del Servicio. Vacío es duración indeterminada.';
+
 
 
 COMMENT ON COLUMN "public"."servicios"."cliente_id" IS 'Cuál es el Cliente. La tabla a la que apunta depende de tipo_contratante, así que no es una clave foránea: la integridad la sostiene el disparador exigir_contratante_del_servicio.';
@@ -20073,7 +20123,7 @@ CREATE INDEX "motivos_resolucion_activos" ON "public"."motivos_resolucion" USING
 
 
 
-CREATE UNIQUE INDEX "motivos_resolucion_nombre_unico" ON "public"."motivos_resolucion" USING "btree" ("prestadora_id", "tabla", "lower"("nombre_es_ar"));
+CREATE UNIQUE INDEX "motivos_resolucion_nombre_unico" ON "public"."motivos_resolucion" USING "btree" ("prestadora_id", "tabla", "estado", "lower"("nombre_es_ar"));
 
 
 
@@ -29880,9 +29930,9 @@ GRANT ALL ON FUNCTION "public"."registrar_autorizacion_signos_vitales_del_titula
 
 
 
-REVOKE ALL ON FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb") TO "service_role";
-GRANT ALL ON FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb", "p_forma" "text") FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb", "p_forma" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."registrar_hospitalizacion"("p_paciente" "uuid", "p_institucion" "text", "p_motivo" "text", "p_fecha_inicio" "date", "p_domicilio" "jsonb", "p_forma" "text") TO "authenticated";
 
 
 
@@ -32722,6 +32772,8 @@ GRANT INSERT("etiqueta") ON TABLE "public"."servicios" TO "trabajo_sin_persona";
 
 
 GRANT INSERT("cliente_id") ON TABLE "public"."servicios" TO "trabajo_sin_persona";
+GRANT INSERT("vigente_desde") ON TABLE "public"."servicios" TO "trabajo_sin_persona";
+GRANT INSERT("vigente_hasta") ON TABLE "public"."servicios" TO "trabajo_sin_persona";
 
 
 
@@ -34130,6 +34182,12 @@ CREATE OR REPLACE FUNCTION "interno"."guardias_en_fechas"("p_prestadora" "uuid",
      AND p.estado = 'vigente'
      AND p.vigente_desde <= d.fecha
      AND (p.vigente_hasta IS NULL OR d.fecha <= p.vigente_hasta)
+    JOIN servicios s
+      ON s.id = p_servicio
+     AND s.prestadora_id = p_prestadora
+     AND s.estado = 'vigente'
+     AND s.vigente_desde <= d.fecha
+     AND (s.vigente_hasta IS NULL OR d.fecha <= s.vigente_hasta)
     JOIN cronograma_de_guardias c
       ON c.prestacion_id = p.id
      AND (c.fecha = d.fecha OR interno.dia_de_la_semana(d.fecha) = ANY (c.dias_semana))
@@ -34325,6 +34383,12 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_sin_cubrir"("p_prestadora" "uuid", 
   SELECT o.prestacion_id, o.guardia_id, o.paciente_id, lower(h.hueco), upper(h.hueco)
     FROM interno.guardias_en_fechas(p_prestadora, p_servicio, NULL, p_desde, p_hasta) o
    CROSS JOIN LATERAL (
+     -- Una guardia que cae en una pausa o una suspensión del Servicio o de su Prestación no hace
+     -- falta cubrirla.
+     SELECT 1 AS sigue
+      WHERE interno.interrupcion_que_tapa(p_prestadora, p_servicio, ARRAY[o.prestacion_id], NULL, NULL, o.fecha) IS NULL
+   ) sin_interrumpir
+   CROSS JOIN LATERAL (
      SELECT tsmultirange(tsrange(o.inicio, o.fin))
             - COALESCE(range_agg(c.tramo) FILTER (WHERE c.tramo IS NOT NULL), '{}'::tsmultirange) AS huecos
        FROM (
@@ -34343,8 +34407,14 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_sin_cubrir"("p_prestadora" "uuid", 
             AND s.vigente_desde <= d.dia
             AND (s.vigente_hasta IS NULL OR d.dia <= s.vigente_hasta)
             AND interno.dia_de_la_semana(d.dia) = ANY (s.dias_semana)
+            -- El día que el recurrente ya tiene su turno de guardia lo cuenta ese turno, más abajo;
+            -- y el día que el recurrente está interrumpido no cubre.
+            AND NOT EXISTS (SELECT 1 FROM turnos_guardia t
+                             WHERE t.serie_id = s.id AND t.fecha = d.dia)
+            AND interno.interrupcion_que_tapa(p_prestadora, p_servicio, NULL, s.id, NULL, d.dia) IS NULL
          UNION ALL
-         -- Los turnos de guardia sueltos que no están cancelados ni pausados.
+         -- Los turnos de guardia, sueltos o del recurrente, que no están cancelados, pausados ni
+         -- suspendidos.
          SELECT CASE WHEN x.fin > x.ini THEN tsrange(x.ini, x.fin) END
            FROM turnos_guardia t
            JOIN turno_guardia_pacientes tp ON tp.turno_guardia_id = t.id AND tp.paciente_id = o.paciente_id
@@ -34354,8 +34424,7 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_sin_cubrir"("p_prestadora" "uuid", 
           ) x
           WHERE t.prestadora_id = p_prestadora
             AND t.servicio_id = p_servicio
-            AND t.serie_id IS NULL
-            AND t.estado NOT IN ('cancelada', 'pausada')
+            AND t.estado NOT IN ('cancelada', 'pausada', 'suspendida')
             AND t.fecha BETWEEN o.fecha - 3 AND o.fecha + 3
        ) c
    ) cuenta
@@ -34551,6 +34620,10 @@ DECLARE
   v_fecha     date;
   v_dia       text;
   v_paciente  uuid;
+  v_serv_desde date;
+  v_serv_hasta date;
+  v_vig_desde  date;
+  v_vig_hasta  date;
 BEGIN
   IF v_prest IS NULL THEN
     RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
@@ -34576,9 +34649,25 @@ BEGIN
   v_hoy := v_ahora::date;
   v_horizonte := COALESCE(interno.dias_de_generacion_de_la_prestadora(), 0);
 
+  -- El recurrente no sale del período del Servicio: empieza, como pronto, el día que empieza el
+  -- Servicio, y termina, como tarde, el día que termina.
+  SELECT s.vigente_desde, s.vigente_hasta INTO v_serv_desde, v_serv_hasta
+    FROM servicios s
+   WHERE s.id = p_servicio AND s.prestadora_id = v_prest AND s.estado = 'vigente';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'servicio_inexistente' USING ERRCODE = 'P0001';
+  END IF;
+  v_vig_desde := greatest(p_vigente_desde, v_serv_desde);
+  v_vig_hasta := CASE WHEN v_serv_hasta IS NULL THEN p_vigente_hasta
+                      WHEN p_vigente_hasta IS NULL THEN v_serv_hasta
+                      ELSE least(p_vigente_hasta, v_serv_hasta) END;
+  IF v_vig_hasta IS NOT NULL AND v_vig_hasta < v_vig_desde THEN
+    RAISE EXCEPTION 'fuera_del_periodo_del_servicio' USING ERRCODE = 'P0001';
+  END IF;
+
   INSERT INTO series_turnos_guardia (prestadora_id, servicio_id, paciente_id, dias_semana, hora_inicio, hora_fin,
                                      dias_hasta_el_fin, modalidad, vigente_desde, vigente_hasta)
-  VALUES (v_prest, p_servicio, v_pacientes[1], v_dias, v_hi, v_hf, v_fin, p_modalidad, p_vigente_desde, p_vigente_hasta)
+  VALUES (v_prest, p_servicio, v_pacientes[1], v_dias, v_hi, v_hf, v_fin, p_modalidad, v_vig_desde, v_vig_hasta)
   RETURNING id INTO v_serie;
 
   INSERT INTO series_turnos_guardia_pacientes (serie_id, paciente_id, prestadora_id)
@@ -34591,10 +34680,10 @@ BEGIN
   FOREACH v_dia IN ARRAY v_dias LOOP
     v_fecha := NULL;
     SELECT d::date INTO v_fecha
-      FROM generate_series(greatest(p_vigente_desde, v_hoy), greatest(p_vigente_desde, v_hoy) + 6, interval '1 day') AS d
+      FROM generate_series(greatest(v_vig_desde, v_hoy), greatest(v_vig_desde, v_hoy) + 6, interval '1 day') AS d
      WHERE interno.dia_de_la_semana(d::date) = v_dia
      LIMIT 1;
-    IF v_fecha IS NULL OR (p_vigente_hasta IS NOT NULL AND v_fecha > p_vigente_hasta) THEN
+    IF v_fecha IS NULL OR (v_vig_hasta IS NOT NULL AND v_fecha > v_vig_hasta) THEN
       CONTINUE;
     END IF;
     FOREACH v_paciente IN ARRAY v_pacientes LOOP
@@ -34606,10 +34695,10 @@ BEGIN
 
   -- Los turnos de guardia: desde hoy si el turno todavía no empezó, si no desde mañana; nunca antes
   -- del día desde el que rige la serie; hasta el horizonte o el último día de la serie.
-  v_desde := greatest(p_vigente_desde, CASE WHEN v_hi > v_ahora::time THEN v_hoy ELSE v_hoy + 1 END);
+  v_desde := greatest(v_vig_desde, CASE WHEN v_hi > v_ahora::time THEN v_hoy ELSE v_hoy + 1 END);
   v_hasta := v_hoy + v_horizonte;
-  IF p_vigente_hasta IS NOT NULL AND p_vigente_hasta < v_hasta THEN
-    v_hasta := p_vigente_hasta;
+  IF v_vig_hasta IS NOT NULL AND v_vig_hasta < v_hasta THEN
+    v_hasta := v_vig_hasta;
   END IF;
 
   IF v_desde <= v_hasta THEN
@@ -34671,3 +34760,827 @@ GRANT ALL ON FUNCTION "public"."anotar_turnos_sin_cubrir_de_la_prestadora"() TO 
 GRANT ALL ON FUNCTION "public"."anotar_turnos_sin_cubrir_de_la_prestadora"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."crear_turno_guardia_recurrente"("p_servicio" "uuid", "p_pacientes" "uuid"[], "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer, "p_modalidad" "text", "p_vigente_desde" "date", "p_vigente_hasta" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."crear_turno_guardia_recurrente"("p_servicio" "uuid", "p_pacientes" "uuid"[], "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer, "p_modalidad" "text", "p_vigente_desde" "date", "p_vigente_hasta" "date") TO "service_role";
+
+
+-- ============================================================================================
+-- La cobertura del Servicio: pausar, suspender, cancelar y editar desde una fecha.
+--
+-- Una interrupción de la cobertura es una pausa (breve, con fecha de vuelta), una suspensión
+-- (larga o sin fecha) o una cancelación desde una fecha. Alcanza al Servicio entero, a una
+-- Prestación, a un turno de guardia recurrente o a un solo turno de guardia. Guarda el motivo y
+-- quién la hizo. Los turnos de guardia que caen adentro de una pausa o una suspensión pasan a
+-- pausados o suspendidos, y vuelven solos cuando la interrupción se levanta: se vuelve sólo lo que
+-- esa interrupción tapó, y nunca nada del pasado. La internación del Paciente que suspende el
+-- Servicio es una suspensión más, con la internación anotada.
+-- ============================================================================================
+
+CREATE TABLE IF NOT EXISTS "public"."interrupciones_de_cobertura" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" DEFAULT "interno"."prestadora_actual"() NOT NULL,
+    "tipo" "text" NOT NULL,
+    "alcance" "text" NOT NULL,
+    "servicio_id" "uuid" NOT NULL,
+    "prestacion_id" bigint,
+    "serie_id" "uuid",
+    "turno_guardia_id" "uuid",
+    "paciente_id" "uuid",
+    "hospitalizacion_id" "uuid",
+    "desde" "date" NOT NULL,
+    "vuelta" "date",
+    "motivo_id" "uuid",
+    "motivo_tabla" "text" GENERATED ALWAYS AS ('interrupciones_de_cobertura'::"text") STORED,
+    "detalle" "text",
+    "hecha_por" "uuid" DEFAULT "interno"."usuario_de_la_sesion"(),
+    "levantada_desde" "date",
+    "levantada_at" timestamp with time zone,
+    "levantada_por" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "interrupciones_de_cobertura_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "interrupciones_de_cobertura_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE,
+    CONSTRAINT "interrupciones_de_cobertura_servicio_fkey" FOREIGN KEY ("servicio_id", "prestadora_id") REFERENCES "public"."servicios"("id", "prestadora_id"),
+    CONSTRAINT "interrupciones_de_cobertura_prestacion_id_fkey" FOREIGN KEY ("prestacion_id") REFERENCES "public"."prestaciones"("id"),
+    CONSTRAINT "interrupciones_de_cobertura_serie_id_fkey" FOREIGN KEY ("serie_id") REFERENCES "public"."series_turnos_guardia"("id"),
+    CONSTRAINT "interrupciones_de_cobertura_turno_guardia_id_fkey" FOREIGN KEY ("turno_guardia_id") REFERENCES "public"."turnos_guardia"("id") ON DELETE CASCADE,
+    CONSTRAINT "interrupciones_de_cobertura_hospitalizacion_fkey" FOREIGN KEY ("hospitalizacion_id", "paciente_id", "prestadora_id") REFERENCES "public"."hospitalizaciones_paciente"("id", "paciente_id", "prestadora_id"),
+    CONSTRAINT "interrupciones_de_cobertura_motivo_fkey" FOREIGN KEY ("motivo_id", "prestadora_id", "motivo_tabla", "tipo") REFERENCES "public"."motivos_resolucion"("id", "prestadora_id", "tabla", "estado"),
+    CONSTRAINT "interrupciones_de_cobertura_hecha_por_fkey" FOREIGN KEY ("hecha_por") REFERENCES "public"."usuarios"("id"),
+    CONSTRAINT "interrupciones_de_cobertura_levantada_por_fkey" FOREIGN KEY ("levantada_por") REFERENCES "public"."usuarios"("id"),
+    CONSTRAINT "interrupciones_de_cobertura_tipo_check" CHECK (("tipo" = ANY (ARRAY['pausa'::"text", 'suspension'::"text", 'cancelacion'::"text"]))),
+    CONSTRAINT "interrupciones_de_cobertura_alcance_check" CHECK ((
+        (("alcance" = 'servicio'::"text") AND ("prestacion_id" IS NULL) AND ("serie_id" IS NULL) AND ("turno_guardia_id" IS NULL))
+     OR (("alcance" = 'prestacion'::"text") AND ("prestacion_id" IS NOT NULL) AND ("serie_id" IS NULL) AND ("turno_guardia_id" IS NULL))
+     OR (("alcance" = 'turno_guardia_recurrente'::"text") AND ("prestacion_id" IS NULL) AND ("serie_id" IS NOT NULL) AND ("turno_guardia_id" IS NULL))
+     OR (("alcance" = 'turno_guardia'::"text") AND ("prestacion_id" IS NULL) AND ("serie_id" IS NULL) AND ("turno_guardia_id" IS NOT NULL)))),
+    CONSTRAINT "interrupciones_de_cobertura_cancelacion_check" CHECK ((("tipo" <> 'cancelacion'::"text") OR ("alcance" = ANY (ARRAY['prestacion'::"text", 'turno_guardia_recurrente'::"text"])))),
+    CONSTRAINT "interrupciones_de_cobertura_vuelta_check" CHECK ((
+        (("tipo" = 'pausa'::"text") AND ("vuelta" IS NOT NULL))
+     OR ("tipo" = 'suspension'::"text")
+     OR (("tipo" = 'cancelacion'::"text") AND ("vuelta" IS NULL)))),
+    CONSTRAINT "interrupciones_de_cobertura_vuelta_despues_check" CHECK ((("vuelta" IS NULL) OR ("vuelta" > "desde"))),
+    CONSTRAINT "interrupciones_de_cobertura_motivo_check" CHECK ((("motivo_id" IS NOT NULL) OR ("hospitalizacion_id" IS NOT NULL))),
+    CONSTRAINT "interrupciones_de_cobertura_paciente_check" CHECK ((("paciente_id" IS NULL) = ("hospitalizacion_id" IS NULL))),
+    CONSTRAINT "interrupciones_de_cobertura_internacion_check" CHECK ((("hospitalizacion_id" IS NULL) OR (("tipo" = 'suspension'::"text") AND ("alcance" = 'servicio'::"text")))),
+    CONSTRAINT "interrupciones_de_cobertura_levantada_check" CHECK (((("levantada_desde" IS NULL) = ("levantada_at" IS NULL)) AND (("levantada_desde" IS NULL) OR ("levantada_desde" >= "desde"))))
+);
+
+ALTER TABLE "public"."interrupciones_de_cobertura" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."interrupciones_de_cobertura" IS 'Las pausas, las suspensiones y las cancelaciones de la cobertura de un Servicio, de una Prestación, de un turno de guardia recurrente o de un solo turno de guardia. Se escriben sólo por las funciones de la cobertura y por la internación.';
+COMMENT ON COLUMN "public"."interrupciones_de_cobertura"."vuelta" IS 'El día en que la cobertura vuelve. Obligatoria en la pausa, optativa en la suspensión, vacía en la cancelación.';
+COMMENT ON COLUMN "public"."interrupciones_de_cobertura"."levantada_desde" IS 'El día desde el que se levantó antes de su vuelta: por la reanudación, el fin de la internación o la baja del Servicio.';
+COMMENT ON COLUMN "public"."interrupciones_de_cobertura"."hospitalizacion_id" IS 'La internación del Paciente que suspendió el Servicio. Al cerrarla se levanta sólo esta suspensión.';
+
+CREATE INDEX IF NOT EXISTS "interrupciones_de_cobertura_servicio_idx" ON "public"."interrupciones_de_cobertura" USING "btree" ("servicio_id", "desde");
+CREATE INDEX IF NOT EXISTS "interrupciones_de_cobertura_hospitalizacion_idx" ON "public"."interrupciones_de_cobertura" USING "btree" ("hospitalizacion_id") WHERE ("hospitalizacion_id" IS NOT NULL);
+
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_interrupcion_id_fkey" FOREIGN KEY ("interrupcion_id") REFERENCES "public"."interrupciones_de_cobertura"("id") ON DELETE SET NULL;
+
+ALTER TABLE "public"."interrupciones_de_cobertura" ENABLE ROW LEVEL SECURITY;
+
+
+-- Quién gestiona la cobertura de un Servicio: la administración de su Prestadora, o el
+-- Coordinador que lo coordina. Lo usan la política y las funciones de la cobertura.
+CREATE OR REPLACE FUNCTION "interno"."puede_gestionar_la_cobertura"("p_servicio" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT EXISTS (SELECT 1 FROM servicios s
+                  WHERE s.id = p_servicio AND s.prestadora_id = interno.prestadora_actual())
+     AND (interno.es_superadmin() OR interno.es_admin_prestadora()
+          OR (interno.es_coordinador() AND interno.coordina_el_servicio(p_servicio)))
+$$;
+
+ALTER FUNCTION "interno"."puede_gestionar_la_cobertura"("p_servicio" "uuid") OWNER TO "postgres";
+
+CREATE POLICY "panel_lee_las_interrupciones_de_cobertura" ON "public"."interrupciones_de_cobertura" FOR SELECT TO "authenticated"
+  USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."puede_gestionar_la_cobertura"("servicio_id")));
+
+
+-- Si una Prestación es ésa o la reemplaza, de una en una, hacia atrás. Lo que se pausó en una
+-- Prestación alcanza a la que la reemplazó.
+CREATE OR REPLACE FUNCTION "interno"."prestacion_desciende_de"("p_prestacion" bigint, "p_raiz" bigint) RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  WITH RECURSIVE cadena(id) AS (
+    SELECT p_prestacion
+    UNION
+    SELECT p.prestacion_anterior_id FROM prestaciones p JOIN cadena c ON p.id = c.id
+     WHERE p.prestacion_anterior_id IS NOT NULL
+  )
+  SELECT EXISTS (SELECT 1 FROM cadena WHERE id = p_raiz)
+$$;
+
+ALTER FUNCTION "interno"."prestacion_desciende_de"("p_prestacion" bigint, "p_raiz" bigint) OWNER TO "postgres";
+
+
+-- La pausa o la suspensión que tapa ese día, para ese Servicio y esas piezas. Gana la suspensión
+-- sobre la pausa, y entre dos iguales la más vieja. Nada si no lo tapa ninguna.
+CREATE OR REPLACE FUNCTION "interno"."interrupcion_que_tapa"("p_prestadora" "uuid", "p_servicio" "uuid", "p_prestaciones" bigint[], "p_serie" "uuid", "p_turno_guardia" "uuid", "p_fecha" "date") RETURNS "uuid"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT i.id FROM interrupciones_de_cobertura i
+   WHERE i.prestadora_id = p_prestadora AND i.servicio_id = p_servicio
+     AND i.tipo IN ('pausa', 'suspension')
+     AND i.desde <= p_fecha AND (i.vuelta IS NULL OR p_fecha < i.vuelta)
+     AND (i.levantada_desde IS NULL OR p_fecha < i.levantada_desde)
+     AND (i.alcance = 'servicio'
+          OR (i.alcance = 'prestacion'
+              AND EXISTS (SELECT 1 FROM unnest(COALESCE(p_prestaciones, '{}'::bigint[])) AS x(id)
+                           WHERE interno.prestacion_desciende_de(x.id, i.prestacion_id)))
+          OR (i.alcance = 'turno_guardia_recurrente' AND i.serie_id = p_serie)
+          OR (i.alcance = 'turno_guardia' AND i.turno_guardia_id = p_turno_guardia))
+   ORDER BY (i.tipo = 'suspension') DESC, i.created_at, i.id
+   LIMIT 1
+$$;
+
+ALTER FUNCTION "interno"."interrupcion_que_tapa"("p_prestadora" "uuid", "p_servicio" "uuid", "p_prestaciones" bigint[], "p_serie" "uuid", "p_turno_guardia" "uuid", "p_fecha" "date") OWNER TO "postgres";
+
+
+-- Pone un turno de guardia en el estado que le toca por las interrupciones: pausado o suspendido
+-- si lo tapa una, y de vuelta programado si lo había tapado una y ya no. Sólo mira los turnos que
+-- no empezaron. Un turno pausado sin interrupción anotada queda como está.
+CREATE OR REPLACE FUNCTION "interno"."reevaluar_turno_guardia"("p_turno_guardia" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_t            turnos_guardia;
+  v_prestaciones bigint[];
+  v_int          uuid;
+  v_estado       text;
+BEGIN
+  SELECT t.* INTO v_t FROM turnos_guardia t WHERE t.id = p_turno_guardia;
+  IF NOT FOUND OR v_t.servicio_id IS NULL OR v_t.checkin_at IS NOT NULL
+     OR v_t.estado NOT IN ('programada', 'pausada', 'suspendida') THEN
+    RETURN;
+  END IF;
+
+  v_prestaciones := ARRAY(SELECT c.prestacion_id
+                            FROM turno_guardia_guardias tg
+                            JOIN cronograma_de_guardias c ON c.id = tg.guardia_id
+                           WHERE tg.turno_guardia_id = p_turno_guardia);
+  v_int := interno.interrupcion_que_tapa(v_t.prestadora_id, v_t.servicio_id, v_prestaciones,
+                                         v_t.serie_id, v_t.id, v_t.fecha);
+
+  IF v_int IS NOT NULL THEN
+    SELECT CASE i.tipo WHEN 'pausa' THEN 'pausada' ELSE 'suspendida' END INTO v_estado
+      FROM interrupciones_de_cobertura i WHERE i.id = v_int;
+    IF v_t.estado IS DISTINCT FROM v_estado OR v_t.interrupcion_id IS DISTINCT FROM v_int THEN
+      UPDATE turnos_guardia SET estado = v_estado, interrupcion_id = v_int WHERE id = p_turno_guardia;
+    END IF;
+  ELSIF v_t.interrupcion_id IS NOT NULL THEN
+    UPDATE turnos_guardia SET estado = 'programada', interrupcion_id = NULL WHERE id = p_turno_guardia;
+  END IF;
+END;
+$$;
+
+ALTER FUNCTION "interno"."reevaluar_turno_guardia"("p_turno_guardia" "uuid") OWNER TO "postgres";
+
+
+-- Reevalúa los turnos de guardia de un Servicio desde una fecha.
+CREATE OR REPLACE FUNCTION "interno"."marcar_turnos_interrumpidos"("p_servicio" "uuid", "p_desde" "date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_turno uuid;
+BEGIN
+  FOR v_turno IN
+    SELECT t.id FROM turnos_guardia t
+     WHERE t.servicio_id = p_servicio
+       AND t.prestadora_id = interno.prestadora_actual()
+       AND t.fecha >= p_desde
+       AND t.checkin_at IS NULL
+       AND t.estado IN ('programada', 'pausada', 'suspendida')
+  LOOP
+    PERFORM interno.reevaluar_turno_guardia(v_turno);
+  END LOOP;
+END;
+$$;
+
+ALTER FUNCTION "interno"."marcar_turnos_interrumpidos"("p_servicio" "uuid", "p_desde" "date") OWNER TO "postgres";
+
+
+-- Levanta una pausa o una suspensión desde un día, y vuelve lo que ella tapaba desde ese día.
+CREATE OR REPLACE FUNCTION "interno"."levantar_interrupcion"("p_interrupcion" "uuid", "p_desde" "date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_servicio uuid;
+  v_desde    date;
+BEGIN
+  UPDATE interrupciones_de_cobertura i
+     SET levantada_desde = greatest(i.desde, p_desde),
+         levantada_at = now(),
+         levantada_por = interno.usuario_de_la_sesion()
+   WHERE i.id = p_interrupcion
+     AND i.prestadora_id = interno.prestadora_actual()
+     AND i.tipo IN ('pausa', 'suspension')
+     AND i.levantada_at IS NULL
+  RETURNING i.servicio_id, i.levantada_desde INTO v_servicio, v_desde;
+  IF v_servicio IS NOT NULL THEN
+    PERFORM interno.marcar_turnos_interrumpidos(v_servicio, v_desde);
+  END IF;
+END;
+$$;
+
+ALTER FUNCTION "interno"."levantar_interrupcion"("p_interrupcion" "uuid", "p_desde" "date") OWNER TO "postgres";
+
+
+-- La internación que suspende: una suspensión de cada Servicio vigente que atiende a ese Paciente,
+-- desde el día que empezó la internación o desde hoy, lo que sea más tarde.
+CREATE OR REPLACE FUNCTION "interno"."suspender_por_la_internacion"("p_hospitalizacion" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_h        hospitalizaciones_paciente;
+  v_desde    date;
+  v_servicio uuid;
+BEGIN
+  SELECT h.* INTO v_h FROM hospitalizaciones_paciente h
+   WHERE h.id = p_hospitalizacion
+     AND h.prestadora_id = interno.prestadora_actual()
+     AND h.forma = 'suspende'
+     AND h.fecha_fin IS NULL;
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+  v_desde := greatest(v_h.fecha_inicio,
+                      (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_h.prestadora_id))::date);
+
+  FOR v_servicio IN
+    SELECT s.id FROM servicios s
+     WHERE s.prestadora_id = v_h.prestadora_id
+       AND s.estado = 'vigente'
+       AND (s.vigente_hasta IS NULL OR s.vigente_hasta >= v_desde)
+       AND EXISTS (SELECT 1 FROM prestaciones p
+                    WHERE p.servicio_id = s.id AND p.paciente_id = v_h.paciente_id
+                      AND p.estado = 'vigente'
+                      AND (p.vigente_hasta IS NULL OR p.vigente_hasta >= v_desde))
+  LOOP
+    INSERT INTO interrupciones_de_cobertura
+      (prestadora_id, tipo, alcance, servicio_id, paciente_id, hospitalizacion_id, desde)
+    VALUES (v_h.prestadora_id, 'suspension', 'servicio', v_servicio, v_h.paciente_id, v_h.id, v_desde);
+    PERFORM interno.marcar_turnos_interrumpidos(v_servicio, v_desde);
+  END LOOP;
+END;
+$$;
+
+ALTER FUNCTION "interno"."suspender_por_la_internacion"("p_hospitalizacion" "uuid") OWNER TO "postgres";
+
+
+-- El fin de la internación levanta sólo las suspensiones que ella hizo.
+CREATE OR REPLACE FUNCTION "interno"."levantar_lo_de_la_internacion"("p_hospitalizacion" "uuid", "p_desde" "date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_id uuid;
+BEGIN
+  FOR v_id IN
+    SELECT i.id FROM interrupciones_de_cobertura i
+     WHERE i.hospitalizacion_id = p_hospitalizacion
+       AND i.prestadora_id = interno.prestadora_actual()
+       AND i.levantada_at IS NULL
+  LOOP
+    PERFORM interno.levantar_interrupcion(v_id, p_desde);
+  END LOOP;
+END;
+$$;
+
+ALTER FUNCTION "interno"."levantar_lo_de_la_internacion"("p_hospitalizacion" "uuid", "p_desde" "date") OWNER TO "postgres";
+
+
+-- Todo turno de guardia nace con el estado que le dan las interrupciones: se mira al anotarle su
+-- guardia del cronograma, que es cuando se sabe de qué Prestaciones es.
+CREATE OR REPLACE FUNCTION "interno"."turno_guardia_nace_interrumpido"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  PERFORM interno.reevaluar_turno_guardia(NEW.turno_guardia_id);
+  RETURN NULL;
+END;
+$$;
+
+ALTER FUNCTION "interno"."turno_guardia_nace_interrumpido"() OWNER TO "postgres";
+
+CREATE OR REPLACE TRIGGER "turno_guardia_nace_interrumpido" AFTER INSERT ON "public"."turno_guardia_guardias" FOR EACH ROW EXECUTE FUNCTION "interno"."turno_guardia_nace_interrumpido"();
+
+
+-- El motivo de una interrupción: activo, de la Prestadora, de esa tabla y de ese tipo, con el
+-- detalle si lo pide.
+CREATE OR REPLACE FUNCTION "interno"."validar_motivo_de_la_interrupcion"("p_prestadora" "uuid", "p_tipo" "text", "p_motivo" "uuid", "p_detalle" "text") RETURNS "text"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_pide boolean;
+BEGIN
+  SELECT m.pide_detalle INTO v_pide FROM motivos_resolucion m
+   WHERE m.id = p_motivo AND m.prestadora_id = p_prestadora
+     AND m.tabla = 'interrupciones_de_cobertura' AND m.estado = p_tipo AND m.activo;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'motivo_inexistente' USING ERRCODE = 'P0001';
+  END IF;
+  IF v_pide AND nullif(btrim(coalesce(p_detalle, '')), '') IS NULL THEN
+    RAISE EXCEPTION 'resolucion_sin_detalle' USING ERRCODE = 'P0001';
+  END IF;
+  RETURN nullif(btrim(coalesce(p_detalle, '')), '');
+END;
+$$;
+
+ALTER FUNCTION "interno"."validar_motivo_de_la_interrupcion"("p_prestadora" "uuid", "p_tipo" "text", "p_motivo" "uuid", "p_detalle" "text") OWNER TO "postgres";
+
+
+-- Pausar o suspender la cobertura de un Servicio, una Prestación, un turno de guardia recurrente
+-- o un solo turno de guardia. Devuelve la interrupción.
+CREATE OR REPLACE FUNCTION "public"."interrumpir_cobertura"("p_tipo" "text", "p_alcance" "text", "p_servicio" "uuid", "p_prestacion" bigint, "p_serie" "uuid", "p_turno_guardia" "uuid", "p_desde" "date", "p_vuelta" "date", "p_motivo" "uuid", "p_detalle" "text") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest   uuid := interno.prestadora_actual();
+  v_hoy     date;
+  v_desde   date := p_desde;
+  v_vuelta  date := p_vuelta;
+  v_detalle text;
+  v_fecha   date;
+  v_id      uuid;
+BEGIN
+  IF v_prest IS NULL OR NOT interno.puede_gestionar_la_cobertura(p_servicio) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_tipo NOT IN ('pausa', 'suspension')
+     OR p_alcance NOT IN ('servicio', 'prestacion', 'turno_guardia_recurrente', 'turno_guardia') THEN
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+  v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest))::date;
+
+  IF NOT EXISTS (SELECT 1 FROM servicios s
+                  WHERE s.id = p_servicio AND s.prestadora_id = v_prest AND s.estado = 'vigente'
+                    AND (s.vigente_hasta IS NULL OR s.vigente_hasta >= v_hoy)) THEN
+    RAISE EXCEPTION 'servicio_inexistente' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF p_alcance = 'prestacion' AND NOT EXISTS (
+       SELECT 1 FROM prestaciones p
+        WHERE p.id = p_prestacion AND p.servicio_id = p_servicio AND p.prestadora_id = v_prest
+          AND p.estado = 'vigente') THEN
+    RAISE EXCEPTION 'prestacion_inexistente' USING ERRCODE = 'P0001';
+  END IF;
+  IF p_alcance = 'turno_guardia_recurrente' AND NOT EXISTS (
+       SELECT 1 FROM series_turnos_guardia s
+        WHERE s.id = p_serie AND s.servicio_id = p_servicio AND s.prestadora_id = v_prest
+          AND s.estado = 'activa') THEN
+    RAISE EXCEPTION 'turno_guardia_recurrente_inexistente' USING ERRCODE = 'P0001';
+  END IF;
+  IF p_alcance = 'turno_guardia' THEN
+    SELECT t.fecha INTO v_fecha FROM turnos_guardia t
+     WHERE t.id = p_turno_guardia AND t.servicio_id = p_servicio AND t.prestadora_id = v_prest
+       AND t.checkin_at IS NULL AND t.estado IN ('programada', 'pausada', 'suspendida');
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'turno_guardia_inexistente' USING ERRCODE = 'P0001';
+    END IF;
+    -- Un solo turno de guardia se interrumpe el día que cae.
+    v_desde := v_fecha;
+    v_vuelta := v_fecha + 1;
+  END IF;
+
+  IF v_desde IS NULL OR (p_tipo = 'pausa' AND v_vuelta IS NULL) THEN
+    RAISE EXCEPTION 'falta_un_dato' USING ERRCODE = '23502';
+  END IF;
+  IF v_desde < v_hoy THEN
+    RAISE EXCEPTION 'la_fecha_ya_paso' USING ERRCODE = 'P0001';
+  END IF;
+  IF v_vuelta IS NOT NULL AND v_vuelta <= v_desde THEN
+    RAISE EXCEPTION 'la_vuelta_es_antes_del_comienzo' USING ERRCODE = 'P0001';
+  END IF;
+  v_detalle := interno.validar_motivo_de_la_interrupcion(v_prest, p_tipo, p_motivo, p_detalle);
+
+  INSERT INTO interrupciones_de_cobertura
+    (prestadora_id, tipo, alcance, servicio_id, prestacion_id, serie_id, turno_guardia_id,
+     desde, vuelta, motivo_id, detalle)
+  VALUES
+    (v_prest, p_tipo, p_alcance, p_servicio,
+     CASE WHEN p_alcance = 'prestacion' THEN p_prestacion END,
+     CASE WHEN p_alcance = 'turno_guardia_recurrente' THEN p_serie END,
+     CASE WHEN p_alcance = 'turno_guardia' THEN p_turno_guardia END,
+     v_desde, v_vuelta, p_motivo, v_detalle)
+  RETURNING id INTO v_id;
+
+  PERFORM interno.marcar_turnos_interrumpidos(p_servicio, v_desde);
+  PERFORM interno.anotar_turnos_sin_cubrir();
+  RETURN v_id;
+END;
+$$;
+
+ALTER FUNCTION "public"."interrumpir_cobertura"("p_tipo" "text", "p_alcance" "text", "p_servicio" "uuid", "p_prestacion" bigint, "p_serie" "uuid", "p_turno_guardia" "uuid", "p_desde" "date", "p_vuelta" "date", "p_motivo" "uuid", "p_detalle" "text") OWNER TO "postgres";
+
+
+-- Reanudar una pausa o una suspensión antes de su vuelta: desde el día que se diga, o desde hoy.
+CREATE OR REPLACE FUNCTION "public"."reanudar_cobertura"("p_interrupcion" "uuid", "p_desde" "date" DEFAULT NULL::"date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest    uuid := interno.prestadora_actual();
+  v_servicio uuid;
+  v_hoy      date;
+BEGIN
+  SELECT i.servicio_id INTO v_servicio FROM interrupciones_de_cobertura i
+   WHERE i.id = p_interrupcion AND i.prestadora_id = v_prest
+     AND i.tipo IN ('pausa', 'suspension') AND i.levantada_at IS NULL;
+  IF v_servicio IS NULL OR NOT interno.puede_gestionar_la_cobertura(v_servicio) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest))::date;
+  IF p_desde IS NOT NULL AND p_desde < v_hoy THEN
+    RAISE EXCEPTION 'la_fecha_ya_paso' USING ERRCODE = 'P0001';
+  END IF;
+
+  PERFORM interno.levantar_interrupcion(p_interrupcion, COALESCE(p_desde, v_hoy));
+  PERFORM interno.anotar_turnos_sin_cubrir();
+END;
+$$;
+
+ALTER FUNCTION "public"."reanudar_cobertura"("p_interrupcion" "uuid", "p_desde" "date") OWNER TO "postgres";
+
+
+-- Cancelar una Prestación o un turno de guardia recurrente desde una fecha. Los turnos de guardia
+-- sin Asistente de ahí en más se cancelan; si queda alguno asignado, se rechaza. El Servicio entero
+-- se cancela con la baja, y un solo turno de guardia con la resolución del turno.
+CREATE OR REPLACE FUNCTION "public"."cancelar_cobertura_desde"("p_alcance" "text", "p_prestacion" bigint, "p_serie" "uuid", "p_desde" "date", "p_motivo" "uuid", "p_detalle" "text") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest    uuid := interno.prestadora_actual();
+  v_hoy      date;
+  v_servicio uuid;
+  v_paciente uuid;
+  v_inicio   date;
+  v_detalle  text;
+  v_series   uuid[];
+  v_turnos   uuid[];
+  v_id       uuid;
+BEGIN
+  IF v_prest IS NULL THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_desde IS NULL THEN
+    RAISE EXCEPTION 'falta_un_dato' USING ERRCODE = '23502';
+  END IF;
+  v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest))::date;
+
+  IF p_alcance = 'turno_guardia_recurrente' THEN
+    SELECT s.servicio_id, s.vigente_desde INTO v_servicio, v_inicio FROM series_turnos_guardia s
+     WHERE s.id = p_serie AND s.prestadora_id = v_prest AND s.estado = 'activa';
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'turno_guardia_recurrente_inexistente' USING ERRCODE = 'P0001';
+    END IF;
+    v_series := ARRAY[p_serie];
+    v_turnos := ARRAY(SELECT t.id FROM turnos_guardia t
+                       WHERE t.serie_id = p_serie AND t.prestadora_id = v_prest AND t.fecha >= p_desde);
+  ELSIF p_alcance = 'prestacion' THEN
+    SELECT p.servicio_id, p.paciente_id, p.vigente_desde INTO v_servicio, v_paciente, v_inicio
+      FROM prestaciones p
+     WHERE p.id = p_prestacion AND p.prestadora_id = v_prest AND p.estado = 'vigente';
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'prestacion_inexistente' USING ERRCODE = 'P0001';
+    END IF;
+    -- Los recurrentes del Servicio que atienden a ese Paciente, y los turnos de guardia de las
+    -- guardias de esa Prestación.
+    v_series := ARRAY(SELECT s.id FROM series_turnos_guardia s
+                       WHERE s.servicio_id = v_servicio AND s.prestadora_id = v_prest AND s.estado = 'activa'
+                         AND (s.paciente_id = v_paciente
+                              OR EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
+                                          WHERE sp.serie_id = s.id AND sp.paciente_id = v_paciente)));
+    v_turnos := ARRAY(SELECT DISTINCT tg.turno_guardia_id
+                        FROM turno_guardia_guardias tg
+                        JOIN cronograma_de_guardias c ON c.id = tg.guardia_id
+                        JOIN turnos_guardia t ON t.id = tg.turno_guardia_id
+                       WHERE c.prestacion_id = p_prestacion AND t.prestadora_id = v_prest
+                         AND t.fecha >= p_desde);
+    IF EXISTS (SELECT 1 FROM series_turnos_guardia_pacientes sp
+                JOIN series_turnos_guardia s ON s.id = sp.serie_id
+               WHERE sp.serie_id = ANY (v_series) AND sp.paciente_id <> v_paciente)
+       OR EXISTS (SELECT 1 FROM series_turnos_guardia s
+                   WHERE s.id = ANY (v_series) AND s.paciente_id <> v_paciente)
+       OR EXISTS (SELECT 1 FROM turno_guardia_pacientes tp
+                   WHERE tp.turno_guardia_id = ANY (v_turnos) AND tp.paciente_id <> v_paciente) THEN
+      RAISE EXCEPTION 'el_turno_guardia_recurrente_atiende_a_otro_paciente' USING ERRCODE = 'P0001';
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF NOT interno.puede_gestionar_la_cobertura(v_servicio) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_desde < v_hoy THEN
+    RAISE EXCEPTION 'la_fecha_ya_paso' USING ERRCODE = 'P0001';
+  END IF;
+  v_detalle := interno.validar_motivo_de_la_interrupcion(v_prest, 'cancelacion', p_motivo, p_detalle);
+
+  -- Lo asignado no se cancela solo: se le quita primero el Asistente.
+  IF EXISTS (SELECT 1 FROM turnos_guardia t
+              WHERE t.id = ANY (v_turnos) AND t.asistente_id IS NOT NULL
+                AND t.estado NOT IN ('cancelada', 'completada', 'ausente'))
+     OR EXISTS (SELECT 1 FROM series_turnos_guardia s
+                 WHERE s.id = ANY (v_series) AND s.asistente_id IS NOT NULL
+                   AND (s.vigente_hasta IS NULL OR s.vigente_hasta >= p_desde)) THEN
+    RAISE EXCEPTION 'quedan_turnos_guardia_asignados' USING ERRCODE = 'P0001';
+  END IF;
+
+  INSERT INTO interrupciones_de_cobertura
+    (prestadora_id, tipo, alcance, servicio_id, prestacion_id, serie_id, desde, motivo_id, detalle)
+  VALUES
+    (v_prest, 'cancelacion', p_alcance, v_servicio,
+     CASE WHEN p_alcance = 'prestacion' THEN p_prestacion END,
+     CASE WHEN p_alcance = 'turno_guardia_recurrente' THEN p_serie END,
+     p_desde, p_motivo, v_detalle)
+  RETURNING id INTO v_id;
+
+  UPDATE turnos_guardia t
+     SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelacion_alcance = p_alcance,
+         interrupcion_id = NULL
+   WHERE t.id = ANY (v_turnos) AND t.checkin_at IS NULL
+     AND t.estado IN ('programada', 'pausada', 'suspendida');
+
+  -- El recurrente rige hasta el día anterior; si no le queda ningún día, se cancela.
+  UPDATE series_turnos_guardia s
+     SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelado_at = now()
+   WHERE s.id = ANY (v_series) AND p_desde <= s.vigente_desde;
+  UPDATE series_turnos_guardia s
+     SET vigente_hasta = least(COALESCE(s.vigente_hasta, p_desde - 1), p_desde - 1)
+   WHERE s.id = ANY (v_series) AND s.estado = 'activa';
+
+  IF p_alcance = 'prestacion' THEN
+    IF p_desde <= v_inicio THEN
+      UPDATE prestaciones SET estado = 'de_baja', vigente_hasta = vigente_desde WHERE id = p_prestacion;
+    ELSE
+      UPDATE prestaciones SET vigente_hasta = least(COALESCE(vigente_hasta, p_desde - 1), p_desde - 1)
+       WHERE id = p_prestacion;
+    END IF;
+  END IF;
+
+  PERFORM interno.anotar_turnos_sin_cubrir();
+  RETURN v_id;
+END;
+$$;
+
+ALTER FUNCTION "public"."cancelar_cobertura_desde"("p_alcance" "text", "p_prestacion" bigint, "p_serie" "uuid", "p_desde" "date", "p_motivo" "uuid", "p_detalle" "text") OWNER TO "postgres";
+
+
+-- Cambiar los días y el horario de un turno de guardia recurrente desde una fecha, sin cancelarlo.
+-- El recurrente de hoy rige hasta el día anterior; nace otro con los mismos Pacientes y sin
+-- Asistente. Los turnos de guardia pasados y los asignados quedan como están; los vacantes de
+-- ahí en más se rehacen con el horario nuevo. Las pausas y las suspensiones que el recurrente
+-- tenía abiertas pasan al nuevo. Devuelve el recurrente nuevo.
+CREATE OR REPLACE FUNCTION "public"."editar_turno_guardia_recurrente"("p_serie" "uuid", "p_desde" "date", "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer) RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest     uuid := interno.prestadora_actual();
+  v_s         series_turnos_guardia;
+  v_hoy       date;
+  v_desde     date;
+  v_pacientes uuid[];
+  v_nueva     uuid;
+BEGIN
+  IF v_prest IS NULL THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  SELECT s.* INTO v_s FROM series_turnos_guardia s
+   WHERE s.id = p_serie AND s.prestadora_id = v_prest AND s.estado = 'activa';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'turno_guardia_recurrente_inexistente' USING ERRCODE = 'P0001';
+  END IF;
+  IF NOT interno.puede_gestionar_la_cobertura(v_s.servicio_id) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF p_desde IS NULL THEN
+    RAISE EXCEPTION 'falta_un_dato' USING ERRCODE = '23502';
+  END IF;
+  v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest))::date;
+  IF p_desde < v_hoy THEN
+    RAISE EXCEPTION 'la_fecha_ya_paso' USING ERRCODE = 'P0001';
+  END IF;
+  v_desde := greatest(p_desde, v_s.vigente_desde);
+  IF v_s.vigente_hasta IS NOT NULL AND v_desde > v_s.vigente_hasta THEN
+    RAISE EXCEPTION 'fuera_del_periodo_del_servicio' USING ERRCODE = 'P0001';
+  END IF;
+
+  v_pacientes := ARRAY[v_s.paciente_id]
+              || ARRAY(SELECT sp.paciente_id FROM series_turnos_guardia_pacientes sp
+                        WHERE sp.serie_id = p_serie AND sp.paciente_id <> v_s.paciente_id
+                        ORDER BY sp.paciente_id);
+
+  -- Los turnos de guardia vacantes de ahí en más se rehacen.
+  DELETE FROM turnos_guardia t
+   WHERE t.serie_id = p_serie AND t.prestadora_id = v_prest AND t.fecha >= v_desde
+     AND t.asistente_id IS NULL AND t.checkin_at IS NULL
+     AND t.estado IN ('programada', 'pausada', 'suspendida')
+     AND NOT EXISTS (SELECT 1 FROM calificaciones_asistente c WHERE c.turno_guardia_id = t.id)
+     AND NOT EXISTS (SELECT 1 FROM excepciones_por_documentos e WHERE e.turno_guardia_id = t.id);
+
+  -- El recurrente de hoy rige hasta el día anterior; si no le queda ningún día, se cancela.
+  IF v_desde <= v_s.vigente_desde THEN
+    UPDATE series_turnos_guardia
+       SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelado_at = now()
+     WHERE id = p_serie;
+  ELSE
+    UPDATE series_turnos_guardia SET vigente_hasta = v_desde - 1 WHERE id = p_serie;
+  END IF;
+
+  v_nueva := public.crear_turno_guardia_recurrente(
+    v_s.servicio_id, v_pacientes, p_dias_semana, p_hora_inicio, p_hora_fin, p_dias_hasta_el_fin,
+    v_s.modalidad, v_desde, v_s.vigente_hasta);
+
+  -- Donde el recurrente de hoy conserva un turno de guardia asignado, el nuevo no pone otro.
+  DELETE FROM turnos_guardia n
+   WHERE n.serie_id = v_nueva AND n.asistente_id IS NULL
+     AND EXISTS (SELECT 1 FROM turnos_guardia v
+                  WHERE v.serie_id = p_serie AND v.fecha = n.fecha AND v.estado <> 'cancelada');
+
+  -- Las pausas y las suspensiones abiertas del recurrente pasan al nuevo.
+  INSERT INTO interrupciones_de_cobertura
+    (prestadora_id, tipo, alcance, servicio_id, serie_id, desde, vuelta, motivo_id, detalle, hecha_por)
+  SELECT i.prestadora_id, i.tipo, i.alcance, i.servicio_id, v_nueva, greatest(i.desde, v_desde),
+         i.vuelta, i.motivo_id, i.detalle, i.hecha_por
+    FROM interrupciones_de_cobertura i
+   WHERE i.serie_id = p_serie AND i.prestadora_id = v_prest
+     AND i.alcance = 'turno_guardia_recurrente' AND i.tipo IN ('pausa', 'suspension')
+     AND i.levantada_at IS NULL
+     AND (i.vuelta IS NULL OR i.vuelta > greatest(i.desde, v_desde));
+
+  PERFORM interno.marcar_turnos_interrumpidos(v_s.servicio_id, v_desde);
+  PERFORM interno.anotar_turnos_sin_cubrir();
+  RETURN v_nueva;
+END;
+$$;
+
+ALTER FUNCTION "public"."editar_turno_guardia_recurrente"("p_serie" "uuid", "p_desde" "date", "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer) OWNER TO "postgres";
+
+
+-- El período del Servicio: nace hoy si no se dice otra cosa; lo cambia quien puede crear un
+-- Servicio, y nunca deja afuera un turno de guardia asignado.
+CREATE OR REPLACE FUNCTION "interno"."periodo_del_servicio"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    NEW.vigente_desde := COALESCE(NEW.vigente_desde,
+      (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(NEW.prestadora_id))::date);
+    RETURN NEW;
+  END IF;
+
+  IF NEW.vigente_desde IS NOT DISTINCT FROM OLD.vigente_desde
+     AND NEW.vigente_hasta IS NOT DISTINCT FROM OLD.vigente_hasta THEN
+    RETURN NEW;
+  END IF;
+  -- La baja y la reactivación ponen y quitan el último día con su propia marca.
+  IF COALESCE(current_setting('careonys.cambio_de_estado_del_servicio', true), '') = NEW.id::text THEN
+    RETURN NEW;
+  END IF;
+
+  IF COALESCE(auth.jwt() ->> 'role', '') = 'authenticated'
+     AND NOT (interno.es_admin_prestadora() OR interno.es_superadmin()
+              OR interno.tiene_permiso('gestionar_servicios')) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM turnos_guardia t
+              WHERE t.servicio_id = NEW.id AND t.asistente_id IS NOT NULL AND t.estado <> 'cancelada'
+                AND (t.fecha < NEW.vigente_desde
+                     OR (NEW.vigente_hasta IS NOT NULL AND t.fecha > NEW.vigente_hasta))) THEN
+    RAISE EXCEPTION 'el_servicio_tiene_turnos_guardia_fuera_del_periodo' USING ERRCODE = 'P0001';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+ALTER FUNCTION "interno"."periodo_del_servicio"() OWNER TO "postgres";
+
+CREATE OR REPLACE TRIGGER "periodo_del_servicio" BEFORE INSERT OR UPDATE OF "vigente_desde", "vigente_hasta" ON "public"."servicios" FOR EACH ROW EXECUTE FUNCTION "interno"."periodo_del_servicio"();
+
+
+-- Cambiar el período de un Servicio vigente. Los turnos de guardia vacantes que quedan afuera se
+-- cancelan y los recurrentes se acotan al período nuevo; si queda afuera un turno de guardia
+-- asignado, se rechaza.
+CREATE OR REPLACE FUNCTION "public"."cambiar_periodo_del_servicio"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prest uuid := interno.prestadora_actual();
+BEGIN
+  IF v_prest IS NULL
+     OR NOT (interno.es_admin_prestadora() OR interno.es_superadmin()
+             OR interno.tiene_permiso('gestionar_servicios')) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM servicios s
+                  WHERE s.id = p_servicio AND s.prestadora_id = v_prest AND s.estado = 'vigente') THEN
+    RAISE EXCEPTION 'servicio_inexistente' USING ERRCODE = 'P0001';
+  END IF;
+  IF p_desde IS NULL THEN
+    RAISE EXCEPTION 'falta_un_dato' USING ERRCODE = '23502';
+  END IF;
+  IF p_hasta IS NOT NULL AND p_hasta < p_desde THEN
+    RAISE EXCEPTION 'la_vuelta_es_antes_del_comienzo' USING ERRCODE = 'P0001';
+  END IF;
+  IF EXISTS (SELECT 1 FROM turnos_guardia t
+              WHERE t.servicio_id = p_servicio AND t.prestadora_id = v_prest
+                AND t.asistente_id IS NOT NULL AND t.estado <> 'cancelada'
+                AND (t.fecha < p_desde OR (p_hasta IS NOT NULL AND t.fecha > p_hasta))) THEN
+    RAISE EXCEPTION 'el_servicio_tiene_turnos_guardia_fuera_del_periodo' USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE turnos_guardia t
+     SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelacion_alcance = 'servicio',
+         interrupcion_id = NULL
+   WHERE t.servicio_id = p_servicio AND t.prestadora_id = v_prest
+     AND t.asistente_id IS NULL AND t.checkin_at IS NULL
+     AND t.estado IN ('programada', 'pausada', 'suspendida')
+     AND (t.fecha < p_desde OR (p_hasta IS NOT NULL AND t.fecha > p_hasta));
+
+  UPDATE series_turnos_guardia s
+     SET vigente_desde = greatest(s.vigente_desde, p_desde),
+         vigente_hasta = CASE WHEN p_hasta IS NULL THEN s.vigente_hasta
+                              ELSE least(COALESCE(s.vigente_hasta, p_hasta), p_hasta) END
+   WHERE s.servicio_id = p_servicio AND s.prestadora_id = v_prest AND s.estado = 'activa'
+     AND (s.vigente_desde < p_desde OR (p_hasta IS NOT NULL AND (s.vigente_hasta IS NULL OR s.vigente_hasta > p_hasta)))
+     AND (p_hasta IS NULL OR greatest(s.vigente_desde, p_desde) <= p_hasta);
+  UPDATE series_turnos_guardia s
+     SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelado_at = now()
+   WHERE s.servicio_id = p_servicio AND s.prestadora_id = v_prest AND s.estado = 'activa'
+     AND ((p_hasta IS NOT NULL AND greatest(s.vigente_desde, p_desde) > p_hasta)
+          OR (s.vigente_hasta IS NOT NULL AND s.vigente_hasta < p_desde));
+
+  UPDATE servicios SET vigente_desde = p_desde, vigente_hasta = p_hasta
+   WHERE id = p_servicio AND prestadora_id = v_prest;
+
+  PERFORM interno.anotar_turnos_sin_cubrir();
+END;
+$$;
+
+ALTER FUNCTION "public"."cambiar_periodo_del_servicio"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
+
+
+REVOKE ALL ON FUNCTION "interno"."puede_gestionar_la_cobertura"("p_servicio" "uuid") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."prestacion_desciende_de"("p_prestacion" bigint, "p_raiz" bigint) FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."interrupcion_que_tapa"("p_prestadora" "uuid", "p_servicio" "uuid", "p_prestaciones" bigint[], "p_serie" "uuid", "p_turno_guardia" "uuid", "p_fecha" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."reevaluar_turno_guardia"("p_turno_guardia" "uuid") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."marcar_turnos_interrumpidos"("p_servicio" "uuid", "p_desde" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."levantar_interrupcion"("p_interrupcion" "uuid", "p_desde" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."suspender_por_la_internacion"("p_hospitalizacion" "uuid") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."levantar_lo_de_la_internacion"("p_hospitalizacion" "uuid", "p_desde" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."turno_guardia_nace_interrumpido"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."validar_motivo_de_la_interrupcion"("p_prestadora" "uuid", "p_tipo" "text", "p_motivo" "uuid", "p_detalle" "text") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."periodo_del_servicio"() FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "public"."interrumpir_cobertura"("p_tipo" "text", "p_alcance" "text", "p_servicio" "uuid", "p_prestacion" bigint, "p_serie" "uuid", "p_turno_guardia" "uuid", "p_desde" "date", "p_vuelta" "date", "p_motivo" "uuid", "p_detalle" "text") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "public"."reanudar_cobertura"("p_interrupcion" "uuid", "p_desde" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "public"."cancelar_cobertura_desde"("p_alcance" "text", "p_prestacion" bigint, "p_serie" "uuid", "p_desde" "date", "p_motivo" "uuid", "p_detalle" "text") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "public"."editar_turno_guardia_recurrente"("p_serie" "uuid", "p_desde" "date", "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer) FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "public"."cambiar_periodo_del_servicio"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") FROM PUBLIC, "anon";
+
+-- La política llama a la primera; las que siguen las llaman la internación y su cierre, que corren
+-- con los permisos de quien las usa, y el disparador del turno de guardia, que corre con los de
+-- quien escribe, persona o trabajo sin persona.
+GRANT ALL ON FUNCTION "interno"."puede_gestionar_la_cobertura"("p_servicio" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."puede_gestionar_la_cobertura"("p_servicio" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."interrupcion_que_tapa"("p_prestadora" "uuid", "p_servicio" "uuid", "p_prestaciones" bigint[], "p_serie" "uuid", "p_turno_guardia" "uuid", "p_fecha" "date") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."reevaluar_turno_guardia"("p_turno_guardia" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."reevaluar_turno_guardia"("p_turno_guardia" "uuid") TO "trabajo_sin_persona";
+GRANT ALL ON FUNCTION "interno"."reevaluar_turno_guardia"("p_turno_guardia" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."suspender_por_la_internacion"("p_hospitalizacion" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."suspender_por_la_internacion"("p_hospitalizacion" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."levantar_lo_de_la_internacion"("p_hospitalizacion" "uuid", "p_desde" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."levantar_lo_de_la_internacion"("p_hospitalizacion" "uuid", "p_desde" "date") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_nace_interrumpido"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_nace_interrumpido"() TO "trabajo_sin_persona";
+GRANT ALL ON FUNCTION "interno"."turno_guardia_nace_interrumpido"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."interrumpir_cobertura"("p_tipo" "text", "p_alcance" "text", "p_servicio" "uuid", "p_prestacion" bigint, "p_serie" "uuid", "p_turno_guardia" "uuid", "p_desde" "date", "p_vuelta" "date", "p_motivo" "uuid", "p_detalle" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."interrumpir_cobertura"("p_tipo" "text", "p_alcance" "text", "p_servicio" "uuid", "p_prestacion" bigint, "p_serie" "uuid", "p_turno_guardia" "uuid", "p_desde" "date", "p_vuelta" "date", "p_motivo" "uuid", "p_detalle" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."reanudar_cobertura"("p_interrupcion" "uuid", "p_desde" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."reanudar_cobertura"("p_interrupcion" "uuid", "p_desde" "date") TO "service_role";
+GRANT ALL ON FUNCTION "public"."cancelar_cobertura_desde"("p_alcance" "text", "p_prestacion" bigint, "p_serie" "uuid", "p_desde" "date", "p_motivo" "uuid", "p_detalle" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cancelar_cobertura_desde"("p_alcance" "text", "p_prestacion" bigint, "p_serie" "uuid", "p_desde" "date", "p_motivo" "uuid", "p_detalle" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."editar_turno_guardia_recurrente"("p_serie" "uuid", "p_desde" "date", "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."editar_turno_guardia_recurrente"("p_serie" "uuid", "p_desde" "date", "p_dias_semana" "text"[], "p_hora_inicio" "text", "p_hora_fin" "text", "p_dias_hasta_el_fin" integer) TO "service_role";
+GRANT ALL ON FUNCTION "public"."cambiar_periodo_del_servicio"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cambiar_periodo_del_servicio"("p_servicio" "uuid", "p_desde" "date", "p_hasta" "date") TO "service_role";
+
+GRANT SELECT ON TABLE "public"."interrupciones_de_cobertura" TO "authenticated";
+GRANT ALL ON TABLE "public"."interrupciones_de_cobertura" TO "service_role";
+
+NOTIFY pgrst, 'reload schema';

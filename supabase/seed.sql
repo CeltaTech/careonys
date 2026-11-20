@@ -494,10 +494,10 @@ INSERT INTO public.informacion_de_salud_del_paciente (prestadora_id, paciente_id
 -- (la crea un disparador, con el Contratante del Cliente). Los Responsables de pagos viven en
 -- `pagadores_del_servicio`: un Servicio puede tener varios a la vez, cada uno desde el día en que
 -- rige y, cuando deja de serlo, hasta otro.
-INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, estado, coordinador_id) VALUES
-  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente', '20000000-0000-4000-8000-000000000003'),
-  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente', '20000000-0000-4000-8000-000000000003'),
-  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente', '20000000-0000-4000-8000-000000000003');
+INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, estado, coordinador_id, vigente_desde) VALUES
+  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente', '20000000-0000-4000-8000-000000000003', CURRENT_DATE - 120),
+  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente', '20000000-0000-4000-8000-000000000003', CURRENT_DATE - 30),
+  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente', '20000000-0000-4000-8000-000000000003', CURRENT_DATE - 90);
 
 INSERT INTO public.pagadores_del_servicio (prestadora_id, servicio_id, pagador_tipo, pagador_persona_id, vigente_desde) VALUES
   ('11111111-1111-4111-8111-111111111111', '60000000-0000-4000-8000-000000000002', 'obra_social', 'c0000000-0000-4000-8000-000000000003', '2026-01-01'),
@@ -1194,10 +1194,10 @@ INSERT INTO public.pacientes (id, persona_id, prestadora_id, cliente_id)
 VALUES ('60000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004');
 
-INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, coordinador_id)
+INSERT INTO public.servicios (id, prestadora_id, cliente_id, etiqueta, coordinador_id, vigente_desde)
 VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos',
-        '50000000-0000-4000-8000-000000000002');
+        '50000000-0000-4000-8000-000000000002', CURRENT_DATE - 30);
 
 -- Lo vendido en ese Servicio, con su cronograma de guardias: todo turno de guardia nace adentro de
 -- una guardia del cronograma.

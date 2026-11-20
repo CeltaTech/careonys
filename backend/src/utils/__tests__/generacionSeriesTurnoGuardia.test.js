@@ -197,6 +197,27 @@ describe('la generación de las series de guardias', () => {
     );
   });
 
+  it('una serie con último día, porque el Servicio termina, genera hasta ese día y no más', async () => {
+    prepararPrestadora(5, { serie: { vigente_hasta: '2026-03-04' } });
+
+    await extenderLasSeriesDeUnaPrestadora(PRESTADORA, MEDIODIA);
+
+    assert.deepEqual(
+      llamadas.find((l) => l.clave === CREAR).cuerpo.map((g) => g.fecha),
+      ['2026-03-02', '2026-03-03', '2026-03-04'],
+    );
+  });
+
+  it('pide las series sin último día y las que lo tienen de hoy en adelante', async () => {
+    prepararPrestadora(5);
+
+    await extenderLasSeriesDeUnaPrestadora(PRESTADORA, MEDIODIA);
+
+    const pedido = llamadas.find((l) => l.clave === SERIES);
+    assert.equal(pedido.filtros.get('or'), '(vigente_hasta.is.null,vigente_hasta.gte.2026-03-01)');
+    assert.equal(pedido.filtros.get('estado'), 'eq.activa');
+  });
+
   it('sigue a partir del último turno de guardia cuando ya hay generados por delante', async () => {
     prepararPrestadora(5);
     respuestas.set(ULTIMA, [{ fecha: '2026-03-04' }]);

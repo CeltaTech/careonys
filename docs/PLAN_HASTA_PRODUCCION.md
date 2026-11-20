@@ -286,12 +286,14 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      puede asignar un cuidador a un Servicio con tareas acordadas para enfermería. Pasa a trabarse
      al asignar, que es lo único que la regla de las tres clases de tarea bloquea; la no incluida
      sólo avisa.
-   - **Capacidad para realizarlas.** El Legajo guarda las Especialidades de la Asistente, del
-     catálogo de su tipo: hoy 11 Especialidades en la nube y 50 asignadas. Pero ni el Servicio ni
-     el Paciente dicen qué Especialidad hace falta: el Paciente sólo tiene sus patologías y su
-     nivel de complejidad. La postulación pide además experiencia clínica, estudios y años de
-     experiencia, y nada de eso pasa al Legajo al incorporar al aspirante. **Lo decide usted:**
-     contra qué se compara la capacidad.
+   - **Capacidad para realizarlas.** Para tener la capacidad de realizar una tarea, la Asistente
+     tiene que contar con la Especialidad adecuada. El Legajo guarda las Especialidades de la
+     Asistente, del catálogo de su tipo: hoy 11 Especialidades en la nube y 50 asignadas. Hoy
+     ninguna tarea dice qué Especialidad pide. Propuesta: cada tarea del catálogo de su tipo dice
+     qué Especialidad pide, o ninguna; el cálculo de candidatas compara las tareas acordadas del
+     Servicio contra las Especialidades del Legajo. La postulación pide además experiencia
+     clínica, estudios y años de experiencia, y nada de eso pasa al Legajo al incorporar al
+     aspirante.
    - **Antecedentes de la Asistente.** El Legajo guarda calificaciones, ausencias, llegadas tarde,
      horas extra e incidentes de relevo, y las referencias laborales que trae la postulación. La
      experiencia laboral de la postulación no pasa al Legajo. **Lo decide usted:** cuáles cuentan y

@@ -236,6 +236,20 @@ export function periodosQueTocan(desde, hasta, frecuencia, topeDeVueltas = 1000)
   return periodos;
 }
 
+/**
+ * Los períodos que cierran entre las dos fechas, en orden.
+ *
+ * Es lo que se liquida: un período se paga cuando terminó. El que cierra el primer día pedido
+ * entra aunque haya empezado antes, y el que todavía no cerró el último día queda para la vez
+ * siguiente. Como cada día pertenece a un solo período, pedir tramos seguidos no paga ningún
+ * día dos veces ni deja ninguno afuera.
+ */
+export function periodosQueCierranEn(desde, hasta, frecuencia, topeDeVueltas = 1000) {
+  return periodosQueTocan(desde, hasta, frecuencia, topeDeVueltas).filter(
+    (periodo) => periodo.hasta >= String(desde) && periodo.hasta <= String(hasta)
+  );
+}
+
 /** Qué día se paga un período que cierra este día. */
 export function fechaDePagoDe(periodo, frecuencia) {
   const regla = frecuenciaDePagoDe(frecuencia);

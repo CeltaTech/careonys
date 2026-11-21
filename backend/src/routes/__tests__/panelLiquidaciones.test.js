@@ -612,8 +612,9 @@ describe('generar el mes', () => {
   // -------------------------------------------------------------------------------------
   // Cada cuánto cobra cada Asistente
   //
-  // Se sigue pidiendo un mes, como siempre. Lo que cambió es que adentro de ese mes cada
-  // persona recibe los períodos suyos: uno solo si cobra por mes, cinco si cobra los viernes.
+  // Se piden dos fechas, o un mes. Cada persona recibe los períodos suyos que cierran entre
+  // ellas: uno solo si cobra por mes, uno por viernes si cobra los viernes, uno por día si
+  // cobra por día. El período que todavía no cerró queda para la vez siguiente.
   // -------------------------------------------------------------------------------------
 
   /** Un turno de guardia de ocho horas, que a mil quinientos la hora da doce mil. */
@@ -626,8 +627,9 @@ describe('generar el mes', () => {
     asistente_id: 'a-1',
   });
 
-  it('quien cobra por semana recibe una liquidación por cada semana del mes', async () => {
-    // Agosto de 2026 con corte los viernes tiene cinco semanas, y hay un turno de guardia en cada una.
+  it('quien cobra por semana recibe una liquidación por cada semana que cierra en el mes', async () => {
+    // Agosto de 2026 tiene cuatro viernes. La semana que arranca el sábado 29 cierra en
+    // septiembre, y su turno de guardia se paga cuando se liquide septiembre.
     prepararLaBase({
       configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'semana' } }],
       turnos_guardia: [
@@ -641,7 +643,7 @@ describe('generar el mes', () => {
 
     const { estado, cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
     assert.equal(estado, 200);
-    assert.equal(cuerpo.generadas, 5);
+    assert.equal(cuerpo.generadas, 4);
 
     const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
     assert.deepEqual(
@@ -651,7 +653,6 @@ describe('generar el mes', () => {
         ['2026-08-08', '2026-08-14'],
         ['2026-08-15', '2026-08-21'],
         ['2026-08-22', '2026-08-28'],
-        ['2026-08-29', '2026-09-04'],
       ]
     );
 
@@ -669,7 +670,7 @@ describe('generar el mes', () => {
     });
 
     const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
-    assert.equal(cuerpo.generadas, 3);
+    assert.equal(cuerpo.generadas, 2);
 
     const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
     assert.deepEqual(
@@ -677,9 +678,55 @@ describe('generar el mes', () => {
       [
         ['2026-07-25', '2026-08-07'],
         ['2026-08-08', '2026-08-21'],
-        ['2026-08-22', '2026-09-04'],
       ]
     );
+  });
+
+  it('quien cobra por día recibe una liquidación por cada día de las dos fechas', async () => {
+    prepararLaBase({
+      configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'dia' } }],
+      turnos_guardia: [turnoGuardiaDe('g-1', '2026-08-10'), turnoGuardiaDe('g-2', '2026-08-11')],
+    });
+
+    const { estado, cuerpo } = await pedir('POST', '/generar', { periodo: { desde: '2026-08-10', hasta: '2026-08-11' } });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.generadas, 2);
+
+    const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.deepEqual(
+      escrituras.map((e) => [e.cuerpo.periodo_desde, e.cuerpo.periodo_hasta, e.cuerpo.bruto]),
+      [
+        ['2026-08-10', '2026-08-10', 12000],
+        ['2026-08-11', '2026-08-11', 12000],
+      ]
+    );
+  });
+
+  it('un mes que todavía no cerró no se liquida', async () => {
+    // Sin frecuencia configurada se cobra por mes, y agosto cierra el 31.
+    prepararLaBase();
+    const { estado, cuerpo } = await pedir('POST', '/generar', { periodo: { desde: '2026-08-01', hasta: '2026-08-20' } });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.generadas, 0);
+    assert.equal(llamadas.filter((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente').length, 0);
+  });
+
+  it('una semana que cierra el primer día pedido se liquida entera, con los turnos de antes', async () => {
+    prepararLaBase({
+      configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'semana' } }],
+      turnos_guardia: [turnoGuardiaDe('g-1', '2026-08-03')],
+    });
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: { desde: '2026-08-07', hasta: '2026-08-13' } });
+    assert.equal(cuerpo.generadas, 1);
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.periodo_desde, '2026-08-01');
+    assert.equal(escritura.cuerpo.periodo_hasta, '2026-08-07');
+    assert.equal(escritura.cuerpo.bruto, 12000);
+  });
+
+  it('las fechas al revés se rechazan antes de tocar la base', async () => {
+    const { estado } = await pedir('POST', '/generar', { periodo: { desde: '2026-08-20', hasta: '2026-08-01' } });
+    assert.equal(estado, 400);
   });
 
   it('lo que se arregló con la persona pisa lo de la Prestadora', async () => {
@@ -1026,13 +1073,13 @@ describe('con qué credencial entra cada ruta', () => {
     }
   });
 
-  it('la lista del mes va con la credencial de quien pide', async () => {
+  it('la lista del tramo va con la credencial de quien pide', async () => {
     respuestas.set('GET /rest/v1/liquidaciones_asistente', () => [
       { id: 'liq-1', estado: 'pendiente', asistente_id: 'a-1', periodo_desde: '2026-08-01', periodo_hasta: '2026-08-31' },
     ]);
     respuestas.set('GET /rest/v1/asistentes', () => [{ id: 'a-1', nombre: 'Asistente de prueba' }]);
 
-    const { estado, cuerpo } = await pedir('GET', '/?periodo=2026-08');
+    const { estado, cuerpo } = await pedir('GET', '/?desde=2026-08-01&hasta=2026-08-31');
     assert.equal(estado, 200);
     assert.equal(cuerpo[0].asistente_nombre, 'Asistente de prueba');
     const aLaBase = llamadas.filter((l) => l.clave.includes('/rest/v1/') && !deLaSesion(l));

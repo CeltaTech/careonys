@@ -46,7 +46,7 @@ import './tarjetas.css';
    eso todo lo que se ve son datos guardados, y el único botón que produce algo se los pide al
    backend. Los importes tampoco se suman de nuevo para el total: el total también está guardado.
 
-   LAS DOS SOLAPAS. "Liquidaciones" es el mes: qué se le liquidó a cada uno y qué se pagó.
+   LAS DOS SOLAPAS. "Liquidaciones" son los períodos de pago que cierran entre dos fechas: qué se le liquidó a cada uno y qué se pagó.
    "Conceptos" es el catálogo de sumas y restas de la Prestadora, que es lo que hace la cuenta
    distinta de una multiplicación. Van juntas porque una no se entiende sin la otra: cuando un
    número no cierra, lo primero que se mira es qué conceptos estaban activos.
@@ -62,13 +62,21 @@ import './tarjetas.css';
 
 const TABS = ['liquidaciones', 'conceptos'];
 
-function mesActual() {
-  return new Date().toISOString().slice(0, 7);
+/**
+ * El día de hoy y el primero del mes, en la hora del aparato.
+ *
+ * Son las dos fechas con que abre la pantalla: de entrada se ve lo que cerró en lo que va del
+ * mes. Se arman con la hora local a propósito, porque en hora universal a la noche ya sería
+ * mañana.
+ */
+function hoyEnTexto() {
+  const ahora = new Date();
+  const dosCifras = (n) => String(n).padStart(2, '0');
+  return `${ahora.getFullYear()}-${dosCifras(ahora.getMonth() + 1)}-${dosCifras(ahora.getDate())}`;
 }
 
-/** El mes de un `periodo` guardado, que en la base es siempre el primer día. */
-function mesDelPeriodo(periodo) {
-  return String(periodo ?? '').slice(0, 7);
+function primeroDelMesEnTexto() {
+  return `${hoyEnTexto().slice(0, 7)}-01`;
 }
 
 /**
@@ -180,14 +188,19 @@ export function PagosAsistentes() {
 }
 
 // ---------------------------------------------------------------------------------------
-// Solapa 1 — las liquidaciones del mes
+// Solapa 1 — las liquidaciones de los períodos que cierran entre dos fechas
 // ---------------------------------------------------------------------------------------
 
 function LiquidacionesTab({ esAdmin }) {
   const { t, locale } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
 
-  const [mes, setMes] = useState(mesActual());
+  // Las dos fechas eligen qué períodos de pago se miran y se generan: los que cierran entre
+  // ellas. Cada Asistente cobra con su propia frecuencia —por día, por semana, por quincena o
+  // por mes—, y así un mismo tramo de fechas le da a cada uno sus períodos cerrados.
+  const [desde, setDesde] = useState(primeroDelMesEnTexto());
+  const [hasta, setHasta] = useState(hoyEnTexto());
+  const tramoValido = Boolean(desde) && Boolean(hasta) && desde <= hasta;
   const [liquidaciones, setLiquidaciones] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -200,20 +213,25 @@ function LiquidacionesTab({ esAdmin }) {
     setEstado('cargando');
     setError(null);
     try {
-      const datos = await llamarApiLiquidaciones(`/?periodo=${mes}`);
+      if (!tramoValido) {
+        setLiquidaciones([]);
+        setEstado('listo');
+        return;
+      }
+      const datos = await llamarApiLiquidaciones(`/?desde=${desde}&hasta=${hasta}`);
       setLiquidaciones(Array.isArray(datos) ? datos : []);
       setEstado('listo');
     } catch (e) {
       setError(mensajeDeError(e, t, 'liquidaciones'));
       setEstado('error');
     }
-  }, [mes, t]);
+  }, [desde, hasta, tramoValido, t]);
 
   useEffect(() => {
     recargar();
   }, [recargar]);
 
-  // Rehacer un mes borra y vuelve a escribir lo que ya estaba, así que se pregunta antes
+  // Rehacer un período borra y vuelve a escribir lo que ya estaba, así que se pregunta antes
   // (regla 4). Lo que ya figura pagado no se toca, y eso lo garantiza el backend, no la advertencia.
   async function generar() {
     if (!(await confirmarDestructivo(t.pagos_asistentes.confirmar_generar))) return;
@@ -221,7 +239,7 @@ function LiquidacionesTab({ esAdmin }) {
     setError(null);
     setResultado(null);
     try {
-      setResultado(await llamarApiLiquidaciones('/generar', { method: 'POST', body: JSON.stringify({ periodo: mes }) }));
+      setResultado(await llamarApiLiquidaciones('/generar', { method: 'POST', body: JSON.stringify({ periodo: { desde, hasta } }) }));
       await recargar();
     } catch (e) {
       setError(mensajeDeError(e, t, 'generar liquidaciones'));
@@ -244,7 +262,7 @@ function LiquidacionesTab({ esAdmin }) {
       <div className="panel-tarjeta-titulo">
         <h2>{t.pagos_asistentes.tabs.liquidaciones}</h2>
         {esAdmin && (
-          <Button onClick={generar} disabled={generando || estado === 'cargando'}>
+          <Button onClick={generar} disabled={generando || estado === 'cargando' || !tramoValido}>
             {generando ? t.pagos_asistentes.generando : t.pagos_asistentes.generar}
           </Button>
         )}
@@ -254,8 +272,12 @@ function LiquidacionesTab({ esAdmin }) {
 
       <div className="panel-filtros">
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          {t.pagos_asistentes.col_periodo}
-          <input type="month" value={mes} onChange={(e) => setMes(e.target.value || mesActual())} />
+          {t.pagos_asistentes.filtro_desde}
+          <input type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} />
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          {t.pagos_asistentes.filtro_hasta}
+          <input type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} />
         </label>
         <input
           type="text"
@@ -458,8 +480,6 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
               <dl className="panel-detalle-lista">
                 <dt>{t.pagos_asistentes.col_asistente}</dt>
                 <dd>{liquidacion.asistente?.nombre || '—'}</dd>
-                <dt>{t.pagos_asistentes.col_periodo}</dt>
-                <dd>{mesDelPeriodo(liquidacion.periodo)}</dd>
                 <dt>{t.pagos_asistentes.col_tramo}</dt>
                 <dd>{tramoDelPeriodo(liquidacion, locale)}</dd>
                 <dt>{t.pagos_asistentes.col_relacion_laboral}</dt>

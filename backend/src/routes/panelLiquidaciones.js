@@ -7,7 +7,7 @@ import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { bordesDelPeriodo, calcularLiquidacion, esPeriodoValido, primerDia, ultimoDia } from '../utils/calcularLiquidacion.js';
-import { diaCorrido, frecuenciaDePagoDe, periodosQueTocan } from '../utils/frecuenciaDePago.js';
+import { diaCorrido, frecuenciaDePagoDe, periodosQueCierranEn } from '../utils/frecuenciaDePago.js';
 import { filasDelLegajoPorAsistente, tramosDelLegajoEnElPeriodo } from '../utils/valorDelLegajoEnLaFecha.js';
 import {
   LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
@@ -104,6 +104,29 @@ const soloAdministracion = exigirAdministracion('La Prestadora no habilitó esta
  * una liquidación de un trabajo que nunca hizo. Las fechas son de tipo `date`,
  * o sea texto `AAAA-MM-DD`, que se compara igual que un número.
  */
+/**
+ * Las dos fechas que se pidieron, o nada si no sirven.
+ *
+ * Llegan como `{ desde, hasta }`, en el cuerpo o en la dirección. Un mes escrito `AAAA-MM`
+ * sigue valiendo y quiere decir del primero al último día de ese mes.
+ */
+export function tramoPedido(pedido) {
+  const candidato = pedido && typeof pedido === 'object' && 'desde' in pedido
+    ? { desde: pedido.desde, hasta: pedido.hasta }
+    : pedido && typeof pedido === 'object'
+      ? pedido.periodo
+      : pedido;
+  if (!esPeriodoValido(candidato)) return null;
+  const { desde, hasta } = bordesDelPeriodo(candidato);
+  return { desde, hasta };
+}
+
+const MENSAJE_TRAMO_INVALIDO = 'Faltan las dos fechas del tramo, en formato AAAA-MM-DD, y la primera no puede ser posterior a la segunda';
+
+// Un mes tiene a lo sumo treinta y un días: el período que cierra el primer día del tramo
+// empezó, como mucho, treinta días antes.
+const DIAS_ANTES_DEL_TRAMO = 30;
+
 export function vinculoVigenteEnElPeriodo(asistente, periodo) {
   const { desde, hasta } = bordesDelPeriodo(periodo);
   if (asistente.fecha_alta && asistente.fecha_alta > hasta) return false;
@@ -313,20 +336,17 @@ async function nombresDeAsistentes(db, ids) {
 }
 
 panelLiquidacionesRouter.get('/', requiereRolPanel, requierePermiso(PERMISO_LECTURA), async (req, res) => {
-  const { periodo } = req.query;
-  if (!esPeriodoValido(periodo)) {
-    return res.status(400).json({ error: 'Falta el período a liquidar, en formato AAAA-MM' });
-  }
+  const tramo = tramoPedido(req.query);
+  if (!tramo) return res.status(400).json({ error: MENSAJE_TRAMO_INVALIDO });
 
-  // Se piden las liquidaciones que TOCAN ese mes, no las que empiezan el primer día. Desde que
-  // el período puede ser una semana o una quincena, un mes contiene varias, y una de ellas
-  // puede haber empezado el mes anterior. Quien mira septiembre tiene que ver esa semana.
+  // Se muestran las liquidaciones cuyo período CIERRA entre las dos fechas: son exactamente las
+  // que genera el botón con esas mismas fechas, así que lo que se ve es lo que se generó.
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('liquidaciones_asistente')
     .select('*')
-    .lte('periodo_desde', ultimoDia(periodo))
-    .gte('periodo_hasta', primerDia(periodo))
+    .gte('periodo_hasta', tramo.desde)
+    .lte('periodo_hasta', tramo.hasta)
     .order('periodo_desde', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);
@@ -336,14 +356,14 @@ panelLiquidacionesRouter.get('/', requiereRolPanel, requierePermiso(PERMISO_LECT
 });
 
 panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERMISO_LECTURA), soloAdministracion, async (req, res) => {
-  const { periodo } = req.body || {};
-  if (!esPeriodoValido(periodo)) {
-    return res.status(400).json({ error: 'Falta el período a liquidar, en formato AAAA-MM' });
-  }
+  const tramo = tramoPedido(req.body?.periodo);
+  if (!tramo) return res.status(400).json({ error: MENSAJE_TRAMO_INVALIDO });
 
   const db = clienteDelPedido(req);
-  const desde = primerDia(periodo);
-  const hasta = ultimoDia(periodo);
+  const { desde, hasta } = tramo;
+  // El período más largo que puede cerrar adentro del tramo es un mes, que puede haber empezado
+  // hasta treinta días antes del primer día pedido. Se lee desde ahí.
+  const lecturaDesde = diaCorrido(desde, -DIAS_ANTES_DEL_TRAMO);
 
   // Las liquidaciones nacen con la Prestadora que la base deja ver a quien pide.
   const { data: prestadora, error: errorPrestadora } = await db
@@ -354,19 +374,18 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   if (errorPrestadora) return responderError(res, errorPrestadora);
   if (!prestadora) return res.status(404).json({ error: 'Prestadora no encontrada' });
 
-  // Se traen los turnos de guardia de un tramo un poco más ancho que el mes, porque un período semanal o
-  // quincenal puede empezar en el mes anterior o terminar en el siguiente. Cada período se queda
-  // después con las suyas. Quince días de más a cada lado cubren cualquiera de las tres formas.
+  // Se traen los turnos de guardia desde el primer día que puede tener un período que cierra en el
+  // tramo. Cada período se queda después con los suyos.
   const turnos_guardia = await traerPaginado(() =>
     db
       .from('turnos_guardia')
       .select('id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, asistente_id')
-      .gte('fecha', diaCorrido(desde, -15))
-      .lte('fecha', diaCorrido(hasta, 15))
+      .gte('fecha', lecturaDesde)
+      .lte('fecha', hasta)
       .not('asistente_id', 'is', null)
       .order('id', { ascending: true })
   );
-  const acumuladoDelMes = acumularTurnosGuardia(turnos_guardia.filter((g) => g.fecha >= desde && g.fecha <= hasta));
+  const acumuladoDelTramo = acumularTurnosGuardia(turnos_guardia);
 
   // La relación laboral vive en su propia tabla, con permiso propio; la liquidación la recibe
   // como un dato más del Asistente.
@@ -396,7 +415,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     db
       .from('remuneraciones_asistente_anteriores')
       .select('asistente_id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, moneda, rige_desde')
-      .gte('rige_hasta', diaCorrido(desde, -15))
+      .gte('rige_hasta', lecturaDesde)
       .order('asistente_id', { ascending: true })
       .order('rige_desde', { ascending: true })
   );
@@ -429,15 +448,15 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     .eq('jurisdiccion', prestadora.pais);
   if (errorEscalas) return responderError(res, errorEscalas);
 
-  // Entra quien trabajó en el mes —aunque después se haya dado de baja, porque el trabajo que
+  // Entra quien trabajó en el tramo —aunque después se haya dado de baja, porque el trabajo que
   // hizo se le paga igual— y también quien está activo sin haber hecho ningún turno de guardia,
   // siempre que su vínculo estuviera en pie: el que cobra por semana cobra esos días lo mismo.
   const aLiquidar = asistentes.filter(
-    (a) => acumuladoDelMes.has(a.id) || (a.estado === 'activo' && vinculoVigenteEnElPeriodo(a, periodo))
+    (a) => acumuladoDelTramo.has(a.id) || (a.estado === 'activo' && vinculoVigenteEnElPeriodo(a, { desde: lecturaDesde, hasta }))
   );
 
-  // Las que ya están, de cualquier período que toque este mes. Se identifica cada una por la
-  // persona y el día en que su período empieza, que es lo que la base tiene por única.
+  // Las que ya están, de cualquier período que se pueda generar ahora. Se identifica cada una
+  // por la persona y el día en que su período empieza, que es lo que la base tiene por única.
   const { data: yaExistentes, error: errorExistentes } = await db
     .from('liquidaciones_asistente')
     .select('id, asistente_id, periodo_desde, estado')
@@ -474,14 +493,19 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     const pago = pagoPorAsistente.get(asistente.id) || {};
 
     // Cada persona tiene su propio calendario de cobro: lo de fábrica, corrido por la
-    // Prestadora, corrido a su vez por lo que se arregló con ella. Pedir «septiembre» quiere
-    // decir generar todos los períodos suyos que tocan septiembre, que con frecuencia mensual
-    // es uno solo y es el mes entero, igual que siempre.
+    // Prestadora, corrido a su vez por lo que se arregló con ella. Se generan los períodos suyos
+    // que cierran entre las dos fechas: quien cobra por día recibe uno por cada día, quien cobra
+    // los viernes uno por cada viernes, y quien cobra por mes uno cuando el mes terminó. Un
+    // período que todavía no cerró queda para cuando cierre, así que ningún día se paga dos
+    // veces ni se queda afuera.
     const frecuencia = frecuenciaDePagoDe(frecuenciaDeLaPrestadora, pago.frecuencia_pago);
-    const suyos = periodosQueTocan(desde, hasta, frecuencia);
+    const suyos = periodosQueCierranEn(desde, hasta, frecuencia);
 
     for (const unPeriodo of suyos) {
-      if (!acumuladoDelMes.has(asistente.id) && !vinculoVigenteEnElPeriodo(asistente, unPeriodo)) continue;
+      const trabajoDelPeriodo = turnos_guardia.some(
+        (g) => g.asistente_id === asistente.id && g.estado === ESTADO_HECHA && g.fecha >= unPeriodo.desde && g.fecha <= unPeriodo.hasta
+      );
+      if (!trabajoDelPeriodo && !(asistente.estado === 'activo' && vinculoVigenteEnElPeriodo(asistente, unPeriodo))) continue;
 
       const existente = existentes.get(`${asistente.id}|${unPeriodo.desde}`);
       // Una liquidación pagada no se toca: es el registro de una plata que ya salió.

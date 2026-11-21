@@ -12,6 +12,7 @@
 import { finDeTurnoGuardia, horaDeReloj, inicioDeTurnoGuardia, momentoDelReloj, sumarDias } from './horarios';
 import { estaSinCubrir } from './cobertura';
 import { horarioCorrido } from './accionesMasivasTurnosGuardia';
+import { IDENTIDAD } from '../config/identidadProducto';
 
 const MS_POR_MINUTO = 60 * 1000;
 
@@ -225,7 +226,7 @@ export function filaDeServicio(turno_guardia) {
 // datos borrados), se vuelve al valor de arranque sin romper nada.
 // ---------------------------------------------------------------------------------------------
 
-const PREFIJO_PREFERENCIA = 'careonys.turnos_guardia';
+const PREFIJO_PREFERENCIA = `${IDENTIDAD.codigo}.turnos_guardia`;
 
 function clavePreferencia(nombre, usuarioId) {
   return `${PREFIJO_PREFERENCIA}.${nombre}.${usuarioId ?? 'anonimo'}`;

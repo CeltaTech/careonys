@@ -113,6 +113,7 @@ const DATOS = {
       { fecha: '2026-10-08', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] },
     ],
   },
+  veto_de_decision: { fecha: '2026-10-07', servicio: 'Cuidado nocturno', motivo: 'El horario es el pactado' },
   incidente_turno_guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 12, veces: 2,

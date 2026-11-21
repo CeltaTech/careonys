@@ -208,14 +208,11 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      abarca. Hoy la nube no tiene ningún lugar cargado.
    - **Quién lo realiza:** los Asistentes que van a cubrir el Servicio. La administración nombra al
      Coordinador, y el Coordinador arma el equipo. El Coordinador se ocupa de todo el manejo
-     operativo del Servicio; en lo económico y en lo legal asiste a la administración. La
-     administración puede revisar y vetar las decisiones del Coordinador, pero no está obligada a
-     hacerlo.
+     operativo del Servicio; en lo económico y en lo legal asiste a la administración.
    - **Hoy** el equipo de la ficha se arma solo con quienes ya tienen turnos de guardia en el
      Servicio. Después lo corrigen a mano, sumando o sacando Asistentes, el Coordinador del Servicio
      con el permiso de modificar los Asistentes del Servicio, o la administración. Un Servicio
-     recién armado no tiene turnos de guardia, así que aparece sin equipo. No existe ninguna forma
-     de que la administración vete una decisión del Coordinador.
+     recién armado no tiene turnos de guardia, así que aparece sin equipo.
    - **Pasa a ser:** al armar el Servicio, el Coordinador suma a los Asistentes que lo van a
      realizar, con la misma corrección a mano que ya existe. El sistema le sugiere por lugar, por
      compatibilidad con las tareas, por capacidad para realizarlas, por antecedentes y por acuerdo

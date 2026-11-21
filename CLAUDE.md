@@ -435,6 +435,20 @@ Y `falta_la_firma_del_pagador`, que recibe un Servicio, resuelve la Prestadora a
 `prestadora_actual()`, sólo le contesta al personal de esa Prestadora y dice si ella pide la firma
 del Responsable de pagos para programar guardias y ese Servicio no la tiene vigente; un Servicio de otra
 Prestadora no devuelve nada.
+**Cada decisión del Coordinador en un Servicio la anota la base sola**, con un disparador en cada
+tabla que él puede cambiar, en `decisiones_de_coordinacion` y el estado anterior de cada fila en
+`cambios_de_la_decision`; registrar un hecho, como una ausencia, no se anota, y lo que se decidió
+por ese hecho sí. El backend, con la credencial de quien pide, llama tres funciones de `public`
+que resuelven la Prestadora adentro con `prestadora_actual()`: `vetar_decision`, que recibe una
+decisión y un motivo obligatorio, sólo deja a la administración de esa misma Prestadora y falla
+cerrada con cualquier otra cuenta; deja cada fila como estaba antes de la decisión de ahí en
+adelante, sin tocar un turno de guardia que ya empezó o terminó, y rechaza el veto con el motivo
+`decision_cambiada_despues` si alguien cambió lo mismo después, todo en una sola operación y con
+constancia en el registro de actividad; `marcar_veto_visto`, que recibe una decisión y sólo la
+marca si quien pide es el Coordinador que la tomó; y `cubrir_turno_guardia_con_sustituto`, que
+recibe un turno de guardia y el sustituto, sólo deja a quien puede gestionar la cobertura de ese
+Servicio o al trabajo sin persona, y guarda en una sola operación la constancia de la cobertura
+y el cambio de Asistente.
 **Un Servicio puede tener varios Responsables de pagos a la vez.** Cada uno es una fila con el día
 desde el que rige y, cuando deja de serlo, el día hasta el que rigió; la misma persona no está dos
 veces en días que se superponen, y una fila cargada no cambia de persona, de tipo ni de día desde:

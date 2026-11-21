@@ -532,8 +532,11 @@ describe('la tarea prohibida para el tipo del Asistente, en cada ruta que asigna
 
   it('al cubrir una ausencia con un sustituto', async () => {
     respuestas.set('GET /rest/v1/asistentes', () => [{ id: OTRO }]);
-    respuestas.set('POST /rest/v1/turnos_guardia_cobertura', () => []);
-    respuestas.set('PATCH /rest/v1/turnos_guardia', () => RECHAZO);
+    respuestas.set('POST /rest/v1/rpc/cubrir_turno_guardia_con_sustituto', () => RECHAZO);
     esElMotivo(await pedir('POST', `/${TURNO_GUARDIA}/cubrir`, { asistente_sustituto_id: OTRO }));
+    // Va con la credencial de quien pide, para que la decisión del Coordinador quede anotada.
+    const cobertura = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/cubrir_turno_guardia_con_sustituto');
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
+    assert.equal(cobertura.credencial, lectura.credencial);
   });
 });

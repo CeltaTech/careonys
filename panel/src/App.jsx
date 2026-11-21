@@ -10,6 +10,7 @@ import { ConfirmacionProvider } from './context/ConfirmacionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { PedidosDeAutorizacionProvider } from './context/PedidosDeAutorizacionContext';
 import { EmergenciasSinAtenderProvider } from './context/EmergenciasSinAtenderContext';
+import { VetosSinVerProvider } from './context/VetosSinVerContext';
 import { PuestaEnMarchaProvider } from './context/PuestaEnMarchaContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { ROLES_ADMINISTRACION, ROLES_PANEL } from './lib/roles';
@@ -34,6 +35,7 @@ import { Personas } from './pages/Personas';
 import { ClienteDetalle } from './pages/clientes/ClienteDetalle';
 import { Servicios } from './pages/Servicios';
 import { ServicioDetalle } from './pages/servicios/ServicioDetalle';
+import { DecisionesVetadas } from './pages/DecisionesVetadas';
 import { TurnosGuardia } from './pages/TurnosGuardia';
 import { Reportes } from './pages/Reportes';
 import { Alertas } from './pages/Alertas';
@@ -91,6 +93,9 @@ function App() {
             {/* Las emergencias sin atender. Va acá por el mismo motivo: el menú las cuenta desde
                 cualquier pantalla, y Situación operativa y Comunicación las muestran. */}
             <EmergenciasSinAtenderProvider>
+            {/* Las decisiones del Coordinador que la administración vetó y él no vio. El menú las
+                cuenta desde cualquier pantalla. */}
+            <VetosSinVerProvider>
             {/* Los umbrales del semáforo de guardia. Van acá por el mismo motivo que los pedidos:
                 son los de la Prestadora en la que se está trabajando ahora. */}
             <UmbralesProvider>
@@ -154,6 +159,7 @@ function App() {
                         niega de verdad es el backend. */}
                     <Route path="contenidos" element={<Contenidos />} />
                     <Route path="servicios/:id" element={<ServicioDetalle />} />
+                    <Route path="decisiones-vetadas" element={<ProtectedRoute roles={['coordinador']}><DecisionesVetadas /></ProtectedRoute>} />
                     <Route path="medicacion" element={<Medicacion />} />
                     <Route path="cargas-pendientes" element={<CargasPendientes />} />
                     <Route path="turnos-guardia" element={<TurnosGuardia />} />
@@ -278,6 +284,7 @@ function App() {
             </AdvertenciaLegalProvider>
             </PuestaEnMarchaProvider>
             </UmbralesProvider>
+            </VetosSinVerProvider>
             </EmergenciasSinAtenderProvider>
             </PedidosDeAutorizacionProvider>
           </ConfirmacionProvider>

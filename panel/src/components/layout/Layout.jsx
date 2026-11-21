@@ -6,6 +6,7 @@ import { useEmpresa } from '../../context/EmpresaContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { useEmergenciasSinAtender } from '../../context/EmergenciasSinAtenderContext';
+import { useVetosSinVer } from '../../context/VetosSinVerContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { MODALIDAD } from '../../lib/modalidades';
@@ -135,6 +136,7 @@ export function Layout() {
   // El contador de emergencias se pregunta solo cada pocos segundos: del otro lado hay alguien
   // esperando, y no puede depender de que a alguien se le ocurra abrir esa sección.
   const { emergencias: emergenciasSinAtender } = useEmergenciasSinAtender();
+  const { vetadas } = useVetosSinVer();
   const ubicacion = useLocation();
   const navegar = useNavigate();
 
@@ -195,6 +197,14 @@ export function Layout() {
       texto: t.nav.sec_servicios,
       enlaces: [
         { a: '/servicios', texto: t.nav.servicios, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        // Sólo para el Coordinador, y sólo mientras tenga alguna sin ver o esté en la página.
+        {
+          a: '/decisiones-vetadas',
+          texto: t.nav.decisiones_vetadas,
+          ver: verDirecta && usuario?.rol === 'coordinador' && (vetadas.length > 0 || ubicacion.pathname === '/decisiones-vetadas'),
+          contador: vetadas.length,
+          modalidad: MODALIDAD.DIRECTA,
+        },
       ],
     },
     {

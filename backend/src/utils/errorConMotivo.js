@@ -247,6 +247,12 @@ const ESTADO_POR_MOTIVO = {
   motivo_de_cierre_pide_detalle: 400,
   motivo_de_reactivacion_inexistente: 400,
   motivo_de_reactivacion_pide_detalle: 400,
+  // El veto de una decisión del Coordinador. La que no existe y la que es de otra Prestadora
+  // contestan lo mismo. La ya vetada, y la que alguien cambió después, son 409: el pedido está
+  // bien armado y choca con el estado de las cosas.
+  decision_inexistente: 404,
+  decision_ya_vetada: 409,
+  decision_cambiada_despues: 409,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.

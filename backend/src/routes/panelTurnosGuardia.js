@@ -19,10 +19,10 @@ export const panelTurnosGuardiaRouter = Router();
 
    Lo que la persona no puede escribir por sí misma va con el trabajo de la Prestadora de esa
    turno de guardia, después de que la base le dejó verla: abrir el incidente de una ausencia, que busca al
-   Asistente saliente aunque sea de otra zona; pasar el turno de guardia al sustituto, que puede ser de
-   otra zona porque el Coordinador ve el padrón entero (`coordinador_lee_el_padron_de_asistentes`)
-   y elige entre todos; y anotar un descanso, que la base le deja cargar sólo a la administración.
-   Si quien coordina puede elegir un sustituto de otra zona se decide aparte. */
+   Asistente saliente aunque sea de otra zona; y anotar un descanso, que la base le deja cargar sólo
+   a la administración. Pasar el turno de guardia al sustituto, que puede ser de otra zona porque el
+   Coordinador ve el padrón entero (`coordinador_lee_el_padron_de_asistentes`), va con la credencial
+   de quien pide: la función de la base `cubrir_turno_guardia_con_sustituto` decide quién puede. */
 
 /* Los turnos de guardia las escribe el Panel directo contra la base, con el pase de la persona, y así
    sigue siendo: reasignar, cancelar, registrar la llegada. Acá vive la excepción.
@@ -124,17 +124,17 @@ panelTurnosGuardiaRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacio
     .maybeSingle();
   if (!sustituto) return res.status(404).json({ error: 'No se encontró ese Asistente' });
 
-  // Con el trabajo de la Prestadora, porque el sustituto puede ser de otra zona: ver el encabezado.
-  const resultado = await enLaPrestadora(turno_guardia.prestadora_id, 'cubrir la guardia', (dbTrabajo) =>
-    cubrirTurnoGuardiaConSustituto({
-      db: dbTrabajo,
-      turno_guardia,
-      asistenteSustitutoId,
-      ausenciaId,
-      motivo,
-      motivoDetalle,
-      costoAdicional,
-    }));
+  // Con la credencial de quien pide: la función de la base decide si puede, y así la decisión del
+  // Coordinador queda anotada para que la administración la pueda vetar.
+  const resultado = await cubrirTurnoGuardiaConSustituto({
+    db,
+    turno_guardia,
+    asistenteSustitutoId,
+    ausenciaId,
+    motivo,
+    motivoDetalle,
+    costoAdicional,
+  });
   if (!resultado.ok) {
     // El turno pasa a nombre del sustituto, y eso la base lo rechaza igual que una asignación.
     if (motivoDeLaAsignacion({ message: resultado.motivo })) {

@@ -14,7 +14,7 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 // Entra con la conexión que recibe —la de quien asignó—: la marca de avisado la escribe la misma
 // persona que pudo asignar el turno.
 
-async function avisarAlAsistente({ prestadoraId, asistenteId, idioma, clave, datos, url }) {
+export async function avisarAlAsistente({ prestadoraId, asistenteId, idioma, clave, datos, url }) {
   try {
     const { titulo, cuerpo } = mensajeDelSistema(clave, idioma, datos);
     const enviadoPorPush = await enviarPushAsistente(prestadoraId, asistenteId, { titulo, cuerpo, url });

@@ -132,6 +132,7 @@ const DATOS_MINIMOS = {
   documento_para_firmar: { link: 'https://ejemplo/documento', producto: 'un producto' },
   origen_de_alerta: { fuente: 'aviso_telefonico' },
   turno_sin_cubrir: { turnos: [{ fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00', pacientes: ['Elena', 'Aníbal'] }] },
+  veto_de_decision: { fecha: '2026-10-07', servicio: 'Cuidado nocturno', motivo: 'El horario es el pactado' },
   turno_guardia_sin_cerrar: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     asistente: 'Marta', minutosDeAtraso: 40, salidaMarcada: true, veces: 2,

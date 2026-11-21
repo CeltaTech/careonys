@@ -18,6 +18,7 @@ import { T } from '../../../i18n/translations.js';
 
 let rol;
 let activas;
+let vetadas = [];
 
 vi.mock('../../../i18n/LocaleContext', () => ({
   useLocale: () => ({ t: T['es-AR'], locale: 'es-AR' }),
@@ -44,6 +45,9 @@ vi.mock('../../../context/ModalidadesContext', () => ({
 vi.mock('../../../context/EmergenciasSinAtenderContext', () => ({
   useEmergenciasSinAtender: () => ({ emergencias: [] }),
 }));
+vi.mock('../../../context/VetosSinVerContext', () => ({
+  useVetosSinVer: () => ({ vetadas }),
+}));
 vi.mock('../../../lib/supabaseClient', () => ({ supabase: {} }));
 vi.mock('../../../lib/apiContenidos', () => ({ llamarApiContenidos: () => Promise.resolve({ hay: false }) }));
 vi.mock('../SelectoresPreferencias', () => ({ SelectoresPreferencias: () => null }));
@@ -59,7 +63,7 @@ const PLATA_DE_MATCH = ['/intermediacion/clientes', '/intermediacion/formas-de-c
    interesa y se juntan los enlaces de las dos vistas. */
 function enlacesDelMenu() {
   const enlaces = new Set();
-  for (const ubicacion of ['/personas', '/asistentes', '/facturacion', '/intermediacion/formas-de-cobro', '/lista-precios']) {
+  for (const ubicacion of ['/personas', '/asistentes', '/servicios', '/facturacion', '/intermediacion/formas-de-cobro', '/lista-precios']) {
     const html = renderToStaticMarkup(
       <StaticRouter location={ubicacion}>
         <Layout />
@@ -73,6 +77,7 @@ function enlacesDelMenu() {
 describe('El menú del Panel', () => {
   beforeEach(() => {
     activas = ['intermediacion'];
+    vetadas = [];
   });
 
   it('al Coordinador no le muestra los enlaces de la plata de Match', () => {
@@ -99,5 +104,29 @@ describe('El menú del Panel', () => {
     }
     activas = [];
     expect(enlacesDelMenu().has('/clientes')).toBe(false);
+  });
+
+  // Las decisiones vetadas: si el enlace dejara de mirar el rol, la administración lo vería y falla
+  // la segunda; si dejara de mirar la cuenta, el Coordinador sin vetos lo vería y falla la tercera.
+  it('al Coordinador con decisiones vetadas sin ver le muestra el enlace', () => {
+    activas = ['directa'];
+    rol = 'coordinador';
+    vetadas = [{ id: 'd-1' }];
+    expect(enlacesDelMenu().has('/decisiones-vetadas')).toBe(true);
+  });
+
+  it('a la administración no le muestra el enlace de las decisiones vetadas', () => {
+    activas = ['directa'];
+    vetadas = [{ id: 'd-1' }];
+    for (const r of ['admin_prestadora', 'superadmin']) {
+      rol = r;
+      expect(enlacesDelMenu().has('/decisiones-vetadas'), r).toBe(false);
+    }
+  });
+
+  it('al Coordinador sin decisiones vetadas sin ver no le muestra el enlace', () => {
+    activas = ['directa'];
+    rol = 'coordinador';
+    expect(enlacesDelMenu().has('/decisiones-vetadas')).toBe(false);
   });
 });

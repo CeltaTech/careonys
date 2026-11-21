@@ -5,9 +5,30 @@ terminados ya no están en el plan. Los que quedan dicen qué esperan. Cada paso
 agrega acá, hasta que el plan quede vacío.
 
 Se hicieron todos los pasos que no esperaban una decisión suya ni algo de afuera, salvo los que
-necesitaban una pantalla nueva. Ninguna pantalla nueva salió.
+necesitaban una pantalla nueva. La única pantalla nueva que salió es la del veto de la
+administración, del paso 27.
 
 ## Lo que se hizo
+
+**Paso 27, el veto de la administración sobre las decisiones del Coordinador.** La administración
+de la Prestadora ya puede vetar cualquier decisión que el Coordinador tomó en un Servicio. En la
+ficha del Servicio hay una pestaña nueva, Decisiones, que sólo ve la administración. Ahí está cada
+decisión del Coordinador, con la fecha, qué cambió y si sigue vigente o fue vetada. El botón
+«Vetar» abre una ventana que pide el motivo, y sin motivo no se veta.
+
+Vetar deja las cosas como estaban antes de la decisión, de ese momento en adelante. Un turno de
+guardia que ya empezó o que ya terminó no cambia. Si después de esa decisión alguien volvió a
+cambiar los mismos datos, el sistema no aplica el veto y lo dice. Registrar un hecho, como una
+ausencia, no se puede vetar; lo que el Coordinador decidió por ese hecho, sí. Un turno de guardia
+que vuelve a un Asistente queda exactamente como estaba, y ese Asistente recibe el mismo aviso que
+en una asignación. Cada veto queda en el registro de actividad, con quién, cuándo y el motivo.
+
+El Coordinador se entera por tres caminos: un correo, un mensaje de WhatsApp y un aviso en el
+Panel. En el menú le aparece «Decisiones vetadas», con cuántas tiene sin ver. Ahí ve el Servicio,
+la decisión y el motivo, y la marca como vista.
+
+De paso, cubrir un turno de guardia con un sustituto ahora se guarda en una sola operación de la
+base: o queda todo guardado, o no queda nada.
 
 **Paso 27, los criterios para sugerir Asistentes: el lugar, las tareas, la Especialidad, los
 antecedentes y el valor.** Al asignar un turno de guardia, la lista de Asistentes sugeridas ahora
@@ -195,6 +216,14 @@ entero el 8 de noviembre de 2026: llegó el correo, el enlace abrió el document
 dejó la firma registrada y apareció «Descargar».
 
 ## Cómo se comprobó
+
+El veto del paso 27: pasaron las 2743 pruebas del backend y las 1072 del Panel, y el Panel
+construye sin error. En la base local se probaron siete casos de veto, entre ellos el cambio
+posterior que rechaza el veto, el veto sin motivo y el veto pedido por un Coordinador o por otra
+Prestadora, que la base rechaza. El caso del turno de guardia que ya empezó no se probó en la base
+local. La migración está aplicada en la base en la nube. No se
+corrieron las dos comprobaciones que entran con la contraseña de las Prestadoras de demostración,
+porque esa contraseña la tiene usted.
 
 Pasaron las 2507 pruebas del backend, las 889 del Panel, las 6 de la aplicación de los Clientes y las 41
 de la aplicación de los Asistentes, y las tres construyen sin error. La prueba que lee cada tabla con cada

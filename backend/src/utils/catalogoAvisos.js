@@ -64,6 +64,8 @@
 //   plazo_ubicacion_sin_aceptar    → utils/plazoDeLaUbicacion.js (notificarCoordinador)
 //   baja_servicio_con_deuda        → utils/avisoBajaConDeuda.js, pedido por routes/panelCuentas.js
 //                                    (aviso en el Panel + WhatsApp y mensaje de texto, sin correo)
+//   veto_de_decision               → utils/avisoVetoDeDecision.js, pedido por routes/panelDecisiones.js
+//                                    (aviso en el Panel + correo y WhatsApp al Coordinador)
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
 // `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
 // piden a un Asistente lo define el catálogo de cada Prestadora.
@@ -247,6 +249,14 @@ export const CATALOGO_MENSAJES = [
     // No puede haber un turno sin cubrir que nadie vea. La configuración elige por qué canal sale y
     // a qué dirección, nunca si sale.
     se_puede_apagar: false,
+  },
+  {
+    // Le llega al Coordinador que tomó la decisión, a su correo y a su teléfono, no a la dirección
+    // de contacto de la Prestadora: es una respuesta a él.
+    evento: 'veto_de_decision',
+    descripcion: 'La administración vetó una decisión del Coordinador',
+    admite_whatsapp: true,
+    admite_cliente: false,
   },
 ];
 

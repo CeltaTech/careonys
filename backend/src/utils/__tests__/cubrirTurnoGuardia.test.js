@@ -6,18 +6,16 @@
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Acá se cruzan dos cosas que el producto no puede perder: que quien
  * va a la casa del Paciente vea su turno de guardia y la pueda fichar —la aplicación del Asistente lista
- * por `turnos_guardia.asistente_id`—, y que quede escrito a quién le tocaba ese turno antes. Lo segundo
- * no se puede reconstruir después: si el turno de guardia cambia de nombre sin que nadie haya anotado al
- * titular, el dato no está en ningún lado.
+ * por `turnos_guardia.asistente_id`—, y que quede escrito a quién le tocaba ese turno antes. Las dos
+ * escrituras las hace juntas una sola función de la base; esta prueba mira que se la llame a ella,
+ * con todos los datos, y que su rechazo llegue tal cual a quien llama.
  *
  * La base es de mentira y contesta por HTTP como la de verdad, así que además del resultado se
- * mira **qué se le pidió y en qué orden**.
+ * mira **qué se le pidió**.
  *
- * QUÉ PASARÍA CON EL SISTEMA ROTO. Si volviera el diseño de dos turnos de guardia, la prueba de «no nace
- * ningún turno de guardia nuevo» falla. Si alguien invirtiera el orden, falla la del orden. Si el turno de guardia
- * dejara de reasignarse, falla la primera. Y si el fallo de la constancia no frenara el cambio de
- * nombre, falla la que lo comprueba. Y si un rechazo de la base al cambio de nombre dejara la
- * constancia escrita sin el turno a nombre del sustituto, fallan las del rechazo.
+ * QUÉ PASARÍA CON EL SISTEMA ROTO. Si volviera a escribir la constancia y el turno de guardia por
+ * separado, falla la de «un solo pedido». Si se perdiera un dato de la constancia, falla la que los
+ * compara. Y si el rechazo de la base se tragara o se cambiara, fallan las del rechazo.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -41,7 +39,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('data', (parte) => { cuerpo += parte; });
   req.on('end', () => {
     const url = new URL(req.url, 'http://interno');
-    const tabla = url.pathname.replace('/rest/v1/', '');
+    const tabla = url.pathname.replace('/rest/v1/', '').replace('rpc/', 'rpc:');
     pedidos.push({
       tabla,
       metodo: req.method,
@@ -55,9 +53,8 @@ const baseFalsa = createServer((req, res) => {
       return;
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    // La constancia nueva vuelve con su identificador, como contesta la base al pedirle `select`.
-    const escribioLaConstancia = tabla === 'turnos_guardia_cobertura' && req.method === 'POST';
-    res.end(escribioLaConstancia ? JSON.stringify([{ id: CONSTANCIA }]) : '[]');
+    // La función devuelve el identificador de la constancia nueva.
+    res.end(JSON.stringify(CONSTANCIA));
   });
 });
 
@@ -66,7 +63,7 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const { cubrirTurnoGuardiaConSustituto } = await import('../cubrirTurnoGuardia.js');
-// La función entra con la conexión que le pasan; la ruta del Panel le pasa la maestra.
+// La función entra con la conexión que le pasan.
 const { conexionDe } = await import('../../__tests__/adentroDeUnaPrestadora.js');
 const supabase = conexionDe();
 
@@ -87,6 +84,7 @@ const cubrir = (extra = {}) => cubrirTurnoGuardiaConSustituto({
   ...extra,
 });
 
+const RPC = 'rpc:cubrir_turno_guardia_con_sustituto';
 const pedidoA = (tabla, metodo) => pedidos.find((p) => p.tabla === tabla && p.metodo === metodo);
 
 describe('cubrir una guardia con un sustituto', () => {
@@ -98,31 +96,26 @@ describe('cubrir una guardia con un sustituto', () => {
 
   after(() => baseFalsa.close());
 
-  it('deja la guardia a nombre de quien la va a hacer', async () => {
+  it('hace todo en un solo pedido a la base', async () => {
     const resultado = await cubrir();
 
     assert.equal(resultado.ok, true);
-    const cambio = pedidoA('turnos_guardia', 'PATCH');
-    assert.ok(cambio, 'la guardia tiene que cambiar de nombre, o el sustituto no la ve');
-    assert.deepEqual(cambio.cuerpo, { asistente_id: SUSTITUTO });
-    assert.equal(cambio.parametros.get('id'), 'eq.g-1');
+    assert.deepEqual(pedidos.map((p) => `${p.metodo} ${p.tabla}`), ['POST rpc:cubrir_turno_guardia_con_sustituto'],
+      'la constancia y el cambio de nombre van juntos, o puede quedar la mitad');
   });
 
-  it('deja escrito a quién le tocaba y por qué lo hace otro', async () => {
+  it('le pasa a la base el turno, el sustituto y por qué lo hace otro', async () => {
     await cubrir({ motivoDetalle: 'se quedó sin transporte', costoAdicional: '1500' });
 
-    const constancia = pedidoA('turnos_guardia_cobertura', 'POST');
-    assert.ok(constancia, 'sin constancia, quién era el titular se pierde para siempre');
-    assert.deepEqual(constancia.cuerpo, {
-      prestadora_id: PRESTADORA,
-      ausencia_id: AUSENCIA,
-      turno_guardia_original_id: 'g-1',
-      asistente_titular_id: TITULAR,
-      asistente_sustituto_id: SUSTITUTO,
-      motivo: 'emergencia',
-      motivo_detalle: 'se quedó sin transporte',
-      costo_adicional: '1500',
-      cobertura_de_ausencia_id: null,
+    const pedido = pedidoA(RPC, 'POST');
+    assert.deepEqual(pedido.cuerpo, {
+      p_turno_guardia: 'g-1',
+      p_asistente_sustituto: SUSTITUTO,
+      p_ausencia: AUSENCIA,
+      p_cobertura_de_ausencia: null,
+      p_motivo: 'emergencia',
+      p_motivo_detalle: 'se quedó sin transporte',
+      p_costo_adicional: '1500',
     });
   });
 
@@ -133,47 +126,16 @@ describe('cubrir una guardia con un sustituto', () => {
     assert.equal(pedidoA('turno_guardia_pacientes', 'POST'), undefined);
   });
 
-  it('escribe la constancia antes de mover la guardia', async () => {
-    await cubrir();
-
-    const orden = pedidos.map((p) => p.tabla);
-    assert.deepEqual(orden, ['turnos_guardia_cobertura', 'turnos_guardia']);
-  });
-
-  it('si la constancia no se pudo escribir, la guardia no se mueve', async () => {
-    tablaQueFalla = 'turnos_guardia_cobertura';
-
-    const resultado = await cubrir();
-
-    assert.equal(resultado.ok, false);
-    assert.equal(pedidoA('turnos_guardia', 'PATCH'), undefined,
-      'el turno tiene que quedar como estaba: moverlo sin constancia pierde al titular');
-  });
-
   for (const rechazo of ['tarea_prohibida_bloquea: la tarea no se le asigna', 'modalidad_bloquea: la modalidad no le corresponde']) {
-    it(`si la base rechaza el cambio de nombre (${rechazo.split(':')[0]}), la constancia se borra`, async () => {
-      tablaQueFalla = 'turnos_guardia';
+    it(`si la base rechaza la cobertura (${rechazo.split(':')[0]}), el motivo llega tal cual`, async () => {
+      tablaQueFalla = RPC;
       mensajeDelRechazo = rechazo;
 
       const resultado = await cubrir();
 
       assert.equal(resultado.ok, false);
       assert.equal(resultado.motivo, rechazo, 'quien llama tiene que poder reconocer el motivo del rechazo');
-      assert.deepEqual(pedidos.map((p) => `${p.metodo} ${p.tabla}`), [
-        'POST turnos_guardia_cobertura',
-        'PATCH turnos_guardia',
-        'DELETE turnos_guardia_cobertura',
-      ]);
-      const borrado = pedidoA('turnos_guardia_cobertura', 'DELETE');
-      assert.equal(borrado.parametros.get('id'), `eq.${CONSTANCIA}`,
-        'tiene que borrar la constancia recién escrita y ninguna otra');
-      assert.equal(borrado.parametros.get('prestadora_id'), `eq.${PRESTADORA}`);
+      assert.equal(pedidos.length, 1, 'no hay nada que deshacer a mano: la base no escribió nada');
     });
   }
-
-  it('si el cambio de nombre sale bien, la constancia no se borra', async () => {
-    await cubrir();
-
-    assert.equal(pedidoA('turnos_guardia_cobertura', 'DELETE'), undefined);
-  });
 });

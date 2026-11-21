@@ -508,6 +508,13 @@ const ARMADORES = {
     })).join('\n'),
   }),
 
+  // Al Coordinador, cuando la administración le veta una decisión: qué día la tomó, en qué
+  // Servicio y el motivo que escribió la administración.
+  veto_de_decision: (t, d) => ({
+    asunto: t('veto_de_decision.asunto'),
+    texto: t('veto_de_decision.texto', { fecha: d.fecha, servicio: d.servicio, motivo: d.motivo }),
+  }),
+
   incidente_turno_guardia_sin_cubrir: (t, d) => ({
     asunto: t(d.yaEmpezo
       ? 'incidente_turno_guardia_sin_cubrir.asunto_ya_empezo'

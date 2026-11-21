@@ -21,6 +21,7 @@ import { coordinadoresSugeridos } from '../../lib/coordinadoresSugeridos';
 import { claseDeResponsable, modalidadesDeTurnosGuardia, nombreDeModalidad } from './modalidadesDelServicio';
 import { TareasDelServicio } from './TareasDelServicio';
 import { PagosDelServicio } from './PagosDelServicio';
+import { DecisionesDelServicio } from './DecisionesDelServicio';
 import { BajaDelServicioModal } from './BajaDelServicioModal';
 import { ReactivarElServicioModal } from './ReactivarElServicioModal';
 import { EquipoDelServicio } from './EquipoDelServicio';
@@ -326,6 +327,7 @@ export function ServicioDetalle() {
     ['seguimiento', d.tab_seguimiento],
     ['incidencias', d.tab_incidencias],
     ...(veLosPagos ? [['pagos', d.tab_pagos]] : []),
+    ...(esAdmin ? [['decisiones', d.tab_decisiones]] : []),
   ];
 
   const vacio = (texto) => <p className="estado-vacio">{texto}</p>;
@@ -618,6 +620,7 @@ export function ServicioDetalle() {
             onGuardado={recargar}
           />
         )}
+        {tab === 'decisiones' && esAdmin && <DecisionesDelServicio servicio={servicio} />}
       </section>
 
       {tab === 'resumen' && (

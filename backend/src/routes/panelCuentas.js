@@ -265,7 +265,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_asistentes'), exigirConfiguracionInicial, async (req, res) => {
-  const { nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, valor_hora, horas_semanales, modalidades } = req.body;
+  const { nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, valor_hora, horas_semanales, modalidades, rige_desde } = req.body;
   try {
     // Con el trabajo de la Prestadora, porque el permiso se le puede dar a quien coordina, y
     // `asistentes` y `remuneraciones_asistente` sólo aceptan altas de la administración. La
@@ -274,7 +274,7 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizaci
     const { asistenteId } = await enLaPrestadora(prestadoraId, 'alta de Asistente', (dbTrabajo) =>
       crearAsistenteDirecto({
         nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
-        valor_hora, horas_semanales, modalidades,
+        valor_hora, horas_semanales, modalidades, rige_desde,
         prestadoraId,
         usuarioPanelId: req.usuarioPanel.id,
         db: dbTrabajo,

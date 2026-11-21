@@ -75,6 +75,7 @@ import {
 } from '../utils/reenvioDeRespuestas.js';
 import { LIMITES_PREAVISO_TURNO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { reglaDePagoDe, revisarReglaDePago, soloLoQueCorreDelPago } from '../utils/formaDePago.js';
+import { ajusteDelPagoDe, ajusteDelPagoQueSePuedeGuardar } from '../utils/ajusteDelPagoPorIndice.js';
 import {
   frecuenciaDePagoDe,
   revisarFrecuenciaDePago,
@@ -1441,7 +1442,9 @@ panelConfiguracionRouter.get('/pago-asistentes', async (req, res) => {
   const corridoDeLaFrecuencia = data?.frecuencia_pago ?? {};
   res.json({
     configuracion: {
-      regla: reglaDePagoDe(corrido),
+      // La regla trae además el ajuste del valor del Legajo por índice, con las mismas claves que
+      // las condiciones de cobro al Cliente.
+      regla: { ...reglaDePagoDe(corrido), ...ajusteDelPagoDe(corrido) },
       corridos: corrido,
       // Con qué se mide el trabajo y cada cuánto se cobra son dos cosas distintas, y por eso
       // viajan separadas. Se le puede pagar por hora y cobrar por mes.
@@ -1457,6 +1460,16 @@ panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
   if (!revision.ok) {
     return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
   }
+
+  // El ajuste del valor del Legajo por índice viaja en la misma regla y se revisa igual que el de
+  // las prestaciones. Se guarda sólo lo que difiere de fábrica.
+  const ajuste = ajusteDelPagoQueSePuedeGuardar(req.body?.regla);
+  if (!ajuste.ok) {
+    return res
+      .status(400)
+      .json({ error: `El valor de «${ajuste.clave}» está fuera de lo permitido`, motivo: 'dato_invalido', clave: ajuste.clave });
+  }
+  Object.assign(corridos, ajuste.valor);
 
   const corridosDeLaFrecuencia = soloLoQueCorreDeLaFrecuencia(req.body?.frecuencia);
   const revisionDeLaFrecuencia = revisarFrecuenciaDePago(corridosDeLaFrecuencia);

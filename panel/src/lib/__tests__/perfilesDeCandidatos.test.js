@@ -195,7 +195,8 @@ describe('la ponderación por niveles', () => {
   it('los bloqueos y el techo de la continuidad no se ponderan', () => {
     expect(SITUACIONES_PONDERABLES).not.toContain('continuidad_maxima');
     expect(SITUACIONES_PONDERABLES).not.toContain('ocupado');
-    expect(SITUACIONES_PONDERABLES).toHaveLength(11);
+    expect(SITUACIONES_PONDERABLES).not.toContain('tarea_prohibida');
+    expect(SITUACIONES_PONDERABLES).toHaveLength(15);
   });
 
   it('cada nivel se reconoce a sí mismo', () => {

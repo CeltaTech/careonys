@@ -8,6 +8,7 @@ import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { bordesDelPeriodo, calcularLiquidacion, esPeriodoValido, primerDia, ultimoDia } from '../utils/calcularLiquidacion.js';
 import { diaCorrido, frecuenciaDePagoDe, periodosQueTocan } from '../utils/frecuenciaDePago.js';
+import { filasDelLegajoPorAsistente, tramosDelLegajoEnElPeriodo } from '../utils/valorDelLegajoEnLaFecha.js';
 import {
   LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
   mediosDePagoDeLaPrestadora,
@@ -382,11 +383,25 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
 
   // Lo que cobra cada uno vive en su propia tabla, separada del Legajo del Asistente justamente porque las
   // reglas de acceso de la base filtran filas y no columnas.
-  const { data: remuneraciones, error: errorRemuneraciones } = await db
-    .from('remuneraciones_asistente')
-    .select('asistente_id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, frecuencia_pago');
-  if (errorRemuneraciones) return responderError(res, errorRemuneraciones);
-  const pagoPorAsistente = new Map((remuneraciones || []).map((r) => [r.asistente_id, r]));
+  // Cada turno de guardia se paga con el valor que regía el día de ese turno, así que además de
+  // la fila vigente se lee la historia. Sólo hace falta la que todavía regía al empezar el tramo
+  // leído: lo que terminó antes no paga ningún turno de los que se liquidan.
+  const remuneraciones = await traerPaginado(() =>
+    db
+      .from('remuneraciones_asistente')
+      .select('asistente_id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, moneda, frecuencia_pago, rige_desde')
+      .order('asistente_id', { ascending: true })
+  );
+  const anteriores = await traerPaginado(() =>
+    db
+      .from('remuneraciones_asistente_anteriores')
+      .select('asistente_id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, moneda, rige_desde')
+      .gte('rige_hasta', diaCorrido(desde, -15))
+      .order('asistente_id', { ascending: true })
+      .order('rige_desde', { ascending: true })
+  );
+  const pagoPorAsistente = new Map(remuneraciones.map((r) => [r.asistente_id, r]));
+  const filasDelLegajo = filasDelLegajoPorAsistente(remuneraciones, anteriores);
 
   // Cómo paga esta Prestadora lo que no depende de una persona sola. Que la fila no exista no
   // es un error: es la configuración de fábrica.
@@ -436,6 +451,9 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     rehechas: 0,
     omitidas_ya_pagadas: [],
     sin_dato_base: [],
+    // Quien tuvo valores en dos monedas dentro del mismo período: pesos y dólares no se suman, y
+    // convertir pediría una cotización que decide la Prestadora.
+    varias_monedas_en_el_periodo: [],
     // El mismo concepto se saltea para todos los que le corresponden, así que la alerta es del
     // catálogo y no de cada persona: se dice una vez.
     sin_escala: new Set(),
@@ -472,13 +490,28 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         continue;
       }
 
-      const delPeriodo = acumularTurnosGuardia(
-        turnos_guardia.filter((g) => g.asistente_id === asistente.id && g.fecha >= unPeriodo.desde && g.fecha <= unPeriodo.hasta)
+      const turnosDelPeriodo = turnos_guardia.filter(
+        (g) => g.asistente_id === asistente.id && g.fecha >= unPeriodo.desde && g.fecha <= unPeriodo.hasta
       );
+      const SIN_TRABAJO = { turnos_guardia: 0, horas: 0, horasExtra: 0 };
+      const delPeriodo = acumularTurnosGuardia(turnosDelPeriodo);
+
+      // Cada día se paga con el valor del Legajo que regía ese día. El período se parte en los
+      // tramos en que rigió cada valor, y cada tramo lleva el trabajo hecho en sus días. Sin
+      // ningún valor cargado no hay tramos, y la cuenta lo dice como falta de la base.
+      const tramos = tramosDelLegajoEnElPeriodo(filasDelLegajo.get(asistente.id) || [], unPeriodo).map((tramo) => ({
+        desde: tramo.desde,
+        hasta: tramo.hasta,
+        valores: tramo.fila,
+        acumulado:
+          acumularTurnosGuardia(turnosDelPeriodo.filter((g) => g.fecha >= tramo.desde && g.fecha <= tramo.hasta)).get(asistente.id) ||
+          SIN_TRABAJO,
+      }));
 
       const calculada = calcularLiquidacion({
-        asistente: { ...asistente, ...pago },
-        acumulado: delPeriodo.get(asistente.id) || { turnos_guardia: 0, horas: 0, horasExtra: 0 },
+        asistente: { ...asistente, frecuencia_pago: pago.frecuencia_pago },
+        acumulado: delPeriodo.get(asistente.id) || SIN_TRABAJO,
+        tramos,
         conceptos: conceptos || [],
         escalasPorTipo: escalasDe(unPeriodo),
         moneda: prestadora.moneda,
@@ -487,6 +520,12 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         reglaDePago,
       });
 
+      if (calculada.variasMonedas) {
+        if (!resultado.varias_monedas_en_el_periodo.includes(asistente.nombre)) {
+          resultado.varias_monedas_en_el_periodo.push(asistente.nombre);
+        }
+        continue;
+      }
       if (calculada.faltaBase) {
         if (!resultado.sin_dato_base.includes(asistente.nombre)) resultado.sin_dato_base.push(asistente.nombre);
         continue;
@@ -503,8 +542,9 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         if (errorBorrado) return responderError(res, errorBorrado);
       }
 
-      // La moneda no se manda: la completa la base con la de la Prestadora, igual que en todas
-      // las tablas de importes (regla 14).
+      // La moneda va con la cuenta: es la del Legajo, que puede no ser la de la Prestadora. Si el
+      // Legajo no trae ninguna, la cuenta pone la de la Prestadora. Los renglones la heredan de
+      // la cabecera en la base.
       const { data: guardada, error: errorGuardar } = await db
         .from('liquidaciones_asistente')
         .insert({ prestadora_id: prestadora.id, ...calculada.liquidacion, generada_por: req.usuarioPanel.id })

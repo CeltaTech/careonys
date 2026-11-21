@@ -120,9 +120,19 @@ export function ListaDeAsistentes({
  * @param idsHuecos  en lugar de `huecos`, los ids de turnos de guardia que ya existen.
  * @param serieId    sólo los turnos de guardia de ese turno fijo.
  * @param excluir    ids de Asistente que no se ofrecen.
+ * @param servicioId      el Servicio, para sus criterios. Sin él, el de los turnos de guardia que ya existen.
+ * @param turnoGuardiaId  el turno de guardia, para mirar el lugar y las tareas de ese día.
  * @param onChange   recibe el id elegido —o `valorSinAsignar` si se eligió no asignar— y el candidato.
  */
-export function ElegirAsistente({ huecos = null, idsHuecos = null, serieId = null, excluir = [], ...lista }) {
-  const sugerencias = useSugerenciasDeAsistentes({ huecos, idsHuecos, serieId, excluir });
+export function ElegirAsistente({
+  huecos = null,
+  idsHuecos = null,
+  serieId = null,
+  servicioId = null,
+  turnoGuardiaId = null,
+  excluir = [],
+  ...lista
+}) {
+  const sugerencias = useSugerenciasDeAsistentes({ huecos, idsHuecos, serieId, servicioId, turnoGuardiaId, excluir });
   return <ListaDeAsistentes sugerencias={sugerencias} {...lista} />;
 }

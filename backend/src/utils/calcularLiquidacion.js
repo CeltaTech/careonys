@@ -99,68 +99,129 @@ export function redondear(numero) {
  * nada", que es una afirmación distinta de "no sabemos cuánto".
  *
  * `sinEscala` sale con los conceptos que quedaron afuera por no tener escala utilizable.
+ *
+ * CADA DÍA SE PAGA CON EL VALOR QUE REGÍA ESE DÍA. El valor del Legajo cambia con el tiempo, y
+ * `tramos` dice qué valor rigió en cada parte del período: `[{ desde, hasta, valores, acumulado }]`,
+ * seguidos, sin huecos y en orden. `valores` es la fila del Legajo de ese tramo —unidad, valores y
+ * moneda— y `acumulado` es el trabajo hecho en esos días. Cada tramo paga su parte con su valor:
+ *   - por hora y por turno de guardia, lo que se hizo en sus días;
+ *   - por semana, sus días divididos por siete, recortados al alta y a la baja si se prorratea.
+ *     Es la misma cuenta del período entero aplicada a cada parte, así que la suma de los tramos
+ *     de un período sin cambios da lo mismo que antes;
+ *   - las horas extra, con el valor de la hora extra de su tramo.
+ * Sin `tramos`, el período entero es un solo tramo con los valores de `asistente` y el
+ * `acumulado` suelto, que es como se calculaba antes de que el valor tuviera historia.
+ *
+ * UNA SOLA MONEDA POR LIQUIDACIÓN. Cada tramo trae la moneda de su fila del Legajo, o la de la
+ * Prestadora si no trae ninguna. Si dos tramos están en monedas distintas, devuelve
+ * `{ variasMonedas: [...] }` y no calcula nada: sumar pesos con dólares no da ningún número, y
+ * convertir obligaría a guardar una cotización, que es una decisión de la Prestadora.
  */
-export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPorTipo, moneda, jurisdiccion, periodo, reglaDePago }) {
+export function calcularLiquidacion({ asistente, acumulado, tramos, conceptos, escalasPorTipo, moneda, jurisdiccion, periodo, reglaDePago }) {
   const regla = reglaDePagoDe(reglaDePago);
-  const unidad = unidadDeMedicionDe(asistente);
-  const baseUnidad = COLUMNA_DEL_VALOR[unidad];
-  const baseValor = valorDeLaUnidad(asistente, unidad);
-  if (baseValor === null) return { faltaBase: true };
-
-  const horas = redondear(acumulado.horas);
   const { desde, hasta, etiqueta } = bordesDelPeriodo(periodo);
-  const cuantas = unidadesDelPeriodo({
-    unidad,
-    acumulado,
-    diasDeLaPersona: diasCubiertos({
-      desde,
-      hasta,
-      fechaAlta: asistente.fecha_alta,
-      fechaBaja: asistente.fecha_baja,
-      prorratear: regla.prorratear_monto_fijo,
-    }),
-  });
-  const montoBase = redondear(cuantas * baseValor);
+  const losTramos =
+    Array.isArray(tramos) && tramos.length > 0
+      ? tramos
+      : [{ desde, hasta, valores: asistente, acumulado }];
+  const variosTramos = losTramos.length > 1;
+
+  const monedasDeLosTramos = [...new Set(losTramos.map((tramo) => tramo.valores?.moneda ?? moneda))];
+  if (monedasDeLosTramos.length > 1) return { variasMonedas: monedasDeLosTramos };
+  const monedaDeLaLiquidacion = monedasDeLosTramos[0] ?? null;
+
+  // Qué paga cada tramo. Si a alguno le falta el valor de su unidad, la liquidación entera
+  // queda sin hacer: pagar una parte y callar la otra sería decir un total que no es.
+  const pagos = [];
+  for (const tramo of losTramos) {
+    const unidad = unidadDeMedicionDe(tramo.valores);
+    const valor = valorDeLaUnidad(tramo.valores, unidad);
+    if (valor === null) return { faltaBase: true };
+    const delTramo = tramo.acumulado ?? { turnos_guardia: 0, horas: 0, horasExtra: 0 };
+    const cuantas = unidadesDelPeriodo({
+      unidad,
+      acumulado: delTramo,
+      diasDeLaPersona: diasCubiertos({
+        desde: tramo.desde,
+        hasta: tramo.hasta,
+        fechaAlta: asistente.fecha_alta,
+        fechaBaja: asistente.fecha_baja,
+        prorratear: regla.prorratear_monto_fijo,
+      }),
+    });
+    pagos.push({ tramo, unidad, columna: COLUMNA_DEL_VALOR[unidad], valor, cuantas, delTramo, monto: redondear(cuantas * valor) });
+  }
+
+  // El trabajo del período entero es la suma del de sus tramos. Con un solo tramo es el
+  // `acumulado` de siempre.
+  const total = variosTramos
+    ? pagos.reduce(
+        (suma, { delTramo }) => ({
+          turnos_guardia: suma.turnos_guardia + (delTramo.turnos_guardia ?? 0),
+          horas: suma.horas + (delTramo.horas ?? 0),
+          horasExtra: suma.horasExtra + (delTramo.horasExtra ?? 0),
+        }),
+        { turnos_guardia: 0, horas: 0, horasExtra: 0 }
+      )
+    : pagos[0].delTramo;
+  const horas = redondear(total.horas ?? 0);
 
   // El renglón de la base va primero y no viene de ningún concepto. La descripción se escribe
   // con datos y no con una frase: la etiqueta que lee la Coordinadora sale de `base_unidad`,
   // que la pantalla traduce a los tres idiomas, mientras que esto es el detalle que permite
   // volver a explicar el importe años después sin depender del idioma en que se generó.
-  const items = [
-    {
-      concepto_id: null,
-      descripcion: `${baseUnidad} ${baseValor.toFixed(2)} × ${cuantas.toFixed(2)} ${unidad}`,
-      signo: 'suma',
-      unidad: 'base',
-      valor_aplicado: baseValor,
-      monto: montoBase,
-      orden: 0,
-    },
-  ];
+  // Con varios tramos va un renglón por tramo, con sus días al final; el tramo que no pagó nada
+  // no lleva renglón, salvo que ninguno haya pagado nada.
+  const conPago = variosTramos ? pagos.filter((pago) => pago.cuantas > 0) : pagos;
+  const renglonesDeLaBase = conPago.length > 0 ? conPago : [pagos[pagos.length - 1]];
+  const items = renglonesDeLaBase.map((pago) => ({
+    concepto_id: null,
+    descripcion:
+      `${pago.columna} ${pago.valor.toFixed(2)} × ${pago.cuantas.toFixed(2)} ${pago.unidad}` +
+      (variosTramos ? ` ${pago.tramo.desde} a ${pago.tramo.hasta}` : ''),
+    signo: 'suma',
+    unidad: 'base',
+    valor_aplicado: pago.valor,
+    monto: pago.monto,
+    orden: 0,
+  }));
+  const montoBase = redondear(pagos.reduce((suma, pago) => suma + pago.monto, 0));
+  // La cabecera guarda un solo valor de la base: el del último tramo que pagó, que es el que
+  // rige al cierre. El detalle de cada tramo queda en los renglones.
+  const baseDeLaCabecera = renglonesDeLaBase[renglonesDeLaBase.length - 1];
 
   // Las horas de más son remuneración, así que entran al bruto: un concepto que se calcula
   // como porcentaje del bruto tiene que verlas. Y si nadie cargó cuánto vale la hora extra,
   // no se estiman con el valor hora normal ni se pagan a cero: quedan afuera y se avisa, que
   // es lo mismo que ya se hace con un concepto sin escala vigente.
-  const horasExtra = redondear(acumulado.horasExtra ?? 0);
-  const valorHoraExtra = valorDeLaHoraExtra(asistente);
   const sinEscala = [];
-  let importeHorasExtra = 0;
-
-  if (horasExtra > 0 && valorHoraExtra === null) {
-    sinEscala.push(`horas extra: hay ${horasExtra.toFixed(2)} h anotadas y la ficha no tiene cargado el valor de la hora extra`);
-  } else if (horasExtra > 0) {
-    importeHorasExtra = redondear(horasExtra * valorHoraExtra);
+  const extras = [];
+  for (const pago of pagos) {
+    const horasExtraDelTramo = redondear(pago.delTramo.horasExtra ?? 0);
+    if (!(horasExtraDelTramo > 0)) continue;
+    const valorHoraExtra = valorDeLaHoraExtra(pago.tramo.valores);
+    const cuando = variosTramos ? ` entre ${pago.tramo.desde} y ${pago.tramo.hasta}` : '';
+    if (valorHoraExtra === null) {
+      sinEscala.push(`horas extra: hay ${horasExtraDelTramo.toFixed(2)} h anotadas${cuando} y la ficha no tiene cargado el valor de la hora extra`);
+      continue;
+    }
+    extras.push({ pago, horasExtra: horasExtraDelTramo, valor: valorHoraExtra, monto: redondear(horasExtraDelTramo * valorHoraExtra) });
+  }
+  for (const extra of extras) {
     items.push({
       concepto_id: null,
-      descripcion: `valor_hora_extra ${valorHoraExtra.toFixed(2)} × ${horasExtra.toFixed(2)} h`,
+      descripcion:
+        `valor_hora_extra ${extra.valor.toFixed(2)} × ${extra.horasExtra.toFixed(2)} h` +
+        (variosTramos ? ` ${extra.pago.tramo.desde} a ${extra.pago.tramo.hasta}` : ''),
       signo: 'suma',
       unidad: 'horas_extra',
-      valor_aplicado: valorHoraExtra,
-      monto: importeHorasExtra,
+      valor_aplicado: extra.valor,
+      monto: extra.monto,
       orden: 1,
     });
   }
+  const importeHorasExtra = redondear(extras.reduce((suma, extra) => suma + extra.monto, 0));
+  const horasExtra = redondear(total.horasExtra ?? 0);
 
   const bruto = redondear(montoBase + importeHorasExtra);
 
@@ -185,18 +246,23 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
       // Un importe en otra moneda no se convierte: convertirlo obligaría a guardar una
       // cotización y una fecha, y eso es una decisión de la Prestadora, no del sistema.
       // Un porcentaje no es plata y no trae moneda: ahí no hay nada que comparar.
-      if (escala.moneda && escala.moneda !== moneda) {
-        sinEscala.push(`${concepto.nombre}: la escala «${concepto.escala_tipo}» está en ${escala.moneda} y la liquidación en ${moneda}`);
+      if (escala.moneda && escala.moneda !== monedaDeLaLiquidacion) {
+        sinEscala.push(`${concepto.nombre}: la escala «${concepto.escala_tipo}» está en ${escala.moneda} y la liquidación en ${monedaDeLaLiquidacion}`);
         continue;
       }
       valorAplicado = Number(escala.valor);
     } else {
+      // El concepto propio que es plata trae su moneda, y vale lo mismo que con la escala.
+      if (concepto.moneda && concepto.moneda !== monedaDeLaLiquidacion) {
+        sinEscala.push(`${concepto.nombre}: el concepto está en ${concepto.moneda} y la liquidación en ${monedaDeLaLiquidacion}`);
+        continue;
+      }
       valorAplicado = Number(concepto.valor);
     }
 
     let monto;
     if (concepto.unidad === 'porcentaje') monto = (bruto * valorAplicado) / 100;
-    else if (concepto.unidad === 'monto_por_hora') monto = acumulado.horas * valorAplicado;
+    else if (concepto.unidad === 'monto_por_hora') monto = (total.horas ?? 0) * valorAplicado;
     else monto = valorAplicado;
     monto = redondear(monto);
 
@@ -212,14 +278,24 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
       unidad: concepto.unidad,
       valor_aplicado: valorAplicado,
       monto,
-      // El orden es la posición en el renglón, no el `orden` del catálogo: dos conceptos
-      // pueden tener el mismo número ahí y los renglones quedarían empatados.
       orden: items.length,
     });
   }
 
+  // El orden es la posición en el renglón, no el `orden` del catálogo: dos conceptos pueden
+  // tener el mismo número ahí y los renglones quedarían empatados. Con varios tramos hay varios
+  // renglones de la base y de horas extra, así que se numera recién al final.
+  items.forEach((item, posicion) => {
+    item.orden = posicion;
+  });
+
   totalSumas = redondear(totalSumas);
   totalRestas = redondear(totalRestas);
+
+  // La hora extra que va en la cabecera es la del último tramo que la pagó, por la misma razón
+  // que la base. Sin horas extra pagadas no hay valor que guardar, y guardar el del Legajo del
+  // Asistente diría que se pagó algo que no se pagó.
+  const ultimaExtra = extras[extras.length - 1];
 
   return {
     liquidacion: {
@@ -229,16 +305,16 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
       periodo: desde,
       periodo_desde: desde,
       periodo_hasta: hasta,
+      // La moneda va explícita porque es la del Legajo, que puede no ser la de la Prestadora.
+      // Los renglones la toman de acá.
+      moneda: monedaDeLaLiquidacion,
       relacion_laboral: asistente.relaciones_laborales?.nombre ?? null,
-      base_unidad: baseUnidad,
-      base_valor: baseValor,
+      base_unidad: baseDeLaCabecera.columna,
+      base_valor: baseDeLaCabecera.valor,
       horas,
-      turnos_guardia_contados: acumulado.turnos_guardia,
+      turnos_guardia_contados: total.turnos_guardia,
       horas_extra: horasExtra,
-      // El valor con el que se pagaron va en la foto: sin él, el importe no se puede volver a
-      // explicar. Sin horas extra no hay valor que guardar, y guardar el del Legajo del Asistente diría que
-      // se pagó algo que no se pagó.
-      valor_hora_extra: importeHorasExtra > 0 ? valorHoraExtra : null,
+      valor_hora_extra: importeHorasExtra > 0 && ultimaExtra ? ultimaExtra.valor : null,
       importe_horas_extra: importeHorasExtra,
       bruto,
       total_sumas: totalSumas,

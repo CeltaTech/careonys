@@ -25,18 +25,23 @@ import { mensajeDeError } from '../lib/errores';
    - `idsHuecos`: los ids de turnos de guardia que ya existen, que se traen de la base con sus
      Pacientes y su modalidad.
    `serieId` deja sólo los turnos de guardia de ese turno fijo. `excluir` son Asistentes que no se
-   ofrecen, como quien falta. */
+   ofrecen, como quien falta.
 
-const COLUMNAS_DEL_TURNO = 'id, asistente_id, paciente_id, serie_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, canal_modalidad';
+   `servicioId` y `turnoGuardiaId` son para los criterios del Servicio, que contesta la base. Un
+   turno de guardia que ya existe trae su Servicio, así que sin `servicioId` se usa el suyo. */
+
+const COLUMNAS_DEL_TURNO = 'id, asistente_id, paciente_id, servicio_id, serie_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, canal_modalidad';
 const COLUMNAS_DE_LA_AGENDA = 'id, asistente_id, paciente_id, serie_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin';
 const COLUMNAS_DEL_ASISTENTE = 'id, nombre, estado, cuenta_desactivada, disponible, horas_semanales, canales, disponibilidad';
 
 /** Lo que identifica a un turno de guardia para saber si cambió y hay que volver a cargar. */
-function claveDeHuecos(huecos, idsHuecos, serieId) {
-  if (Array.isArray(idsHuecos)) return JSON.stringify({ ids: [...idsHuecos].sort(), serieId: serieId ?? null });
+function claveDeHuecos(huecos, idsHuecos, serieId, servicioId, turnoGuardiaId) {
+  const delServicio = { servicioId: servicioId ?? null, turnoGuardiaId: turnoGuardiaId ?? null };
+  if (Array.isArray(idsHuecos)) return JSON.stringify({ ids: [...idsHuecos].sort(), serieId: serieId ?? null, ...delServicio });
   return JSON.stringify({
-    huecos: (huecos ?? []).map((h) => [h?.id ?? null, h?.fecha, h?.hora_inicio, h?.hora_fin, h?.dias_hasta_el_fin ?? 0, h?.canal_modalidad ?? null, idsDePacientes(h)]),
+    huecos: (huecos ?? []).map((h) => [h?.id ?? null, h?.servicio_id ?? null, h?.fecha, h?.hora_inicio, h?.hora_fin, h?.dias_hasta_el_fin ?? 0, h?.canal_modalidad ?? null, idsDePacientes(h)]),
     serieId: serieId ?? null,
+    ...delServicio,
   });
 }
 
@@ -106,6 +111,46 @@ async function cargarContinuidad(huecos) {
   return resultado;
 }
 
+/**
+ * Qué turno de guardia se le pasa a la base para un Servicio: el pedido, si es de ese Servicio;
+ * si no, el único turno de guardia que ya existe de ese Servicio. Con varios, ninguno, y la base
+ * mira el Servicio entero.
+ */
+function turnoParaLosCriterios(servicio, huecos, turnoGuardiaId) {
+  const delServicio = huecos.filter((h) => h.servicio_id === servicio && h.id);
+  if (turnoGuardiaId && (delServicio.some((h) => h.id === turnoGuardiaId) || !huecos.some((h) => h.id))) return turnoGuardiaId;
+  return delServicio.length === 1 ? delServicio[0].id : null;
+}
+
+/**
+ * Los criterios del Servicio para cada Asistente: una llamada por Servicio.
+ *
+ * Si la base no contesta —error o sin permiso—, ese Servicio queda sin fila y sus criterios no
+ * opinan: la lista sigue sirviendo con el resto de la cuenta.
+ *
+ * @returns {Promise<Map<string, Map<string, object>>>} Servicio → Asistente → fila.
+ */
+async function cargarCriterios(servicios, huecos, turnoGuardiaId, asistentes, topes) {
+  const resultado = new Map();
+  const ids = asistentes.map((a) => a.id).filter(Boolean);
+  if (!servicios.length || !ids.length) return resultado;
+  const meses = Math.round(Number(topes?.meses_de_antecedentes));
+  await Promise.all(servicios.map(async (servicio) => {
+    const { data, error } = await supabase.rpc('criterios_de_candidatas', {
+      p_servicio: servicio,
+      p_asistentes: ids,
+      p_turno_guardia: turnoParaLosCriterios(servicio, huecos, turnoGuardiaId),
+      p_meses_de_antecedentes: Number.isFinite(meses) ? meses : null,
+    });
+    if (error) {
+      console.error(error);
+      return;
+    }
+    resultado.set(servicio, new Map((data ?? []).map((fila) => [fila.asistente_id, fila])));
+  }));
+  return resultado;
+}
+
 async function cargarAsistentes(prestadoraId) {
   return traerTodasLasFilas((desde, hasta) =>
     supabase
@@ -158,26 +203,36 @@ async function cargarDocumentos(prestadoraId) {
  *   recargar: () => void,
  * }}
  */
-export function useSugerenciasDeAsistentes({ huecos = null, idsHuecos = null, serieId = null, excluir = [] } = {}) {
+export function useSugerenciasDeAsistentes({
+  huecos = null,
+  idsHuecos = null,
+  serieId = null,
+  servicioId = null,
+  turnoGuardiaId = null,
+  excluir = [],
+} = {}) {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const [carga, setCarga] = useState({ estado: 'cargando', error: null, huecos: [], datos: null, configuracion: null });
   const pedido = useRef(0);
 
-  const clave = claveDeHuecos(huecos, idsHuecos, serieId);
+  const clave = claveDeHuecos(huecos, idsHuecos, serieId, servicioId, turnoGuardiaId);
   // Lo que se usa adentro de la carga se lee de una referencia: los turnos de guardia llegan como
   // objetos nuevos en cada dibujo, y lo que decide si se vuelve a cargar es `clave`.
-  const entrada = useRef({ huecos, idsHuecos, serieId });
-  entrada.current = { huecos, idsHuecos, serieId };
+  const entrada = useRef({ huecos, idsHuecos, serieId, servicioId, turnoGuardiaId });
+  entrada.current = { huecos, idsHuecos, serieId, servicioId, turnoGuardiaId };
 
   const recargar = useCallback(async () => {
     if (!prestadoraId) return;
     const numero = ++pedido.current;
     setCarga((c) => ({ ...c, estado: 'cargando', error: null }));
     try {
-      const { huecos: dados, idsHuecos: ids, serieId: serie } = entrada.current;
+      const { huecos: dados, idsHuecos: ids, serieId: serie, servicioId: servicio, turnoGuardiaId: turno } = entrada.current;
       const [todos, configuracion] = await Promise.all([cargarHuecos(dados, ids), cargarConfiguracion(prestadoraId)]);
-      const elegidos = serie ? todos.filter((h) => h.serie_id === serie) : todos;
+      const elegidos = (serie ? todos.filter((h) => h.serie_id === serie) : todos)
+        .map((h) => (h.servicio_id || !servicio ? h : { ...h, servicio_id: servicio }));
+      // Sin `servicioId`, el Servicio sale de los turnos de guardia; si son de varios, uno por cada uno.
+      const servicios = [...new Set([servicio, ...elegidos.map((h) => h.servicio_id)].filter(Boolean))];
       const rango = rangoDeFechas(elegidos, configuracion.topes);
 
       const [asistentes, agenda, continuidad, ausencias, documentos] = await Promise.all([
@@ -189,14 +244,26 @@ export function useSugerenciasDeAsistentes({ huecos = null, idsHuecos = null, se
       ]);
       // La cercanía se calcula contra el primer turno de guardia: los de una misma ausencia o un
       // mismo turno fijo son de las mismas casas.
-      const distancias = elegidos.length ? await cargarDistanciasDeAsistentes(elegidos[0], asistentes.map((a) => a.id)) : {};
+      const [distancias, criterios] = await Promise.all([
+        elegidos.length ? cargarDistanciasDeAsistentes(elegidos[0], asistentes.map((a) => a.id)) : {},
+        cargarCriterios(servicios, elegidos, turno, asistentes, configuracion.topes),
+      ]);
 
       if (numero !== pedido.current) return;
       setCarga({
         estado: 'listo',
         error: null,
         huecos: elegidos,
-        datos: { asistentes, turnos_guardia: agenda, continuidad, ausencias, documentos, distancias },
+        datos: {
+          asistentes,
+          turnos_guardia: agenda,
+          continuidad,
+          ausencias,
+          documentos,
+          distancias,
+          criterios,
+          servicio_id: servicio ?? (servicios.length === 1 ? servicios[0] : null),
+        },
         configuracion,
       });
     } catch (e) {

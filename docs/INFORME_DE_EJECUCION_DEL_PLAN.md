@@ -9,6 +9,38 @@ necesitaban una pantalla nueva. Ninguna pantalla nueva salió.
 
 ## Lo que se hizo
 
+**Paso 27, los criterios para sugerir Asistentes: el lugar, las tareas, la Especialidad, los
+antecedentes y el valor.** Al asignar un turno de guardia, la lista de Asistentes sugeridas ahora
+mira cinco cosas más:
+
+- **El lugar.** Si la Asistente acepta trabajar en el lugar de todos los Pacientes del turno de
+  guardia: su domicilio o el domicilio temporal vigente. Si falta el lugar, el criterio no opina.
+- **Las tareas.** Una tarea o una vía de medicación prohibida para el tipo de la Asistente ya no
+  deja asignarla, por ningún camino: la base lo rechaza al guardar. Una tarea no incluida en su
+  tipo sólo avisa.
+- **La Especialidad.** En Configuración, cada tarea del tipo de Asistente puede pedir una
+  Especialidad. La sugerencia avisa cuántas le faltan a la Asistente.
+- **Los antecedentes.** Las calificaciones, las faltas sin aviso y las llegadas tarde de los
+  últimos 6 meses. Cada Prestadora cambia los meses y el peso de cada uno en la configuración del
+  cálculo.
+- **El valor.** En la ficha del Servicio, la administración carga el valor acordado con cada
+  Asistente, con su moneda y desde qué fecha rige. La sugerencia dice sólo si ese valor coincide
+  con el del Legajo. El Coordinador no ve ningún importe.
+
+El valor del Legajo ahora tiene fecha desde la que rige y guarda la historia de los valores
+anteriores. La liquidación paga cada día con el valor que regía ese día, aunque el valor haya
+cambiado en la mitad del período. Si en un mismo período el Legajo tiene valores en dos monedas,
+esa liquidación no se genera y se avisa. El valor del Legajo se ajusta por índice con el mismo
+mecanismo que el precio al Cliente: cada Prestadora elige en Configuración qué índice, o ninguno,
+y si se aplica solo o con revisión previa. Los ajustes con revisión previa aparecen en Ajustes por
+índice para aceptarlos o rechazarlos.
+
+De paso quedó corregido un defecto: al cubrir un turno de guardia, si la base rechazaba al
+sustituto, quedaba guardada una cobertura sin turno. Ahora esa cobertura se borra.
+
+No se hizo el nivel de complejidad, que espera la pregunta 82. Tampoco el valor del Legajo por
+mes, que espera que se decida cómo se liquida un mes.
+
 **Paso 25, el nombre «turno de guardia».** Todo lo guardado que es un turno de guardia ya se llama
 turno de guardia, nunca «turno» a secas ni «guardia»: las tablas, las columnas, las funciones, las
 reglas de acceso de la base, los tipos de aviso, las claves de los textos, el backend, el Panel y

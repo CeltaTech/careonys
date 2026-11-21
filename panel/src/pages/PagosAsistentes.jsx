@@ -89,6 +89,27 @@ function tramoDelPeriodo(liquidacion, locale) {
   return `${comoTexto(desde)} – ${comoTexto(hasta)}`;
 }
 
+/**
+ * Qué se pagó en un renglón que no viene de un concepto: la base o las horas extra.
+ *
+ * Cuando el valor del Legajo cambió dentro del período, hay un renglón por cada tramo, cada uno
+ * con su valor. El backend deja escrito en el detalle del renglón con qué columna se pagó y, si
+ * hay tramos, desde qué día hasta qué día: de ahí sale la etiqueta traducida y el tramo.
+ */
+const TRAMO_DEL_RENGLON = /(\d{4}-\d{2}-\d{2}) a (\d{4}-\d{2}-\d{2})$/;
+
+function etiquetaDelRenglon(item, liquidacion, textos, locale) {
+  const detalle = String(item.descripcion ?? '');
+  const columna = detalle.split(' ')[0];
+  const etiqueta =
+    item.unidad === 'base'
+      ? traducirValor(textos, `base_${columna.startsWith('valor_') ? columna : liquidacion.base_unidad}`)
+      : textos.horas_extra;
+  const tramo = TRAMO_DEL_RENGLON.exec(detalle);
+  if (!tramo) return etiqueta;
+  return `${etiqueta} · ${tramoDelPeriodo({ periodo_desde: tramo[1], periodo_hasta: tramo[2] }, locale)}`;
+}
+
 function formatearHoras(valor, locale) {
   return `${(Math.round(Number(valor ?? 0) * 10) / 10).toLocaleString(locale)} h`;
 }
@@ -331,6 +352,7 @@ function ResultadoGeneracion({ resultado }) {
   const conNombres = [
     { texto: t.pagos_asistentes.resultado_ya_pagadas, nombres: lista(resultado.omitidas_ya_pagadas) },
     { texto: t.pagos_asistentes.resultado_sin_dato_base, nombres: lista(resultado.sin_dato_base) },
+    { texto: t.pagos_asistentes.resultado_varias_monedas, nombres: lista(resultado.varias_monedas_en_el_periodo) },
     // El backend explica cada salteo en una línea que empieza con el nombre del concepto. Acá se
     // muestra el nombre y el porqué lo pone la frase traducida: la explicación del backend está
     // escrita en un solo idioma y nombra unidades internas, así que no se le pasa a nadie.
@@ -482,8 +504,8 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                   {items.map((item) => (
                     <tr key={item.id}>
                       <td>
-                        {item.unidad === 'base'
-                          ? traducirValor(t.pagos_asistentes, `base_${liquidacion.base_unidad}`)
+                        {item.unidad === 'base' || item.unidad === 'horas_extra'
+                          ? etiquetaDelRenglon(item, liquidacion, t.pagos_asistentes, locale)
                           : item.descripcion}
                       </td>
                       <td>{traducirValor(t.pagos_asistentes, `unidad_${item.unidad}`)}</td>

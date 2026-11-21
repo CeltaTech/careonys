@@ -66,6 +66,7 @@ import { respaldarLosDatos } from './utils/respaldoDeLosDatos.js';
 import { borrarLoVencidoDelRegistroDeAccesos } from './utils/borradoDelRegistroDeAccesos.js';
 import { avisarElBorradoDelRegistroDeAccesos } from './utils/avisoDeBorradoDelRegistroDeAccesos.js';
 import { ajustarLosPreciosPorIndice } from './utils/ajustePorIndice.js';
+import { ajustarLosValoresDelLegajoPorIndice } from './utils/ajusteDelLegajoPorIndice.js';
 import { avisarLasAlarmasDeLasCuentasAutomaticas } from './utils/alarmaDeLasCuentasAutomaticas.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
@@ -351,6 +352,10 @@ programar(avisarElBorradoDelRegistroDeAccesos, UN_DIA_MS, { conLaPrestadora: tru
 // El ajuste periódico de los precios de cada Servicio por el índice que rige: lo aplica, o deja la
 // propuesta para que la revise la administración, según lo que eligió cada Prestadora.
 programar(ajustarLosPreciosPorIndice, UN_DIA_MS, { conLaPrestadora: true });
+
+// El mismo ajuste para el valor del Legajo de cada Asistente, con el índice que eligió la
+// Prestadora para el pago a los Asistentes: lo aplica, o deja la propuesta para la administración.
+programar(ajustarLosValoresDelLegajoPorIndice, UN_DIA_MS, { conLaPrestadora: true });
 
 // El conteo diario de los accesos a la información de salud del día anterior que salen de lo
 // normal —fuera del horario, sin relación con el Paciente o con demasiados Pacientes en el día—,

@@ -365,12 +365,15 @@ const FILAS_DE_UNA_PERSONA_AUTORIZADA = [
 export async function crearAsistenteDirecto({
   nombre, telefono, email, documento, documento_tipo, documento_numero, documento_pais, dni, genero,
   domicilio, domicilioPartido, tipo_asistente_id, tipo_asistente, lugares, estado,
-  valor_hora, horas_semanales, modalidades,
+  valor_hora, horas_semanales, modalidades, rige_desde,
   prestadoraId, usuarioPanelId, importacionId, db,
 }) {
   if (!nombre || !email) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email)');
   }
+  // Desde qué día rige el valor del Legajo. Es optativo: sin fecha, la base lo hace regir desde
+  // hoy en el día de la Prestadora. Se comprueba antes de crear nada.
+  if (rige_desde && !esFechaValida(rige_desde)) throw new ErrorConMotivo('dato_invalido');
 
   // Cómo figura ante el organismo fiscal. El Panel manda el tipo elegido de la lista; una planilla
   // manda sólo el número, y entonces el tipo es el primero del país que lleva dígito verificador,
@@ -464,6 +467,7 @@ export async function crearAsistenteDirecto({
         asistente_id: asistenteId,
         prestadora_id: prestadoraId,
         valor_hora: valor_hora || null,
+        ...(rige_desde ? { rige_desde } : {}),
       });
       if (errorRemuneracion) throw new Error(errorRemuneracion.message);
     }

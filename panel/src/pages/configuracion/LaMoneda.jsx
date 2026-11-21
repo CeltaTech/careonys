@@ -7,6 +7,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { nombreDeLaMoneda } from '../../lib/nombreDeLaMoneda';
 import '../../styles/molde-paginas.css';
 
 /* En qué moneda trabaja esta Prestadora.
@@ -26,7 +27,8 @@ import '../../styles/molde-paginas.css';
 
    CÓMO SE ESCRIBE CADA OPCIÓN. El código de tres letras es lo que se guarda, y el nombre al
    lado lo pone el navegador en el idioma que esté elegido: no hay ninguna lista de nombres de
-   monedas escrita a mano, que además habría que mantener en tres idiomas. */
+   monedas escrita a mano, que además habría que mantener en tres idiomas. Cómo se arma ese
+   texto vive en `lib/nombreDeLaMoneda.js`, el mismo que usan las demás pantallas. */
 export function LaMoneda() {
   const { t, locale } = useLocale();
   const { refrescarUsuario } = useAuth();
@@ -105,7 +107,7 @@ export function LaMoneda() {
             >
               {monedas.map((codigo) => (
                 <option key={codigo} value={codigo}>
-                  {comoSeLlama(codigo, locale)}
+                  {nombreDeLaMoneda(codigo, locale)}
                 </option>
               ))}
             </FormField>
@@ -119,15 +121,4 @@ export function LaMoneda() {
       </EstadoLista>
     </section>
   );
-}
-
-/* El código y, si el navegador lo sabe, cómo se llama esa moneda en el idioma elegido. Si no lo
-   sabe queda el código solo, que es lo que se guarda: nunca un nombre inventado. */
-function comoSeLlama(codigo, locale) {
-  try {
-    const nombre = new Intl.DisplayNames([locale], { type: 'currency' }).of(codigo);
-    return nombre && nombre !== codigo ? `${codigo} — ${nombre}` : codigo;
-  } catch {
-    return codigo;
-  }
 }

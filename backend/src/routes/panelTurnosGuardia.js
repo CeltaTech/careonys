@@ -135,7 +135,13 @@ panelTurnosGuardiaRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacio
       motivoDetalle,
       costoAdicional,
     }));
-  if (!resultado.ok) return res.status(500).json({ error: resultado.motivo });
+  if (!resultado.ok) {
+    // El turno pasa a nombre del sustituto, y eso la base lo rechaza igual que una asignación.
+    if (motivoDeLaAsignacion({ message: resultado.motivo })) {
+      return responderRechazo(req, res, { message: resultado.motivo });
+    }
+    return res.status(500).json({ error: resultado.motivo });
+  }
 
   res.json({ ok: true });
 });
@@ -208,6 +214,9 @@ export function motivoDeLaAsignacion(error) {
   }
   const modalidad = /modalidad_bloquea:([a-z_]+)/.exec(texto);
   if (modalidad) return { estado: 409, motivo: `modalidad_bloquea:${modalidad[1]}` };
+  // Lo revisa la base al confirmar la escritura: al Asistente le tocaría una tarea o una vía de
+  // medicación prohibida para su tipo. Llega en la misma llamada que asignó.
+  if (texto.startsWith('tarea_prohibida_bloquea:')) return { estado: 409, motivo: 'tarea_prohibida_bloquea' };
   return LO_QUE_RECHAZA_LA_BASE.find((r) => r.patron.test(texto)) ?? null;
 }
 

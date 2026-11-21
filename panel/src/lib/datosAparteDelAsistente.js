@@ -20,7 +20,7 @@
  */
 
 /** Lo que hay que agregar al `select` para que la base traiga también los importes. */
-export const CAMPOS_PAGO = 'remuneraciones_asistente(unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, frecuencia_pago)';
+export const CAMPOS_PAGO = 'remuneraciones_asistente(unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, frecuencia_pago, moneda, rige_desde)';
 
 /** Lo que hay que agregar al `select` para que la base traiga también lo reservado. */
 export const CAMPOS_RESERVADOS = 'datos_reservados_asistente(motivo_exclusion_directo, motivo_exclusion_intermediacion)';
@@ -61,6 +61,10 @@ export function conDatosAparte(asistente) {
     valor_turno_guardia: pago?.valor_turno_guardia ?? null,
     valor_semana: pago?.valor_semana ?? null,
     valor_hora_extra: pago?.valor_hora_extra ?? null,
+    // En qué moneda está el valor del Legajo y desde qué fecha rige. Van con su propio nombre
+    // porque `moneda` y `rige_desde` sueltos se leerían como datos del Asistente.
+    moneda_pago: pago?.moneda ?? null,
+    rige_desde_pago: pago?.rige_desde ?? null,
     // Cada cuánto cobra esta persona. Vacío quiere decir «lo que diga la Prestadora», y es lo
     // normal: sólo se guarda acá lo que se arregló distinto con ella.
     frecuencia_pago: pago?.frecuencia_pago ?? {},

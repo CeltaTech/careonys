@@ -219,8 +219,7 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
    - **Pasa a ser:** al armar el Servicio, el Coordinador suma a los Asistentes que lo van a
      realizar, con la misma corrección a mano que ya existe. El sistema le sugiere por lugar, por
      compatibilidad con las tareas, por capacidad para realizarlas, por antecedentes y por acuerdo
-     económico; el lugar es el punto «El lugar entra en el cálculo de candidatas» y los otros
-     cuatro, el punto «Los criterios de sugerencia que faltan». La lista que se arma sola se
+     económico, con los criterios que ya están en el cálculo de candidatas. La lista que se arma sola se
      conserva: quien empieza a tener turnos de guardia aparece igual.
 
 5. **Modificar, pausar, suspender y cancelar, total o parcialmente.**
@@ -265,24 +264,11 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
        también los pausados.
      - La internación no mira si el Servicio sigue vigente. Pasa a mirarlo.
 
-6. **El lugar entra en el cálculo de candidatas.**
-   - **Hoy la lista de candidatas no aparece en ninguna pantalla.** El cálculo existe
-     (`panel/src/lib/candidatos.js:386`) y su configuración tiene pantalla, pero ninguna pantalla
-     de asignación lo llama. Mira el Padrón, la continuidad, si está libre a esa hora, la modalidad,
-     las ausencias, si se marcó disponible, los documentos, las horas por semana, el descanso entre
-     turnos y la distancia en línea recta. No mira el lugar.
-   - **Legajo:** guarda «Dónde acepta trabajar», que se elige de la lista de lugares de la
-     Prestadora. Hoy en la nube ninguna de las 46 Asistentes tiene lugares elegidos.
-   - **Reclutamiento:** la postulación pide los lugares escritos a mano y una distancia máxima, y
-     ninguno de los dos pasa al Legajo al incorporar al aspirante. Es el defecto «Al incorporar un
-     aspirante se pierden datos», más abajo en este plan.
-   - **Propuesta:** la base dice si la Asistente acepta trabajar en el lugar del Paciente, sea su
-     domicilio o un domicilio temporal vigente. Si el Paciente o la Asistente no tienen lugar
-     cargado, el criterio no opina.
-   - **La lista vuelve a una pantalla:** la de asignar una Asistente a un turno de guardia, con la
-     configuración que ya existe.
-   - **El nivel de complejidad entra en la misma pasada**, como dice el paso de más abajo sobre el
-     mismo archivo. Es información de salud: no viaja al Panel, la base contesta sólo si la
+6. **El nivel de complejidad entra en el cálculo de candidatas.**
+   - **Hoy:** el lugar ya entra en el cálculo, y el nivel de complejidad no. Se carga y se edita,
+     y nadie lo mira.
+   - **Espera la pregunta 82**, que dice qué significa cada nivel y si condiciona qué tipo de
+     Asistente se admite. Es información de salud: no viaja al Panel, la base contesta sólo si la
      Asistente alcanza o no.
 
 7. **La sugerencia de quién coordina.**
@@ -295,44 +281,14 @@ punto se comprobó contra el código y la base en la nube; los números de la ba
      tiene cada uno y por si el lugar del Servicio está entre los lugares que cubre. La cuenta la hace la base,
      sólo para la administración. El sistema sugiere y la administración elige.
 
-8. **Los criterios de sugerencia que faltan, además del lugar.**
-   - **Compatibilidad con las tareas.** El Legajo guarda el tipo de Asistente, y cada tipo dice qué
-     tareas tiene habilitadas, no incluidas o prohibidas. Las tareas acordadas de cada Servicio se
-     guardan (hoy 0 en la nube). El cálculo de candidatas no lo lee. Además hay un defecto: la
-     tarea prohibida traba sólo al cargar las tareas acordadas, no al asignar el turno. Hoy se
-     puede asignar un cuidador a un Servicio con tareas acordadas para enfermería. Pasa a trabarse
-     al asignar, que es lo único que la regla de las tres clases de tarea bloquea; la no incluida
-     sólo avisa.
-   - **Capacidad para realizarlas.** Para tener la capacidad de realizar una tarea, la Asistente
-     tiene que contar con la Especialidad adecuada. El Legajo guarda las Especialidades de la
-     Asistente, del catálogo de su tipo: hoy 11 Especialidades en la nube y 50 asignadas. Hoy
-     ninguna tarea dice qué Especialidad pide. Decidido: cada tarea del catálogo de su tipo puede
-     pedir una Especialidad, y no es obligatorio; sin Especialidad pedida, alcanza con el tipo. En
-     el Legajo tampoco es obligatoria: hoy 5 Asistentes no tienen ninguna. El cálculo de candidatas compara las tareas acordadas del
-     Servicio contra las Especialidades del Legajo. La postulación pide además experiencia
-     clínica, estudios y años de experiencia, y nada de eso pasa al Legajo al incorporar al
-     aspirante.
-   - **Antecedentes de la Asistente.** El Legajo guarda calificaciones, ausencias, llegadas tarde,
-     horas extra e incidentes de relevo, y las referencias laborales que trae la postulación. La
-     experiencia laboral de la postulación no pasa al Legajo. Decidido: cuentan las
-     calificaciones, las ausencias sin aviso y las llegadas tarde de los últimos seis meses, con el
-     período en la configuración del cálculo para que cada Prestadora lo cambie.
-   - **Acuerdo económico.** El Legajo guarda lo que cobra cada Asistente: hoy 38 de 46 lo tienen
-     cargado, por hora, por turno de guardia o por semana. La postulación pide el honorario
-     pretendido, y no pasa al Legajo. La Prestación guarda sólo el precio al Cliente: nada dice
-     cuánto se le paga a la Asistente por ese Servicio, así que hoy no hay contra qué comparar.
-     Decidido: el valor del Legajo es el que la Asistente pretende, y se actualiza por un índice o
-     a pedido de ella. La Prestadora puede proponerle otro valor en cada Servicio y negociarlo. El
-     criterio compara el valor del Servicio con el que la Asistente pretende.
-     - **Hoy:** el valor del Legajo es uno solo por Asistente, sin fecha desde la que rige y sin
-       historia, y el índice sólo actualiza el precio al Cliente.
-     - **Decidido:** el valor del Legajo guarda desde qué fecha rige cada monto, como pide la
-       regla de calcular a la escala vigente a la fecha del hecho. El ajuste por índice del Legajo
-       reusa el mecanismo que ya actualiza el precio al Cliente, y es configurable por Prestadora
-       igual que ése: qué índice, o ninguno, y si se aplica solo o con revisión previa. Del valor
-       de cada Servicio para cada Asistente se guarda sólo el valor final de la negociación, con
-       su moneda, aparte del Legajo. El Coordinador
-     no ve remuneraciones: la comparación la hace la base y contesta sólo si encaja o no.
+8. **El valor del Legajo por mes.**
+   - **Hoy:** la base acepta que un Legajo cobre por mes, y en la nube hay 15 Legajos así, ninguno
+     con valor cargado. Pero el Legajo no tiene dónde guardar el valor mensual, la pantalla no
+     ofrece «Por mes» y la liquidación paga esos Legajos como si cobraran por hora. El valor
+     acordado de cada Servicio sí admite el mes.
+   - **Falta decidir** cómo se liquida un mes: un monto fijo por mes calendario, o repartido por
+     los días trabajados. Con esa respuesta se agrega el valor mensual al Legajo, a su pantalla y a
+     la liquidación.
 
 El acto no trae convertidor de los días y horarios escritos hoy a mano en la Prestación, porque no hay datos reales que
 convertir: en la nube hay 0 Prestaciones. No toca las dos aplicaciones de teléfono, que no escriben
@@ -1171,13 +1127,9 @@ títulos:
   configuración por Prestadora. Las alertas tempranas las enciende o apaga cada Prestadora, una por
   una (sección «El Paciente nunca queda solo»), y el aviso del turno sin cubrir no puede ser
   de ésas: usted fijó que no puede haber un turno sin cubrir que nadie vea.
-- **La sugerencia de Asistentes no mira la zona, y no aparece en ninguna pantalla.** El cálculo
-  —`panel/src/lib/candidatos.js`— no nombra zonas; sí mira la distancia en línea recta hasta la
-  casa del Paciente, cuando las dos ubicaciones están cargadas. Ninguna pantalla de asignación lo
-  llama. **Y más abajo hay otro paso sobre ese mismo archivo**, el del nivel de complejidad. Los
-  dos se hacen en una sola pasada.
-- **El acuerdo económico como criterio de sugerencia necesita un dato que falta**: lo que cobra
-  cada Asistente sí se guarda, pero no si aceptó ese monto para un Servicio.
+- **La sugerencia de Asistentes ya mira el lugar, las tareas, la Especialidad, los antecedentes y
+  el valor acordado**, y aparece al asignar un turno de guardia. Le falta el nivel de complejidad,
+  que espera la pregunta 82.
 - **Un coordinador de sólo lectura no puede ser el asignado.** Más abajo se pregunta cómo entra un
   Pagador que sólo consulta, y una de las salidas propuestas es un Coordinador de sólo lectura.
   Quien tiene el Servicio asignado arma el equipo: si esa salida se elige, tiene que decir que ese

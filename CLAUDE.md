@@ -351,7 +351,7 @@ de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 `supabase/config.toml` a propósito: así no son direcciones web. Las políticas las siguen
 encontrando porque guardan el identificador interno de la función, no su nombre. **Una función se
 queda en `public` solamente si el navegador la llama a propósito, y entonces no puede recibir un
-identificador que la apunte a otra Prestadora** — hoy el Panel llama diez: `resolver`, que
+identificador que la apunte a otra Prestadora** — hoy el Panel llama doce: `resolver`, que
 resuelve la Prestadora adentro con `prestadora_actual()`; `reasignar_turno_guardia_por_emergencia`, que
 también la resuelve adentro, corre con los permisos de quien llama y es el único camino por el que
 una guardia empezada —la ausente— cambia de Asistente, con motivo y registro, con un
@@ -375,13 +375,24 @@ quien llama, resuelve la Prestadora adentro con `prestadora_actual()` y sólo le
 Administrador de esa Prestadora —un Servicio de otra Prestadora no devuelve nada—: lista los
 Coordinadores con cuántos Servicios vigentes coordina cada uno y si cubre el lugar de los
 Pacientes del Servicio, por localidad o por zona, primero los que lo cubren y después los que
-coordinan menos; y `asistentes_que_atendieron_a_pacientes`, que recibe Pacientes, corre con los
+coordinan menos; `asistentes_que_atendieron_a_pacientes`, que recibe Pacientes, corre con los
 permisos de quien llama y devuelve una fila por Asistente: cuántos turnos de guardia tuvo con
 alguno de esos Pacientes y la fecha del último. Cada turno de guardia cuenta una sola vez, aunque
 tenga a varios de esos Pacientes, y cuenta sólo el que tiene Asistente, no está cancelado ni
-ausente y ya empezó en la zona horaria de la Prestadora.
+ausente y ya empezó en la zona horaria de la Prestadora;
+`criterios_de_candidatas`, que recibe un Servicio, Asistentes, un turno de guardia optativo y los
+meses de antecedentes, resuelve la Prestadora adentro, sólo le contesta al personal de esa
+Prestadora e ignora en silencio a los Asistentes de otra: dice si cada uno acepta el lugar de
+todos los Pacientes, si tiene una tarea prohibida, cuántas tareas no incluidas y cuántas
+Especialidades le faltan, su calificación, sus faltas sin aviso y llegadas tarde, y si el valor
+acordado en el Servicio coincide con el pretendido del Legajo, sin entregar ningún importe; y
+`revisar_propuesta_de_ajuste_del_legajo`, que recibe una propuesta de ajuste por índice del valor
+del Legajo y la acepta o la rechaza, sólo para la administración con permiso de ver pagos.
 `ausencias_que_tapan` sigue en `public`, recibe dos fechas y resuelve la Prestadora adentro, pero
-no la llama nadie. Además el Panel lee `cuenta_desactivada` como columna calculada de
+no la llama nadie; tampoco `valor_del_legajo_en`, que recibe un Asistente y una fecha, corre con
+los permisos de quien llama y devuelve el valor del Legajo que regía ese día. Una tarea o una vía
+de medicación prohibida para el tipo del Asistente la rechaza la base al asignar el turno de
+guardia, con el motivo `tarea_prohibida_bloquea`. Además el Panel lee `cuenta_desactivada` como columna calculada de
 `asistentes`: recibe la fila que la consulta ya le dejó ver y contesta falso si es de otra
 Prestadora. Y el backend, con la credencial de quien pide, llama —entre otras—
 `tiene_permiso_la_sesion` y `permisos_efectivos_de_la_sesion`, que no reciben a nadie y contestan
@@ -448,6 +459,8 @@ y el Panel, con el responsable vacío cuando es el Contratante. Adentro de la ba
 `interno.responsables_de_pagos_en` contesta quiénes son los Responsables de pagos de un Servicio en
 una fecha.
 Con la credencial del trabajo sin persona, de a una Prestadora por vez, llama —entre otras—
+`ajustar_valores_del_legajo_por_indice`, que no recibe nada y ajusta por índice los valores del
+Legajo de esa Prestadora, o los deja propuestos si ella pide revisión previa;
 `desactivar_la_cuenta` y `turnos_guardia_que_traban_la_desactivacion`, que toman la Prestadora de esa
 credencial; `borrar_consultas_a_hce_vencidas`, que no recibe nada, borra de esa Prestadora los
 años enteros del registro de accesos cuyo plazo de su país ya venció y deja el corte y el

@@ -360,6 +360,7 @@ export function NuevoTurnoGuardiaModal({ onClose, onCreada, servicioId: servicio
                 Paciente antes de saber quién lo va a hacer. */}
             <ElegirAsistente
               huecos={huecoQueSeCrea}
+              servicioId={servicioId || null}
               label={textos.asistente}
               name="asistente_id"
               value={asistenteId}

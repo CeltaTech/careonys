@@ -507,7 +507,7 @@ describe('quién puede mirar y quién puede tocar', () => {
 });
 
 describe('generar el mes', () => {
-  function prepararLaBase({ liquidacionesExistentes = [], remuneracion, configuracionPago = [], turnos_guardia } = {}) {
+  function prepararLaBase({ liquidacionesExistentes = [], remuneracion, anteriores = [], configuracionPago = [], turnos_guardia } = {}) {
     respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS' }]);
     // La fecha del turno de guardia importa: desde que el período puede ser una semana, cada uno se
     // queda con los turnos de guardia que caen adentro de sus bordes.
@@ -520,6 +520,8 @@ describe('generar el mes', () => {
     respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [
       remuneracion ?? { asistente_id: 'a-1', valor_hora: 1500 },
     ]);
+    // La historia del valor del Legajo: vacía salvo en las pruebas que la miran.
+    respuestas.set('GET /rest/v1/remuneraciones_asistente_anteriores', () => anteriores);
     // Sin fila: es la configuración de fábrica, que es el caso corriente.
     respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => configuracionPago);
     respuestas.set('GET /rest/v1/conceptos_liquidacion', () => []);
@@ -713,6 +715,99 @@ describe('generar el mes', () => {
     assert.equal(escritura.cuerpo.bruto, 12000);
   });
 
+  // -------------------------------------------------------------------------------------
+  // Con qué valor del Legajo se paga cada turno de guardia
+  //
+  // El valor cambia con el tiempo, y el anterior queda en la historia. Cada turno se paga con
+  // el que regía el día de ese turno, no con el de hoy.
+  // -------------------------------------------------------------------------------------
+
+  it('un turno anterior al cambio de valor se paga con el valor de entonces', async () => {
+    // Hoy vale 2000 desde septiembre; en agosto valía 1500.
+    prepararLaBase({
+      remuneracion: { asistente_id: 'a-1', valor_hora: 2000, rige_desde: '2026-09-01' },
+      anteriores: [{ asistente_id: 'a-1', valor_hora: 1500, rige_desde: '2026-01-01' }],
+    });
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(cuerpo.generadas, 1);
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.base_valor, 1500);
+    assert.equal(escritura.cuerpo.bruto, 12000);
+  });
+
+  it('un turno posterior al cambio se paga con el valor nuevo', async () => {
+    prepararLaBase({
+      remuneracion: { asistente_id: 'a-1', valor_hora: 2000, rige_desde: '2026-08-01' },
+      anteriores: [{ asistente_id: 'a-1', valor_hora: 1500, rige_desde: '2026-01-01' }],
+    });
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(cuerpo.generadas, 1);
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.bruto, 16000);
+  });
+
+  it('la historia se lee una sola vez, no una por turno de guardia', async () => {
+    prepararLaBase({
+      turnos_guardia: [turnoGuardiaDe('g-1', '2026-08-03'), turnoGuardiaDe('g-2', '2026-08-10'), turnoGuardiaDe('g-3', '2026-08-18')],
+    });
+    await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/remuneraciones_asistente_anteriores').length, 1);
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/valor_del_legajo_en'), false);
+  });
+
+  it('si el valor cambió en el medio del período, cada turno se paga con el valor de su día', async () => {
+    prepararLaBase({
+      remuneracion: { asistente_id: 'a-1', valor_hora: 2000, rige_desde: '2026-08-15' },
+      anteriores: [{ asistente_id: 'a-1', valor_hora: 1500, rige_desde: '2026-01-01' }],
+      turnos_guardia: [turnoGuardiaDe('g-1', '2026-08-10'), turnoGuardiaDe('g-2', '2026-08-20')],
+    });
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(cuerpo.generadas, 1);
+    assert.equal('cambio_de_valor_en_el_periodo' in cuerpo, false);
+    assert.deepEqual(cuerpo.varias_monedas_en_el_periodo, []);
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    // Ocho horas a 1500 antes del cambio y ocho a 2000 después.
+    assert.equal(escritura.cuerpo.bruto, 28000);
+    assert.equal(escritura.cuerpo.base_valor, 2000);
+    assert.equal(escritura.cuerpo.moneda, 'ARS');
+    const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente_items').cuerpo;
+    assert.deepEqual(
+      renglones.filter((r) => r.unidad === 'base').map((r) => [r.valor_aplicado, r.monto]),
+      [
+        [1500, 12000],
+        [2000, 16000],
+      ]
+    );
+  });
+
+  it('con valores en dos monedas dentro del período, no se suma: queda afuera y se avisa', async () => {
+    prepararLaBase({
+      remuneracion: { asistente_id: 'a-1', valor_hora: 20, moneda: 'USD', rige_desde: '2026-08-15' },
+      anteriores: [{ asistente_id: 'a-1', valor_hora: 1500, moneda: 'ARS', rige_desde: '2026-01-01' }],
+      turnos_guardia: [turnoGuardiaDe('g-1', '2026-08-10'), turnoGuardiaDe('g-2', '2026-08-20')],
+    });
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(cuerpo.generadas, 0);
+    assert.deepEqual(cuerpo.varias_monedas_en_el_periodo, ['Asistente de prueba']);
+    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente'), false);
+  });
+
+  it('con cobro semanal, cada semana se paga con el valor de su semana', async () => {
+    prepararLaBase({
+      configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'semana' } }],
+      remuneracion: { asistente_id: 'a-1', valor_hora: 2000, rige_desde: '2026-08-15' },
+      anteriores: [{ asistente_id: 'a-1', valor_hora: 1500, rige_desde: '2026-01-01' }],
+      turnos_guardia: [turnoGuardiaDe('g-1', '2026-08-10'), turnoGuardiaDe('g-2', '2026-08-18')],
+    });
+    const { cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.deepEqual(cuerpo.varias_monedas_en_el_periodo, []);
+    const brutos = llamadas
+      .filter((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente')
+      .map((e) => [e.cuerpo.periodo_desde, e.cuerpo.bruto]);
+    assert.deepEqual(brutos.find(([d]) => d === '2026-08-08'), ['2026-08-08', 12000]);
+    assert.deepEqual(brutos.find(([d]) => d === '2026-08-15'), ['2026-08-15', 16000]);
+  });
+
   it('una frecuencia guardada fuera de borde no rompe la liquidación: vale la de fábrica', async () => {
     // Una liquidación que no se puede generar es peor que una que sale con el valor de fábrica.
     prepararLaBase({ configuracionPago: [{ regla: null, frecuencia_pago: { cada_cuanto: 'cada_luna_llena' } }] });
@@ -887,6 +982,7 @@ describe('con qué credencial entra cada ruta', () => {
       { id: 'a-1', nombre: 'Asistente importado de prueba', estado: 'activo', relacion_laboral_asistente: { relaciones_laborales: { nombre: 'Monotributo' } }, fecha_alta: '2020-01-01', fecha_baja: null },
     ]);
     respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [{ asistente_id: 'a-1', valor_hora: 1500 }]);
+    respuestas.set('GET /rest/v1/remuneraciones_asistente_anteriores', () => []);
     respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => []);
     respuestas.set('GET /rest/v1/conceptos_liquidacion', () => []);
     respuestas.set('GET /rest/v1/escalas_legales', () => []);
@@ -904,7 +1000,7 @@ describe('con qué credencial entra cada ruta', () => {
       assert.equal(llamada.credencial, credencialEnviada, `${llamada.clave} no fue con la credencial de quien pide`);
       assert.notEqual(llamada.credencial, LLAVE_MAESTRA);
     }
-    for (const tabla of ['turnos_guardia', 'asistentes', 'remuneraciones_asistente', 'configuracion_pago_asistentes', 'conceptos_liquidacion', 'liquidaciones_asistente']) {
+    for (const tabla of ['turnos_guardia', 'asistentes', 'remuneraciones_asistente', 'remuneraciones_asistente_anteriores', 'configuracion_pago_asistentes', 'conceptos_liquidacion', 'liquidaciones_asistente']) {
       const lectura = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
       assert.ok(!lectura.url.includes('prestadora_id='), `${tabla}: el aislamiento lo hace la base, no un filtro`);
     }

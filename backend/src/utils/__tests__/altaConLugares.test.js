@@ -180,6 +180,38 @@ describe('el alta de una Asistente', () => {
   });
 });
 
+describe('el valor del Legajo en el alta, y desde cuándo rige', () => {
+  beforeEach(() => {
+    respuestas.set('POST /rest/v1/remuneraciones_asistente', () => []);
+  });
+
+  const alta = (extra) => crearAsistenteDirecto({
+    nombre: 'Persona De Prueba',
+    email: 'persona@ejemplo.invalido',
+    ...IDENTIDAD,
+    valor_hora: 1500,
+    prestadoraId: PRESTADORA,
+    db: supabase,
+    ...extra,
+  });
+
+  it('con fecha, el valor se guarda desde esa fecha', async () => {
+    await alta({ rige_desde: '2026-10-01' });
+    assert.equal(loEscritoEn('remuneraciones_asistente').rige_desde, '2026-10-01');
+  });
+
+  it('sin fecha no se manda ninguna: la pone la base', async () => {
+    await alta();
+    assert.equal('rige_desde' in loEscritoEn('remuneraciones_asistente'), false);
+  });
+
+  it('una fecha mal escrita se rechaza antes de crear nada', async () => {
+    await assert.rejects(() => alta({ rige_desde: '2026-02-30' }), { motivo: 'dato_invalido' });
+    assert.equal(hubo('POST /rest/v1/asistentes'), false);
+    assert.equal(hubo('POST /rest/v1/rpc/dar_de_alta_la_cuenta'), false);
+  });
+});
+
 describe('el alta de una cuenta del Panel', () => {
   it('guarda hasta dónde llega quien coordina', async () => {
     const { estado } = await pedir('POST', '/usuarios', {

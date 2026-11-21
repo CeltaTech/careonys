@@ -136,6 +136,9 @@ export function motivoDeModalidadDelError(error) {
  * @param tm     el bloque de textos ya traducido: `t.modalidades`.
  */
 export function mensajeDeModalidad(error, tm) {
+  const porTareaProhibida = mensajeDeTareaProhibida(error, tm);
+  if (porTareaProhibida) return porTareaProhibida;
+
   const encontrado = motivoDeModalidadDelError(error);
   if (!encontrado || !tm) return null;
 
@@ -143,4 +146,36 @@ export function mensajeDeModalidad(error, tm) {
   const plantilla =
     encontrado.motivo === 'no_habilitada' ? tm.error_no_habilitada : tm.error_bloquea;
   return String(plantilla ?? '').replace('{modalidad}', nombre);
+}
+
+/**
+ * El rechazo de la base cuando al Asistente le tocaría una tarea o una vía de medicación
+ * prohibida para su tipo. La base frena la asignación al confirmarla, y llega de dos maneras:
+ * por el Backend, como motivo suelto `tarea_prohibida_bloquea`, o directo de la base, como
+ * mensaje que empieza con `tarea_prohibida_bloquea:`. Vive acá y no en un archivo aparte porque
+ * choca en las mismas pantallas que la modalidad —cubrir una vacante, reasignar— y
+ * `mensajeDeModalidad` es la que todas ellas ya consultan.
+ */
+export const MOTIVO_TAREA_PROHIBIDA = 'tarea_prohibida_bloquea';
+
+/** Si el error es el rechazo de la base por una tarea prohibida. */
+export function esRechazoPorTareaProhibida(error) {
+  const texto =
+    typeof error === 'string'
+      ? error
+      : (error?.motivo ?? error?.message ?? error?.error_description ?? '');
+  if (typeof texto !== 'string' || !texto) return false;
+  return texto === MOTIVO_TAREA_PROHIBIDA || texto.startsWith(`${MOTIVO_TAREA_PROHIBIDA}:`);
+}
+
+/**
+ * La frase que se le muestra a la persona cuando la base frenó la asignación por una tarea
+ * prohibida, o `null` si el error es otra cosa.
+ *
+ * @param error  lo que devolvió la base o el Backend.
+ * @param tm     el bloque de textos ya traducido: `t.modalidades`.
+ */
+export function mensajeDeTareaProhibida(error, tm) {
+  if (!tm || !esRechazoPorTareaProhibida(error)) return null;
+  return tm.error_tarea_prohibida ?? null;
 }

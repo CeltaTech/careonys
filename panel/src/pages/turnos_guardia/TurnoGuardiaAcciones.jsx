@@ -635,6 +635,8 @@ export function TurnoGuardiaAcciones({ turno_guardia, onReasignar, onClose, onAc
                 cambia nada. Un turno ausente ya está sin nadie: dejarlo sin asignar no cambia nada. */}
             <ElegirAsistente
               idsHuecos={[turno_guardia.id]}
+              servicioId={turno_guardia.servicio_id ?? null}
+              turnoGuardiaId={turno_guardia.id}
               excluir={[turno_guardia.asistente_id]}
               label={t.turnos_guardia.detalle.reasignar_asistente}
               name="reasignar_asistente"

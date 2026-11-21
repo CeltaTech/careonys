@@ -16,7 +16,8 @@
  * QUÉ PASARÍA CON EL SISTEMA ROTO. Si volviera el diseño de dos turnos de guardia, la prueba de «no nace
  * ningún turno de guardia nuevo» falla. Si alguien invirtiera el orden, falla la del orden. Si el turno de guardia
  * dejara de reasignarse, falla la primera. Y si el fallo de la constancia no frenara el cambio de
- * nombre, falla la última.
+ * nombre, falla la que lo comprueba. Y si un rechazo de la base al cambio de nombre dejara la
+ * constancia escrita sin el turno a nombre del sustituto, fallan las del rechazo.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -28,10 +29,12 @@ const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const TITULAR = '22222222-2222-2222-2222-222222222222';
 const SUSTITUTO = '33333333-3333-3333-3333-333333333333';
 const AUSENCIA = '44444444-4444-4444-4444-444444444444';
+const CONSTANCIA = '55555555-5555-5555-5555-555555555555';
 
-/** Lo que se le pidió a la base, en orden, y qué tabla contesta con error. */
+/** Lo que se le pidió a la base, en orden, qué tabla contesta con error y con qué mensaje. */
 let pedidos = [];
 let tablaQueFalla = null;
+let mensajeDelRechazo = 'la base dijo que no';
 
 const baseFalsa = createServer((req, res) => {
   let cuerpo = '';
@@ -48,11 +51,13 @@ const baseFalsa = createServer((req, res) => {
 
     if (tabla === tablaQueFalla) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ message: 'la base dijo que no' }));
+      res.end(JSON.stringify({ code: '23514', message: mensajeDelRechazo }));
       return;
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end('[]');
+    // La constancia nueva vuelve con su identificador, como contesta la base al pedirle `select`.
+    const escribioLaConstancia = tabla === 'turnos_guardia_cobertura' && req.method === 'POST';
+    res.end(escribioLaConstancia ? JSON.stringify([{ id: CONSTANCIA }]) : '[]');
   });
 });
 
@@ -88,6 +93,7 @@ describe('cubrir una guardia con un sustituto', () => {
   beforeEach(() => {
     pedidos = [];
     tablaQueFalla = null;
+    mensajeDelRechazo = 'la base dijo que no';
   });
 
   after(() => baseFalsa.close());
@@ -142,5 +148,32 @@ describe('cubrir una guardia con un sustituto', () => {
     assert.equal(resultado.ok, false);
     assert.equal(pedidoA('turnos_guardia', 'PATCH'), undefined,
       'el turno tiene que quedar como estaba: moverlo sin constancia pierde al titular');
+  });
+
+  for (const rechazo of ['tarea_prohibida_bloquea: la tarea no se le asigna', 'modalidad_bloquea: la modalidad no le corresponde']) {
+    it(`si la base rechaza el cambio de nombre (${rechazo.split(':')[0]}), la constancia se borra`, async () => {
+      tablaQueFalla = 'turnos_guardia';
+      mensajeDelRechazo = rechazo;
+
+      const resultado = await cubrir();
+
+      assert.equal(resultado.ok, false);
+      assert.equal(resultado.motivo, rechazo, 'quien llama tiene que poder reconocer el motivo del rechazo');
+      assert.deepEqual(pedidos.map((p) => `${p.metodo} ${p.tabla}`), [
+        'POST turnos_guardia_cobertura',
+        'PATCH turnos_guardia',
+        'DELETE turnos_guardia_cobertura',
+      ]);
+      const borrado = pedidoA('turnos_guardia_cobertura', 'DELETE');
+      assert.equal(borrado.parametros.get('id'), `eq.${CONSTANCIA}`,
+        'tiene que borrar la constancia recién escrita y ninguna otra');
+      assert.equal(borrado.parametros.get('prestadora_id'), `eq.${PRESTADORA}`);
+    });
+  }
+
+  it('si el cambio de nombre sale bien, la constancia no se borra', async () => {
+    await cubrir();
+
+    assert.equal(pedidoA('turnos_guardia_cobertura', 'DELETE'), undefined);
   });
 });

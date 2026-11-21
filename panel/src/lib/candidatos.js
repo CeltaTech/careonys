@@ -109,6 +109,19 @@ export const MOTIVO = {
   HORAS_PASA: 'motivo_horas_pasa',
   DESCANSO: 'motivo_descanso',
   DESCANSO_CORTO: 'motivo_descanso_corto',
+  /*
+   * Los criterios del Servicio. Los calcula la base (`criterios_de_candidatas`), porque miran
+   * datos que la lista no trae: el lugar que acepta cada Asistente, las tareas de los Pacientes,
+   * las calificaciones, la asistencia y el valor acordado.
+   */
+  TAREA_PROHIBIDA: 'motivo_tarea_prohibida',
+  LUGAR_NO_ACEPTADO: 'motivo_lugar_no_aceptado',
+  TAREAS_NO_INCLUIDAS: 'motivo_tareas_no_incluidas',
+  FALTA_ESPECIALIDAD: 'motivo_falta_especialidad',
+  CALIFICACION: 'motivo_calificacion',
+  FALTAS_SIN_AVISO: 'motivo_faltas_sin_aviso',
+  LLEGADAS_TARDE: 'motivo_llegadas_tarde',
+  VALOR_NO_ENCAJA: 'motivo_valor_no_encaja',
 };
 
 /** Qué motivo le corresponde a cada modalidad de guardia. */
@@ -424,6 +437,7 @@ export function candidatosParaTurnoGuardia(hueco, datos = {}, opciones = {}) {
 
   const distancias = datos.distancias ?? null;
   const continuidad = datos.continuidad ?? null;
+  const criterios = datos.criterios ?? null;
 
   const evaluados = asistentes.map((asistente) =>
     evaluarAsistente(asistente, {
@@ -433,6 +447,7 @@ export function candidatosParaTurnoGuardia(hueco, datos = {}, opciones = {}) {
       documentos,
       distancias,
       continuidad,
+      criterios,
       ahora,
       pesos,
       topes,
@@ -615,6 +630,18 @@ function evaluarAsistente(asistente, ctx) {
     // Entre un borde y el otro no se dice nada: a doce kilómetros no hay nada que opinar.
   }
 
+  // --- 8. Los criterios del Servicio, que contesta la base. Si la base no contestó —error o sin
+  //        permiso— no hay fila, y estos criterios no opinan: el resto de la cuenta sigue igual.
+  const delServicio = evaluarCriteriosDelServicio(
+    criteriosDelAsistente(ctx.criterios, hueco.servicio_id, asistente.id),
+    pesos,
+    topes
+  );
+  aFavor.push(...delServicio.aFavor);
+  enContra.push(...delServicio.enContra);
+  puntaje += delServicio.puntaje;
+  if (delServicio.bloqueado) bloqueado = true;
+
   return {
     asistente,
     puntaje: Math.round(puntaje),
@@ -623,4 +650,71 @@ function evaluarAsistente(asistente, ctx) {
     bloqueado,
     desaconsejado,
   };
+}
+
+/**
+ * La fila que contestó la base para un Asistente en un Servicio, o `null` si no hay.
+ *
+ * @param criterios  `Map` de Servicio → `Map` de Asistente → fila de `criterios_de_candidatas`.
+ */
+export function criteriosDelAsistente(criterios, servicioId, asistenteId) {
+  if (!(criterios instanceof Map) || !servicioId || !asistenteId) return null;
+  const delServicio = criterios.get(servicioId);
+  return delServicio instanceof Map ? delServicio.get(asistenteId) ?? null : null;
+}
+
+/** Un conteo que llega de la base. Vacío o ilegible cuenta como cero. */
+function conteo(x) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Lo que dicen los criterios del Servicio de un Asistente. Un valor vacío no suma ni resta.
+ *
+ * - Una tarea prohibida para su tipo bloquea: la base rechaza la asignación.
+ * - Que no acepte el lugar resta.
+ * - Las tareas fuera de su tipo, la especialidad que falta y el valor que no encaja son
+ *   advertencias: se muestran y no mueven el orden.
+ * - Las calificaciones suman por estrella del promedio; las faltas sin aviso y las llegadas tarde
+ *   restan por cada una.
+ *
+ * @param fila  una fila de `criterios_de_candidatas`, o `null`.
+ * @returns {{ aFavor: object[], enContra: object[], puntaje: number, bloqueado: boolean }}
+ */
+export function evaluarCriteriosDelServicio(fila, pesos = PESOS, topes = TOPES) {
+  const resultado = { aFavor: [], enContra: [], puntaje: 0, bloqueado: false };
+  if (!fila) return resultado;
+  const p = { ...PESOS, ...(pesos ?? {}) };
+  const meses = (topes ?? TOPES).meses_de_antecedentes ?? TOPES.meses_de_antecedentes;
+  const suma = (destino, clave, valores, peso) => {
+    destino.push({ clave, valores: valores ?? {} });
+    resultado.puntaje += peso;
+  };
+
+  if (fila.tarea_prohibida === true) {
+    resultado.bloqueado = true;
+    suma(resultado.enContra, MOTIVO.TAREA_PROHIBIDA, null, p.tarea_prohibida);
+  }
+  if (fila.acepta_lugar === false) {
+    suma(resultado.enContra, MOTIVO.LUGAR_NO_ACEPTADO, null, p.lugar_no_aceptado);
+  }
+  const noIncluidas = conteo(fila.tareas_no_incluidas);
+  if (noIncluidas > 0) suma(resultado.enContra, MOTIVO.TAREAS_NO_INCLUIDAS, { n: noIncluidas }, 0);
+  const sinEspecialidad = conteo(fila.falta_especialidad);
+  if (sinEspecialidad > 0) suma(resultado.enContra, MOTIVO.FALTA_ESPECIALIDAD, { n: sinEspecialidad }, 0);
+  if (fila.encaja_valor === false) suma(resultado.enContra, MOTIVO.VALOR_NO_ENCAJA, null, 0);
+
+  const promedio = fila.promedio_estrellas === null || fila.promedio_estrellas === undefined ? NaN : Number(fila.promedio_estrellas);
+  const calificaciones = conteo(fila.cantidad_calificaciones);
+  if (Number.isFinite(promedio) && calificaciones > 0) {
+    const estrellas = Math.round(promedio * 10) / 10;
+    suma(resultado.aFavor, MOTIVO.CALIFICACION, { estrellas, n: calificaciones, meses }, promedio * p.calificacion_por_estrella);
+  }
+  const faltas = conteo(fila.faltas_sin_aviso);
+  if (faltas > 0) suma(resultado.enContra, MOTIVO.FALTAS_SIN_AVISO, { n: faltas, meses }, faltas * p.falta_sin_aviso);
+  const tarde = conteo(fila.llegadas_tarde);
+  if (tarde > 0) suma(resultado.enContra, MOTIVO.LLEGADAS_TARDE, { n: tarde, meses }, tarde * p.llegada_tarde);
+
+  return resultado;
 }

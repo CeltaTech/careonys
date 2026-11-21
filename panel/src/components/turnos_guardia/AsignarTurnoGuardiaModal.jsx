@@ -36,7 +36,13 @@ export function AsignarTurnoGuardiaModal({ turnoGuardia, pacientes = [], onClose
   const { puede } = usePermisos();
   const puedeAsignarIgual = esAdminOSuperior(usuario?.rol) || puede('asignar_con_documentos_pendientes');
   const idsHuecos = useMemo(() => [turnoGuardia.id], [turnoGuardia.id]);
-  const sugerencias = useSugerenciasDeAsistentes({ idsHuecos });
+  // El Servicio y el turno de guardia salen de la base junto con el turno, venga de la pantalla
+  // que venga; si la pantalla ya los tiene, se pasan igual.
+  const sugerencias = useSugerenciasDeAsistentes({
+    idsHuecos,
+    servicioId: turnoGuardia.servicio_id ?? null,
+    turnoGuardiaId: turnoGuardia.id,
+  });
   const [asistenteId, setAsistenteId] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);

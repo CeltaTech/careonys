@@ -35,6 +35,17 @@ import { coordenadasSiCambio } from '../../lib/coordenadasDeDomicilio';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
 import { mensajeDeError } from '../../lib/errores';
+import { hoyISO } from '../../lib/horarios';
+import { fechaVisible } from '../../lib/fechaVisible';
+import { formatearImporte } from '../../lib/dinero';
+import {
+  CAMPOS_DE_LOS_VALORES_ANTERIORES,
+  cambiaElValor,
+  esRigeDesdeAnterior,
+  filaDelValorDelLegajo,
+  historiaDelValor,
+  revisarRigeDesde,
+} from '../../lib/valorDelLegajo';
 import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
 import { useTiposDeDocumento } from '../../hooks/useTiposDeDocumento';
 import { useGeneros } from '../../hooks/useGeneros';
@@ -59,7 +70,7 @@ const AVISO_DE_LA_BASE = {
 // Las columnas de `domicilio_asistente` que dicen si el Asistente ya tenía un domicilio cargado.
 const PARTES_GUARDADAS = ['domicilio', 'calle', 'numero', 'piso', 'unidad', 'lugar_id', 'codigo_postal'];
 
-const ORDEN_DE_LOS_CASILLEROS =['nombre', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais'];
+const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais', 'rige_desde'];
 
 export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) {
   const { t, locale } = useLocale();
@@ -72,6 +83,9 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
   const veDomicilio = esAdmin || puede('ver_domicilio_asistente');
   const editaDomicilio = esAdmin || (veDomicilio && puede('gestionar_asistentes'));
   const veRelacion = esAdmin || puede('ver_relacion_laboral_asistente');
+  // El valor del Legajo y su historia los ve y los cambia la administración con el permiso de ver
+  // los pagos de los Asistentes. La base exige lo mismo para leerlos y para escribirlos.
+  const vePagos = esAdmin && puede('ver_pagos_asistente');
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   const { modalidades } = useModalidades();
   /* La lista de lugares de la Prestadora, pedida una sola vez para las tres cosas que la usan en
@@ -116,6 +130,9 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     valor_turno_guardia: asistente.valor_turno_guardia || '',
     valor_semana: asistente.valor_semana || '',
     valor_hora_extra: asistente.valor_hora_extra || '',
+    // Desde qué fecha rige un valor nuevo. Arranca en hoy, en el día de la Prestadora, y sólo se
+    // guarda si cambió el valor.
+    rige_desde: hoyISO(),
     horas_semanales: asistente.horas_semanales || '',
     relacion_laboral_id: asistente.relacion_laboral_id || '',
     modalidades: modalidadesDelAsistente(asistente),
@@ -141,6 +158,10 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
   function avisosEnPantalla() {
     const avisos = {};
     if (!form.nombre.trim()) avisos.nombre = 'falta_el_dato';
+    if (vePagos && cambiaElValor(asistente, form)) {
+      const enLaFecha = revisarRigeDesde(form.rige_desde);
+      if (enLaFecha) avisos.rige_desde = enLaFecha;
+    }
     return Object.assign(
       avisos,
       avisosDelDocumento({
@@ -166,6 +187,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     falta_el_genero: t.personas.falta_el_genero,
     genero_no_reconocido: t.personas.genero_no_reconocido,
     legajo_repetido: t.errores.motivos.legajo_repetido,
+    rige_desde_anterior: t.asistentes.rige_desde_anterior,
   };
   const avisoDe = (casillero) => (avisos[casillero] ? TEXTO_DEL_AVISO[avisos[casillero]] : undefined);
 
@@ -183,6 +205,42 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
      cada lugar, y por eso se lee y se escribe por el backend, que deja guardados exactamente los que
      quedaron tildados. Mientras no se pudo leer, no se manda nada al guardar: escribir una lista
      que no se llegó a cargar borraría los lugares que la persona ya tenía. */
+  /* Los valores del Legajo que rigieron antes del vigente. Se vuelven a leer cuando cambia la
+     fecha del vigente, que es lo que pasa al guardar un valor nuevo. */
+  const [anteriores, setAnteriores] = useState([]);
+  const [estadoHistoria, setEstadoHistoria] = useState('cargando');
+  const [errorHistoria, setErrorHistoria] = useState(null);
+  const rigeDesdeDelVigente = asistente.rige_desde_pago;
+
+  const cargarHistoria = useCallback(async () => {
+    if (!vePagos) return;
+    setEstadoHistoria('cargando');
+    setErrorHistoria(null);
+    const { data, error: errorLectura } = await supabase
+      .from('remuneraciones_asistente_anteriores')
+      .select(CAMPOS_DE_LOS_VALORES_ANTERIORES)
+      .eq('asistente_id', asistente.id)
+      .order('rige_desde', { ascending: false });
+    if (errorLectura) {
+      setErrorHistoria(mensajeDeError(errorLectura, t));
+      setEstadoHistoria('error');
+      return;
+    }
+    setAnteriores(data ?? []);
+    setEstadoHistoria('listo');
+    // La fecha del vigente está para que se vuelva a leer al guardar un valor nuevo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vePagos, asistente.id, rigeDesdeDelVigente, t]);
+
+  useEffect(() => {
+    cargarHistoria();
+  }, [cargarHistoria]);
+
+  const historia = historiaDelValor({
+    vigente: { ...asistente, moneda: asistente.moneda_pago, rige_desde: asistente.rige_desde_pago },
+    anteriores,
+  });
+
   const [lugares, setLugares] = useState([]);
   const [estadoLugares, setEstadoLugares] = useState('cargando');
   const [errorLugares, setErrorLugares] = useState(null);
@@ -437,30 +495,31 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
 
     // Lo que cobra el Asistente se guarda aparte, en `remuneraciones_asistente`, donde la base
     // exige el permiso `ver_pagos_asistente` para leerlo y ser administración para cambiarlo.
-    // Puede no existir todavía la fila —un Asistente dado de alta sin importes—, así que se
-    // usa `upsert`: la crea la primera vez y la actualiza las siguientes.
-    if (esAdmin) {
-      const { error: errorRemuneracion } = await supabase
-        .from('remuneraciones_asistente')
-        .upsert(
-          {
-            asistente_id: asistente.id,
-            prestadora_id: usuario?.prestadora_id,
-            unidad_medicion: form.unidad_medicion,
-            valor_hora: form.valor_hora || null,
-            valor_turno_guardia: form.valor_turno_guardia || null,
-            valor_semana: form.valor_semana || null,
-            valor_hora_extra: form.valor_hora_extra || null,
-            // Sin arreglo propio, vacío: hereda lo de la Prestadora y sigue heredándolo el día
-            // que ella lo cambie. Con arreglo propio, sólo lo que difiere de fábrica.
-            frecuencia_pago: form.frecuencia_propia ? soloLoQueCorreDeLaFrecuencia(form.frecuencia) : {},
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'asistente_id' },
-        );
+    // Puede no existir todavía la fila, así que se usa `upsert`. Si cambió el valor, rige desde la
+    // fecha elegida y la base deja el anterior en la historia. Si no cambió, la fecha no se manda:
+    // correría la del valor vigente sin dejar historia.
+    if (vePagos) {
+      const { error: errorRemuneracion } = await supabase.from('remuneraciones_asistente').upsert(
+        filaDelValorDelLegajo({
+          asistenteId: asistente.id,
+          prestadoraId: usuario?.prestadora_id,
+          escrito: form,
+          rigeDesde: form.rige_desde,
+          cambio: cambiaElValor(asistente, form),
+          // Sin arreglo propio, vacío: hereda lo de la Prestadora y sigue heredándolo el día
+          // que ella lo cambie. Con arreglo propio, sólo lo que difiere de fábrica.
+          frecuenciaPago: form.frecuencia_propia ? soloLoQueCorreDeLaFrecuencia(form.frecuencia) : {},
+        }),
+        { onConflict: 'asistente_id' },
+      );
       if (errorRemuneracion) {
         setGuardando(false);
-        setError(t.comun.error_generico);
+        if (esRigeDesdeAnterior(errorRemuneracion)) {
+          setAvisoDeLaBase(['rige_desde', 'rige_desde_anterior']);
+          saltarAlPrimero({ rige_desde: true });
+          return;
+        }
+        setError(mensajeDeError(errorRemuneracion, t));
         return;
       }
     }
@@ -706,7 +765,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
               ))}
             </FormField>
 
-            {esAdmin && (
+            {vePagos && (
             <>
 
             {/* Con qué se mide el trabajo lo elige quien carga el Legajo del Asistente. Se muestra el valor de la unidad elegida y no los cuatro, porque
@@ -730,6 +789,15 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
                 se paga igual midan el trabajo como lo midan. Vacío quiere decir que no está
                 cargado, y entonces la liquidación avisa en vez de estimarlo. */}
             <FormField label={t.asistentes.valor_hora_extra} name="valor_hora_extra" type="number" value={form.valor_hora_extra} onChange={(e) => set('valor_hora_extra', e.target.value)} />
+
+            <FormField
+              label={t.asistentes.rige_desde}
+              name="rige_desde"
+              type="date"
+              value={form.rige_desde}
+              onChange={(e) => setIdentidad('rige_desde', e.target.value)}
+              error={avisoDe('rige_desde')}
+            />
 
             <FormField label={t.asistentes.horas_semanales} name="horas_semanales" type="number" value={form.horas_semanales} onChange={(e) => set('horas_semanales', e.target.value)} />
 
@@ -795,6 +863,47 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
             </>
             )}
           </div>
+        </section>
+      )}
+
+      {vePagos && (
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.asistentes.historia_valor.titulo}</h2>
+          </div>
+          <EstadoLista
+            estado={estadoHistoria}
+            error={errorHistoria}
+            recargar={cargarHistoria}
+            vacio={estadoHistoria === 'listo' && historia.length === 0}
+          >
+            <div className="tarjeta-desplazable">
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.asistentes.historia_valor.col_unidad}</th>
+                    <th>{t.asistentes.historia_valor.col_valor}</th>
+                    <th>{t.asistentes.historia_valor.col_hora_extra}</th>
+                    <th>{t.asistentes.historia_valor.col_moneda}</th>
+                    <th>{t.asistentes.historia_valor.col_desde}</th>
+                    <th>{t.asistentes.historia_valor.col_hasta}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historia.map((renglon) => (
+                    <tr key={renglon.clave}>
+                      <td>{t.asistentes[`unidad_${renglon.unidad_medicion}`]}</td>
+                      <td>{renglon.valor === null ? '—' : formatearImporte(renglon.valor, renglon.moneda, locale)}</td>
+                      <td>{renglon.valor_hora_extra === null ? '—' : formatearImporte(renglon.valor_hora_extra, renglon.moneda, locale)}</td>
+                      <td>{renglon.moneda ?? '—'}</td>
+                      <td>{fechaVisible(renglon.rige_desde, locale)}</td>
+                      <td>{renglon.vigente ? t.asistentes.historia_valor.vigente : fechaVisible(renglon.rige_hasta, locale)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </EstadoLista>
         </section>
       )}
 

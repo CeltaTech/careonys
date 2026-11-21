@@ -493,4 +493,47 @@ describe('motivoDeLaAsignacion', () => {
     assert.equal(motivoDeLaAsignacion({ message: 'turno_guardia_no_se_asigna' }).motivo, 'turno_guardia_no_se_asigna');
     assert.equal(motivoDeLaAsignacion({ message: 'otra cosa' }), null);
   });
+
+  it('la tarea prohibida para el tipo del Asistente vuelve como 409 con su motivo', () => {
+    assert.deepEqual(motivoDeLaAsignacion({ message: 'tarea_prohibida_bloquea:', code: '23514' }), { estado: 409, motivo: 'tarea_prohibida_bloquea' });
+    // Otro rechazo de la misma clase no se confunde con éste.
+    assert.equal(motivoDeLaAsignacion({ message: 'rige_desde_anterior:', code: '23514' }), null);
+  });
+});
+
+/* La base revisa la tarea prohibida al confirmar la escritura, así que el rechazo llega en la misma
+   llamada que asignó. Toda ruta que cambia el Asistente de un turno lo tiene que contestar igual. */
+describe('la tarea prohibida para el tipo del Asistente, en cada ruta que asigna', () => {
+  const OTRO = '77777777-7777-7777-7777-777777777777';
+  const SERIE = '66666666-6666-6666-6666-666666666666';
+  const DESTINO = '88888888-8888-8888-8888-888888888888';
+  const RECHAZO = { rechazo: 'tarea_prohibida_bloquea:' };
+
+  function esElMotivo({ estado, cuerpo }) {
+    assert.equal(estado, 409);
+    assert.deepEqual(cuerpo, { error: 'tarea_prohibida_bloquea', motivo: 'tarea_prohibida_bloquea' });
+  }
+
+  it('al asignar un turno', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno_guardia', () => RECHAZO);
+    esElMotivo(await pedir('POST', `/${TURNO_GUARDIA}/asignar`, { asistente_id: OTRO }));
+    assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/turnos_guardia'), false);
+  });
+
+  it('al asignar un turno fijo', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_serie', () => RECHAZO);
+    esElMotivo(await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: OTRO }));
+  });
+
+  it('al llevar un turno a otro Paciente', async () => {
+    respuestas.set('POST /rest/v1/rpc/mover_turno_guardia_a_otro_paciente', () => RECHAZO);
+    esElMotivo(await pedir('POST', `/${TURNO_GUARDIA}/mover-a-paciente`, { paciente_id: DESTINO }));
+  });
+
+  it('al cubrir una ausencia con un sustituto', async () => {
+    respuestas.set('GET /rest/v1/asistentes', () => [{ id: OTRO }]);
+    respuestas.set('POST /rest/v1/turnos_guardia_cobertura', () => []);
+    respuestas.set('PATCH /rest/v1/turnos_guardia', () => RECHAZO);
+    esElMotivo(await pedir('POST', `/${TURNO_GUARDIA}/cubrir`, { asistente_sustituto_id: OTRO }));
+  });
 });

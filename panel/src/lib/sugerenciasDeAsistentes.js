@@ -5,7 +5,16 @@
 // contestan para la lista que se elige, y no toca la base: lo que necesita lo trae
 // `hooks/useSugerenciasDeAsistentes.js`. Así el orden de la lista se prueba sin base.
 
-import { candidatosParaTurnoGuardia, estaEnElPadron, limitesDeSemana, MOTIVO, TOPES } from './candidatos';
+import {
+  candidatosParaTurnoGuardia,
+  criteriosDelAsistente,
+  estaEnElPadron,
+  evaluarCriteriosDelServicio,
+  limitesDeSemana,
+  MOTIVO,
+  PESOS,
+  TOPES,
+} from './candidatos';
 import { advertenciasDeAsignacion } from './avisosAsignacion';
 import { comparable } from './textoComparable';
 
@@ -86,8 +95,9 @@ export function etiquetasDe(candidato) {
 /**
  * La lista ordenada para elegir a quién asignar uno o varios turnos de guardia.
  *
- * Sin ningún turno de guardia que mirar —por ejemplo, un turno fijo que no tiene días pendientes—
- * no hay con qué ordenar: queda el Padrón por nombre y sin advertencias.
+ * Sin ningún turno de guardia que mirar —por ejemplo, el equipo de un Servicio, o un turno fijo
+ * que no tiene días pendientes— la agenda no opina, y el Padrón se ordena con los criterios del
+ * Servicio (`datos.servicio_id`). Sin Servicio, o si la base no los contestó, queda por nombre.
  *
  * @param huecos    los turnos de guardia que se van a asignar, cada uno con `fecha`, `hora_inicio`,
  *                  `hora_fin` y, si los tiene, `id`, sus Pacientes y `canal_modalidad`.
@@ -105,10 +115,21 @@ export function sugerenciasPara(huecos, datos = {}, opciones = {}) {
     : ordenarCandidatos(
         lista(datos.asistentes)
           .filter(estaEnElPadron)
-          .map((asistente) => ({ asistente, puntaje: 0, aFavor: [], enContra: [], bloqueado: false, desaconsejado: false }))
+          .map((asistente) => candidatoSinTurnos(asistente, datos, opciones))
       );
 
   return candidatos.filter((c) => !excluir.has(c.asistente?.id));
+}
+
+/** Un candidato evaluado sólo con los criterios del Servicio. */
+function candidatoSinTurnos(asistente, datos, opciones) {
+  const fila = criteriosDelAsistente(datos.criterios, datos.servicio_id, asistente.id);
+  const { aFavor, enContra, puntaje, bloqueado } = evaluarCriteriosDelServicio(
+    fila,
+    { ...PESOS, ...(opciones.pesos ?? {}) },
+    { ...TOPES, ...(opciones.topes ?? {}) }
+  );
+  return { asistente, puntaje: Math.round(puntaje), aFavor, enContra, bloqueado, desaconsejado: false };
 }
 
 /**

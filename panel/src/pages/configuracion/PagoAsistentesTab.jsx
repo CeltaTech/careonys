@@ -6,6 +6,9 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { AjustePorIndiceConfig } from '../../components/AjustePorIndiceConfig';
+import { ajusteDeLaRegla, ajusteDeLaReglaQueSePuedeGuardar } from '../../lib/ajustePorIndice';
+import { guardarConfiguracionDePago } from '../../lib/configuracionDePagoAsistentes';
 import {
   FRECUENCIAS_POSIBLES,
   FRECUENCIA_QUE_SE_PUEDE_TOCAR,
@@ -33,10 +36,19 @@ import '../../styles/molde-paginas.css';
    son independientes: se le puede pagar por hora y cobrar por mes. Esto es lo que rige para toda
    la Prestadora; con cada persona se puede arreglar distinto desde el Legajo del Asistente. No cambia ningún
    importe: sólo desde qué día hasta qué día va cada período. Vive en `lib/frecuenciaDePago.js`,
-   que también es el mismo archivo que usa el backend. */
+   que también es el mismo archivo que usa el backend.
+
+   Y AL FINAL, EL AJUSTE POR ÍNDICE DEL VALOR DEL LEGAJO. Las mismas tres preguntas que el precio
+   que se le cobra al Cliente —qué índice, cada cuántos meses, solo o con revisión previa—, con los
+   mismos casilleros. Se guarda en la misma regla y en el mismo guardado, y cómo se arma vive en
+   `lib/configuracionDePagoAsistentes.js`. */
 export function PagoAsistentesTab() {
   const { t } = useLocale();
   const [regla, setRegla] = useState(null);
+  const [ajuste, setAjuste] = useState(ajusteDeLaRegla(null));
+  const [ajusteMal, setAjusteMal] = useState(null);
+  const [indices, setIndices] = useState([]);
+  const [errorIndices, setErrorIndices] = useState(null);
   const [frecuencia, setFrecuencia] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -50,6 +62,8 @@ export function PagoAsistentesTab() {
       const { configuracion } = await llamarApi('/pago-asistentes');
       setRegla(configuracion.regla);
       setFrecuencia(configuracion.frecuencia);
+      setAjuste(ajusteDeLaRegla(configuracion.corridos));
+      setAjusteMal(null);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -60,6 +74,28 @@ export function PagoAsistentesTab() {
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  // El mismo catálogo de índices que usa el cobro a los Clientes. Si no se puede leer, el resto
+  // sigue funcionando: sólo la opción del índice queda sin lista.
+  useEffect(() => {
+    let vigente = true;
+    llamarApi('/facturacion-clientes/indices')
+      .then(({ indices: lista }) => {
+        if (vigente) setIndices(lista || []);
+      })
+      .catch((err) => {
+        if (vigente) setErrorIndices(mensajeDeError(err, t));
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [t]);
+
+  function cambiarAjuste(clave, valor) {
+    setGuardado(false);
+    if (clave === ajusteMal) setAjusteMal(null);
+    setAjuste((previo) => ({ ...previo, [clave]: valor }));
+  }
 
   function cambiar(clave, valor) {
     setGuardado(false);
@@ -81,11 +117,17 @@ export function PagoAsistentesTab() {
   }
 
   async function guardar() {
+    const ajusteRevisado = ajusteDeLaReglaQueSePuedeGuardar(ajuste);
+    if (!ajusteRevisado.ok) {
+      setAjusteMal(ajusteRevisado.clave);
+      document.getElementsByName(ajusteRevisado.clave)[0]?.focus();
+      return;
+    }
     setGuardando(true);
     setError(null);
     setGuardado(false);
     try {
-      await llamarApi('/pago-asistentes', { method: 'PUT', body: JSON.stringify({ regla, frecuencia }) });
+      await guardarConfiguracionDePago({ regla, frecuencia, ajuste: ajusteRevisado.valor });
       setGuardado(true);
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -165,6 +207,24 @@ export function PagoAsistentesTab() {
               max={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.maximo}
               value={frecuencia.dias_hasta_el_pago}
               onChange={(e) => cambiarDiasHastaElPago(e.target.value)}
+            />
+          </div>
+        </section>
+      )}
+
+      {estado === 'listo' && regla && frecuencia && (
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.configuracion.pago_asistentes_ajuste_titulo}</h2>
+          </div>
+          <div className="molde-formgrid">
+            <AjustePorIndiceConfig
+              t={t}
+              valores={ajuste}
+              indices={indices}
+              errorIndices={errorIndices}
+              claveMal={ajusteMal}
+              onCambiar={cambiarAjuste}
             />
           </div>
           <div className="molde-acciones">

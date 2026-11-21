@@ -24,6 +24,13 @@ import { FRECUENCIA_DE_PAGO } from '../../utils/frecuenciaDePago.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
+// El ajuste del valor del Legajo por índice sale de fábrica sin índice, mensual y con revisión.
+const AJUSTE_DE_FABRICA = {
+  indice_de_actualizacion: null,
+  meses_entre_actualizaciones: 1,
+  ajuste_por_indice: 'revision_previa',
+};
+
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 
@@ -121,7 +128,7 @@ describe('leer cómo se paga el período', () => {
   it('sin nada guardado, contesta los valores de fábrica', async () => {
     const { estado, cuerpo } = await leer();
     assert.equal(estado, 200);
-    assert.deepEqual(cuerpo.configuracion.regla, REGLA_DE_PAGO);
+    assert.deepEqual(cuerpo.configuracion.regla, { ...REGLA_DE_PAGO, ...AJUSTE_DE_FABRICA });
     assert.deepEqual(cuerpo.configuracion.corridos, {});
   });
 
@@ -250,6 +257,76 @@ describe('cada cuánto cobran los Asistentes', () => {
   it('quien no manda frecuencia no borra nada raro: escribe vacío, que es heredar fábrica', async () => {
     await guardar({ regla: { prorratear_monto_fijo: false } });
     assert.deepEqual(loEscrito().frecuencia_pago, {});
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// El ajuste del valor del Legajo por índice
+//
+// Viaja en la misma regla, con las mismas claves y la misma revisión que el ajuste del precio de
+// las prestaciones.
+// ---------------------------------------------------------------------------------------
+
+describe('el ajuste del valor del Legajo por índice', () => {
+  it('lo guardado manda al leer, y lo no guardado sale de fábrica', async () => {
+    respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => [
+      { regla: { indice_de_actualizacion: 'ipc', meses_entre_actualizaciones: 3 } },
+    ]);
+    const { cuerpo } = await leer();
+    assert.equal(cuerpo.configuracion.regla.indice_de_actualizacion, 'ipc');
+    assert.equal(cuerpo.configuracion.regla.meses_entre_actualizaciones, 3);
+    assert.equal(cuerpo.configuracion.regla.ajuste_por_indice, 'revision_previa');
+    assert.equal(cuerpo.configuracion.regla.prorratear_monto_fijo, REGLA_DE_PAGO.prorratear_monto_fijo);
+  });
+
+  it('guarda las tres claves junto con el resto de la regla', async () => {
+    const { estado } = await guardar({
+      regla: {
+        prorratear_monto_fijo: false,
+        indice_de_actualizacion: 'ipc',
+        meses_entre_actualizaciones: 6,
+        ajuste_por_indice: 'automatico',
+      },
+    });
+    assert.equal(estado, 200);
+    assert.deepEqual(loEscrito().regla, {
+      prorratear_monto_fijo: false,
+      indice_de_actualizacion: 'ipc',
+      meses_entre_actualizaciones: 6,
+      ajuste_por_indice: 'automatico',
+    });
+  });
+
+  it('lo que llega como texto de un casillero se lee igual', async () => {
+    await guardar({ regla: { meses_entre_actualizaciones: '3' } });
+    assert.deepEqual(loEscrito().regla, { meses_entre_actualizaciones: 3 });
+  });
+
+  it('guardar los valores de fábrica no congela nada', async () => {
+    await guardar({ regla: { ...REGLA_DE_PAGO, ...AJUSTE_DE_FABRICA, indice_de_actualizacion: '' } });
+    assert.deepEqual(loEscrito().regla, {});
+  });
+
+  it('una forma de ajuste que no existe se rechaza y no escribe nada', async () => {
+    const { estado, cuerpo } = await guardar({ regla: { ajuste_por_indice: 'cuando_quiera' } });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'dato_invalido');
+    assert.equal(cuerpo.clave, 'ajuste_por_indice');
+    assert.equal(loEscrito(), undefined, 'dijo que no y guardó igual');
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('cada cuántos meses sólo acepta mensual, trimestral o semestral', async () => {
+    const { estado, cuerpo } = await guardar({ regla: { meses_entre_actualizaciones: 2 } });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.clave, 'meses_entre_actualizaciones');
+    assert.equal(loEscrito(), undefined);
+  });
+
+  it('las demás condiciones de cobro al Cliente no entran por acá', async () => {
+    const { estado } = await guardar({ regla: { forma_de_precio: 'lista', medicion: 'hora' } });
+    assert.equal(estado, 200);
+    assert.deepEqual(loEscrito().regla, {});
   });
 });
 

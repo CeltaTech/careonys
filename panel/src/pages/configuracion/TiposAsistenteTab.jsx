@@ -7,11 +7,21 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { Candado } from '../../components/ui/Candado';
 import { EstadoLista } from '../../components/layout/EstadoLista';
-import { CLASES_TAREA, esTipoGeneral, nombreTipo, nombreMatricula } from '../../lib/tiposAsistente';
+import {
+  CLASES_TAREA,
+  esTipoGeneral,
+  nombreTipo,
+  nombreMatricula,
+  clasePideEspecialidad,
+  especialidadPorTarea,
+  motivoDeLaEspecialidadDeLaTarea,
+} from '../../lib/tiposAsistente';
 import { TareaConDetalle } from '../../components/ui/TareaConDetalle';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { useAuth } from '../../context/AuthContext';
+import { esAdminOSuperior } from '../../lib/roles';
 import '../../styles/molde-paginas.css';
 
 /* Los tipos de Asistente, sus especialidades y sus tareas.
@@ -37,6 +47,9 @@ export function TiposAsistenteTab() {
   const [tipoEnModal, setTipoEnModal] = useState(null);
   const [ocupadoId, setOcupadoId] = useState(null);
   const [tipoAbierto, setTipoAbierto] = useState(null);
+  // Cada cambio en las Especialidades del tipo vuelve a cargar las tareas, porque cada tarea
+  // ofrece para elegir las Especialidades que el tipo tiene en uso.
+  const [versionEspecialidades, setVersionEspecialidades] = useState(0);
 
   const recargar = useCallback(async () => {
     if (!prestadoraId) return;
@@ -157,8 +170,12 @@ export function TiposAsistenteTab() {
             </div>
             {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
             <div className="molde-tipo-contenido">
-              <EspecialidadesDelTipo tipo={tipoElegido} prestadoraId={prestadoraId} />
-              <TareasDelTipo tipo={tipoElegido} prestadoraId={prestadoraId} />
+              <EspecialidadesDelTipo
+                tipo={tipoElegido}
+                prestadoraId={prestadoraId}
+                onCambio={() => setVersionEspecialidades((v) => v + 1)}
+              />
+              <TareasDelTipo tipo={tipoElegido} prestadoraId={prestadoraId} versionEspecialidades={versionEspecialidades} />
             </div>
           </section>
         )}
@@ -253,7 +270,7 @@ function TipoModal({ tipo, prestadoraId, onClose, onGuardado }) {
 /* Las especialidades de un tipo son de cada Prestadora, también las de los tipos de fábrica:
    ella las agrega, las renombra y las borra. Una especialidad puede pedir su propia matrícula.
    Borrarla se la quita a los Asistentes que la tenían. */
-function EspecialidadesDelTipo({ tipo, prestadoraId }) {
+function EspecialidadesDelTipo({ tipo, prestadoraId, onCambio }) {
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [especialidades, setEspecialidades] = useState([]);
@@ -295,6 +312,7 @@ function EspecialidadesDelTipo({ tipo, prestadoraId }) {
       return false;
     }
     recargar();
+    onCambio?.();
     return true;
   }
 
@@ -470,29 +488,46 @@ function FormularioDeTarea({ nombre, inicial, ocupado, etiquetaBoton, onGuardar,
 /* Las tres listas de tareas de un tipo: habilitadas, no incluidas y prohibidas. Van separadas
    porque son tres cosas distintas: lo que es su trabajo, lo que no le toca pero se le puede
    acordar aparte, y lo que no se le puede asignar. */
-function TareasDelTipo({ tipo, prestadoraId }) {
+function TareasDelTipo({ tipo, prestadoraId, versionEspecialidades }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
+  const administra = esAdminOSuperior(usuario?.rol);
   const [tareas, setTareas] = useState([]);
+  const [especialidades, setEspecialidades] = useState([]);
+  const [pedidas, setPedidas] = useState({});
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
 
   const recargar = useCallback(async () => {
-    if (!tipo) return;
+    if (!tipo || !prestadoraId) return;
     setEstado('cargando');
     setError(null);
-    const { data, error: errorConsulta } = await supabase
-      .from('tareas_tipo_asistente')
-      .select('*')
-      .eq('tipo_asistente_id', tipo.id)
-      .order('orden');
+    const [consultaTareas, consultaEspecialidades, consultaPedidas] = await Promise.all([
+      supabase.from('tareas_tipo_asistente').select('*').eq('tipo_asistente_id', tipo.id).order('orden'),
+      supabase
+        .from('especialidades')
+        .select('id, nombre')
+        .eq('tipo_asistente_id', tipo.id)
+        .eq('prestadora_id', prestadoraId)
+        .eq('activo', true)
+        .order('orden')
+        .order('nombre'),
+      supabase.from('especialidad_que_pide_la_tarea').select('tarea_id, especialidad_id').eq('prestadora_id', prestadoraId),
+    ]);
+    const errorConsulta = consultaTareas.error || consultaEspecialidades.error || consultaPedidas.error;
     if (errorConsulta) {
       setError(mensajeDeError(errorConsulta, t));
       setEstado('error');
       return;
     }
-    setTareas(data ?? []);
+    setTareas(consultaTareas.data ?? []);
+    setEspecialidades(consultaEspecialidades.data ?? []);
+    setPedidas(especialidadPorTarea(consultaPedidas.data));
     setEstado('listo');
-  }, [tipo, t]);
+    // versionEspecialidades no se lee adentro: está para volver a cargar cuando cambian las
+    // Especialidades del tipo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipo, prestadoraId, t, versionEspecialidades]);
 
   useEffect(() => {
     recargar();
@@ -509,6 +544,9 @@ function TareasDelTipo({ tipo, prestadoraId }) {
           tareas={tareas.filter((x) => x.clase === clase)}
           tipo={tipo}
           prestadoraId={prestadoraId}
+          especialidades={especialidades}
+          pedidas={pedidas}
+          administra={administra}
           onCambio={recargar}
         />
       ))}
@@ -516,7 +554,7 @@ function TareasDelTipo({ tipo, prestadoraId }) {
   );
 }
 
-function ListaDeClase({ clase, tareas, tipo, prestadoraId, onCambio }) {
+export function ListaDeClase({ clase, tareas, tipo, prestadoraId, especialidades = [], pedidas = {}, administra, onCambio }) {
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [editandoId, setEditandoId] = useState(null);
@@ -565,6 +603,32 @@ function ListaDeClase({ clase, tareas, tipo, prestadoraId, onCambio }) {
     await correr(supabase.from('tareas_tipo_asistente').delete().eq('id', tarea.id));
   }
 
+  // Elegir una Especialidad la anota; dejar el casillero vacío borra el renglón y la tarea ya no
+  // pide ninguna.
+  async function elegirEspecialidad(tarea, especialidadId) {
+    setOcupado(true);
+    setError(null);
+    const { error: fallo } = especialidadId
+      ? await supabase
+          .from('especialidad_que_pide_la_tarea')
+          .upsert(
+            { prestadora_id: prestadoraId, tarea_id: tarea.id, especialidad_id: especialidadId },
+            { onConflict: 'prestadora_id,tarea_id' },
+          )
+      : await supabase
+          .from('especialidad_que_pide_la_tarea')
+          .delete()
+          .eq('prestadora_id', prestadoraId)
+          .eq('tarea_id', tarea.id);
+    setOcupado(false);
+    if (fallo) {
+      const motivo = motivoDeLaEspecialidadDeLaTarea(fallo);
+      setError(motivo ? t.configuracion[`tareas_especialidad_error_${motivo}`] : mensajeDeError(fallo, t));
+      return;
+    }
+    onCambio();
+  }
+
   return (
     <section className="molde-tipo-seccion">
       <h4>{t.tareas_asistente[`clase_${clase}`]}</h4>
@@ -586,6 +650,26 @@ function ListaDeClase({ clase, tareas, tipo, prestadoraId, onCambio }) {
           ) : (
             <div key={tarea.id} className="panel-fila-alerta">
               <TareaConDetalle tarea={tarea} t={t} />
+              {clasePideEspecialidad(clase) && (
+                <FormField
+                  type="select"
+                  label={t.configuracion.tareas_especialidad}
+                  name={`especialidad_de_la_tarea_${tarea.id}`}
+                  value={pedidas[tarea.id] ?? ''}
+                  disabled={!administra || ocupado}
+                  onChange={(e) => elegirEspecialidad(tarea, e.target.value || null)}
+                >
+                  <option value="">{t.configuracion.tareas_especialidad_ninguna}</option>
+                  {especialidades.map((especialidad) => (
+                    <option key={especialidad.id} value={especialidad.id}>
+                      {especialidad.nombre}
+                    </option>
+                  ))}
+                  {pedidas[tarea.id] && !especialidades.some((x) => x.id === pedidas[tarea.id]) && (
+                    <option value={pedidas[tarea.id]}>{t.configuracion.tareas_especialidad_fuera_de_uso}</option>
+                  )}
+                </FormField>
+              )}
               {!tarea.prestadora_id ? (
                 <Candado etiqueta={t.configuracion.candado} />
               ) : (

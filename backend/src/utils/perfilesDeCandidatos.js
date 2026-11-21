@@ -14,9 +14,9 @@
 // entero al backend (`scripts/copias_entre_apps.mjs`). `candidatos.js` los vuelve a exportar, así
 // que quien los importaba de allá los sigue encontrando.
 //
-// LO QUE NO SE CONFIGURA, Y POR QUÉ. Los cinco motivos que bloquean —ya tiene otro turno de guardia, tiene
+// LO QUE NO SE CONFIGURA, Y POR QUÉ. Los seis motivos que bloquean —ya tiene otro turno de guardia, tiene
 // una ausencia cargada, le falta la Matrícula o está vencida o sin comprobar, no trabaja en esa
-// modalidad— y el interruptor de "no disponible" no están acá. Esos números no deciden nada: el
+// modalidad, le toca una tarea prohibida para su tipo— y el interruptor de "no disponible" no están acá. Esos números no deciden nada: el
 // bloqueo ya lo decidió otra cosa, y el −1000 solamente los manda al fondo de la lista. Dejarlos
 // tocar sería ofrecer una perilla que no hace nada, o peor, una con la que se puede subir a la
 // cabeza de la lista a alguien que no puede tomar el turno de guardia.
@@ -99,6 +99,25 @@ export const PESOS = {
 
   descanso_ok: 6,
   descanso_corto: -25,
+
+  /**
+   * Al Asistente le toca una tarea, o una vía de medicación, prohibida para su tipo. Bloquea: la
+   * base rechaza la asignación. Como los demás bloqueos, el número sólo lo manda al fondo.
+   */
+  tarea_prohibida: -1000,
+
+  /** El Asistente no acepta trabajar en el lugar de alguno de los Pacientes. Resta, no bloquea. */
+  lugar_no_aceptado: -20,
+
+  /**
+   * Por cada estrella del promedio de calificaciones del período de antecedentes. Sin
+   * calificaciones no suma nada.
+   */
+  calificacion_por_estrella: 4,
+  /** Por cada falta sin aviso en el período de antecedentes. */
+  falta_sin_aviso: -15,
+  /** Por cada llegada tarde en el período de antecedentes. */
+  llegada_tarde: -4,
 };
 
 /** Los topes y umbrales. Valores de fábrica. */
@@ -149,6 +168,9 @@ export const TOPES = {
    */
   km_cerca: 8,
   km_lejos: 25,
+
+  /** Cuántos meses hacia atrás se miran las calificaciones, las faltas sin aviso y las llegadas tarde. */
+  meses_de_antecedentes: 6,
 };
 
 /**
@@ -171,6 +193,10 @@ export const PESOS_QUE_SE_PUEDEN_TOCAR = {
   horas_pasa_el_tope: { minimo: -120, maximo: 0 },
   descanso_ok: { minimo: 0, maximo: 60 },
   descanso_corto: { minimo: -120, maximo: 0 },
+  lugar_no_aceptado: { minimo: -120, maximo: 0 },
+  calificacion_por_estrella: { minimo: 0, maximo: 60 },
+  falta_sin_aviso: { minimo: -120, maximo: 0 },
+  llegada_tarde: { minimo: -60, maximo: 0 },
 };
 
 /** Qué topes se pueden tocar, y entre qué valores. */
@@ -183,6 +209,7 @@ export const TOPES_QUE_SE_PUEDEN_TOCAR = {
   dia_inicio_semana: { minimo: 0, maximo: 6 },
   km_cerca: { minimo: 0, maximo: 200 },
   km_lejos: { minimo: 0, maximo: 500 },
+  meses_de_antecedentes: { minimo: 1, maximo: 24 },
 };
 
 /**
@@ -193,8 +220,12 @@ export const TOPES_QUE_SE_PUEDEN_TOCAR = {
  */
 const TOPES_EN_PORCENTAJE = new Set(['proporcion_horas_para_avisar']);
 
+/** Los topes que cuentan cosas enteras, como meses: se escriben y se guardan sin decimales. */
+const TOPES_ENTEROS = new Set(['meses_de_antecedentes']);
+
 /** Los bordes de un tope tal como se muestran: en porcentaje entero si corresponde. */
 export function bordeEnPantalla(clave, borde) {
+  if (TOPES_ENTEROS.has(clave)) return { ...borde, paso: 1 };
   if (!TOPES_EN_PORCENTAJE.has(clave)) return { ...borde, paso: 'any' };
   return { minimo: Math.round(borde.minimo * 100), maximo: Math.round(borde.maximo * 100), paso: 1 };
 }
@@ -207,7 +238,9 @@ export function topeEnPantalla(clave, valor) {
 
 /** Lo escrito en pantalla, tal como se guarda: el porcentaje vuelve a proporción, entero. */
 export function topeGuardado(clave, escrito) {
-  if (!TOPES_EN_PORCENTAJE.has(clave) || escrito === '') return escrito;
+  if (escrito === '') return escrito;
+  if (TOPES_ENTEROS.has(clave)) return Math.round(Number(escrito));
+  if (!TOPES_EN_PORCENTAJE.has(clave)) return escrito;
   return Math.round(Number(escrito)) / 100;
 }
 

@@ -12,17 +12,15 @@ import {
   plazoQueSePuedeGuardar,
 } from '../../lib/facturacionDeClientes';
 import {
-  AJUSTES_POR_INDICE_POSIBLES,
   CLAVES_DE_LAS_CONDICIONES,
   FORMAS_DE_PRECIO_POSIBLES,
   FRECUENCIAS_DE_COBRO_POSIBLES,
   MEDICIONES_POSIBLES,
-  SIN_INDICE,
   VALORES_DE_FABRICA_DEL_CLIENTE,
   condicionesQueSePuedenGuardar,
 } from '../../lib/condicionesDelCliente';
 import { CONDICIONES_DE_CADA_MEDICION } from '../../lib/calcularLiquidacion';
-import { MESES_POSIBLES, textoDeMeses } from '../../lib/ajustePorIndice';
+import { AjustePorIndiceConfig } from '../../components/AjustePorIndiceConfig';
 import '../../styles/molde-paginas.css';
 
 /* A qué plazo pagan los Clientes lo que se les factura.
@@ -115,10 +113,7 @@ export function FacturacionClientesTab() {
   const cambiarCondicion = (clave) => (e) => ponerCondicion(clave, e.target.value === '' ? null : e.target.value);
   const cambiarSiNo = (clave) => (e) => ponerCondicion(clave, e.target.checked);
 
-  // Sin índice no hay nada que aplicar: los meses y la forma de aplicarlo no se muestran.
-  const conIndice = (condiciones.indice_de_actualizacion ?? SIN_INDICE) !== SIN_INDICE;
   const medicionQueRige = condiciones.medicion ?? VALORES_DE_FABRICA_DEL_CLIENTE.medicion;
-  const errorDe = (clave, texto) => (condicionMal === clave ? texto : undefined);
 
   // La misma comprobación que hace el backend antes de escribir, leída del archivo compartido: así
   // el botón no ofrece guardar algo que después se rechaza.
@@ -293,50 +288,14 @@ export function FacturacionClientesTab() {
               />
             </div>
           ))}
-          <FormField
-            label={t.configuracion.condiciones_cliente.indice_de_actualizacion}
-            name="indice_de_actualizacion"
-            type="select"
-            value={condiciones.indice_de_actualizacion ?? SIN_INDICE}
-            error={errorIndices ?? undefined}
-            onChange={cambiarCondicion('indice_de_actualizacion')}
-          >
-            <option value={SIN_INDICE}>{t.actualizacion_de_precios.sin_indice}</option>
-            {indices.map((indice) => (
-              <option key={indice.codigo} value={indice.codigo}>
-                {indice.nombre}
-              </option>
-            ))}
-          </FormField>
-          {conIndice && (
-            <>
-              <FormField
-                label={t.configuracion.condiciones_cliente.meses_entre_actualizaciones}
-                name="meses_entre_actualizaciones"
-                type="select"
-                value={String(condiciones.meses_entre_actualizaciones ?? VALORES_DE_FABRICA_DEL_CLIENTE.meses_entre_actualizaciones)}
-                error={errorDe('meses_entre_actualizaciones', t.formularios.falta_un_dato_obligatorio)}
-                onChange={cambiarCondicion('meses_entre_actualizaciones')}
-              >
-                {MESES_POSIBLES.map((n) => (
-                  <option key={n} value={String(n)}>{textoDeMeses(t.configuracion.condiciones_cliente, n)}</option>
-                ))}
-              </FormField>
-              <FormField
-                label={t.configuracion.condiciones_cliente.ajuste_por_indice}
-                name="ajuste_por_indice"
-                type="select"
-                value={condiciones.ajuste_por_indice ?? VALORES_DE_FABRICA_DEL_CLIENTE.ajuste_por_indice}
-                onChange={cambiarCondicion('ajuste_por_indice')}
-              >
-                {AJUSTES_POR_INDICE_POSIBLES.map((valor) => (
-                  <option key={valor} value={valor}>
-                    {t.configuracion.condiciones_cliente.valores.ajuste_por_indice[valor]}
-                  </option>
-                ))}
-              </FormField>
-            </>
-          )}
+          <AjustePorIndiceConfig
+            t={t}
+            valores={condiciones}
+            indices={indices}
+            errorIndices={errorIndices}
+            claveMal={condicionMal}
+            onCambiar={ponerCondicion}
+          />
           </div>
           <div className="molde-acciones">
             <Button onClick={guardar} disabled={guardando || !revisado.ok}>

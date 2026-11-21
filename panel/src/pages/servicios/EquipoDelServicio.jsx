@@ -3,7 +3,8 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
-import { ORIGEN, equipoDelServicio, reglaDeEquipoDe } from '../../lib/equipoDelServicio';
+import { ORIGEN } from '../../lib/equipoDelServicio';
+import { leerEquipoCompletoDelServicio } from '../../lib/leerEquipoDelServicio';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
@@ -53,63 +54,15 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
     setErrorFila(null);
 
     try {
-      const [turnos_guardia, series, configuracion, decisiones] = await Promise.all([
-        supabase
-          .from('turnos_guardia')
-          .select('id, servicio_id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado')
-          .eq('servicio_id', servicio.id),
-        supabase
-          .from('series_turnos_guardia')
-          .select('id, servicio_id, asistente_id, estado, vigente_hasta')
-          .eq('servicio_id', servicio.id),
-        supabase
-          .from('configuracion_equipo_paciente')
-          .select('regla')
-          .eq('prestadora_id', servicio.prestadora_id)
-          .maybeSingle(),
-        supabase.from('equipo_servicio').select('*').eq('servicio_id', servicio.id),
-      ]);
-      for (const respuesta of [turnos_guardia, series, configuracion, decisiones]) {
-        if (respuesta.error) throw respuesta.error;
-      }
+      const { equipo, turnos_guardia, idsAsistentes, nombreDeAsistente, nombreDeUsuario } =
+        await leerEquipoCompletoDelServicio(supabase, servicio);
 
-      const equipo = equipoDelServicio({
-        servicioId: servicio.id,
-        turnos_guardia: turnos_guardia.data ?? [],
-        series: series.data ?? [],
-        decisiones: decisiones.data ?? [],
-        coordinadorDelServicio: servicio.coordinador_id ?? null,
-        regla: reglaDeEquipoDe(configuracion.data?.regla),
-      });
-
-      const idsAsistentes = [...new Set([...equipo.asistentes, ...equipo.afuera].map((a) => a.asistente_id))];
-      const idsUsuarios = [...new Set(equipo.coordinadores.map((c) => c.usuario_id))];
-      const [delEquipo, usuarios] = await Promise.all([
-        idsAsistentes.length
-          ? supabase.from('asistentes').select('id, nombre, apellido').in('id', idsAsistentes)
-          : Promise.resolve({ data: [], error: null }),
-        idsUsuarios.length
-          ? supabase.from('usuarios').select('id, nombre').in('id', idsUsuarios)
-          : Promise.resolve({ data: [], error: null }),
-      ]);
-      for (const respuesta of [delEquipo, usuarios]) {
-        if (respuesta.error) throw respuesta.error;
-      }
-
-      const nombre = (p) => `${p.apellido ?? ''} ${p.nombre ?? ''}`.trim();
-      const porId = new Map((delEquipo.data ?? []).map((a) => [a.id, a]));
-      const nombresDeUsuario = new Map((usuarios.data ?? []).map((u) => [u.id, nombre(u)]));
-
-      setDatos({
-        ...equipo,
-        nombreDeAsistente: (id) => (porId.has(id) ? nombre(porId.get(id)) : '—'),
-        nombreDeUsuario: (id) => nombresDeUsuario.get(id) || '—',
-      });
+      setDatos({ ...equipo, nombreDeAsistente, nombreDeUsuario });
 
       setYaEstan(idsAsistentes);
       const hoy = hoyISO();
       setIdsVacantes(
-        (turnos_guardia.data ?? [])
+        turnos_guardia
           .filter((tg) => !tg.asistente_id && tg.estado === 'programada' && tg.fecha >= hoy)
           .map((tg) => tg.id)
       );
@@ -118,6 +71,7 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
       setError(explicar(falla));
       setEstado('error');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- se relee cuando cambia alguno de estos tres datos del Servicio, no cuando llega otro objeto igual
   }, [servicio.id, servicio.prestadora_id, servicio.coordinador_id, explicar]);
 
   useEffect(() => {
@@ -251,6 +205,7 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
                 <>
                   <ElegirAsistente
                     idsHuecos={idsVacantes}
+                    servicioId={servicio.id}
                     excluir={yaEstan}
                     name="equipo-sumar"
                     label={e.sumar}

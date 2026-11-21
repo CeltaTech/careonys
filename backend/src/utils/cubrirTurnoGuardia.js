@@ -51,7 +51,12 @@ export async function cubrirTurnoGuardiaConSustituto({
   // La constancia se escribe antes de mover el turno de guardia. Si fallara, el turno queda como estaba y
   // no se perdió nada. Al revés —el turno de guardia ya a nombre del sustituto y sin nadie anotado— se
   // perdería para siempre a quién le tocaba, que es justamente lo que hay que conservar.
-  const { error: errorCobertura } = await db.from('turnos_guardia_cobertura').insert({
+  //
+  // Ninguna función de la base hace las dos escrituras en una sola transacción, así que lo que no
+  // puede quedar es la mitad: si la base rechaza el cambio de nombre —una tarea prohibida para el
+  // sustituto, una modalidad que no le corresponde—, la constancia recién escrita se borra, porque
+  // esa sustitución no ocurrió.
+  const { data: constancias, error: errorCobertura } = await db.from('turnos_guardia_cobertura').insert({
     prestadora_id: prestadoraId,
     ausencia_id: ausenciaId,
     cobertura_de_ausencia_id: coberturaDeAusenciaId,
@@ -61,8 +66,9 @@ export async function cubrirTurnoGuardiaConSustituto({
     motivo,
     motivo_detalle: motivoDetalle,
     costo_adicional: costoAdicional,
-  });
+  }).select('id');
   if (errorCobertura) return { ok: false, motivo: errorCobertura.message };
+  const constanciaId = constancias?.[0]?.id ?? null;
 
   // El turno no cambia en nada más: mismo Paciente, mismo día, mismo horario, misma modalidad.
   // Cambia quién lo hace.
@@ -71,7 +77,27 @@ export async function cubrirTurnoGuardiaConSustituto({
     .update({ asistente_id: asistenteSustitutoId })
     .eq('prestadora_id', prestadoraId)
     .eq('id', turno_guardia.id);
-  if (errorReasignar) return { ok: false, motivo: errorReasignar.message };
+  if (errorReasignar) {
+    await borrarConstancia({ db, prestadoraId, constanciaId, turnoGuardiaId: turno_guardia.id });
+    // Quien llama recibe el rechazo de la base tal cual, para poder reconocer su motivo.
+    return { ok: false, motivo: errorReasignar.message };
+  }
 
   return { ok: true };
+}
+
+/** Borra la constancia de una sustitución que la base no dejó hacer. */
+async function borrarConstancia({ db, prestadoraId, constanciaId, turnoGuardiaId }) {
+  if (!constanciaId) {
+    console.error(`[cubrirTurnoGuardia] la constancia del turno de guardia ${turnoGuardiaId} no devolvió su identificador y no se pudo borrar`);
+    return;
+  }
+  const { error } = await db
+    .from('turnos_guardia_cobertura')
+    .delete()
+    .eq('prestadora_id', prestadoraId)
+    .eq('id', constanciaId);
+  if (error) {
+    console.error(`[cubrirTurnoGuardia] no se pudo borrar la constancia ${constanciaId} del turno de guardia ${turnoGuardiaId}:`, error.message);
+  }
 }

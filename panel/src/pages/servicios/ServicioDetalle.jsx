@@ -27,6 +27,7 @@ import { EquipoDelServicio } from './EquipoDelServicio';
 import { CoberturaDelServicio } from './CoberturaDelServicio';
 import { CoberturaModal } from './CoberturaModal';
 import { TurnosGuardiaDelServicio } from './TurnosGuardiaDelServicio';
+import { ValoresAcordadosDelServicio } from './ValoresAcordadosDelServicio';
 import './servicios.css';
 
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
@@ -74,6 +75,9 @@ export function ServicioDetalle() {
   const veLosPagos = puedeEditarPagos || puedeRegistrarConsentimiento;
   const gestionaServicios = esAdmin || puede('gestionar_servicios');
   const modificaAsistentes = esAdmin || puede('modificar_asistentes_del_servicio');
+  // El valor acordado con cada Asistente lo ve y lo carga sólo la administración con el permiso de
+  // ver lo que se les paga. El Coordinador no lo ve aunque tenga ese permiso. La base aplica el mismo corte.
+  const veValoresAcordados = esAdmin && puede('ver_pagos_asistente');
   // La pausa, la suspensión o la cancelación de una Prestación, mientras su ventana está abierta.
   const [accionPrestacion, setAccionPrestacion] = useState(null);
   const [viendoEquipo, setViendoEquipo] = useState(false);
@@ -655,6 +659,8 @@ export function ServicioDetalle() {
           </section>
         </div>
       )}
+
+      {tab === 'resumen' && veValoresAcordados && <ValoresAcordadosDelServicio servicio={servicio} />}
     </div>
   );
 }

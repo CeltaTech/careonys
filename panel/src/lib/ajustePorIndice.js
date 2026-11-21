@@ -3,6 +3,7 @@ import {
   SIN_INDICE,
   condicionDe,
   condicionDelServicioQueSePuedeGuardar,
+  condicionesQueSePuedenGuardar,
   leerValorDeLaCondicion,
 } from './condicionesDelCliente';
 
@@ -68,6 +69,29 @@ export function ajusteQueSePuedeGuardar(regla, elegido) {
     valores[clave] = revisado.valor;
   }
   return { ok: true, valores };
+}
+
+/* El ajuste de toda la Prestadora, guardado en una `regla` de configuración: la del cobro a los
+   Clientes o la del pago a los Asistentes, que usan las mismas tres claves.
+
+   Lo que muestran los casilleros: lo que hay en la regla, o null («la de fábrica»). */
+export function ajusteDeLaRegla(regla) {
+  const resultado = {};
+  for (const clave of CLAVES_DEL_AJUSTE) resultado[clave] = regla?.[clave] ?? null;
+  return resultado;
+}
+
+/* Lo que se escribe en la regla. Devuelve { ok: true, valor } con sólo las claves que difieren de
+   fábrica, o { ok: false, clave } con la primera mal cargada. Sin índice, los meses y la forma de
+   aplicarlo no dicen nada y no se guardan. */
+export function ajusteDeLaReglaQueSePuedeGuardar(elegido) {
+  const sinIndice = (elegido?.indice_de_actualizacion ?? SIN_INDICE) === SIN_INDICE;
+  const claves = sinIndice ? ['indice_de_actualizacion'] : CLAVES_DEL_AJUSTE;
+  const revisado = condicionesQueSePuedenGuardar(Object.fromEntries(claves.map((clave) => [clave, elegido?.[clave]])));
+  if (!revisado.ok) return revisado;
+  const valor = {};
+  for (const clave of CLAVES_DEL_AJUSTE) if (revisado.valor[clave] !== undefined) valor[clave] = revisado.valor[clave];
+  return { ok: true, valor };
 }
 
 // Mensual, trimestral o semestral. `tc` es `t.configuracion.condiciones_cliente`.

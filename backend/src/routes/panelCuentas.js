@@ -52,6 +52,7 @@ import {
 import { enviarDocumentoParaFirmar } from '../utils/enlaceConsentimientoPagador.js';
 import { normalizarIdioma } from '../i18n/idiomas.js';
 import { avisarLaBajaConDeuda } from '../utils/avisoBajaConDeuda.js';
+import { zonaDeLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 
 // CON LA CREDENCIAL DE QUIEN PIDE. Lo que estas rutas leen y escriben en tablas entra con
 // `clienteDelPedido(req)`: la base sabe quién pide y le contesta sólo lo de su Prestadora, así que
@@ -568,7 +569,7 @@ panelCuentasRouter.get('/servicio/:servicioId/pagador', requiereRolPanel, exigir
       servicioId: servicio.id,
       prestadoraId: servicio.prestadora_id,
       idioma: normalizarIdioma(req.query.idioma),
-      zona: req.query.zona,
+      zona: await zonaDeLaPrestadora(clienteDelPedido(req), servicio.prestadora_id),
     }));
   } catch (error) {
     responderError(res, error);

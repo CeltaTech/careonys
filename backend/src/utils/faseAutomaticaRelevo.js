@@ -4,6 +4,7 @@ import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
 import { seSuperponen } from './horarios.js';
 import { sumarDias } from './fechas.js';
+import { diasDeLaGuardiaMasLarga } from './guardiaMasLarga.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 
 /*
@@ -114,13 +115,17 @@ async function suplentesDisponibles(prestadoraId, turno_guardia) {
 
   if (error) throw new Error(error.message);
 
+  // Un turno de guardia no tiene tope de días: se miran hacia atrás tantos días como dura el más
+  // largo, y nunca menos de uno, por el turno de noche que empezó el día anterior.
+  const diasHaciaAtras = Math.max(1, await diasDeLaGuardiaMasLarga(supabase, prestadoraId));
   const { data: turnosGuardiaDelDia, error: errorTurnosGuardia } = await supabase
     .from('turnos_guardia')
     .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
     .eq('prestadora_id', prestadoraId)
     .neq('estado', 'cancelada')
     .not('asistente_id', 'is', null)
-    .in('fecha', [fechaAnterior(turno_guardia.fecha), turno_guardia.fecha]);
+    .gte('fecha', sumarDias(turno_guardia.fecha, -diasHaciaAtras))
+    .lte('fecha', turno_guardia.fecha);
 
   if (errorTurnosGuardia) throw new Error(errorTurnosGuardia.message);
 
@@ -133,19 +138,6 @@ async function suplentesDisponibles(prestadoraId, turno_guardia) {
   return (padron ?? [])
     .map((a) => a.id)
     .filter((id) => id !== turno_guardia.asistente_id && !ocupados.has(id));
-}
-
-/**
- * El día anterior al del turno de guardia.
- *
- * Se mira también ese día porque un turno de guardia que empezó a las 22:00 sigue corriendo a las 02:00 del
- * día siguiente: buscando sólo por la fecha del turno de guardia entrante, quien está adentro de una
- * turno de guardia de noche aparecería libre.
- */
-function fechaAnterior(fechaISO) {
-  // La cuenta es de días escritos, sin reloj: con la medianoche del servidor, en una zona
-  // adelantada a la hora universal el día anterior salía dos días antes.
-  return sumarDias(fechaISO, -1);
 }
 
 /**

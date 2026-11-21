@@ -3,8 +3,8 @@ import { frase } from '../i18n/mensajesDelSistema.js';
 // La frase que va al pie del documento firmado con el enlace, en lugar de los renglones para firmar a
 // mano. Una sola para todos los que la muestran: el Panel, la página del enlace y lo que se descarga.
 //
-// La fecha y la hora se escriben en la zona horaria de quien mira, que la manda su navegador: la base
-// guarda el instante, y el servidor no sabe en qué hora vive cada uno.
+// La base guarda el instante, y la fecha y la hora se escriben en la zona que pasa quien la llama: el
+// Panel pasa la de la Prestadora, leída de la base; la página del enlace, la del navegador de quien mira.
 //
 // Sin Email guardado no hay frase: un documento firmado antes de que se guardara no la inventa.
 export function fraseDeLaFirma({ consentimiento, idioma, zona, prestadoraId }) {

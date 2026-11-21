@@ -92,6 +92,7 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   respuestas.set('GET /rest/v1/turnos_guardia', () => [SIN_COBRAR, SIN_CERRAR, COBRADA]);
   respuestas.set('POST /rest/v1/rpc/periodos_pagados_de_la_sesion', () => [
     { desde: '2026-09-01', hasta: '2026-09-30' },
@@ -189,5 +190,21 @@ describe('GET /perfil — sin la credencial interna del código QR', () => {
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/asistentes' && l.url.includes('tipo_asistente_id'));
     assert.ok(lectura, 'no leyó el perfil');
     assert.ok(!lectura.url.includes('qr_token'), 'el perfil sigue pidiendo qr_token');
+  });
+});
+
+describe('GET /perfil — la zona horaria de la Prestadora', () => {
+  it('viaja con el perfil, leída de la base con la sesión del Asistente', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', ({ url }) => (decodeURIComponent(url).includes('zona_horaria')
+      ? [{ zona_horaria: 'America/Sao_Paulo' }]
+      : [{ dias_aviso_vencimiento_documentos: 30 }]));
+    const { estado, cuerpo } = await pedir('/perfil');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.zonaHoraria, 'America/Sao_Paulo');
+
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras' && l.url.includes('zona_horaria'));
+    assert.ok(lectura, 'no leyó la zona de la Prestadora');
+    assert.equal(lectura.credencial, SESION, 'la zona se leyó con otra credencial');
+    assert.ok(lectura.url.includes(`id=eq.${PRESTADORA}`), 'no acotó la lectura a su Prestadora');
   });
 });

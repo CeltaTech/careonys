@@ -1,5 +1,6 @@
 import { idsDePacientesDeTurnoGuardia } from './pacientesDeTurnoGuardia.js';
 import { finDeTurnoGuardia, inicioDeTurnoGuardia, sumarDias } from './horarios.js';
+import { diasDeLaGuardiaMasLarga } from './guardiaMasLarga.js';
 
 /* Marcar un turno de guardia como ausente y abrir el incidente de relevo.
    ==========================================================================
@@ -86,12 +87,23 @@ async function buscarTurnoGuardiaSaliente({ db, turno_guardia, prestadoraId }) {
   }
   if (pacienteIds.length === 0) return null;
 
+  // Un turno de guardia no tiene tope de días: el saliente puede haber empezado tantos días antes
+  // como dura el más largo, y nunca menos de uno, por el turno de noche del día anterior.
+  let diasHaciaAtras;
+  try {
+    diasHaciaAtras = Math.max(1, await diasDeLaGuardiaMasLarga(db, prestadoraId));
+  } catch (e) {
+    console.error(`Error leyendo el turno más largo (guardia ${turno_guardia.id}):`, e.message);
+    return null;
+  }
+
   const { data: candidatas, error } = await db
     .from('turno_guardia_pacientes')
     .select('turnos_guardia!inner(id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)')
     .in('paciente_id', pacienteIds)
     .eq('prestadora_id', prestadoraId)
-    .in('turnos_guardia.fecha', [sumarDias(turno_guardia.fecha, -1), turno_guardia.fecha])
+    .gte('turnos_guardia.fecha', sumarDias(turno_guardia.fecha, -diasHaciaAtras))
+    .lte('turnos_guardia.fecha', turno_guardia.fecha)
     .neq('turnos_guardia.estado', 'cancelada')
     .neq('turnos_guardia.id', turno_guardia.id);
   if (error) {

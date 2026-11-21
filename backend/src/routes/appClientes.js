@@ -59,7 +59,7 @@ import {
 import { direccionDeVideollamada } from '../utils/videollamada.js';
 import { abrirElContactoDeUnAsistente, comoEstaElContacto } from '../utils/contactoDelAsistente.js';
 import { MODALIDAD } from '../utils/modalidades.js';
-import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
+import { hoyEnLaPrestadora, zonaDeLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 
 export const appClientesRouter = Router();
 
@@ -217,6 +217,10 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   // Cuánto queda abierta la sesión sin nadie delante: la aplicación cuenta el tiempo desde que abre.
   const cierrePorInactividad = await cierrePorInactividadDelPedido(db, req.usuarioCliente.prestadoraId);
 
+  // La zona horaria de la Prestadora, para que la aplicación diga «hoy» y las horas de los turnos de
+  // guardia en la de ella y no en la del aparato.
+  const zonaHoraria = await zonaDeLaPrestadora(db, req.usuarioCliente.prestadoraId);
+
   res.json({
     perfil: {
       ...usuario,
@@ -229,6 +233,7 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
     intermediacion,
     instruccionPendiente: pendiente,
     cierrePorInactividad,
+    zonaHoraria,
   });
 });
 

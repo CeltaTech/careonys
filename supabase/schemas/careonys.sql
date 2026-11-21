@@ -122,6 +122,40 @@ COMMENT ON DOMAIN "public"."moneda_iso" IS 'Código de moneda de tres letras may
 
 
 
+-- El día de hoy en la zona horaria de una Prestadora. Es el único lugar de la base que lo cuenta,
+-- y da lo mismo que la cuenta del backend. Sin zona o sin Prestadora no hay día: falla cerrado.
+CREATE OR REPLACE FUNCTION "interno"."hoy_en_la_zona"("p_zona" "text") RETURNS "date"
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'pg_catalog'
+    AS $$
+  SELECT (now() AT TIME ZONE p_zona)::date
+$$;
+
+
+ALTER FUNCTION "interno"."hoy_en_la_zona"("p_zona" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "interno"."hoy_de_la_prestadora"("p_prestadora" "uuid") RETURNS "date"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT interno.hoy_en_la_zona(p.zona_horaria) FROM prestadoras p WHERE p.id = p_prestadora
+$$;
+
+
+ALTER FUNCTION "interno"."hoy_de_la_prestadora"("p_prestadora" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "interno"."hoy_de_la_sesion"() RETURNS "date"
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'pg_catalog'
+    AS $$
+  SELECT interno.hoy_de_la_prestadora(interno.prestadora_actual())
+$$;
+
+
+ALTER FUNCTION "interno"."hoy_de_la_sesion"() OWNER TO "postgres";
+
 CREATE OR REPLACE FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestadora" "uuid", "p_desde" "date", "p_hasta" "date") RETURNS TABLE("consulta_id" "uuid", "usuario_id" "uuid", "persona" "text", "paciente_id" "uuid", "paciente" "text", "categorias" "text"[], "momento" timestamp with time zone, "origen" "text", "motivos" "text"[])
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -148,19 +182,18 @@ CREATE OR REPLACE FUNCTION "interno"."accesos_fuera_de_lo_normal_de"("p_prestado
        AND c.momento >= (p_desde::timestamp AT TIME ZONE k.zona)
        AND c.momento <  ((p_hasta + 1)::timestamp AT TIME ZONE k.zona)
   ),
-  -- Las guardias que rodean el período, con su comienzo y su fin en hora del lugar. La que
-  -- termina a una hora menor que la de comienzo cruza la medianoche.
+  -- Las guardias que rodean el período, con su comienzo y su fin en hora del lugar. El fin sale
+  -- de los días que dura cada una, sin tope.
   turnos_guardia_del_periodo AS (
     SELECT g.paciente_id, g.coordinador_id, a.usuario_id AS asistente_usuario_id,
            (g.fecha + g.hora_inicio) AS empieza,
-           (g.fecha + g.hora_fin
-             + CASE WHEN g.hora_fin <= g.hora_inicio THEN interval '1 day' ELSE interval '0' END) AS termina
+           (interno.dia_en_que_termina_turno_guardia(g.fecha, g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin) + g.hora_fin) AS termina
       FROM turnos_guardia g
       CROSS JOIN configuracion k
       LEFT JOIN asistentes a ON a.id = g.asistente_id AND a.prestadora_id = g.prestadora_id
      WHERE g.prestadora_id = p_prestadora
        AND g.estado <> 'cancelada'
-       AND g.fecha BETWEEN p_desde - k.dias_de_margen AND p_hasta + k.dias_de_margen
+       AND g.fecha + g.dias_hasta_el_fin >= p_desde - k.dias_de_margen AND g.fecha <= p_hasta + k.dias_de_margen
   ),
   -- Las personas que ese día leyeron más Pacientes distintos que el tope.
   volumen AS (
@@ -472,7 +505,7 @@ BEGIN
              WHERE c.id = v_servicio.cliente_id AND c.prestadora_id = v_baja.prestadora_id))
     INTO v_contratante;
 
-  v_responsables := ARRAY(SELECT interno.responsables_de_pagos_en(v_servicio.id, current_date));
+  v_responsables := ARRAY(SELECT interno.responsables_de_pagos_en(v_servicio.id, interno.hoy_de_la_prestadora(v_baja.prestadora_id)));
 
   SELECT coalesce((regla ->> 'sigue_la_cobranza')::boolean, true) = false INTO v_la_lleva_otro
     FROM configuracion_facturacion_clientes
@@ -492,7 +525,7 @@ BEGIN
          AND e.cliente_id = v_servicio.cliente_id
       UNION ALL
       SELECT sum(s.saldo), s.moneda,
-             coalesce(current_date - min(s.fecha_vencimiento) FILTER (WHERE s.fecha_vencimiento < current_date), 0)
+             coalesce(interno.hoy_de_la_prestadora(v_baja.prestadora_id) - min(s.fecha_vencimiento) FILTER (WHERE s.fecha_vencimiento < interno.hoy_de_la_prestadora(v_baja.prestadora_id)), 0)
         FROM saldos_cliente s
        WHERE NOT coalesce(v_la_lleva_otro, false)
          AND s.prestadora_id = v_baja.prestadora_id
@@ -905,7 +938,7 @@ CREATE OR REPLACE FUNCTION "interno"."aviso_de_borrado_de_consultas_a_hce_pendie
     SET "search_path" TO 'public', 'interno'
     AS $$
   WITH v AS (
-    SELECT * FROM interno.consultas_a_hce_por_vencer(p_prestadora)
+    SELECT c.*, interno.hoy_de_la_prestadora(p_prestadora) AS hoy FROM interno.consultas_a_hce_por_vencer(p_prestadora) c
   ), ya AS (
     SELECT ra.accion
       FROM registro_actividad ra, v
@@ -915,15 +948,15 @@ CREATE OR REPLACE FUNCTION "interno"."aviso_de_borrado_de_consultas_a_hce_pendie
   )
   SELECT v.anio, v.se_borra_el,
          CASE
-           WHEN current_date >= v.notificacion_el THEN 'notificacion'
+           WHEN v.hoy >= v.notificacion_el THEN 'notificacion'
            ELSE 'preaviso'
          END,
-         v.se_borra_el - current_date
+         v.se_borra_el - v.hoy
     FROM v
-   WHERE current_date < v.se_borra_el
-     AND current_date >= v.preaviso_el
+   WHERE v.hoy < v.se_borra_el
+     AND v.hoy >= v.preaviso_el
      AND NOT EXISTS (SELECT 1 FROM ya WHERE ya.accion = 'notificacion_de_borrado')
-     AND (current_date >= v.notificacion_el
+     AND (v.hoy >= v.notificacion_el
           OR NOT EXISTS (SELECT 1 FROM ya WHERE ya.accion = 'preaviso_de_borrado'));
 $$;
 
@@ -956,11 +989,11 @@ CREATE OR REPLACE FUNCTION "interno"."calcular_prorroga_de_gracia"() RETURNS "tr
 DECLARE
   v_gracia date;
 BEGIN
-  v_gracia := interno.gracia_hasta(NEW.asistente_id, NEW.tipo_documento_id, CURRENT_DATE);
+  v_gracia := interno.gracia_hasta(NEW.asistente_id, NEW.tipo_documento_id, interno.hoy_de_la_prestadora(NEW.prestadora_id));
   IF v_gracia IS NULL THEN
     RAISE EXCEPTION 'documento_sin_gracia' USING ERRCODE = '23514';
   END IF;
-  NEW.hasta := GREATEST(v_gracia, CURRENT_DATE) + NEW.dias;
+  NEW.hasta := GREATEST(v_gracia, interno.hoy_de_la_prestadora(NEW.prestadora_id)) + NEW.dias;
   RETURN NEW;
 END;
 $$;
@@ -1039,7 +1072,7 @@ BEGIN
   IF recien_se_da_de_baja AND NOT la_trae_escrita THEN
     -- `GREATEST` cubre la prestacion que se da de baja antes de arrancar: no
     -- puede terminar antes de empezar, y la restriccion de mas arriba lo exige.
-    NEW.vigente_hasta := GREATEST(NEW.vigente_desde, CURRENT_DATE);
+    NEW.vigente_hasta := GREATEST(NEW.vigente_desde, interno.hoy_de_la_prestadora(NEW.prestadora_id));
   END IF;
 
   RETURN NEW;
@@ -1273,8 +1306,8 @@ CREATE OR REPLACE FUNCTION "interno"."consultas_a_hce_por_vencer"("p_prestadora"
      WHERE r.clase_de_registro = 'consultas_a_hce'
        AND r.al_vencer = 'borrar'
        AND r.tramo = 1
-       AND r.vigencia_desde <= current_date
-       AND (r.vigencia_hasta IS NULL OR r.vigencia_hasta >= current_date)
+       AND r.vigencia_desde <= interno.hoy_de_la_prestadora(p_prestadora)
+       AND (r.vigencia_hasta IS NULL OR r.vigencia_hasta >= interno.hoy_de_la_prestadora(p_prestadora))
      ORDER BY r.vigencia_desde DESC
      LIMIT 1
   ), primero AS (
@@ -1425,8 +1458,8 @@ CREATE OR REPLACE FUNCTION "interno"."coordinador_alcanza_asistente_de"("p_usuar
     WHERE u.id = p_usuario
       AND u.rol = 'coordinador'
       AND a.usuario_id IS NOT NULL
-      AND a.fecha_inicio <= current_date
-      AND (a.fecha_vuelta_real IS NULL OR a.fecha_vuelta_real > current_date)
+      AND a.fecha_inicio <= interno.hoy_de_la_prestadora(a.prestadora_id)
+      AND (a.fecha_vuelta_real IS NULL OR a.fecha_vuelta_real > interno.hoy_de_la_prestadora(a.prestadora_id))
       AND al.asistente_id = p_asistente_id
   );
 $$;
@@ -1658,8 +1691,8 @@ CREATE OR REPLACE FUNCTION "interno"."coordinadores_que_represento"() RETURNS "u
                  WHERE a.coordinador_que_cubre_id = auth.uid()
                    AND a.prestadora_id = interno.prestadora_actual()
                    AND a.usuario_id IS NOT NULL
-                   AND a.fecha_inicio <= current_date
-                   AND (a.fecha_vuelta_real IS NULL OR a.fecha_vuelta_real > current_date)
+                   AND a.fecha_inicio <= interno.hoy_de_la_prestadora(a.prestadora_id)
+                   AND (a.fecha_vuelta_real IS NULL OR a.fecha_vuelta_real > interno.hoy_de_la_prestadora(a.prestadora_id))
               ) END;
 $$;
 
@@ -1991,24 +2024,24 @@ ALTER FUNCTION "interno"."documentos_que_bloquean"("p_asistente_id" "uuid", "p_d
 
 
 
-CREATE OR REPLACE FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") RETURNS boolean
+CREATE OR REPLACE FUNCTION "interno"."el_acceso_abre_contactos"("p_prestadora" "uuid", "p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") RETURNS boolean
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'pg_catalog', 'pg_temp'
     AS $$
-  SELECT CASE p_estado
+  SELECT COALESCE(CASE p_estado
     WHEN 'vigente' THEN true
     -- En gracia abre hasta el día anterior a la suspensión. Sin fecha de suspensión no hay
     -- fecha conocida y se niega: falla cerrado.
-    WHEN 'en_gracia' THEN p_suspension_desde IS NOT NULL AND p_suspension_desde > current_date
+    WHEN 'en_gracia' THEN p_suspension_desde IS NOT NULL AND p_suspension_desde > interno.hoy_de_la_prestadora(p_prestadora)
     -- Dado de baja, abre hasta el último día del período pagado, ese día incluido.
-    WHEN 'cancelada' THEN p_vigente_hasta IS NOT NULL AND p_vigente_hasta >= current_date
+    WHEN 'cancelada' THEN p_vigente_hasta IS NOT NULL AND p_vigente_hasta >= interno.hoy_de_la_prestadora(p_prestadora)
     ELSE false
-  END;
+  END, false);
 $$;
 
 
 
-ALTER FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") OWNER TO "postgres";
+ALTER FUNCTION "interno"."el_acceso_abre_contactos"("p_prestadora" "uuid", "p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"() RETURNS "trigger"
@@ -3176,13 +3209,13 @@ BEGIN
       FROM public.turnos_guardia g
      WHERE g.id = NEW.turno_guardia_id;
   ELSIF NEW.serie_id IS NOT NULL THEN
-    SELECT GREATEST(s.vigente_desde, CURRENT_DATE), s.paciente_id, s.servicio_id
+    SELECT GREATEST(s.vigente_desde, interno.hoy_de_la_prestadora(NEW.prestadora_id)), s.paciente_id, s.servicio_id
       INTO v_dia, v_paciente, v_servicio
       FROM public.series_turnos_guardia s
      WHERE s.id = NEW.serie_id;
   END IF;
 
-  v_bloquean := interno.documentos_que_bloquean(NEW.asistente_id, COALESCE(v_dia, CURRENT_DATE), v_paciente, v_servicio);
+  v_bloquean := interno.documentos_que_bloquean(NEW.asistente_id, COALESCE(v_dia, interno.hoy_de_la_prestadora(NEW.prestadora_id)), v_paciente, v_servicio);
 
   IF cardinality(v_bloquean) > 0 THEN
     RAISE EXCEPTION 'documentos_bloquean:%:', array_to_string(v_bloquean, ', ')
@@ -3463,10 +3496,10 @@ CREATE OR REPLACE FUNCTION "interno"."firma_del_pagador_vigente"("p_servicio" "u
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT EXISTS (SELECT 1 FROM interno.responsables_de_pagos_en(p_servicio, current_date))
+  SELECT EXISTS (SELECT 1 FROM interno.responsables_de_pagos_en(p_servicio, interno.hoy_de_la_prestadora((SELECT s.prestadora_id FROM public.servicios s WHERE s.id = p_servicio))))
      AND NOT EXISTS (
        SELECT 1
-         FROM interno.responsables_de_pagos_en(p_servicio, current_date) AS r(persona)
+         FROM interno.responsables_de_pagos_en(p_servicio, interno.hoy_de_la_prestadora((SELECT s.prestadora_id FROM public.servicios s WHERE s.id = p_servicio))) AS r(persona)
         WHERE NOT EXISTS (
           SELECT 1
             FROM servicios s
@@ -3553,7 +3586,7 @@ COMMENT ON FUNCTION "interno"."gestiona_la_facturacion"() IS 'Único punto de ve
 
 
 
-CREATE OR REPLACE FUNCTION "interno"."gracia_hasta"("p_asistente_id" "uuid", "p_tipo_documento_id" "uuid", "p_dia" "date" DEFAULT CURRENT_DATE) RETURNS "date"
+CREATE OR REPLACE FUNCTION "interno"."gracia_hasta"("p_asistente_id" "uuid", "p_tipo_documento_id" "uuid", "p_dia" "date" DEFAULT "interno"."hoy_de_la_sesion"()) RETURNS "date"
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
@@ -5948,7 +5981,7 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_guardia_que_traban_la_desactivacion
    WHERE a.usuario_id = p_usuario
      AND a.prestadora_id = p_prestadora
      AND s.estado = 'activa'
-     AND (s.vigente_hasta IS NULL OR s.vigente_hasta >= current_date - 1)
+     AND (s.vigente_hasta IS NULL OR s.vigente_hasta + s.dias_hasta_el_fin >= interno.hoy_de_la_prestadora(p_prestadora))
    ORDER BY 3, 4;
 $$;
 
@@ -6387,7 +6420,7 @@ BEGIN
        AND g.prestadora_id = v_prestadora
        AND g.estado = 'programada'
        AND (g.asistente_id IS NULL OR g.asistente_id = v_asignacion.asistente_anterior_id)
-       AND g.fecha >= CURRENT_DATE
+       AND g.fecha >= interno.hoy_de_la_prestadora(v_prestadora)
        AND NOT EXISTS (
          SELECT 1 FROM asignaciones_de_turno_guardia o
           WHERE o.turno_guardia_id = g.id
@@ -6712,7 +6745,7 @@ BEGIN
        AND p.estado = 'vigente'
        AND p.vigente_hasta IS NULL
        AND p.servicio_id IS NOT NULL
-       AND p.vigente_desde <= current_date
+       AND p.vigente_desde <= interno.hoy_de_la_prestadora(v_prest)
        AND p.precio_final > 0
        AND x.indice IS NOT NULL
        AND NOT EXISTS (SELECT 1 FROM public.propuestas_de_ajuste_por_indice pr
@@ -6725,7 +6758,7 @@ BEGIN
      WHERE pr.prestacion_id = v.id AND pr.estado = 'rechazada';
 
     v_rige := (v_ancla + make_interval(months => v.meses))::date;
-    CONTINUE WHEN current_date < v_rige;
+    CONTINUE WHEN interno.hoy_de_la_prestadora(v_prest) < v_rige;
 
     v_base := (date_trunc('month', v.vigente_desde) - interval '1 month')::date;
     v_nuevo := (v_rige - interval '1 month')::date;
@@ -6912,7 +6945,7 @@ BEGIN
          round(p_monto, 2), p_moneda, p_periodo,
          CASE WHEN p_estado = 'pagado' THEN 'exitoso' ELSE 'fallido' END,
          btrim(p_numero_del_aviso),
-         COALESCE(p_fecha_cobro, current_date));
+         COALESCE(p_fecha_cobro, interno.hoy_de_la_prestadora(v_prestadora)));
     EXCEPTION WHEN unique_violation THEN
       RETURN jsonb_build_object('ok', true, 'repetido', true,
         'estado', v_acceso.estado, 'saldo_contactos', v_acceso.saldo_contactos);
@@ -6945,7 +6978,7 @@ BEGIN
     ELSIF p_estado = 'suspendido' THEN
       UPDATE public.accesos_intermediacion
          SET estado = 'suspendida',
-             suspension_desde = COALESCE(p_suspende_el, v_acceso.suspension_desde, current_date),
+             suspension_desde = COALESCE(p_suspende_el, v_acceso.suspension_desde, interno.hoy_de_la_prestadora(v_prestadora)),
              updated_at = now()
        WHERE id = p_acceso_id;
       v_estado_nuevo := 'suspendida';
@@ -7131,7 +7164,7 @@ BEGIN
     END IF;
 
     v_bloquean := interno.documentos_que_bloquean(
-      p_asistente_id, GREATEST(v_serie.vigente_desde, CURRENT_DATE), v_serie.paciente_id, v_serie.servicio_id);
+      p_asistente_id, GREATEST(v_serie.vigente_desde, interno.hoy_de_la_prestadora(v_prestadora)), v_serie.paciente_id, v_serie.servicio_id);
     IF cardinality(v_bloquean) > 0 THEN
       RAISE EXCEPTION 'documentos_bloquean:%:', array_to_string(v_bloquean, ', ') USING ERRCODE = '23514';
     END IF;
@@ -7318,14 +7351,14 @@ CREATE OR REPLACE FUNCTION "public"."asistentes_asignados_al_paciente"("p_pacien
      AND gp.prestadora_id = interno.prestadora_actual()
      AND interno.es_personal_de_la_prestadora()
      AND g.asistente_id IS NOT NULL
-     AND g.fecha >= current_date;
+     AND g.fecha >= interno.hoy_de_la_prestadora(gp.prestadora_id);
 $$;
 
 
 ALTER FUNCTION "public"."asistentes_asignados_al_paciente"("p_paciente" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."ausencias_que_tapan"("p_desde" "date", "p_hasta" "date", "p_hoy" "date" DEFAULT CURRENT_DATE) RETURNS TABLE("asistente_id" "uuid", "fecha_inicio" "date", "fecha_fin" "date")
+CREATE OR REPLACE FUNCTION "public"."ausencias_que_tapan"("p_desde" "date", "p_hasta" "date", "p_hoy" "date" DEFAULT "interno"."hoy_de_la_sesion"()) RETURNS TABLE("asistente_id" "uuid", "fecha_inicio" "date", "fecha_fin" "date")
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -7418,7 +7451,7 @@ BEGIN
 
   LOOP
     SELECT * INTO v FROM interno.consultas_a_hce_por_vencer(v_prest);
-    EXIT WHEN v.anio IS NULL OR v.se_borra_el > current_date;
+    EXIT WHEN v.anio IS NULL OR v.se_borra_el > interno.hoy_de_la_prestadora(v_prest);
 
     SELECT a.numero, a.resumen INTO v_hasta
       FROM consultas_a_hce a
@@ -7623,7 +7656,7 @@ BEGIN
   ELSIF v_forma = 'suspende' THEN
     -- Vuelve sólo lo que esta internación suspendió, desde el día siguiente al alta y nunca antes
     -- de hoy: lo pasado queda como quedó.
-    v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(interno.prestadora_actual()))::date;
+    v_hoy := interno.hoy_de_la_sesion();
     PERFORM interno.levantar_lo_de_la_internacion(p_hospitalizacion, greatest(v_hoy, v_fin + 1));
   END IF;
 
@@ -7725,7 +7758,7 @@ BEGIN
 
   -- Falla cerrado: un acceso suspendido, vencido o dado de baja con el período pagado ya
   -- terminado no abre nada, aunque le haya quedado saldo.
-  IF NOT interno.el_acceso_abre_contactos(v_acceso.estado, v_acceso.suspension_desde, v_acceso.vigente_hasta) THEN
+  IF NOT interno.el_acceso_abre_contactos(v_acceso.prestadora_id, v_acceso.estado, v_acceso.suspension_desde, v_acceso.vigente_hasta) THEN
     RETURN jsonb_build_object('ok', false, 'motivo', 'acceso_no_vigente');
   END IF;
 
@@ -7838,7 +7871,7 @@ CREATE TABLE IF NOT EXISTS "public"."asistentes" (
     "disponibilidad" "jsonb",
     "estado" "text" DEFAULT 'activo'::"text" NOT NULL,
     "qr_token" "text" DEFAULT ("gen_random_uuid"())::"text",
-    "fecha_alta" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "fecha_alta" "date" NOT NULL,
     "fecha_baja" "date",
     "horas_semanales" numeric(5,2),
     "created_at" timestamp with time zone DEFAULT "now"(),
@@ -8138,10 +8171,10 @@ BEGIN
                        (v_pase || jsonb_build_object('prestadora_id', v_id))::text, true);
 
     INSERT INTO prestadoras (id, razon_social, identificacion_fiscal, pais, nombre_fantasia,
-                             casilla_envio, regla_reenvio, referencia_celtatech, fecha_alta)
+                             casilla_envio, regla_reenvio, referencia_celtatech)
     VALUES (v_id, btrim(p_razon_social), NULLIF(btrim(COALESCE(p_identificacion_fiscal, '')), ''),
             upper(btrim(p_pais)), btrim(p_nombre_fantasia), NULLIF(btrim(COALESCE(p_casilla_envio, '')), ''),
-            NULLIF(btrim(COALESCE(p_regla_reenvio, '')), ''), p_referencia, current_date);
+            NULLIF(btrim(COALESCE(p_regla_reenvio, '')), ''), p_referencia);
 
     -- El código y el correo que recibe las respuestas viven en la configuración, que el
     -- disparador de la Prestadora ya sembró.
@@ -8298,7 +8331,7 @@ BEGIN
 
   -- Las pausas y las suspensiones abiertas del Servicio terminan con la baja.
   UPDATE interrupciones_de_cobertura
-     SET levantada_desde = greatest(desde, (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(prestadora_id))::date),
+     SET levantada_desde = greatest(desde, interno.hoy_de_la_prestadora(prestadora_id)),
          levantada_at = now(), levantada_por = interno.usuario_de_la_sesion()
    WHERE servicio_id = p_servicio AND tipo IN ('pausa', 'suspension') AND levantada_at IS NULL;
 
@@ -8306,7 +8339,7 @@ BEGIN
   UPDATE servicios
      SET estado = 'de_baja',
          vigente_hasta = greatest(vigente_desde,
-                                  (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(prestadora_id))::date)
+                                  interno.hoy_de_la_prestadora(prestadora_id))
    WHERE id = p_servicio;
   PERFORM set_config('careonys.cambio_de_estado_del_servicio', '', true);
 
@@ -8480,7 +8513,7 @@ $$;
 ALTER FUNCTION "public"."documento_autorizacion_signos_vitales"("p_paciente" "uuid", "p_idioma" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."domicilio_del_paciente_en"("p_paciente_id" "uuid", "p_fecha" "date") RETURNS TABLE("paciente_id" "uuid", "domicilio_temporal_id" "uuid", "calle" "text", "numero" "text", "piso" "text", "unidad" "text", "lugar" "text", "lat" double precision, "lng" double precision, "es_temporal" boolean, "motivo" "text", "desde" "date", "hasta" "date")
+CREATE OR REPLACE FUNCTION "public"."domicilio_del_paciente_en"("p_paciente_id" "uuid", "p_fecha" "date") RETURNS TABLE("paciente_id" "uuid", "domicilio_temporal_id" "uuid", "calle" "text", "numero" "text", "piso" "text", "unidad" "text", "lugar" "text", "lat" double precision, "lng" double precision, "es_temporal" boolean, "motivo" "text", "desde" "date", "hasta" "date", "lugar_id" "uuid")
     LANGUAGE "sql" STABLE
     SET "search_path" TO ''
     AS $$
@@ -8491,7 +8524,7 @@ $$;
 ALTER FUNCTION "public"."domicilio_del_paciente_en"("p_paciente_id" "uuid", "p_fecha" "date") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."domicilios_de_pacientes_en"("p_pacientes" "uuid"[], "p_fecha" "date") RETURNS TABLE("paciente_id" "uuid", "domicilio_temporal_id" "uuid", "calle" "text", "numero" "text", "piso" "text", "unidad" "text", "lugar" "text", "lat" double precision, "lng" double precision, "es_temporal" boolean, "motivo" "text", "desde" "date", "hasta" "date")
+CREATE OR REPLACE FUNCTION "public"."domicilios_de_pacientes_en"("p_pacientes" "uuid"[], "p_fecha" "date") RETURNS TABLE("paciente_id" "uuid", "domicilio_temporal_id" "uuid", "calle" "text", "numero" "text", "piso" "text", "unidad" "text", "lugar" "text", "lat" double precision, "lng" double precision, "es_temporal" boolean, "motivo" "text", "desde" "date", "hasta" "date", "lugar_id" "uuid")
     LANGUAGE "sql" STABLE
     SET "search_path" TO ''
     AS $$
@@ -8508,7 +8541,8 @@ CREATE OR REPLACE FUNCTION "public"."domicilios_de_pacientes_en"("p_pacientes" "
     d.id is not null as es_temporal,
     d.motivo,
     d.fecha_inicio as desde,
-    d.fecha_fin as hasta
+    d.fecha_fin as hasta,
+    case when d.id is null then f.lugar_id else d.lugar_id end as lugar_id
   from public.pacientes p
   join public.personas f on f.id = p.persona_id and f.prestadora_id = p.prestadora_id
   left join lateral (
@@ -8566,23 +8600,23 @@ COMMENT ON FUNCTION "public"."el_mensaje_se_guarda_ya_tapado"() IS 'Sobre mensaj
 
 
 
-CREATE OR REPLACE FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") RETURNS "text"
+CREATE OR REPLACE FUNCTION "public"."estado_de_factura"("p_prestadora" "uuid", "p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") RETURNS "text"
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public'
     AS $$
   SELECT CASE
     -- Nada por cobrar, nada que reclamar. Vale también para una factura de cero.
     WHEN COALESCE(p_cobrado, 0) >= COALESCE(p_monto_total, 0) THEN 'pagada'
-    WHEN p_fecha_vencimiento IS NOT NULL AND p_fecha_vencimiento < CURRENT_DATE THEN 'vencida'
+    WHEN p_fecha_vencimiento IS NOT NULL AND p_fecha_vencimiento < interno.hoy_de_la_prestadora(p_prestadora) THEN 'vencida'
     ELSE 'pendiente'
   END;
 $$;
 
 
-ALTER FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") OWNER TO "postgres";
+ALTER FUNCTION "public"."estado_de_factura"("p_prestadora" "uuid", "p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") IS 'Único lugar donde se decide si una factura está pagada, vencida o pendiente. Cobro parcial: sigue pendiente (o vencida), y el cuánto falta lo dice el saldo.';
+COMMENT ON FUNCTION "public"."estado_de_factura"("p_prestadora" "uuid", "p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") IS 'Único lugar donde se decide si una factura está pagada, vencida o pendiente. Cobro parcial: sigue pendiente (o vencida), y el cuánto falta lo dice el saldo.';
 
 
 
@@ -8653,7 +8687,7 @@ BEGIN
 
   IF p_porcentaje > 0 THEN
     INSERT INTO public.descuentos_del_servicio (prestadora_id, servicio_id, clase, valor, vigente_desde)
-    VALUES (v_prest, p_servicio, 'porcentaje', p_porcentaje, current_date);
+    VALUES (v_prest, p_servicio, 'porcentaje', p_porcentaje, interno.hoy_de_la_prestadora(v_prest));
   END IF;
 END;
 $$;
@@ -8859,7 +8893,7 @@ DECLARE
   v_cobrado numeric;
 BEGIN
   SELECT cobrado INTO v_cobrado FROM public.resumen_cobros_de_factura(NEW.id);
-  NEW.estado := public.estado_de_factura(
+  NEW.estado := public.estado_de_factura(NEW.prestadora_id,
     public.monto_a_cobrar_de_factura(NEW.monto_total, NEW.monto_facturado, NEW.id),
     v_cobrado,
     NEW.fecha_vencimiento
@@ -9255,8 +9289,7 @@ BEGIN
     RAISE EXCEPTION 'Sin Prestadora para el informe diario' USING ERRCODE = '42501';
   END IF;
 
-  SELECT (now() AT TIME ZONE p.zona_horaria)::date - 1 INTO v_dia
-    FROM prestadoras p WHERE p.id = v_prestadora;
+  v_dia := interno.hoy_de_la_prestadora(v_prestadora) - 1;
 
   PERFORM pg_advisory_xact_lock(hashtext('informe_diario_de_accesos_fuera_de_lo_normal'), hashtext(v_prestadora::text));
 
@@ -9387,7 +9420,7 @@ BEGIN
     SET requiere_revision = true
     WHERE precio_lista_id = NEW.id
       AND estado = 'vigente'
-      AND (vigente_hasta IS NULL OR vigente_hasta >= CURRENT_DATE);
+      AND (vigente_hasta IS NULL OR vigente_hasta >= interno.hoy_de_la_prestadora(NEW.prestadora_id));
   END IF;
   RETURN NEW;
 END;
@@ -9464,7 +9497,7 @@ COMMENT ON FUNCTION "public"."monto_a_cobrar_de_factura"("p_monto_total" numeric
 
 
 
-CREATE OR REPLACE FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) RETURNS "jsonb"
+CREATE OR REPLACE FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" integer DEFAULT NULL::integer) RETURNS "jsonb"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
     AS $$
@@ -9520,7 +9553,8 @@ BEGIN
     COALESCE(p_fecha, v_turno_guardia.fecha),
     COALESCE(p_hora_inicio, v_turno_guardia.hora_inicio),
     COALESCE(p_hora_fin, v_turno_guardia.hora_fin),
-    v_turno_guardia.dias_hasta_el_fin, v_turno_guardia.modalidad, v_turno_guardia.canal_modalidad
+    COALESCE(p_dias_hasta_el_fin, v_turno_guardia.dias_hasta_el_fin),
+    v_turno_guardia.modalidad, v_turno_guardia.canal_modalidad
   )
   RETURNING id INTO v_nueva;
 
@@ -9538,7 +9572,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) OWNER TO "postgres";
+ALTER FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."nombrar_apoderado"("p_cliente" "uuid", "p_funcion" "text", "p_nombre" "text", "p_apellido" "text", "p_cuil" "text", "p_archivo" "text", "p_usuario" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
@@ -9763,7 +9797,7 @@ CREATE TABLE IF NOT EXISTS "public"."lista_precios" (
     "tipo_servicio" "text" NOT NULL,
     "modalidad" "text" NOT NULL,
     "precio" numeric(12,2) NOT NULL,
-    "vigente_desde" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "vigente_desde" "date" NOT NULL,
     "activo" boolean DEFAULT true NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
@@ -9781,7 +9815,7 @@ CREATE TABLE IF NOT EXISTS "public"."lista_precios" (
 ALTER TABLE "public"."lista_precios" OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."precios_de_lista_que_rigen"("p_fecha" "date" DEFAULT CURRENT_DATE) RETURNS SETOF "public"."lista_precios"
+CREATE OR REPLACE FUNCTION "public"."precios_de_lista_que_rigen"("p_fecha" "date" DEFAULT "interno"."hoy_de_la_sesion"()) RETURNS SETOF "public"."lista_precios"
     LANGUAGE "sql" STABLE
     SET "search_path" TO ''
     AS $$
@@ -9801,7 +9835,7 @@ $$;
 ALTER FUNCTION "public"."precios_de_lista_que_rigen"("p_fecha" "date") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."prestaciones_con_promocion_vencida"("p_fecha" "date" DEFAULT CURRENT_DATE) RETURNS TABLE("prestacion_id" bigint, "promocion_id" bigint, "promocion_hasta" "date", "precio_de_siempre_id" bigint)
+CREATE OR REPLACE FUNCTION "public"."prestaciones_con_promocion_vencida"("p_fecha" "date" DEFAULT "interno"."hoy_de_la_sesion"()) RETURNS TABLE("prestacion_id" bigint, "promocion_id" bigint, "promocion_hasta" "date", "precio_de_siempre_id" bigint)
     LANGUAGE "sql" STABLE
     SET "search_path" TO ''
     AS $$
@@ -11150,11 +11184,11 @@ CREATE OR REPLACE FUNCTION "public"."turnos_guardia_asignados_sin_responder"() R
   fijos AS (
     SELECT a.id, a.asignado_at, 'serie'::text, NULL::uuid, s.id, NULL::uuid,
            NULL::date, s.hora_inicio, s.hora_fin, s.dias_hasta_el_fin, s.modalidad, s.dias_semana,
-           GREATEST(s.vigente_desde, CURRENT_DATE), s.vigente_hasta, NULL::integer,
+           GREATEST(s.vigente_desde, interno.hoy_de_la_prestadora(s.prestadora_id)), s.vigente_hasta, NULL::integer,
            array_remove(ARRAY[s.paciente_id], NULL)
              || ARRAY(SELECT sp.paciente_id FROM series_turnos_guardia_pacientes sp
                        WHERE sp.serie_id = s.id AND sp.prestadora_id = s.prestadora_id),
-           GREATEST(s.vigente_desde, CURRENT_DATE), s.prestadora_id,
+           GREATEST(s.vigente_desde, interno.hoy_de_la_prestadora(s.prestadora_id)), s.prestadora_id,
            ARRAY[s.servicio_id]
       FROM mias a
       JOIN series_turnos_guardia s
@@ -11167,9 +11201,9 @@ CREATE OR REPLACE FUNCTION "public"."turnos_guardia_asignados_sin_responder"() R
   -- `hastaDondeCubrir` del backend.
   ausencias_mias AS (
     SELECT a.id, a.asignado_at, a.prestadora_id, au.id AS ausencia_id, au.asistente_id AS titular_id,
-           GREATEST(au.fecha_inicio, CURRENT_DATE) AS desde,
-           CASE WHEN au.fecha_vuelta_real IS NULL AND au.fecha_fin < CURRENT_DATE
-                THEN CURRENT_DATE + 2
+           GREATEST(au.fecha_inicio, interno.hoy_de_la_prestadora(a.prestadora_id)) AS desde,
+           CASE WHEN au.fecha_vuelta_real IS NULL AND au.fecha_fin < interno.hoy_de_la_prestadora(a.prestadora_id)
+                THEN interno.hoy_de_la_prestadora(a.prestadora_id) + 2
                 ELSE au.fecha_fin
            END AS hasta
       FROM mias a
@@ -12336,7 +12370,7 @@ CREATE TABLE IF NOT EXISTS "public"."cobros_cliente" (
     "factura_id" "uuid" NOT NULL,
     "monto" numeric(12,2) NOT NULL,
     "moneda" "public"."moneda_iso" NOT NULL,
-    "fecha_cobro" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "fecha_cobro" "date" NOT NULL,
     "medio" "text" NOT NULL,
     "origen" "text" DEFAULT 'panel'::"text" NOT NULL,
     "referencia_externa" "text",
@@ -12376,7 +12410,7 @@ CREATE TABLE IF NOT EXISTS "public"."cobros_intermediacion" (
     "periodo" "date" NOT NULL,
     "estado_cobro" "text" DEFAULT 'pendiente'::"text" NOT NULL,
     "referencia_externa" "text",
-    "fecha_cobro" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "fecha_cobro" "date" NOT NULL,
     "registrado_por" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "moneda" "public"."moneda_iso" NOT NULL,
@@ -13343,7 +13377,7 @@ CREATE TABLE IF NOT EXISTS "public"."correcciones_factura_cliente" (
     "comprobante_tipo" "text" NOT NULL,
     "comprobante_numero" "text",
     "motivo" "text" NOT NULL,
-    "fecha" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "fecha" "date" NOT NULL,
     "registrada_por" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "moneda" "public"."moneda_iso",
@@ -13697,7 +13731,7 @@ CREATE OR REPLACE VIEW "public"."documentos_pedidos_al_asistente" WITH ("securit
     COALESCE("u"."estado", 'falta'::"text") AS "estado",
     "u"."fecha_vencimiento",
     "u"."motivo_observacion",
-    "interno"."gracia_hasta"("a"."id", "t"."id", CURRENT_DATE) AS "gracia_hasta"
+    "interno"."gracia_hasta"("a"."id", "t"."id", "interno"."hoy_de_la_prestadora"("a"."prestadora_id")) AS "gracia_hasta"
    FROM ((("public"."asistentes" "a"
      JOIN "public"."tipos_documento_por_tipo_asistente" "r" ON ((("r"."tipo_asistente_id" = "a"."tipo_asistente_id") AND ("r"."prestadora_id" = "a"."prestadora_id"))))
      JOIN "public"."tipos_documento_asistente" "t" ON ((("t"."id" = "r"."tipo_documento_id") AND "t"."activo")))
@@ -14171,7 +14205,7 @@ CREATE TABLE IF NOT EXISTS "public"."facturas_cliente" (
     "periodo" "date" NOT NULL,
     "monto_total" numeric(12,2) DEFAULT 0 NOT NULL,
     "estado" "text" DEFAULT 'pendiente'::"text" NOT NULL,
-    "fecha_emision" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "fecha_emision" "date" NOT NULL,
     "fecha_vencimiento" "date",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -14567,7 +14601,8 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     CONSTRAINT "turnos_guardia_cierre_por_el_asistente_sin_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'asistente'::"text") OR ("cerrada_motivo" IS NULL))),
     CONSTRAINT "turnos_guardia_cierre_por_el_panel_exige_persona_y_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'panel'::"text") OR (("cerrada_por" IS NOT NULL) AND ("cerrada_motivo" IS NOT NULL) AND ("btrim"("cerrada_motivo") <> ''::"text")))),
     CONSTRAINT "turnos_guardia_cierre_rastro_completo" CHECK (((("cerrada_at" IS NULL) AND ("cerrada_origen" IS NULL) AND ("cerrada_por" IS NULL) AND ("cerrada_motivo" IS NULL)) OR (("cerrada_at" IS NOT NULL) AND ("cerrada_origen" IS NOT NULL)))),
-    CONSTRAINT "turnos_guardia_dios_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
+    CONSTRAINT "turnos_guardia_dios_hasta_el_fin_valido" CHECK (("dias_hasta_el_fin" >= 0)),
+    CONSTRAINT "turnos_guardia_dura_algo" CHECK ((("dias_hasta_el_fin" > 0) OR ("hora_fin" > "hora_inicio"))),
     CONSTRAINT "turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['programada'::"text", 'activa'::"text", 'completada'::"text", 'cancelada'::"text", 'ausente'::"text", 'pausada'::"text", 'suspendida'::"text"]))),
     CONSTRAINT "turnos_guardia_interrupcion_check" CHECK ((("interrupcion_id" IS NULL) OR ("estado" = ANY (ARRAY['pausada'::"text", 'suspendida'::"text"])))),
     CONSTRAINT "turnos_guardia_horos_extra_con_motivo" CHECK ((("horas_extra" = (0)::numeric) OR (("horas_extra_motivo" IS NOT NULL) AND ("btrim"("horas_extra_motivo") <> ''::"text")))),
@@ -14616,7 +14651,7 @@ COMMENT ON COLUMN "public"."turnos_guardia"."aviso_sin_cerrar_grave_at" IS 'Cuá
 
 
 
-COMMENT ON COLUMN "public"."turnos_guardia"."dias_hasta_el_fin" IS 'Cuantos dias despues de fecha termina el turno de guardia: 0 el mismo dia, 1 al siguiente, 2 dos dias despues. Permite los turnos de guardia de 24, 48 y 72 horas.';
+COMMENT ON COLUMN "public"."turnos_guardia"."dias_hasta_el_fin" IS 'Cuantos dias despues de fecha termina el turno de guardia: 0 el mismo dia, 1 al siguiente, 2 dos dias despues, y asi sin tope. Con 0 la hora de fin va despues de la de comienzo.';
 
 
 
@@ -14675,7 +14710,7 @@ CREATE TABLE IF NOT EXISTS "public"."hospitalizaciones_paciente" (
     "paciente_id" "uuid" NOT NULL,
     "institucion" "text" NOT NULL,
     "motivo" "text",
-    "fecha_inicio" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "fecha_inicio" "date" NOT NULL,
     "fecha_fin" "date",
     "registrado_por" "uuid" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -15966,7 +16001,7 @@ CREATE TABLE IF NOT EXISTS "public"."prestaciones" (
     "prestadora_id" "uuid" NOT NULL,
     "servicio_id" "uuid",
     "moneda" "public"."moneda_iso" NOT NULL,
-    "vigente_desde" "date" DEFAULT CURRENT_DATE NOT NULL,
+    "vigente_desde" "date" NOT NULL,
     "vigente_hasta" "date",
     "forma_de_precio" "text" DEFAULT 'directo'::"text" NOT NULL,
     "sentido_del_ajuste" "text",
@@ -16657,7 +16692,7 @@ CREATE OR REPLACE VIEW "public"."saldos_cliente" WITH ("security_invoker"='true'
     "public"."monto_a_cobrar_de_factura"("f"."monto_total", "f"."monto_facturado", "f"."id") AS "monto_a_cobrar",
     "r"."cobrado",
     (("public"."monto_a_cobrar_de_factura"("f"."monto_total", "f"."monto_facturado", "f"."id") - "r"."cobrado"))::numeric(12,2) AS "saldo",
-    "public"."estado_de_factura"("public"."monto_a_cobrar_de_factura"("f"."monto_total", "f"."monto_facturado", "f"."id"), "r"."cobrado", "f"."fecha_vencimiento") AS "estado",
+    "public"."estado_de_factura"("f"."prestadora_id", "public"."monto_a_cobrar_de_factura"("f"."monto_total", "f"."monto_facturado", "f"."id"), "r"."cobrado", "f"."fecha_vencimiento") AS "estado",
     "f"."estado" AS "estado_guardado",
     "f"."fecha_emision",
     "f"."fecha_vencimiento",
@@ -16735,7 +16770,8 @@ CREATE TABLE IF NOT EXISTS "public"."series_turnos_guardia" (
     CONSTRAINT "series_turnos_guardia_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
     CONSTRAINT "series_turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelado_at" IS NULL)))),
     CONSTRAINT "series_turnos_guardia_cancelacion_origen_check" CHECK (("cancelacion_origen" = ANY (ARRAY['cliente'::"text", 'prestadora'::"text"]))),
-    CONSTRAINT "series_turnos_guardia_dias_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
+    CONSTRAINT "series_turnos_guardia_dias_hasta_el_fin_valido" CHECK (("dias_hasta_el_fin" >= 0)),
+    CONSTRAINT "series_turnos_guardia_dura_algo" CHECK ((("dias_hasta_el_fin" > 0) OR ("hora_fin" > "hora_inicio"))),
     CONSTRAINT "series_turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['activa'::"text", 'cancelada'::"text"])))
 );
 
@@ -28197,15 +28233,15 @@ GRANT ALL ON FUNCTION "interno"."documentos_que_bloquean"("p_asistente_id" "uuid
 
 
 
-REVOKE ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") FROM PUBLIC;
+REVOKE ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_prestadora" "uuid", "p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") FROM PUBLIC, "anon";
 
 
 
-GRANT ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_prestadora" "uuid", "p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") TO "trabajo_sin_persona";
+GRANT ALL ON FUNCTION "interno"."el_acceso_abre_contactos"("p_prestadora" "uuid", "p_estado" "text", "p_suspension_desde" "date", "p_vigente_hasta" "date") TO "trabajo_sin_persona";
 
 
 
@@ -29251,6 +29287,18 @@ REVOKE ALL ON FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" 
 GRANT ALL ON FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."zona_horaria_de_la_prestadora"("p_prestadora" "uuid") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."hoy_en_la_zona"("p_zona" "text") FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "interno"."hoy_en_la_zona"("p_zona" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."hoy_en_la_zona"("p_zona" "text") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."hoy_en_la_zona"("p_zona" "text") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."hoy_de_la_prestadora"("p_prestadora" "uuid") FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "interno"."hoy_de_la_prestadora"("p_prestadora" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."hoy_de_la_prestadora"("p_prestadora" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."hoy_de_la_prestadora"("p_prestadora" "uuid") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "interno"."hoy_de_la_sesion"() FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "interno"."hoy_de_la_sesion"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."hoy_de_la_sesion"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."hoy_de_la_sesion"() TO "trabajo_sin_persona";
 
 
 
@@ -29635,10 +29683,10 @@ GRANT ALL ON FUNCTION "public"."el_mensaje_se_guarda_ya_tapado"() TO "service_ro
 
 
 
-REVOKE ALL ON FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") TO "service_role";
-GRANT ALL ON FUNCTION "public"."estado_de_factura"("p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") TO "trabajo_sin_persona";
+REVOKE ALL ON FUNCTION "public"."estado_de_factura"("p_prestadora" "uuid", "p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "public"."estado_de_factura"("p_prestadora" "uuid", "p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."estado_de_factura"("p_prestadora" "uuid", "p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") TO "service_role";
+GRANT ALL ON FUNCTION "public"."estado_de_factura"("p_prestadora" "uuid", "p_monto_total" numeric, "p_cobrado" numeric, "p_fecha_vencimiento" "date") TO "trabajo_sin_persona";
 
 
 
@@ -29808,9 +29856,9 @@ GRANT ALL ON FUNCTION "public"."monto_a_cobrar_de_factura"("p_monto_total" numer
 
 
 
-REVOKE ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) TO "service_role";
-GRANT ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone) TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" integer) TO "service_role";
+GRANT ALL ON FUNCTION "public"."mover_turno_guardia_a_otro_paciente"("p_turno_guardia_id" "uuid", "p_paciente_id" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" integer) TO "authenticated";
 
 
 
@@ -34106,7 +34154,7 @@ CREATE TABLE IF NOT EXISTS "public"."cronograma_de_guardias" (
     CONSTRAINT "cronograma_de_guardias_prestacion_id_fkey" FOREIGN KEY ("prestacion_id") REFERENCES "public"."prestaciones"("id") ON DELETE CASCADE,
     CONSTRAINT "cronograma_de_guardias_dias_o_fecha" CHECK ((("dias_semana" IS NULL) <> ("fecha" IS NULL))),
     CONSTRAINT "cronograma_de_guardias_dias_validos" CHECK ((("dias_semana" IS NULL) OR (("cardinality"("dias_semana") > 0) AND ("dias_semana" <@ ARRAY['lunes'::"text", 'martes'::"text", 'miercoles'::"text", 'jueves'::"text", 'viernes'::"text", 'sabado'::"text", 'domingo'::"text"])))),
-    CONSTRAINT "cronograma_de_guardias_dias_hasta_el_fin_valido" CHECK ((("dias_hasta_el_fin" >= 0) AND ("dias_hasta_el_fin" <= 3))),
+    CONSTRAINT "cronograma_de_guardias_dias_hasta_el_fin_valido" CHECK (("dias_hasta_el_fin" >= 0)),
     CONSTRAINT "cronograma_de_guardias_dura_algo" CHECK ((("dias_hasta_el_fin" > 0) OR ("hora_fin" > "hora_inicio")))
 );
 
@@ -34196,6 +34244,21 @@ $$;
 ALTER FUNCTION "interno"."guardias_en_fechas"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_desde" "date", "p_hasta" "date") OWNER TO "postgres";
 
 
+-- Cuántos días dura la guardia más larga del cronograma de un Servicio. Es lo que hay que mirar
+-- hacia atrás para encontrar una guardia que todavía sigue corriendo.
+CREATE OR REPLACE FUNCTION "interno"."dias_de_la_guardia_mas_larga"("p_prestadora" "uuid", "p_servicio" "uuid") RETURNS integer
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT COALESCE(max(c.dias_hasta_el_fin), 0)::integer
+    FROM cronograma_de_guardias c
+    JOIN prestaciones p ON p.id = c.prestacion_id AND p.prestadora_id = c.prestadora_id
+   WHERE p.servicio_id = p_servicio
+     AND p.prestadora_id = p_prestadora
+$$;
+
+ALTER FUNCTION "interno"."dias_de_la_guardia_mas_larga"("p_prestadora" "uuid", "p_servicio" "uuid") OWNER TO "postgres";
+
 -- La guardia del cronograma de ese Paciente, en ese Servicio, que contiene entero el tramo de un
 -- turno de guardia. Nada si no hay ninguna.
 CREATE OR REPLACE FUNCTION "interno"."guardia_que_contiene"("p_prestadora" "uuid", "p_servicio" "uuid", "p_paciente" "uuid", "p_fecha" "date", "p_hora_inicio" time without time zone, "p_hora_fin" time without time zone, "p_dias_hasta_el_fin" smallint) RETURNS "uuid"
@@ -34203,7 +34266,7 @@ CREATE OR REPLACE FUNCTION "interno"."guardia_que_contiene"("p_prestadora" "uuid
     SET "search_path" TO 'public', 'interno'
     AS $$
   SELECT o.guardia_id
-    FROM interno.guardias_en_fechas(p_prestadora, p_servicio, p_paciente, p_fecha - 3, p_fecha) o
+    FROM interno.guardias_en_fechas(p_prestadora, p_servicio, p_paciente, p_fecha - interno.dias_de_la_guardia_mas_larga(p_prestadora, p_servicio), p_fecha) o
    WHERE o.inicio <= p_fecha + p_hora_inicio
      AND interno.dia_en_que_termina_turno_guardia(p_fecha, p_hora_inicio, p_hora_fin, p_dias_hasta_el_fin) + p_hora_fin <= o.fin
    ORDER BY o.inicio DESC, o.guardia_id
@@ -34396,7 +34459,7 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_sin_cubrir"("p_prestadora" "uuid", 
          SELECT CASE WHEN x.fin > x.ini THEN tsrange(x.ini, x.fin) END AS tramo
            FROM series_turnos_guardia s
            JOIN series_turnos_guardia_pacientes sp ON sp.serie_id = s.id AND sp.paciente_id = o.paciente_id
-          CROSS JOIN LATERAL (SELECT o.fecha + i AS dia FROM generate_series(-3, 3) AS i) d
+          CROSS JOIN LATERAL (SELECT o.inicio::date - s.dias_hasta_el_fin::integer + i AS dia FROM generate_series(0, (o.fin::date - o.inicio::date) + s.dias_hasta_el_fin::integer) AS i) d
           CROSS JOIN LATERAL (
             SELECT d.dia + s.hora_inicio AS ini,
                    interno.dia_en_que_termina_turno_guardia(d.dia, s.hora_inicio, s.hora_fin, s.dias_hasta_el_fin) + s.hora_fin AS fin
@@ -34425,7 +34488,7 @@ CREATE OR REPLACE FUNCTION "interno"."turnos_sin_cubrir"("p_prestadora" "uuid", 
           WHERE t.prestadora_id = p_prestadora
             AND t.servicio_id = p_servicio
             AND t.estado NOT IN ('cancelada', 'pausada', 'suspendida')
-            AND t.fecha BETWEEN o.fecha - 3 AND o.fecha + 3
+            AND t.fecha <= o.fin::date AND t.fecha + t.dias_hasta_el_fin::integer >= o.inicio::date
        ) c
    ) cuenta
    CROSS JOIN LATERAL unnest(cuenta.huecos) AS h(hueco)
@@ -34509,8 +34572,8 @@ GRANT UPDATE ("avisado_at") ON TABLE "public"."turnos_sin_cubrir_avisados" TO "t
 GRANT ALL ON TABLE "public"."turnos_sin_cubrir_avisados" TO "service_role";
 
 
--- Rehace la cuenta en todos los Servicios vigentes de la Prestadora de la sesión, desde tres días
--- atrás, porque una guardia de 72 horas puede seguir corriendo, hasta el horizonte de generación,
+-- Rehace la cuenta en todos los Servicios vigentes de la Prestadora de la sesión, desde tantos días
+-- atrás como dura la guardia más larga del Servicio, que puede seguir corriendo, hasta el horizonte de generación,
 -- y anota los turnos sin cubrir nuevos. Los anotados que ya no faltan, o que ya terminaron, quedan
 -- resueltos. Devuelve cuántos quedan pendientes de avisar.
 CREATE OR REPLACE FUNCTION "interno"."anotar_turnos_sin_cubrir"() RETURNS integer
@@ -34539,7 +34602,7 @@ BEGIN
   WITH actuales AS (
     SELECT s.id AS servicio_id, u.guardia_id, u.paciente_id, u.inicio, u.fin
       FROM servicios s
-     CROSS JOIN LATERAL interno.turnos_sin_cubrir(v_prest, s.id, v_hoy - 3, v_hoy + COALESCE(v_horizonte, 0)) u
+     CROSS JOIN LATERAL interno.turnos_sin_cubrir(v_prest, s.id, v_hoy - interno.dias_de_la_guardia_mas_larga(v_prest, s.id), v_hoy + COALESCE(v_horizonte, 0)) u
      WHERE s.prestadora_id = v_prest
        AND s.estado = 'vigente'
        AND u.fin > v_ahora
@@ -35011,7 +35074,7 @@ BEGIN
     RETURN;
   END IF;
   v_desde := greatest(v_h.fecha_inicio,
-                      (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_h.prestadora_id))::date);
+                      interno.hoy_de_la_prestadora(v_h.prestadora_id));
 
   FOR v_servicio IN
     SELECT s.id FROM servicios s
@@ -35054,6 +35117,51 @@ END;
 $$;
 
 ALTER FUNCTION "interno"."levantar_lo_de_la_internacion"("p_hospitalizacion" "uuid", "p_desde" "date") OWNER TO "postgres";
+
+
+-- La suspensión que hizo una internación no se toca mientras la internación siga abierta: vuelve
+-- sólo al cerrarla, o termina con la baja del Servicio. Vale para cualquier camino, no sólo para
+-- las funciones de la cobertura. Al borrarse la Prestadora entera, se va con ella.
+CREATE OR REPLACE FUNCTION "interno"."la_suspension_de_la_internacion_vuelve_al_cerrarla"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+  IF OLD.hospitalizacion_id IS NULL OR OLD.levantada_at IS NOT NULL THEN
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    IF NOT EXISTS (SELECT 1 FROM public.prestadoras p WHERE p.id = OLD.prestadora_id)
+       OR EXISTS (SELECT 1 FROM public.hospitalizaciones_paciente h
+                   WHERE h.id = OLD.hospitalizacion_id AND h.fecha_fin IS NOT NULL) THEN
+      RETURN OLD;
+    END IF;
+    RAISE EXCEPTION 'la_suspension_es_de_una_internacion' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Lo único que se le cambia es levantarla: el resto queda como nació. La columna calculada del
+  -- motivo no cuenta: antes de guardarse la fila llega vacía y parecería cambiada.
+  IF (to_jsonb(NEW) - 'levantada_desde' - 'levantada_at' - 'levantada_por' - 'motivo_tabla')
+     IS DISTINCT FROM (to_jsonb(OLD) - 'levantada_desde' - 'levantada_at' - 'levantada_por' - 'motivo_tabla') THEN
+    RAISE EXCEPTION 'la_suspension_es_de_una_internacion' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF NEW.levantada_at IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM public.hospitalizaciones_paciente h
+                      WHERE h.id = OLD.hospitalizacion_id AND h.fecha_fin IS NOT NULL)
+     AND NOT EXISTS (SELECT 1 FROM public.bajas_de_servicio b
+                      WHERE b.servicio_id = OLD.servicio_id AND b.created_at = now()) THEN
+    RAISE EXCEPTION 'la_suspension_es_de_una_internacion' USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+ALTER FUNCTION "interno"."la_suspension_de_la_internacion_vuelve_al_cerrarla"() OWNER TO "postgres";
+
+CREATE OR REPLACE TRIGGER "la_suspension_de_la_internacion_vuelve_al_cerrarla" BEFORE UPDATE OR DELETE ON "public"."interrupciones_de_cobertura" FOR EACH ROW EXECUTE FUNCTION "interno"."la_suspension_de_la_internacion_vuelve_al_cerrarla"();
 
 
 -- Todo turno de guardia nace con el estado que le dan las interrupciones: se mira al anotarle su
@@ -35120,7 +35228,7 @@ BEGIN
      OR p_alcance NOT IN ('servicio', 'prestacion', 'turno_guardia_recurrente', 'turno_guardia') THEN
     RAISE EXCEPTION 'dato_invalido' USING ERRCODE = 'P0001';
   END IF;
-  v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest))::date;
+  v_hoy := interno.hoy_de_la_prestadora(v_prest);
 
   IF NOT EXISTS (SELECT 1 FROM servicios s
                   WHERE s.id = p_servicio AND s.prestadora_id = v_prest AND s.estado = 'vigente'
@@ -35189,17 +35297,23 @@ CREATE OR REPLACE FUNCTION "public"."reanudar_cobertura"("p_interrupcion" "uuid"
     SET "search_path" TO 'public', 'interno'
     AS $$
 DECLARE
-  v_prest    uuid := interno.prestadora_actual();
-  v_servicio uuid;
-  v_hoy      date;
+  v_prest          uuid := interno.prestadora_actual();
+  v_servicio       uuid;
+  v_hospitalizacion uuid;
+  v_hoy            date;
 BEGIN
-  SELECT i.servicio_id INTO v_servicio FROM interrupciones_de_cobertura i
+  SELECT i.servicio_id, i.hospitalizacion_id INTO v_servicio, v_hospitalizacion
+    FROM interrupciones_de_cobertura i
    WHERE i.id = p_interrupcion AND i.prestadora_id = v_prest
      AND i.tipo IN ('pausa', 'suspension') AND i.levantada_at IS NULL;
   IF v_servicio IS NULL OR NOT interno.puede_gestionar_la_cobertura(v_servicio) THEN
     RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
   END IF;
-  v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest))::date;
+  -- La suspensión de una internación vuelve sólo al cerrar la internación.
+  IF v_hospitalizacion IS NOT NULL THEN
+    RAISE EXCEPTION 'la_suspension_es_de_una_internacion' USING ERRCODE = 'P0001';
+  END IF;
+  v_hoy := interno.hoy_de_la_prestadora(v_prest);
   IF p_desde IS NOT NULL AND p_desde < v_hoy THEN
     RAISE EXCEPTION 'la_fecha_ya_paso' USING ERRCODE = 'P0001';
   END IF;
@@ -35236,7 +35350,7 @@ BEGIN
   IF p_desde IS NULL THEN
     RAISE EXCEPTION 'falta_un_dato' USING ERRCODE = '23502';
   END IF;
-  v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest))::date;
+  v_hoy := interno.hoy_de_la_prestadora(v_prest);
 
   IF p_alcance = 'turno_guardia_recurrente' THEN
     SELECT s.servicio_id, s.vigente_desde INTO v_servicio, v_inicio FROM series_turnos_guardia s
@@ -35369,7 +35483,7 @@ BEGIN
   IF p_desde IS NULL THEN
     RAISE EXCEPTION 'falta_un_dato' USING ERRCODE = '23502';
   END IF;
-  v_hoy := (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(v_prest))::date;
+  v_hoy := interno.hoy_de_la_prestadora(v_prest);
   IF p_desde < v_hoy THEN
     RAISE EXCEPTION 'la_fecha_ya_paso' USING ERRCODE = 'P0001';
   END IF;
@@ -35439,7 +35553,7 @@ CREATE OR REPLACE FUNCTION "interno"."periodo_del_servicio"() RETURNS "trigger"
 BEGIN
   IF TG_OP = 'INSERT' THEN
     NEW.vigente_desde := COALESCE(NEW.vigente_desde,
-      (now() AT TIME ZONE interno.zona_horaria_de_la_prestadora(NEW.prestadora_id))::date);
+      interno.hoy_de_la_prestadora(NEW.prestadora_id));
     RETURN NEW;
   END IF;
 
@@ -35544,6 +35658,7 @@ REVOKE ALL ON FUNCTION "interno"."marcar_turnos_interrumpidos"("p_servicio" "uui
 REVOKE ALL ON FUNCTION "interno"."levantar_interrupcion"("p_interrupcion" "uuid", "p_desde" "date") FROM PUBLIC, "anon";
 REVOKE ALL ON FUNCTION "interno"."suspender_por_la_internacion"("p_hospitalizacion" "uuid") FROM PUBLIC, "anon";
 REVOKE ALL ON FUNCTION "interno"."levantar_lo_de_la_internacion"("p_hospitalizacion" "uuid", "p_desde" "date") FROM PUBLIC, "anon";
+REVOKE ALL ON FUNCTION "interno"."la_suspension_de_la_internacion_vuelve_al_cerrarla"() FROM PUBLIC, "anon";
 REVOKE ALL ON FUNCTION "interno"."turno_guardia_nace_interrumpido"() FROM PUBLIC, "anon";
 REVOKE ALL ON FUNCTION "interno"."validar_motivo_de_la_interrupcion"("p_prestadora" "uuid", "p_tipo" "text", "p_motivo" "uuid", "p_detalle" "text") FROM PUBLIC, "anon";
 REVOKE ALL ON FUNCTION "interno"."periodo_del_servicio"() FROM PUBLIC, "anon";
@@ -35582,5 +35697,162 @@ GRANT ALL ON FUNCTION "public"."cambiar_periodo_del_servicio"("p_servicio" "uuid
 
 GRANT SELECT ON TABLE "public"."interrupciones_de_cobertura" TO "authenticated";
 GRANT ALL ON TABLE "public"."interrupciones_de_cobertura" TO "service_role";
+
+
+-- Anota el día de hoy, en la zona de la Prestadora, en la columna de fecha que el alta deja vacía.
+-- Reemplaza a la fecha del servidor, que cuenta en hora universal. Recibe el nombre de la columna.
+CREATE OR REPLACE FUNCTION "interno"."anotar_el_dia_de_hoy"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_columna text := TG_ARGV[0];
+  v_fila jsonb := to_jsonb(NEW);
+  v_hoy date;
+BEGIN
+  IF v_fila ->> v_columna IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+  v_hoy := CASE
+             WHEN TG_TABLE_NAME = 'prestadoras' THEN interno.hoy_en_la_zona(v_fila ->> 'zona_horaria')
+             ELSE interno.hoy_de_la_prestadora((v_fila ->> 'prestadora_id')::uuid)
+           END;
+  NEW := jsonb_populate_record(NEW, jsonb_build_object(v_columna, v_hoy));
+  RETURN NEW;
+END;
+$$;
+
+ALTER FUNCTION "interno"."anotar_el_dia_de_hoy"() OWNER TO "postgres";
+
+REVOKE ALL ON FUNCTION "interno"."anotar_el_dia_de_hoy"() FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "interno"."anotar_el_dia_de_hoy"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."anotar_el_dia_de_hoy"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."anotar_el_dia_de_hoy"() TO "trabajo_sin_persona";
+
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."asistentes" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('fecha_alta');
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."lista_precios" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('vigente_desde');
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."cobros_cliente" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('fecha_cobro');
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."cobros_intermediacion" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('fecha_cobro');
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."correcciones_factura_cliente" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('fecha');
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."facturas_cliente" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('fecha_emision');
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."hospitalizaciones_paciente" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('fecha_inicio');
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."prestaciones" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('vigente_desde');
+CREATE OR REPLACE TRIGGER "anotar_el_dia_de_hoy" BEFORE INSERT ON "public"."prestadoras" FOR EACH ROW EXECUTE FUNCTION "interno"."anotar_el_dia_de_hoy"('fecha_alta');
+
+REVOKE ALL ON FUNCTION "interno"."dias_de_la_guardia_mas_larga"("p_prestadora" "uuid", "p_servicio" "uuid") FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "interno"."dias_de_la_guardia_mas_larga"("p_prestadora" "uuid", "p_servicio" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."dias_de_la_guardia_mas_larga"("p_prestadora" "uuid", "p_servicio" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."dias_de_la_guardia_mas_larga"("p_prestadora" "uuid", "p_servicio" "uuid") TO "trabajo_sin_persona";
+
+GRANT ALL ON FUNCTION "public"."domicilio_del_paciente_en"("p_paciente_id" "uuid", "p_fecha" "date") TO "trabajo_sin_persona";
+
+
+-- Los Coordinadores que se le sugieren al administrador para un Servicio de su Prestadora: primero
+-- los que cubren el lugar del domicilio de sus Pacientes, por localidad o por zona, y después los
+-- que coordinan menos Servicios vigentes. Para cualquier otra persona, o un Servicio de otra
+-- Prestadora, no devuelve nada. Cubre el lugar queda sin valor cuando no hay con qué comparar.
+CREATE OR REPLACE FUNCTION "public"."coordinadores_sugeridos_para_el_servicio"("p_servicio" "uuid") RETURNS TABLE("coordinador_id" "uuid", "nombre" "text", "servicios_vigentes" integer, "cubre_el_lugar" boolean)
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO ''
+    AS $$
+  WITH sesion AS (
+    SELECT s.prestadora_id, interno.hoy_de_la_prestadora(s.prestadora_id) AS hoy
+      FROM public.servicios s
+     WHERE s.id = p_servicio
+       AND s.prestadora_id = interno.prestadora_actual()
+       AND (interno.es_admin_prestadora() OR interno.es_superadmin())
+  ),
+  pacientes AS (
+    SELECT DISTINCT p.paciente_id
+      FROM public.prestaciones p
+      JOIN sesion k ON k.prestadora_id = p.prestadora_id
+     WHERE p.servicio_id = p_servicio
+       AND p.paciente_id IS NOT NULL
+       AND p.estado = 'vigente'
+       AND p.vigente_desde <= k.hoy
+       AND (p.vigente_hasta IS NULL OR p.vigente_hasta >= k.hoy)
+  ),
+  lugares_del_servicio AS (
+    SELECT DISTINCT l.id, l.parte_de
+      FROM sesion k
+     CROSS JOIN LATERAL public.domicilios_de_pacientes_en(ARRAY(SELECT x.paciente_id FROM pacientes x), k.hoy) d
+      JOIN public.lugares l ON l.id = d.lugar_id AND l.prestadora_id = k.prestadora_id
+  ),
+  candidatos AS (
+    SELECT u.id AS coordinador_id,
+           u.nombre,
+           (SELECT count(*)::integer
+              FROM public.servicios s
+             WHERE s.coordinador_id = u.id
+               AND s.prestadora_id = k.prestadora_id
+               AND s.estado = 'vigente'
+               AND (s.vigente_hasta IS NULL OR s.vigente_hasta >= k.hoy)) AS servicios_vigentes,
+           CASE
+             WHEN NOT EXISTS (SELECT 1 FROM lugares_del_servicio) THEN NULL
+             WHEN NOT EXISTS (SELECT 1 FROM public.usuario_lugares ul
+                               WHERE ul.usuario_id = u.id AND ul.prestadora_id = k.prestadora_id) THEN NULL
+             ELSE EXISTS (
+               SELECT 1
+                 FROM lugares_del_servicio ls
+                 JOIN public.usuario_lugares ul
+                   ON ul.usuario_id = u.id AND ul.prestadora_id = k.prestadora_id
+                WHERE ul.lugar_id = ls.id
+                   OR ul.lugar_id = ls.parte_de
+                   OR EXISTS (
+                        SELECT 1
+                          FROM public.zona_lugares zp
+                          JOIN public.zona_lugares zc
+                            ON zc.zona_id = zp.zona_id AND zc.prestadora_id = k.prestadora_id
+                          JOIN public.zonas_cobertura z
+                            ON z.id = zp.zona_id AND z.prestadora_id = k.prestadora_id AND z.activa
+                         WHERE zp.lugar_id = ls.id
+                           AND zp.prestadora_id = k.prestadora_id
+                           AND zc.lugar_id = ul.lugar_id))
+           END AS cubre_el_lugar
+      FROM sesion k
+      JOIN public.usuarios u ON u.prestadora_id = k.prestadora_id
+     WHERE u.rol = 'coordinador'
+       AND u.desactivada_en IS NULL
+  )
+  SELECT c.coordinador_id, c.nombre, c.servicios_vigentes, c.cubre_el_lugar
+    FROM candidatos c
+   ORDER BY (c.cubre_el_lugar IS TRUE) DESC, c.servicios_vigentes, c.nombre, c.coordinador_id;
+$$;
+
+ALTER FUNCTION "public"."coordinadores_sugeridos_para_el_servicio"("p_servicio" "uuid") OWNER TO "postgres";
+
+REVOKE ALL ON FUNCTION "public"."coordinadores_sugeridos_para_el_servicio"("p_servicio" "uuid") FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "public"."coordinadores_sugeridos_para_el_servicio"("p_servicio" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."coordinadores_sugeridos_para_el_servicio"("p_servicio" "uuid") TO "service_role";
+
+
+-- Los Asistentes que ya atendieron a alguno de esos Pacientes: cuántos turnos de guardia tiene
+-- cada uno y la fecha del último. Cuenta un turno de guardia una sola vez, aunque tenga a varios de
+-- esos Pacientes, en la lista o en la columna. Cuenta el que tiene Asistente, no está cancelado ni
+-- ausente y ya empezó: su fecha y su hora de inicio, en la zona horaria de la Prestadora, ya
+-- pasaron. Corre con los permisos de quien llama: la protección por fila decide qué turnos ve.
+CREATE OR REPLACE FUNCTION "public"."asistentes_que_atendieron_a_pacientes"("p_pacientes" "uuid"[]) RETURNS TABLE("asistente_id" "uuid", "cantidad" integer, "ultima_fecha" "date")
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO ''
+    AS $$
+  SELECT g.asistente_id, count(*)::integer, max(g.fecha)
+    FROM public.turnos_guardia g
+   WHERE g.asistente_id IS NOT NULL
+     AND g.estado NOT IN ('cancelada', 'ausente')
+     AND (g.paciente_id = ANY (p_pacientes)
+          OR EXISTS (SELECT 1
+                       FROM public.turno_guardia_pacientes gp
+                      WHERE gp.turno_guardia_id = g.id
+                        AND gp.prestadora_id = g.prestadora_id
+                        AND gp.paciente_id = ANY (p_pacientes)))
+     AND (g.fecha + g.hora_inicio) AT TIME ZONE interno.zona_horaria_de_la_prestadora(g.prestadora_id) <= now()
+   GROUP BY g.asistente_id;
+$$;
+
+ALTER FUNCTION "public"."asistentes_que_atendieron_a_pacientes"("p_pacientes" "uuid"[]) OWNER TO "postgres";
+
+REVOKE ALL ON FUNCTION "public"."asistentes_que_atendieron_a_pacientes"("p_pacientes" "uuid"[]) FROM PUBLIC, "anon";
+GRANT ALL ON FUNCTION "public"."asistentes_que_atendieron_a_pacientes"("p_pacientes" "uuid"[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."asistentes_que_atendieron_a_pacientes"("p_pacientes" "uuid"[]) TO "service_role";
 
 NOTIFY pgrst, 'reload schema';

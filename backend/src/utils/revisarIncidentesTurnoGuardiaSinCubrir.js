@@ -255,6 +255,10 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora, zona }) {
  * que nadie puede saber mirando la base es si el turno terminó en manos del cliente, y ése es
  * justamente el final que importa: lo cierra una persona, desde el Panel.
  */
+// El turno cancelado no se cubre, y el pausado o suspendido tampoco mientras dure la pausa o la
+// internación: en los tres, el incidente se cierra porque ya no hacía falta nadie.
+const ESTADOS_QUE_YA_NO_NECESITAN_ASISTENTE = ['cancelada', 'pausada', 'suspendida'];
+
 async function cerrarLosQueYaNoCorresponden({ abiertos, turnoGuardiaPorId, prestadoraId, ahora }) {
   for (const incidente of abiertos) {
     const turno_guardia = turnoGuardiaPorId.get(incidente.turno_guardia_id);
@@ -263,7 +267,7 @@ async function cerrarLosQueYaNoCorresponden({ abiertos, turnoGuardiaPorId, prest
 
     const comoTermino = turno_guardia.asistente_id
       ? CIERRES.LLEGO_UN_RELEVO
-      : turno_guardia.estado === 'cancelada'
+      : ESTADOS_QUE_YA_NO_NECESITAN_ASISTENTE.includes(turno_guardia.estado)
         ? CIERRES.YA_NO_HACIA_FALTA
         : null;
     if (!comoTermino) continue;

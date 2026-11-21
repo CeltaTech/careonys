@@ -80,6 +80,9 @@ after(() => baseFalsa.close());
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
+  // El día de hoy sale de la zona horaria de la Prestadora. Con la hora universal, el día coincide
+  // con el que las pruebas calculan arriba.
+  respuestas.set('GET /rest/v1/prestadoras', [{ zona_horaria: 'UTC' }]);
 });
 
 const ACCESOS = 'GET /rest/v1/accesos_intermediacion';
@@ -131,7 +134,7 @@ describe('con cuál de los accesos se paga', () => {
       acceso({ id: 'por-fecha', saldo_contactos: null }),
       acceso({ id: 'con-saldo', saldo_contactos: 2 }),
     ]);
-    const { acceso: elegido, hubo_alguno } = await accesoQuePagaElContacto({ clienteId: CLIENTE });
+    const { acceso: elegido, hubo_alguno } = await accesoQuePagaElContacto({ prestadoraId: PRESTADORA, clienteId: CLIENTE });
     assert.equal(elegido.id, 'con-saldo');
     assert.equal(hubo_alguno, true);
   });
@@ -141,29 +144,37 @@ describe('con cuál de los accesos se paga', () => {
       acceso({ id: 'viejo', saldo_contactos: 1 }),
       acceso({ id: 'nuevo', saldo_contactos: 9 }),
     ]);
-    const { acceso: elegido } = await accesoQuePagaElContacto({ clienteId: CLIENTE });
+    const { acceso: elegido } = await accesoQuePagaElContacto({ prestadoraId: PRESTADORA, clienteId: CLIENTE });
     assert.equal(elegido.id, 'viejo');
-    assert.match(llamadas[0].busqueda, /created_at\.asc/);
+    assert.match(llamadas.find((l) => l.clave === ACCESOS).busqueda, /created_at\.asc/);
   });
 
   it('un acceso que no está vigente no paga, pero se sabe que existió', async () => {
     // «Nunca tuvo» y «se le venció» no se arreglan igual: uno lo da de alta la Prestadora y el
     // otro lo renueva.
     respuestas.set(ACCESOS, [acceso({ estado: 'vencida' }), acceso({ estado: 'cancelada' })]);
-    const resultado = await accesoQuePagaElContacto({ clienteId: CLIENTE });
+    const resultado = await accesoQuePagaElContacto({ prestadoraId: PRESTADORA, clienteId: CLIENTE });
     assert.equal(resultado.acceso, null);
     assert.equal(resultado.hubo_alguno, true);
   });
 
   it('el paquete agotado se elige igual, para poder decir que se agotó', async () => {
     respuestas.set(ACCESOS, [acceso({ saldo_contactos: 0 })]);
-    const { acceso: elegido } = await accesoQuePagaElContacto({ clienteId: CLIENTE });
+    const { acceso: elegido } = await accesoQuePagaElContacto({ prestadoraId: PRESTADORA, clienteId: CLIENTE });
     assert.equal(elegido.saldo_contactos, 0);
   });
 
   it('si la base falla, no se inventa ningún acceso', async () => {
-    const resultado = await accesoQuePagaElContacto({ clienteId: CLIENTE });
-    assert.deepEqual(resultado, { acceso: null, hubo_alguno: false });
+    const resultado = await accesoQuePagaElContacto({ prestadoraId: PRESTADORA, clienteId: CLIENTE });
+    assert.equal(resultado.acceso, null);
+    assert.equal(resultado.hubo_alguno, false);
+  });
+
+  it('sin la zona horaria de la Prestadora no se elige ningún acceso', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', [{ zona_horaria: null }]);
+    respuestas.set(ACCESOS, [acceso()]);
+    const resultado = await accesoQuePagaElContacto({ prestadoraId: PRESTADORA, clienteId: CLIENTE });
+    assert.deepEqual(resultado, { acceso: null, hubo_alguno: false, hoy: null });
   });
 });
 

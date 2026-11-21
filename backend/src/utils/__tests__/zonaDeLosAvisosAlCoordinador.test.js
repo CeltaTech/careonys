@@ -219,3 +219,44 @@ describe('equipo de un Servicio', () => {
     assert.equal(pedidos('GET /rest/v1/turnos_guardia').length, 0);
   });
 });
+
+describe('incidente de turno de guardia sin cubrir, con el turno pausado o suspendido', () => {
+  const INCIDENTE = '55555555-5555-4555-8555-555555555555';
+
+  function prepararVuelta(estado) {
+    prepararPrestadora();
+    respuestas.set('GET /rest/v1/turnos_guardia', [
+      { ...turnoDeUnaHora(new Date(Date.now() + 23 * MS_POR_HORA)), estado },
+    ]);
+    respuestas.set('GET /rest/v1/incidentes_turno_guardia_sin_cubrir', [
+      { id: INCIDENTE, turno_guardia_id: TURNO_GUARDIA, abierto_at: new Date().toISOString(), ultimo_recordatorio_at: null, veces_recordado: 0 },
+    ]);
+    respuestas.set('PATCH /rest/v1/incidentes_turno_guardia_sin_cubrir', []);
+  }
+
+  for (const estado of ['pausada', 'suspendida']) {
+    it(`${estado}: el incidente abierto se cierra porque ya no hacía falta`, async () => {
+      prepararVuelta(estado);
+      await revisarIncidentesTurnoGuardiaSinCubrir();
+      const cierres = pedidos('PATCH /rest/v1/incidentes_turno_guardia_sin_cubrir');
+      assert.equal(cierres.length, 1);
+      assert.equal(cierres[0].cuerpo.resuelto_como, 'ya_no_hacia_falta');
+      assert.equal(cierres[0].filtros.get('id'), `eq.${INCIDENTE}`);
+    });
+
+    it(`${estado}: sin incidente abierto, no se abre uno`, async () => {
+      prepararVuelta(estado);
+      respuestas.set('GET /rest/v1/incidentes_turno_guardia_sin_cubrir', []);
+      await revisarIncidentesTurnoGuardiaSinCubrir();
+      assert.equal(pedidos('POST /rest/v1/incidentes_turno_guardia_sin_cubrir').length, 0);
+    });
+  }
+
+  it('control: programado y sin nadie, el incidente abierto sigue abierto', async () => {
+    prepararVuelta('programada');
+    await revisarIncidentesTurnoGuardiaSinCubrir();
+    const cierres = pedidos('PATCH /rest/v1/incidentes_turno_guardia_sin_cubrir')
+      .filter((l) => l.cuerpo?.resuelto_como);
+    assert.equal(cierres.length, 0);
+  });
+});

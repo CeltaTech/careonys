@@ -149,3 +149,31 @@ describe('el documento firmado de las personas autorizadas la abre quien ve la f
     assert.equal(firma.credencial, credencialEnviada, 'el enlace se pidió con otra credencial');
   });
 });
+
+describe('la hora de la firma del Responsable de pagos sale de la zona de la Prestadora', () => {
+  beforeEach(() => {
+    respuestas.set('GET /rest/v1/servicios', () => [{ id: SERVICIO, prestadora_id: PRESTADORA, cliente_id: CLIENTE }]);
+    respuestas.set('GET /rest/v1/pagadores_del_servicio', () => []);
+    respuestas.set('GET /rest/v1/consentimientos_pagador', () => []);
+    respuestas.set('GET /rest/v1/tipos_documento_pagador', () => []);
+    respuestas.set('GET /rest/v1/documentos_pagador', () => []);
+  });
+
+  it('la zona se lee de la base con la credencial de quien pide', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
+    const { estado } = await pedir('GET', `/servicio/${SERVICIO}/pagador`);
+    assert.equal(estado, 200);
+
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras' && /zona_horaria/.test(l.busqueda));
+    assert.ok(lectura, 'no leyó la zona de la Prestadora');
+    assert.equal(lectura.credencial, credencialEnviada, 'la zona se leyó con otra credencial');
+    assert.match(lectura.busqueda, new RegExp(`id=eq\\.${PRESTADORA}`));
+  });
+
+  it('la zona que viene en el pedido no reemplaza a la de la base', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: null }]);
+    const { estado } = await pedir('GET', `/servicio/${SERVICIO}/pagador?zona=Pacific/Kiritimati`);
+    assert.notEqual(estado, 200);
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/consentimientos_pagador'), 'siguió sin la zona de la Prestadora');
+  });
+});

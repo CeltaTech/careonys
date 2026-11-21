@@ -306,9 +306,16 @@ panelTurnosGuardiaRouter.post('/series/:id/asignar', requiereRolPanel, exigirOrg
    que aceptar. Pasa por el backend por los dos avisos a ese Asistente: que perdió uno y que tiene
    otro para responder. */
 panelTurnosGuardiaRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
-  const { paciente_id: pacienteId, fecha = null, hora_inicio: horaInicio = null, hora_fin: horaFin = null } = req.body ?? {};
+  const {
+    paciente_id: pacienteId, fecha = null, hora_inicio: horaInicio = null, hora_fin: horaFin = null,
+    dias_hasta_el_fin: diasHastaElFin = null,
+  } = req.body ?? {};
   if (typeof pacienteId !== 'string' || !pacienteId) {
     return res.status(400).json({ error: 'Paciente no reconocido' });
+  }
+  // Sin valor, el turno nuevo conserva la duración del original.
+  if (diasHastaElFin !== null && !(Number.isInteger(diasHastaElFin) && diasHastaElFin >= 0)) {
+    return res.status(400).json({ error: 'Duración no reconocida' });
   }
 
   const db = clienteDelPedido(req);
@@ -322,6 +329,7 @@ panelTurnosGuardiaRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirO
     p_fecha: fecha,
     p_hora_inicio: horaInicio,
     p_hora_fin: horaFin,
+    p_dias_hasta_el_fin: diasHastaElFin,
   });
 
   if (error) return responderRechazo(req, res, error);

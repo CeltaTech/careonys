@@ -437,8 +437,26 @@ describe('llevar un turno a otro Paciente', () => {
     const llamada = movimientoPedido();
     assert.deepEqual(llamada.cuerpo, {
       p_turno_guardia_id: TURNO_GUARDIA, p_paciente_id: DESTINO, p_fecha: '2026-09-06', p_hora_inicio: null, p_hora_fin: null,
+      p_dias_hasta_el_fin: null,
     });
     assert.notEqual(llamada.credencial, 'Bearer clave-de-mentira');
+  });
+
+  it('la duración que manda el Panel llega a la base', async () => {
+    const { estado } = await pedir('POST', `/${TURNO_GUARDIA}/mover-a-paciente`, {
+      paciente_id: DESTINO, fecha: '2026-09-06', hora_inicio: '20:00', hora_fin: '08:00', dias_hasta_el_fin: 1,
+    });
+    assert.equal(estado, 200);
+    assert.equal(movimientoPedido().cuerpo.p_dias_hasta_el_fin, 1);
+  });
+
+  it('una duración que no es un entero de cero en adelante no llega a la base', async () => {
+    for (const dias of [-1, 1.5, '2']) {
+      llamadas.length = 0;
+      const { estado } = await pedir('POST', `/${TURNO_GUARDIA}/mover-a-paciente`, { paciente_id: DESTINO, dias_hasta_el_fin: dias });
+      assert.equal(estado, 400);
+      assert.equal(movimientoPedido(), undefined);
+    }
   });
 
   it('el turno nuevo queda avisado, acotado a la Prestadora', async () => {

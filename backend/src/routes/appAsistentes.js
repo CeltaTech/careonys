@@ -255,7 +255,9 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // Su Certificado de Aptitud, el último, y con cuántos días de anticipación lo da por vencer su
   // Prestadora: el teléfono calcula el estado con esos días y no con unos fijos. La base le deja
   // ver al Asistente una sola Prestadora, la suya.
-  const [{ data: certificado }, { data: prestadora }] = await Promise.all([
+  // Y su zona horaria, para que el teléfono diga «hoy» y las horas de los turnos de guardia en la
+  // de la Prestadora y no en la del aparato.
+  const [{ data: certificado }, { data: prestadora }, zonaHoraria] = await Promise.all([
     db
       .from('certificados')
       .select('activo, fecha_emision, fecha_vencimiento')
@@ -264,6 +266,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
       .limit(1)
       .maybeSingle(),
     db.from('prestadoras').select('dias_aviso_vencimiento_documentos').maybeSingle(),
+    zonaDeLaPrestadora(db, req.usuarioAsistente.prestadoraId),
   ]);
 
   // La marca de su Prestadora viaja con el perfil, no en una dirección aparte:
@@ -312,6 +315,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     opciones_disponibilidad: opcionesDisponibilidad,
     certificado: certificado || null,
     dias_aviso_vencimiento_documentos: prestadora?.dias_aviso_vencimiento_documentos ?? null,
+    zonaHoraria,
     marca,
     visibilidad,
     intermediacion,

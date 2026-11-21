@@ -2,6 +2,7 @@ import { enLaPrestadora } from '../db/connection.js';
 import { estaCertificada, exigirLaPrestadora } from './prestadoraCertificada.js';
 import { idsDePacientesDeTurnoGuardia } from './pacientesDeTurnoGuardia.js';
 import { sumarDias } from './fechas.js';
+import { diasDeLaGuardiaMasLarga } from './guardiaMasLarga.js';
 import { diaEnLaZona, finDeTurnoGuardiaEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 import {
   cuandoTermino,
@@ -36,9 +37,9 @@ import {
    Trabaja en una sola Prestadora, la que le pasa `programar` en server.js, y sólo si está
    certificada, con la credencial del trabajo de esa Prestadora, que la base acota a ella. */
 
-// Hasta dónde se mira hacia atrás al traer los turnos abiertos. Un turno de 72 horas empieza tres
-// días antes de terminar, y todavía uno más para el caso que quedó abierto de ayer.
-const DIAS_HACIA_ATRAS = 4;
+// Hasta dónde se mira hacia atrás al traer los turnos abiertos: tantos días como dura el turno más
+// largo de la Prestadora, que no tiene tope, y uno más para el caso que quedó abierto de ayer.
+const DIA_DE_MARGEN = 1;
 
 export async function revisarExtensionesDeTurnoGuardia(prestadoraId, ahora = new Date()) {
   exigirLaPrestadora(prestadoraId, 'revisarExtensionesDeTurnoGuardia');
@@ -64,6 +65,14 @@ async function revisarPrestadora({ db, prestadoraId, ahora }) {
     return;
   }
 
+  let diasHaciaAtras;
+  try {
+    diasHaciaAtras = (await diasDeLaGuardiaMasLarga(db, prestadoraId)) + DIA_DE_MARGEN;
+  } catch (e) {
+    console.error(`Error leyendo el turno más largo para las extensiones (prestadora ${prestadoraId}):`, e.message);
+    return;
+  }
+
   const { data: turnos_guardia, error } = await db
     .from('turnos_guardia')
     .select(
@@ -71,7 +80,7 @@ async function revisarPrestadora({ db, prestadoraId, ahora }) {
     )
     .eq('prestadora_id', prestadoraId)
     .not('checkin_at', 'is', null)
-    .gte('fecha', sumarDias(diaEnLaZona(ahora, zona), -DIAS_HACIA_ATRAS))
+    .gte('fecha', sumarDias(diaEnLaZona(ahora, zona), -diasHaciaAtras))
     .lte('fecha', diaEnLaZona(ahora, zona));
 
   if (error) {

@@ -50,7 +50,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
-    llamadas.push({ clave, credencial: leerCredencial(req.headers.authorization ?? '') });
+    llamadas.push({ clave, select: direccion.searchParams.get('select'), credencial: leerCredencial(req.headers.authorization ?? '') });
     const valor = respuestas.get(clave) ?? [];
     const unoSolo = (req.headers.accept || '').includes('vnd.pgrst.object+json');
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -102,7 +102,9 @@ for (const [nombre, trabajo, tabla] of TRABAJOS) {
       // Lo mismo que hace `programar` en server.js con `conLaPrestadora`.
       await paraCadaPrestadora(trabajo.name, (prestadoraId) => trabajo(prestadoraId));
 
-      const vueltas = llamadas.filter((l) => l.clave === tabla);
+      // La lectura del turno más largo va a la misma tabla, pero es una consulta aparte: se cuenta
+      // la vuelta de trabajo, no esa.
+      const vueltas = llamadas.filter((l) => l.clave === tabla && l.select !== 'dias_hasta_el_fin');
       assert.equal(vueltas.length, 3, anotados.join('\n'));
       assert.deepEqual(vueltas.map((l) => l.credencial?.prestadora_id).sort(), [...TRES].sort());
       assert.equal(llamadas.filter((l) => l.clave === RECORRER).length, 1);

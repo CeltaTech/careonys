@@ -42,6 +42,7 @@
    nada y se devuelve el motivo. Nunca se muestra un contacto que no se pudo descontar. */
 
 import { supabase, enLaPrestadora } from '../db/connection.js';
+import { hoyEnLaPrestadora } from './relojDeLaPrestadora.js';
 import { abrirElContacto, elAccesoAbreContactos, MOTIVO_CONTACTO } from './contactosIntermediacion.js';
 
 /** Las columnas del Legajo del Asistente que son el dato que se vende. Están acá, en una sola
@@ -66,9 +67,10 @@ const COLUMNAS_DEL_ACCESO =
   'formas_de_cobro_intermediacion(nombre, renueva_sola, periodo_cantidad, periodo_unidad, contactos_incluidos)';
 
 /** ¿Este acceso está todavía en período gratuito? Se compara por día, que es como está guardado:
- *  el último día del período gratuito todavía es gratis. */
-export function enPeriodoGratuito(acceso, hoy = new Date().toISOString().slice(0, 10)) {
-  return Boolean(acceso?.gratis_hasta) && acceso.gratis_hasta >= hoy;
+ *  el último día del período gratuito todavía es gratis. `hoy` es el día en la zona horaria de la
+ *  Prestadora; sin día contesta que no. */
+export function enPeriodoGratuito(acceso, hoy) {
+  return Boolean(hoy) && Boolean(acceso?.gratis_hasta) && acceso.gratis_hasta >= hoy;
 }
 
 /** ¿Este acceso puede pagar un contacto más? El que se sostiene por fecha paga siempre; el de
@@ -88,9 +90,20 @@ function puedePagar(acceso) {
  * La Prestadora se pide además del Legajo del Cliente, y es obligatoria: un identificador
  * probado a mano no alcanza los accesos de otra Organización (`celtatech\CLAUDE.md` §5).
  *
- * @returns {Promise<{acceso: object|null, hubo_alguno: boolean}>}
+ * El día de hoy es el de la zona horaria de la Prestadora, el mismo que usa la base, y se devuelve
+ * para que quien llama decida con ese mismo día.
+ *
+ * @returns {Promise<{acceso: object|null, hubo_alguno: boolean, hoy: string|null}>}
  */
 export async function accesoQuePagaElContacto({ prestadoraId, clienteId }) {
+  let hoy;
+  try {
+    hoy = await hoyEnLaPrestadora(supabase, prestadoraId);
+  } catch (e) {
+    console.error('Error leyendo el día de hoy de la Prestadora:', e.message);
+    return { acceso: null, hubo_alguno: false, hoy: null };
+  }
+
   const { data, error } = await supabase
     .from('accesos_intermediacion')
     .select(COLUMNAS_DEL_ACCESO)
@@ -100,19 +113,19 @@ export async function accesoQuePagaElContacto({ prestadoraId, clienteId }) {
 
   if (error) {
     console.error('Error consultando los accesos del Cliente:', error.message);
-    return { acceso: null, hubo_alguno: false };
+    return { acceso: null, hubo_alguno: false, hoy };
   }
 
   const todos = data || [];
   // «Vigente» acá quiere decir que hoy abre contactos: además del vigente, el que está en período
   // de gracia antes de su suspensión y el dado de baja antes de su último día pagado.
-  const vigentes = todos.filter((a) => elAccesoAbreContactos(a));
+  const vigentes = todos.filter((a) => elAccesoAbreContactos(a, hoy));
   const conSaldo = vigentes.find((a) => a.saldo_contactos !== null && a.saldo_contactos > 0);
   const porFecha = vigentes.find((a) => a.saldo_contactos === null);
 
   // El agotado va último y a propósito: devolverlo es lo que permite contestar «se le acabó» en vez
   // de «no tiene acceso». Quien llama pregunta si puede pagar antes de cobrarle.
-  return { acceso: conSaldo || porFecha || vigentes[0] || null, hubo_alguno: todos.length > 0 };
+  return { acceso: conSaldo || porFecha || vigentes[0] || null, hubo_alguno: todos.length > 0, hoy };
 }
 
 /** El dato de contacto de un Asistente. Se pide con el identificador de la Prestadora además del
@@ -139,7 +152,7 @@ export async function datosDeContacto({ prestadoraId, asistenteId }) {
 /** Lo que la pantalla necesita para preguntar antes de cobrar: qué forma se va a usar, cuánto
  *  sale, y si tocar el botón termina el período gratuito. Es lo que se muestra en la
  *  confirmación, y por eso sale armado de un solo lugar. */
-function advertenciaDeLaActivacion(acceso) {
+function advertenciaDeLaActivacion(acceso, hoy) {
   if (!acceso) return null;
   const forma = acceso.formas_de_cobro_intermediacion || {};
   return {
@@ -149,7 +162,7 @@ function advertenciaDeLaActivacion(acceso) {
     renueva_sola: Boolean(forma.renueva_sola),
     // Los dos datos que cambian lo que dice la confirmación: uno avisa que se termina la prueba,
     // el otro que se gasta un contacto de los que quedan.
-    termina_el_periodo_gratuito: enPeriodoGratuito(acceso),
+    termina_el_periodo_gratuito: enPeriodoGratuito(acceso, hoy),
     saldo_contactos: acceso.saldo_contactos,
   };
 }
@@ -195,7 +208,7 @@ async function mirarElContacto({ prestadoraId, clienteId, asistenteId, mira_el_d
     return { abierto: false, contacto: null, activacion: null };
   }
 
-  const { acceso, hubo_alguno: huboAlguno } = await accesoQuePagaElContacto({ prestadoraId, clienteId });
+  const { acceso, hubo_alguno: huboAlguno, hoy } = await accesoQuePagaElContacto({ prestadoraId, clienteId });
   if (!acceso) {
     return {
       abierto: false,
@@ -208,7 +221,7 @@ async function mirarElContacto({ prestadoraId, clienteId, asistenteId, mira_el_d
     return { abierto: false, contacto: null, activacion: null, motivo: MOTIVO_VER_CONTACTO.SALDO_AGOTADO };
   }
 
-  return { abierto: false, contacto: null, activacion: advertenciaDeLaActivacion(acceso) };
+  return { abierto: false, contacto: null, activacion: advertenciaDeLaActivacion(acceso, hoy) };
 }
 
 /**
@@ -225,7 +238,7 @@ export function abrirElContactoDeUnAsistente(argumentos) {
 }
 
 async function abrirYMostrar({ prestadoraId, clienteId, asistenteId }) {
-  const { acceso, hubo_alguno: huboAlguno } = await accesoQuePagaElContacto({ prestadoraId, clienteId });
+  const { acceso, hubo_alguno: huboAlguno, hoy } = await accesoQuePagaElContacto({ prestadoraId, clienteId });
   if (!acceso) {
     return { ok: false, motivo: huboAlguno ? MOTIVO_VER_CONTACTO.ACCESO_NO_VIGENTE : MOTIVO_VER_CONTACTO.SIN_ACCESO };
   }
@@ -240,7 +253,7 @@ async function abrirYMostrar({ prestadoraId, clienteId, asistenteId }) {
   // Se termina la prueba sólo cuando se abrió un contacto nuevo. Volver a mirar uno que ya estaba
   // abierto no consume nada, así que tampoco activa nada.
   if (!abierto.ya_estaba) {
-    await terminarElPeriodoGratuito(acceso);
+    await terminarElPeriodoGratuito(acceso, hoy);
   }
 
   const contacto = await datosDeContacto({ prestadoraId, asistenteId });
@@ -255,10 +268,9 @@ async function abrirYMostrar({ prestadoraId, clienteId, asistenteId }) {
 /** Deja el acceso fuera del período gratuito. Lo que se cobró ya se consumió, así que la prueba
  *  terminó: el primer cobro pasa a ser el de hoy. No se adelanta una fecha que ya pasó:
  *  `proximo_cobro` anterior a hoy se respeta como está. */
-async function terminarElPeriodoGratuito(acceso) {
-  if (!enPeriodoGratuito(acceso)) return;
+async function terminarElPeriodoGratuito(acceso, hoy) {
+  if (!enPeriodoGratuito(acceso, hoy)) return;
 
-  const hoy = new Date().toISOString().slice(0, 10);
   const cambios = { gratis_hasta: hoy, updated_at: new Date().toISOString() };
   if (!acceso.proximo_cobro || acceso.proximo_cobro > hoy) cambios.proximo_cobro = hoy;
 

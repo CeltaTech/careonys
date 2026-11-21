@@ -57,10 +57,11 @@ export const ESTADO_DEL_ACCESO = {
  * Las fechas se comparan como texto `AAAA-MM-DD`, que es como las devuelve la base.
  *
  * @param {{estado?: string, suspension_desde?: string|null, vigente_hasta?: string|null}} acceso
- * @param {string} [hoy]  El día de hoy, `AAAA-MM-DD`, en hora universal como la base.
+ * @param {string} hoy  El día de hoy, `AAAA-MM-DD`, en la zona horaria de la Prestadora, como la
+ *                      base. Sin día contesta que no.
  */
-export function elAccesoAbreContactos(acceso, hoy = new Date().toISOString().slice(0, 10)) {
-  if (!acceso) return false;
+export function elAccesoAbreContactos(acceso, hoy) {
+  if (!acceso || !hoy) return false;
   switch (acceso.estado) {
     case ESTADO_DEL_ACCESO.VIGENTE:
       return true;

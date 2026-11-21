@@ -231,8 +231,20 @@ describe('las horas del turno se leen en la zona de la Prestadora', () => {
 
     await revisarLasExtensionesDeUnaPrestadora(PRESTADORA, new Date('2026-03-02T01:30:00Z'));
 
-    const consulta = llamadas.find((l) => l.clave === TURNOS_GUARDIA);
-    assert.deepEqual(consulta.filtros.getAll('fecha').sort(), ['gte.2026-02-25', 'lte.2026-03-01']);
+    // Sin turnos largos se mira un solo día hacia atrás, el margen del turno que quedó abierto ayer.
+    const consulta = llamadas.find((l) => l.clave === TURNOS_GUARDIA && l.filtros.get('select') !== 'dias_hasta_el_fin');
+    assert.deepEqual(consulta.filtros.getAll('fecha').sort(), ['gte.2026-02-28', 'lte.2026-03-01']);
+  });
+
+  it('un turno de cinco días no tiene tope: se mira hacia atrás lo que dura el más largo y un día más', async () => {
+    respuestas.set(TURNOS_GUARDIA, (llamada) =>
+      llamada.filtros.get('select') === 'dias_hasta_el_fin' ? [{ dias_hasta_el_fin: 5 }] : []);
+    respuestas.set(ABIERTAS, []);
+
+    await revisarLasExtensionesDeUnaPrestadora(PRESTADORA, new Date('2026-03-02T01:30:00Z'));
+
+    const consulta = llamadas.find((l) => l.clave === TURNOS_GUARDIA && l.filtros.get('select') !== 'dias_hasta_el_fin');
+    assert.deepEqual(consulta.filtros.getAll('fecha').sort(), ['gte.2026-02-23', 'lte.2026-03-01']);
   });
 
   it('sin la zona de la Prestadora no se revisa nada', async () => {

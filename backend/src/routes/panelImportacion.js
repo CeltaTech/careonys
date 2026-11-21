@@ -11,7 +11,7 @@ import {
 import {
   parsearArchivo, intentarParsearSQL, evaluarViabilidadIA, proponerMapeoIA,
   CAMPOS_IMPORTACION, CAMPOS_OBLIGATORIOS, CAMPOS_LISTA, CAMPOS_DOMICILIO, valorDesdeFila, domicilioDesdeFila,
-  reescritorDeLocalidades, lectorDeGeneros,
+  reescritorDeLocalidades, lectorDeGeneros, fechaDeLaCelda, fechaDelValorHora,
 } from '../utils/importacionIA.js';
 import { resolverGeneros } from '../utils/generosDeLaImportacion.js';
 import { catalogoDeLugares, paisDeLaPrestadora, agregarLugar } from '../utils/catalogoDeLugares.js';
@@ -321,6 +321,8 @@ panelImportacionRouter.post(
             }
             datos.domicilioPartido = partes;
             datos.lugares = lugaresDeTrabajo;
+            datos.rige_desde = fechaDelValorHora(datos);
+            delete datos.valor_hora_rige_desde;
             await crearAsistenteDirecto(conGeneroLeido(datos));
           } else {
             const datos = { prestadoraId, importacionId: lote.id, db: db };
@@ -330,6 +332,7 @@ panelImportacionRouter.post(
             }
             datos.domicilioDelPacientePartido = partes;
             datos.domicilioPaciente = valorDesdeFila(fila, mapeo, 'domicilioPaciente', false);
+            datos.fechaNacimientoPaciente = fechaDeLaCelda(datos.fechaNacimientoPaciente);
             const alta = await crearClienteImportado(conGeneroLeido(datos));
             if (alta.yaEstaba) {
               yaEstaban.push({ fila: i + 1, numeroCliente: alta.numeroCliente });

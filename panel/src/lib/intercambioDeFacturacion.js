@@ -227,22 +227,43 @@ export function numeroDeArchivo(valor) {
   return Number(`${entero}.${decimales}`);
 }
 
+// El día cero de las fechas de Excel. Una celda con formato de fecha guarda la cantidad de días
+// contados desde ahí, y la parte decimal es la hora.
+const DIA_CERO_DE_EXCEL = Date.UTC(1899, 11, 30);
+const MILISEGUNDOS_POR_DIA = 86400000;
+
+/* El día, si existe en el calendario: `2026-02-31` tiene la forma y no es ningún día. */
+function diaQueExiste(anio, mes, dia) {
+  const texto = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+  const fecha = new Date(`${texto}T00:00:00Z`);
+  return !Number.isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 10) === texto ? texto : '';
+}
+
 /**
  * Una fecha escrita como la escribe una planilla de cálculo, en la forma que guarda la base.
  *
- * Se aceptan la forma con el año adelante y la de día, mes y año separados por barra, que es la
- * que devuelve Excel en castellano y en portugués. Cualquier otra cosa se devuelve vacía, y la
- * comprobación de más abajo la rechaza diciendo cuál es el dato.
+ * Se aceptan tres formas: la del año adelante; la de día, mes y año separados por barra, que es la
+ * que devuelve Excel en castellano y en portugués; y la celda con formato de fecha, que Excel
+ * guarda como un número de días. Una fecha que no existe en el calendario o que tiene cualquier
+ * otra forma se devuelve vacía, y la comprobación de más abajo la rechaza diciendo cuál es el
+ * dato. Es la única lectura de fechas de planilla del producto: la usan este intercambio y la
+ * importación de personas.
  */
 export function fechaDeArchivo(valor) {
+  if (typeof valor === 'number') {
+    if (!Number.isFinite(valor) || valor < 1) return '';
+    return new Date(DIA_CERO_DE_EXCEL + Math.floor(valor) * MILISEGUNDOS_POR_DIA).toISOString().slice(0, 10);
+  }
   const texto = String(valor ?? '').trim();
   if (texto === '') return null;
-  if (/^\d{4}-\d{2}-\d{2}/.test(texto)) return texto.slice(0, 10);
+
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(texto);
+  if (iso) return diaQueExiste(iso[1], iso[2], iso[3]);
 
   const barras = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(texto);
   if (barras) {
     const [, dia, mes, anio] = barras;
-    return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    return diaQueExiste(anio, mes, dia);
   }
   return '';
 }

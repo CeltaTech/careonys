@@ -5,6 +5,8 @@ import { TRATO_IA } from './tratoIA.js';
 import { jsonDeRespuestaIA } from './respuestaIA.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { MODELO_IA } from '../config/modeloIA.js';
+import { ErrorConMotivo } from './errorConMotivo.js';
+import { fechaDeArchivo } from './intercambioDeFacturacion.js';
 
 // Fase 3 del plan "Terminar la Etapa 2 (Panel)" (importación masiva de datos con IA).
 // Sigue el mismo patrón que backend/src/utils/reporteIA.js: cliente de Anthropic con
@@ -33,7 +35,7 @@ export const CAMPOS_IMPORTACION = {
     'nombre', 'telefono', 'email', 'documento', 'dni', 'genero', 'tipo_asistente',
     'domicilio', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilio${parte}`),
     'dondeAceptaTrabajar',
-    'valor_hora', 'horas_semanales',
+    'valor_hora', 'valor_hora_rige_desde', 'horas_semanales',
   ],
   cliente: [
     'nombreContacto', 'apellidoContacto', 'documentoContacto', 'dniContacto', 'generoContacto',
@@ -92,6 +94,23 @@ export function valorDesdeFila(fila, mapeo, campo, esLista) {
   return valor === '' || valor == null ? undefined : valor;
 }
 
+/**
+ * La fecha de una celda, en la forma que guarda la base.
+ *
+ * La celda vacía no trae fecha. La que trae algo que no es una fecha del calendario es un dato mal
+ * cargado: la fila vuelve con ese motivo en el archivo de no cargados, y la fecha nunca se adivina.
+ */
+export function fechaDeLaCelda(valor) {
+  const fecha = fechaDeArchivo(valor);
+  if (fecha === '') throw new ErrorConMotivo('fecha_invalida', 'una fecha de la planilla no se entiende');
+  return fecha ?? undefined;
+}
+
+/** La fecha desde la que rige el valor hora de la fila. Acompaña a ese valor: sin valor, se ignora. */
+export function fechaDelValorHora(datos) {
+  return datos.valor_hora ? fechaDeLaCelda(datos.valor_hora_rige_desde) : undefined;
+}
+
 // Capa 1 (formato conocido): cualquier formato que `xlsx` ya sepa leer — XLSX/XLSM/XLSB/XLS,
 // ODS, XML SpreadsheetML, CSV/TSV/TXT delimitado, DIF, SYLK, DBF, WK1/WK3 — se acepta sin
 // código nuevo, `XLSX.read` autodetecta el formato por firma de archivo, no hace falta un
@@ -100,7 +119,11 @@ export function parsearArchivo(buffer, nombreArchivo) {
   // codepage 65001 (UTF-8) explícito: sin esto, un CSV en UTF-8 sin BOM (el caso normal al
   // exportar desde Excel/Sheets en español) se interpreta con acentos/ñ corrompidos —
   // encontrado en la verificación de esta fase con una planilla de prueba real.
-  const libro = XLSX.read(buffer, { type: 'buffer', codepage: 65001 });
+  // `raw` deja el texto de un CSV tal cual está escrito. Sin eso, la librería convierte por su
+  // cuenta lo que parece una fecha y lee `05/03/2026` como 3 de mayo, a la manera de Estados
+  // Unidos: la fecha la interpreta después `fechaDeLaCelda`, que lee el día adelante. En un
+  // archivo de Excel no cambia nada: la celda con formato de fecha sigue llegando como número.
+  const libro = XLSX.read(buffer, { type: 'buffer', codepage: 65001, raw: true });
   const planilla = libro.Sheets[libro.SheetNames[0]];
   const filas = XLSX.utils.sheet_to_json(planilla, { defval: '' });
   if (filas.length === 0) {

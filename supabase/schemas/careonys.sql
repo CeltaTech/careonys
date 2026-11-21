@@ -32723,6 +32723,10 @@ GRANT INSERT("valor_hora") ON TABLE "public"."remuneraciones_asistente" TO "trab
 
 
 
+GRANT INSERT("rige_desde") ON TABLE "public"."remuneraciones_asistente" TO "trabajo_sin_persona";
+
+
+
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."reportes" TO "authenticated";
 GRANT ALL ON TABLE "public"."reportes" TO "service_role";
 GRANT SELECT ON TABLE "public"."reportes" TO "trabajo_sin_persona";

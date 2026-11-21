@@ -109,6 +109,17 @@ describe('fechaDeArchivo', () => {
   it('devuelve nada cuando la celda está vacía', () => {
     expect(fechaDeArchivo('')).toBe(null);
   });
+
+  it('entiende la celda con formato de fecha, que Excel guarda como número de días', () => {
+    expect(fechaDeArchivo(46086)).toBe('2026-03-05');
+    expect(fechaDeArchivo(46086.75)).toBe('2026-03-05');
+  });
+
+  it('devuelve vacío cuando el día no existe en el calendario', () => {
+    expect(fechaDeArchivo('31/02/2026')).toBe('');
+    expect(fechaDeArchivo('2026-13-01')).toBe('');
+    expect(fechaDeArchivo(0)).toBe('');
+  });
 });
 
 describe('loFacturadoDeLaFila', () => {

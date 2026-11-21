@@ -112,21 +112,13 @@ de una Prestadora no lee nada de otra.
 
 **27.** Terminar el acto de armar un Servicio. Lo demás del acto ya está construido.
 
-1. **Las sugerencias al armar el equipo del Servicio.**
-   - **Hoy:** el Coordinador suma Asistentes al equipo desde la ficha del Servicio, y la lista se
-     ordena contra los turnos de guardia vacantes. Un Servicio recién armado no tiene turnos de
-     guardia, así que la lista ofrece a todo el Padrón sin orden y sin advertencias.
-   - **Pasa a ser:** con o sin turnos de guardia, la lista viene ordenada por lugar, tareas,
-     Especialidades, antecedentes y acuerdo económico, con los criterios que ya usa la asignación
-     de turnos de guardia.
-
-2. **El nivel de complejidad entra en el cálculo de candidatas.**
+1. **El nivel de complejidad entra en el cálculo de candidatas.**
    - **Hoy:** se carga y se edita, y nadie lo mira.
    - **Espera la pregunta 82**, que dice qué significa cada nivel y si condiciona qué tipo de
      Asistente se admite. Es información de salud: no viaja al Panel, la base contesta sólo si la
      Asistente alcanza o no.
 
-3. **El valor del Legajo por mes.**
+2. **El valor del Legajo por mes.**
    - **Hoy:** la base acepta que un Legajo cobre por mes. Pero el Legajo no tiene dónde guardar el
      valor mensual, la pantalla no ofrece «Por mes» y la liquidación paga esos Legajos como si
      cobraran por hora. El valor acordado de cada Servicio sí admite el mes.

@@ -10,6 +10,13 @@ administración, del paso 27.
 
 ## Lo que se hizo
 
+**Paso 27, las sugerencias al armar el equipo del Servicio.** Al sumar a alguien al equipo de un
+Servicio, la lista de Asistentes viene ordenada por lugar, tareas, Especialidades, antecedentes y
+acuerdo económico, con los mismos criterios que la asignación de turnos de guardia. Si el Servicio
+tiene turnos de guardia sin cubrir, también cuentan, y quien ya tiene otro turno a esa hora baja en
+la lista con una advertencia. Un Servicio recién armado, sin turnos de guardia, recibe la lista
+igual ordenada y con sus advertencias. Quien ya está en el equipo no se ofrece.
+
 **Paso 27, la fecha desde la que rige el valor hora en la importación de Asistentes.** La
 planilla para importar Asistentes acepta ahora una columna más: desde qué fecha rige el valor hora
 de cada uno. La fecha se lee en los mismos formatos que el resto de la importación, con el día adelante. Un

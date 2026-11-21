@@ -42,7 +42,7 @@ const t = {
     legajo_col_unidad: 'Unidad',
     legajo_valor_actual: 'Valor actual',
     legajo_valor_nuevo: 'Valor nuevo',
-    legajo_aceptar: 'Aceptar',
+    legajo_aceptar: 'Aplicar',
     legajo_rechazar: 'Rechazar',
     legajo_alarma_una: 'Hay {cantidad} valor del Legajo ajustado por índice para revisar.',
     legajo_alarma_varias: 'Hay {cantidad} valores del Legajo ajustados por índice para revisar.',

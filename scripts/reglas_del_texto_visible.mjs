@@ -541,6 +541,16 @@ export const EXCEPCIONES = [
     clave: 'tareas_asistente.clase_prohibida',
     motivo: '«Prohibidas» es el nombre aprobado de una de las tres clases de tarea del glosario.',
   },
+  ...[
+    'errores.motivos.tarea_prohibida_bloquea',
+    'configuracion.tareas_especialidad_error_tarea_prohibida',
+    'modalidades.error_tarea_prohibida',
+    'turnos_guardia.cobertura_panel.motivo_tarea_prohibida',
+  ].map((clave) => ({
+    regla: 'palabra_de_error',
+    clave,
+    motivo: 'Nombra la clase «Prohibidas» del glosario: una tarea prohibida para ese tipo de Asistente.',
+  })),
   {
     regla: 'verbos',
     clave: 'tareas_asistente.clase_habilitada',

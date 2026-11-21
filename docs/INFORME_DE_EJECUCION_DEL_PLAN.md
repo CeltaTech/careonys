@@ -10,6 +10,12 @@ administración, del paso 27.
 
 ## Lo que se hizo
 
+**Paso 27, la fecha desde la que rige el valor hora en la importación de Asistentes.** La
+planilla para importar Asistentes acepta ahora una columna más: desde qué fecha rige el valor hora
+de cada uno. La fecha se lee en los mismos formatos que el resto de la importación, con el día adelante. Un
+renglón con una fecha que no se entiende no se importa y vuelve con ese motivo. Si la columna viene
+vacía, el valor rige desde el día de la importación, igual que cuando se carga a mano.
+
 **Paso 27, el veto de la administración sobre las decisiones del Coordinador.** La administración
 de la Prestadora ya puede vetar cualquier decisión que el Coordinador tomó en un Servicio. En la
 ficha del Servicio hay una pestaña nueva, Decisiones, que sólo ve la administración. Ahí está cada

@@ -66,7 +66,8 @@ export async function cuerpoVigente({ db, prestadoraId, idioma = IDIOMA_DEL_DOCU
 
 // El Servicio con sus Responsables de pagos que no terminaron antes de hoy —los que rigen hoy y los
 // que empiezan más adelante—, y de qué Cliente es. La tabla la abre la base sólo a quien tiene el
-// permiso de lo comercial o el de los consentimientos.
+// permiso de lo comercial o el de los consentimientos. «Hoy» es el día de la Prestadora, no el de la
+// hora universal: entre las 21 y las 24 de Argentina la hora universal ya está en el día siguiente.
 export async function servicioConSusResponsables({ db, servicioId, prestadoraId }) {
   const { data: servicio } = await db
     .from('servicios')
@@ -79,7 +80,7 @@ export async function servicioConSusResponsables({ db, servicioId, prestadoraId 
     throw new ErrorConMotivo('no_encontrado', 'Servicio no encontrado');
   }
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = await hoyEnLaPrestadora(db, prestadoraId);
   const { data: filas, error } = await db
     .from('pagadores_del_servicio')
     .select('id, pagador_persona_id, pagador_tipo, vigente_desde, vigente_hasta, factura_al_responsable')

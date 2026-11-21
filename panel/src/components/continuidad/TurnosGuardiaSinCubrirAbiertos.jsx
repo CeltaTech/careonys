@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
+import { useEmpresa } from '../../context/EmpresaContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { EstadoLista } from '../layout/EstadoLista';
@@ -61,6 +62,8 @@ export function TurnosGuardiaSinCubrirAbiertos() {
   const [asignando, setAsignando] = useState(null);
   const tomas = useAlarmasTomadas();
   const prestadoraId = usePrestadoraActual();
+  // Las horas que faltan para cada turno se cuentan con la zona horaria de la Prestadora.
+  const zona = useEmpresa().empresa?.zona_horaria;
 
   const recargar = useCallback(async () => {
     if (!prestadoraId) return;
@@ -111,7 +114,7 @@ export function TurnosGuardiaSinCubrirAbiertos() {
             ...f,
             turno_guardia,
             pacientes: turno_guardia?.pacientes ?? [],
-            horas: turno_guardia ? horasHastaElTurnoGuardia(turno_guardia) : null,
+            horas: turno_guardia ? horasHastaElTurnoGuardia(turno_guardia, new Date(), zona) : null,
           };
         })
       );
@@ -120,7 +123,7 @@ export function TurnosGuardiaSinCubrirAbiertos() {
       setError(mensajeDeError(e, t));
       setEstado('error');
     }
-  }, [prestadoraId, t]);
+  }, [prestadoraId, zona, t]);
 
   useEffect(() => { recargar(); }, [recargar]);
 

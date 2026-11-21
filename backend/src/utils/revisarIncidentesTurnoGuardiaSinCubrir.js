@@ -8,9 +8,11 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
   CIERRES,
   REGLA_QUE_SE_PUEDE_TOCAR,
+  elTurnoGuardiaYaEsGrave,
+  horasHastaElTurnoGuardia,
   reglaDelIncidenteDe,
 } from './incidenteTurnoGuardiaSinCubrir.js';
-import { diaEnLaZona, inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
+import { diaEnLaZona } from './relojDeLaPrestadora.js';
 import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
 import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { escalonesYaAvisados, escalarSiCorresponde, minutosDesde } from './avisosDeEscalon.js';
@@ -193,7 +195,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora, zona }) {
     // la alarma la abrió alguien que ya sabía que el turno tenía un problema.
     const yaAbierto = porTurnoGuardia.has(turno_guardia.id) && !turno_guardia.asistente_id && turno_guardia.estado === 'programada';
     const horas = horasHastaElTurnoGuardia(turno_guardia, ahora, zona);
-    if (!yaAbierto && !elTurnoGuardiaYaEsGrave({ turno_guardia, regla, horas })) continue;
+    if (!yaAbierto && !elTurnoGuardiaYaEsGrave({ turno_guardia, regla, ahora, zona })) continue;
 
     // Ya pasó el plazo en que taparlo servía de algo: no se abre uno nuevo.
     const yaNoSePuedeTapar = horas !== null && horas < -DIAS_HACIA_ATRAS * 24;
@@ -414,36 +416,4 @@ async function aQuienSeLeAvisa({ servicioId, prestadoraId, ahora, zona }) {
     candidatos: nombres(equipo.asistentes),
     cubrenFrancos: nombres(equipo.cubrenFrancos),
   };
-}
-
-/**
- * Cuántas horas faltan para que este turno empiece, con su hora leída en la zona de la
- * Prestadora. Negativo si ya empezó; `null` si al turno le falta la fecha o la hora.
- *
- * Es la misma cuenta que `horasHastaElTurnoGuardia` de `incidenteTurnoGuardiaSinCubrir.js`, que es
- * copia del Panel y lee la hora en el aparato de quien mira. En el servidor ese aparato cuenta en
- * hora universal, y el turno de las 08:00 de Argentina quedaba tres horas antes de tiempo.
- */
-function horasHastaElTurnoGuardia(turno_guardia, ahora, zona) {
-  if (!turno_guardia?.fecha || !turno_guardia?.hora_inicio) return null;
-  let inicio;
-  try {
-    inicio = inicioDeTurnoGuardiaEnLaZona(turno_guardia, zona);
-  } catch {
-    return null;
-  }
-  return (inicio.getTime() - ahora.getTime()) / MS_POR_HORA;
-}
-
-/**
- * Si este turno ya es grave y tiene que tener un incidente abierto: sin nadie asignado, en pie y
- * dentro de las horas que decidió la Prestadora. Las tres condiciones son las de
- * `elTurnoGuardiaYaEsGrave` del Panel; acá las horas llegan ya contadas en la zona de la Prestadora.
- */
-function elTurnoGuardiaYaEsGrave({ turno_guardia, regla, horas }) {
-  if (!turno_guardia) return false;
-  if (turno_guardia.asistente_id) return false;
-  if (turno_guardia.estado !== 'programada') return false;
-  if (horas === null) return false;
-  return horas <= reglaDelIncidenteDe(regla).horas_para_abrirlo;
 }

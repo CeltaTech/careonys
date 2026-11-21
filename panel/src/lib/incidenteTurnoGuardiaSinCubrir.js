@@ -36,7 +36,7 @@
 
 // Con extensión a propósito: este archivo se copia tal cual al backend, que corre en Node y ahí la
 // ruta sin extensión no resuelve.
-import { inicioDeTurnoGuardia } from './horarios.js';
+import { momentoEnLaZona } from './horarios.js';
 
 /**
  * Los números con los que un turno vacío se vuelve un incidente. Valores de fábrica.
@@ -201,13 +201,26 @@ export function soloLoQueCorreDeLaRegla(cambios) {
 /**
  * Cuántas horas faltan para que este turno empiece. Negativo si ya empezó.
  *
- * Devuelve `null` si al turno le falta la fecha o la hora: sin eso no hay cuenta posible, y quien
- * llama decide qué hacer con la duda en vez de recibir un cero que parece un dato.
+ * La hora del turno es la de la casa del Paciente, así que se lee en la zona horaria de la
+ * Prestadora, que llega en `zona` (`America/Argentina/Buenos_Aires`). Nunca en el reloj del aparato
+ * ni en hora universal: el servidor cuenta en hora universal, y el turno de las 08:00 de Argentina
+ * le quedaba tres horas antes de tiempo.
+ *
+ * Devuelve `null` si al turno le falta la fecha o la hora, o si no llega una zona que se entienda:
+ * sin eso no hay cuenta posible, y quien llama decide qué hacer con la duda en vez de recibir un
+ * cero que parece un dato o una cuenta hecha con otro reloj.
  */
-export function horasHastaElTurnoGuardia(turno_guardia, ahora = new Date()) {
+export function horasHastaElTurnoGuardia(turno_guardia, ahora = new Date(), zona) {
   if (!turno_guardia?.fecha || !turno_guardia?.hora_inicio) return null;
-  const inicio = inicioDeTurnoGuardia(turno_guardia);
-  if (!inicio || Number.isNaN(inicio.getTime())) return null;
+  if (typeof zona !== 'string' || !zona) return null;
+  let inicio;
+  try {
+    inicio = momentoEnLaZona(turno_guardia.fecha, turno_guardia.hora_inicio, zona);
+  } catch {
+    // Una zona que no existe no cae a otro reloj: no hay cuenta.
+    return null;
+  }
+  if (Number.isNaN(inicio.getTime())) return null;
   return (inicio.getTime() - ahora.getTime()) / MS_POR_HORA;
 }
 
@@ -223,14 +236,16 @@ export function horasHastaElTurnoGuardia(turno_guardia, ahora = new Date()) {
  * @param {object} entrada.turno_guardia Con `asistente_id`, `estado`, `fecha` y `hora_inicio`.
  * @param {object} entrada.regla Los números de esta Prestadora, de `reglaDelIncidenteDe()`.
  * @param {Date} entrada.ahora
+ * @param {string} entrada.zona La zona horaria de la Prestadora. Sin ella el turno no es grave:
+ *   no hay cuenta posible.
  */
 export function elTurnoGuardiaYaEsGrave(
-  { turno_guardia, regla = REGLA_DEL_INCIDENTE, ahora = new Date() } = {}
+  { turno_guardia, regla = REGLA_DEL_INCIDENTE, ahora = new Date(), zona } = {}
 ) {
   if (!turno_guardia) return false;
   if (turno_guardia.asistente_id) return false;
   if (turno_guardia.estado !== 'programada') return false;
-  const horas = horasHastaElTurnoGuardia(turno_guardia, ahora);
+  const horas = horasHastaElTurnoGuardia(turno_guardia, ahora, zona);
   if (horas === null) return false;
   return horas <= reglaDelIncidenteDe(regla).horas_para_abrirlo;
 }

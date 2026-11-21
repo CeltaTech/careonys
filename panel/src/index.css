@@ -2525,6 +2525,149 @@ button.panel-kpi-card[aria-pressed='true'] {
   font-size: 0.72rem;
 }
 
+/* Un turno de guardia de varios días se dibuja en cada día que toca. El tramo que sigue desde
+   el día anterior no tiene esquinas a la izquierda, y el que sigue al día siguiente no las tiene
+   a la derecha: así se lee como una sola pieza de punta a punta. */
+.grilla-chip[data-empieza-antes='true'] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left-style: dashed;
+}
+
+.grilla-chip[data-sigue-despues='true'] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* En el mes cada día tiene poco lugar: el chip muestra sólo la cabecera. */
+.grilla-chip-compacta {
+  padding: 0.2rem 0.4rem;
+  font-size: 0.72rem;
+}
+
+/* El que ya empezó no se arrastra, y el puntero no lo promete. */
+.grilla-chip-fija {
+  cursor: pointer;
+}
+
+.grilla-chip-fija:active {
+  cursor: pointer;
+}
+
+/* La cantidad al lado del título de una fila o del número de un día. */
+.grilla-cantidad {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  padding: 0.05rem 0.4rem;
+  margin-left: 0.4rem;
+  border-radius: 999px;
+  background: var(--tono-neutro-fondo);
+  color: var(--tono-neutro-texto);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.grilla-fila-titulo-hueco {
+  background: var(--tono-critico-fondo);
+  border-radius: 8px;
+}
+
+.grilla-fila-titulo-hueco .grilla-cantidad,
+.grilla-mes-encabezado .grilla-cantidad {
+  background: var(--tono-critico-fondo);
+  color: var(--tono-critico-texto);
+}
+
+/* --- El mes --- */
+
+.grilla-mes {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.grilla-mes-celda {
+  background: var(--fondo-alt);
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  padding: 0.3rem;
+  min-height: 7rem;
+  max-height: 12rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+/* Los días del mes anterior y del siguiente completan la cuadrícula, pero no son del mes. */
+.grilla-mes-celda-fuera {
+  opacity: 0.55;
+}
+
+.grilla-mes-celda-hoy {
+  border-color: var(--azul-medio);
+  box-shadow: inset 0 0 0 1px var(--azul-medio);
+}
+
+.grilla-mes-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+}
+
+.grilla-mes-numero {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--texto-titulo);
+  background: none;
+  border: none;
+  padding: 0.1rem 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.grilla-mes-numero:hover {
+  background: var(--superficie-hover);
+}
+
+.grilla-mes-numero:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: 1px;
+}
+
+/* El nombre del día sobra cuando arriba están las siete columnas; en el teléfono no están. */
+.grilla-mes-nombre-del-dia {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .grilla-mes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grilla-mes-dia-semana,
+  .grilla-mes-blanco,
+  .grilla-mes-celda-fuera {
+    display: none;
+  }
+
+  .grilla-mes-celda {
+    min-height: 0;
+    max-height: none;
+  }
+
+  .grilla-mes-nombre-del-dia {
+    display: inline;
+  }
+}
+
 /* --- La barra de acciones de a muchos --- */
 
 /* Aparece pegada abajo y solo cuando hay algo elegido. Dice cuántas son: una acción masiva

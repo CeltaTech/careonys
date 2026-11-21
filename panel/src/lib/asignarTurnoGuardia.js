@@ -72,11 +72,13 @@ export async function asignarSerie(serieId, asistenteId, t = null) {
  * @param {object} t  Los textos del idioma en que está el Panel.
  * @returns {Promise<{ error: string | null }>}
  */
-export async function moverTurnoGuardiaAOtroPaciente(turnoGuardiaId, { pacienteId, fecha = null, horaInicio = null, horaFin = null }, t = null) {
+export async function moverTurnoGuardiaAOtroPaciente(turnoGuardiaId, { pacienteId, fecha = null, horaInicio = null, horaFin = null, diasHastaElFin = null }, t = null) {
   try {
     await llamarApiPanel(`/turnos-guardia/${turnoGuardiaId}/mover-a-paciente`, {
       method: 'POST',
-      body: JSON.stringify({ paciente_id: pacienteId, fecha, hora_inicio: horaInicio, hora_fin: horaFin }),
+      body: JSON.stringify({
+        paciente_id: pacienteId, fecha, hora_inicio: horaInicio, hora_fin: horaFin, dias_hasta_el_fin: diasHastaElFin,
+      }),
     });
     return { error: null };
   } catch (e) {

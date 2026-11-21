@@ -17,6 +17,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { FormField } from '../../components/ui/FormField';
 import { mensajeDeError } from '../../lib/errores';
 import { clienteDelServicio, contactosDeClientes } from '../../lib/clienteDelServicio';
+import { coordinadoresSugeridos } from '../../lib/coordinadoresSugeridos';
 import { claseDeResponsable, modalidadesDeTurnosGuardia, nombreDeModalidad } from './modalidadesDelServicio';
 import { TareasDelServicio } from './TareasDelServicio';
 import { PagosDelServicio } from './PagosDelServicio';
@@ -25,6 +26,7 @@ import { ReactivarElServicioModal } from './ReactivarElServicioModal';
 import { EquipoDelServicio } from './EquipoDelServicio';
 import { CoberturaDelServicio } from './CoberturaDelServicio';
 import { CoberturaModal } from './CoberturaModal';
+import { TurnosGuardiaDelServicio } from './TurnosGuardiaDelServicio';
 import './servicios.css';
 
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
@@ -40,6 +42,15 @@ const REPORTES_A_MOSTRAR = 50;
 
 const ESTADO_ACTIVO = 'vigente';
 const ESTADO_DE_BAJA = 'de_baja';
+
+// Cómo se lee un Coordinador en la lista de asignar: su nombre, cuántos Servicios vigentes coordina
+// y, si cubre el lugar del Servicio, que lo cubre. Las dos cosas que ordenan la sugerencia quedan a la
+// vista, porque el orden solo no dice por qué uno está antes que otro.
+function opcionDeCoordinador(c, d) {
+  const partes = [c.nombre, con(c.servicios === 1 ? d.coordina_un_servicio : d.coordina_servicios, { n: c.servicios })];
+  if (c.cubreElLugar === true) partes.push(d.cubre_el_lugar);
+  return partes.join(' · ');
+}
 
 function fecha(valor, locale) {
   return valor ? new Date(valor).toLocaleDateString(locale) : '—';
@@ -90,8 +101,10 @@ export function ServicioDetalle() {
   const location = useLocation();
   const [tab, setTab] = useState(location.state?.solapa ?? 'resumen');
 
-  const recargar = useCallback(async () => {
-    setEstado('cargando');
+  // `enSilencio` vuelve a leer sin tapar la ficha con «Cargando»: lo usa una pestaña que acaba de
+  // cambiar algo y tiene a la vista un aviso que no se tiene que perder.
+  const recargar = useCallback(async (opciones) => {
+    if (!opciones?.enSilencio) setEstado('cargando');
     setError(null);
 
     const { data: s, error: fallaServicio } = await supabase
@@ -110,8 +123,9 @@ export function ServicioDetalle() {
 
     // La modalidad la lleva cada turno de guardia, así que se traen todas las del Servicio: de ahí salen
     // las modalidades, y por sus ids se buscan las incidencias.
-    // Quiénes pueden coordinarlo: las cuentas de coordinación activas de la Prestadora. Quien no
-    // asigna recibe de la base sólo la suya, que es la del Servicio que está mirando.
+    // Quiénes pueden coordinarlo. A la administración, que asigna, la base le contesta la lista
+    // ordenada con la sugerencia. Quien no asigna sólo necesita el nombre, y la base le deja ver
+    // únicamente su propia cuenta, que es la del Servicio que está mirando.
     const [pr, gu, rep, rangos, coord, firma] = await Promise.all([
       supabase
         .from('prestaciones')
@@ -135,13 +149,19 @@ export function ServicioDetalle() {
         .from('rangos_referencia_vitales')
         .select('signo, paciente_id, valor_min, valor_max, unidad')
         .eq('prestadora_id', prestadoraId),
-      supabase
-        .from('usuarios')
-        .select('id, nombre')
-        .eq('prestadora_id', prestadoraId)
-        .eq('rol', 'coordinador')
-        .is('desactivada_en', null)
-        .order('nombre'),
+      asignaCoordinador
+        ? coordinadoresSugeridos(supabase, id)
+        : supabase
+            .from('usuarios')
+            .select('id, nombre')
+            .eq('prestadora_id', prestadoraId)
+            .eq('rol', 'coordinador')
+            .is('desactivada_en', null)
+            .order('nombre')
+            .then(({ data, error: fallaUsuarios }) => ({
+              coordinadores: (data ?? []).map((u) => ({ id: u.id, nombre: (u.nombre ?? '').trim() || '—' })),
+              error: fallaUsuarios,
+            })),
       supabase.rpc('falta_la_firma_del_pagador', { p_servicio: id }),
     ]);
 
@@ -189,9 +209,7 @@ export function ServicioDetalle() {
     const buscador = armarBuscadorDeRangos(rangos.data);
 
     setServicio(s);
-    setCoordinadores(
-      (coord.data ?? []).map((u) => ({ id: u.id, nombre: (u.nombre ?? '').trim() || '—' })),
-    );
+    setCoordinadores(coord.coordinadores);
     setContactos(mapaContactos);
     setPrestaciones(pr.data ?? []);
     setTurnosGuardia(listaTurnosGuardia);
@@ -223,7 +241,7 @@ export function ServicioDetalle() {
     setNombresAsistente(Object.fromEntries((asistentes.data ?? []).map((a) => [a.id, a.nombre])));
     setFaltaLaFirma(firma.data === true);
     setEstado('listo');
-  }, [id, prestadoraId, t]);
+  }, [id, prestadoraId, asignaCoordinador, t]);
 
   useEffect(() => {
     recargar();
@@ -290,7 +308,6 @@ export function ServicioDetalle() {
   const nombrePacientes = pacientesDelServicio.length ? pacientesDelServicio.join(', ') : '—';
   const nombreCliente = contacto?.nombre || '—';
   const puedeAgregarPrestacion = servicio.estado === ESTADO_ACTIVO && Boolean(cliente.ruta);
-  const turnosGuardiaVisibles = turnos_guardia.slice(0, TURNOS_GUARDIA_A_MOSTRAR);
   const nombreCoordinador = coordinadores.find((c) => c.id === servicio.coordinador_id)?.nombre || '—';
   // Pausar, suspender y cancelar la cobertura: la administración o el Coordinador que coordina este
   // Servicio. Es el mismo corte que hace la base.
@@ -415,7 +432,7 @@ export function ServicioDetalle() {
                 >
                   {!servicio.coordinador_id && <option value="" disabled>{d.elegir_coordinador}</option>}
                   {coordinadores.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                    <option key={c.id} value={c.id}>{opcionDeCoordinador(c, d)}</option>
                   ))}
                 </FormField>
               ) : (
@@ -504,46 +521,17 @@ export function ServicioDetalle() {
           />
         )}
 
-        {tab === 'turnos_guardia' &&
-          (turnos_guardia.length === 0 ? (
-            vacio(d.sin_turnos_guardia)
-          ) : (
-            <>
-              {turnos_guardia.length > TURNOS_GUARDIA_A_MOSTRAR && (
-                <span className="panel-mini">{con(d.turnos_guardia_mostrados, { n: TURNOS_GUARDIA_A_MOSTRAR })}</span>
-              )}
-              <div className="servicios-tabla-envoltura">
-                <table className="panel-tabla">
-                  <thead>
-                    <tr>
-                      <th>{d.col_fecha}</th>
-                      <th>{d.col_horario}</th>
-                      <th>{d.col_para_quien}</th>
-                      <th>{d.col_asistente}</th>
-                      <th>{t.servicios.col_modalidades}</th>
-                      <th>{d.col_estado}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {turnosGuardiaVisibles.map((g) => (
-                      <tr key={g.id}>
-                        <td>{g.fecha}</td>
-                        <td>{g.hora_inicio?.slice(0, 5)} – {g.hora_fin?.slice(0, 5)}</td>
-                        <td>{nombresPaciente[g.paciente_id] || '—'}</td>
-                        <td>{g.asistente_id ? nombresAsistente[g.asistente_id] || '—' : d.sin_cubrir}</td>
-                        <td>{g.canal_modalidad ? nombreDeModalidad(g.canal_modalidad, t) : '—'}</td>
-                        {/* El estado del turno de guardia se traduce con los textos de Guardias: es el
-                            mismo estado, y no se nombra de dos maneras. */}
-                        <td>
-                          <span className={claseBadge(g.estado)}>{traducirValor(t.turnos_guardia, `estado_${g.estado}`)}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ))}
+        {tab === 'turnos_guardia' && (
+          <TurnosGuardiaDelServicio
+            servicio={servicio}
+            turnos_guardia={turnos_guardia}
+            cuantosMostrar={TURNOS_GUARDIA_A_MOSTRAR}
+            nombresPaciente={nombresPaciente}
+            nombresAsistente={nombresAsistente}
+            onCambio={() => recargar({ enSilencio: true })}
+            t={t}
+          />
+        )}
 
         {tab === 'seguimiento' &&
           (reportes.length === 0 ? (

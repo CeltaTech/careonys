@@ -27,6 +27,7 @@ import { ORIGENES } from '../../lib/pacienteSolo';
 import { LoQuePasoEnLaCasa } from './LoQuePasoEnLaCasa';
 import '../../pages/seguimientoDeTurnosGuardia.css';
 import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
+import { AsignarTurnoGuardiaModal } from '../turnos_guardia/AsignarTurnoGuardiaModal';
 
 /* LOS TURNOS QUE QUEDARON SIN NADIE, Y POR QUÉ NO SE VAN SOLOS DE ACÁ
 
@@ -57,6 +58,7 @@ export function TurnosGuardiaSinCubrirAbiertos() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [cerrando, setCerrando] = useState(null);
+  const [asignando, setAsignando] = useState(null);
   const tomas = useAlarmasTomadas();
   const prestadoraId = usePrestadoraActual();
 
@@ -78,7 +80,8 @@ export function TurnosGuardiaSinCubrirAbiertos() {
       const { data: turnos_guardia, error: errorTurnosGuardia } = idsTurnosGuardia.length
         ? await supabase
             .from('turnos_guardia')
-            .select('id, paciente_id, fecha, hora_inicio, hora_fin')
+            // La modalidad, los días que dura y la serie hacen falta para proponer a quién asignarlo.
+            .select('id, asistente_id, paciente_id, serie_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, canal_modalidad')
             .in('id', idsTurnosGuardia)
         : { data: [], error: null };
       if (errorTurnosGuardia) throw errorTurnosGuardia;
@@ -161,8 +164,13 @@ export function TurnosGuardiaSinCubrirAbiertos() {
               </span>
             </div>
             <div className="seguimiento-acciones">
+              {/* Asignarlo desde acá, con quien está libre primero. El turno sigue abierto hasta
+                  que el Asistente lo acepte, y ahí lo cierra el backend. */}
+              {i.turno_guardia && !tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.TURNO_GUARDIA_SIN_CUBRIR, i.id) && (
+                <Button onClick={() => setAsignando(i)}>{t.documentos_asistente.asignar}</Button>
+              )}
               {!tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.TURNO_GUARDIA_SIN_CUBRIR, i.id) && (
-                <Button onClick={() => setCerrando(i)}>{t.continuidad.turnos_guardia_vacios_cerrar}</Button>
+                <Button variant="secondary" onClick={() => setCerrando(i)}>{t.continuidad.turnos_guardia_vacios_cerrar}</Button>
               )}
               {/* Cerrarlo dice cómo terminó; tomarlo dice que alguien está buscando quién lo
                   cubra ahora mismo, y mientras tanto el recordatorio no le llega a los demás. */}
@@ -188,6 +196,15 @@ export function TurnosGuardiaSinCubrirAbiertos() {
           incidente={cerrando}
           onClose={() => setCerrando(null)}
           onCerrado={() => { setCerrando(null); recargar(); }}
+        />
+      )}
+
+      {asignando && (
+        <AsignarTurnoGuardiaModal
+          turnoGuardia={asignando.turno_guardia}
+          pacientes={asignando.pacientes}
+          onClose={() => setAsignando(null)}
+          onAsignado={() => { setAsignando(null); recargar(); }}
         />
       )}
     </>

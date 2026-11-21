@@ -10,6 +10,7 @@ import { cargarPacientesDeTurnosGuardia, pacientesDeTurnoGuardia, textoDePacient
 import { llegoAlDomicilio } from '../lib/toleranciaCheckin';
 import { domiciliosPorFecha, domicilioDe } from '../lib/domicilioDelDia';
 import { mensajeDeError } from '../lib/errores';
+import { hoyISO, sumarDias } from '../lib/horarios';
 import './tarjetas.css';
 import './seguimientoDeTurnosGuardia.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
@@ -26,16 +27,6 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
  *   - **Contra qué dirección se mide** es la del día de ese turno, no la que figura hoy en el
  *     Paciente. Si el Paciente pasó una temporada en otra casa, el Asistente fue ahí.
  */
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function sumarDias(fechaISO, dias) {
-  const f = new Date(`${fechaISO}T00:00:00`);
-  f.setDate(f.getDate() + dias);
-  return f.toISOString().slice(0, 10);
-}
 
 function estadoVerificacion(punto, paciente, configuracion) {
   if (!punto?.lat || !punto?.lng) return 'sin_datos';

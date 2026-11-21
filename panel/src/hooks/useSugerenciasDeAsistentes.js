@@ -2,19 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useLocale } from '../i18n/LocaleContext';
 import { usePrestadoraActual } from './usePrestadoraActual';
-import { ESTADO_ACTIVO } from '../lib/candidatos';
+import { claveDePacientes, ESTADO_ACTIVO } from '../lib/candidatos';
 import { pesosYTopesDe } from '../lib/perfilesDeCandidatos';
 import { cargarDistanciasDeAsistentes } from '../lib/distanciasDeAsistentes';
 import { cargarAsignacionesPendientes } from '../lib/asignarTurnoGuardia';
 import {
   cargarPacientesDeTurnosGuardia,
-  cargarTurnosGuardiaDePacientes,
   conPacientes,
   idsDePacientes,
 } from '../lib/pacientesDeTurnoGuardia';
 import { traerTodasLasFilas } from '../lib/traerTodasLasFilas';
 import { advertenciasPara, rangoDeFechas, sugerenciasPara } from '../lib/sugerenciasDeAsistentes';
-import { hoyISO } from '../lib/horarios';
 import { mensajeDeError } from '../lib/errores';
 
 /* Lo que hace falta traer de la base para proponer Asistentes para uno o varios turnos de guardia.
@@ -87,15 +85,25 @@ async function cargarAgenda(prestadoraId, rango) {
   return filas.map((g) => (g.asistente_id || !pendientes.has(g.id) ? g : { ...g, asistente_id: pendientes.get(g.id) }));
 }
 
-/** Los turnos de guardia ya hechos con estos Pacientes, para saber quién los conoce. */
-async function cargarHistoria(idsPacientes) {
-  if (!idsPacientes.length) return [];
-  const filas = await cargarTurnosGuardiaDePacientes(idsPacientes, COLUMNAS_DE_LA_AGENDA, (c) =>
-    // Los más recientes primero, hasta una página: alcanza para saber quién conoce la casa.
-    c.lte('fecha', hoyISO()).not('asistente_id', 'is', null).neq('estado', 'cancelada').order('fecha', { ascending: false }).limit(1000)
-  );
-  const mapa = await cargarPacientesDeTurnosGuardia(filas.map((g) => g.id));
-  return conPacientes(filas, mapa, {});
+/**
+ * Cuántas veces atendió cada Asistente a cada grupo de Pacientes de estos turnos de guardia. La
+ * cuenta la hace la base, entera y sin tope, una vez por grupo distinto.
+ *
+ * @returns {Promise<Map<string, Map<string, number>>>} clave del grupo → Asistente → cantidad.
+ */
+async function cargarContinuidad(huecos) {
+  const grupos = new Map();
+  for (const h of huecos) {
+    const ids = idsDePacientes(h);
+    if (ids.length) grupos.set(claveDePacientes(ids), ids);
+  }
+  const resultado = new Map();
+  await Promise.all([...grupos.entries()].map(async ([clave, ids]) => {
+    const { data, error } = await supabase.rpc('asistentes_que_atendieron_a_pacientes', { p_pacientes: ids });
+    if (error) throw error;
+    resultado.set(clave, new Map((data ?? []).map((fila) => [fila.asistente_id, fila.cantidad])));
+  }));
+  return resultado;
 }
 
 async function cargarAsistentes(prestadoraId) {
@@ -141,13 +149,6 @@ async function cargarDocumentos(prestadoraId) {
   );
 }
 
-/** Junta dos listas de turnos de guardia sin repetir ninguno; la segunda manda. */
-function juntar(...listas) {
-  const porId = new Map();
-  for (const g of listas.flat()) if (g?.id) porId.set(g.id, { ...(porId.get(g.id) ?? {}), ...g });
-  return [...porId.values()];
-}
-
 /**
  * @returns {{
  *   estado: 'cargando' | 'error' | 'vacio' | 'listo',
@@ -178,12 +179,11 @@ export function useSugerenciasDeAsistentes({ huecos = null, idsHuecos = null, se
       const [todos, configuracion] = await Promise.all([cargarHuecos(dados, ids), cargarConfiguracion(prestadoraId)]);
       const elegidos = serie ? todos.filter((h) => h.serie_id === serie) : todos;
       const rango = rangoDeFechas(elegidos, configuracion.topes);
-      const idsPacientes = [...new Set(elegidos.flatMap((h) => idsDePacientes(h)))];
 
-      const [asistentes, agenda, historia, ausencias, documentos] = await Promise.all([
+      const [asistentes, agenda, continuidad, ausencias, documentos] = await Promise.all([
         cargarAsistentes(prestadoraId),
         cargarAgenda(prestadoraId, rango),
-        cargarHistoria(idsPacientes),
+        cargarContinuidad(elegidos),
         cargarAusencias(prestadoraId, rango),
         cargarDocumentos(prestadoraId),
       ]);
@@ -196,7 +196,7 @@ export function useSugerenciasDeAsistentes({ huecos = null, idsHuecos = null, se
         estado: 'listo',
         error: null,
         huecos: elegidos,
-        datos: { asistentes, turnos_guardia: juntar(agenda, historia), ausencias, documentos, distancias },
+        datos: { asistentes, turnos_guardia: agenda, continuidad, ausencias, documentos, distancias },
         configuracion,
       });
     } catch (e) {

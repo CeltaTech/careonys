@@ -6,6 +6,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
 import { mensajeDeError } from '../lib/errores';
+import { hoyISO, sumarDias } from '../lib/horarios';
 import {
   SIGNOS_VITALES,
   SIGNOS_VITALES_LEGADO,
@@ -22,11 +23,6 @@ import { informacionDeSalud } from '../lib/informacionDeSalud';
 // nunca; existe para que un rango muy ancho no traiga miles de filas de golpe.
 const TOPE_FILAS = 300;
 
-function fechaISO(desplazamientoDias = 0) {
-  const fecha = new Date();
-  fecha.setDate(fecha.getDate() + desplazamientoDias);
-  return fecha.toISOString().slice(0, 10);
-}
 
 export function Reportes() {
   const { t } = useLocale();
@@ -35,7 +31,7 @@ export function Reportes() {
   const [rangoDe, setRangoDe] = useState(() => () => null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const { f, set, limpiar, hayFiltros } = useFiltros({ desde: fechaISO(-7), hasta: fechaISO(0), filtro: 'todos' });
+  const { f, set, limpiar, hayFiltros } = useFiltros({ desde: sumarDias(hoyISO(), -7), hasta: hoyISO(), filtro: 'todos' });
   const [abierto, setAbierto] = useState(null);
 
   const recargar = useCallback(async () => {

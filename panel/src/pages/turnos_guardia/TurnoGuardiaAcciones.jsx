@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useNombreConDisponibilidad } from '../../hooks/useNombreConDisponibilidad';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { obtenerUbicacion } from '../../lib/ubicacion';
@@ -14,13 +13,14 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { COBERTURA, claveTextoCobertura, coberturaDeTurnoGuardia } from '../../lib/cobertura';
-import { estaEnElPadron } from '../../lib/candidatos';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { DescansosDelTurnoGuardia } from './DescansosDelTurnoGuardia';
 import { yaEmpezo } from '../../lib/moverTurnoGuardia';
 import { esAdminOSuperior } from '../../lib/roles';
 import { CoberturaModal } from '../servicios/CoberturaModal';
+import { ElegirAsistente } from '../../components/turnos_guardia/ElegirAsistente';
+import { textoDelDia, textoDelHorario } from '../../lib/horarioDeTurnoGuardia';
 import { EditarRecurrenteModal } from '../servicios/EditarRecurrenteModal';
 
 // Qué se resuelve en esta pantalla y en qué estado queda. Es el nombre guardado de la tabla, y con
@@ -33,10 +33,9 @@ const ESTADO_CANCELADA = 'cancelada';
 // El valor del desplegable que deja el turno sin nadie. Viaja como `null`.
 const SIN_ASIGNAR = 'sin-asignar';
 
-export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
+export function TurnoGuardiaAcciones({ turno_guardia, onReasignar, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
   const { t, locale } = useLocale();
-  const nombreConHorarios = useNombreConDisponibilidad();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -97,15 +96,6 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
   const interrumpeEsteTurnoGuardia = gestionaCobertura && turno_guardia.estado === 'programada' && !yaEmpezo(turno_guardia);
   const gestionaElRecurrente = gestionaCobertura && Boolean(turno_guardia.serie_id);
 
-  /* A quién se le puede pasar este turno de guardia: solo quien sigue en el Padrón.
-     La lista que llega por `asistentes` es el Padrón entero a propósito —la misma consulta le
-     pone el nombre a los turnos de guardia ya asignadas, y un turno de guardia viejo que cubrió alguien que
-     después fue cesado tiene que seguir mostrando ese nombre—, así que el filtro va acá, en la
-     puerta que reparte trabajo nuevo, y no en la consulta. La pregunta "¿sigue trabajando en la
-     Prestadora?" se contesta con `estaEnElPadron`, que es donde está escrita una sola vez para
-     todo el Panel (regla 12 de CLAUDE.md §7); repetir acá el `estado === 'activo'` sería
-     garantizar que el día que la regla cambie, este desplegable se quede con la vieja. */
-  const asistentesAsignables = useMemo(() => asistentes.filter(estaEnElPadron), [asistentes]);
 
   // Alternativa por teclado/botón a la reasignación por arrastre de GrillaTurnosGuardia.jsx
   // (WCAG 2.5.7 — el drag-and-drop nunca puede ser la única forma de reasignar).
@@ -344,6 +334,11 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
     { clave: 'momento_checkout', at: turno_guardia.checkout_at },
   ];
 
+  const opcionesDelHorario = {
+    locale,
+    textos: { hoy: t.turnos_guardia.dia_hoy, manana: t.turnos_guardia.listado.dia_manana, duracion: t.turnos_guardia.duracion_horas },
+  };
+
   async function coberturaHecha() {
     setAccionCobertura(null);
     await onActualizada?.();
@@ -377,9 +372,10 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
 
         <dl className="panel-detalle-lista">
           <dt>{t.turnos_guardia.detalle.fecha}</dt>
-          <dd>{turno_guardia.fecha}</dd>
+          <dd>{textoDelDia(turno_guardia.fecha, opcionesDelHorario)}</dd>
           <dt>{t.turnos_guardia.detalle.horario}</dt>
-          <dd>{turno_guardia.hora_inicio} – {turno_guardia.hora_fin}</dd>
+          {/* El día de inicio ya está en el renglón de arriba. El de fin se escribe cuando es otro. */}
+          <dd>{textoDelHorario(turno_guardia, { ...opcionesDelHorario, conDia: false })}</dd>
           <dt>{t.turnos_guardia.detalle.asistente}</dt>
           <dd>{tieneAsistente ? turno_guardia.asistente_nombre : t.turnos_guardia[claveTextoCobertura(turno_guardia)]}</dd>
           <dt>{t.turnos_guardia.detalle.paciente}</dt>
@@ -635,22 +631,19 @@ export function TurnoGuardiaAcciones({ turno_guardia, asistentes = [], onReasign
         {puedeReasignar && (
           <div className="panel-resultado-calculo">
             <h3>{t.turnos_guardia.detalle.reasignar_titulo}</h3>
-            <FormField
+            {/* Primero quien está libre. No se ofrece el Asistente actual: reasignárselo no
+                cambia nada. Un turno ausente ya está sin nadie: dejarlo sin asignar no cambia nada. */}
+            <ElegirAsistente
+              idsHuecos={[turno_guardia.id]}
+              excluir={[turno_guardia.asistente_id]}
               label={t.turnos_guardia.detalle.reasignar_asistente}
               name="reasignar_asistente"
-              type="select"
               value={nuevoAsistenteId}
-              onChange={(e) => setNuevoAsistenteId(e.target.value)}
-            >
-              <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
-              {/* Un turno ausente ya está sin nadie: dejarlo sin asignar no cambia nada. */}
-              {turno_guardia.estado !== 'ausente' && (
-                <option value={SIN_ASIGNAR}>{t.turnos_guardia.listado.sin_asignar}</option>
-              )}
-              {asistentesAsignables.map((a) => (
-                <option key={a.id} value={a.id}>{nombreConHorarios(a)}</option>
-              ))}
-            </FormField>
+              onChange={(id) => setNuevoAsistenteId(id)}
+              disabled={procesando}
+              opcionSinAsignar={turno_guardia.estado !== 'ausente' ? t.turnos_guardia.listado.sin_asignar : null}
+              valorSinAsignar={SIN_ASIGNAR}
+            />
             {cubrePorEmergencia ? (
               <FormField
                 label={t.comun.motivo}

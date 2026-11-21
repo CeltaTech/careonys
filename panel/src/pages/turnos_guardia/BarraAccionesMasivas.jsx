@@ -7,7 +7,8 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { FormField } from '../../components/ui/FormField';
-import { correrHora, sumarDias } from '../../lib/horarios';
+import { hoyISO, sumarDias } from '../../lib/horarios';
+import { vistaPreviaDelHorarioCorrido } from '../../lib/accionesMasivasTurnosGuardia';
 import { estaEnElPadron } from '../../lib/candidatos';
 import { con } from '../../lib/textos';
 
@@ -47,7 +48,7 @@ const TABLA = 'turnos_guardia';
 const ESTADO_CANCELADA = 'cancelada';
 
 export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAplicar, onLimpiar }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const nombreConHorarios = useNombreConDisponibilidad();
   const confirmarDestructivo = useConfirmarDestructivo();
   const prestadoraId = usePrestadoraActual();
@@ -115,24 +116,30 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
       && (!motivoElegido.pide_detalle || Boolean(detalle.trim()))
       && Boolean(origen));
 
-  // Un adelanto de lo que va a pasar, calculado sobre el primer turno de guardia marcado.
-  // Es la única razón por la que este componente usa `horarios.js`: no guarda nada, solo
-  // muestra. "Correr 90 minutos" no se entiende hasta que alguien ve que las 23:30 se vuelven
-  // las 01:00 del día siguiente, y esa vuelta al día es justo donde la cuenta hecha a ojo
-  // falla. Mejor que lo vea antes de aplicar y no después, sobre cuarenta guardias.
+  // Un adelanto de lo que va a pasar, calculado sobre el primer turno de guardia marcado. No
+  // guarda nada, solo muestra. "Correr 90 minutos" no se entiende hasta que alguien ve que las
+  // 23:30 se vuelven las 01:00 del día siguiente, y esa vuelta al día es justo donde la cuenta
+  // hecha a ojo falla. Por eso el adelanto sale de la misma cuenta que guarda y se escribe con el
+  // mismo formato de la grilla, con el día del fin cuando cambia.
   const muestra = seleccionadas[0];
+  const opcionesDelHorario = useMemo(
+    () => ({
+      locale,
+      hoy: hoyISO(),
+      textos: { hoy: t.turnos_guardia.dia_hoy, manana: t.turnos_guardia.listado.dia_manana, duracion: t.turnos_guardia.duracion_horas },
+    }),
+    [locale, t],
+  );
   const vistaPrevia = useMemo(() => {
     if (!muestra) return null;
     if (accion === 'correr' && minutosValidos) {
-      const inicio = correrHora(muestra.hora_inicio, minutosNumero);
-      const fin = correrHora(muestra.hora_fin, minutosNumero);
-      return `${muestra.hora_inicio}–${muestra.hora_fin} → ${inicio}–${fin}`;
+      return vistaPreviaDelHorarioCorrido(muestra, minutosNumero, opcionesDelHorario);
     }
     if (accion === 'duplicar' && semanasValidas) {
       return `${muestra.fecha} → ${sumarDias(muestra.fecha, semanasNumero * DIAS_POR_SEMANA)}`;
     }
     return null;
-  }, [muestra, accion, minutosValidos, minutosNumero, semanasValidas, semanasNumero]);
+  }, [muestra, accion, minutosValidos, minutosNumero, semanasValidas, semanasNumero, opcionesDelHorario]);
 
   // Cambiar de acción o de parámetro borra el resultado anterior: dejarlo puesto haría creer
   // que ese "listo" habla del cambio que se está por hacer ahora.

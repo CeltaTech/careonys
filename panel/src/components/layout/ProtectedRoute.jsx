@@ -2,6 +2,8 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
+import { useEmpresa } from '../../context/EmpresaContext';
+import { zonaHorariaAnotada } from '../../lib/horarios';
 import { useLocale } from '../../i18n/LocaleContext';
 import { esAdminOSuperior, ROLES_PANEL } from '../../lib/roles';
 import { Alert } from '../ui/Alert';
@@ -10,6 +12,7 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   const { session, usuario, estado: estadoSesion } = useAuth();
   const { puede, estado: estadoPermisos } = usePermisos();
   const { tieneModalidad, estado: estadoModalidades } = useModalidades();
+  const { estado: estadoEmpresa } = useEmpresa();
   const { t } = useLocale();
 
   // Que no se haya podido averiguar algo no es lo mismo que que no exista: se lo dice, y la
@@ -36,6 +39,14 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   if (!session || !usuario || !ROLES_PANEL.includes(usuario.rol)) {
     return <Navigate to="/login" replace />;
   }
+
+  // El reloj de la Prestadora. Toda pantalla del Panel cuenta «hoy» y los turnos de guardia con la
+  // zona horaria de la Prestadora (lib/horarios.js), que llega con su fila. Mientras no llega no
+  // se entra, y si no se pudo leer, la pantalla no se abre: contar con el reloj del aparato
+  // mostraría otro día justo en las horas en que la zona del aparato y la de la Prestadora no
+  // coinciden.
+  if (estadoEmpresa === 'cargando') return <div className="pantalla-cargando">{t.comun.cargando}</div>;
+  if (estadoEmpresa === 'error' || !zonaHorariaAnotada()) return mensajeDeFalla();
 
   if (soloAdmin && !esAdminOSuperior(usuario.rol)) {
     return <Navigate to="/" replace />;

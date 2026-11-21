@@ -8,13 +8,18 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { CasillerosDeHorario } from '../../components/turnos_guardia/CasillerosDeHorario';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { mensajeDeError } from '../../lib/errores';
-import { fechaVisible } from '../../lib/fechaVisible';
-import { DIAS_SEMANA, faltantesDeLaGuardia, horaCorta } from '../../lib/cronogramaDeGuardias';
-
-const TERMINA = ['termina_mismo_dia', 'termina_dia_siguiente', 'termina_dos_dias', 'termina_tres_dias'];
+import {
+  DIAS_SEMANA,
+  duracionVisible,
+  faltantesDeLaGuardia,
+  horasDelHorario,
+  momentoVisible,
+  textoDelFaltante,
+  tramosDeLaGuardia,
+} from '../../lib/cronogramaDeGuardias';
 
 // El orden de los casilleros, para saltar al primero que falte.
-const ORDEN_DE_LOS_CASILLEROS = ['dias_semana', 'fecha', 'hora_inicio', 'hora_fin'];
+const ORDEN_DE_LOS_CASILLEROS = ['dias_semana', 'fecha', 'hora_inicio', 'dias_hasta_el_fin', 'fecha_fin', 'hora_fin'];
 
 /**
  * El cronograma de guardias de una Prestación: qué días y en qué horario hay que cubrir a ese
@@ -70,13 +75,11 @@ export function CronogramaDeGuardias({ prestacion, prestadoraId, onCerrar }) {
     fecha,
     hora_inicio: horaInicio,
     hora_fin: horaFin,
-    dias_hasta_el_fin: Number(diasHastaElFin),
+    dias_hasta_el_fin: diasHastaElFin,
   });
-  const textoDelFaltante = (motivo) =>
-    motivo === 'faltan_dias' ? textosHorario.error_dias_semana : motivo === 'no_dura' ? textos.no_dura : t.formularios.falta_un_dato_obligatorio;
   const avisos = {};
   if (intentoGuardar) {
-    for (const [campo, motivo] of Object.entries(faltantes)) avisos[campo] = textoDelFaltante(motivo);
+    for (const [campo, motivo] of Object.entries(faltantes)) avisos[campo] = textoDelFaltante(motivo, t);
   }
 
   function alternarDia(dia) {
@@ -132,10 +135,9 @@ export function CronogramaDeGuardias({ prestacion, prestadoraId, onCerrar }) {
     cargar();
   }
 
-  const cuando = (g) =>
-    g.fecha
-      ? fechaVisible(g.fecha, locale)
-      : DIAS_SEMANA.filter((d) => (g.dias_semana ?? []).includes(d)).map((d) => textosHorario.dias[d]).join(', ');
+  // Cada guardia con su comienzo y su fin, de a un renglón por día marcado.
+  const unRenglonPorTramo = (g, punta) =>
+    tramosDeLaGuardia(g).map((tr) => <div key={tr.comienzo.dia ?? tr.comienzo.fecha}>{momentoVisible(tr[punta], t, locale)}</div>);
 
   const ocupado = agregando || quitandoId !== null;
 
@@ -162,20 +164,18 @@ export function CronogramaDeGuardias({ prestacion, prestadoraId, onCerrar }) {
         <table className="panel-tabla">
           <thead>
             <tr>
-              <th>{textos.col_cuando}</th>
-              <th>{textos.col_horario}</th>
-              <th>{textosHorario.termina}</th>
+              <th>{textos.col_comienzo}</th>
+              <th>{textos.col_fin}</th>
+              <th>{textos.col_duracion}</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {guardias.map((g) => (
               <tr key={g.id}>
-                <td>{cuando(g)}</td>
-                <td>
-                  {textos.horario.replace('{inicio}', horaCorta(g.hora_inicio)).replace('{fin}', horaCorta(g.hora_fin))}
-                </td>
-                <td>{textosHorario[TERMINA[g.dias_hasta_el_fin] ?? TERMINA[0]]}</td>
+                <td>{unRenglonPorTramo(g, 'comienzo')}</td>
+                <td>{unRenglonPorTramo(g, 'fin')}</td>
+                <td>{duracionVisible(horasDelHorario(g), t)}</td>
                 <td>
                   <Button variant="secondary" onClick={() => quitar(g)} disabled={ocupado}>
                     {quitandoId === g.id ? textos.quitando : textos.quitar}
@@ -205,7 +205,7 @@ export function CronogramaDeGuardias({ prestacion, prestadoraId, onCerrar }) {
 
         {!repite && (
           <FormField
-            label={textos.fecha}
+            label={textosHorario.fecha_inicio}
             name="cronograma_fecha"
             type="date"
             required
@@ -221,6 +221,7 @@ export function CronogramaDeGuardias({ prestacion, prestadoraId, onCerrar }) {
             prefijo="cronograma_"
             diasSemana={repite ? diasSemana : undefined}
             onAlternarDia={repite ? alternarDia : undefined}
+            fecha={repite ? undefined : fecha}
             horaInicio={horaInicio}
             onHoraInicio={setHoraInicio}
             horaFin={horaFin}

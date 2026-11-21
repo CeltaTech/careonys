@@ -164,6 +164,8 @@ export function situacionDeTurnoGuardia(turno_guardia, ctx = {}) {
   if (turno_guardia.estado === 'cancelada') return SITUACION.CANCELADA;
   if (turno_guardia.estado === 'completada') return SITUACION.COMPLETADA;
   if (turno_guardia.estado === 'ausente') return SITUACION.AUSENTE;
+  // Interrumpido: mientras dure la pausa o la suspensión no se espera a nadie.
+  if (turno_guardia.estado === 'pausada' || turno_guardia.estado === 'suspendida') return SITUACION.PROGRAMADA;
 
   // 2. El hueco. Lo que lo vuelve urgente es lo poco que falta para que empiece.
   if (estaSinCubrir(turno_guardia)) {

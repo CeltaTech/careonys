@@ -10,8 +10,9 @@ import { Alert } from '../components/ui/Alert';
 import { NuevoTurnoGuardiaModal } from './turnos_guardia/NuevoTurnoGuardiaModal';
 import { TurnoGuardiaAcciones } from './turnos_guardia/TurnoGuardiaAcciones';
 import { GrillaTurnosGuardia } from './turnos_guardia/GrillaTurnosGuardia';
+import { BarraAccionesMasivas } from './turnos_guardia/BarraAccionesMasivas';
 import { TurnosGuardiaSinCerrar } from './turnos_guardia/TurnosGuardiaSinCerrar';
-import { COBERTURA, FILA_SIN_CUBRIR, coberturaDeTurnoGuardia, filaDeTurnoGuardia } from '../lib/cobertura';
+import { FILA_SIN_CUBRIR, estaSinCubrir, filaDeTurnoGuardia } from '../lib/cobertura';
 import { cargarPacientesDeTurnosGuardia, conPacientes, textoDePacientes } from '../lib/pacientesDeTurnoGuardia';
 import { SITUACION, situacionDeTurnoGuardia } from '../lib/semaforoTurnoGuardia';
 import { claseBadgeTono, TONO } from '../lib/tonos';
@@ -40,32 +41,46 @@ import { esAdminOSuperior } from '../lib/roles';
 // guardias que estaba buscando ya no estaban. La de `lib/horarios.js` corre el huso antes de
 // cortar, y es la que usa todo el resto del Panel.
 import { hoyISO, sumarDias } from '../lib/horarios';
+import {
+  VISTAS,
+  ZOOMS,
+  desdeDeLaConsulta,
+  guardarPreferencia,
+  leerPreferencia,
+  rangoDeVista,
+  tocaElRango,
+} from '../lib/agendaTurnosGuardia';
+import { textoDelHorario } from '../lib/horarioDeTurnoGuardia';
+import { aplicarAccionesMasivas } from '../lib/aplicarAccionesMasivas';
 import './listadosMaqueta.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
-const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', 'pausada'];
+const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', 'pausada', 'suspendida'];
+
+/** Las dos formas de ver los turnos de guardia. La grilla es la principal. */
+const FORMAS = ['grilla', 'lista'];
 
 /*
  * Cómo se lee cada situación del semáforo (`lib/semaforoTurnoGuardia.js`) en las tres palabras de la
- * maqueta, y qué botón le toca. Los tres botones abren el mismo panel de acciones del turno de guardia:
- * ahí están asignarla, reasignarla, cancelarla y marcar llegada, salida o ausencia.
+ * lista, y con qué tono. Qué se puede hacer con el turno lo dice su panel de acciones, que se abre
+ * con el mismo botón en todas las filas.
  */
 const SIN_COBERTURA = { estado: 'sin_cobertura', tono: TONO.CRITICO };
 const EN_RIESGO = { estado: 'en_riesgo', tono: TONO.ATENCION };
 const CUBIERTA = { estado: 'cubierta', tono: TONO.EXITO };
 
 const LECTURA_DE_SITUACION = {
-  [SITUACION.HUECO_URGENTE]: { ...SIN_COBERTURA, accion: 'resolver' },
-  [SITUACION.AUSENTE]: { ...SIN_COBERTURA, accion: 'resolver' },
-  [SITUACION.TARDE]: { ...EN_RIESGO, accion: 'resolver' },
-  [SITUACION.SIN_CERRAR]: { ...EN_RIESGO, accion: 'resolver' },
-  [SITUACION.HUECO]: { ...EN_RIESGO, accion: 'solicitar_cobertura' },
-  [SITUACION.CANCELADA]: { estado: 'cancelada', tono: TONO.NEUTRO, accion: 'ver' },
+  [SITUACION.HUECO_URGENTE]: SIN_COBERTURA,
+  [SITUACION.AUSENTE]: SIN_COBERTURA,
+  [SITUACION.TARDE]: EN_RIESGO,
+  [SITUACION.SIN_CERRAR]: EN_RIESGO,
+  [SITUACION.HUECO]: EN_RIESGO,
+  [SITUACION.CANCELADA]: { estado: 'cancelada', tono: TONO.NEUTRO },
 };
 
 function lecturaDeTurnoGuardia(turno_guardia, ctx) {
-  return LECTURA_DE_SITUACION[situacionDeTurnoGuardia(turno_guardia, ctx)] ?? { ...CUBIERTA, accion: 'ver' };
+  return LECTURA_DE_SITUACION[situacionDeTurnoGuardia(turno_guardia, ctx)] ?? CUBIERTA;
 }
 
 export function TurnosGuardia() {
@@ -89,9 +104,13 @@ export function TurnosGuardia() {
   const [parametros] = useSearchParams();
   const desdeDelEnlace = parametros.get('desde');
   const hastaDelEnlace = parametros.get('hasta');
+  // El enlace desde la ficha de un Servicio trae ese Servicio: la agenda muestra sólo sus turnos.
+  const servicioDelEnlace = parametros.get('servicio');
   const filtrosIniciales = useMemo(() => {
     const esFecha = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v ?? '');
     const desde = esFecha(desdeDelEnlace) ? desdeDelEnlace : hoyISO();
+    // Sin enlace, la lista mira dos semanas desde hoy. Es el valor de arranque del filtro, no un
+    // tope: la persona lo cambia en «Filtrar», y la grilla no lo usa.
     const hasta = esFecha(hastaDelEnlace) && hastaDelEnlace >= desde ? hastaDelEnlace : sumarDias(desde, 14);
     return { desde, hasta, estado: '', sinCubrir: false, busqueda: '' };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -107,9 +126,18 @@ export function TurnosGuardia() {
   );
   const [mostrarNueva, setMostrarNueva] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
-  // La grilla sigue a mano porque hace lo que la tabla no: mover un turno de guardia arrastrándola y
-  // verlas por Paciente, por semana o en línea de tiempo.
-  const [verGrilla, setVerGrilla] = useState(false);
+  // Grilla o lista, y en la grilla qué vista y qué acercamiento. Se recuerda por cada cuenta, en
+  // este aparato. La grilla es la forma principal; la lista queda para buscar y revisar de corrido.
+  const [forma, setForma] = useState(() => leerPreferencia('forma', usuario?.id, FORMAS, 'grilla'));
+  const [vista, setVista] = useState(() =>
+    servicioDelEnlace ? 'servicio' : leerPreferencia('vista', usuario?.id, VISTAS, 'asistente'),
+  );
+  const [zoom, setZoom] = useState(() => leerPreferencia('zoom', usuario?.id, ZOOMS, 'semana'));
+  // El día que se mira en la grilla. El rango lo decide el acercamiento: no hay tope de días.
+  const [ancla, setAncla] = useState(() => filtrosIniciales.desde);
+  const verGrilla = forma === 'grilla';
+  // Los turnos de guardia elegidos para una acción de a muchos, por id.
+  const [elegidos, setElegidos] = useState(() => new Set());
   const [turnoGuardiaSeleccionado, setTurnoGuardiaSeleccionado] = useState(null);
   // Quién está en la puerta esperando que lo dejen entrar. El Asistente que no pudo leer el
   // código QR llama a quien coordina; quien coordina busca su turno de guardia acá, abre «Solicitud de
@@ -126,10 +154,34 @@ export function TurnosGuardia() {
   const [nombreDelPaciente, setNombreDelPaciente] = useState({});
   const { pedirConfirmacion } = useConfirmacion();
 
+  // Qué días se piden a la base. En la grilla, los que muestra el acercamiento; en la lista, los
+  // del filtro. Se piden también los que empezaron antes, tantos días antes como dura el turno de
+  // guardia más largo de la Prestadora: un turno no tiene tope de días, y uno largo que arrancó
+  // antes sigue adentro del rango.
+  const rango = useMemo(
+    () => (verGrilla ? rangoDeVista(zoom, ancla) : { desde: f.desde, hasta: f.hasta }),
+    [verGrilla, zoom, ancla, f.desde, f.hasta],
+  );
+
   const recargar = useCallback(async () => {
     if (!prestadoraId) return;
     setEstadoCarga('cargando');
     setError(null);
+
+    // Cuántos días dura el turno más largo que empezó antes del rango: es lo que se mira hacia atrás.
+    const { data: masLargo, error: errorMasLargo } = await supabase
+      .from('turnos_guardia')
+      .select('dias_hasta_el_fin')
+      .eq('prestadora_id', prestadoraId)
+      .lt('fecha', rango.desde)
+      .order('dias_hasta_el_fin', { ascending: false })
+      .limit(1);
+    if (errorMasLargo) {
+      setError(mensajeDeError(errorMasLargo, t));
+      setEstadoCarga('error');
+      return;
+    }
+    const diasDelMasLargo = Number(masLargo?.[0]?.dias_hasta_el_fin) || 0;
 
     const [
       { data: turnosGuardiaData, error: errorTurnosGuardia },
@@ -141,8 +193,8 @@ export function TurnosGuardia() {
         .from('turnos_guardia')
         .select('*')
         .eq('prestadora_id', prestadoraId)
-        .gte('fecha', f.desde)
-        .lte('fecha', f.hasta)
+        .gte('fecha', desdeDeLaConsulta(rango.desde, diasDelMasLargo))
+        .lte('fecha', rango.hasta)
         .order('fecha', { ascending: true })
         .order('hora_inicio', { ascending: true }),
       // Se pide el Padrón entero, sin filtrar por estado, y se pide también el estado. Las dos
@@ -185,7 +237,8 @@ export function TurnosGuardia() {
       return;
     }
 
-    const filasConNombres = conPacientes(turnosGuardiaData ?? [], pacientesPorTurnoGuardia, pacientesPorId).map((g) => ({
+    const delRango = (turnosGuardiaData ?? []).filter((g) => tocaElRango(g, rango.desde, rango.hasta));
+    const filasConNombres = conPacientes(delRango, pacientesPorTurnoGuardia, pacientesPorId).map((g) => ({
       ...g,
       asistente_nombre: asistentesPorId[g.asistente_id] || '—',
       pendiente_asistente_id: pendientes.get(g.id) ?? null,
@@ -197,7 +250,7 @@ export function TurnosGuardia() {
     setEstadoCarga('listo');
     // Solo el rango de fechas se pide al servidor: los demás filtros se aplican acá, en
     // memoria, y no tienen que volver a consultar la base cada vez que cambian.
-  }, [f.desde, f.hasta, prestadoraId, t]);
+  }, [rango.desde, rango.hasta, prestadoraId, t]);
 
   useEffect(() => {
     recargar();
@@ -214,8 +267,9 @@ export function TurnosGuardia() {
       }))
       .filter((g) => {
         if (delAviso && !delAviso.ids.has(g.id)) return false;
+        if (servicioDelEnlace && g.servicio_id !== servicioDelEnlace) return false;
         const coincideEstado = !f.estado || g.estado === f.estado;
-        const coincideCobertura = !f.sinCubrir || coberturaDeTurnoGuardia(g) !== COBERTURA.CUBIERTA;
+        const coincideCobertura = !f.sinCubrir || estaSinCubrir(g);
         // La búsqueda mira TODOS los nombres del turno, no el resumen: en un asilo el resumen
         // muestra dos y esconde dieciocho, y buscar a uno de esos dieciocho no daría nada.
         const coincideBusqueda =
@@ -224,7 +278,7 @@ export function TurnosGuardia() {
           (g.pacientes_nombres ?? []).some((n) => n?.toLowerCase().includes(b));
         return coincideEstado && coincideCobertura && coincideBusqueda;
       });
-  }, [filas, f, t, delAviso]);
+  }, [filas, f, t, delAviso, servicioDelEnlace]);
 
   /* El reloj entra una sola vez por carga, igual que en el Estado actual: si cada turno de guardia
      preguntara la hora por su cuenta, dos turnos de guardia de la misma pantalla podrían estar mirando
@@ -272,7 +326,8 @@ export function TurnosGuardia() {
   }
 
   // Y lo mismo con arrastrar un turno de guardia a otra celda de la grilla: lo que eso significa está en
-  // `lib/moverTurnoGuardia.js`, que es el mismo que usa el Estado actual con esta misma grilla.
+  // `lib/moverTurnoGuardia.js`. Esta pantalla es la única que lo llama; el banco de pruebas del
+  // Estado actual dibuja la misma grilla, pero no guarda nada.
   async function alMoverTurnoGuardia({ turnoGuardiaId, ...movimiento }) {
     const turnoGuardiaActual = filas.find((g) => g.id === turnoGuardiaId);
     if (!turnoGuardiaActual) return;
@@ -299,18 +354,53 @@ export function TurnosGuardia() {
   }
 
   const tl = t.turnos_guardia.listado;
-  const manana = sumarDias(hoyISO(), 1);
+  const opcionesDelHorario = {
+    locale,
+    hoy: hoyISO(),
+    textos: { hoy: t.turnos_guardia.dia_hoy, manana: tl.dia_manana, duracion: t.turnos_guardia.duracion_horas },
+  };
 
-  function textoDelDia(fecha) {
-    if (fecha === hoyISO()) return t.turnos_guardia.dia_hoy;
-    if (fecha === manana) return tl.dia_manana;
-    return new Date(`${fecha}T00:00:00`).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+  function cambiarForma(nueva) {
+    setForma(nueva);
+    guardarPreferencia('forma', usuario?.id, nueva);
   }
 
-  function textoDelHorario(g) {
-    const desde = (g.hora_inicio ?? '').slice(0, 5);
-    const hasta = (g.hora_fin ?? '').slice(0, 5);
-    return `${textoDelDia(g.fecha)} ${desde}–${hasta}`;
+  function cambiarVista(nueva) {
+    setVista(nueva);
+    guardarPreferencia('vista', usuario?.id, nueva);
+  }
+
+  function cambiarZoom(nuevo) {
+    setZoom(nuevo);
+    guardarPreferencia('zoom', usuario?.id, nuevo);
+  }
+
+  // La selección para las acciones de a muchos. En la grilla se elige con Ctrl y clic, o con la
+  // barra espaciadora; en la lista, con la casilla de cada fila.
+  function alternarElegido(turno_guardia) {
+    setElegidos((actual) => {
+      const nuevo = new Set(actual);
+      if (nuevo.has(turno_guardia.id)) nuevo.delete(turno_guardia.id);
+      else nuevo.add(turno_guardia.id);
+      return nuevo;
+    });
+  }
+
+  const elegidosALaVista = useMemo(() => filasFiltradas.filter((g) => elegidos.has(g.id)), [filasFiltradas, elegidos]);
+  const todosElegidos = filasFiltradas.length > 0 && elegidosALaVista.length === filasFiltradas.length;
+
+  function alternarTodos() {
+    setElegidos(todosElegidos ? new Set() : new Set(filasFiltradas.map((g) => g.id)));
+  }
+
+  // La barra confirma antes de cancelar y dice cuántos salieron; esto guarda y vuelve a traer.
+  async function aplicarDeAMuchos(orden) {
+    const resultado = await aplicarAccionesMasivas(elegidosALaVista, orden, t, usuario?.prestadora_id ?? null);
+    setAviso(resultado.error);
+    setExcepcion(null);
+    if (!resultado.error) setElegidos(new Set());
+    await recargar();
+    return { ok: resultado.ok, total: resultado.total };
   }
 
   function textoDelEstado(estado) {
@@ -333,10 +423,25 @@ export function TurnosGuardia() {
       <TurnosGuardiaSinCerrar onCerrada={recargar} />
 
       <section className="panel-tarjeta">
+        <div className="grilla-controles">
+          <div className="grilla-interruptor">
+            {FORMAS.map((cual) => (
+              <button key={cual} type="button" aria-pressed={forma === cual} onClick={() => cambiarForma(cual)}>
+                {t.turnos_guardia[`vista_${cual}`]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {mostrarFiltros && (
           <div className="panel-filtros">
-            <FormFieldFecha label={t.turnos_guardia.filtro_desde} value={f.desde} onChange={(v) => set('desde', v)} />
-            <FormFieldFecha label={t.turnos_guardia.filtro_hasta} value={f.hasta} onChange={(v) => set('hasta', v)} />
+            {/* En la grilla los días los decide el acercamiento; las fechas filtran la lista. */}
+            {!verGrilla && (
+              <>
+                <FormFieldFecha label={t.turnos_guardia.filtro_desde} value={f.desde} onChange={(v) => set('desde', v)} />
+                <FormFieldFecha label={t.turnos_guardia.filtro_hasta} value={f.hasta} onChange={(v) => set('hasta', v)} />
+              </>
+            )}
             <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
               <option value="">{t.comun.todos}</option>
               {ESTADOS.map((e) => (
@@ -358,9 +463,6 @@ export function TurnosGuardia() {
               />
               {t.turnos_guardia.cobertura_solo_huecos}
             </label>
-            <Button variant="secondary" onClick={() => setVerGrilla((v) => !v)} aria-pressed={verGrilla}>
-              {t.turnos_guardia.grilla_titulo}
-            </Button>
           </div>
         )}
 
@@ -394,7 +496,8 @@ export function TurnosGuardia() {
         <EstadoLista
           estado={estadoCarga}
           error={error}
-          vacio={estadoCarga === 'listo' && filasFiltradas.length === 0}
+          // La grilla se dibuja aunque esté vacía: sin ella no habría cómo mirar otro período.
+          vacio={estadoCarga === 'listo' && !verGrilla && filasFiltradas.length === 0}
           recargar={recargar}
           filtrado={hayFiltros}
           onLimpiarFiltros={limpiar}
@@ -403,9 +506,18 @@ export function TurnosGuardia() {
           {verGrilla ? (
             <GrillaTurnosGuardia
               turnos_guardia={filasFiltradas}
-              desde={f.desde}
-              hasta={f.hasta}
+              desde={rango.desde}
+              hasta={rango.hasta}
+              vista={vista}
+              onVista={cambiarVista}
+              zoom={zoom}
+              onZoom={cambiarZoom}
+              diaElegido={ancla}
+              onDiaElegido={setAncla}
+              onNavegar={setAncla}
               ctx={ctx}
+              seleccionadas={elegidos}
+              onAlternarSeleccion={alternarElegido}
               onAbrir={setTurnoGuardiaSeleccionado}
               onMover={alMoverTurnoGuardia}
             />
@@ -414,6 +526,9 @@ export function TurnosGuardia() {
               <table className="panel-tabla">
                 <thead>
                   <tr>
+                    <th>
+                      <input type="checkbox" checked={todosElegidos} onChange={alternarTodos} aria-label={tl.elegir_todos} />
+                    </th>
                     <th>{tl.col_horario}</th>
                     <th>{tl.col_servicio}</th>
                     <th>{tl.col_responsable}</th>
@@ -428,7 +543,15 @@ export function TurnosGuardia() {
                     const servicio = [g.servicio_etiqueta, g.paciente_nombre].filter(Boolean).join(' · ') || '—';
                     return (
                       <tr key={g.id}>
-                        <td>{textoDelHorario(g)}</td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={elegidos.has(g.id)}
+                            onChange={() => alternarElegido(g)}
+                            aria-label={tl.col_elegir}
+                          />
+                        </td>
+                        <td>{textoDelHorario(g, opcionesDelHorario)}</td>
                         <td>{servicio}</td>
                         <td>{tl[`responsable_${g.canal_modalidad}`] ?? '—'}</td>
                         <td>
@@ -442,14 +565,16 @@ export function TurnosGuardia() {
                           <span className={claseBadgeTono(lectura.tono)}>{textoDelEstado(lectura.estado)}</span>
                         </td>
                         <td>
-                          {pedidoPorTurnoGuardia.has(g.id) && (
+                          {/* Un solo botón por fila. Si alguien espera en la puerta, eso va primero. */}
+                          {pedidoPorTurnoGuardia.has(g.id) ? (
                             <Button onClick={() => setSolicitudAbierta(pedidoPorTurnoGuardia.get(g.id))}>
                               {tl.solicitud_de_ingreso}
                             </Button>
-                          )}{' '}
-                          <Button variant="secondary" onClick={() => setTurnoGuardiaSeleccionado(g)}>
-                            {tl[`accion_${lectura.accion}`]}
-                          </Button>
+                          ) : (
+                            <Button variant="secondary" onClick={() => setTurnoGuardiaSeleccionado(g)}>
+                              {tl.accion_abrir}
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -459,6 +584,13 @@ export function TurnosGuardia() {
             </div>
           )}
         </EstadoLista>
+
+        <BarraAccionesMasivas
+          seleccionadas={elegidosALaVista}
+          asistentes={asistentes}
+          onAplicar={aplicarDeAMuchos}
+          onLimpiar={() => setElegidos(new Set())}
+        />
       </section>
 
       {mostrarNueva && <NuevoTurnoGuardiaModal onClose={() => setMostrarNueva(false)} onCreada={cerrarYRecargar} />}
@@ -491,7 +623,6 @@ export function TurnosGuardia() {
       {turnoGuardiaSeleccionado && (
         <TurnoGuardiaAcciones
           turno_guardia={turnoGuardiaSeleccionado}
-          asistentes={asistentes}
           onReasignar={handleReasignar}
           onClose={() => setTurnoGuardiaSeleccionado(null)}
           onActualizada={recargar}

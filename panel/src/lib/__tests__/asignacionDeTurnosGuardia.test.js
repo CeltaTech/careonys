@@ -214,6 +214,30 @@ describe('arrastrar en la vista de Asistentes', () => {
     expect(funcionesLlamadas).toEqual([]);
   });
 
+  it('soltado más tarde en la línea de tiempo, el turno que ahora termina al otro día guarda ese día', async () => {
+    // De 20:00 a 23:00, soltado a las 23: termina a las 02:00 del día siguiente.
+    await moverTurnoGuardia(
+      turno_guardia({ asistente_id: ANA, hora_inicio: '20:00', hora_fin: '23:00', dias_hasta_el_fin: 0 }),
+      { fila: ANA, fecha: '2026-10-20', vista: 'asistente', horaInicio: '23:00', horaFin: '02:00', diasHastaElFin: 1 },
+      t,
+    );
+    expect(pedidosALaBase).toEqual([
+      { tabla: 'turnos_guardia', cambios: { fecha: '2026-10-20', hora_inicio: '23:00', hora_fin: '02:00', dias_hasta_el_fin: 1 } },
+    ]);
+  });
+
+  it('un turno de cinco días llevado a otra fila y otra hora conserva sus cinco días', async () => {
+    await moverTurnoGuardia(
+      turno_guardia({ asistente_id: ANA, hora_inicio: '08:00', hora_fin: '08:00', dias_hasta_el_fin: 5 }),
+      { fila: BRUNO, fecha: '2026-10-20', vista: 'asistente', horaInicio: '10:00', horaFin: '10:00', diasHastaElFin: 5 },
+      t,
+    );
+    expect(pedidosALaBase[0]).toEqual({
+      tabla: 'turnos_guardia',
+      cambios: { hora_inicio: '10:00', hora_fin: '10:00', dias_hasta_el_fin: 5 },
+    });
+  });
+
   it('ninguna guardia empezada se arrastra, y un estado desconocido cuenta como empezada', () => {
     for (const estado of ['activa', 'ausente', 'completada', 'otro']) {
       expect(seArrastra(turno_guardia({ estado }))).toBe(false);
@@ -297,7 +321,7 @@ describe('arrastrar en la vista de Pacientes', () => {
     await mover(turno_guardia({ paciente_id: 'p1', asistente_id: ANA, asistente_nombre: 'Ana' }));
     expect(llamadasAlBackend).toEqual([{
       ruta: '/turnos-guardia/g1/mover-a-paciente',
-      cuerpo: { paciente_id: 'p2', fecha: '2026-10-21', hora_inicio: null, hora_fin: null },
+      cuerpo: { paciente_id: 'p2', fecha: '2026-10-21', hora_inicio: null, hora_fin: null, dias_hasta_el_fin: null },
     }]);
     expect(pedidosALaBase).toEqual([]);
   });
@@ -311,6 +335,15 @@ describe('arrastrar en la vista de Pacientes', () => {
     await mover(turno_guardia({ paciente_id: 'p1' }));
     expect(llamadasAlBackend).toEqual([]);
     expect(pedidosALaBase.map((p) => p.cambios)).toEqual([{ paciente_id: 'p2' }, { fecha: '2026-10-21' }]);
+  });
+
+  it('sin Asistente y en otra hora: guarda las horas con los días hasta el fin', async () => {
+    await moverTurnoGuardia(
+      turno_guardia({ paciente_id: 'p1', hora_inicio: '20:00', hora_fin: '23:00', dias_hasta_el_fin: 0 }),
+      { fila: 'p1', filaOrigen: 'p1', fecha: '2026-10-21', vista: 'paciente', horaInicio: '23:00', horaFin: '02:00', diasHastaElFin: 1 },
+      t,
+    );
+    expect(pedidosALaBase.at(-1).cambios).toEqual({ fecha: '2026-10-21', hora_inicio: '23:00', hora_fin: '02:00', dias_hasta_el_fin: 1 });
   });
 
   it('con check-in: la guardia ya empezó y no se mueve ni cambia de Paciente', async () => {

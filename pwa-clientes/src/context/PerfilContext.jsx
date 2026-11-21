@@ -29,6 +29,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { guardarMarca } from '../lib/marcaGuardada';
 import { anotarNombreDeLaPrestadora } from '../i18n/marcaEnElTexto';
+import { anotarZonaHoraria } from '../lib/horarios';
 import { useAuth } from './AuthContext';
 
 const MARCA_VACIA = { nombre: null, logoUrl: null };
@@ -73,6 +74,7 @@ export function PerfilProvider({ children }) {
       // Sin sesión no se sabe de qué Prestadora se trata, y el nombre de la anterior no puede
       // quedar colgado en el texto de la pantalla de ingreso de la siguiente.
       anotarNombreDeLaPrestadora(null);
+      anotarZonaHoraria(null);
       return undefined;
     }
 
@@ -81,6 +83,9 @@ export function PerfilProvider({ children }) {
       .perfil()
       .then((datos) => {
         if (!activo) return;
+        // «Hoy» y la hora de cada turno de guardia se cuentan con el reloj de la Prestadora, no
+        // con el del teléfono (lib/horarios.js). Se anota antes de dibujar con el perfil nuevo.
+        anotarZonaHoraria(datos.zonaHoraria ?? null);
         setPerfil({
           marca: datos.marca ?? MARCA_VACIA,
           contacto: datos.contacto ?? CONTACTO_VACIO,

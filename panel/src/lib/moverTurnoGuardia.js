@@ -67,6 +67,9 @@ export function seArrastra(turno_guardia) {
  *     pantalla cree si nadie la controla.
  *   - `horaInicio` y `horaFin`: solo desde la línea de tiempo. Si no vienen, el horario no se
  *     toca.
+ *   - `diasHastaElFin`: con las dos horas, cuántos días después de empezar termina el turno en
+ *     su lugar nuevo. La grilla lo calcula para que la duración no cambie: un turno soltado más
+ *     tarde puede terminar al día siguiente. Sin tope de días.
  *   - `prestadoraId`: la Prestadora de la sesión, con la que se guarda la lista de Pacientes.
  * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
  *                          acá no se sabe en qué idioma está, y hacen falta para que ningún
@@ -75,34 +78,43 @@ export function seArrastra(turno_guardia) {
  * @returns {Promise<{ error: string | null, documentosPendientes?: string[] | null }>} El motivo si
  *          algo falló, o null si salió todo; y los documentos, si la asignación la frenaron ellos.
  */
-export async function moverTurnoGuardia(turno_guardia, { fila, filaOrigen, fecha, vista, horaInicio, horaFin, prestadoraId }, t = null, motivoExcepcion = null) {
+export async function moverTurnoGuardia(turno_guardia, { fila, filaOrigen, fecha, vista, horaInicio, horaFin, diasHastaElFin, prestadoraId }, t = null, motivoExcepcion = null) {
   if (!turno_guardia?.id || !seArrastra(turno_guardia)) return { error: null };
 
   if (!VISTAS.includes(vista)) {
     return { error: mensajeDeError(new Error(`Vista de grilla desconocida: ${String(vista)}`), t, 'moverTurnoGuardia') };
   }
 
+  const horario = horarioNuevo({ horaInicio, horaFin, diasHastaElFin });
+
   if (vista === 'paciente') {
     // Con alguien que lo va a hacer, el turno no cambia de Paciente: queda donde estaba, sin
     // nadie, y el Asistente tiene que aceptar uno nuevo para el otro Paciente.
     if (fila !== filaOrigen && quienTieneElTurnoGuardia(turno_guardia)) {
-      return moverTurnoGuardiaAOtroPaciente(turno_guardia.id, { pacienteId: fila, fecha, horaInicio, horaFin }, t);
+      return moverTurnoGuardiaAOtroPaciente(
+        turno_guardia.id,
+        {
+          pacienteId: fila,
+          fecha,
+          horaInicio: horario?.hora_inicio,
+          horaFin: horario?.hora_fin,
+          diasHastaElFin: horario?.dias_hasta_el_fin,
+        },
+        t,
+      );
     }
     const { error: falla } = await cambiarPacienteDeTurnoGuardia(turno_guardia, filaOrigen, fila, t, prestadoraId);
     if (falla) return { error: falla };
-    return moverEnElCalendario(turno_guardia, { fecha, horaInicio, horaFin }, t);
+    return moverEnElCalendario(turno_guardia, fecha, horario, t);
   }
 
   // Del lado de los Asistentes. Si se la soltó en su misma fila, sólo cambian el día o la hora.
-  if (fila === filaDeTurnoGuardia(turno_guardia)) return moverEnElCalendario(turno_guardia, { fecha, horaInicio, horaFin }, t);
+  if (fila === filaDeTurnoGuardia(turno_guardia)) return moverEnElCalendario(turno_guardia, fecha, horario, t);
 
   // La hora se corre antes de asignar, y la fecha la corre la asignación: los documentos se miran
   // contra el día nuevo.
-  if (horaInicio && horaFin) {
-    const { error } = await supabase
-      .from('turnos_guardia')
-      .update({ hora_inicio: horaInicio, hora_fin: horaFin })
-      .eq('id', turno_guardia.id);
+  if (horario) {
+    const { error } = await supabase.from('turnos_guardia').update(horario).eq('id', turno_guardia.id);
     if (error) return { error: mensajeDeError(error, t) };
   }
 
@@ -111,13 +123,21 @@ export async function moverTurnoGuardia(turno_guardia, { fila, filaOrigen, fecha
   return asignarConFecha(turno_guardia, asistenteId, fecha, t, motivoExcepcion);
 }
 
+/**
+ * Las columnas del horario que se guardan al mover, o `null` si el horario no cambia. Las dos
+ * horas van juntas; los días hasta el fin van con ellas cuando la grilla los manda, para que un
+ * turno que ahora termina otro día conserve su duración.
+ */
+function horarioNuevo({ horaInicio, horaFin, diasHastaElFin }) {
+  if (!horaInicio || !horaFin) return null;
+  const horario = { hora_inicio: horaInicio, hora_fin: horaFin };
+  if (Number.isInteger(diasHastaElFin) && diasHastaElFin >= 0) horario.dias_hasta_el_fin = diasHastaElFin;
+  return horario;
+}
+
 /** Correr un turno de guardia de día o de hora sin cambiarle quién la hace. */
-async function moverEnElCalendario(turno_guardia, { fecha, horaInicio, horaFin }, t) {
-  const cambios = { fecha };
-  if (horaInicio && horaFin) {
-    cambios.hora_inicio = horaInicio;
-    cambios.hora_fin = horaFin;
-  }
+async function moverEnElCalendario(turno_guardia, fecha, horario, t) {
+  const cambios = { fecha, ...(horario ?? {}) };
 
   const { error } = await supabase.from('turnos_guardia').update(cambios).eq('id', turno_guardia.id);
   if (error) return { error: mensajeDeError(error, t) };

@@ -9,11 +9,9 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useMonedaActual } from '../hooks/useMonedaActual';
 import { mensajeDeError } from '../lib/errores';
+import { hoyISO } from '../lib/horarios';
 import '../styles/molde-paginas.css';
 
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
@@ -31,7 +29,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
   const [tipoServicio, setTipoServicio] = useState(precio?.tipo_servicio || '');
   const [modalidad, setModalidad] = useState(precio?.modalidad || '');
   const [valorPrecio, setValorPrecio] = useState(precio?.precio ?? '');
-  const [vigenteDesde, setVigenteDesde] = useState(precio?.vigente_desde || hoy());
+  const [vigenteDesde, setVigenteDesde] = useState(precio?.vigente_desde || hoyISO());
   const [activo, setActivo] = useState(precio?.activo ?? true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -47,7 +45,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
   function cambiarPrecio(valor) {
     setValorPrecio(valor);
     if (!esNuevo && Number(valor) !== Number(precio.precio) && vigenteDesde === precio.vigente_desde) {
-      setVigenteDesde(hoy());
+      setVigenteDesde(hoyISO());
     }
     if (!esNuevo && Number(valor) === Number(precio.precio)) setVigenteDesde(precio.vigente_desde);
   }

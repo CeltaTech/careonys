@@ -296,6 +296,14 @@ export function documentoQueVencePrimero(asistenteId, documentos) {
 }
 
 /**
+ * La clave de un grupo de Pacientes: los mismos Pacientes en cualquier orden dan la misma clave.
+ * Con ella se busca la cuenta de continuidad que hizo la base para ese grupo.
+ */
+export function claveDePacientes(pacienteIds) {
+  return [...new Set((pacienteIds ?? []).filter(Boolean))].sort().join(',');
+}
+
+/**
  * Cuántas veces este Asistente ya atendió a esta gente.
  *
  * "Ya atendió" significa que el turno de guardia empezó antes de ahora y no se canceló ni quedó como
@@ -306,10 +314,12 @@ export function documentoQueVencePrimero(asistenteId, documentos) {
  * es un desconocido porque ahora el turno incluya también al marido. Contar por un solo
  * Paciente le borraba toda la historia y lo mandaba al fondo de la lista de candidatos.
  *
- * El número depende del rango de guardias que la pantalla haya cargado. Si trajo un mes, el
- * conteo es de ese mes. Es una limitación conocida y no se disimula: se cuenta lo que hay.
+ * La cuenta completa la hace la base: `continuidad` es lo que devolvió
+ * `asistentes_que_atendieron_a_pacientes` para cada grupo de Pacientes (clave de
+ * `claveDePacientes` → Asistente → cantidad). Sin ella se cuentan los turnos de guardia recibidos.
  */
-export function vecesQueAtendio(asistenteId, pacienteIds, turnos_guardia, ahora) {
+export function vecesQueAtendio(asistenteId, pacienteIds, turnos_guardia, ahora, continuidad = null) {
+  if (continuidad) return continuidad.get(claveDePacientes(pacienteIds))?.get(asistenteId) ?? 0;
   const buscados = new Set((pacienteIds ?? []).filter(Boolean));
   if (buscados.size === 0) return 0;
   return lista(turnos_guardia).filter(
@@ -413,6 +423,7 @@ export function candidatosParaTurnoGuardia(hueco, datos = {}, opciones = {}) {
   const documentos = lista(datos.documentos);
 
   const distancias = datos.distancias ?? null;
+  const continuidad = datos.continuidad ?? null;
 
   const evaluados = asistentes.map((asistente) =>
     evaluarAsistente(asistente, {
@@ -421,6 +432,7 @@ export function candidatosParaTurnoGuardia(hueco, datos = {}, opciones = {}) {
       ausencias,
       documentos,
       distancias,
+      continuidad,
       ahora,
       pesos,
       topes,
@@ -479,7 +491,7 @@ function evaluarAsistente(asistente, ctx) {
 
   // --- 1. Continuidad. El criterio que más pesa: para el Paciente y su Cliente, que venga
   //        alguien conocido vale más que cualquier comodidad de la agenda.
-  const veces = vecesQueAtendio(asistente.id, idsDePacientes(hueco), turnos_guardia, ahora);
+  const veces = vecesQueAtendio(asistente.id, idsDePacientes(hueco), turnos_guardia, ahora, ctx.continuidad);
   if (veces > 0) {
     const puntos = Math.min(veces * pesos.continuidad_por_vez, pesos.continuidad_maxima);
     suma(aFavor, veces === 1 ? MOTIVO.CONTINUIDAD_UNA_VEZ : MOTIVO.CONTINUIDAD, { n: veces }, puntos);

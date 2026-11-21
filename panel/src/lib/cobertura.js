@@ -30,9 +30,15 @@ export function coberturaDeTurnoGuardia(turno_guardia) {
   return turno_guardia?.asistente_id ? COBERTURA.CUBIERTA : COBERTURA.SIN_CUBRIR;
 }
 
-/** ¿Es un hueco? */
+/** Los estados en que un turno sin Asistente no espera a nadie: cancelado, o interrumpido. */
+const ESTADOS_QUE_NO_ESPERAN_ASISTENTE = ['cancelada', 'pausada', 'suspendida'];
+
+/** ¿Es un hueco? Un turno sin Asistente que todavía espera que alguien lo haga. */
 export function estaSinCubrir(turno_guardia) {
-  return coberturaDeTurnoGuardia(turno_guardia) !== COBERTURA.CUBIERTA;
+  return (
+    coberturaDeTurnoGuardia(turno_guardia) !== COBERTURA.CUBIERTA &&
+    !ESTADOS_QUE_NO_ESPERAN_ASISTENTE.includes(turno_guardia?.estado)
+  );
 }
 
 /**

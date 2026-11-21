@@ -12,6 +12,7 @@ import { traducirValor } from '../i18n/valores';
 import { claseBadge } from '../lib/tonos';
 import { con } from '../lib/textos';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
+import { hoyISO } from '../lib/horarios';
 import { avisar } from '../lib/mensajeEmergente';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import '../styles/molde-paginas.css';
@@ -42,11 +43,9 @@ function primerDiaDelMes(fechaISO) {
 
 function ultimoDiaDelMes(fechaISO) {
   const [anio, mes] = fechaISO.slice(0, 7).split('-').map(Number);
-  return new Date(anio, mes, 0).toISOString().slice(0, 10);
-}
-
-function mesActualISO() {
-  return new Date().toISOString().slice(0, 10);
+  // En hora universal: es una cuenta de calendario, y en la hora del aparato daba el día anterior
+  // en las zonas que van adelante de la hora universal.
+  return new Date(Date.UTC(anio, mes, 0)).toISOString().slice(0, 10);
 }
 
 function ContenidoInforme({ contenido, t }) {
@@ -210,8 +209,8 @@ export function InformesObraSocial() {
 
   const [pacienteId, setPacienteId] = useState('');
   const [tipo, setTipo] = useState('resumen_mensual');
-  const [periodoDesde, setPeriodoDesde] = useState(primerDiaDelMes(mesActualISO()));
-  const [periodoHasta, setPeriodoHasta] = useState(ultimoDiaDelMes(mesActualISO()));
+  const [periodoDesde, setPeriodoDesde] = useState(primerDiaDelMes(hoyISO()));
+  const [periodoHasta, setPeriodoHasta] = useState(ultimoDiaDelMes(hoyISO()));
 
   const [preview, setPreview] = useState(null);
   const [cargandoPreview, setCargandoPreview] = useState(false);

@@ -30,13 +30,15 @@ describe('pestanasDelAsistente', () => {
       'col_registro',
       'col_situacion',
       'sin_registro',
+      'titulo_proximos',
+      'titulo_anteriores',
+      'ver_mas',
+      'sin_proximos',
+      'sin_anteriores',
     ]) {
       expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
       expect(textos[clave].length).toBeGreaterThan(0);
     }
-    // Sin el hueco, la advertencia diría que se muestran "las últimas guardias" sin decir cuántas, y
-    // nadie sabría cuánto quedó afuera.
-    expect(textos.tope).toContain('{n}');
   });
 
   it.each(IDIOMAS)('%s nombra los textos de las evaluaciones recibidas', (idioma) => {

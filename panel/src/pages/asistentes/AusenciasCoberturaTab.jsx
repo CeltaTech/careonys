@@ -9,7 +9,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/constanciaDeAusencia';
 import { prepararMembrete } from '../../lib/membrete';
-import { ESTADO_ACTIVO } from '../../lib/candidatos';
+import { ElegirAsistente } from '../../components/turnos_guardia/ElegirAsistente';
 import { turnosGuardiaAfectados, turnosGuardiaSinCubrir, sumarLasYaCubiertas } from '../../lib/turnosGuardiaAfectados';
 import { diasComputados } from '../../lib/diasDeAusencia';
 import { mensajeDeError } from '../../lib/errores';
@@ -17,29 +17,25 @@ import { con } from '../../lib/textos';
 import { llamadorDe } from '../../lib/apiPanel';
 import { useMotivosSustitucionTurnoGuardia } from '../../hooks/useMotivosSustitucionTurnoGuardia';
 import { nombreMotivoSustitucion, valorGuardado } from '../../lib/motivoDeSustitucion';
-import { hoyISO, sumarDias } from '../../lib/horarios';
+import { hoyISO, momentoDelCampo, momentoParaElCampo, sumarDias } from '../../lib/horarios';
 import '../../styles/molde-paginas.css';
 import './renglonDelAsistente.css';
 
 const TIPOS =['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 
-// El momento de ahora con la forma que pide una caja de fecha y hora (`2026-09-16T14:30`), en hora
-// local. `toISOString()` a secas daría la hora en UTC, que en horario argentino se lee tres horas
-// corrida. Es lo que viene puesto en «cuándo avisó»: el caso corriente es que la Coordinadora
-// cargue la ausencia al enterarse, y el que avisó antes se corrige hacia atrás.
+// El momento de ahora con la forma que pide una caja de fecha y hora (`2026-09-16T14:30`), en el
+// reloj de la Prestadora. Es lo que viene puesto en «cuándo avisó»: el caso corriente es que la
+// Coordinadora cargue la ausencia al enterarse, y el que avisó antes se corrige hacia atrás.
 function ahoraLocal() {
-  const momento = new Date();
-  const corrida = new Date(momento.getTime() - momento.getTimezoneOffset() * 60000);
-  return corrida.toISOString().slice(0, 16);
+  return momentoParaElCampo(new Date());
 }
 
 // De lo que escribió la Coordinadora al momento exacto que se guarda. Vacío devuelve `null`, y
 // entonces la base pone el momento de la carga: una ausencia sin este dato se trata como urgente,
 // que es el error barato.
 function momentoGuardado(texto) {
-  if (!texto) return null;
-  const momento = new Date(texto);
-  return Number.isNaN(momento.getTime()) ? null : momento.toISOString();
+  const momento = momentoDelCampo(texto);
+  return momento ? momento.toISOString() : null;
 }
 const llamarApiAusencias = llamadorDe('/ausencias');
 
@@ -49,7 +45,10 @@ export function AusenciasCoberturaTab({ asistente }) {
   const { empresa } = useEmpresa();
   const [ausencias, setAusencias] = useState([]);
   const [coberturas, setCoberturas] = useState({});
-  const [otrosAsistentes, setOtrosAsistentes] = useState([]);
+  // Los turnos sin cubrir de las ausencias cargadas antes de que se guardara esa lista. Se averiguan
+  // al abrir la pestaña sólo para ordenar a quién proponer, y no se escriben: eso lo hace
+  // `afectadasDe` al asignar el sustituto.
+  const [sinCubrirAveriguados, setSinCubrirAveriguados] = useState({});
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -80,18 +79,12 @@ export function AusenciasCoberturaTab({ asistente }) {
   async function recargar() {
     if (!prestadoraId) return;
     setEstado('cargando');
+    // Quién puede cubrir cada ausencia lo trae `ElegirAsistente`, ordenado por quién está libre.
     const [
       { data: dataAusencias, error: errorAusencias },
-      { data: dataAsistentes },
       { data: dataSeries, error: errorSeries },
     ] = await Promise.all([
       supabase.from('ausencias').select('*').eq('asistente_id', asistente.id).order('fecha_inicio', { ascending: false }),
-      // Quién puede cubrir esta ausencia. Es repartir trabajo, así que solo entra quien sigue en
-      // el Padrón; y se filtra en la consulta porque esta lista no muestra a nadie, solo llena
-      // el desplegable del sustituto. El valor sale de `ESTADO_ACTIVO`, la misma constante que
-      // contesta `estaEnElPadron`, para que la regla quede escrita en un solo lugar
-      // (regla 12 de CLAUDE.md §7).
-      supabase.from('asistentes').select('id, nombre').eq('prestadora_id', prestadoraId).eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).neq('id', asistente.id),
       // Los turnos fijos de esta persona, para elegir cuál se cubre.
       supabase.from('series_turnos_guardia').select('id, dias_semana, hora_inicio, hora_fin').eq('asistente_id', asistente.id),
     ]);
@@ -144,8 +137,29 @@ export function AusenciasCoberturaTab({ asistente }) {
     setCambiosDeFecha(cambiosPorAusencia);
     setTurnosGuardiaCubiertos(turnosGuardiaPorAusencia);
     setTurnosGuardiaFijos(dataSeries ?? []);
-    setOtrosAsistentes(dataAsistentes ?? []);
+    setSinCubrirAveriguados(await averiguarSinCubrir(lista, porAusencia));
     setEstado('listo');
+  }
+
+  // Para las ausencias sin la lista guardada de turnos afectados: cuáles quedan sin cubrir, con la
+  // misma cuenta que hace `turnosGuardiaDeLaAusencia`. Si la consulta falla, esa ausencia queda sin
+  // dato y la lista de sustitutos sale por nombre, sin orden por disponibilidad.
+  async function averiguarSinCubrir(lista, porAusencia) {
+    const viejas = lista.filter((a) => !Array.isArray(a.turnos_guardia_afectados) && a.fecha_inicio && a.fecha_fin);
+    const pares = await Promise.all(
+      viejas.map(async (a) => {
+        const { data, error: errorTurnosGuardia } = await supabase
+          .from('turnos_guardia')
+          .select('id, fecha, estado')
+          .eq('asistente_id', asistente.id)
+          .gte('fecha', a.fecha_inicio)
+          .lte('fecha', a.fecha_fin);
+        if (errorTurnosGuardia) return null;
+        const afectadas = sumarLasYaCubiertas(turnosGuardiaAfectados(data ?? [], a), porAusencia[a.id]);
+        return [a.id, turnosGuardiaSinCubrir(afectadas, porAusencia[a.id])];
+      })
+    );
+    return Object.fromEntries(pares.filter(Boolean));
   }
 
   useEffect(() => { recargar(); }, [asistente.id, prestadoraId]);
@@ -523,18 +537,6 @@ export function AusenciasCoberturaTab({ asistente }) {
                     )}
                     {errorMotivos && <Alert variant="error">{errorMotivos}</Alert>}
                     <div className="molde-formgrid">
-                      <FormField
-                        label={t.asistentes.ausencias.asignar_sustituto}
-                        name={`sustituto-${a.id}`}
-                        type="select"
-                        value={coberturaForm[a.id]?.asistente_sustituto_id || ''}
-                        onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], asistente_sustituto_id: e.target.value } }))}
-                      >
-                        <option value="">{t.turnos_guardia.nuevo_turno_guardia.elegir}</option>
-                        {otrosAsistentes.map((o) => (
-                          <option key={o.id} value={o.id}>{o.nombre}</option>
-                        ))}
-                      </FormField>
                       {turnosGuardiaFijos.length > 0 && (
                         <FormField
                           label={t.asistentes.ausencias.turno_guardia_fijo}
@@ -549,6 +551,20 @@ export function AusenciasCoberturaTab({ asistente }) {
                           ))}
                         </FormField>
                       )}
+                      {/* Primero quien está libre en los turnos que faltan cubrir —los del turno
+                          fijo elegido, si se eligió uno—; las advertencias van al lado del nombre. */}
+                      <div className="molde-ancho">
+                        <ElegirAsistente
+                          idsHuecos={sinCubrir ?? sinCubrirAveriguados[a.id] ?? []}
+                          serieId={coberturaForm[a.id]?.serie_id || null}
+                          excluir={[asistente.id]}
+                          label={t.asistentes.ausencias.asignar_sustituto}
+                          name={`sustituto-${a.id}`}
+                          value={coberturaForm[a.id]?.asistente_sustituto_id || ''}
+                          onChange={(id) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], asistente_sustituto_id: id } }))}
+                          disabled={guardando}
+                        />
+                      </div>
                       <FormField
                         label={t.asistentes.ausencias.sustitucion_motivo}
                         name={`motivo-sustitucion-${a.id}`}

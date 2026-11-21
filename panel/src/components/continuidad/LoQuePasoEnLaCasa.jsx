@@ -9,6 +9,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { SelectorDePersona } from '../personas/SelectorDePersona';
+import { momentoDelCampo, momentoParaElCampo } from '../../lib/horarios';
 import {
   MEDIOS_POSIBLES,
   revisarConsentimiento,
@@ -95,10 +96,8 @@ export function LoQuePasoEnLaCasa({ turnoGuardiaId, pacientes = [], origen, inci
 /** El primer momento que se propone es ahora, en el formato que entiende el campo de fecha y hora. */
 function ahoraParaElCampo(desplazamientoEnHoras = 0) {
   const momento = new Date(Date.now() + desplazamientoEnHoras * 60 * 60 * 1000);
-  // En hora local y no universal: quien lo carga escribe la hora de su reloj, no la de Londres.
-  const conCero = (n) => String(n).padStart(2, '0');
-  return `${momento.getFullYear()}-${conCero(momento.getMonth() + 1)}-${conCero(momento.getDate())}`
-    + `T${conCero(momento.getHours())}:${conCero(momento.getMinutes())}`;
+  // En el reloj de la Prestadora, que es el de la casa del Paciente, y no en hora universal.
+  return momentoParaElCampo(momento);
 }
 
 /* `alGuardar`, cuando viene, corre después de anotar el hecho y antes de cerrar la ventana: es lo
@@ -139,8 +138,8 @@ export function RegistrarConsentimiento({ turnoGuardiaId, pacientes, onClose, on
           paciente_id: pacienteId,
           quien_consintio: quien.trim(),
           medio,
-          desde_at: new Date(desde).toISOString(),
-          hasta_at: new Date(hasta).toISOString(),
+          desde_at: momentoDelCampo(desde).toISOString(),
+          hasta_at: momentoDelCampo(hasta).toISOString(),
           registrado_por: usuario?.id ?? null,
           nota: nota.trim() || null,
         });
@@ -274,7 +273,7 @@ export function RegistrarFamiliarQueSeQuedo({ turnoGuardiaId, origen, incidenteI
           // se quede, y una columna que dijera lo contrario mentiría sobre lo que pasó.
           registrado_por: usuario?.id ?? null,
           motivo: motivo.trim() || null,
-          desde_at: new Date(desde).toISOString(),
+          desde_at: momentoDelCampo(desde).toISOString(),
         });
         if (errorInsert) throw errorInsert;
         setAnotado(true);

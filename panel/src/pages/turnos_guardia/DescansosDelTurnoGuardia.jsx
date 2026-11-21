@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { momentoDelCampo } from '../../lib/horarios';
 
 /**
  * Los descansos de un turno de guardia largo, vistos y anotados desde el Panel.
@@ -59,8 +60,8 @@ export function DescansosDelTurnoGuardia({ turnoGuardiaId }) {
       await llamarApiPanel(`/turnos-guardia/${turnoGuardiaId}/descansos`, {
         method: 'POST',
         body: JSON.stringify({
-          inicio_at: new Date(inicio).toISOString(),
-          fin_at: new Date(fin).toISOString(),
+          inicio_at: momentoDelCampo(inicio).toISOString(),
+          fin_at: momentoDelCampo(fin).toISOString(),
           nota: nota.trim() || null,
         }),
       });

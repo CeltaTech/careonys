@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   diaDelMomento,
   diasDeEspera,
+  diasEntre,
   finDeTurnoGuardia,
   horasDeTurnoGuardia,
   hoyISO,
@@ -10,7 +11,8 @@ import {
 } from '../horarios';
 import { T } from '../../i18n/translations';
 
-// Los turnos de guardia de 24, 48 y 72 horas que cubre una sola Asistente son parte del rubro. Hasta que
+// Los turnos de guardia de varios días seguidos que cubre una sola Asistente son parte del rubro, y
+// no tienen tope: 24, 48, 72 horas o más. Hasta que
 // la duración se escribió, el sistema deducía hasta cuándo iba un turno comparando las dos horas
 // de reloj, y esa deducción no puede pasar de un día: un turno de guardia de 72 horas quedaba contada
 // como una de 24. Éste es el error que estas pruebas tienen que encontrar.
@@ -53,6 +55,43 @@ describe('cuánto dura un turno', () => {
     const larga = turnoGuardiaDe({ dias_hasta_el_fin: 3 });
     const delMedio = { fecha: '2026-08-02', hora_inicio: '10:00', hora_fin: '18:00', dias_hasta_el_fin: 0 };
     expect(seSuperponen(larga, delMedio)).toBe(true);
+  });
+
+  it('no hay tope de días: un turno de cuatro días dura 96 horas', () => {
+    const cuatro = turnoGuardiaDe({ dias_hasta_el_fin: 4 });
+    expect(horasDeTurnoGuardia(cuatro)).toBe(96);
+    expect(finDeTurnoGuardia(cuatro).getDate()).toBe(5);
+  });
+
+  it('un turno de diez días que empieza a las 20:00 y termina a las 08:00 dura 228 horas', () => {
+    expect(horasDeTurnoGuardia(turnoGuardiaDe({ hora_inicio: '20:00', dias_hasta_el_fin: 10 }))).toBe(228);
+  });
+
+  it('un turno de cuatro días se pisa con otro del cuarto día', () => {
+    const cuatro = turnoGuardiaDe({ dias_hasta_el_fin: 4 });
+    const delCuartoDia = { fecha: '2026-08-04', hora_inicio: '10:00', hora_fin: '18:00', dias_hasta_el_fin: 0 };
+    expect(seSuperponen(cuatro, delCuartoDia)).toBe(true);
+  });
+});
+
+// La fecha de fin que se elige en el calendario se guarda como días hasta el fin.
+describe('diasEntre', () => {
+  it('cuenta los días de calendario entre dos fechas', () => {
+    expect(diasEntre('2026-08-01', '2026-08-01')).toBe(0);
+    expect(diasEntre('2026-08-01', '2026-08-05')).toBe(4);
+    expect(diasEntre('2026-12-28', '2027-01-04')).toBe(7);
+  });
+
+  it('es la cuenta inversa de sumarDias, sin tope', () => {
+    for (const dias of [0, 1, 3, 4, 10, 45]) {
+      expect(diasEntre('2026-03-20', sumarDias('2026-03-20', dias))).toBe(dias);
+    }
+  });
+
+  it('da negativo si el fin es anterior y nulo si falta una fecha', () => {
+    expect(diasEntre('2026-08-05', '2026-08-01')).toBe(-4);
+    expect(diasEntre('2026-08-05', '')).toBeNull();
+    expect(diasEntre(null, '2026-08-05')).toBeNull();
   });
 });
 

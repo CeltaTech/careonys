@@ -11,6 +11,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { ApoderadoDelCliente } from './ApoderadoDelCliente';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
+import { zonaHorariaAnotada } from '../../lib/horarios';
 
 /* Si cada Responsable de pagos de este Servicio firmó, ahí donde se lo elige.
    ==========================================================================
@@ -43,7 +44,7 @@ export function EstadoDelPagador({ servicioId, clienteId, puedeRegistrar, esAdmi
     setEstado('cargando');
     setError(null);
     try {
-      setDatos(await llamarApiPanel(`/cuentas/servicio/${servicioId}/pagador?idioma=${encodeURIComponent(locale)}&zona=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`));
+      setDatos(await llamarApiPanel(`/cuentas/servicio/${servicioId}/pagador?idioma=${encodeURIComponent(locale)}&zona=${encodeURIComponent(zonaHorariaAnotada() ?? '')}`));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));

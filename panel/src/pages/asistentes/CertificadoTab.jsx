@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { hoyISO } from '../../lib/horarios';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
@@ -47,7 +48,7 @@ export function CertificadoTab({ asistente }) {
     const { error: errorInsert } = await supabase.from('certificados').insert({
       prestadora_id: prestadoraId,
       asistente_id: asistente.id,
-      fecha_emision: new Date().toISOString().slice(0, 10),
+      fecha_emision: hoyISO(),
     });
     setEmitiendo(false);
     if (errorInsert) {

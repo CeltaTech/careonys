@@ -28,7 +28,7 @@
 
 // Con extensión a propósito: este archivo se copia tal cual al backend, que corre en Node y ahí la
 // ruta sin extensión no resuelve.
-import { inicioDeTurnoGuardia } from './horarios.js';
+import { hoyISO, inicioDeTurnoGuardia } from './horarios.js';
 
 /**
  * Cuándo una Asistente es del equipo sin que nadie la haya puesto. Valores de fábrica.
@@ -246,14 +246,7 @@ const claveCoordinador = (id) => `c:${id}`;
 function serieVigente(serie) {
   if (serie.estado && serie.estado !== 'activa') return false;
   if (!serie.vigente_hasta) return true;
-  return serie.vigente_hasta >= hoyEnTexto();
-}
-
-function hoyEnTexto() {
-  const ahora = new Date();
-  return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(
-    ahora.getDate()
-  ).padStart(2, '0')}`;
+  return serie.vigente_hasta >= hoyISO();
 }
 
 /** Quién cubre los francos del Servicio, que es a quien se llama primero cuando falta alguien. */

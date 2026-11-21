@@ -19,6 +19,8 @@
 // Nunca se edita una copia a mano.
 // ---------------------------------------------------------------------------
 
+import { hoyISO } from './horarios.js';
+
 /**
  * Cuántos días antes se empieza a avisar, cuando la Prestadora no configuró el suyo.
  *
@@ -88,7 +90,7 @@ export function ventanaDeAviso(diasAviso = DIAS_AVISO_POR_DEFECTO) {
  *
  * Se cuenta en días de calendario, no en horas: a nadie le sirve "vence en 0,3 días".
  */
-export function diasParaVencer(fechaVencimiento, desde = new Date()) {
+export function diasParaVencer(fechaVencimiento, desde = hoyISO()) {
   if (!fechaVencimiento) return null;
   const hoy = diaISO(desde);
   const vence = diaISO(fechaVencimiento);
@@ -103,7 +105,7 @@ export function diasParaVencer(fechaVencimiento, desde = new Date()) {
  * Sirve para pedirle a la base solo lo que interesa, en vez de traer todos los documentos y
  * descartarlos después. Devuelve el día en `AAAA-MM-DD`, listo para comparar contra la base.
  */
-export function fechaLimiteDeAviso(diasAviso = DIAS_AVISO_POR_DEFECTO, desde = new Date()) {
+export function fechaLimiteDeAviso(diasAviso = DIAS_AVISO_POR_DEFECTO, desde = hoyISO()) {
   const dia = diaISO(desde);
   if (!dia) return null;
   const limite = new Date(`${dia}T00:00:00`);

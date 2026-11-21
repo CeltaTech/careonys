@@ -13,7 +13,7 @@ import { fechaLimiteDeAviso } from '../lib/reglaVencimientos';
 import { documentosQueVencen } from '../lib/documentosQueVencen';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { ESTADO_EN_CURSO } from '../lib/turnoGuardiaSinCerrar';
-import { hoyISO } from '../lib/horarios';
+import { diaDelMomento, hoyISO, sumarDias } from '../lib/horarios';
 import { soloSinResolver } from '../lib/alertaSinResolver';
 import { contarPorModalidad, MODALIDADES, modalidadesDelAsistente } from '../lib/modalidades';
 import { ESTADO_ACTIVO, estaEnElPadron } from '../lib/candidatos';
@@ -37,23 +37,19 @@ const COLOR_MODALIDAD = {
   intermediacion: 'var(--violeta)',
 };
 
+// Los dos se cuentan con el día de la Prestadora (lib/horarios.js), no con el del aparato.
 function esHoy(fechaIso) {
-  const hoy = new Date();
-  const fecha = new Date(fechaIso);
-  return (
-    fecha.getFullYear() === hoy.getFullYear() &&
-    fecha.getMonth() === hoy.getMonth() &&
-    fecha.getDate() === hoy.getDate()
-  );
+  return diaDelMomento(fechaIso) === hoyISO();
 }
 
+// La semana empieza el domingo. El día de la semana sale del día de hoy de la Prestadora, leído a
+// mediodía para que ningún huso lo corra.
 function esEstaSemana(fechaIso) {
-  const fecha = new Date(fechaIso);
-  const ahora = new Date();
-  const inicioSemana = new Date(ahora);
-  inicioSemana.setDate(ahora.getDate() - ahora.getDay());
-  inicioSemana.setHours(0, 0, 0, 0);
-  return fecha >= inicioSemana;
+  const dia = diaDelMomento(fechaIso);
+  if (!dia) return false;
+  const hoy = hoyISO();
+  const inicioSemana = sumarDias(hoy, -new Date(`${hoy}T12:00:00`).getDay());
+  return dia >= inicioSemana;
 }
 
 export function Dashboard() {

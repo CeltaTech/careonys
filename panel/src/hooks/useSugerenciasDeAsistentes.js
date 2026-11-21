@@ -13,6 +13,7 @@ import {
 } from '../lib/pacientesDeTurnoGuardia';
 import { traerTodasLasFilas } from '../lib/traerTodasLasFilas';
 import { advertenciasPara, rangoDeFechas, sugerenciasPara } from '../lib/sugerenciasDeAsistentes';
+import { cargarTurnosSinCubrirDelServicio } from '../lib/turnosSinCubrirDelServicio';
 import { mensajeDeError } from '../lib/errores';
 
 /* Lo que hace falta traer de la base para proponer Asistentes para uno o varios turnos de guardia.
@@ -28,15 +29,23 @@ import { mensajeDeError } from '../lib/errores';
    ofrecen, como quien falta.
 
    `servicioId` y `turnoGuardiaId` son para los criterios del Servicio, que contesta la base. Un
-   turno de guardia que ya existe trae su Servicio, así que sin `servicioId` se usa el suyo. */
+   turno de guardia que ya existe trae su Servicio, así que sin `servicioId` se usa el suyo.
+
+   `turnosSinCubrir` suma como huecos los turnos del cronograma de guardias de `servicioId` que
+   nadie cubre, desde hoy hasta donde la Prestadora genera los turnos de guardia. Es para elegir a
+   quién sumar al equipo de un Servicio, que puede no tener todavía ningún turno de guardia. */
 
 const COLUMNAS_DEL_TURNO = 'id, asistente_id, paciente_id, servicio_id, serie_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, canal_modalidad';
 const COLUMNAS_DE_LA_AGENDA = 'id, asistente_id, paciente_id, serie_id, estado, fecha, hora_inicio, hora_fin, dias_hasta_el_fin';
 const COLUMNAS_DEL_ASISTENTE = 'id, nombre, estado, cuenta_desactivada, disponible, horas_semanales, canales, disponibilidad';
 
 /** Lo que identifica a un turno de guardia para saber si cambió y hay que volver a cargar. */
-function claveDeHuecos(huecos, idsHuecos, serieId, servicioId, turnoGuardiaId) {
-  const delServicio = { servicioId: servicioId ?? null, turnoGuardiaId: turnoGuardiaId ?? null };
+function claveDeHuecos(huecos, idsHuecos, serieId, servicioId, turnoGuardiaId, turnosSinCubrir) {
+  const delServicio = {
+    servicioId: servicioId ?? null,
+    turnoGuardiaId: turnoGuardiaId ?? null,
+    turnosSinCubrir: Boolean(turnosSinCubrir),
+  };
   if (Array.isArray(idsHuecos)) return JSON.stringify({ ids: [...idsHuecos].sort(), serieId: serieId ?? null, ...delServicio });
   return JSON.stringify({
     huecos: (huecos ?? []).map((h) => [h?.id ?? null, h?.servicio_id ?? null, h?.fecha, h?.hora_inicio, h?.hora_fin, h?.dias_hasta_el_fin ?? 0, h?.canal_modalidad ?? null, idsDePacientes(h)]),
@@ -209,6 +218,7 @@ export function useSugerenciasDeAsistentes({
   serieId = null,
   servicioId = null,
   turnoGuardiaId = null,
+  turnosSinCubrir = false,
   excluir = [],
 } = {}) {
   const { t } = useLocale();
@@ -216,20 +226,33 @@ export function useSugerenciasDeAsistentes({
   const [carga, setCarga] = useState({ estado: 'cargando', error: null, huecos: [], datos: null, configuracion: null });
   const pedido = useRef(0);
 
-  const clave = claveDeHuecos(huecos, idsHuecos, serieId, servicioId, turnoGuardiaId);
+  const clave = claveDeHuecos(huecos, idsHuecos, serieId, servicioId, turnoGuardiaId, turnosSinCubrir);
   // Lo que se usa adentro de la carga se lee de una referencia: los turnos de guardia llegan como
   // objetos nuevos en cada dibujo, y lo que decide si se vuelve a cargar es `clave`.
-  const entrada = useRef({ huecos, idsHuecos, serieId, servicioId, turnoGuardiaId });
-  entrada.current = { huecos, idsHuecos, serieId, servicioId, turnoGuardiaId };
+  const entrada = useRef({ huecos, idsHuecos, serieId, servicioId, turnoGuardiaId, turnosSinCubrir });
+  entrada.current = { huecos, idsHuecos, serieId, servicioId, turnoGuardiaId, turnosSinCubrir };
 
   const recargar = useCallback(async () => {
     if (!prestadoraId) return;
     const numero = ++pedido.current;
     setCarga((c) => ({ ...c, estado: 'cargando', error: null }));
     try {
-      const { huecos: dados, idsHuecos: ids, serieId: serie, servicioId: servicio, turnoGuardiaId: turno } = entrada.current;
-      const [todos, configuracion] = await Promise.all([cargarHuecos(dados, ids), cargarConfiguracion(prestadoraId)]);
-      const elegidos = (serie ? todos.filter((h) => h.serie_id === serie) : todos)
+      const {
+        huecos: dados,
+        idsHuecos: ids,
+        serieId: serie,
+        servicioId: servicio,
+        turnoGuardiaId: turno,
+        turnosSinCubrir: conCronograma,
+      } = entrada.current;
+      const [todos, configuracion, delCronograma] = await Promise.all([
+        cargarHuecos(dados, ids),
+        cargarConfiguracion(prestadoraId),
+        conCronograma ? cargarTurnosSinCubrirDelServicio(supabase, prestadoraId, servicio) : [],
+      ]);
+      // Un turno de guardia vacante ya cuenta como cubierto en el cronograma, así que las dos
+      // listas no se pisan.
+      const elegidos = [...(serie ? todos.filter((h) => h.serie_id === serie) : todos), ...delCronograma]
         .map((h) => (h.servicio_id || !servicio ? h : { ...h, servicio_id: servicio }));
       // Sin `servicioId`, el Servicio sale de los turnos de guardia; si son de varios, uno por cada uno.
       const servicios = [...new Set([servicio, ...elegidos.map((h) => h.servicio_id)].filter(Boolean))];

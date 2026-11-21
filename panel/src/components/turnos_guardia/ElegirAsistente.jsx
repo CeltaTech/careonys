@@ -122,6 +122,7 @@ export function ListaDeAsistentes({
  * @param excluir    ids de Asistente que no se ofrecen.
  * @param servicioId      el Servicio, para sus criterios. Sin él, el de los turnos de guardia que ya existen.
  * @param turnoGuardiaId  el turno de guardia, para mirar el lugar y las tareas de ese día.
+ * @param turnosSinCubrir suma como huecos los turnos del cronograma de guardias de `servicioId` que nadie cubre.
  * @param onChange   recibe el id elegido —o `valorSinAsignar` si se eligió no asignar— y el candidato.
  */
 export function ElegirAsistente({
@@ -130,9 +131,18 @@ export function ElegirAsistente({
   serieId = null,
   servicioId = null,
   turnoGuardiaId = null,
+  turnosSinCubrir = false,
   excluir = [],
   ...lista
 }) {
-  const sugerencias = useSugerenciasDeAsistentes({ huecos, idsHuecos, serieId, servicioId, turnoGuardiaId, excluir });
+  const sugerencias = useSugerenciasDeAsistentes({
+    huecos,
+    idsHuecos,
+    serieId,
+    servicioId,
+    turnoGuardiaId,
+    turnosSinCubrir,
+    excluir,
+  });
   return <ListaDeAsistentes sugerencias={sugerencias} {...lista} />;
 }

@@ -40,9 +40,11 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
 
   const [datos, setDatos] = useState(null);
   const [yaEstan, setYaEstan] = useState([]);
-  // Los turnos de guardia que vienen y todavía no tienen Asistente. Contra ellos se ordenan las
-  // sugerencias de a quién sumar: lugar, horario, carga, antecedentes. Un Servicio recién armado no
-  // tiene ninguno, y entonces la lista ofrece a todo el Padrón sin orden de preferencia.
+  // Los turnos de guardia que vienen y todavía no tienen Asistente. Contra ellos, y contra los
+  // turnos del cronograma de guardias que nadie cubre, se ordenan las sugerencias de a quién sumar:
+  // horario, carga y cercanía. Los criterios del Servicio —lugar de sus Pacientes, tareas,
+  // Especialidades, antecedentes y valor acordado— ordenan siempre, así que un Servicio recién
+  // armado, sin turnos de guardia ni cronograma, también recibe la lista ordenada y con advertencias.
   const [idsVacantes, setIdsVacantes] = useState([]);
   const [aSumar, setASumar] = useState('');
 
@@ -199,13 +201,15 @@ export function EquipoDelServicio({ servicio, puedeEditar, onClose }) {
               )}
 
               {/* Sumar a alguien, con la lista de sugerencias: primero quienes mejor cubren los
-                  turnos de guardia vacantes del Servicio, con sus advertencias al lado del nombre.
-                  Quien ya está en el equipo, o quedó afuera a mano, no se ofrece. */}
+                  turnos de guardia vacantes y los turnos sin cubrir del cronograma, y quienes mejor
+                  encajan con el Servicio, con sus advertencias al lado del nombre. Quien ya está en
+                  el equipo, o quedó afuera a mano, no se ofrece. */}
               {puedeEditar && (
                 <>
                   <ElegirAsistente
                     idsHuecos={idsVacantes}
                     servicioId={servicio.id}
+                    turnosSinCubrir
                     excluir={yaEstan}
                     name="equipo-sumar"
                     label={e.sumar}

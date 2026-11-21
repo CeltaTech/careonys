@@ -95,9 +95,11 @@ export function etiquetasDe(candidato) {
 /**
  * La lista ordenada para elegir a quién asignar uno o varios turnos de guardia.
  *
- * Sin ningún turno de guardia que mirar —por ejemplo, el equipo de un Servicio, o un turno fijo
- * que no tiene días pendientes— la agenda no opina, y el Padrón se ordena con los criterios del
- * Servicio (`datos.servicio_id`). Sin Servicio, o si la base no los contestó, queda por nombre.
+ * Sin ningún turno de guardia que mirar —por ejemplo, el equipo de un Servicio que todavía no
+ * tiene turnos de guardia ni cronograma, o un turno fijo que no tiene días pendientes— la agenda no
+ * opina, y el Padrón se ordena con los criterios del Servicio (`datos.servicio_id`): lugar, tareas,
+ * Especialidades, antecedentes y valor acordado. Sin Servicio, o si la base no los contestó, queda
+ * por nombre.
  *
  * @param huecos    los turnos de guardia que se van a asignar, cada uno con `fecha`, `hora_inicio`,
  *                  `hora_fin` y, si los tiene, `id`, sus Pacientes y `canal_modalidad`.
@@ -119,6 +121,42 @@ export function sugerenciasPara(huecos, datos = {}, opciones = {}) {
       );
 
   return candidatos.filter((c) => !excluir.has(c.asistente?.id));
+}
+
+/**
+ * Los turnos del cronograma de guardias que nadie cubre, como huecos para ordenar la lista.
+ *
+ * La base (`turnos_sin_cubrir`) devuelve una fila por Paciente y por tramo sin cubrir. Los tramos
+ * con el mismo horario son una sola guardia de la casa, así que se juntan en un hueco con todos sus
+ * Pacientes. No llevan id ni modalidad: todavía no son turnos de guardia, y la modalidad la elige
+ * quien los arma.
+ *
+ * @param filas       lo que devolvió `turnos_sin_cubrir`.
+ * @param servicioId  el Servicio de esas filas.
+ */
+export function huecosDeTurnosSinCubrir(filas, servicioId = null) {
+  const porHorario = new Map();
+  for (const f of lista(filas)) {
+    if (!f?.fecha || !f?.hora_inicio || !f?.hora_fin) continue;
+    const dias = Number(f.dias_hasta_el_fin) || 0;
+    const clave = [f.fecha, f.hora_inicio, f.hora_fin, dias].join('|');
+    if (!porHorario.has(clave)) {
+      porHorario.set(clave, {
+        id: null,
+        servicio_id: servicioId,
+        fecha: f.fecha,
+        hora_inicio: f.hora_inicio,
+        hora_fin: f.hora_fin,
+        dias_hasta_el_fin: dias,
+        canal_modalidad: null,
+        paciente_ids: new Set(),
+      });
+    }
+    if (f.paciente_id) porHorario.get(clave).paciente_ids.add(f.paciente_id);
+  }
+  return [...porHorario.values()]
+    .map((h) => ({ ...h, paciente_ids: [...h.paciente_ids].sort() }))
+    .sort((a, b) => `${a.fecha} ${a.hora_inicio}`.localeCompare(`${b.fecha} ${b.hora_inicio}`));
 }
 
 /** Un candidato evaluado sólo con los criterios del Servicio. */

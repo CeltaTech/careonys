@@ -23,6 +23,7 @@ import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 // ---------------------------------------------------------------------------------------
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
+const ZONA = 'America/Argentina/Buenos_Aires';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
@@ -154,13 +155,24 @@ function liquidar(asistente, acumulado, extras = {}) {
 }
 
 describe('las horas del mes', () => {
+  // Un turno de guardia cerrado con sus dos marcas. Las horas se dan en hora de Buenos Aires,
+  // que está tres horas detrás de la hora universal.
+  const cerrado = (desde, hasta, llegada, cierre, extra = {}) => ({
+    asistente_id: 'a-1',
+    estado: 'completada',
+    fecha: '2026-08-10',
+    hora_inicio: desde,
+    hora_fin: hasta,
+    checkin_at: llegada,
+    checkout_at: cierre,
+    ...extra,
+  });
+
   it('una guardia que cubrió a dos Pacientes se paga una sola vez', () => {
     // Ocho horas trabajadas son ocho, atienda a uno o a cinco. La lista que entra acá es la
     // de guardias y nada más: no trae Pacientes, justamente para que no haya forma de
     // contarlas dos veces.
-    const acumulado = acumularTurnosGuardia([
-      { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00' },
-    ]);
+    const acumulado = acumularTurnosGuardia([cerrado('08:00', '16:00', '2026-08-10T11:00:00Z', '2026-08-10T19:00:00Z')], ZONA);
     assert.equal(acumulado.get('a-1').horas, 8);
     assert.equal(acumulado.get('a-1').turnos_guardia, 1);
   });
@@ -168,27 +180,67 @@ describe('las horas del mes', () => {
   it('la cuenta del Asistente nunca se cruza con la lista de Pacientes', () => {
     // Esta es la prueba de fondo del renglón anterior, y se hace mirando el código: unir
     // `turnos_guardia` con `turno_guardia_pacientes` haría aparecer dos veces el mismo turno de guardia y el
-    // Asistente cobraría dieciséis horas por ocho trabajadas. Si alguna vez alguien
-    // "completa" la consulta, esto falla acá y no en el recibo de alguien.
+    // Asistente cobraría dieciséis horas por ocho trabajadas.
     const codigo = readFileSync(new URL('../panelLiquidaciones.js', import.meta.url), 'utf8');
     assert.equal(codigo.includes("from('turno_guardia_pacientes')"), false);
   });
 
-  it('la guardia de noche no da horas negativas', () => {
-    const acumulado = acumularTurnosGuardia([
-      { asistente_id: 'a-1', estado: 'completada', hora_inicio: '22:00', hora_fin: '06:00' },
-    ]);
+  it('la guardia de noche cuenta las horas de los dos días', () => {
+    const acumulado = acumularTurnosGuardia(
+      [cerrado('22:00', '06:00', '2026-08-11T01:00:00Z', '2026-08-11T09:00:00Z', { dias_hasta_el_fin: 1 })],
+      ZONA
+    );
     assert.equal(acumulado.get('a-1').horas, 8);
   });
 
   it('solo se cuentan las guardias cerradas', () => {
     const acumulado = acumularTurnosGuardia([
-      { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00', hora_fin: '16:00' },
-      { asistente_id: 'a-1', estado: 'programada', hora_inicio: '08:00', hora_fin: '16:00' },
-      { asistente_id: 'a-1', estado: 'cancelada', hora_inicio: '08:00', hora_fin: '16:00' },
-    ]);
+      cerrado('08:00', '16:00', '2026-08-10T11:00:00Z', '2026-08-10T19:00:00Z'),
+      { ...cerrado('08:00', '16:00', null, null), estado: 'programada' },
+      { ...cerrado('08:00', '16:00', null, null), estado: 'cancelada' },
+    ], ZONA);
     assert.equal(acumulado.get('a-1').turnos_guardia, 1);
     assert.equal(acumulado.get('a-1').horas, 8);
+  });
+
+  it('quien llega tarde cobra desde que llegó, y quien llega antes cobra desde la hora programada', () => {
+    const tarde = acumularTurnosGuardia([cerrado('08:00', '16:00', '2026-08-10T11:30:00Z', '2026-08-10T19:00:00Z')], ZONA);
+    assert.equal(tarde.get('a-1').horas, 7.5);
+    const temprano = acumularTurnosGuardia([cerrado('08:00', '16:00', '2026-08-10T10:00:00Z', '2026-08-10T19:00:00Z')], ZONA);
+    assert.equal(temprano.get('a-1').horas, 8);
+    assert.equal(temprano.get('a-1').horasExtra, 0);
+  });
+
+  it('quien se va antes cobra hasta que se fue', () => {
+    const acumulado = acumularTurnosGuardia([cerrado('08:00', '16:00', '2026-08-10T11:00:00Z', '2026-08-10T18:15:00Z')], ZONA);
+    assert.equal(acumulado.get('a-1').horas, 7.25);
+  });
+
+  it('sin una de las dos marcas no se cuentan horas, y queda dicho', () => {
+    const acumulado = acumularTurnosGuardia([cerrado('08:00', '16:00', '2026-08-10T11:00:00Z', null)], ZONA);
+    assert.equal(acumulado.get('a-1').horas, 0);
+    assert.equal(acumulado.get('a-1').sinMarca, 1);
+    assert.equal(acumulado.get('a-1').detalle[0].sin_marca, true);
+  });
+
+  it('cada turno de guardia deja su renglón en el detalle', () => {
+    const acumulado = acumularTurnosGuardia([cerrado('08:00', '16:00', '2026-08-10T11:05:00Z', '2026-08-10T20:00:00Z', { id: 'g-9' })], ZONA);
+    const [renglon] = acumulado.get('a-1').detalle;
+    assert.deepEqual(renglon, {
+      turno_guardia_id: 'g-9',
+      fecha: '2026-08-10',
+      programado_desde: '2026-08-10T11:00:00.000Z',
+      programado_hasta: '2026-08-10T19:00:00.000Z',
+      llegada: '2026-08-10T11:05:00.000Z',
+      cierre: '2026-08-10T20:00:00.000Z',
+      minutos: 475,
+      minutos_extra: 60,
+      sin_marca: false,
+    });
+  });
+
+  it('sin la zona horaria de la Prestadora no se cuenta nada', () => {
+    assert.throws(() => acumularTurnosGuardia([cerrado('08:00', '16:00', '2026-08-10T11:00:00Z', '2026-08-10T19:00:00Z')]));
   });
 });
 
@@ -275,12 +327,16 @@ describe('a quien cobra un monto fijo y entró o se fue a mitad de camino', () =
 describe('las horas de más', () => {
   const CON_VALOR_EXTRA = { ...ASISTENTE_POR_HORA, valor_hora_extra: 2250 };
 
-  it('se suman a la cuenta del mes desde lo anotado en cada guardia', () => {
+  it('se suman a la cuenta del mes desde el cierre marcado después del fin programado', () => {
+    const turno = (cierre) => ({
+      asistente_id: 'a-1', estado: 'completada', fecha: '2026-08-10', hora_inicio: '08:00', hora_fin: '16:00',
+      checkin_at: '2026-08-10T11:00:00Z', checkout_at: cierre,
+    });
     const acumulado = acumularTurnosGuardia([
-      { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00', hora_fin: '16:00', horas_extra: 2 },
-      { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00', hora_fin: '16:00', horas_extra: 1.5 },
-      { asistente_id: 'a-1', estado: 'completada', hora_inicio: '08:00', hora_fin: '16:00' },
-    ]);
+      turno('2026-08-10T21:00:00Z'),
+      turno('2026-08-10T20:30:00Z'),
+      turno('2026-08-10T19:00:00Z'),
+    ], ZONA);
     assert.equal(acumulado.get('a-1').horasExtra, 3.5);
     assert.equal(acumulado.get('a-1').horas, 24);
   });
@@ -508,11 +564,11 @@ describe('quién puede mirar y quién puede tocar', () => {
 
 describe('generar el mes', () => {
   function prepararLaBase({ liquidacionesExistentes = [], remuneracion, anteriores = [], configuracionPago = [], turnos_guardia } = {}) {
-    respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS' }]);
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS', zona_horaria: ZONA }]);
     // La fecha del turno de guardia importa: desde que el período puede ser una semana, cada uno se
     // queda con los turnos de guardia que caen adentro de sus bordes.
     respuestas.set('GET /rest/v1/turnos_guardia', () => turnos_guardia ?? [
-      { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
+      { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', checkin_at: '2026-08-10T11:00:00Z', checkout_at: '2026-08-10T19:00:00Z', asistente_id: 'a-1' },
     ]);
     respuestas.set('GET /rest/v1/asistentes', () => [
       { id: 'a-1', nombre: 'Asistente de prueba', estado: 'activo', relacion_laboral_asistente: { relaciones_laborales: { nombre: 'Monotributo' } }, fecha_alta: '2020-01-01', fecha_baja: null },
@@ -624,6 +680,9 @@ describe('generar el mes', () => {
     estado: 'completada',
     hora_inicio: '08:00:00',
     hora_fin: '16:00:00',
+    // Llegó y cerró a horario: en Buenos Aires las ocho son las once en hora universal.
+    checkin_at: `${fecha}T11:00:00Z`,
+    checkout_at: `${fecha}T19:00:00Z`,
     asistente_id: 'a-1',
   });
 
@@ -1021,9 +1080,9 @@ describe('con qué credencial entra cada ruta', () => {
   });
 
   it('generar el mes va con la credencial de quien pide y sin filtrar por Prestadora', async () => {
-    respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS' }]);
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS', zona_horaria: ZONA }]);
     respuestas.set('GET /rest/v1/turnos_guardia', () => [
-      { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
+      { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', checkin_at: '2026-08-10T11:00:00Z', checkout_at: '2026-08-10T19:00:00Z', asistente_id: 'a-1' },
     ]);
     respuestas.set('GET /rest/v1/asistentes', () => [
       { id: 'a-1', nombre: 'Asistente importado de prueba', estado: 'activo', relacion_laboral_asistente: { relaciones_laborales: { nombre: 'Monotributo' } }, fecha_alta: '2020-01-01', fecha_baja: null },

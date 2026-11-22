@@ -32,6 +32,8 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 import '../styles/molde-paginas.css';
 import './tarjetas.css';
 import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
+import { DetalleDeHoras } from '../components/DetalleDeHoras';
+import { formatearHoras } from '../lib/formatoDeHoras';
 
 /* Lo que la Prestadora le paga al Asistente, guardado.
    ==========================================================================
@@ -119,10 +121,6 @@ function etiquetaDelRenglon(item, liquidacion, textos, locale) {
   return `${etiqueta} · ${tramoDelPeriodo({ periodo_desde: tramo[1], periodo_hasta: tramo[2] }, locale)}`;
 }
 
-function formatearHoras(valor, locale) {
-  return `${(Math.round(Number(valor ?? 0) * 10) / 10).toLocaleString(locale)} h`;
-}
-
 /**
  * Un valor que a veces es plata y a veces no.
  *
@@ -208,6 +206,7 @@ function LiquidacionesTab({ esAdmin }) {
   const [generando, setGenerando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [abiertaId, setAbiertaId] = useState(null);
+  const [horasDeId, setHorasDeId] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', estado: 'todos' });
 
   const recargar = useCallback(async () => {
@@ -324,7 +323,16 @@ function LiquidacionesTab({ esAdmin }) {
                 </td>
                 <td>{tramoDelPeriodo(l, locale)}</td>
                 <td>{l.relacion_laboral || '—'}</td>
-                <td>{formatearHoras(l.horas, locale)}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="panel-enlace"
+                    aria-label={`${t.pagos_asistentes.detalle_horas_ver}: ${l.asistente_nombre || ''}`}
+                    onClick={() => setHorasDeId(l.id)}
+                  >
+                    {formatearHoras(l.horas, locale)}
+                  </button>
+                </td>
                 <td>{formatearImporte(l.bruto, l.moneda, locale)}</td>
                 <td>{formatearImporte(l.neto, l.moneda, locale)}</td>
                 {/* La moneda va también en su propia columna, escrita como se guarda. El
@@ -339,6 +347,8 @@ function LiquidacionesTab({ esAdmin }) {
           </tbody>
         </table>
       </EstadoLista>
+
+      {horasDeId && <HorasDeLaLiquidacion id={horasDeId} onCerrar={() => setHorasDeId(null)} />}
 
       {abiertaId && (
         <DetalleLiquidacion
@@ -377,6 +387,7 @@ function ResultadoGeneracion({ resultado }) {
       texto: t.pagos_asistentes.resultado_sin_escala,
       nombres: lista(resultado.sin_escala).map((detalle) => String(detalle).split(':')[0]),
     },
+    { texto: t.pagos_asistentes.resultado_turnos_sin_marca, nombres: lista(resultado.turnos_sin_marca) },
   ];
 
   return (
@@ -393,6 +404,65 @@ function ResultadoGeneracion({ resultado }) {
         )
       )}
     </Alert>
+  );
+}
+
+/**
+ * Las horas de una liquidación, abiertas desde la columna de horas del listado.
+ *
+ * Se piden a la liquidación guardada, que trae el detalle tal como se escribió al generarla.
+ */
+function HorasDeLaLiquidacion({ id, onCerrar }) {
+  const modal = useModalAccesible(onCerrar);
+  const { t, locale } = useLocale();
+  const [liquidacion, setLiquidacion] = useState(null);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      setLiquidacion(await llamarApiLiquidaciones(`/${id}`));
+      setEstado('listo');
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'detalle de horas'));
+      setEstado('error');
+    }
+  }, [id, t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  return (
+    <div className="panel-modal-fondo" onClick={onCerrar}>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.pagos_asistentes.detalle_horas_titulo}</h2>
+        <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+          {liquidacion && (
+            <>
+              <dl className="panel-detalle-lista">
+                <dt>{t.pagos_asistentes.col_asistente}</dt>
+                <dd>{liquidacion.asistente?.nombre || '—'}</dd>
+                <dt>{t.pagos_asistentes.col_tramo}</dt>
+                <dd>{tramoDelPeriodo(liquidacion, locale)}</dd>
+                <dt>{t.pagos_asistentes.col_horas}</dt>
+                <dd>{formatearHoras(liquidacion.horas, locale)}</dd>
+                <dt>{t.pagos_asistentes.horas_extra}</dt>
+                <dd>{formatearHoras(liquidacion.horas_extra, locale)}</dd>
+              </dl>
+              <DetalleDeHoras detalle={liquidacion.detalle_horas} />
+            </>
+          )}
+        </EstadoLista>
+        <div className="panel-modal-acciones">
+          <Button variant="secondary" onClick={onCerrar}>
+            {t.comun.cerrar}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -418,6 +488,7 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
   const mediosDePago = useListaDeOpciones('medios_de_pago_al_asistente');
   const [pago, setPago] = useState({ fecha_pago: '', forma_pago: '', referencia_pago: '' });
   const [ocupado, setOcupado] = useState(false);
+  const [verHoras, setVerHoras] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -485,7 +556,17 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                   {traducirValor(t.pagos_asistentes, `base_${liquidacion.base_unidad}`)}
                 </dd>
                 <dt>{t.pagos_asistentes.col_horas}</dt>
-                <dd>{formatearHoras(liquidacion.horas, locale)}</dd>
+                <dd>
+                  <button
+                    type="button"
+                    className="panel-enlace"
+                    aria-expanded={verHoras}
+                    aria-label={t.pagos_asistentes.detalle_horas_ver}
+                    onClick={() => setVerHoras((antes) => !antes)}
+                  >
+                    {formatearHoras(liquidacion.horas, locale)}
+                  </button>
+                </dd>
                 <dt>{t.pagos_asistentes.col_turnos_guardia}</dt>
                 <dd>{liquidacion.turnos_guardia_contados}</dd>
                 <dt>{t.pagos_asistentes.horas_extra}</dt>
@@ -497,6 +578,8 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                   </span>
                 </dd>
               </dl>
+
+              {verHoras && <DetalleDeHoras detalle={liquidacion.detalle_horas} />}
 
               {/* Horas anotadas que no se pagaron porque el Legajo del Asistente no tiene cargado cuánto vale
                   la hora extra. Sin esta advertencia, el recibo sale más chico de lo que corresponde y

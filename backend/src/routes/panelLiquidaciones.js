@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
-import { horasEntre } from '../utils/horasDeTurnoGuardia.js';
+import { horasRealesDelTurnoGuardia } from '../utils/horasTrabajadas.js';
+import { zonaDeLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -146,20 +147,30 @@ export function vinculoVigenteEnElPeriodo(asistente, periodo) {
  *
  * Al Asistente se le pagan las horas enteras, una sola vez, atienda a uno o a cinco. El
  * reparto entre Pacientes es la otra cuenta, la de los informes de obra social, y vive en
- * `utils/horasDeTurnoGuardia.js` junto con esta.
+ * `utils/horasDeTurnoGuardia.js`.
+ *
+ * LAS HORAS SON LAS TRABAJADAS, no las programadas: salen de la llegada y el cierre que marcó el
+ * Asistente, con la regla de `utils/horasTrabajadas.js`. Las horas extra van aparte porque se
+ * pagan a otro valor. Cada turno de guardia deja además su renglón en `detalle`, que se guarda
+ * con la liquidación para que se pueda ver de dónde salió cada hora.
  */
-export function acumularTurnosGuardia(turnos_guardia) {
+export function acumularTurnosGuardia(turnos_guardia, zona) {
   const porAsistente = new Map();
   for (const g of turnos_guardia) {
     if (g.estado !== ESTADO_HECHA) continue;
-    const acumulado = porAsistente.get(g.asistente_id) || { turnos_guardia: 0, horas: 0, horasExtra: 0 };
+    const acumulado = porAsistente.get(g.asistente_id) || { turnos_guardia: 0, horas: 0, horasExtra: 0, minutos: 0, minutosExtra: 0, detalle: [], sinMarca: 0 };
+    const renglon = horasRealesDelTurnoGuardia(g, zona);
     acumulado.turnos_guardia += 1;
-    acumulado.horas += horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin);
-    // Las horas de más se anotaron en el turno de guardia cuando pasaron. Van aparte de las horas
-    // planificadas porque se pagan a otro valor, y sumarlas acá las escondería adentro del
-    // total sin que nadie pueda ver cuántas fueron.
-    acumulado.horasExtra += Number(g.horas_extra ?? 0);
+    acumulado.minutos += renglon.minutos;
+    acumulado.minutosExtra += renglon.minutos_extra;
+    acumulado.horas = acumulado.minutos / 60;
+    acumulado.horasExtra = acumulado.minutosExtra / 60;
+    if (renglon.sin_marca) acumulado.sinMarca += 1;
+    acumulado.detalle.push(renglon);
     porAsistente.set(g.asistente_id, acumulado);
+  }
+  for (const acumulado of porAsistente.values()) {
+    acumulado.detalle.sort((a, b) => a.programado_desde.localeCompare(b.programado_desde));
   }
   return porAsistente;
 }
@@ -374,18 +385,27 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   if (errorPrestadora) return responderError(res, errorPrestadora);
   if (!prestadora) return res.status(404).json({ error: 'Prestadora no encontrada' });
 
+  // Las marcas de llegada y cierre son momentos exactos, y el horario programado es de la zona
+  // horaria de la Prestadora: sin zona no hay forma de compararlos, y no se adivina.
+  let zona;
+  try {
+    zona = await zonaDeLaPrestadora(db, prestadora.id);
+  } catch (errorZona) {
+    return responderError(res, errorZona);
+  }
+
   // Se traen los turnos de guardia desde el primer día que puede tener un período que cierra en el
   // tramo. Cada período se queda después con los suyos.
   const turnos_guardia = await traerPaginado(() =>
     db
       .from('turnos_guardia')
-      .select('id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, asistente_id')
+      .select('id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, checkin_at, checkout_at, asistente_id')
       .gte('fecha', lecturaDesde)
       .lte('fecha', hasta)
       .not('asistente_id', 'is', null)
       .order('id', { ascending: true })
   );
-  const acumuladoDelTramo = acumularTurnosGuardia(turnos_guardia);
+  const acumuladoDelTramo = acumularTurnosGuardia(turnos_guardia, zona);
 
   // La relación laboral vive en su propia tabla, con permiso propio; la liquidación la recibe
   // como un dato más del Asistente.
@@ -476,6 +496,9 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     // El mismo concepto se saltea para todos los que le corresponden, así que la alerta es del
     // catálogo y no de cada persona: se dice una vez.
     sin_escala: new Set(),
+    // Quien tiene turnos de guardia cerrados sin la marca de llegada o de cierre: esas horas no
+    // se cuentan hasta que se corrijan las marcas.
+    turnos_sin_marca: [],
   };
 
   // La escala vigente no depende de la persona sino del tramo de días, y con frecuencia mensual
@@ -517,8 +540,9 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
       const turnosDelPeriodo = turnos_guardia.filter(
         (g) => g.asistente_id === asistente.id && g.fecha >= unPeriodo.desde && g.fecha <= unPeriodo.hasta
       );
-      const SIN_TRABAJO = { turnos_guardia: 0, horas: 0, horasExtra: 0 };
-      const delPeriodo = acumularTurnosGuardia(turnosDelPeriodo);
+      const SIN_TRABAJO = { turnos_guardia: 0, horas: 0, horasExtra: 0, detalle: [], sinMarca: 0 };
+      const delPeriodo = acumularTurnosGuardia(turnosDelPeriodo, zona);
+      const acumuladoDelPeriodo = delPeriodo.get(asistente.id) || SIN_TRABAJO;
 
       // Cada día se paga con el valor del Legajo que regía ese día. El período se parte en los
       // tramos en que rigió cada valor, y cada tramo lleva el trabajo hecho en sus días. Sin
@@ -528,13 +552,13 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         hasta: tramo.hasta,
         valores: tramo.fila,
         acumulado:
-          acumularTurnosGuardia(turnosDelPeriodo.filter((g) => g.fecha >= tramo.desde && g.fecha <= tramo.hasta)).get(asistente.id) ||
+          acumularTurnosGuardia(turnosDelPeriodo.filter((g) => g.fecha >= tramo.desde && g.fecha <= tramo.hasta), zona).get(asistente.id) ||
           SIN_TRABAJO,
       }));
 
       const calculada = calcularLiquidacion({
         asistente: { ...asistente, frecuencia_pago: pago.frecuencia_pago },
-        acumulado: delPeriodo.get(asistente.id) || SIN_TRABAJO,
+        acumulado: acumuladoDelPeriodo,
         tramos,
         conceptos: conceptos || [],
         escalasPorTipo: escalasDe(unPeriodo),
@@ -555,6 +579,9 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         continue;
       }
       for (const alerta of calculada.sinEscala) resultado.sin_escala.add(alerta);
+      if (acumuladoDelPeriodo.sinMarca > 0 && !resultado.turnos_sin_marca.includes(asistente.nombre)) {
+        resultado.turnos_sin_marca.push(asistente.nombre);
+      }
 
       // Rehacer un período es borrar la liquidación anterior y generar otra. Se borra recién
       // acá, con la cuenta nueva ya hecha, para no dejarlo sin nada si algo salía mal antes.
@@ -571,7 +598,12 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
       // la cabecera en la base.
       const { data: guardada, error: errorGuardar } = await db
         .from('liquidaciones_asistente')
-        .insert({ prestadora_id: prestadora.id, ...calculada.liquidacion, generada_por: req.usuarioPanel.id })
+        .insert({
+          prestadora_id: prestadora.id,
+          ...calculada.liquidacion,
+          detalle_horas: acumuladoDelPeriodo.detalle,
+          generada_por: req.usuarioPanel.id,
+        })
         .select()
         .single();
       if (errorGuardar) return responderError(res, errorGuardar);

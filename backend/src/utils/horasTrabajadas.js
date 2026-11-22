@@ -1,27 +1,31 @@
 import { finDeTurnoGuardiaEnLaZona, inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
+import { reglaDePagoDe } from './formaDePago.js';
 
 /* Las horas que de verdad trabajó un Asistente en un turno de guardia.
    ==========================================================================
 
    DE DÓNDE SALEN. De las dos marcas que deja el Asistente desde la aplicación: la llegada y el
-   cierre del turno de guardia. El horario programado sólo pone el marco.
+   cierre del turno de guardia. El horario programado pone el marco, y la regla de pago de la
+   Prestadora decide tres cosas (`reglaDePagoDe` en `formaDePago.js`, con sus valores de fábrica):
+     - Llegada antes de hora (`pagar_llegada_anticipada`). Encendida, el tiempo entre la llegada
+       y el inicio programado se paga como horas extra. De fábrica no se paga.
+     - Llegada tarde y salida antes de hora (`descontar_llegada_tarde_y_salida_anticipada`).
+       Encendida, que es la de fábrica, las horas normales son las que estuvo adentro del horario
+       programado: desde la más tardía entre el inicio programado y la llegada, hasta la más
+       temprana entre el fin programado y el cierre. Apagada, con las dos marcas se pagan como
+       horas normales las programadas enteras.
+     - Tiempo después del fin (`pagar_tiempo_despues_del_fin`). Encendida, que es la de fábrica,
+       el tiempo entre el fin programado y el cierre se paga como horas extra. Apagada, no se
+       cuenta.
+   Se cuenta al minuto, sin redondeos a favor de nadie.
 
-   LA REGLA, que es la de cualquier liquidación de sueldos con control de presencia:
-     - Las horas normales son las que estuvo adentro del horario programado: desde la más tardía
-       entre la hora programada y la llegada, hasta la más temprana entre la hora programada de
-       fin y el cierre. Quien llega tarde cobra desde que llegó; quien se va antes cobra hasta
-       que se fue.
-     - Llegar antes de hora no se paga: nadie pidió ese tiempo.
-     - Las horas extra son las que se quedó después del fin programado, hasta el cierre. Es el
-       mismo criterio de las extensiones del turno de guardia: las horas que se quedó son suyas.
-     - Se cuenta al minuto, sin redondeos a favor de nadie.
+   SIN LAS DOS MARCAS NO HAY HORAS, con cualquier regla. Un turno de guardia cerrado al que le
+   falta la llegada o el cierre no tiene de dónde contar. Inventar las horas programadas sería
+   pagar un tiempo que nadie controló: se cuenta cero y se avisa, para que la Prestadora corrija
+   las marcas y vuelva a generar la liquidación.
 
-   SIN LAS DOS MARCAS NO HAY HORAS. Un turno de guardia cerrado al que le falta la llegada o el
-   cierre no tiene de dónde contar. Inventar las horas programadas sería pagar un tiempo que nadie
-   controló: se cuenta cero y se avisa, para que la Prestadora corrija las marcas y vuelva a
-   generar la liquidación.
-
-   Sin base de datos adentro: entra el turno de guardia y la zona horaria, sale la cuenta. */
+   Sin base de datos adentro: entra el turno de guardia, la zona horaria y la regla, sale la
+   cuenta. */
 
 const MS_POR_MINUTO = 60 * 1000;
 
@@ -41,12 +45,15 @@ function momento(valor) {
  * @param {object} turno_guardia  con `fecha`, `hora_inicio`, `hora_fin`, `dias_hasta_el_fin`,
  *                                `checkin_at` y `checkout_at`
  * @param {string} zona           la zona horaria de la Prestadora
+ * @param {object} [reglaDePago]  lo que la Prestadora corrió de la regla de pago; lo que falta
+ *                                rige de fábrica
  * @returns {{ fecha: string, programado_desde: string, programado_hasta: string,
  *             llegada: string|null, cierre: string|null, minutos: number,
  *             minutos_extra: number, sin_marca: boolean }}
  */
-export function horasRealesDelTurnoGuardia(turno_guardia, zona) {
+export function horasRealesDelTurnoGuardia(turno_guardia, zona, reglaDePago) {
   if (!zona) throw new Error('horasRealesDelTurnoGuardia: falta la zona horaria de la Prestadora');
+  const regla = reglaDePagoDe(reglaDePago);
   const inicio = inicioDeTurnoGuardiaEnLaZona(turno_guardia, zona);
   const fin = finDeTurnoGuardiaEnLaZona(turno_guardia, zona);
   const llegada = momento(turno_guardia.checkin_at);
@@ -65,9 +72,21 @@ export function horasRealesDelTurnoGuardia(turno_guardia, zona) {
   };
   if (renglon.sin_marca) return renglon;
 
-  const desde = new Date(Math.max(inicio.getTime(), llegada.getTime()));
-  const hasta = new Date(Math.min(fin.getTime(), cierre.getTime()));
-  renglon.minutos = minutosEntre(desde, hasta);
-  renglon.minutos_extra = minutosEntre(new Date(Math.max(fin.getTime(), llegada.getTime())), cierre);
+  if (regla.descontar_llegada_tarde_y_salida_anticipada) {
+    const desde = new Date(Math.max(inicio.getTime(), llegada.getTime()));
+    const hasta = new Date(Math.min(fin.getTime(), cierre.getTime()));
+    renglon.minutos = minutosEntre(desde, hasta);
+  } else {
+    renglon.minutos = minutosEntre(inicio, fin);
+  }
+
+  if (regla.pagar_llegada_anticipada) {
+    // Hasta el inicio programado, o hasta el cierre si cerró antes de ese inicio.
+    const hastaElInicio = new Date(Math.min(inicio.getTime(), cierre.getTime()));
+    renglon.minutos_extra += minutosEntre(llegada, hastaElInicio);
+  }
+  if (regla.pagar_tiempo_despues_del_fin) {
+    renglon.minutos_extra += minutosEntre(new Date(Math.max(fin.getTime(), llegada.getTime())), cierre);
+  }
   return renglon;
 }

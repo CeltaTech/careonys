@@ -239,6 +239,63 @@ describe('las horas del mes', () => {
     });
   });
 
+  it('llegada antes de hora: de fábrica no se paga, y encendida se paga como horas extra', () => {
+    const turno = cerrado('08:00', '16:00', '2026-08-10T10:30:00Z', '2026-08-10T19:00:00Z');
+    const deFabrica = acumularTurnosGuardia([turno], ZONA, {}).get('a-1');
+    assert.equal(deFabrica.horas, 8);
+    assert.equal(deFabrica.horasExtra, 0);
+    const apagada = acumularTurnosGuardia([turno], ZONA, { pagar_llegada_anticipada: false }).get('a-1');
+    assert.equal(apagada.horasExtra, 0);
+    const encendida = acumularTurnosGuardia([turno], ZONA, { pagar_llegada_anticipada: true }).get('a-1');
+    assert.equal(encendida.horas, 8);
+    assert.equal(encendida.horasExtra, 0.5);
+  });
+
+  it('llegada antes de hora encendida suma a las horas extra después del fin', () => {
+    const turno = cerrado('08:00', '16:00', '2026-08-10T10:30:00Z', '2026-08-10T20:00:00Z');
+    const acumulado = acumularTurnosGuardia([turno], ZONA, { pagar_llegada_anticipada: true }).get('a-1');
+    assert.equal(acumulado.horasExtra, 1.5);
+  });
+
+  it('llegada tarde y salida antes de hora: de fábrica se descuentan', () => {
+    const turno = cerrado('08:00', '16:00', '2026-08-10T11:30:00Z', '2026-08-10T18:15:00Z');
+    assert.equal(acumularTurnosGuardia([turno], ZONA, {}).get('a-1').horas, 6.75);
+    const encendida = acumularTurnosGuardia([turno], ZONA, { descontar_llegada_tarde_y_salida_anticipada: true }).get('a-1');
+    assert.equal(encendida.horas, 6.75);
+  });
+
+  it('llegada tarde y salida antes de hora apagada: se pagan las horas programadas enteras', () => {
+    const turno = cerrado('08:00', '16:00', '2026-08-10T11:30:00Z', '2026-08-10T18:15:00Z');
+    const acumulado = acumularTurnosGuardia([turno], ZONA, { descontar_llegada_tarde_y_salida_anticipada: false }).get('a-1');
+    assert.equal(acumulado.horas, 8);
+    assert.equal(acumulado.horasExtra, 0);
+    assert.equal(acumulado.sinMarca, 0);
+  });
+
+  it('sin descontar, sin las dos marcas sigue sin contar horas', () => {
+    const turno = cerrado('08:00', '16:00', '2026-08-10T11:00:00Z', null);
+    const acumulado = acumularTurnosGuardia([turno], ZONA, { descontar_llegada_tarde_y_salida_anticipada: false }).get('a-1');
+    assert.equal(acumulado.horas, 0);
+    assert.equal(acumulado.sinMarca, 1);
+  });
+
+  it('tiempo después del fin: de fábrica se paga como horas extra, y apagado no se cuenta', () => {
+    const turno = cerrado('08:00', '16:00', '2026-08-10T11:00:00Z', '2026-08-10T20:30:00Z');
+    const deFabrica = acumularTurnosGuardia([turno], ZONA, {}).get('a-1');
+    assert.equal(deFabrica.horasExtra, 1.5);
+    const encendido = acumularTurnosGuardia([turno], ZONA, { pagar_tiempo_despues_del_fin: true }).get('a-1');
+    assert.equal(encendido.horasExtra, 1.5);
+    const apagado = acumularTurnosGuardia([turno], ZONA, { pagar_tiempo_despues_del_fin: false }).get('a-1');
+    assert.equal(apagado.horas, 8);
+    assert.equal(apagado.horasExtra, 0);
+  });
+
+  it('un valor que no es sí o no en la regla rige de fábrica', () => {
+    const turno = cerrado('08:00', '16:00', '2026-08-10T10:30:00Z', '2026-08-10T20:00:00Z');
+    const acumulado = acumularTurnosGuardia([turno], ZONA, { pagar_llegada_anticipada: 'si', pagar_tiempo_despues_del_fin: null }).get('a-1');
+    assert.equal(acumulado.horasExtra, 1);
+  });
+
   it('sin la zona horaria de la Prestadora no se cuenta nada', () => {
     assert.throws(() => acumularTurnosGuardia([cerrado('08:00', '16:00', '2026-08-10T11:00:00Z', '2026-08-10T19:00:00Z')]));
   });
@@ -602,6 +659,41 @@ describe('generar el mes', () => {
     assert.equal(escritura.cuerpo.neto, 12000);
     assert.equal(escritura.cuerpo.horas, 8);
     assert.equal(escritura.cuerpo.periodo, '2026-08-01');
+  });
+
+  it('un turno de guardia de intermediación no entra en la liquidación de la Prestadora', async () => {
+    // En la intermediación al Asistente le paga el Cliente. La base de mentira hace lo que haría
+    // la de verdad con el filtro que le llega en la dirección: si el backend no lo pidiera, el
+    // turno de intermediación pasaría y la cuenta daría dieciséis horas.
+    const directa = { id: 'g-1', canal_modalidad: 'directa', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', checkin_at: '2026-08-10T11:00:00Z', checkout_at: '2026-08-10T19:00:00Z', asistente_id: 'a-1' };
+    const intermediacion = { ...directa, id: 'g-2', canal_modalidad: 'intermediacion', fecha: '2026-08-11', checkin_at: '2026-08-11T11:00:00Z', checkout_at: '2026-08-11T19:00:00Z' };
+    prepararLaBase();
+    respuestas.set('GET /rest/v1/turnos_guardia', () => {
+      const pedido = llamadas.filter((l) => l.clave === 'GET /rest/v1/turnos_guardia').at(-1);
+      const filtro = new URL(pedido.url, 'http://interno').searchParams.get('canal_modalidad');
+      return [directa, intermediacion].filter((t) => !filtro || filtro === `eq.${t.canal_modalidad}`);
+    });
+    const { estado } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(estado, 200);
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
+    assert.equal(new URL(lectura.url, 'http://interno').searchParams.get('canal_modalidad'), 'eq.directa');
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.horas, 8);
+    assert.equal(escritura.cuerpo.bruto, 12000);
+  });
+
+  it('la regla de pago de la Prestadora decide cómo se cuentan las horas al generar el mes', async () => {
+    prepararLaBase({
+      configuracionPago: [{ regla: { pagar_tiempo_despues_del_fin: false, descontar_llegada_tarde_y_salida_anticipada: false }, frecuencia_pago: {} }],
+      turnos_guardia: [
+        { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', checkin_at: '2026-08-10T12:00:00Z', checkout_at: '2026-08-10T21:00:00Z', asistente_id: 'a-1' },
+      ],
+    });
+    const { estado } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(estado, 200);
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.horas, 8);
+    assert.equal(escritura.cuerpo.bruto, 12000);
   });
 
   it('una liquidación ya pagada no se rehace', async () => {

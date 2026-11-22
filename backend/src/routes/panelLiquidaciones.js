@@ -150,16 +150,18 @@ export function vinculoVigenteEnElPeriodo(asistente, periodo) {
  * `utils/horasDeTurnoGuardia.js`.
  *
  * LAS HORAS SON LAS TRABAJADAS, no las programadas: salen de la llegada y el cierre que marcó el
- * Asistente, con la regla de `utils/horasTrabajadas.js`. Las horas extra van aparte porque se
- * pagan a otro valor. Cada turno de guardia deja además su renglón en `detalle`, que se guarda
- * con la liquidación para que se pueda ver de dónde salió cada hora.
+ * Asistente, con la cuenta de `utils/horasTrabajadas.js` y la regla de pago de la Prestadora, que
+ * decide si se paga la llegada antes de hora, si se descuenta la llegada tarde y la salida antes
+ * de hora, y si se paga el tiempo después del fin. Las horas extra van aparte porque se pagan a
+ * otro valor. Cada turno de guardia deja además su renglón en `detalle`, que se guarda con la
+ * liquidación para que se pueda ver de dónde salió cada hora.
  */
-export function acumularTurnosGuardia(turnos_guardia, zona) {
+export function acumularTurnosGuardia(turnos_guardia, zona, reglaDePago) {
   const porAsistente = new Map();
   for (const g of turnos_guardia) {
     if (g.estado !== ESTADO_HECHA) continue;
     const acumulado = porAsistente.get(g.asistente_id) || { turnos_guardia: 0, horas: 0, horasExtra: 0, minutos: 0, minutosExtra: 0, detalle: [], sinMarca: 0 };
-    const renglon = horasRealesDelTurnoGuardia(g, zona);
+    const renglon = horasRealesDelTurnoGuardia(g, zona, reglaDePago);
     acumulado.turnos_guardia += 1;
     acumulado.minutos += renglon.minutos;
     acumulado.minutosExtra += renglon.minutos_extra;
@@ -394,18 +396,32 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     return responderError(res, errorZona);
   }
 
+  // Cómo paga esta Prestadora lo que no depende de una persona sola, incluso cómo se cuentan las
+  // horas de cada turno de guardia contra sus marcas. Que la fila no exista no es un error: es la
+  // configuración de fábrica.
+  const { data: filaPago, error: errorConfigPago } = await db
+    .from('configuracion_pago_asistentes')
+    .select('regla, frecuencia_pago')
+    .maybeSingle();
+  if (errorConfigPago) return responderError(res, errorConfigPago);
+  const reglaDePago = filaPago?.regla ?? {};
+  const frecuenciaDeLaPrestadora = filaPago?.frecuencia_pago ?? {};
+
   // Se traen los turnos de guardia desde el primer día que puede tener un período que cierra en el
-  // tramo. Cada período se queda después con los suyos.
+  // tramo. Cada período se queda después con los suyos. Sólo los de prestación directa: en la
+  // intermediación al Asistente no le paga la Prestadora sino el Cliente, y ese turno de guardia
+  // no entra en esta liquidación.
   const turnos_guardia = await traerPaginado(() =>
     db
       .from('turnos_guardia')
       .select('id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, checkin_at, checkout_at, asistente_id')
+      .eq('canal_modalidad', 'directa')
       .gte('fecha', lecturaDesde)
       .lte('fecha', hasta)
       .not('asistente_id', 'is', null)
       .order('id', { ascending: true })
   );
-  const acumuladoDelTramo = acumularTurnosGuardia(turnos_guardia, zona);
+  const acumuladoDelTramo = acumularTurnosGuardia(turnos_guardia, zona, reglaDePago);
 
   // La relación laboral vive en su propia tabla, con permiso propio; la liquidación la recibe
   // como un dato más del Asistente.
@@ -441,16 +457,6 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   );
   const pagoPorAsistente = new Map(remuneraciones.map((r) => [r.asistente_id, r]));
   const filasDelLegajo = filasDelLegajoPorAsistente(remuneraciones, anteriores);
-
-  // Cómo paga esta Prestadora lo que no depende de una persona sola. Que la fila no exista no
-  // es un error: es la configuración de fábrica.
-  const { data: filaPago, error: errorConfigPago } = await db
-    .from('configuracion_pago_asistentes')
-    .select('regla, frecuencia_pago')
-    .maybeSingle();
-  if (errorConfigPago) return responderError(res, errorConfigPago);
-  const reglaDePago = filaPago?.regla ?? {};
-  const frecuenciaDeLaPrestadora = filaPago?.frecuencia_pago ?? {};
 
   const { data: conceptos, error: errorConceptos } = await db
     .from('conceptos_liquidacion')
@@ -541,7 +547,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         (g) => g.asistente_id === asistente.id && g.fecha >= unPeriodo.desde && g.fecha <= unPeriodo.hasta
       );
       const SIN_TRABAJO = { turnos_guardia: 0, horas: 0, horasExtra: 0, detalle: [], sinMarca: 0 };
-      const delPeriodo = acumularTurnosGuardia(turnosDelPeriodo, zona);
+      const delPeriodo = acumularTurnosGuardia(turnosDelPeriodo, zona, reglaDePago);
       const acumuladoDelPeriodo = delPeriodo.get(asistente.id) || SIN_TRABAJO;
 
       // Cada día se paga con el valor del Legajo que regía ese día. El período se parte en los
@@ -552,7 +558,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         hasta: tramo.hasta,
         valores: tramo.fila,
         acumulado:
-          acumularTurnosGuardia(turnosDelPeriodo.filter((g) => g.fecha >= tramo.desde && g.fecha <= tramo.hasta), zona).get(asistente.id) ||
+          acumularTurnosGuardia(turnosDelPeriodo.filter((g) => g.fecha >= tramo.desde && g.fecha <= tramo.hasta), zona, reglaDePago).get(asistente.id) ||
           SIN_TRABAJO,
       }));
 

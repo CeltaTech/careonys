@@ -42,6 +42,17 @@ import '../../styles/molde-paginas.css';
    que se le cobra al Cliente —qué índice, cada cuántos meses, solo o con revisión previa—, con los
    mismos casilleros. Se guarda en la misma regla y en el mismo guardado, y cómo se arma vive en
    `lib/configuracionDePagoAsistentes.js`. */
+
+/* Las opciones de sí o no de la regla de pago, en el orden en que se muestran: el prorrateo del
+   monto fijo y las tres que dicen cómo se cuentan las horas de un turno de guardia contra las
+   marcas del Asistente. Qué hace cada una está en `lib/formaDePago.js`. */
+const OPCIONES_DE_LA_REGLA = [
+  { clave: 'prorratear_monto_fijo', etiqueta: 'pago_asistentes_prorratear' },
+  { clave: 'pagar_llegada_anticipada', etiqueta: 'pago_asistentes_pagar_llegada_anticipada' },
+  { clave: 'descontar_llegada_tarde_y_salida_anticipada', etiqueta: 'pago_asistentes_descontar_llegada_tarde' },
+  { clave: 'pagar_tiempo_despues_del_fin', etiqueta: 'pago_asistentes_pagar_tiempo_despues_del_fin' },
+];
+
 export function PagoAsistentesTab() {
   const { t } = useLocale();
   const [regla, setRegla] = useState(null);
@@ -147,15 +158,17 @@ export function PagoAsistentesTab() {
         <EstadoLista estado={estado} error={error} recargar={recargar}>
           {regla && frecuencia && (
             <div className="molde-formgrid">
-              <div className="molde-ancho">
-                <FormField
-                  label={t.configuracion.pago_asistentes_prorratear}
-                  name="prorratear_monto_fijo"
-                  type="checkbox"
-                  checked={regla.prorratear_monto_fijo}
-                  onChange={(e) => cambiar('prorratear_monto_fijo', e.target.checked)}
-                />
-              </div>
+              {OPCIONES_DE_LA_REGLA.map(({ clave, etiqueta }) => (
+                <div className="molde-ancho" key={clave}>
+                  <FormField
+                    label={t.configuracion[etiqueta]}
+                    name={clave}
+                    type="checkbox"
+                    checked={regla[clave]}
+                    onChange={(e) => cambiar(clave, e.target.checked)}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </EstadoLista>

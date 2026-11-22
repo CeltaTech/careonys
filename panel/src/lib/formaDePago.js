@@ -10,10 +10,10 @@
 // cosa, se arregla con cada persona y no cambia ni un centavo de esta cuenta. Acá está sólo
 // la medición.
 //
-// DE DÓNDE SALEN LAS HORAS EXTRA, Y DE DÓNDE NO. Salen de lo que se anotó en el turno de guardia
-// cuando pasó. NO salen de restarle a la marca de salida la hora de fin planificada: irse
-// media hora tarde porque el relevo se demoró no es una hora extra autorizada, y calcularlas
-// así convertiría cualquier demora en plata sin que nadie lo haya decidido.
+// DE DÓNDE SALEN LAS HORAS EXTRA. De las marcas de llegada y de cierre que dejó el Asistente,
+// comparadas con el horario programado, y según lo que decidió cada Prestadora en su regla de
+// pago: si el tiempo después del fin programado se paga como horas extra, y si el tiempo antes
+// del inicio programado también. La cuenta vive en `backend/src/utils/horasTrabajadas.js`.
 //
 // Y TAMPOCO HAY JORNADA NORMAL DE OCHO HORAS. Existen guardias de veinticuatro, cuarenta y
 // ocho y setenta y dos horas cubiertas por una sola persona. Un tope de jornada convertiría
@@ -49,13 +49,27 @@ export const DIAS_DE_UNA_SEMANA = 7;
  * Prorratear quiere decir que a quien cobra un monto fijo, el mes en que entra o se va se le
  * paga la parte de los días que estuvo. Viene puesto porque es lo corriente en una
  * liquidación, y se puede apagar.
+ *
+ * Las otras tres dicen cómo se cuentan las horas de un turno de guardia contra sus marcas:
+ *   - pagar_llegada_anticipada: el tiempo entre la llegada y el inicio programado, cuando llega
+ *     antes, se paga como horas extra. De fábrica no se paga: nadie pidió ese tiempo.
+ *   - descontar_llegada_tarde_y_salida_anticipada: llegar tarde o irse antes descuenta ese
+ *     tiempo. Apagada, con las dos marcas se pagan como horas normales las programadas enteras.
+ *   - pagar_tiempo_despues_del_fin: el tiempo entre el fin programado y el cierre se paga como
+ *     horas extra. Apagada, no se cuenta.
  */
 export const REGLA_DE_PAGO = {
   prorratear_monto_fijo: true,
+  pagar_llegada_anticipada: false,
+  descontar_llegada_tarde_y_salida_anticipada: true,
+  pagar_tiempo_despues_del_fin: true,
 };
 
 export const REGLA_DE_PAGO_QUE_SE_PUEDE_TOCAR = {
   prorratear_monto_fijo: { tipo: 'booleano' },
+  pagar_llegada_anticipada: { tipo: 'booleano' },
+  descontar_llegada_tarde_y_salida_anticipada: { tipo: 'booleano' },
+  pagar_tiempo_despues_del_fin: { tipo: 'booleano' },
 };
 
 /** La regla que rige, que es la de fábrica con lo que esta Prestadora haya corrido encima. */

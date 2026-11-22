@@ -22,6 +22,11 @@ import { strict as assert } from 'node:assert';
 import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { diaEnLaZona } from '../../utils/relojDeLaPrestadora.js';
+
+// «Hoy» se cuenta en la zona de la Prestadora, como lo cuenta el sistema: en hora universal, a la
+// noche de Argentina ya es el día siguiente y la prueba fallaría sin que el sistema esté mal.
+const ZONA_DE_LA_PRESTADORA = 'America/Argentina/Buenos_Aires';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 // ---------------------------------------------------------------------------------------
@@ -165,7 +170,7 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: ZONA_DE_LA_PRESTADORA }]);
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => true);
   // De fábrica la cobranza la sigue este sistema, que es lo que hace la mayoría. Las pruebas del
   // caso conectado pisan esta respuesta.
@@ -1411,7 +1416,7 @@ describe('generar las facturas de un período', () => {
     assert.deepEqual(cuerpo, contadores({ generadas: 1 }));
 
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = diaEnLaZona(new Date(), ZONA_DE_LA_PRESTADORA);
     const esperado = new Date(Date.parse(`${hoy}T00:00:00Z`) + 10 * 86400000).toISOString().slice(0, 10);
     assert.equal(factura.cuerpo.fecha_emision, hoy);
     assert.equal(factura.cuerpo.fecha_vencimiento, esperado);
@@ -1423,7 +1428,7 @@ describe('generar las facturas de un período', () => {
     await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
 
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = diaEnLaZona(new Date(), ZONA_DE_LA_PRESTADORA);
     const esperado = new Date(Date.parse(`${hoy}T00:00:00Z`) + 30 * 86400000).toISOString().slice(0, 10);
     assert.equal(factura.cuerpo.fecha_vencimiento, esperado);
   });
@@ -1444,7 +1449,7 @@ describe('generar las facturas de un período', () => {
     assert.equal(cuerpo.generadas, 1);
 
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = diaEnLaZona(new Date(), ZONA_DE_LA_PRESTADORA);
     const esperado = new Date(Date.parse(`${hoy}T00:00:00Z`) + 10 * 86400000).toISOString().slice(0, 10);
     assert.equal(factura.cuerpo.fecha_vencimiento, esperado);
   });
@@ -1550,7 +1555,7 @@ describe('generar las facturas de un período', () => {
 
   it('el período que todavía no terminó no se factura: se cuenta aparte', async () => {
     baseConUnCliente({ prestaciones: [unaPrestacion()] });
-    const hoy = new Date().toISOString().slice(0, 7);
+    const hoy = diaEnLaZona(new Date(), ZONA_DE_LA_PRESTADORA).slice(0, 7);
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: hoy, fecha_vencimiento: '2099-12-31' });
     assert.deepEqual(cuerpo, contadores({ sinTerminar: 1 }));

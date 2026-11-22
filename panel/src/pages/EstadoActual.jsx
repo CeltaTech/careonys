@@ -35,6 +35,7 @@ import './EstadoActual.css';
 import { AlarmaDeAjustesPorIndice } from '../components/AlarmaDeAjustesPorIndice';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 import { informacionDeSalud } from '../lib/informacionDeSalud';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 
 /* La Situación operativa: la página de entrada del Panel.
    ==========================================================================
@@ -564,7 +565,6 @@ export function EstadoActual() {
                   <th>{tx.col_contratante}</th>
                   <th>{tx.col_prestaciones}</th>
                   <th>{tx.col_estado}</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -577,7 +577,7 @@ export function EstadoActual() {
                   const nombres = idsPaciente.map((id) => datos.nombresPaciente[id]).filter(Boolean);
                   const contacto = clienteDelServicio(s, datos.contactos).contacto;
                   return (
-                    <tr key={s.id}>
+                    <tr key={s.id} {...propsDeFilaQueAbre(() => navigate(`/servicios/${s.id}`))}>
                       <td>
                         <b>{s.etiqueta || '—'}</b>
                       </td>
@@ -588,11 +588,6 @@ export function EstadoActual() {
                         <span className={claseBadge(s.estado)}>
                           {traducirValor(t.servicios, `estado_${s.estado}`)}
                         </span>
-                      </td>
-                      <td>
-                        <Button variant="secondary" type="button" onClick={() => navigate(`/servicios/${s.id}`)}>
-                          {tx.ver}
-                        </Button>
                       </td>
                     </tr>
                   );

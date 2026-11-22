@@ -17,6 +17,7 @@ import { useModalidades } from '../context/ModalidadesContext';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Cabecera } from '../components/ui/Cabecera';
 import { mensajeDeError } from '../lib/errores';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 import './listadosMaqueta.css';
 import { conSusFichas, fichaCon } from '../lib/fichaDelPaciente';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
@@ -175,15 +176,7 @@ export function Clientes() {
                   const deMatch = accesosPorCliente.get(fam.id) ?? [];
                   const estadoFam = ESTADOS[estadoDelCliente(propios, deMatch)];
                   return (
-                    <tr
-                      key={fam.id}
-                      className="listado-fila-abre"
-                      tabIndex={0}
-                      onClick={() => abrirFichaDelCliente(fam)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') abrirFichaDelCliente(fam);
-                      }}
-                    >
+                    <tr key={fam.id} {...propsDeFilaQueAbre(() => abrirFichaDelCliente(fam))}>
                       <td><strong>{fam.personas?.nombre_visible || '—'}</strong></td>
                       <td>{textoDePacientes(nombres, t.turnos_guardia.pacientes_y_mas)}</td>
                       {verServicios && <td>{propios.length}</td>}

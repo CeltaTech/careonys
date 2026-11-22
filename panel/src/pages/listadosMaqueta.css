@@ -42,12 +42,3 @@
   background: var(--tono-violeta-fondo);
   color: var(--tono-violeta-texto);
 }
-
-.listado-fila-abre {
-  cursor: pointer;
-}
-
-.listado-fila-abre:focus-visible {
-  outline: 2px solid var(--azul-medio);
-  outline-offset: -2px;
-}

@@ -18,6 +18,7 @@ import { nombreDeLaAccion, queCambio } from '../lib/registroDeActividad';
 import { AusenciasDelCoordinador } from './AusenciasDelCoordinador';
 import { TurnosGuardiaQueTraban } from '../components/cuenta/TurnosGuardiaQueTraban';
 import '../styles/molde-paginas.css';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -419,18 +420,14 @@ function CuentasDesactivadas({ filtro, aviso, onReactivada }) {
                 <th>{t.usuarios_panel.col_nombre}</th>
                 <th>{t.usuarios_panel.col_rol}</th>
                 <th>{t.usuarios_panel.col_desactivada_en}</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
               {cuentas.map((c) => (
-                <tr key={c.id}>
+                <tr key={c.id} {...propsDeFilaQueAbre(() => setAbierta(c))}>
                   <td><b>{c.nombre}</b></td>
                   <td><span className="badge badge-neutro">{t.usuarios_panel[`rol_${c.rol}`]}</span></td>
                   <td className="panel-mini">{new Date(c.desactivada_en).toLocaleString(locale)}</td>
-                  <td>
-                    <button type="button" className="panel-enlace" onClick={() => setAbierta(c)}>{t.usuarios_panel.ver}</button>
-                  </td>
                 </tr>
               ))}
             </tbody>

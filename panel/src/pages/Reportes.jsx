@@ -18,6 +18,7 @@ import '../styles/molde-paginas.css';
 import './tarjetas.css';
 import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
 import { informacionDeSalud } from '../lib/informacionDeSalud';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 
 // Tope de filas por consulta. Con el rango de fechas por defecto (una semana) no se alcanza
 // nunca; existe para que un rango muy ancho no traiga miles de filas de golpe.
@@ -137,12 +138,11 @@ export function Reportes() {
                     <th>{t.reportes.col_asistente}</th>
                     <th>{t.reportes.col_animo}</th>
                     <th>{t.reportes.col_senales}</th>
-                    <th>{t.reportes.col_detalle}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filasFiltradas.map((r) => (
-                    <tr key={r.id}>
+                    <tr key={r.id} {...propsDeFilaQueAbre(() => setAbierto(abierto === r.id ? null : r.id))}>
                       <td>{r.fecha}</td>
                       <td>
                         <b>{r.paciente_nombre}</b>
@@ -154,15 +154,6 @@ export function Reportes() {
                         {r.fuera_de_rango && <span className="badge badge-atencion">{t.reportes.senal_fuera_rango}</span>}
                         {!r.confirmado_asistente && <span className="badge">{t.reportes.senal_sin_confirmar}</span>}
                         {!r.incidentes && !r.fuera_de_rango && r.confirmado_asistente && t.reportes.sin_novedades}
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="panel-enlace"
-                          onClick={() => setAbierto(abierto === r.id ? null : r.id)}
-                        >
-                          {abierto === r.id ? t.reportes.ocultar_detalle : t.reportes.ver_detalle}
-                        </button>
                       </td>
                     </tr>
                   ))}

@@ -29,6 +29,7 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { AvisosBajaConDeuda } from './AvisosBajaConDeuda';
 import './tarjetas.css';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 
 /* Los saldos de los Clientes: lo facturado, lo que entró y lo que falta.
    ==========================================================================
@@ -504,12 +505,11 @@ export function Facturacion() {
               <th>{t.facturacion.col_vencimiento}</th>
               <th>{t.facturacion.col_origen}</th>
               <th>{t.facturacion.col_actualizado}</th>
-              <th></th>
             </tr>
           </thead>
           <tbody>
             {saldos.map((s) => (
-              <tr key={s.factura_id}>
+              <tr key={s.factura_id} {...propsDeFilaQueAbre(() => setDetalleId(s.factura_id))}>
                 <td>{s.cliente_nombre || '—'}</td>
                 <td>{formatearImporte(s.monto_a_cobrar, s.moneda, locale)}</td>
                 <td>{textoDeComprobante(s)}</td>
@@ -522,11 +522,6 @@ export function Facturacion() {
                 <td>{s.fecha_vencimiento || '—'}</td>
                 <td>{textoDeOrigenes(s.origenes, t)}</td>
                 <td>{soloLaFecha(s.actualizado_en)}</td>
-                <td>
-                  <button type="button" className="panel-enlace" onClick={() => setDetalleId(s.factura_id)}>
-                    {t.comun.ver_detalle}
-                  </button>
-                </td>
               </tr>
             ))}
           </tbody>

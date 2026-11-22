@@ -20,6 +20,7 @@ import { usePermisos } from '../context/PermisosContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { NuevoServicioModal } from './servicios/NuevoServicioModal';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 
 // De las prestaciones salen qué incluye el Servicio y a quién cuida; de los turnos de guardia, a quién cuida
 // también y en qué modalidades trabaja, porque la modalidad la lleva cada turno de guardia.
@@ -217,12 +218,11 @@ export function Servicios() {
                   <th>{t.servicios.col_prestaciones}</th>
                   <th>{t.servicios.col_modalidades}</th>
                   <th>{t.servicios.filtro_estado}</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
                 {renglonesFiltrados.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} {...propsDeFilaQueAbre(() => navigate(`/servicios/${r.id}`))}>
                     <td><b>{r.servicio}</b></td>
                     <td>{r.pacientes.length ? r.pacientes.map((p, i) => <div key={i}>{p}</div>) : '—'}</td>
                     <td>{r.cliente}</td>
@@ -242,11 +242,6 @@ export function Servicios() {
                       <span className={claseBadge(r.estado)}>
                         {traducirValor(t.servicios, `estado_${r.estado}`)}
                       </span>
-                    </td>
-                    <td>
-                      <Button variant="secondary" onClick={() => navigate(`/servicios/${r.id}`)}>
-                        {t.servicios.abrir}
-                      </Button>
                     </td>
                   </tr>
                 ))}

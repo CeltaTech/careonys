@@ -14,6 +14,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { ContenidoDetalle } from './ContenidoDetalle';
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
+import { propsDeFilaQueAbre } from '../../lib/filaQueAbre';
 
 /* Contenidos.
    ==========================================================================
@@ -126,12 +127,11 @@ export function Contenidos() {
                 <th>{t.contenidos.col_destinatarios}</th>
                 <th>{t.contenidos.col_enlace}</th>
                 <th>{t.contenidos.col_publicado}</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
               {contenidos.map((contenido) => (
-                <tr key={contenido.id}>
+                <tr key={contenido.id} {...propsDeFilaQueAbre(() => setSeleccionado(contenido))}>
                   <td>{contenido.orden}</td>
                   <td>
                     <b>{contenido.titulo}</b>
@@ -150,11 +150,6 @@ export function Contenidos() {
                     <span className={claseBadge(contenido.publicado ? 'activo' : 'inactivo')}>
                       {contenido.publicado ? t.contenidos.publicado_si : t.contenidos.publicado_no}
                     </span>
-                  </td>
-                  <td>
-                    <button type="button" className="panel-enlace" onClick={() => setSeleccionado(contenido)}>
-                      {puedeEscribir ? t.comun.editar : t.comun.ver_detalle}
-                    </button>
                   </td>
                 </tr>
               ))}

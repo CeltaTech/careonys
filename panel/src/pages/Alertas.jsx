@@ -13,6 +13,7 @@ import '../styles/molde-paginas.css';
 import './tarjetas.css';
 import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
 import { informacionDeSalud } from '../lib/informacionDeSalud';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 
 // Alertas de la IA Nivel 2 (backend/src/utils/revisarAlertasIA.js): la IA lee los últimos
 // reportes de cada Paciente y, si detecta un patrón preocupante, deja una alerta con dos
@@ -149,12 +150,11 @@ export function Alertas() {
                     <th>{t.alertas.col_nivel}</th>
                     <th>{t.alertas.col_descripcion}</th>
                     <th>{t.alertas.col_estado}</th>
-                    <th>{t.alertas.col_detalle}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filasFiltradas.map((a) => (
-                    <tr key={a.id}>
+                    <tr key={a.id} {...propsDeFilaQueAbre(() => setAbierta(abierta === a.id ? null : a.id))}>
                       <td>{a.created_at?.slice(0, 10)}</td>
                       <td>
                         <b>{a.paciente_nombre}</b>
@@ -169,15 +169,6 @@ export function Alertas() {
                         <span className={claseBadge(sigueSinResolver(a) ? 'pendiente' : 'atendida')}>
                           {sigueSinResolver(a) ? t.alertas.estado_pendiente : t.alertas.estado_resuelta}
                         </span>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="panel-enlace"
-                          onClick={() => setAbierta(abierta === a.id ? null : a.id)}
-                        >
-                          {abierta === a.id ? t.alertas.ocultar_detalle : t.alertas.ver_detalle}
-                        </button>
                       </td>
                     </tr>
                   ))}

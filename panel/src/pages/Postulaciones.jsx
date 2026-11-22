@@ -19,6 +19,7 @@ import { claseBadge } from '../lib/tonos';
 import '../styles/molde-paginas.css';
 import './tarjetas.css';
 import './postulaciones.css';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 
 const ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado'];
 const TIPOS_DE_SERVICIO = ['con_retiro', 'sin_retiro'];
@@ -223,12 +224,11 @@ export function Postulaciones() {
                   <th>{t.postulaciones.col_urgencias}</th>
                   <th>{t.postulaciones.como_conocio}</th>
                   <th>{t.postulaciones.col_estado}</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {filasFiltradas.map((p) => (
-                  <tr key={p.id}>
+                  <tr key={p.id} {...propsDeFilaQueAbre(() => { setSeleccionada(p); window.scrollTo(0, 0); })}>
                     <td>
                       <b>{p.nombre}</b>
                     </td>
@@ -246,18 +246,6 @@ export function Postulaciones() {
                     <td>{p.como_conocio || '—'}</td>
                     <td>
                       <span className={claseBadge(p.estado)}>{t.postulaciones[`estado_${p.estado}`]}</span>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="panel-enlace"
-                        onClick={() => {
-                          setSeleccionada(p);
-                          window.scrollTo(0, 0);
-                        }}
-                      >
-                        {t.comun.ver_detalle}
-                      </button>
                     </td>
                   </tr>
                 ))}

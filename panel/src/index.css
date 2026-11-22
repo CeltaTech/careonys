@@ -2830,6 +2830,21 @@ button.panel-kpi-card[aria-pressed='true'] {
   cursor: pointer;
 }
 
+/* El renglón de una lista que abre su detalle: el nombre se marca como enlace al pasar el puntero. */
+.listado-fila-abre {
+  cursor: pointer;
+}
+
+.listado-fila-abre:hover :is(b, strong) {
+  color: var(--azul-medio);
+  text-decoration: underline;
+}
+
+.listado-fila-abre:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: -2px;
+}
+
 .panel-mini {
   font-size: 11px;
   color: var(--texto-secundario);

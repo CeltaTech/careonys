@@ -16,6 +16,7 @@ import { PromocionDeLista } from './PromocionDeLista';
 import { admitePromocion, conSusPromociones, esPromocion, promocionRige } from '../lib/promocionDeLista';
 import { fechaVisible } from '../lib/fechaVisible';
 import { hoyISO } from '../lib/horarios';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 import '../styles/molde-paginas.css';
 
 export function ListaPrecios() {
@@ -90,7 +91,7 @@ export function ListaPrecios() {
             </thead>
             <tbody>
               {filasFiltradas.map((p) => (
-                <tr key={p.id}>
+                <tr key={p.id} {...propsDeFilaQueAbre(() => setSeleccionado(p))}>
                   <td>
                     {esPromocion(p) ? (
                       <span className={claseBadge(promocionRige(p, hoyISO()) ? 'vigente' : 'programada')}>
@@ -112,16 +113,10 @@ export function ListaPrecios() {
                     </span>
                   </td>
                   <td>
-                    <button type="button" className="panel-enlace" onClick={() => setSeleccionado(p)}>
-                      {esAdmin && !esPromocion(p) ? t.comun.editar : t.comun.ver_detalle}
-                    </button>
                     {esAdmin && admitePromocion(p) && (
-                      <>
-                        {' '}
-                        <button type="button" className="panel-enlace" onClick={() => setConPromocion(p)}>
-                          {t.lista_precios.cargar_promocion}
-                        </button>
-                      </>
+                      <button type="button" className="panel-enlace" onClick={() => setConPromocion(p)}>
+                        {t.lista_precios.cargar_promocion}
+                      </button>
                     )}
                   </td>
                 </tr>

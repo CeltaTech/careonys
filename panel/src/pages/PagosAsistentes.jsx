@@ -31,6 +31,7 @@ import { FormField } from '../components/ui/FormField';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import '../styles/molde-paginas.css';
 import './tarjetas.css';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 
 /* Lo que la Prestadora le paga al Asistente, guardado.
    ==========================================================================
@@ -313,12 +314,11 @@ function LiquidacionesTab({ esAdmin }) {
               <th>{t.pagos_asistentes.col_neto}</th>
               <th>{t.pagos_asistentes.col_moneda}</th>
               <th>{t.pagos_asistentes.col_estado}</th>
-              <th></th>
             </tr>
           </thead>
           <tbody>
             {filtradas.map((l) => (
-              <tr key={l.id}>
+              <tr key={l.id} {...propsDeFilaQueAbre(() => setAbiertaId(l.id))}>
                 <td>
                   <b>{l.asistente_nombre || '—'}</b>
                 </td>
@@ -333,11 +333,6 @@ function LiquidacionesTab({ esAdmin }) {
                 <td>{l.moneda}</td>
                 <td>
                   <span className={claseBadge(l.estado)}>{traducirValor(t.pagos_asistentes, `estado_${l.estado}`)}</span>
-                </td>
-                <td>
-                  <button type="button" className="panel-enlace" onClick={() => setAbiertaId(l.id)}>
-                    {t.comun.ver_detalle}
-                  </button>
                 </td>
               </tr>
             ))}

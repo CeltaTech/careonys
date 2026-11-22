@@ -21,6 +21,7 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { NuevoAsistenteModal } from './asistentes/NuevoAsistenteModal';
 import { PasarAlCatalogoModal } from './asistentes/PasarAlCatalogoModal';
 import { VerCuentaDesactivada } from './UsuariosPanel';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 import './listadosMaqueta.css';
 
 const ESTADOS = ['activo', 'inactivo', 'cesado'];
@@ -235,14 +236,17 @@ export function Asistentes() {
                   <th>{tl.col_asistente}</th>
                   <th>{t.asistentes.col_estado}</th>
                   <th>{tl.col_modalidad_utilizada}</th>
-                  <th><span className="solo-lectores-pantalla">{t.comun.detalle}</span></th>
                 </tr>
               </thead>
               <tbody>
                 {filasFiltradas.map((a) => {
                   const modalidades = esAdmin ? modalidadesDelAsistente(a) : [];
+                  // Una cuenta desactivada sin usuario no tiene nada que mostrar: su renglón no abre.
+                  const abrir = desactivados
+                    ? a.usuario_id ? () => setAbierto(a) : null
+                    : () => navigate(`/asistentes/${a.id}`);
                   return (
-                    <tr key={a.id}>
+                    <tr key={a.id} {...(abrir ? propsDeFilaQueAbre(abrir) : {})}>
                       <td>{a.numero_legajo}</td>
                       <td>
                         <strong>{a.nombre}</strong>
@@ -266,17 +270,6 @@ export function Asistentes() {
                           </span>
                         ) : (
                           '—'
-                        )}
-                      </td>
-                      <td>
-                        {desactivados ? (
-                          <Button variant="secondary" onClick={() => setAbierto(a)} disabled={!a.usuario_id}>
-                            {t.usuarios_panel.ver}
-                          </Button>
-                        ) : (
-                          <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>
-                            {tl.ver_legajo}
-                          </Button>
                         )}
                       </td>
                     </tr>

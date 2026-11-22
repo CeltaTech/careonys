@@ -12,6 +12,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { FormaDeCobroDetalle } from './FormaDeCobroDetalle';
 import '../../styles/molde-paginas.css';
+import { propsDeFilaQueAbre } from '../../lib/filaQueAbre';
 
 /* Cómo cobra la Prestadora.
    ==========================================================================
@@ -98,12 +99,11 @@ export function FormasDeCobro() {
                   <th>{t.intermediacion.forma_contactos_incluidos}</th>
                   <th>{t.intermediacion.forma_renueva_sola}</th>
                   <th>{t.intermediacion.forma_ofrecida}</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {formas.map((forma) => (
-                  <tr key={forma.id}>
+                  <tr key={forma.id} {...propsDeFilaQueAbre(() => setSeleccionada(forma))}>
                     <td>
                       <b>{forma.nombre}</b>
                     </td>
@@ -117,11 +117,6 @@ export function FormasDeCobro() {
                       <span className={claseBadge(forma.ofrecida ? 'activo' : 'inactivo')}>
                         {forma.ofrecida ? t.intermediacion.forma_ofrecida_si : t.intermediacion.forma_ofrecida_no}
                       </span>
-                    </td>
-                    <td>
-                      <button type="button" className="panel-enlace" onClick={() => setSeleccionada(forma)}>
-                        {esAdmin ? t.comun.editar : t.comun.ver_detalle}
-                      </button>
                     </td>
                   </tr>
                 ))}

@@ -14,6 +14,7 @@ import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
 import { LaTomoYo } from '../components/continuidad/LaTomoYo';
 import { useEmergenciasSinAtender } from '../context/EmergenciasSinAtenderContext';
 import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 import './tarjetas.css';
 import './seguimientoDeTurnosGuardia.css';
 
@@ -102,7 +103,7 @@ export function EmergenciasEnTurnoGuardia() {
           </thead>
           <tbody>
             {emergencias.map((emergencia) => (
-              <tr key={emergencia.id}>
+              <tr key={emergencia.id} {...propsDeFilaQueAbre(() => setSeleccionada(emergencia))}>
                 <td>
                   <b>{emergencia.reportado_at?.slice(0, 10)}</b>
                   <div className="panel-mini">{horaDelMomento(emergencia.reportado_at, locale)}</div>
@@ -122,9 +123,6 @@ export function EmergenciasEnTurnoGuardia() {
                 </td>
                 <td>
                   <div className="seguimiento-celda-acciones">
-                    <Button variant="secondary" onClick={() => setSeleccionada(emergencia)}>
-                      {t.comun.ver_detalle}
-                    </Button>
                     {!emergencia.atendida_at && (
                       <LaTomoYo tipo={TIPOS_DE_ALARMA.EMERGENCIA} referenciaId={emergencia.id} {...tomas} />
                     )}

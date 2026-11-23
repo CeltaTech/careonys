@@ -344,6 +344,27 @@ frases porque se van con el módulo: en el Panel, forma de cobro con nombre repe
 límite de pago de los saldos, falta el motivo para anular un cobro, falta el importe o el tipo de
 comprobante y faltan datos de la corrección.
 
+**165.** Sacar el pago a los Asistentes a un software aparte, que trabaja por API y se construye
+sobre el código que ya existe en Careonys. Careonys tiene que seguir funcionando sin ese software
+conectado: cada Prestadora elige, igual que con la facturación.
+
+- **Queda en Careonys:** los turnos de guardia con las horas trabajadas; el valor que el Asistente
+  pretende en su Legajo y el valor acordado en cada Servicio, con el ajuste del valor del Legajo
+  por índice; los índices de actualización, que también ajustan el precio al Cliente; y la factura
+  al Cliente.
+- **Se va al software aparte:** las escalas legales; los conceptos que suman o restan; la regla y
+  la frecuencia de pago; el cálculo de la liquidación, las liquidaciones y el registro de cada
+  pago; y los datos bancarios del Asistente, que él sigue cargando desde su aplicación.
+- **Careonys le entrega** las horas trabajadas de cada Asistente con el valor que corresponde a
+  cada una. **El software le informa** qué períodos ya se le pagaron a cada Asistente.
+- **Primero se separa** el cálculo de la factura al Cliente, que hoy comparte el programa con el
+  cálculo de la liquidación.
+- **Mientras tanto, nada nuevo de liquidación, escalas legales ni conceptos se construye adentro de
+  Careonys.** La parte de liquidación del valor del Legajo por mes, la categoría de convenio y la
+  validación de las escalas legales se resuelven en el software aparte.
+- **Usted** — ¿El software aparte se vende solo o sólo lo usan otros productos? Decide si es un
+  Octo o un módulo.
+
 ### Decisiones que no traban nada empezado
 
 **107. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.

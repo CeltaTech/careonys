@@ -628,14 +628,6 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                     <td>{formatearImporte(liquidacion.bruto, liquidacion.moneda, locale)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={3}>{t.pagos_asistentes.total_sumas}</td>
-                    <td>{formatearImporte(liquidacion.total_sumas, liquidacion.moneda, locale)}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={3}>{t.pagos_asistentes.total_restas}</td>
-                    <td>{formatearImporte(conSigno(liquidacion.total_restas, 'resta'), liquidacion.moneda, locale)}</td>
-                  </tr>
-                  <tr>
                     <td colSpan={3}>
                       <strong>{t.pagos_asistentes.total_neto}</strong>
                     </td>

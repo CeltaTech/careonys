@@ -1623,7 +1623,8 @@ le pide al Asistente un consentimiento propio para eso? Va con las preguntas del
 **165. Usted** — ¿Se saca el pago a los Asistentes a un software aparte? No está decidido. Sería un
 software que trabaja por API, construido sobre el código que ya existe en Careonys. **Nace
 preparado para venderse solo**, se haga o no esta mudanza, y lo más probable es que termine siendo
-un software de liquidación de sueldos y jornales. Careonys tiene que seguir funcionando sin ese
+un software de liquidación de sueldos y jornales. **Lo construye CeltaTech y es de CeltaTech**: no
+es un software de terceros como el de facturación. Careonys tiene que seguir funcionando sin ese
 software conectado: cada Prestadora elige, igual que con la facturación. **Si se hace, el reparto
 ya está fijado:**
 

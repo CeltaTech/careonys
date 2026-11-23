@@ -132,6 +132,17 @@ function etiquetaDelRenglon(item, liquidacion, textos, locale) {
  * las dos aplicaciones (regla 12), y esto lo usa una sola pantalla: agregarlo allá obligaría a
  * mover la misma función a tres lugares para que la use uno.
  */
+/**
+ * Un importe que resta se muestra con signo menos: no hace falta una columna que lo diga.
+ * El cero queda sin signo, porque "-$ 0,00" se lee como una deuda que no existe.
+ */
+export function conSigno(monto, signo) {
+  if (monto === null || monto === undefined || monto === '') return monto;
+  const numero = Number(monto);
+  if (signo !== 'resta' || !Number.isFinite(numero) || numero === 0) return monto;
+  return -Math.abs(numero);
+}
+
 function formatearValor(valor, unidad, moneda, locale) {
   if (valor === null || valor === undefined || valor === '') return '—';
   if (unidad === 'porcentaje') {
@@ -594,7 +605,6 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                     <th>{t.pagos_asistentes.col_concepto}</th>
                     <th>{t.pagos_asistentes.col_unidad}</th>
                     <th>{t.pagos_asistentes.col_valor_aplicado}</th>
-                    <th>{t.pagos_asistentes.col_signo}</th>
                     <th>{t.pagos_asistentes.col_importe}</th>
                   </tr>
                 </thead>
@@ -608,26 +618,25 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                       </td>
                       <td>{traducirValor(t.pagos_asistentes, `unidad_${item.unidad}`)}</td>
                       <td>{formatearValor(item.valor_aplicado, item.unidad, item.moneda, locale)}</td>
-                      <td>{traducirValor(t.pagos_asistentes, `signo_${item.signo}`)}</td>
-                      <td>{formatearImporte(item.monto, item.moneda, locale)}</td>
+                      <td>{formatearImporte(conSigno(item.monto, item.signo), item.moneda, locale)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={4}>{t.pagos_asistentes.total_bruto}</td>
+                    <td colSpan={3}>{t.pagos_asistentes.total_bruto}</td>
                     <td>{formatearImporte(liquidacion.bruto, liquidacion.moneda, locale)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={4}>{t.pagos_asistentes.total_sumas}</td>
+                    <td colSpan={3}>{t.pagos_asistentes.total_sumas}</td>
                     <td>{formatearImporte(liquidacion.total_sumas, liquidacion.moneda, locale)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={4}>{t.pagos_asistentes.total_restas}</td>
-                    <td>{formatearImporte(liquidacion.total_restas, liquidacion.moneda, locale)}</td>
+                    <td colSpan={3}>{t.pagos_asistentes.total_restas}</td>
+                    <td>{formatearImporte(conSigno(liquidacion.total_restas, 'resta'), liquidacion.moneda, locale)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={4}>
+                    <td colSpan={3}>
                       <strong>{t.pagos_asistentes.total_neto}</strong>
                     </td>
                     <td>

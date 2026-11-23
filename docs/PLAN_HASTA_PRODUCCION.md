@@ -118,14 +118,6 @@ de una Prestadora no lee nada de otra.
      Asistente se admite. Es información de salud: no viaja al Panel, la base contesta sólo si la
      Asistente alcanza o no.
 
-2. **El valor del Legajo por mes.**
-   - **Hoy:** la base acepta que un Legajo cobre por mes. Pero el Legajo no tiene dónde guardar el
-     valor mensual, la pantalla no ofrece «Por mes» y la liquidación paga esos Legajos como si
-     cobraran por hora. El valor acordado de cada Servicio sí admite el mes.
-   - **Falta decidir** cómo se liquida un mes: un monto fijo por mes calendario, o repartido por
-     los días trabajados. Con esa respuesta se agrega el valor mensual al Legajo, a su pantalla y a
-     la liquidación.
-
 **28.** **Lo que ve cada uno se recorta a lo que necesita para trabajar**, y se cumple en la base y
 en el backend, que hoy filtra sólo por Prestadora.
 

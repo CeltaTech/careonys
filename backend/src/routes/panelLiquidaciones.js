@@ -444,13 +444,13 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   const remuneraciones = await traerPaginado(() =>
     db
       .from('remuneraciones_asistente')
-      .select('asistente_id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, moneda, frecuencia_pago, rige_desde')
+      .select('asistente_id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_mes, valor_hora_extra, moneda, frecuencia_pago, rige_desde')
       .order('asistente_id', { ascending: true })
   );
   const anteriores = await traerPaginado(() =>
     db
       .from('remuneraciones_asistente_anteriores')
-      .select('asistente_id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, moneda, rige_desde')
+      .select('asistente_id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_mes, valor_hora_extra, moneda, rige_desde')
       .gte('rige_hasta', lecturaDesde)
       .order('asistente_id', { ascending: true })
       .order('rige_desde', { ascending: true })

@@ -32,6 +32,7 @@ import {
   COLUMNA_DEL_VALOR,
   UNIDADES,
   diasCubiertos,
+  mesesCubiertos,
   reglaDePagoDe,
   unidadDeMedicionDe,
   unidadesDelPeriodo,
@@ -106,6 +107,7 @@ export function redondear(numero) {
  * moneda— y `acumulado` es el trabajo hecho en esos días. Cada tramo paga su parte con su valor:
  *   - por hora y por turno de guardia, lo que se hizo en sus días;
  *   - por semana, sus días divididos por siete, recortados al alta y a la baja si se prorratea.
+ *   - por mes, la parte de cada mes calendario que cubren sus días, con el mismo recorte.
  *     Es la misma cuenta del período entero aplicada a cada parte, así que la suma de los tramos
  *     de un período sin cambios da lo mismo que antes;
  *   - las horas extra, con el valor de la hora extra de su tramo.
@@ -138,16 +140,18 @@ export function calcularLiquidacion({ asistente, acumulado, tramos, conceptos, e
     const valor = valorDeLaUnidad(tramo.valores, unidad);
     if (valor === null) return { faltaBase: true };
     const delTramo = tramo.acumulado ?? { turnos_guardia: 0, horas: 0, horasExtra: 0 };
+    const presencia = {
+      desde: tramo.desde,
+      hasta: tramo.hasta,
+      fechaAlta: asistente.fecha_alta,
+      fechaBaja: asistente.fecha_baja,
+      prorratear: regla.prorratear_monto_fijo,
+    };
     const cuantas = unidadesDelPeriodo({
       unidad,
       acumulado: delTramo,
-      diasDeLaPersona: diasCubiertos({
-        desde: tramo.desde,
-        hasta: tramo.hasta,
-        fechaAlta: asistente.fecha_alta,
-        fechaBaja: asistente.fecha_baja,
-        prorratear: regla.prorratear_monto_fijo,
-      }),
+      diasDeLaPersona: diasCubiertos(presencia),
+      mesesDeLaPersona: mesesCubiertos(presencia),
     });
     pagos.push({ tramo, unidad, columna: COLUMNA_DEL_VALOR[unidad], valor, cuantas, delTramo, monto: redondear(cuantas * valor) });
   }

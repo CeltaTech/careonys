@@ -16,6 +16,7 @@ import {
   diasCubiertos,
   diasEntre,
   esMontoFijo,
+  mesesCubiertos,
   reglaDePagoDe,
   revisarReglaDePago,
   soloLoQueCorreDelPago,
@@ -37,11 +38,15 @@ describe('con qué se le mide el trabajo a cada persona', () => {
 
   it('descarta una unidad que no existe y mide por hora', () => {
     expect(unidadDeMedicionDe({ unidad_medicion: 'quincena' })).toBe(UNIDADES.HORA);
-    expect(unidadDeMedicionDe({ unidad_medicion: 'mes' })).toBe(UNIDADES.HORA);
   });
 
-  it('el monto fijo es el de semana, no el de hora ni el de guardia', () => {
+  it('acepta el mes como unidad del Legajo del Asistente', () => {
+    expect(unidadDeMedicionDe({ unidad_medicion: 'mes' })).toBe(UNIDADES.MES);
+  });
+
+  it('el monto fijo es el de semana o el de mes, no el de hora ni el de guardia', () => {
     expect(esMontoFijo(UNIDADES.SEMANA)).toBe(true);
+    expect(esMontoFijo(UNIDADES.MES)).toBe(true);
     expect(esMontoFijo(UNIDADES.HORA)).toBe(false);
     expect(esMontoFijo(UNIDADES.TURNO_GUARDIA)).toBe(false);
   });
@@ -49,10 +54,11 @@ describe('con qué se le mide el trabajo a cada persona', () => {
 
 describe('cuánto vale una unidad', () => {
   it('busca el valor en la columna que le corresponde a esa unidad', () => {
-    const pago = { valor_hora: 100, valor_turno_guardia: 200, valor_semana: 300 };
+    const pago = { valor_hora: 100, valor_turno_guardia: 200, valor_semana: 300, valor_mes: 1200 };
     expect(valorDeLaUnidad(pago, UNIDADES.HORA)).toBe(100);
     expect(valorDeLaUnidad(pago, UNIDADES.TURNO_GUARDIA)).toBe(200);
     expect(valorDeLaUnidad(pago, UNIDADES.SEMANA)).toBe(300);
+    expect(valorDeLaUnidad(pago, UNIDADES.MES)).toBe(1200);
   });
 
   // No sabemos cuánto cobra y no le pagamos nada son dos cosas distintas, y de la diferencia
@@ -147,8 +153,43 @@ describe('cuántas unidades se pagan en el período', () => {
       .toBe(31 / DIAS_DE_UNA_SEMANA);
   });
 
+  it('por mes, los meses que estuvo la persona', () => {
+    expect(unidadesDelPeriodo({ unidad: UNIDADES.MES, mesesDeLaPersona: 1, ...MARZO })).toBe(1);
+    expect(unidadesDelPeriodo({ unidad: UNIDADES.MES, mesesDeLaPersona: 0.5, ...MARZO })).toBe(0.5);
+  });
+
   it('una unidad que no existe no paga nada', () => {
-    expect(unidadesDelPeriodo({ unidad: 'mes', ...MARZO })).toBe(0);
+    expect(unidadesDelPeriodo({ unidad: 'quincena', ...MARZO })).toBe(0);
+  });
+});
+
+describe('cuántos meses del período estuvo la persona', () => {
+  it('un mes entero vale uno, tenga 28 o 31 días', () => {
+    expect(mesesCubiertos({ desde: '2026-02-01', hasta: '2026-02-28', prorratear: true })).toBe(1);
+    expect(mesesCubiertos({ desde: '2026-03-01', hasta: '2026-03-31', prorratear: true })).toBe(1);
+  });
+
+  it('la mitad de un mes de treinta días vale medio mes', () => {
+    expect(mesesCubiertos({ desde: '2026-04-01', hasta: '2026-04-15', prorratear: true })).toBe(0.5);
+  });
+
+  it('un período que toma dos meses suma la parte de cada uno', () => {
+    expect(mesesCubiertos({ desde: '2026-04-16', hasta: '2026-05-31', prorratear: true })).toBeCloseTo(1.5);
+  });
+
+  it('con prorrateo, desde el día en que entró', () => {
+    expect(mesesCubiertos({ desde: '2026-04-01', hasta: '2026-04-30', fechaAlta: '2026-04-16', prorratear: true }))
+      .toBe(0.5);
+  });
+
+  it('sin prorrateo, el mes entero aunque haya entrado a mitad de mes', () => {
+    expect(mesesCubiertos({ desde: '2026-04-01', hasta: '2026-04-30', fechaAlta: '2026-04-16', prorratear: false }))
+      .toBe(1);
+  });
+
+  it('con prorrateo, hasta el día en que se fue', () => {
+    expect(mesesCubiertos({ desde: '2026-04-01', hasta: '2026-04-30', fechaBaja: '2026-04-06', prorratear: true }))
+      .toBeCloseTo(0.2);
   });
 });
 

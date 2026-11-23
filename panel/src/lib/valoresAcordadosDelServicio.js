@@ -14,8 +14,8 @@
  */
 import { UNIDADES_POSIBLES } from './formaDePago';
 
-/** Las unidades de un valor acordado: las del Legajo y, además, el mes. */
-export const UNIDADES_ACORDADAS = [...UNIDADES_POSIBLES, 'mes'];
+/** Las unidades de un valor acordado: las mismas del Legajo. */
+export const UNIDADES_ACORDADAS = UNIDADES_POSIBLES;
 
 /** Lo que se pide de cada valor acordado. */
 export const CAMPOS_DEL_VALOR_ACORDADO = 'id, asistente_id, rige_desde, unidad_medicion, valor, moneda, created_at';

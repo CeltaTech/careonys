@@ -14994,7 +14994,7 @@ CREATE TABLE IF NOT EXISTS "public"."liquidaciones_asistente" (
     "importe_horas_extra" numeric(12,2) DEFAULT 0 NOT NULL,
     "periodo_desde" "date" NOT NULL,
     "periodo_hasta" "date" NOT NULL,
-    CONSTRAINT "liquidaciones_asistente_base_unidad_check" CHECK (("base_unidad" = ANY (ARRAY['valor_hora'::"text", 'valor_turno_guardia'::"text", 'valor_semana'::"text"]))),
+    CONSTRAINT "liquidaciones_asistente_base_unidad_check" CHECK (("base_unidad" = ANY (ARRAY['valor_hora'::"text", 'valor_turno_guardia'::"text", 'valor_semana'::"text", 'valor_mes'::"text"]))),
     CONSTRAINT "liquidaciones_asistente_bordes_en_orden" CHECK ((("periodo_desde" <= "periodo_hasta") AND ("periodo" = "periodo_desde"))),
     CONSTRAINT "liquidaciones_asistente_estado_check" CHECK (("estado" = ANY (ARRAY['pendiente'::"text", 'pagada'::"text"]))),
     CONSTRAINT "liquidaciones_asistente_horas_extra_con_valor" CHECK (((("importe_horas_extra" = (0)::numeric) AND ("valor_hora_extra" IS NULL)) OR (("importe_horas_extra" > (0)::numeric) AND ("valor_hora_extra" IS NOT NULL)))),
@@ -16510,12 +16510,13 @@ CREATE TABLE IF NOT EXISTS "public"."remuneraciones_asistente" (
     "unidad_medicion" "text" DEFAULT 'hora'::"text" NOT NULL,
     "valor_turno_guardia" numeric(12,2),
     "valor_semana" numeric(12,2),
+    "valor_mes" numeric(12,2),
     "valor_hora_extra" numeric(12,2),
     "frecuencia_pago" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     "rige_desde" "date" NOT NULL,
     CONSTRAINT "remuneraciones_asistente_frecuencia_es_objeto" CHECK (("jsonb_typeof"("frecuencia_pago") = 'object'::"text")),
     CONSTRAINT "remuneraciones_asistente_unidad_conocida" CHECK (("unidad_medicion" = ANY (ARRAY['hora'::"text", 'turno_guardia'::"text", 'semana'::"text", 'mes'::"text"]))),
-    CONSTRAINT "remuneraciones_asistente_valores_no_negativos" CHECK (((COALESCE("valor_hora", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_turno_guardia", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_semana", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_hora_extra", (0)::numeric) >= (0)::numeric)))
+    CONSTRAINT "remuneraciones_asistente_valores_no_negativos" CHECK (((COALESCE("valor_hora", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_turno_guardia", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_semana", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_mes", (0)::numeric) >= (0)::numeric) AND (COALESCE("valor_hora_extra", (0)::numeric) >= (0)::numeric)))
 );
 
 
@@ -16527,6 +16528,10 @@ COMMENT ON TABLE "public"."remuneraciones_asistente" IS 'Lo que cobra cada Asist
 
 
 COMMENT ON COLUMN "public"."remuneraciones_asistente"."unidad_medicion" IS 'Con que se mide el trabajo de esta persona: hora, turno de guardia, semana o mes. No es cada cuanto se le paga, que es otra cosa y se arregla aparte.';
+
+
+
+COMMENT ON COLUMN "public"."remuneraciones_asistente"."valor_mes" IS 'Cuánto se le paga al Asistente por mes, cuando el Legajo se mide por mes. Vacío quiere decir que no está cargado.';
 
 
 
@@ -35986,6 +35991,7 @@ CREATE TABLE IF NOT EXISTS "public"."remuneraciones_asistente_anteriores" (
     "valor_hora" numeric(12,2),
     "valor_turno_guardia" numeric(12,2),
     "valor_semana" numeric(12,2),
+    "valor_mes" numeric(12,2),
     "valor_hora_extra" numeric(12,2),
     "moneda" "public"."moneda_iso" NOT NULL,
     "unidad_medicion" "text" NOT NULL,
@@ -36000,6 +36006,8 @@ CREATE TABLE IF NOT EXISTS "public"."remuneraciones_asistente_anteriores" (
 );
 
 ALTER TABLE "public"."remuneraciones_asistente_anteriores" OWNER TO "postgres";
+
+COMMENT ON COLUMN "public"."remuneraciones_asistente_anteriores"."valor_mes" IS 'Cuánto se le pagaba al Asistente por mes mientras rigió este valor anterior.';
 
 CREATE INDEX "remuneraciones_asistente_anteriores_por_fecha" ON "public"."remuneraciones_asistente_anteriores" USING "btree" ("asistente_id", "rige_desde");
 
@@ -36056,9 +36064,9 @@ CREATE OR REPLACE FUNCTION "interno"."guardar_el_valor_anterior_del_legajo"() RE
     SET "search_path" TO ''
     AS $$
 BEGIN
-  IF (NEW.valor_hora, NEW.valor_turno_guardia, NEW.valor_semana, NEW.valor_hora_extra, NEW.moneda, NEW.unidad_medicion)
+  IF (NEW.valor_hora, NEW.valor_turno_guardia, NEW.valor_semana, NEW.valor_mes, NEW.valor_hora_extra, NEW.moneda, NEW.unidad_medicion)
      IS NOT DISTINCT FROM
-     (OLD.valor_hora, OLD.valor_turno_guardia, OLD.valor_semana, OLD.valor_hora_extra, OLD.moneda, OLD.unidad_medicion) THEN
+     (OLD.valor_hora, OLD.valor_turno_guardia, OLD.valor_semana, OLD.valor_mes, OLD.valor_hora_extra, OLD.moneda, OLD.unidad_medicion) THEN
     IF NEW.rige_desde IS NULL OR NEW.rige_desde < OLD.rige_desde THEN
       NEW.rige_desde := OLD.rige_desde;
     END IF;
@@ -36075,9 +36083,9 @@ BEGIN
 
   IF NEW.rige_desde > OLD.rige_desde THEN
     INSERT INTO public.remuneraciones_asistente_anteriores (
-      prestadora_id, asistente_id, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra,
+      prestadora_id, asistente_id, valor_hora, valor_turno_guardia, valor_semana, valor_mes, valor_hora_extra,
       moneda, unidad_medicion, rige_desde, rige_hasta, reemplazado_por)
-    VALUES (OLD.prestadora_id, OLD.asistente_id, OLD.valor_hora, OLD.valor_turno_guardia, OLD.valor_semana,
+    VALUES (OLD.prestadora_id, OLD.asistente_id, OLD.valor_hora, OLD.valor_turno_guardia, OLD.valor_semana, OLD.valor_mes,
             OLD.valor_hora_extra, OLD.moneda, OLD.unidad_medicion, OLD.rige_desde, NEW.rige_desde,
             interno.usuario_registrado_de_la_sesion());
   END IF;
@@ -36096,19 +36104,19 @@ CREATE OR REPLACE TRIGGER "guardar_el_valor_anterior_del_legajo" BEFORE UPDATE O
 -- El valor del Legajo de un Asistente que regía en una fecha: el de fecha más reciente que no sea
 -- posterior. Si la fecha es anterior al primer valor cargado, el primero. Corre con los permisos
 -- de quien llama: la protección por fila decide si lo puede ver.
-CREATE OR REPLACE FUNCTION "public"."valor_del_legajo_en"("p_asistente" "uuid", "p_fecha" "date") RETURNS TABLE("valor_hora" numeric, "valor_turno_guardia" numeric, "valor_semana" numeric, "valor_hora_extra" numeric, "moneda" "text", "unidad_medicion" "text", "rige_desde" "date")
+CREATE OR REPLACE FUNCTION "public"."valor_del_legajo_en"("p_asistente" "uuid", "p_fecha" "date") RETURNS TABLE("valor_hora" numeric, "valor_turno_guardia" numeric, "valor_semana" numeric, "valor_mes" numeric, "valor_hora_extra" numeric, "moneda" "text", "unidad_medicion" "text", "rige_desde" "date")
     LANGUAGE "sql" STABLE
     SET "search_path" TO ''
     AS $$
-  SELECT x.valor_hora, x.valor_turno_guardia, x.valor_semana, x.valor_hora_extra,
+  SELECT x.valor_hora, x.valor_turno_guardia, x.valor_semana, x.valor_mes, x.valor_hora_extra,
          x.moneda, x.unidad_medicion, x.rige_desde
     FROM (
-      SELECT r.valor_hora, r.valor_turno_guardia, r.valor_semana, r.valor_hora_extra,
+      SELECT r.valor_hora, r.valor_turno_guardia, r.valor_semana, r.valor_mes, r.valor_hora_extra,
              r.moneda::text AS moneda, r.unidad_medicion, r.rige_desde
         FROM public.remuneraciones_asistente r
        WHERE r.asistente_id = p_asistente
       UNION ALL
-      SELECT h.valor_hora, h.valor_turno_guardia, h.valor_semana, h.valor_hora_extra,
+      SELECT h.valor_hora, h.valor_turno_guardia, h.valor_semana, h.valor_mes, h.valor_hora_extra,
              h.moneda::text, h.unidad_medicion, h.rige_desde
         FROM public.remuneraciones_asistente_anteriores h
        WHERE h.asistente_id = p_asistente
@@ -36148,6 +36156,8 @@ CREATE TABLE IF NOT EXISTS "public"."propuestas_de_ajuste_del_legajo" (
     "valor_turno_guardia_propuesto" numeric(12,2),
     "valor_semana_actual" numeric(12,2),
     "valor_semana_propuesto" numeric(12,2),
+    "valor_mes_actual" numeric(12,2),
+    "valor_mes_propuesto" numeric(12,2),
     "valor_hora_extra_actual" numeric(12,2),
     "valor_hora_extra_propuesto" numeric(12,2),
     "estado" "text" DEFAULT 'pendiente'::"text" NOT NULL,
@@ -36166,6 +36176,10 @@ CREATE TABLE IF NOT EXISTS "public"."propuestas_de_ajuste_del_legajo" (
 );
 
 ALTER TABLE "public"."propuestas_de_ajuste_del_legajo" OWNER TO "postgres";
+
+COMMENT ON COLUMN "public"."propuestas_de_ajuste_del_legajo"."valor_mes_actual" IS 'El importe por mes del Legajo cuando se armó la propuesta.';
+
+COMMENT ON COLUMN "public"."propuestas_de_ajuste_del_legajo"."valor_mes_propuesto" IS 'El importe por mes ajustado por el índice.';
 
 CREATE INDEX "propuestas_de_ajuste_del_legajo_por_prestadora" ON "public"."propuestas_de_ajuste_del_legajo" USING "btree" ("prestadora_id", "estado");
 
@@ -36205,6 +36219,7 @@ DECLARE
   v_hora       numeric;
   v_turno      numeric;
   v_semana     numeric;
+  v_mes        numeric;
   v_extra      numeric;
   v_propuesta  uuid;
 BEGIN
@@ -36243,6 +36258,7 @@ BEGIN
                  AND r.valor_hora IS NOT DISTINCT FROM pr.valor_hora_actual
                  AND r.valor_turno_guardia IS NOT DISTINCT FROM pr.valor_turno_guardia_actual
                  AND r.valor_semana IS NOT DISTINCT FROM pr.valor_semana_actual
+                 AND r.valor_mes IS NOT DISTINCT FROM pr.valor_mes_actual
                  AND r.valor_hora_extra IS NOT DISTINCT FROM pr.valor_hora_extra_actual))
     RETURNING pr.id
   )
@@ -36254,7 +36270,7 @@ BEGIN
   END IF;
 
   FOR v IN
-    SELECT r.asistente_id, r.valor_hora, r.valor_turno_guardia, r.valor_semana, r.valor_hora_extra,
+    SELECT r.asistente_id, r.valor_hora, r.valor_turno_guardia, r.valor_semana, r.valor_mes, r.valor_hora_extra,
            r.moneda::text AS moneda, r.unidad_medicion, r.rige_desde
       FROM public.remuneraciones_asistente r
       JOIN public.asistentes a ON a.id = r.asistente_id AND a.prestadora_id = r.prestadora_id
@@ -36262,7 +36278,7 @@ BEGIN
        AND a.estado <> 'cesado'
        AND r.rige_desde <= v_hoy
        AND greatest(coalesce(r.valor_hora, 0), coalesce(r.valor_turno_guardia, 0),
-                    coalesce(r.valor_semana, 0), coalesce(r.valor_hora_extra, 0)) > 0
+                    coalesce(r.valor_semana, 0), coalesce(r.valor_mes, 0), coalesce(r.valor_hora_extra, 0)) > 0
        AND NOT EXISTS (SELECT 1 FROM public.propuestas_de_ajuste_del_legajo pr
                         WHERE pr.asistente_id = r.asistente_id AND pr.estado = 'pendiente')
      ORDER BY r.asistente_id
@@ -36287,9 +36303,10 @@ BEGIN
     v_hora := round(v.valor_hora * v_factor, 2);
     v_turno := round(v.valor_turno_guardia * v_factor, 2);
     v_semana := round(v.valor_semana * v_factor, 2);
+    v_mes := round(v.valor_mes * v_factor, 2);
     v_extra := round(v.valor_hora_extra * v_factor, 2);
-    CONTINUE WHEN (v_hora, v_turno, v_semana, v_extra) IS NOT DISTINCT FROM
-                  (v.valor_hora, v.valor_turno_guardia, v.valor_semana, v.valor_hora_extra);
+    CONTINUE WHEN (v_hora, v_turno, v_semana, v_mes, v_extra) IS NOT DISTINCT FROM
+                  (v.valor_hora, v.valor_turno_guardia, v.valor_semana, v.valor_mes, v.valor_hora_extra);
 
     -- Ya hubo un ajuste para ese mes sobre este valor (rechazado, por ejemplo): no se vuelve a proponer.
     CONTINUE WHEN EXISTS (SELECT 1 FROM public.propuestas_de_ajuste_del_legajo pr
@@ -36302,18 +36319,18 @@ BEGIN
       prestadora_id, asistente_id, indice, periodo_base, periodo_nuevo, factor, valor_rige_desde,
       rige_desde, moneda, unidad_medicion,
       valor_hora_actual, valor_hora_propuesto, valor_turno_guardia_actual, valor_turno_guardia_propuesto,
-      valor_semana_actual, valor_semana_propuesto, valor_hora_extra_actual, valor_hora_extra_propuesto,
+      valor_semana_actual, valor_semana_propuesto, valor_mes_actual, valor_mes_propuesto, valor_hora_extra_actual, valor_hora_extra_propuesto,
       estado)
     VALUES (v_prest, v.asistente_id, v_indice, v_base, v_nuevo, v_factor, v.rige_desde,
             v_rige, v.moneda, v.unidad_medicion,
             v.valor_hora, v_hora, v.valor_turno_guardia, v_turno,
-            v.valor_semana, v_semana, v.valor_hora_extra, v_extra,
+            v.valor_semana, v_semana, v.valor_mes, v_mes, v.valor_hora_extra, v_extra,
             CASE WHEN v_ajuste = 'automatico' THEN 'aplicada' ELSE 'pendiente' END)
     RETURNING id INTO v_propuesta;
 
     IF v_ajuste = 'automatico' THEN
       UPDATE public.remuneraciones_asistente
-         SET valor_hora = v_hora, valor_turno_guardia = v_turno, valor_semana = v_semana,
+         SET valor_hora = v_hora, valor_turno_guardia = v_turno, valor_semana = v_semana, valor_mes = v_mes,
              valor_hora_extra = v_extra, rige_desde = v_rige, updated_at = now()
        WHERE asistente_id = v.asistente_id AND prestadora_id = v_prest;
 
@@ -36384,14 +36401,15 @@ BEGIN
      OR r.rige_desde <> pr.valor_rige_desde
      OR r.moneda::text <> pr.moneda
      OR r.unidad_medicion <> pr.unidad_medicion
-     OR (r.valor_hora, r.valor_turno_guardia, r.valor_semana, r.valor_hora_extra) IS DISTINCT FROM
-        (pr.valor_hora_actual, pr.valor_turno_guardia_actual, pr.valor_semana_actual, pr.valor_hora_extra_actual) THEN
+     OR (r.valor_hora, r.valor_turno_guardia, r.valor_semana, r.valor_mes, r.valor_hora_extra) IS DISTINCT FROM
+        (pr.valor_hora_actual, pr.valor_turno_guardia_actual, pr.valor_semana_actual, pr.valor_mes_actual, pr.valor_hora_extra_actual) THEN
     RAISE EXCEPTION 'ya_reemplazado' USING ERRCODE = 'P0001';
   END IF;
 
   UPDATE public.remuneraciones_asistente
      SET valor_hora = pr.valor_hora_propuesto, valor_turno_guardia = pr.valor_turno_guardia_propuesto,
-         valor_semana = pr.valor_semana_propuesto, valor_hora_extra = pr.valor_hora_extra_propuesto,
+         valor_semana = pr.valor_semana_propuesto, valor_mes = pr.valor_mes_propuesto,
+         valor_hora_extra = pr.valor_hora_extra_propuesto,
          rige_desde = pr.rige_desde, updated_at = now()
    WHERE asistente_id = pr.asistente_id AND prestadora_id = v_prest;
 
@@ -36770,6 +36788,7 @@ CREATE OR REPLACE FUNCTION "public"."criterios_de_candidatas"("p_servicio" "uuid
                                WHEN 'hora' THEN lg.valor_hora
                                WHEN 'turno_guardia' THEN lg.valor_turno_guardia
                                WHEN 'semana' THEN lg.valor_semana
+                               WHEN 'mes' THEN lg.valor_mes
                              END)
          END
     FROM candidatas c

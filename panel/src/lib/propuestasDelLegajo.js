@@ -5,8 +5,8 @@
    Legajo de cada Asistente. Quien revisa lo acepta —el Legajo cambia— o lo rechaza —sigue el
    valor de hoy—. Lo hace la base con `revisar_propuesta_de_ajuste_del_legajo`. */
 
-// Los cuatro valores del Legajo, con la palabra que ya usa el Legajo en la pantalla.
-export const VALORES_DEL_LEGAJO = Object.freeze(['valor_hora', 'valor_turno_guardia', 'valor_semana', 'valor_hora_extra']);
+// Los valores del Legajo, con la palabra que ya usa el Legajo en la pantalla.
+export const VALORES_DEL_LEGAJO = Object.freeze(['valor_hora', 'valor_turno_guardia', 'valor_semana', 'valor_mes', 'valor_hora_extra']);
 
 // Lo que se lee de la base para cada propuesta pendiente.
 export const COLUMNAS_DE_LA_PROPUESTA = [

@@ -17,13 +17,13 @@ import { COLUMNA_DEL_VALOR, unidadDeMedicionDe } from './formaDePago';
 
 /** Lo que se pide de los valores anteriores para mostrar la historia. */
 export const CAMPOS_DE_LOS_VALORES_ANTERIORES =
-  'id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_hora_extra, moneda, rige_desde, rige_hasta';
+  'id, unidad_medicion, valor_hora, valor_turno_guardia, valor_semana, valor_mes, valor_hora_extra, moneda, rige_desde, rige_hasta';
 
 /** El comienzo del mensaje con que la base rechaza una fecha anterior a la vigente. */
 export const RECHAZO_RIGE_DESDE_ANTERIOR = 'rige_desde_anterior:';
 
 /** Los importes del Legajo que, si cambian, hacen un valor nuevo. */
-const IMPORTES = ['valor_hora', 'valor_turno_guardia', 'valor_semana', 'valor_hora_extra'];
+const IMPORTES = ['valor_hora', 'valor_turno_guardia', 'valor_semana', 'valor_mes', 'valor_hora_extra'];
 
 const FECHA_DEL_DIA = /^\d{4}-\d{2}-\d{2}$/;
 

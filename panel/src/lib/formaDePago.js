@@ -1,12 +1,13 @@
 // ---------------------------------------------------------------------------
 // formaDePago.js — con qué se mide el trabajo de cada Asistente, y qué es una hora extra
 //
-// POR QUÉ EXISTE ESTE ARCHIVO. A cada Asistente se le paga por hora, por guardia o por semana, y
+// POR QUÉ EXISTE ESTE ARCHIVO. A cada Asistente se le paga por hora, por guardia, por semana o por
+// mes, y
 // la hora de más se le paga aparte: la Asistente que se queda tres horas después de su turno
 // cobra esas horas.
 //
-// LAS DOS COSAS QUE NO SON LO MISMO. Con qué se mide el trabajo —por hora, por guardia o por
-// semana— es esto. Cada cuánto se le paga —los viernes, a treinta días— es otra
+// LAS DOS COSAS QUE NO SON LO MISMO. Con qué se mide el trabajo —por hora, por guardia, por
+// semana o por mes— es esto. Cada cuánto se le paga —los viernes, a treinta días— es otra
 // cosa, se arregla con cada persona y no cambia ni un centavo de esta cuenta. Acá está sólo
 // la medición.
 //
@@ -29,6 +30,7 @@ export const UNIDADES = {
   HORA: 'hora',
   TURNO_GUARDIA: 'turno_guardia',
   SEMANA: 'semana',
+  MES: 'mes',
 };
 
 export const UNIDADES_POSIBLES = Object.values(UNIDADES);
@@ -38,6 +40,7 @@ export const COLUMNA_DEL_VALOR = {
   [UNIDADES.HORA]: 'valor_hora',
   [UNIDADES.TURNO_GUARDIA]: 'valor_turno_guardia',
   [UNIDADES.SEMANA]: 'valor_semana',
+  [UNIDADES.MES]: 'valor_mes',
 };
 
 /** Un día tiene una sola forma de contarse; una semana, siete días. No es una decisión. */
@@ -109,7 +112,7 @@ export function soloLoQueCorreDelPago(regla) {
 
 /** Un monto fijo se paga esté la persona o no; lo demás se paga por lo que hizo. */
 export function esMontoFijo(unidad) {
-  return unidad === UNIDADES.SEMANA;
+  return unidad === UNIDADES.SEMANA || unidad === UNIDADES.MES;
 }
 
 /**
@@ -172,14 +175,54 @@ export function diasCubiertos({ desde, hasta, fechaAlta, fechaBaja, prorratear }
   return diasEntre(arranca, termina);
 }
 
+/** Cuántos días tiene el mes de una fecha `AAAA-MM-DD`. */
+function diasDelMes(fecha) {
+  const [anio, mes] = fecha.split('-').map(Number);
+  return new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+}
+
+/** El último día del mes de una fecha `AAAA-MM-DD`. */
+function finDelMes(fecha) {
+  return `${fecha.slice(0, 8)}${String(diasDelMes(fecha)).padStart(2, '0')}`;
+}
+
+/** El primer día del mes siguiente al de una fecha `AAAA-MM-DD`. */
+function primeroDelMesSiguiente(fecha) {
+  const [anio, mes] = fecha.split('-').map(Number);
+  const siguiente = new Date(Date.UTC(anio, mes, 1));
+  return siguiente.toISOString().slice(0, 10);
+}
+
+/**
+ * Cuántos meses del período estuvo esta persona en la Prestadora.
+ *
+ * Cada mes calendario cuenta por su parte: los días que estuvo en ese mes divididos por los días
+ * que tiene el mes. Un mes entero vale uno, sea de 28 o de 31 días; la primera quincena de un mes
+ * de 30 días vale media. Sin prorrateo, la persona cuenta todos los días del período.
+ */
+export function mesesCubiertos({ desde, hasta, fechaAlta, fechaBaja, prorratear }) {
+  const arranca = prorratear && fechaAlta && fechaAlta > desde ? fechaAlta : desde;
+  const termina = prorratear && fechaBaja && fechaBaja < hasta ? fechaBaja : hasta;
+  let meses = 0;
+  let dia = arranca;
+  while (dia <= termina) {
+    const fin = finDelMes(dia) < termina ? finDelMes(dia) : termina;
+    meses += diasEntre(dia, fin) / diasDelMes(dia);
+    dia = primeroDelMesSiguiente(dia);
+  }
+  return meses;
+}
+
 /**
  * Cuántas unidades se le pagan a esta persona en el período, y de ahí sale el importe.
  *
- * Por hora y por guardia, lo que hizo. Por semana, los días que estuvo divididos por siete.
+ * Por hora y por guardia, lo que hizo. Por semana, los días que estuvo divididos por siete. Por
+ * mes, la parte de cada mes calendario en que estuvo.
  */
-export function unidadesDelPeriodo({ unidad, acumulado, diasDeLaPersona }) {
+export function unidadesDelPeriodo({ unidad, acumulado, diasDeLaPersona, mesesDeLaPersona }) {
   if (unidad === UNIDADES.HORA) return acumulado?.horas ?? 0;
   if (unidad === UNIDADES.TURNO_GUARDIA) return acumulado?.turnos_guardia ?? 0;
   if (unidad === UNIDADES.SEMANA) return diasDeLaPersona / DIAS_DE_UNA_SEMANA;
+  if (unidad === UNIDADES.MES) return mesesDeLaPersona ?? 0;
   return 0;
 }

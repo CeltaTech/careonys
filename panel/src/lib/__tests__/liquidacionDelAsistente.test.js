@@ -76,6 +76,27 @@ describe('la liquidación de un Asistente por tramos', () => {
     expect(liquidacion.bruto).toBe(326000);
   });
 
+  it('por mes, el mes entero cobra el monto mensual', () => {
+    const { liquidacion } = liquidar({
+      tramos: [
+        { desde: '2026-08-01', hasta: '2026-08-31', valores: { unidad_medicion: 'mes', valor_mes: 900000 }, acumulado: SIN_TRABAJO },
+      ],
+    });
+    expect(liquidacion.bruto).toBe(900000);
+  });
+
+  it('por mes, un cambio el día 16 de agosto prorratea los días de cada tramo', () => {
+    const { liquidacion, items } = liquidar({
+      tramos: [
+        { desde: '2026-08-01', hasta: '2026-08-15', valores: { unidad_medicion: 'mes', valor_mes: 620000 }, acumulado: SIN_TRABAJO },
+        { desde: '2026-08-16', hasta: '2026-08-31', valores: { unidad_medicion: 'mes', valor_mes: 682000 }, acumulado: SIN_TRABAJO },
+      ],
+    });
+    // 15 de 31 días de 620000 por mes y 16 de 31 días de 682000 por mes.
+    expect(items.filter((item) => item.unidad === 'base').map((item) => item.monto)).toEqual([300000, 352000]);
+    expect(liquidacion.bruto).toBe(652000);
+  });
+
   it('las horas extra se pagan con el valor de la hora extra de su tramo', () => {
     const { liquidacion, sinEscala } = liquidar({
       tramos: [

@@ -129,6 +129,7 @@ export function PerfilTab({ asistente, onActualizado, documentosDelAsistente }) 
     valor_hora: asistente.valor_hora || '',
     valor_turno_guardia: asistente.valor_turno_guardia || '',
     valor_semana: asistente.valor_semana || '',
+    valor_mes: asistente.valor_mes || '',
     valor_hora_extra: asistente.valor_hora_extra || '',
     // Desde qué fecha rige un valor nuevo. Arranca en hoy, en el día de la Prestadora, y sólo se
     // guarda si cambió el valor.

@@ -2134,10 +2134,10 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | «Presente el Reporte antes de terminar el turno.» |
+| **Texto actual** | «No olvide enviar el Reporte al finalizar su turno.» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
-| **Por qué** | antes decía «Presente el Reporte Diario antes del fin del turno de guardia.». Es más corto y suena natural. |
+| **Por qué** | antes decía «Presente el Reporte antes de terminar el turno.». Recuerda sin dar una orden. |
 | **Quién lo lee** | el Asistente. |
 | **Dónde está** | aviso que recibe minutos antes de que termine su turno de guardia, si todavía no presentó el Reporte. |
 | **Qué estaba haciendo** | está terminando el turno de guardia. |

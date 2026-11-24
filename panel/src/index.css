@@ -1687,7 +1687,10 @@ button.panel-kpi-card[aria-pressed='true'] {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  z-index: 10;
+  /* Por encima del encabezado, del menú lateral y de las listas desplegables de la página:
+     la ventana tapa todo el Panel. Por encima de ella quedan sólo el enlace que saltea el menú y el
+     mensaje emergente. */
+  z-index: 40;
 }
 
 .panel-modal {

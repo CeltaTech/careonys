@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import { mensajeDeError } from '../lib/errores';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
+import ContactosDeEmergencia from '../components/ContactosDeEmergencia';
 import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
 
 // Una de las dos listas: qué ve esta persona y qué no. La de «qué no ve» pesa lo mismo que la
@@ -226,6 +227,8 @@ export default function MiPerfil() {
       )}
 
       {perfil.esTitular && <PersonasAutorizadasDelTitular />}
+
+      {perfil.esTitular && <ContactosDeEmergencia />}
 
       <section className="pwa-card">
         <h2>{t.perfil.notificaciones_titulo}</h2>

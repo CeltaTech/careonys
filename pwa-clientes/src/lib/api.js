@@ -147,4 +147,9 @@ export const api = {
   reemplazarPoder: (funcion, formData) => pedido(`/apoderado/${funcion}/poder`, { method: 'POST', body: formData }),
   quitarApoderado: (funcion) => pedido(`/apoderado/${funcion}/quitar`, { method: 'POST' }),
   verPoder: (funcion) => pedido(`/apoderado/${funcion}/poder`),
+  // A quién se llama si al Paciente le pasa algo. Sólo el titular. Al guardar se manda la lista
+  // entera, en orden de prioridad, y el backend la reemplaza de una vez.
+  contactosDeEmergencia: (idioma) => pedido(`/contactos-de-emergencia?idioma=${encodeURIComponent(idioma)}`),
+  guardarContactosDeEmergencia: (contactos, idioma) =>
+    pedido(`/contactos-de-emergencia?idioma=${encodeURIComponent(idioma)}`, { method: 'PUT', body: JSON.stringify({ contactos }) }),
 };

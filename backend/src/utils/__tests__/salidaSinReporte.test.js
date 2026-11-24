@@ -119,9 +119,8 @@ describe('el relevo lee el código del que sale', () => {
   it('con el Reporte Diario presentado, el turno del que sale queda completado a la hora de la lectura', async () => {
     prepararBase({ conReporte: true });
 
-    const { salienteSinReporte } = await cerrarLaSalidaDelSaliente({ relevo, lat: -34.6, lng: -58.4 });
+    await cerrarLaSalidaDelSaliente({ relevo, lat: -34.6, lng: -58.4 });
 
-    assert.equal(salienteSinReporte, false);
     const [cambio] = cambiosDelTurno();
     assert.equal(cambio.filtros.get('id'), `eq.${SALIENTE}`);
     assert.equal(cambio.filtros.get('estado'), 'eq.activa');
@@ -139,9 +138,8 @@ describe('el relevo lee el código del que sale', () => {
   it('sin el Reporte Diario, el turno del que sale queda en «Salida sin Reporte Diario» con la falta anotada', async () => {
     prepararBase({ conReporte: false });
 
-    const { salienteSinReporte } = await cerrarLaSalidaDelSaliente({ relevo, lat: -34.6, lng: -58.4 });
+    await cerrarLaSalidaDelSaliente({ relevo, lat: -34.6, lng: -58.4 });
 
-    assert.equal(salienteSinReporte, true);
     const [cambio] = cambiosDelTurno();
     assert.equal(cambio.cuerpo.estado, ESTADO_SALIDA_SIN_REPORTE);
     assert.equal(cambio.cuerpo.salio_sin_reporte, true);
@@ -178,8 +176,7 @@ describe('el relevo lee el código del que sale', () => {
 
   it('si la llegada se comprobó con el código del Cliente, el que sale no se toca', async () => {
     prepararBase({ llegada: llegadaDelRelevo({ medio: 'codigo_cliente', sujeto_tipo: 'cliente' }) });
-    const { salienteSinReporte } = await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
-    assert.equal(salienteSinReporte, false);
+    await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
     assert.equal(cambiosDelTurno().length, 0);
   });
 

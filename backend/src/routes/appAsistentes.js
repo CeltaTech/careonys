@@ -899,15 +899,12 @@ const trajoUnCodigo = (req) => Boolean(req.body?.comprobacion?.codigo);
 
 // Cierra la salida del Asistente que deja la guardia, cuando el relevo marcó la llegada con su
 // código. Nunca hace fallar la llegada del relevo, que ya quedó marcada: si algo falla, queda en
-// el registro del servidor y el reintento de la llegada lo vuelve a intentar. Devuelve verdadero
-// si el que sale no había presentado el Reporte Diario.
+// el registro del servidor y el reintento de la llegada lo vuelve a intentar.
 async function salidaDelSaliente(turno_guardia, lat, lng) {
   try {
-    const { salienteSinReporte } = await cerrarLaSalidaDelSaliente({ relevo: turno_guardia, lat, lng });
-    return salienteSinReporte;
+    await cerrarLaSalidaDelSaliente({ relevo: turno_guardia, lat, lng });
   } catch (err) {
     console.error('Error cerrando la salida del Asistente que deja la guardia:', err.message);
-    return false;
   }
 }
 
@@ -1014,7 +1011,7 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkin', requiereRolAsistente, to
   }
 
   // El relevo leyó el código del que sale: esa lectura es la salida del que sale.
-  const salienteSinReporte = await salidaDelSaliente(turno_guardia, lat, lng);
+  await salidaDelSaliente(turno_guardia, lat, lng);
 
   // El titular llegó sobre un turno de guardia ya marcado ausente: la base la anota como llegada tarde, y el
   // pedido de relevo de ese turno de guardia se cierra como resuelto por él, para que deje de insistirse.
@@ -1094,7 +1091,7 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkin', requiereRolAsistente, to
     });
   }
 
-  res.json({ ok: true, dentroDeRango, distanciaMetros: distancia, comprobacion: comprobacion.estado, salienteSinReporte });
+  res.json({ ok: true, dentroDeRango, distanciaMetros: distancia, comprobacion: comprobacion.estado });
 });
 
 // ============================================================================

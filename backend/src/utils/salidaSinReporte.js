@@ -62,9 +62,6 @@ export async function faltaElReporte(db, turno_guardia) {
  *
  * `lat` y `lng` son los de la lectura: el que sale estaba en la casa en ese momento, y la
  * coordenada se guarda sólo si su consentimiento de ubicación está vigente.
- *
- * Devuelve `{ salienteSinReporte }`: verdadero si alguno de los que salieron no había presentado
- * el Reporte Diario.
  */
 export async function cerrarLaSalidaDelSaliente({ relevo, lat, lng }) {
   return enLaPrestadora(relevo?.prestadora_id, 'Salida del Asistente que deja la guardia al relevo', (db) =>
@@ -75,10 +72,10 @@ async function cerrarCon(db, { relevo, lat, lng }) {
   const prestadoraId = relevo.prestadora_id;
   const llegada = await comprobacionCon(db, { prestadoraId, turnoGuardiaId: relevo.id, momento: 'checkin' });
   if (llegada?.estado !== 'comprobada' || llegada.medio !== MEDIO_CODIGO_DEL_SALIENTE) {
-    return { salienteSinReporte: false };
+    return;
   }
   if (llegada.sujeto_tipo !== 'asistente' || !llegada.sujeto_id || !llegada.comprobada_en) {
-    return { salienteSinReporte: false };
+    return;
   }
 
   // La hora de salida es la de la lectura, que guardó la base, y no la de este momento.
@@ -88,7 +85,6 @@ async function cerrarCon(db, { relevo, lat, lng }) {
 
   const facturaSinReporte = await facturaLosTurnosSinReporte(db, prestadoraId);
 
-  let salienteSinReporte = false;
   for (const saliente of salientes) {
     const turno_guardia = { ...saliente, prestadora_id: prestadoraId };
 
@@ -138,12 +134,9 @@ async function cerrarCon(db, { relevo, lat, lng }) {
     if (error) throw new Error(error.message);
 
     if (sinReporte && cerrado?.length) {
-      salienteSinReporte = true;
       await avisarAlSaliente(db, turno_guardia);
     }
   }
-
-  return { salienteSinReporte };
 }
 
 // Si la Prestadora factura los turnos de guardia sin Reporte Diario. Mientras ella no elija otra

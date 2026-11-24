@@ -365,7 +365,6 @@ export default function TurnoGuardiaActivo() {
         const advertencias = [];
         if (!resultado.dentroDeRango) advertencias.push(t.turno_guardia_activo.fuera_de_rango);
         if (resultado.comprobacion === 'sin_comprobar') advertencias.push(t.turno_guardia_activo.quedo_sin_comprobar);
-        if (resultado.salienteSinReporte) advertencias.push(t.turno_guardia_activo.saliente_sin_reporte);
         if (advertencias.length > 0) setAdvertencia(advertencias.join(' '));
         setPasandoCheckin(false);
         cargar();

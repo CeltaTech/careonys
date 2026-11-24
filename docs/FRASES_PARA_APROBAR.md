@@ -684,7 +684,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | mensaje emergente o franja. |
 | **Decisión** | |
 
-## Aplicación de Asistentes (23)
+## Aplicación de Asistentes (22)
 
 ### 102. Enlace para activar la cuenta
 
@@ -1036,22 +1036,6 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Qué pasó** | se fue de un turno sin presentar el Reporte. |
 | **Qué puede hacer después** | presentar el Reporte. |
 | **Cómo se muestra** | etiqueta en la lista. |
-| **Decisión** | |
-
-### 202. El Asistente anterior no presentó el Reporte
-
-| | |
-|---|---|
-| **Texto actual** | «El Asistente anterior no presentó el Reporte.» |
-| **Propuesta** | igual. |
-| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
-| **Por qué** | antes decía «El Asistente saliente no presentó el Reporte Diario.». «Anterior» es la palabra de uso corriente. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | aplicación de Asistentes, pantalla del turno de guardia en curso. |
-| **Qué estaba haciendo** | llegó a tomar el turno de guardia. |
-| **Qué pasó** | el Asistente que se fue no presentó el Reporte. |
-| **Qué puede hacer después** | seguir con su turno. |
-| **Cómo se muestra** | franja. |
 | **Decisión** | |
 
 ## Panel: otros textos cambiados (54)

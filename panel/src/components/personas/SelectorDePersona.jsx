@@ -97,7 +97,11 @@ export function SelectorDePersona({
         required={required}
         error={errorDelCasillero}
         value={valor ?? ''}
-        onChange={(e) => alElegir(e.target.value || null)}
+        onChange={(e) => {
+          // Con el identificador va la fila, para quien además necesita mostrar el nombre.
+          const elegido = e.target.value || null;
+          alElegir(elegido, filas.find((fila) => fila.id === elegido) ?? null);
+        }}
         disabled={deshabilitado || estado === 'cargando' || estado === 'error'}
       >
         <option value="">

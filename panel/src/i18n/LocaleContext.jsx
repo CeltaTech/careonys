@@ -8,6 +8,12 @@ import {
   sustituirPrestadoraProfundo,
 } from './marcaEnElTexto.js';
 import { avisandoLoQueFalta } from './faltaLaFrase.js';
+import {
+  alCambiarLasFrasesDeLosMotivos,
+  conLosMotivosDeLaBase,
+  frasesDeLosMotivosAnotadas,
+  motivosEnElIdioma,
+} from './frasesDeLosMotivos.js';
 
 const LocaleContext = createContext(null);
 
@@ -39,6 +45,14 @@ export function LocaleProvider({ children }) {
     nombreDeLaPrestadora
   );
 
+  // Las frases de la base que explican los rechazos de la base. Se leen de un anotador por el
+  // mismo motivo que el nombre de la Prestadora. Ver `i18n/frasesDeLosMotivos.js`.
+  const filasDeLosMotivos = useSyncExternalStore(
+    alCambiarLasFrasesDeLosMotivos,
+    frasesDeLosMotivosAnotadas,
+    frasesDeLosMotivosAnotadas
+  );
+
   // Los textos nombran al producto con el marcador {{producto}} y a la Prestadora con
   // {{prestadora}}, y los dos se resuelven acá, una sola vez por idioma y por nombre. Se hace en
   // este punto —y no en cada componente— porque `t` se consume como objeto plano (t.auth.titulo),
@@ -48,9 +62,12 @@ export function LocaleProvider({ children }) {
   const t = useMemo(
     () =>
       avisandoLoQueFalta(
-        sustituirPrestadoraProfundo(sustituirIdentidadProfundo(T[locale]), nombrePrestadora)
+        conLosMotivosDeLaBase(
+          sustituirPrestadoraProfundo(sustituirIdentidadProfundo(T[locale]), nombrePrestadora),
+          motivosEnElIdioma(filasDeLosMotivos, locale)
+        )
       ),
-    [locale, nombrePrestadora]
+    [locale, nombrePrestadora, filasDeLosMotivos]
   );
 
   // En qué idioma está la página. El `index.html` la declara en castellano y ahí se quedaba

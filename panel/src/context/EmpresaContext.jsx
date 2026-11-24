@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { supabase } from '../lib/supabaseClient';
 import { anotarNombreDeLaPrestadora } from '../i18n/marcaEnElTexto';
 import { anotarZonaHoraria } from '../lib/horarios';
+import { anotarFrasesDeLosMotivos } from '../i18n/frasesDeLosMotivos';
+import { leerFrasesDeLosMotivos } from '../lib/leerFrasesDeLosMotivos';
 
 const EmpresaContext = createContext(null);
 
@@ -56,7 +58,15 @@ export function EmpresaProvider({ children }) {
   useEffect(() => {
     let activo = true;
 
+    // Las frases de la base que explican los rechazos de la base (i18n/frasesDeLosMotivos.js).
+    // Corren aparte de la configuración: una no espera a la otra. Sin sesión se borran.
+    async function anotarLasFrasesDeLosMotivos(session) {
+      const filas = session ? await leerFrasesDeLosMotivos().catch(() => null) : null;
+      if (activo) anotarFrasesDeLosMotivos(filas);
+    }
+
     async function cargarSegunSesion(session) {
+      anotarLasFrasesDeLosMotivos(session);
       if (activo && vuelta === 0) setEstado('cargando');
       let traido = { empresa: null, fallo: false };
       if (session) {

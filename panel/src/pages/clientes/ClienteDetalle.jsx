@@ -16,6 +16,7 @@ import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { SignosVitalesPaciente } from './SignosVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { AgregarPersonaAutorizadaModal } from './AgregarPersonaAutorizadaModal';
+import { ContactosDeEmergencia } from './ContactosDeEmergencia';
 import { AccesosALaInformacionDeSalud } from './AccesosALaInformacionDeSalud';
 import {
   AlertasDelCliente,
@@ -192,6 +193,7 @@ export function ClienteDetalle() {
   const pestanas = [
     ['pacientes', t.clientes.pacientes],
     ['personas_autorizadas', t.clientes.personas_autorizadas.titulo],
+    ['contactos_de_emergencia', t.clientes.contactos_de_emergencia.titulo],
     ['turnos_guardia', t.clientes.turnos_guardia_activos],
     ['reportes', t.clientes.historial_reportes],
     ['alertas', t.clientes.alertas_activas],
@@ -381,6 +383,7 @@ export function ClienteDetalle() {
         {/* Las tres secciones traen sus propios datos y manejan sus propios cuatro estados; viven
             en `TurnosGuardiaReportesYAlertas.jsx` y hacen las mismas preguntas que las pantallas de
             Guardias, Reportes y Alertas, acotadas a los Pacientes de este Cliente. */}
+        {tab === 'contactos_de_emergencia' && <ContactosDeEmergencia clienteId={cliente.id} puedeEditar={puedeEditarCliente} />}
         {tab === 'turnos_guardia' && <TurnosGuardiaActivosDelCliente pacientes={cliente.pacientes} />}
         {tab === 'reportes' && <ReportesDelCliente pacientes={cliente.pacientes} />}
         {tab === 'alertas' && <AlertasDelCliente pacientes={cliente.pacientes} />}

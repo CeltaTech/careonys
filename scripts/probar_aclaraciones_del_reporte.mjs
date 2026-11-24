@@ -15,7 +15,8 @@
 //   1. El Asistente que presentó el Reporte agrega una aclaración, y la firma es la suya aunque
 //      intente poner otra.
 //   2. Otro Asistente de la misma Prestadora no puede.
-//   3. El Coordinador del Paciente puede.
+//   3. El Coordinador del Paciente puede, y otro Coordinador de la misma Prestadora que no coordina
+//      a ese Paciente no puede.
 //   4. El Administrador de la Prestadora puede.
 //   5. El Asistente que la escribió la lee: ve las tres.
 //   6. Nadie de la otra Prestadora —Administrador, Coordinador, Asistente— la lee ni la escribe.
@@ -28,7 +29,7 @@
 // CÓMO ENTRA. Adentro de la base local, con el rol `authenticated` y los datos de sesión de cada
 // cuenta que siembra `supabase/seed.sql`, o con `trabajo_sin_persona` y su Prestadora. No usa
 // contraseñas ni claves. Los dos Reportes se cargan como dueño de la base porque la siembra no trae
-// ninguno. Los datos son inventados, y todo corre adentro de una transacción que se deshace al
+// ninguno, y lo mismo el Coordinador que no coordina al Paciente, porque la siembra trae uno solo. Los datos son inventados, y todo corre adentro de una transacción que se deshace al
 // final: no deja nada escrito.
 // ---------------------------------------------------------------------------
 
@@ -61,6 +62,8 @@ const SANDBOX = {
   otroAsistente: '30000000-0000-4000-8000-000000000002',
   coordinador: '20000000-0000-4000-8000-000000000003',
   administrador: '20000000-0000-4000-8000-000000000002',
+  // Inventado adentro de la prueba: Coordinador de Sandbox que no coordina ningún Servicio.
+  otroCoordinador: '20000000-0000-4000-8000-0000000000c9',
 };
 // Cuidar del Sur: su único turno de guardia sembrado, de Elena Escobar.
 const SUR = {
@@ -91,6 +94,15 @@ BEGIN
   VALUES ('${SUR.prestadora}', '${SUR.turnoGuardia}', '${SUR.paciente}', 'Caminó por el patio. Texto inventado.', true)
   RETURNING id INTO v_r2;
 
+  -- Otro Coordinador de Sandbox, que no coordina ningún Servicio, cargado como dueño de la base.
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, created_at, updated_at,
+    confirmation_token, recovery_token, email_change_token_new, email_change)
+  VALUES ('00000000-0000-0000-0000-000000000000', '${SANDBOX.otroCoordinador}', 'authenticated', 'authenticated',
+    '${SANDBOX.otroCoordinador}@acceso.careonys.invalid', '', now(), now(), '', '', '', '');
+  INSERT INTO public.usuarios (id, rol, nombre, prestadora_id, email)
+  VALUES ('${SANDBOX.otroCoordinador}', 'coordinador', 'Otro Coordinador inventado', '${SANDBOX.prestadora}',
+    'otro.coordinador@ejemplo.invalid');
+
   -- 1. El Asistente que presentó el Reporte. Intenta firmar con el nombre del Administrador.
   v_res := v_res || pg_temp.agregar('${SANDBOX.asistente}', v_r1,
     jsonb_build_object('escrita_por', '${SANDBOX.administrador}'));
@@ -102,6 +114,8 @@ BEGIN
   v_res := v_res || pg_temp.agregar('${SANDBOX.otroAsistente}', v_r1, '{}');
   -- 3. El Coordinador del Paciente.
   v_res := v_res || pg_temp.agregar('${SANDBOX.coordinador}', v_r1, '{}');
+  -- 3 bis. Otro Coordinador de la misma Prestadora, que no coordina a ese Paciente.
+  v_res := v_res || pg_temp.agregar('${SANDBOX.otroCoordinador}', v_r1, '{}');
   -- 4. El Administrador de la Prestadora.
   v_res := v_res || pg_temp.agregar('${SANDBOX.administrador}', v_r1, '{}');
 
@@ -252,6 +266,7 @@ const ESPERADO = [
   ['la firma es la de quien la escribió', 'firma propia'],
   ['otro Asistente de la misma Prestadora agrega una', 'rechazado'],
   ['el Coordinador del Paciente agrega una', 'aceptado'],
+  ['un Coordinador que no coordina al Paciente agrega una', 'rechazado'],
   ['el Administrador de la Prestadora agrega una', 'aceptado'],
   ['el Asistente lee las aclaraciones de su Reporte', 've 3'],
   ['el Administrador de la otra Prestadora las lee', 've 0'],

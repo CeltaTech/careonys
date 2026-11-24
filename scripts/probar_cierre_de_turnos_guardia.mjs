@@ -22,6 +22,8 @@
 //     nombre de quien la autorizó, que tiene que ser del Panel de esa misma Prestadora;
 //   - el permiso para que el Paciente quede solo guarda el permiso y cierra el turno en la misma
 //     operación, y el Asistente no puede darlo;
+//   - el Coordinador que coordina el Servicio del turno cierra y da ese permiso, y otro Coordinador
+//     de la misma Prestadora que no lo coordina no puede ninguna de las dos cosas;
 //   - y otra Prestadora no alcanza el turno: ni su Administrador ni su trabajo sin persona.
 //
 // Lo que hace que la prueba pueda fallar: una base que rechazara todo falla los cierres válidos, y
@@ -29,8 +31,9 @@
 // después de cada rechazo se comprueba que el turno siguió abierto.
 //
 // CON QUÉ DATOS. Uno de los turnos de guardia ya cargados de la Prestadora de prueba, puesto como
-// empezado hace tres horas, su Administrador y su Asistente. La segunda Prestadora, con su
-// Administrador, se inventa adentro de la prueba. Todo adentro de una transacción que termina en
+// empezado hace tres horas, su Administrador y su Asistente. Dos Coordinadores inventados de esa
+// misma Prestadora: uno pasa a coordinar el Servicio del turno y el otro no coordina ninguno. La
+// segunda Prestadora, con su Administrador, se inventa adentro de la prueba. Todo adentro de una transacción que termina en
 // ROLLBACK, y cada caso se deshace antes del siguiente: al terminar no queda nada cambiado.
 // ---------------------------------------------------------------------------
 
@@ -127,6 +130,8 @@ DECLARE
   v_b uuid;
   v_admin uuid;
   v_admin_b uuid := gen_random_uuid();
+  v_coord uuid := gen_random_uuid();
+  v_coord_ajeno uuid := gen_random_uuid();
   v_asistente uuid;
   v_turno uuid;
   v_otro_turno uuid;
@@ -185,6 +190,24 @@ BEGIN
   INSERT INTO usuarios (id, rol, nombre, prestadora_id, email)
   VALUES (v_admin_b, 'admin_prestadora', 'Admin inventado', v_b, v_admin_b::text || '@ejemplo.invalid');
 
+  -- Los dos Coordinadores inventados de la Prestadora de prueba. El primero pasa a coordinar el
+  -- Servicio del turno; el segundo no coordina ninguno.
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, created_at, updated_at,
+    confirmation_token, recovery_token, email_change_token_new, email_change,
+    email_change_token_current, phone_change, phone_change_token, reauthentication_token)
+  SELECT '00000000-0000-0000-0000-000000000000', c, 'authenticated', 'authenticated',
+    c::text || '@acceso.careonys.invalid', '', now(), now(), '', '', '', '', '', '', '', ''
+    FROM unnest(ARRAY[v_coord, v_coord_ajeno]) AS c;
+  INSERT INTO usuarios (id, rol, nombre, prestadora_id, email)
+  VALUES (v_coord, 'coordinador', 'Coordinador inventado', v_a, v_coord::text || '@ejemplo.invalid'),
+         (v_coord_ajeno, 'coordinador', 'Otro Coordinador inventado', v_a, v_coord_ajeno::text || '@ejemplo.invalid');
+  UPDATE servicios SET coordinador_id = v_coord
+   WHERE id = (SELECT servicio_id FROM turnos_guardia WHERE id = v_turno);
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'El turno de prueba no tiene Servicio';
+  END IF;
+
   -- El turno, empezado hace tres horas, sin salida ni cierre, y con el Reporte pendiente.
   UPDATE turnos_guardia
      SET estado = 'activa', checkin_at = v_llegada,
@@ -222,7 +245,9 @@ BEGIN
       ('el Administrador de otra Prestadora cierra', 'no_encontrado'),
       ('el trabajo de otra Prestadora autoriza en nombre de este Administrador', 'sin_permiso'),
       ('el trabajo de la Prestadora autoriza en nombre de alguien de otra', 'sin_permiso'),
-      ('el Asistente da el permiso para que el Paciente quede solo', 'sin_permiso')
+      ('el Asistente da el permiso para que el Paciente quede solo', 'sin_permiso'),
+      ('un Coordinador que no coordina el Servicio cierra', 'sin_permiso'),
+      ('un Coordinador que no coordina el Servicio da el permiso para que el Paciente quede solo', 'sin_permiso')
     ) AS casos(caso, esperado)
   LOOP
     v_r := NULL;
@@ -275,6 +300,12 @@ BEGIN
         v_r := pg_temp.cerrar(NULL, v_a, v_turno, now(), true, v_m_telefono, NULL, v_admin_b);
       ELSIF v_caso = 'el Asistente da el permiso para que el Paciente quede solo' THEN
         v_r := pg_temp.paciente_solo(v_asistente, v_turno, v_paciente);
+        SELECT count(*) INTO v_n FROM consentimientos_paciente_solo WHERE turno_guardia_id = v_turno AND quien_consintio = 'Familiar inventado';
+        IF v_n <> 0 THEN v_r := 'quedó guardado el permiso'; END IF;
+      ELSIF v_caso = 'un Coordinador que no coordina el Servicio cierra' THEN
+        v_r := pg_temp.cerrar(v_coord_ajeno, NULL, v_turno, now(), true, v_m_telefono, NULL, NULL);
+      ELSIF v_caso = 'un Coordinador que no coordina el Servicio da el permiso para que el Paciente quede solo' THEN
+        v_r := pg_temp.paciente_solo(v_coord_ajeno, v_turno, v_paciente);
         SELECT count(*) INTO v_n FROM consentimientos_paciente_solo WHERE turno_guardia_id = v_turno AND quien_consintio = 'Familiar inventado';
         IF v_n <> 0 THEN v_r := 'quedó guardado el permiso'; END IF;
       END IF;
@@ -376,6 +407,34 @@ BEGIN
     RAISE EXCEPTION 'deshacer';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM <> 'deshacer' THEN v_fallas := v_fallas || ('Paciente solo: ' || SQLERRM); END IF;
+  END;
+
+  -- El Coordinador que coordina el Servicio del turno cierra con motivo: queda a su nombre.
+  BEGIN
+    v_r := pg_temp.cerrar(v_coord, NULL, v_turno, now(), true, v_m_telefono, NULL, NULL);
+    SELECT * INTO v_fila FROM turnos_guardia WHERE id = v_turno;
+    IF v_r IS DISTINCT FROM 'salida_sin_reporte' OR v_fila.cerrada_por IS DISTINCT FROM v_coord THEN
+      v_fallas := v_fallas || ('el cierre del Coordinador del Servicio dio ' || coalesce(v_r, 'nada'));
+    END IF;
+    RAISE EXCEPTION 'deshacer';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'deshacer' THEN v_fallas := v_fallas || ('cierre del Coordinador del Servicio: ' || SQLERRM); END IF;
+  END;
+
+  -- Y da el permiso para que el Paciente quede solo: permiso y cierre juntos, a su nombre.
+  BEGIN
+    v_r := pg_temp.paciente_solo(v_coord, v_turno, v_paciente);
+    SELECT * INTO v_fila FROM turnos_guardia WHERE id = v_turno;
+    SELECT count(*) INTO v_n FROM consentimientos_paciente_solo
+     WHERE turno_guardia_id = v_turno AND quien_consintio = 'Familiar inventado' AND registrado_por = v_coord;
+    IF v_r IS DISTINCT FROM 'cerrado' THEN
+      v_fallas := v_fallas || ('el permiso del Coordinador del Servicio dio ' || coalesce(v_r, 'nada'));
+    ELSIF v_n <> 1 OR v_fila.estado <> 'salida_sin_reporte' OR v_fila.cerrada_motivo_id IS DISTINCT FROM v_m_solo THEN
+      v_fallas := v_fallas || text 'el permiso del Coordinador del Servicio no guardó el permiso y el cierre juntos';
+    END IF;
+    RAISE EXCEPTION 'deshacer';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'deshacer' THEN v_fallas := v_fallas || ('Paciente solo del Coordinador: ' || SQLERRM); END IF;
   END;
 
   PERFORM set_config('prueba.fallas', array_to_string(v_fallas, ' | '), true);

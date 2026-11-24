@@ -33,11 +33,16 @@ const SONDEO_MS = 4000;
  *   Si al abrir esta pantalla ya estaba autorizado —el cierre del Asistente que se va, que quedó
  *   autorizado junto con la llegada del que entra—, se marca enseguida.
  *
- *   El piso — si la autorización tampoco llega, se entra igual eligiendo un motivo. La
- *   turno de guardia NUNCA se traba: esto no es una puerta, y ninguna rama de acá adentro termina sin una
- *   salida hacia adelante.
+ *   El piso, sólo en la llegada — si la autorización tampoco llega, se entra igual eligiendo un
+ *   motivo. La llegada NUNCA se traba: esto no es una puerta, y ninguna rama de acá adentro termina
+ *   sin una salida hacia adelante.
  *
- * `onListo(comprobacion)` recibe { codigo }, { autorizada: true } o { motivoSinComprobar, detalle } y devuelve
+ *   La salida no tiene piso: queda siempre comprobada con el código QR o con la autorización de
+ *   quien coordina, y la ubicación va con cualquiera de las dos. «Sin comprobar» es sólo de la
+ *   llegada, y la base rechaza una salida sin comprobar.
+ *
+ * `onListo(comprobacion)` recibe { codigo }, { autorizada: true } o, sólo en la llegada,
+ * { motivoSinComprobar, detalle }, y devuelve
  * { ok: true } o { ok: false, mensaje }. Cuando el backend rechaza el código —equivocado, vencido,
  * o de otra casa— este componente se queda abierto con la advertencia: cerrarlo dejaría al Asistente
  * en la puerta sin nada que apretar.
@@ -239,11 +244,14 @@ export default function PaseDeTurnoGuardia({ t, turnoGuardiaId, momento, onListo
 
   const titulo = momento === 'checkin' ? t.pase_de_turno_guardia.titulo_checkin : t.pase_de_turno_guardia.titulo_checkout;
 
-  const botonEntrarIgual = (
+  // Sólo la llegada tiene el piso de entrar sin comprobar. La salida queda siempre comprobada.
+  const admiteSinComprobar = momento === 'checkin';
+
+  const botonEntrarIgual = admiteSinComprobar ? (
     <button type="button" className="btn btn-secondary btn-full pwa-card-pie" onClick={irAlPiso} disabled={enviando}>
-      {momento === 'checkin' ? t.pase_de_turno_guardia.entrar_igual : t.pase_de_turno_guardia.cerrar_igual}
+      {t.pase_de_turno_guardia.entrar_igual}
     </button>
-  );
+  ) : null;
 
   return (
     <div className="tarjeta">
@@ -318,7 +326,7 @@ export default function PaseDeTurnoGuardia({ t, turnoGuardiaId, momento, onListo
         </>
       )}
 
-      {paso === 'sin_comprobar' && (
+      {paso === 'sin_comprobar' && admiteSinComprobar && (
         <>
           <p className="tarjeta-detalle">{t.pase_de_turno_guardia.sin_comprobar_titulo}</p>
           {MOTIVOS_SIN_COMPROBAR.map((m) => (

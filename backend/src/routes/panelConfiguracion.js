@@ -73,7 +73,7 @@ import {
   hayReenvioConfigurado,
   respuestasConfirmadas,
 } from '../utils/reenvioDeRespuestas.js';
-import { LIMITES_PREAVISO_TURNO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
+import { LIMITES_PREAVISO_TURNO_GUARDIA, LIMITES_RECORDATORIO_REPORTE_DIARIO } from '../utils/revisarRecordatoriosPush.js';
 import { reglaDePagoDe, revisarReglaDePago, soloLoQueCorreDelPago } from '../utils/formaDePago.js';
 import { ajusteDelPagoDe, ajusteDelPagoQueSePuedeGuardar } from '../utils/ajusteDelPagoPorIndice.js';
 import {
@@ -1024,6 +1024,40 @@ panelConfiguracionRouter.patch('/aviso-previo-turno-guardia', async (req, res) =
   // fila es la que la base acaba de dejar ver con la credencial de quien pide.
   const { error } = await enLaPrestadora(prestadoraId, 'aviso previo de guardia', (dbDelTrabajo) =>
     dbDelTrabajo.from('prestadoras').update({ minutos_aviso_previo_turno_guardia: minutos }).eq('id', prestadoraId)
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Cuánto antes del fin del turno de guardia se le recuerda al Asistente que presente el
+//     Reporte Diario. Mismo patrón que /aviso-previo-turno-guardia. ---
+panelConfiguracionRouter.get('/recordatorio-reporte-diario', async (req, res) => {
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
+    .from('prestadoras')
+    .select('minutos_recordatorio_reporte_diario')
+    .single();
+  if (error) return responderError(res, error);
+  res.json({ minutos_recordatorio_reporte_diario: data.minutos_recordatorio_reporte_diario });
+});
+
+panelConfiguracionRouter.patch('/recordatorio-reporte-diario', async (req, res) => {
+  const { minutos } = req.body;
+  if (
+    !Number.isInteger(minutos)
+    || minutos < LIMITES_RECORDATORIO_REPORTE_DIARIO.minimo
+    || minutos > LIMITES_RECORDATORIO_REPORTE_DIARIO.maximo
+  ) {
+    return res.status(400).json({
+      error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_RECORDATORIO_REPORTE_DIARIO.minimo} y ${LIMITES_RECORDATORIO_REPORTE_DIARIO.maximo}.`,
+    });
+  }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  // Con el trabajo de la Prestadora, igual que el aviso previo: la base sólo le deja cambiar
+  // `prestadoras` al Superadmin.
+  const { error } = await enLaPrestadora(prestadoraId, 'recordatorio del Reporte Diario', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ minutos_recordatorio_reporte_diario: minutos }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });

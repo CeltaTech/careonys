@@ -67,8 +67,12 @@ export function ServicioDetalle() {
   // Al Coordinador lo asigna la administración; el Coordinador asignado sólo lo ve. La base dice
   // lo mismo: esto sólo decide si se muestra la lista o el nombre.
   const asignaCoordinador = esAdminOSuperior(usuario?.rol);
-  const { puede } = usePermisos();
+  const { puede, cargado } = usePermisos();
   const esAdmin = asignaCoordinador;
+  // El precio de cada Prestación lo ven la administración y quien gestiona la facturación de los
+  // Clientes. Los demás leen las Prestaciones sin importes. La base aplica el mismo corte.
+  const veLosPrecios = esAdmin || puede('ver_facturacion_cliente');
+  const permisosListos = esAdmin || cargado;
   // Lo comercial del Servicio lo corrige quien tiene ese permiso; lo que firma el Responsable de
   // pagos tiene el suyo. Con cualquiera de los dos se ve la solapa. La base aplica el mismo corte.
   const puedeEditarPagos = esAdmin || puede('editar_condiciones_comerciales_servicio');
@@ -109,6 +113,7 @@ export function ServicioDetalle() {
   // `enSilencio` vuelve a leer sin tapar la ficha con «Cargando»: lo usa una pestaña que acaba de
   // cambiar algo y tiene a la vista un aviso que no se tiene que perder.
   const recargar = useCallback(async (opciones) => {
+    if (!permisosListos) return;
     if (!opciones?.enSilencio) setEstado('cargando');
     setError(null);
 
@@ -132,9 +137,9 @@ export function ServicioDetalle() {
     // ordenada con la sugerencia. Quien no asigna sólo necesita el nombre, y la base le deja ver
     // únicamente su propia cuenta, que es la del Servicio que está mirando.
     const [pr, gu, rep, rangos, coord, firma] = await Promise.all([
-      supabase
-        .from('prestaciones')
-        .select('id, tipo_servicio, precio_final, moneda, estado, nota, paciente_id, created_at')
+      (veLosPrecios
+        ? supabase.from('prestaciones').select('id, tipo_servicio, precio_final, moneda, estado, nota, paciente_id, created_at')
+        : supabase.from('prestaciones_sin_importes').select('id, tipo_servicio, estado, nota, paciente_id, created_at'))
         .eq('servicio_id', id)
         .order('created_at', { ascending: false }),
       supabase
@@ -246,7 +251,7 @@ export function ServicioDetalle() {
     setNombresAsistente(Object.fromEntries((asistentes.data ?? []).map((a) => [a.id, a.nombre])));
     setFaltaLaFirma(firma.data === true);
     setEstado('listo');
-  }, [id, prestadoraId, asignaCoordinador, t]);
+  }, [id, prestadoraId, asignaCoordinador, permisosListos, veLosPrecios, t]);
 
   useEffect(() => {
     recargar();
@@ -468,7 +473,7 @@ export function ServicioDetalle() {
                   <tr>
                     <th>{d.col_que}</th>
                     <th>{d.col_para_quien}</th>
-                    <th>{d.col_precio}</th>
+                    {veLosPrecios && <th>{d.col_precio}</th>}
                     <th>{d.col_estado}</th>
                     <th>{d.col_nota}</th>
                     {coberturaEditable && <th>{t.servicios.cobertura.col_cobertura}</th>}
@@ -479,7 +484,7 @@ export function ServicioDetalle() {
                     <tr key={p.id}>
                       <td>{p.tipo_servicio}</td>
                       <td>{nombresPaciente[p.paciente_id] || '—'}</td>
-                      <td>{formatearImporte(p.precio_final, p.moneda, locale)}</td>
+                      {veLosPrecios && <td>{formatearImporte(p.precio_final, p.moneda, locale)}</td>}
                       <td>
                         <span className={claseBadge(p.estado)}>{traducirValor(t.servicios, `estado_${p.estado}`)}</span>
                       </td>

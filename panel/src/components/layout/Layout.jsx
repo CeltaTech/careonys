@@ -251,8 +251,16 @@ export function Layout() {
       grupo: 'gestion',
       texto: t.nav.sec_facturacion,
       enlaces: [
-        { a: '/facturacion', texto: t.nav.facturacion, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
-        { a: '/lista-precios', texto: t.nav.lista_precios, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        // La facturación y la lista de precios son de la administración o de quien tenga el
+        // permiso de ver la facturación; el estado de cuenta, que vive en la misma página, también
+        // lo abre su propio permiso. Los mismos candados que las direcciones (App.jsx).
+        {
+          a: '/facturacion',
+          texto: t.nav.facturacion,
+          ver: verDirecta && (esAdmin || puede('ver_facturacion_cliente') || puede('ver_estado_de_cuenta_cliente')),
+          modalidad: MODALIDAD.DIRECTA,
+        },
+        { a: '/lista-precios', texto: t.nav.lista_precios, ver: verDirecta && (esAdmin || puede('ver_facturacion_cliente')), modalidad: MODALIDAD.DIRECTA },
         { a: '/intermediacion/formas-de-cobro', texto: t.nav.intermediacion_formas_de_cobro, ver: verMatch && esAdmin, modalidad: MODALIDAD.INTERMEDIACION },
       ],
     },

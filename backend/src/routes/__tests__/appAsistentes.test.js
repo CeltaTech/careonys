@@ -17,8 +17,8 @@
  *      cuando quedó sin comprobar. Y no sale cuando la llegada no se marcó.
  *   4. EL CÓDIGO NUNCA SE GUARDA EN CLARO. De la base sale el identificador de verificación y nada más.
  *
- * Y que nada de esto debilitó lo que ya existía: ni el bloqueo por Reporte Diario faltante, ni el
- * protocolo de continuidad de guardia.
+ * Y que nada de esto debilitó lo que ya existía: el bloqueo por Reporte Diario faltante. La salida,
+ * a diferencia de la llegada, queda siempre comprobada: sin código ni autorización no cierra.
  */
 import { strict as assert } from 'node:assert';
 import { after, afterEach, beforeEach, describe, it, mock } from 'node:test';
@@ -214,7 +214,6 @@ beforeEach(() => {
     estado: 'programada',
     checkin_at: null,
     checkout_at: null,
-    checkout_bloqueado: false,
   };
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
@@ -793,37 +792,41 @@ describe('el tope de pedidos por minuto en la llegada y la salida', () => {
 describe('check-out — la misma comprobación, contra el acto que cierra la guardia', () => {
   beforeEach(() => {
     // Para probar el check-out hace falta un turno de guardia ya en curso, con el Reporte Diario de su
-    // única Paciente ya cargado (default de arriba) y sin el protocolo de continuidad puesto.
+    // única Paciente ya cargado (default de arriba).
     turnoGuardiaActual.checkin_at = '2026-09-09T11:00:00.000Z';
     turnoGuardiaActual.estado = 'activa';
   });
 
-  it('se sale igual con un motivo, y la salida queda sin comprobar', async () => {
+  // La salida no tiene piso: ni un motivo de la lista, ni uno que no está, ni el pedido viejo sin
+  // nada la cierran. Si alguno de los tres cerrara, `turnoGuardiaMarcado()` daría verdadero.
+  for (const [caso, comprobacion] of [
+    ['con un motivo de la lista', { motivoSinComprobar: 'prestadora_no_responde' }],
+    ['con un motivo que no está en la lista', { motivoSinComprobar: 'se_lo_comio_el_perro' }],
+    ['sin datos de comprobación', undefined],
+  ]) {
+    it(`una salida ${caso} no cierra la guardia y se rechaza como salida sin comprobar`, async () => {
+      const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
+        lat: LAT,
+        lng: LNG,
+        ...(comprobacion ? { comprobacion } : {}),
+      });
+      assert.equal(estado, 400);
+      assert.equal(cuerpo.motivo, 'salida_sin_comprobar');
+      assert.equal(turnoGuardiaMarcado(), false);
+      assert.equal(comprobacionesGuardadas().length, 0);
+    });
+  }
+
+  it('el teléfono que dice «autorizada» sin que nadie haya autorizado la salida no cierra nada', async () => {
     const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
       lat: LAT,
       lng: LNG,
-      comprobacion: { motivoSinComprobar: 'prestadora_no_responde' },
+      comprobacion: { autorizada: true },
     });
-    assert.equal(estado, 200);
-    assert.equal(cuerpo.ok, true);
-    assert.equal(cuerpo.comprobacion, 'sin_comprobar');
-    assert.equal(turnoGuardiaMarcado(), true);
-
-    const [fila] = comprobacionesGuardadas();
-    assert.equal(fila.momento, 'checkout');
-    assert.equal(fila.estado, 'sin_comprobar');
-    assert.equal(fila.motivo_sin_comprobar, 'prestadora_no_responde');
-  });
-
-  it('un pedido sin datos de comprobación cierra igual y queda sin comprobar por «otro»', async () => {
-    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, { lat: LAT, lng: LNG });
-    assert.equal(estado, 200);
-    assert.equal(cuerpo.ok, true);
-
-    const [fila] = comprobacionesGuardadas();
-    assert.equal(fila.momento, 'checkout');
-    assert.equal(fila.estado, 'sin_comprobar');
-    assert.equal(fila.motivo_sin_comprobar, 'otro');
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'salida_sin_comprobar');
+    assert.equal(turnoGuardiaMarcado(), false);
+    assert.equal(comprobacionesGuardadas().length, 0);
   });
 
   it('el código que muestra el Cliente cierra la guardia y queda anotado como comprobado', async () => {
@@ -855,8 +858,8 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
     assert.equal(turnoGuardiaMarcado(), false);
   });
 
-  // Regresión: separar la comprobación del check-out no puede aflojar ninguna de las dos reglas
-  // que ya existían para cerrar un turno de guardia.
+  // Regresión: separar la comprobación del check-out no puede aflojar la regla que ya existía para
+  // cerrar un turno de guardia.
   it('sigue sin poder cerrarse sin el Reporte Diario, aunque el código sea correcto', async () => {
     respuestas.set('GET /rest/v1/reportes', () => []);
     codigosEnPantalla = [
@@ -870,23 +873,6 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
     });
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'falta_reporte');
-    assert.equal(turnoGuardiaMarcado(), false);
-    assert.equal(comprobacionesGuardadas().length, 0);
-  });
-
-  it('el protocolo de continuidad de guardia sigue vigente, aunque el código sea correcto', async () => {
-    turnoGuardiaActual.checkout_bloqueado = true;
-    codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
-    ];
-
-    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
-      lat: LAT,
-      lng: LNG,
-      comprobacion: { codigo: '123456' },
-    });
-    assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'continuidad');
     assert.equal(turnoGuardiaMarcado(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
   });

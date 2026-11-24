@@ -131,7 +131,7 @@ export function NuevoTurnoGuardiaModal({ onClose, onCreada, servicioId: servicio
     const { data, error: errorCarga } = await supabase
       .from('cronograma_de_guardias')
       .select(
-        'id, prestacion_id, dias_semana, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, prestaciones!inner(id, servicio_id, paciente_id, tipo_servicio, estado, vigente_desde, vigente_hasta)',
+        'id, prestacion_id, dias_semana, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, prestaciones:prestaciones_sin_importes!inner(id, servicio_id, paciente_id, tipo_servicio, estado, vigente_desde, vigente_hasta)',
       )
       .eq('prestaciones.servicio_id', servicioId)
       .order('created_at');

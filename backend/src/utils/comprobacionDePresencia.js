@@ -33,6 +33,9 @@ import { diaEnLaZona, finDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js
 //   llegada queda anotada SIN COMPROBAR, con ese motivo. El turno de guardia nunca se traba, y lo que
 //   siga lo deciden los protocolos que la Prestadora ya tenga para eso.
 //
+//   La salida no tiene piso: queda siempre comprobada, con el código QR o con la autorización.
+//   Sin ninguna de las dos se rechaza con `salida_sin_comprobar`, y la base lo hace cumplir.
+//
 // EL PACIENTE NO ESTÁ EN ESTA LISTA, Y NO ES UN OLVIDO. El diseño aprobado dice que el código lo
 // puede mostrar «el Cliente, el Paciente, o el Asistente saliente». En este producto el Paciente
 // no tiene cuenta —los roles posibles son admin_prestadora, coordinador, asistente, cliente y
@@ -333,6 +336,7 @@ async function resolverCodigo(db, { turno_guardia, codigo, zona }) {
  *   { codigo: '123456' }                                  — alguien mostró el código QR
  *   { autorizada: true }                                  — quien coordina autorizó el ingreso
  *   { motivoSinComprobar: 'nadie_para_mostrar', detalle }  — se entra igual, y queda en la lista
+ *                                                           (sólo en la llegada)
  *
  * Devuelve `{ estado, medio }`.
  */
@@ -370,6 +374,14 @@ async function registrarCon(db, { turno_guardia, momento, lat, lng, comprobacion
       motivo_detalle: null,
     });
     return { estado: 'comprobada', medio };
+  }
+
+  // La salida queda siempre comprobada. Lo que no traiga código —ni una autorización que la base
+  // ya tenga, que se devolvió arriba como comprobada— no la cierra, venga con un motivo o sin
+  // nada. La base lo rechazaría igual; acá se rechaza antes y con un motivo que la pantalla sabe
+  // explicar.
+  if (momento === 'checkout') {
+    throw new ErrorConMotivo('salida_sin_comprobar', 'La salida no trae el código ni una autorización registrada');
   }
 
   // El teléfono dice que lo autorizaron y la base no lo tiene: no se le cree al teléfono.

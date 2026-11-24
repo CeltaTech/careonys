@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
+import { usePermisos } from '../../context/PermisosContext';
+import { esAdminOSuperior } from '../../lib/roles';
 import { supabase } from '../../lib/supabaseClient';
 import { TONO, claseBadge, claseBadgeTono } from '../../lib/tonos';
 import { Button } from '../../components/ui/Button';
@@ -19,6 +21,7 @@ import {
   TIPOS_DE_AJUSTE_POSIBLES,
   calcularPrecioFinal,
   columnasDelPrecio,
+  esSinPrecio,
   faltantesDelPrecio,
   cambioDePrecioValido,
   idsReemplazados,
@@ -26,8 +29,13 @@ import {
 import '../../styles/molde-paginas.css';
 import '../tarjetas.css';
 
-// Las situaciones en las que una Prestación todavía puede cambiar de precio desde una fecha.
-const SE_PUEDE_CAMBIAR_EL_PRECIO = ['corriendo', 'por_empezar'];
+// Las situaciones en las que una Prestación sigue en pie: puede cambiar de precio desde una fecha
+// y armar su cronograma de guardias.
+const SIGUE_EN_PIE = ['corriendo', 'por_empezar'];
+
+// Cómo se muestra un tipo de servicio de la lista: el tipo y la modalidad. Es el mismo texto que
+// guarda una Prestación con precio de lista.
+const nombreDelTipo = (fila) => [fila.tipo_servicio, fila.modalidad].filter(Boolean).join(' — ');
 
 // Un importe escrito que no sirve: negativo o que no es número. Vacío es «falta», no «mal».
 const importeMalEscrito = (valor) => valor !== '' && !(Number(valor) >= 0);
@@ -51,7 +59,16 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const { puede, cargado } = usePermisos();
   const prestadoraId = usePrestadoraActual();
+  // El precio lo ven y lo cargan la administración y quien gestiona la facturación de los
+  // Clientes. La Coordinadora carga la Prestación sin precio y arma su cronograma. La base aplica
+  // el mismo corte: sin el permiso, lee la vista sin importes y sólo puede guardar sin precio.
+  const esAdmin = esAdminOSuperior(usuario?.rol);
+  const veLosPrecios = esAdmin || puede('ver_facturacion_cliente');
+  const permisosListos = esAdmin || cargado;
+  // Los tipos de servicio que rigen, sin precio: entre ésos elige quien carga sin ver los precios.
+  const [tiposQueRigen, setTiposQueRigen] = useState([]);
   const [listaPrecios, setListaPrecios] = useState([]);
   const [prestaciones, setPrestaciones] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -71,6 +88,8 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [mostrandoForm, setMostrandoForm] = useState(false);
   // La Prestación cuyo precio se cambia, o null si se carga una nueva.
   const [reemplazaA, setReemplazaA] = useState(null);
+  // La Prestación sin precio a la que se le pone el precio, o null.
+  const [ponerPrecioA, setPonerPrecioA] = useState(null);
   const [servicioId, setServicioId] = useState('');
   const [forma, setForma] = useState('');
   const [precioListaId, setPrecioListaId] = useState('');
@@ -108,14 +127,21 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [marcandoAvisoId, setMarcandoAvisoId] = useState(null);
 
   const recargar = useCallback(async () => {
-    if (!prestadoraId) return;
+    if (!prestadoraId || !permisosListos) return;
     setEstado('cargando');
     setError(null);
 
-    const [listaResp, prestacionesResp, cierresResp, serviciosResp, reglaResp] = await Promise.all([
+    const vacio = Promise.resolve({ data: [], error: null });
+    const [listaResp, prestacionesResp, cierresResp, serviciosResp, reglaResp, tiposResp] = await Promise.all([
       // El precio que rige hoy, uno por tipo: la promoción vigente si la hay, y si no el de siempre.
-      supabase.rpc('precios_de_lista_que_rigen', { p_fecha: hoyISO() }).order('tipo_servicio'),
-      supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
+      veLosPrecios
+        ? supabase.rpc('precios_de_lista_que_rigen', { p_fecha: hoyISO() }).order('tipo_servicio')
+        : vacio,
+      supabase
+        .from(veLosPrecios ? 'prestaciones' : 'prestaciones_sin_importes')
+        .select('*')
+        .eq('paciente_id', paciente.id)
+        .order('created_at', { ascending: false }),
       supabase.from('cierres_servicio_paciente').select('id, servicio_id').eq('paciente_id', paciente.id),
       // Los Servicios vigentes de la Prestadora. Cuáles de ellos sirven para este Paciente lo
       // decide abajo la misma regla que aplica la base, y no una consulta escrita a medida acá.
@@ -128,15 +154,18 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       // Los valores de fábrica de la Prestadora. La protección por fila sólo se los abre a la
       // administración: para la coordinación llega vacío y rige el de fábrica del producto. Por
       // eso un error acá no frena la pantalla: sólo cambia qué forma viene elegida de entrada.
-      supabase
-        .from('configuracion_facturacion_clientes')
-        .select('regla')
-        .eq('prestadora_id', prestadoraId)
-        .maybeSingle(),
+      veLosPrecios
+        ? supabase
+            .from('configuracion_facturacion_clientes')
+            .select('regla')
+            .eq('prestadora_id', prestadoraId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      veLosPrecios ? vacio : supabase.rpc('tipos_de_servicio_que_rigen'),
     ]);
 
     const falla =
-      listaResp.error || prestacionesResp.error || cierresResp.error || serviciosResp.error;
+      listaResp.error || prestacionesResp.error || cierresResp.error || serviciosResp.error || tiposResp.error;
     if (falla) {
       setError(mensajeDeError(falla, t));
       setEstado('error');
@@ -144,6 +173,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     }
 
     setListaPrecios(listaResp.data ?? []);
+    setTiposQueRigen(tiposResp.data ?? []);
     setPrestaciones(prestacionesResp.data ?? []);
     setCierres(cierresResp.data ?? []);
     setServiciosDelCliente(serviciosResp.data ?? []);
@@ -161,7 +191,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     }
 
     setEstado('listo');
-  }, [paciente.id, prestadoraId, t]);
+  }, [paciente.id, prestadoraId, permisosListos, veLosPrecios, t]);
 
   useEffect(() => {
     recargar();
@@ -194,26 +224,36 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
   const reemplazadas = useMemo(() => idsReemplazados(prestaciones), [prestaciones]);
 
-  const sePuedeCambiarElPrecio = (p) =>
-    SE_PUEDE_CAMBIAR_EL_PRECIO.includes(situacion(p)) && !reemplazadas.has(p.id) && Boolean(p.servicio_id);
+  const sigueEnPie = (p) => SIGUE_EN_PIE.includes(situacion(p)) && !reemplazadas.has(p.id) && Boolean(p.servicio_id);
+  const sePuedeCambiarElPrecio = (p) => veLosPrecios && !esSinPrecio(p.forma_de_precio) && sigueEnPie(p);
+  const sePuedePonerElPrecio = (p) => veLosPrecios && esSinPrecio(p.forma_de_precio) && !reemplazadas.has(p.id);
 
   // El aviso de cada casillero, por nombre. Se calcula siempre y se muestra sólo después de
   // apretar Guardar: así desaparece en cuanto el dato se completa.
   const avisos = {};
   if (!servicioId) avisos.servicio_id = t.formularios.falta_un_dato_obligatorio;
-  for (const campo of faltantesDelPrecio(datosDelPrecio)) {
-    const escrito = campo === 'precio_escrito' ? precioEscrito : campo === 'valor_del_ajuste' ? valorDescuento : '';
-    avisos[campo] = importeMalEscrito(escrito) ? t.prestaciones.precio_invalido : t.formularios.falta_un_dato_obligatorio;
+  if (veLosPrecios) {
+    // Quien ve los precios guarda siempre con precio: la forma vacía es de quien no los ve.
+    if (esSinPrecio(forma)) avisos.forma_de_precio = t.formularios.falta_un_dato_obligatorio;
+    for (const campo of faltantesDelPrecio(datosDelPrecio)) {
+      const escrito = campo === 'precio_escrito' ? precioEscrito : campo === 'valor_del_ajuste' ? valorDescuento : '';
+      avisos[campo] = importeMalEscrito(escrito) ? t.prestaciones.precio_invalido : t.formularios.falta_un_dato_obligatorio;
+    }
+    if (importeMalEscrito(precioTurnoGuardiaAdicional)) avisos.precio_turno_guardia_adicional = t.prestaciones.precio_invalido;
+    if (importeMalEscrito(precioHoraAdicional)) avisos.precio_hora_adicional = t.prestaciones.precio_invalido;
+  } else if (!tipoServicioEscrito) {
+    avisos.tipo_servicio = t.formularios.falta_un_dato_obligatorio;
   }
-  if (importeMalEscrito(precioTurnoGuardiaAdicional)) avisos.precio_turno_guardia_adicional = t.prestaciones.precio_invalido;
-  if (importeMalEscrito(precioHoraAdicional)) avisos.precio_hora_adicional = t.prestaciones.precio_invalido;
-  if (!vigenteDesde) avisos.vigente_desde = t.formularios.falta_un_dato_obligatorio;
-  else if (reemplazaA && !cambioDePrecioValido(reemplazaA, vigenteDesde, reemplazadas)) {
-    avisos.vigente_desde = t.prestaciones.cambio_fuera_de_vigencia;
+  // Al poner el precio no se tocan las fechas: siguen las de la Prestación.
+  if (!ponerPrecioA) {
+    if (!vigenteDesde) avisos.vigente_desde = t.formularios.falta_un_dato_obligatorio;
+    else if (reemplazaA && !cambioDePrecioValido(reemplazaA, vigenteDesde, reemplazadas)) {
+      avisos.vigente_desde = t.prestaciones.cambio_fuera_de_vigencia;
+    }
+    // La base rechaza un período dado vuelta, pero el mensaje que devolvería habla de una
+    // restricción y de una columna. Acá se avisa antes y con palabras de quien está cargando.
+    if (vigenteHasta && vigenteDesde && vigenteHasta < vigenteDesde) avisos.vigente_hasta = t.prestaciones.vigencia_al_reves;
   }
-  // La base rechaza un período dado vuelta, pero el mensaje que devolvería habla de una
-  // restricción y de una columna. Acá se avisa antes y con palabras de quien está cargando.
-  if (vigenteHasta && vigenteDesde && vigenteHasta < vigenteDesde) avisos.vigente_hasta = t.prestaciones.vigencia_al_reves;
 
   const avisoDe = (campo) => (intentoGuardar ? avisos[campo] : undefined);
 
@@ -229,14 +269,25 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
   // Cuando hay uno solo no se hace elegir; cuando hay varios, la elección es de quien carga.
   useEffect(() => {
-    if (reemplazaA) return;
+    if (reemplazaA || ponerPrecioA) return;
     const unico = serviciosAbiertos.length === 1 ? serviciosAbiertos[0].id : '';
     setServicioId((actual) => (serviciosAbiertos.some((s) => s.id === actual) ? actual : unico));
-  }, [serviciosAbiertos, reemplazaA]);
+  }, [serviciosAbiertos, reemplazaA, ponerPrecioA]);
 
   function abrirNueva() {
     limpiarForm();
+    setForma(veLosPrecios ? formaDeEntrada : '');
+    setMostrandoForm(true);
+  }
+
+  // Poner el precio a una Prestación que se cargó sin él. Se completa la misma fila: no hay una
+  // anterior que reemplazar, porque hasta ahora no había precio pactado.
+  function abrirPonerPrecio(prestacion) {
+    limpiarForm();
+    setPonerPrecioA(prestacion);
+    setServicioId(prestacion.servicio_id ?? '');
     setForma(formaDeEntrada);
+    setTipoServicioEscrito(prestacion.tipo_servicio || '');
     setMostrandoForm(true);
   }
 
@@ -283,6 +334,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
   function limpiarForm() {
     setReemplazaA(null);
+    setPonerPrecioA(null);
     setForma('');
     setPrecioListaId('');
     setSentidoDelAjuste('');
@@ -311,12 +363,39 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       return;
     }
 
-    const columnas = columnasDelPrecio(datosDelPrecio);
+    const columnas = columnasDelPrecio(veLosPrecios ? datosDelPrecio : { forma: '' });
     if (!columnas) return;
+    const adicionales = veLosPrecios
+      ? {
+          precio_turno_guardia_adicional: precioTurnoGuardiaAdicional === '' ? null : Number(precioTurnoGuardiaAdicional),
+          precio_hora_adicional: precioHoraAdicional === '' ? null : Number(precioHoraAdicional),
+        }
+      : { precio_turno_guardia_adicional: null, precio_hora_adicional: null };
 
     setGuardando(true);
     setErrorForm(null);
 
+    if (ponerPrecioA) {
+      // Sólo si sigue sin precio: si otra persona se lo puso mientras tanto, no se pisa.
+      const { data: puestas, error: errorUpdate } = await supabase
+        .from('prestaciones')
+        .update({ ...columnas, ...adicionales })
+        .eq('id', ponerPrecioA.id)
+        .is('forma_de_precio', null)
+        .select('id');
+      setGuardando(false);
+      if (errorUpdate || (puestas ?? []).length === 0) {
+        setErrorForm(errorUpdate ? mensajeDeError(errorUpdate, t) : t.comun.error_generico);
+        return;
+      }
+      cerrarForm();
+      recargar();
+      return;
+    }
+
+    // Sin el permiso, la Prestación va sin precio: la forma vacía se manda escrita, porque la base
+    // pone una de fábrica si no viene. Y sin `.select()`: quien no ve los precios no puede leer
+    // la fila de la tabla que acaba de guardar.
     const { error: errorInsert } = await supabase.from('prestaciones').insert({
       prestadora_id: prestadoraId,
       // De qué Servicio es lo que se pacta, y a quién se le presta. Las dos cosas: el precio y
@@ -324,6 +403,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       servicio_id: servicioId,
       paciente_id: paciente.id,
       ...columnas,
+      ...(veLosPrecios ? {} : { tipo_servicio: tipoServicioEscrito }),
       configuracion: {
         cantidad_turnos_guardia: cantidadTurnosGuardia,
         feriados,
@@ -331,8 +411,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         hospitalizacion,
       },
       nota,
-      precio_turno_guardia_adicional: precioTurnoGuardiaAdicional === '' ? null : Number(precioTurnoGuardiaAdicional),
-      precio_hora_adicional: precioHoraAdicional === '' ? null : Number(precioHoraAdicional),
+      ...adicionales,
       estado: 'vigente',
       vigente_desde: vigenteDesde,
       vigente_hasta: vigenteHasta || null,
@@ -403,10 +482,10 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   <thead>
                     <tr>
                       <th>{t.prestaciones.col_tipo_servicio}</th>
-                      <th>{t.prestaciones.col_precio_final}</th>
+                      {veLosPrecios && <th>{t.prestaciones.col_precio_final}</th>}
                       <th>{t.prestaciones.col_vigencia}</th>
                       <th>{t.prestaciones.col_situacion}</th>
-                      <th>{t.prestaciones.col_revision}</th>
+                      {veLosPrecios && <th>{t.prestaciones.col_revision}</th>}
                       <th></th>
                     </tr>
                   </thead>
@@ -414,7 +493,15 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     {prestaciones.map((p) => (
                       <tr key={p.id}>
                         <td><b>{p.tipo_servicio}</b></td>
-                        <td>{p.precio_final}</td>
+                        {veLosPrecios && (
+                          <td>
+                            {esSinPrecio(p.forma_de_precio) ? (
+                              <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.sin_precio}</span>
+                            ) : (
+                              p.precio_final
+                            )}
+                          </td>
+                        )}
                         <td>
                           {p.vigente_desde} →{' '}
                           {p.vigente_hasta || <span className="panel-dato-vacio">{t.prestaciones.vigencia_sin_fin}</span>}
@@ -424,16 +511,18 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                             {t.prestaciones[`situacion_${situacion(p)}`]}
                           </span>
                         </td>
-                        <td>
-                          {p.requiere_revision ? (
-                            <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.a_revisar}</span>
-                          ) : (
-                            <span className={claseBadgeTono(TONO.EXITO)}>{t.prestaciones.al_dia}</span>
-                          )}
-                        </td>
+                        {veLosPrecios && (
+                          <td>
+                            {p.requiere_revision ? (
+                              <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.a_revisar}</span>
+                            ) : (
+                              <span className={claseBadgeTono(TONO.EXITO)}>{t.prestaciones.al_dia}</span>
+                            )}
+                          </td>
+                        )}
                         <td>
                           <div className="molde-acciones">
-                            {p.requiere_revision && (
+                            {veLosPrecios && p.requiere_revision && (
                               <Button variant="secondary" onClick={() => handleMarcarRevisado(p.id)} disabled={marcandoRevisado === p.id}>
                                 {t.prestaciones.marcar_revisado}
                               </Button>
@@ -443,7 +532,12 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                                 {t.prestaciones.cambiar_precio}
                               </Button>
                             )}
-                            {sePuedeCambiarElPrecio(p) && cronogramaDe?.id !== p.id && (
+                            {!mostrandoForm && sePuedePonerElPrecio(p) && (
+                              <Button variant="secondary" onClick={() => abrirPonerPrecio(p)}>
+                                {t.prestaciones.poner_precio}
+                              </Button>
+                            )}
+                            {sigueEnPie(p) && cronogramaDe?.id !== p.id && (
                               <Button variant="secondary" onClick={() => setCronogramaDe(p)}>
                                 {t.prestaciones.cronograma.titulo}
                               </Button>
@@ -469,10 +563,16 @@ export function PrestacionesPaciente({ paciente, onClose }) {
             {mostrandoForm && (
               <section className="panel-tarjeta">
                 <div className="panel-tarjeta-titulo">
-                  <h2>{reemplazaA ? t.prestaciones.cambio_de_precio_titulo : t.prestaciones.nueva_prestacion}</h2>
+                  <h2>
+                    {reemplazaA
+                      ? t.prestaciones.cambio_de_precio_titulo
+                      : ponerPrecioA
+                        ? `${t.prestaciones.poner_precio} — ${ponerPrecioA.tipo_servicio}`
+                        : t.prestaciones.nueva_prestacion}
+                  </h2>
                 </div>
                 {errorForm && <Alert variant="error">{errorForm}</Alert>}
-                {!reemplazaA && serviciosAbiertos.length === 0 && <Alert variant="info">{t.prestaciones.sin_servicio_abierto}</Alert>}
+                {!reemplazaA && !ponerPrecioA && serviciosAbiertos.length === 0 && <Alert variant="info">{t.prestaciones.sin_servicio_abierto}</Alert>}
 
                 <div className="molde-formgrid">
                   <FormField
@@ -481,13 +581,13 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     type="select"
                     value={servicioId}
                     onChange={(e) => setServicioId(e.target.value)}
-                    disabled={Boolean(reemplazaA)}
+                    disabled={Boolean(reemplazaA || ponerPrecioA)}
                     error={avisoDe('servicio_id')}
                     required
                   >
                     <option value="">—</option>
-                    {(reemplazaA
-                      ? serviciosDelCliente.filter((s) => s.id === reemplazaA.servicio_id)
+                    {(reemplazaA || ponerPrecioA
+                      ? serviciosDelCliente.filter((s) => s.id === (reemplazaA || ponerPrecioA).servicio_id)
                       : serviciosAbiertos
                     ).map((s) => (
                       <option key={s.id} value={s.id}>
@@ -496,23 +596,44 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     ))}
                   </FormField>
 
-                  <FormField
-                    label={t.prestaciones.forma_de_precio}
-                    name="forma_de_precio"
-                    type="select"
-                    value={forma}
-                    onChange={(e) => setForma(e.target.value)}
-                    error={avisoDe('forma_de_precio')}
-                    required
-                  >
-                    {FORMAS_DE_PRECIO_POSIBLES.map((f) => (
-                      <option key={f} value={f}>
-                        {t.prestaciones[`forma_de_precio_${f}`]}
-                      </option>
-                    ))}
-                  </FormField>
+                  {!veLosPrecios && (
+                    <FormField
+                      label={t.prestaciones.col_tipo_servicio}
+                      name="tipo_servicio"
+                      type="select"
+                      value={tipoServicioEscrito}
+                      onChange={(e) => setTipoServicioEscrito(e.target.value)}
+                      error={avisoDe('tipo_servicio')}
+                      required
+                    >
+                      <option value="">—</option>
+                      {tiposQueRigen.map((fila) => (
+                        <option key={nombreDelTipo(fila)} value={nombreDelTipo(fila)}>
+                          {nombreDelTipo(fila)}
+                        </option>
+                      ))}
+                    </FormField>
+                  )}
 
-                  {forma === 'lista' && (
+                  {veLosPrecios && (
+                    <FormField
+                      label={t.prestaciones.forma_de_precio}
+                      name="forma_de_precio"
+                      type="select"
+                      value={forma}
+                      onChange={(e) => setForma(e.target.value)}
+                      error={avisoDe('forma_de_precio')}
+                      required
+                    >
+                      {FORMAS_DE_PRECIO_POSIBLES.map((f) => (
+                        <option key={f} value={f}>
+                          {t.prestaciones[`forma_de_precio_${f}`]}
+                        </option>
+                      ))}
+                    </FormField>
+                  )}
+
+                  {veLosPrecios && forma === 'lista' && (
                     <>
                       <FormField
                         label={t.prestaciones.col_tipo_servicio}
@@ -580,7 +701,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     </>
                   )}
 
-                  {forma === 'directo' && (
+                  {veLosPrecios && forma === 'directo' && (
                     <>
                       <FormField
                         label={t.prestaciones.col_tipo_servicio}
@@ -604,61 +725,73 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     </>
                   )}
 
-                  <FormField
-                    label={t.prestaciones.cantidad_turnos_guardia}
-                    name="cantidad_turnos_guardia"
-                    type="number"
-                    value={cantidadTurnosGuardia}
-                    onChange={(e) => setCantidadTurnosGuardia(e.target.value)}
-                  />
-                  <div className="molde-ancho">
-                    <FormField label={t.prestaciones.feriados} name="feriados" type="checkbox" checked={feriados} onChange={(e) => setFeriados(e.target.checked)} />
-                    <FormField label={t.prestaciones.viajes} name="viajes" type="checkbox" checked={viajes} onChange={(e) => setViajes(e.target.checked)} />
-                    <FormField label={t.prestaciones.hospitalizacion} name="hospitalizacion" type="checkbox" checked={hospitalizacion} onChange={(e) => setHospitalizacion(e.target.checked)} />
-                  </div>
+                  {!ponerPrecioA && (
+                    <>
+                      <FormField
+                        label={t.prestaciones.cantidad_turnos_guardia}
+                        name="cantidad_turnos_guardia"
+                        type="number"
+                        value={cantidadTurnosGuardia}
+                        onChange={(e) => setCantidadTurnosGuardia(e.target.value)}
+                      />
+                      <div className="molde-ancho">
+                        <FormField label={t.prestaciones.feriados} name="feriados" type="checkbox" checked={feriados} onChange={(e) => setFeriados(e.target.checked)} />
+                        <FormField label={t.prestaciones.viajes} name="viajes" type="checkbox" checked={viajes} onChange={(e) => setViajes(e.target.checked)} />
+                        <FormField label={t.prestaciones.hospitalizacion} name="hospitalizacion" type="checkbox" checked={hospitalizacion} onChange={(e) => setHospitalizacion(e.target.checked)} />
+                      </div>
+                    </>
+                  )}
 
-                  <FormField
-                    label={t.prestaciones.precio_turno_guardia_adicional}
-                    name="precio_turno_guardia_adicional"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={precioTurnoGuardiaAdicional}
-                    onChange={(e) => setPrecioTurnoGuardiaAdicional(e.target.value)}
-                    error={avisoDe('precio_turno_guardia_adicional')}
-                  />
-                  <FormField
-                    label={t.prestaciones.precio_hora_adicional}
-                    name="precio_hora_adicional"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={precioHoraAdicional}
-                    onChange={(e) => setPrecioHoraAdicional(e.target.value)}
-                    error={avisoDe('precio_hora_adicional')}
-                  />
+                  {veLosPrecios && (
+                    <>
+                      <FormField
+                        label={t.prestaciones.precio_turno_guardia_adicional}
+                        name="precio_turno_guardia_adicional"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={precioTurnoGuardiaAdicional}
+                        onChange={(e) => setPrecioTurnoGuardiaAdicional(e.target.value)}
+                        error={avisoDe('precio_turno_guardia_adicional')}
+                      />
+                      <FormField
+                        label={t.prestaciones.precio_hora_adicional}
+                        name="precio_hora_adicional"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={precioHoraAdicional}
+                        onChange={(e) => setPrecioHoraAdicional(e.target.value)}
+                        error={avisoDe('precio_hora_adicional')}
+                      />
+                    </>
+                  )}
 
-                  <FormField
-                    label={t.prestaciones.vigente_desde}
-                    name="vigente_desde"
-                    type="date"
-                    value={vigenteDesde}
-                    onChange={(e) => setVigenteDesde(e.target.value)}
-                    error={avisoDe('vigente_desde')}
-                    required
-                  />
-                  <FormField
-                    label={t.prestaciones.vigente_hasta}
-                    name="vigente_hasta"
-                    type="date"
-                    value={vigenteHasta}
-                    onChange={(e) => setVigenteHasta(e.target.value)}
-                    error={avisoDe('vigente_hasta')}
-                  />
+                  {!ponerPrecioA && (
+                    <>
+                      <FormField
+                        label={t.prestaciones.vigente_desde}
+                        name="vigente_desde"
+                        type="date"
+                        value={vigenteDesde}
+                        onChange={(e) => setVigenteDesde(e.target.value)}
+                        error={avisoDe('vigente_desde')}
+                        required
+                      />
+                      <FormField
+                        label={t.prestaciones.vigente_hasta}
+                        name="vigente_hasta"
+                        type="date"
+                        value={vigenteHasta}
+                        onChange={(e) => setVigenteHasta(e.target.value)}
+                        error={avisoDe('vigente_hasta')}
+                      />
 
-                  <div className="molde-ancho">
-                    <FormField label={t.comun.nota_interna} name="nota" type="textarea" value={nota} onChange={(e) => setNota(e.target.value)} />
-                  </div>
+                      <div className="molde-ancho">
+                        <FormField label={t.comun.nota_interna} name="nota" type="textarea" value={nota} onChange={(e) => setNota(e.target.value)} />
+                      </div>
+                    </>
+                  )}
 
                   {precioFinalCalculado !== null && (
                     <div className="tarjeta-dato molde-ancho">

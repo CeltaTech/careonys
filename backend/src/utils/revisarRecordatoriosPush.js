@@ -6,7 +6,8 @@ import { configuracionEvento } from './email.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { turnosGuardiaEnLicenciaAdentro } from './turnoGuardiaDeLicencia.js';
-import { inicioDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
+import { inicioDeTurnoGuardiaEnLaZona, finDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
+import { pacientesDeTurnosGuardia } from './pacientesDeTurnoGuardia.js';
 
 // Recorre los 3 eventos de push a Asistentes listados en
 // docs/PRD_04_05_App_Servicio.md:115 ("Nuevo turno de guardia asignado, mensajes del coordinador,
@@ -24,6 +25,14 @@ export const MINUTOS_ANTES_RECORDATORIO = 60;
 // backend rechace el número antes que la base, y el Panel reciba un mensaje en castellano en
 // vez del error crudo de Postgres.
 export const LIMITES_PREAVISO_TURNO_GUARDIA = { minimo: 5, maximo: 1440 };
+
+// Cuánto antes del fin del turno de guardia se le recuerda al Asistente que presente el Reporte
+// Diario, mientras la Prestadora no haya elegido otra cosa. Es el valor por defecto de la columna
+// `prestadoras.minutos_recordatorio_reporte_diario`, con el mismo criterio que el de arriba.
+export const MINUTOS_ANTES_RECORDATORIO_REPORTE = 30;
+
+// Los mismos topes que la regla de la base (`prestadoras_minutos_recordatorio_reporte_diario_check`).
+export const LIMITES_RECORDATORIO_REPORTE_DIARIO = { minimo: 5, maximo: 1440 };
 
 const EVENTO_AVISO_RUTINA = 'aviso_rutina_asistente';
 
@@ -76,7 +85,7 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
   return enLaPrestadora(prestadoraId, 'revisar los avisos al Asistente', async (db) => {
     const { data: prestadora, error } = await db
       .from('prestadoras')
-      .select('minutos_aviso_previo_turno_guardia, zona_horaria')
+      .select('minutos_aviso_previo_turno_guardia, minutos_recordatorio_reporte_diario, zona_horaria')
       .eq('id', prestadoraId)
       .maybeSingle();
     if (error) {
@@ -93,6 +102,8 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
       return;
     }
     await revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutosAntes, ahora, prestadora.zona_horaria);
+    const minutosAntesDelFin = prestadora.minutos_recordatorio_reporte_diario ?? MINUTOS_ANTES_RECORDATORIO_REPORTE;
+    await revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntesDelFin, ahora, prestadora.zona_horaria);
   });
 }
 
@@ -213,6 +224,71 @@ async function revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutos
     await db
       .from('turnos_guardia')
       .update({ push_recordatorio_enviado_at: new Date().toISOString() })
+      .eq('prestadora_id', prestadoraId)
+      .eq('id', turno_guardia.id);
+  }
+}
+
+// Cuando faltan los minutos que eligió la Prestadora para que termine un turno de guardia en curso
+// y el Asistente todavía no presentó el Reporte Diario, se lo recuerda. Una sola vez por turno.
+// El reporte está presentado cuando cada Paciente del turno tiene el suyo: es la misma cuenta que
+// decide si el turno se puede cerrar en la aplicación del Asistente.
+async function revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntes, ahora, zona) {
+  const { data: turnos_guardia, error } = await db
+    .from('turnos_guardia')
+    .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
+    .eq('prestadora_id', prestadoraId)
+    .is('push_recordatorio_reporte_enviado_at', null)
+    .is('checkout_at', null)
+    .eq('estado', 'activa')
+    .not('asistente_id', 'is', null);
+
+  if (error) {
+    console.error(`Error consultando guardias para el recordatorio del Reporte Diario (prestadora ${prestadoraId}):`, error.message);
+    return;
+  }
+  if (!turnos_guardia?.length) return;
+
+  const desde = ahora.getTime() + minutosAntes * 60_000;
+  const porTerminar = turnos_guardia.filter((turno_guardia) => {
+    const fin = finDeTurnoGuardiaEnLaZona(turno_guardia, zona).getTime();
+    return fin <= desde && fin > ahora.getTime();
+  });
+  if (!porTerminar.length) return;
+
+  // Sólo se pregunta qué Paciente tiene reporte en cada turno: nunca el contenido del reporte.
+  const pacientes = await pacientesDeTurnosGuardia(db, prestadoraId, porTerminar, 'id');
+  const { data: reportes, error: errorReportes } = await db
+    .from('reportes')
+    .select('turno_guardia_id, paciente_id')
+    .eq('prestadora_id', prestadoraId)
+    .in('turno_guardia_id', porTerminar.map((g) => g.id));
+  if (errorReportes) {
+    console.error(`Error consultando los reportes para el recordatorio del Reporte Diario (prestadora ${prestadoraId}):`, errorReportes.message);
+    return;
+  }
+  const conReporte = new Set((reportes ?? []).map((r) => `${r.turno_guardia_id}:${r.paciente_id}`));
+
+  const sinReporte = porTerminar.filter((turno_guardia) => {
+    const delTurno = pacientes.get(turno_guardia.id) ?? [];
+    return delTurno.some((p) => !conReporte.has(`${turno_guardia.id}:${p.id}`));
+  });
+  if (!sinReporte.length) return;
+
+  const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
+  const { titulo, cuerpo } = mensajeDelSistema('recordatorio_del_reporte_diario', idioma);
+
+  for (const turno_guardia of sinReporte) {
+    const enviadoPorPush = await enviarPushAsistente(prestadoraId, turno_guardia.asistente_id, {
+      titulo,
+      cuerpo,
+      url: `/turnos-guardia/${turno_guardia.id}`,
+    });
+    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: turno_guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
+
+    await db
+      .from('turnos_guardia')
+      .update({ push_recordatorio_reporte_enviado_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)
       .eq('id', turno_guardia.id);
   }

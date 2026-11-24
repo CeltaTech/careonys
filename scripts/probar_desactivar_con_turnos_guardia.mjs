@@ -66,7 +66,7 @@ CREATE FUNCTION pg_temp.turno_guardia_en(p_turno_guardia uuid, p_estado text, p_
 LANGUAGE sql AS $f$
   UPDATE turnos_guardia
      SET fecha = p_fecha, estado = p_estado,
-         salida_checkin_at = NULL, checkin_at = NULL, checkout_at = NULL, checkout_bloqueado = false,
+         salida_checkin_at = NULL, checkin_at = NULL, checkout_at = NULL,
          cerrada_at = NULL, cerrada_origen = NULL, cerrada_por = NULL, cerrada_motivo = NULL,
          cancelacion_origen = NULL, cancelacion_alcance = NULL
    WHERE id = p_turno_guardia;

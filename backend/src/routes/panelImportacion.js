@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido, enLaPrestadora, TRABAJO_DE_LA_IMPORTACION } from '../db/connection.js';
-import { requierePermiso } from '../utils/permisos.js';
+import { negarSinPermiso, requierePermiso, tienePermiso } from '../utils/permisos.js';
 import { anotarExportacion } from '../utils/registroDeActividad.js';
 import {
   crearAsistenteDirecto, crearClienteImportado,
@@ -25,6 +25,10 @@ import { informeDeFilasNoCargadas } from '../utils/informeDeFilasNoCargadas.js';
 import {
   CAMPOS_DE_LA_LISTA_DE_PRECIOS, errorDeLaBase, esLoteDePersonas, fechaDelDia, mapeoPropuestoDeLaLista, renglonesDeLaLista,
 } from '../utils/actualizacionDePrecios.js';
+
+// La lista de precios es de la facturación del Cliente: la importa y la revisa la administración, o
+// quien tenga esta acción del catálogo de permisos, además de la de importar.
+const ACCION_FACTURACION = 'ver_facturacion_cliente';
 
 export const panelImportacionRouter = Router();
 
@@ -430,6 +434,11 @@ panelImportacionRouter.get(
       if (errorLote || !lote) {
         return res.status(404).json({ error: 'Lote de importación no encontrado' });
       }
+      // El lote de una lista de precios trae precios en sus renglones dudosos: sólo lo abre quien
+      // tiene la facturación del Cliente. La pregunta va con la sesión de quien pide.
+      if (!esLoteDePersonas(lote) && !(await tienePermiso({ db: clienteDelPedido(req), accion: ACCION_FACTURACION }))) {
+        return negarSinPermiso(res);
+      }
 
       const tabla = lote.tipo === 'asistente' ? 'asistentes' : 'clientes';
       const { data: filas, error: errorFilas } = await db
@@ -601,6 +610,7 @@ panelImportacionRouter.post(
   '/precios/analizar',
   requiereRolPanel,
   requierePermiso('importar_datos_masivos'),
+  requierePermiso(ACCION_FACTURACION),
   upload.single('archivo'),
   manejarErrorMulter,
   async (req, res) => {
@@ -629,6 +639,7 @@ panelImportacionRouter.post(
   '/precios/confirmar',
   requiereRolPanel,
   requierePermiso('importar_datos_masivos'),
+  requierePermiso(ACCION_FACTURACION),
   async (req, res) => {
     const { filas, mapeo, archivoNombre, desde } = req.body ?? {};
     const pDesde = fechaDelDia(desde);

@@ -28,7 +28,7 @@ import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 // De qué Cliente es sale de `cliente_id`. Sus datos de contacto los trae `contactosDeClientes`.
 const CONSULTA =
   'id, etiqueta, estado, created_at, cliente_id, ' +
-  'prestaciones(id, tipo_servicio, paciente_id), turnos_guardia(paciente_id, canal_modalidad)';
+  'prestaciones:prestaciones_sin_importes(id, tipo_servicio, paciente_id), turnos_guardia(paciente_id, canal_modalidad)';
 
 const ESTADO_ACTIVO = 'vigente';
 

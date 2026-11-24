@@ -163,6 +163,9 @@ export function Facturacion() {
   // una tabla no protege nada por sí solo.
   const { puede, cargado: permisosCargados } = usePermisos();
   const veElEstadoDeCuenta = puede('ver_estado_de_cuenta_cliente');
+  // Generar, bajar y subir lo facturado, y abrir el detalle de una factura, es de quien ve la
+  // facturación. Quien sólo ve el estado de cuenta mira los saldos y nada más.
+  const veLaFacturacion = puede('ver_facturacion_cliente');
 
   const [tramo, setTramo] = useState(tramoDelMesActual);
   const [vencimiento, setVencimiento] = useState('');
@@ -333,7 +336,7 @@ export function Facturacion() {
   return (
     <div className="panel-grilla">
       <Cabecera titulo={t.facturacion.titulo}>
-        {sigue && (
+        {sigue && veLaFacturacion && (
           <Button onClick={handleGenerar} disabled={generando || !esTramoValido(tramo)}>
             {generando ? t.facturacion.generando : t.facturacion.generar}
           </Button>
@@ -443,6 +446,8 @@ export function Facturacion() {
             onChange={(e) => setTramo((anterior) => ({ ...anterior, hasta: e.target.value }))}
           />
         </label>
+        {veLaFacturacion && (
+          <>
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.facturacion.col_vencimiento}
           <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} />
@@ -464,6 +469,8 @@ export function Facturacion() {
           onChange={handleSubirFacturado}
           style={{ display: 'none' }}
         />
+          </>
+        )}
       </div>
       {mensajeIntercambio && <Alert variant="info">{mensajeIntercambio}</Alert>}
 
@@ -509,7 +516,7 @@ export function Facturacion() {
           </thead>
           <tbody>
             {saldos.map((s) => (
-              <tr key={s.factura_id} {...propsDeFilaQueAbre(() => setDetalleId(s.factura_id))}>
+              <tr key={s.factura_id} {...(veLaFacturacion ? propsDeFilaQueAbre(() => setDetalleId(s.factura_id)) : {})}>
                 <td>{s.cliente_nombre || '—'}</td>
                 <td>{formatearImporte(s.monto_a_cobrar, s.moneda, locale)}</td>
                 <td>{textoDeComprobante(s)}</td>
@@ -532,7 +539,7 @@ export function Facturacion() {
         </>
       )}
 
-      {detalleId && (
+      {detalleId && veLaFacturacion && (
         <DetalleDeSaldo facturaId={detalleId} onCerrar={() => setDetalleId(null)} onCambio={recargar} />
       )}
     </div>

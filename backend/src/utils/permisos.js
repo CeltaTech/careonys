@@ -65,11 +65,14 @@ export function requierePermiso(accion) {
     } catch {
       permitido = false;
     }
-    if (!permitido) {
-      return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
-    }
+    if (!permitido) return negarSinPermiso(res);
     next();
   };
+}
+
+/** El rechazo de una acción que la Prestadora no habilitó. Es uno solo, venga de donde venga. */
+export function negarSinPermiso(res) {
+  return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
 }
 
 // Las respuestas de todas las acciones de una sola vez, para cuando el Panel necesita saber

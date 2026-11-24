@@ -65,6 +65,8 @@ function agrupadoPorServicio(filas) {
  * @param {string|null} [p.servicioId]  Sólo ese Servicio.
  * @returns {Promise<{generadas, sinPrestaciones, sinVencimiento, sinTerminar, turnosGuardiaSinAsignar,
  *   turnosGuardiaAmbiguos, sinPrecio, monedasMezcladas}>}
+ *   `sinPrecio` es cuántos Servicios quedaron sin facturar porque una prestación que corre en el
+ *   período no tiene precio.
  */
 export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencimientoDeLaTanda = null, servicioId = null }) {
   const db = clienteDelPedido(req);
@@ -223,6 +225,10 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
     monedasMezcladas: 0,
   };
 
+  // La prestación puede cargarse sin precio. Mientras no lo tenga, el período donde corre no se
+  // factura: una factura sin ese renglón le cobraría al Cliente menos de lo pactado.
+  const serviciosSinPrecio = new Set();
+
   for (const servicio of serviciosVisibles) {
     const comercial = comercialDelServicio.get(servicio.id);
     // Todas las condiciones que rigen para este Servicio: la medición y qué se descuenta o se
@@ -244,7 +250,11 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
         });
         cuenta.turnosGuardiaSinAsignar += factura.turnosGuardiaSinAsignar;
         cuenta.turnosGuardiaAmbiguos += factura.turnosGuardiaAmbiguos;
-        cuenta.sinPrecio += factura.sinPrecio;
+
+        if (factura.sinPrecio > 0) {
+          serviciosSinPrecio.add(servicio.id);
+          continue;
+        }
 
         if (factura.renglones.length === 0) {
           cuenta.sinPrestaciones += 1;
@@ -312,5 +322,6 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
     }
   }
 
+  cuenta.sinPrecio = serviciosSinPrecio.size;
   return cuenta;
 }

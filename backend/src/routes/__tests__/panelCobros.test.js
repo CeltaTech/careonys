@@ -1945,3 +1945,136 @@ describe('el día de un cobro o una corrección sin fecha', () => {
     assert.equal(lectura.credencial, credencialEnviada);
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// La facturación del Cliente es de quien tiene la acción
+// ---------------------------------------------------------------------------------------
+
+/** Deja a quien mira con todas las acciones menos la de la facturación del Cliente. */
+function sinLaFacturacion() {
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', (cuerpo) => cuerpo?.p_accion !== 'ver_facturacion_cliente');
+}
+
+describe('la facturación del Cliente la ve y la mueve solamente quien tiene la acción', () => {
+  const COBRO = '55555555-5555-5555-5555-555555555555';
+  const ITEM = '88888888-8888-4888-8888-888888888888';
+  const RUTAS_DE_FACTURACION = [
+    ['GET', `/facturas/${FACTURA}`],
+    ['PUT', `/facturas/${FACTURA}/items/${ITEM}/precio`, { precio_unitario: 1000 }],
+    ['POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' }],
+    ['PUT', `/facturas/${FACTURA}/facturado`, { comprobante_numero: 'A-0001' }],
+    ['POST', `/facturas/${FACTURA}/comprobante`, {}],
+    ['GET', '/para-facturar?periodo=2026-08'],
+    ['POST', '/facturado/importar', { filas: [] }],
+    ['POST', `/facturas/${FACTURA}/correcciones`, { sentido: 'resta', monto: 100, motivo: 'error inventado' }],
+    ['POST', `/facturas/${FACTURA}/cobros`, { monto: 1000, medio: 'transferencia' }],
+    ['POST', `/cobros/${COBRO}/anular`, { motivo: 'cargado dos veces' }],
+    ['POST', '/entrada', { origen: 'api', cobros: [] }],
+  ];
+
+  it('sin la acción, ninguna ruta de la facturación entra ni toca la base', async () => {
+    sinLaFacturacion();
+    for (const [metodo, ruta, cuerpo] of RUTAS_DE_FACTURACION) {
+      const { estado, cuerpo: respuesta } = await pedir(metodo, ruta, cuerpo);
+      assert.equal(estado, 403, `${metodo} ${ruta}`);
+      assert.equal(respuesta.error, 'La Prestadora no habilitó esta acción');
+    }
+    const TABLAS = /\/rest\/v1\/(facturas_cliente|facturas_cliente_items|cobros_cliente|correcciones_factura_cliente|saldos_cliente|prestaciones)$/;
+    const tocadas = llamadas.filter((l) => TABLAS.test(l.clave.split(' ')[1]));
+    assert.deepEqual(tocadas.map((l) => l.clave), []);
+  });
+
+  it('la pregunta por la acción va con la sesión de quien pide', async () => {
+    sinLaFacturacion();
+    await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
+    const preguntas = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/tiene_permiso_la_sesion');
+    assert.ok(preguntas.some((l) => l.cuerpo?.p_accion === 'ver_facturacion_cliente'));
+    for (const l of preguntas) assert.equal(l.credencial, credencialEnviada);
+  });
+
+  it('sin la acción, la configuración y las restricciones se siguen entregando', async () => {
+    sinLaFacturacion();
+    respuestas.set('GET /rest/v1/restricciones_de_cobranza', () => []);
+    assert.equal((await pedir('GET', '/configuracion')).estado, 200);
+    assert.equal((await pedir('GET', '/restricciones')).estado, 200);
+  });
+
+  it('sin la acción, el estado de cuenta se sigue entregando', async () => {
+    sinLaFacturacion();
+    respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
+    const { estado } = await pedir('GET', '/saldos?periodo=2026-08');
+    assert.equal(estado, 200);
+  });
+
+  it('con la acción de facturación pero sin la del estado de cuenta, el detalle de una factura no se abre', async () => {
+    respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', (cuerpo) => cuerpo?.p_accion === 'ver_facturacion_cliente');
+    respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
+    const { estado } = await pedir('GET', `/facturas/${FACTURA}`);
+    assert.equal(estado, 403);
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/saldos_cliente'));
+  });
+});
+
+describe('un Servicio con una prestación sin precio no se factura', () => {
+  it('la prestación sin precio deja al Servicio sin factura, y se cuenta el Servicio', async () => {
+    baseConUnCliente({ prestaciones: [unaPrestacion({ precio_final: null, forma_de_precio: null })] });
+    const { estado, cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
+    assert.deepEqual(cuerpo, contadores({ sinPrecio: 1 }));
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_cliente'));
+  });
+
+  it('con otra prestación que sí tiene precio, el Servicio tampoco se factura: saldría por menos de lo pactado', async () => {
+    baseConUnCliente({
+      prestaciones: [unaPrestacion({ precio_final: '10000.00' }), unaPrestacion({ id: 2, precio_final: null })],
+    });
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.deepEqual(cuerpo, contadores({ sinPrecio: 1 }));
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_cliente'));
+  });
+
+  it('dos prestaciones sin precio en el mismo Servicio cuentan un solo Servicio', async () => {
+    baseConUnCliente({
+      prestaciones: [unaPrestacion({ precio_final: null }), unaPrestacion({ id: 2, precio_final: null })],
+    });
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.equal(cuerpo.sinPrecio, 1);
+    assert.equal(cuerpo.generadas, 0);
+  });
+
+  it('la prestación sin precio que terminó antes del período no frena la factura', async () => {
+    baseConUnCliente({
+      prestaciones: [
+        unaPrestacion({ precio_final: '31000.00' }),
+        unaPrestacion({ id: 2, precio_final: null, vigente_desde: '2026-01-01', vigente_hasta: '2026-06-30' }),
+      ],
+    });
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    assert.deepEqual(cuerpo, contadores({ generadas: 1 }));
+  });
+});
+
+describe('editar los Responsables de pagos sin la facturación del Cliente', () => {
+  const RESPONSABLE = '99999999-9999-4999-8999-999999999999';
+  const MARCAR = 'POST /rest/v1/rpc/marcar_factura_al_responsable';
+
+  it('la marca se guarda, pero las facturas borradas no se vuelven a generar', async () => {
+    baseConUnCliente({ plazoDelCliente: 10, prestaciones: [unaPrestacion({ precio_final: '31000.00' })] });
+    sinLaFacturacion();
+    respuestas.set(MARCAR, () => [{ periodo: '2026-08-01', periodo_hasta: '2026-08-31' }]);
+    respuestas.set('GET /rest/v1/pagadores_del_servicio', () =>
+      (llamadas.at(-1).url.includes(`id=eq.${RESPONSABLE}`) ? [{ id: RESPONSABLE }] : []));
+    respuestas.set('GET /rest/v1/consentimientos_pagador', () => []);
+
+    const { estado, cuerpo } = await pedir(
+      'PUT',
+      `/servicios/${SERVICIO}/responsables-de-pagos/${RESPONSABLE}/factura`,
+      { encendida: true },
+    );
+    assert.equal(estado, 200, JSON.stringify(cuerpo));
+    assert.equal(cuerpo.regeneradas, 0);
+    assert.ok(llamadas.some((l) => l.clave === MARCAR));
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_cliente'));
+  });
+});

@@ -136,7 +136,6 @@ function turnoGuardiaDePrueba(extra = {}) {
     medio_transporte: null,
     checkin_at: null,
     checkout_at: null,
-    checkout_bloqueado: false,
     ...extra,
   };
 }

@@ -3,6 +3,7 @@ import {
   calcularPrecioFinal,
   faltantesDelPrecio,
   columnasDelPrecio,
+  esSinPrecio,
   diaAnterior,
   cambioDePrecioValido,
   idsReemplazados,
@@ -61,8 +62,14 @@ describe('faltantesDelPrecio', () => {
     expect(faltantesDelPrecio({ forma: 'lista', renglon, sentido: 'recargo', tipo: 'porcentaje', valor: 5 })).toEqual([]);
   });
 
-  it('sin forma no se guarda', () => {
-    expect(faltantesDelPrecio({})).toEqual(['forma_de_precio']);
+  it('sin forma es una prestación sin precio: no falta nada', () => {
+    expect(faltantesDelPrecio({})).toEqual([]);
+    expect(faltantesDelPrecio({ forma: null })).toEqual([]);
+    expect(faltantesDelPrecio({ forma: '' })).toEqual([]);
+  });
+
+  it('una forma que no existe no se guarda', () => {
+    expect(faltantesDelPrecio({ forma: 'otra' })).toEqual(['forma_de_precio']);
   });
 });
 
@@ -101,8 +108,32 @@ describe('columnasDelPrecio', () => {
     });
   });
 
+  it('sin forma deja todas las columnas del precio vacías', () => {
+    const vacias = {
+      forma_de_precio: null,
+      precio_lista_id: null,
+      precio_lista_snapshot: null,
+      sentido_del_ajuste: null,
+      tipo_descuento: null,
+      valor_descuento: null,
+      precio_final: null,
+    };
+    expect(columnasDelPrecio({ forma: '' })).toEqual(vacias);
+    expect(columnasDelPrecio({ forma: null, renglon, precioEscrito: '900' })).toEqual(vacias);
+  });
+
   it('con algo faltante no devuelve columnas', () => {
     expect(columnasDelPrecio({ forma: 'lista' })).toBeNull();
+  });
+});
+
+describe('esSinPrecio', () => {
+  it('sólo la forma vacía es sin precio', () => {
+    expect(esSinPrecio(null)).toBe(true);
+    expect(esSinPrecio(undefined)).toBe(true);
+    expect(esSinPrecio('')).toBe(true);
+    expect(esSinPrecio('lista')).toBe(false);
+    expect(esSinPrecio('directo')).toBe(false);
   });
 });
 

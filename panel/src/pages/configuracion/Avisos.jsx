@@ -242,19 +242,32 @@ function TabNotificaciones() {
       </section>
       <TabAvisoDelCierreDelServicio />
       <TabMensajeTurnoGuardiaSinCubrir />
-      <TabAvisoPrevioTurnoGuardia />
+      <TabMinutosDeAnticipacion
+        ruta="/aviso-previo-turno-guardia"
+        campo="minutos_aviso_previo_turno_guardia"
+        titulo="aviso_previo_turno_guardia_titulo"
+        etiqueta="aviso_previo_turno_guardia_minutos"
+      />
+      <TabMinutosDeAnticipacion
+        ruta="/recordatorio-reporte-diario"
+        campo="minutos_recordatorio_reporte_diario"
+        titulo="recordatorio_reporte_diario_titulo"
+        etiqueta="recordatorio_reporte_diario_minutos"
+      />
       <TabCorreoDeLaPrestadora />
       <TabMensajeDeTexto />
     </>
   );
 }
 
-/* Cuánto antes se le recuerda a la Asistente su próximo turno de guardia.
+/* Cuántos minutos antes se le manda un aviso al Asistente: antes de que empiece su turno de
+   guardia, o antes de que termine si todavía no presentó el Reporte Diario.
    ==========================================================================
 
-   Estaba escrito fijo en una hora para todas las Prestadoras, y una hora no le sirve a todas:
-   quien trabaja con guardias de doce horas quiere avisar la noche anterior. */
-function TabAvisoPrevioTurnoGuardia() {
+   Cada Prestadora elige su número, porque una cantidad fija no le sirve a todas: quien trabaja
+   con guardias de doce horas quiere avisar la noche anterior. La misma tarjeta sirve para los
+   dos avisos; cambia sólo de dónde lee y dónde guarda. */
+function TabMinutosDeAnticipacion({ ruta, campo, titulo, etiqueta }) {
   const { t } = useLocale();
   const [minutos, setMinutos] = useState('');
   const [estado, setEstado] = useState('cargando');
@@ -266,14 +279,14 @@ function TabAvisoPrevioTurnoGuardia() {
     setEstado('cargando');
     setError(null);
     try {
-      const { minutos_aviso_previo_turno_guardia } = await llamarApi('/aviso-previo-turno-guardia');
-      setMinutos(minutos_aviso_previo_turno_guardia);
+      const respuesta = await llamarApi(ruta);
+      setMinutos(respuesta[campo]);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
       setEstado('error');
     }
-  }, [t]);
+  }, [ruta, campo, t]);
 
   useEffect(() => {
     recargar();
@@ -283,7 +296,7 @@ function TabAvisoPrevioTurnoGuardia() {
     setGuardando(true);
     setError(null);
     try {
-      await llamarApi('/aviso-previo-turno-guardia', {
+      await llamarApi(ruta, {
         method: 'PATCH',
         body: JSON.stringify({ minutos: Number(minutos) }),
       });
@@ -298,7 +311,7 @@ function TabAvisoPrevioTurnoGuardia() {
   return (
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.aviso_previo_turno_guardia_titulo}</h2>
+        <h2>{t.configuracion[titulo]}</h2>
       </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         <>
@@ -306,8 +319,8 @@ function TabAvisoPrevioTurnoGuardia() {
           {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
           <div className="molde-formgrid">
             <FormField
-              label={t.configuracion.aviso_previo_turno_guardia_minutos}
-              name="minutos_aviso_previo_turno_guardia"
+              label={t.configuracion[etiqueta]}
+              name={campo}
               type="number"
               value={minutos}
               onChange={(e) => { setMinutos(e.target.value); setGuardado(false); }}

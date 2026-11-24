@@ -236,10 +236,14 @@ recibe.** No lo recalcula, no lo completa con lo suyo y no lo compara contra nad
 llega de afuera y otro calculado acá son dos verdades para lo mismo, y eso es peor que no tener
 ninguna. Textual del Desarrollador: *«cada prestadora elige como hacerlo»*.
 
-**El estado de cuenta lo ve solamente la administración de la Prestadora.** Cuánto debe un Cliente
-y si está atrasado no es información de quien coordina turnos ni de nadie más: entra por el
-catálogo de permisos, con el mismo molde que `ver_pagos_asistente`, que nace reservada a
-administración.
+**La facturación, los cobros, las correcciones y la lista de precios los ve la administración de
+la Prestadora o quien tenga el permiso «Ver la facturación de los Clientes»**
+(`ver_facturacion_cliente`). La Coordinadora sin ese permiso carga prestaciones sin precio y arma
+el cronograma de guardias, sin ver ningún importe. **El estado de cuenta lo ve la administración o
+quien tenga el permiso de ver el estado de cuenta de los Clientes** (`ver_estado_de_cuenta_cliente`).
+Cuánto debe un Cliente y si está atrasado no es información de quien coordina turnos. Los dos
+permisos entran por el catálogo de permisos con el mismo molde que `ver_pagos_asistente`: nacen
+reservados a la administración.
 
 **Cada Prestadora con lo suyo, sin mezclar.** Una conexión con un software de facturación o de
 cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.
@@ -435,6 +439,18 @@ Y `falta_la_firma_del_pagador`, que recibe un Servicio, resuelve la Prestadora a
 `prestadora_actual()`, sólo le contesta al personal de esa Prestadora y dice si ella pide la firma
 del Responsable de pagos para programar guardias y ese Servicio no la tiene vigente; un Servicio de otra
 Prestadora no devuelve nada.
+Para quien carga prestaciones sin ver la facturación hay dos lecturas sin precio. La vista
+`prestaciones_sin_importes` trae las prestaciones sin las columnas de precio y con una marca de si
+ya tienen precio; filtra ella misma por la Prestadora de la sesión y por los Pacientes que ve quien
+consulta, y no toma los permisos de quien consulta. La función `tipos_de_servicio_que_rigen` recibe
+una fecha optativa, por omisión el día de hoy de la Prestadora, y devuelve los tipos de servicio y
+las modalidades vigentes de la lista de precios, sin precio ni identificador; sólo le contesta al
+personal de la Prestadora.
+La vista `saldos_cliente`, que da el saldo de cada factura de Cliente, ya no se consulta con los
+permisos de quien pregunta: filtra ella misma y le contesta a la Prestadora de la sesión, si quien
+pregunta tiene el permiso de ver la facturación o el de ver el estado de cuenta, o a la persona
+del Cliente autorizada a ver el dinero. La cuenta del saldo la lee de una vista interna,
+`interno.saldos_de_las_facturas`, que es el único lugar donde se hace esa resta.
 **Cada decisión del Coordinador en un Servicio la anota la base sola**, con un disparador en cada
 tabla que él puede cambiar, en `decisiones_de_coordinacion` y el estado anterior de cada fila en
 `cambios_de_la_decision`; registrar un hecho, como una ausencia, no se anota, y lo que se decidió

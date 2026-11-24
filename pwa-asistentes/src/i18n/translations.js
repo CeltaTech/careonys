@@ -25,9 +25,6 @@ export const T = {
         // pantalla no ofrece el botón; esto se lee si se llegó por otro camino.
         videollamada_no_configurada: 'Esta Prestadora todavía no configuró las videollamadas, así que por ahora la conversación sigue por escrito.',
         falta_checkin: 'Este turno de guardia todavía no tiene el check-in marcado, así que no se puede cerrar.',
-        // La misma frase que ve quien todavía no intentó cerrar: es la misma regla, contada
-        // antes o después del intento. Por eso hay un solo texto y no dos iguales.
-        continuidad: 'No puede cerrar este turno de guardia hasta que llegue el relevo. Si es urgente, avise al Coordinador.',
         no_disponible: 'Esta función no está activada en esta Prestadora.',
         // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
         // problemas distintos y cada uno se sale de una manera: el enlace equivocado o
@@ -66,6 +63,8 @@ export const T = {
         // la salida es el piso de siempre. El tope de pedidos por minuto sí se arregla esperando.
         demasiados_pedidos: 'Demasiados intentos. Espere un minuto o elija un motivo.',
         ya_comprobada: 'Esta llegada ya quedó comprobada.',
+        // La salida no tiene piso: sin el código QR ni la autorización, el pase se queda abierto.
+        salida_sin_comprobar: 'La salida necesita el código QR o la autorización del Coordinador. Escanee el código o pida autorización.',
         // Los del descargo ante una calificación. Se escribe una sola vez, así que el segundo
         // intento no es un choque de datos: es que ya está dicho lo que había para decir.
         descargo_vacio: 'El descargo está vacío. Escriba el descargo antes de guardarlo.',
@@ -412,9 +411,9 @@ export const T = {
       en_curso: 'Descansando desde las {hora}. Sigue disponible.',
       terminado: 'Descanso terminado a las {hora}.',
     },
-    // El pase de guardia, al marcar la llegada y al cerrar (pendiente #113). Nunca traba: si no
-    // se puede leer el código QR se pide autorización, y si tampoco así, se entra igual eligiendo
-    // un motivo. Los cinco motivos son un código técnico fijo, en el mismo
+    // El pase de guardia, al marcar la llegada y al cerrar (pendiente #113). Si no se puede leer
+    // el código QR se pide autorización, y en la llegada, si tampoco así, se entra igual eligiendo
+    // un motivo. La salida no tiene ese piso: queda siempre comprobada. Los cinco motivos son un código técnico fijo, en el mismo
     // espíritu que errores.motivos — no un catálogo de la Prestadora.
     pase_de_turno_guardia: {
       titulo_checkin: 'Pase de guardia',
@@ -424,10 +423,9 @@ export const T = {
       pedir_autorizacion: 'Pedir autorización',
       pidiendo_autorizacion: 'Pidiendo autorización…',
       entrar_igual: 'Entrar igual',
-      cerrar_igual: 'Cerrar igual',
       volver_al_codigo: 'Volver al código',
       esperando: 'Esperando la autorización…',
-      // El piso: el turno de guardia nunca se traba.
+      // El piso: la llegada nunca se traba.
       pedido_titulo: '¿Por qué no puede leer el código QR?',
       sin_comprobar_titulo: '¿Por qué no se pudo hacer el pase?',
       motivo_nadie_para_mostrar: 'No hay nadie que pueda mostrar el código QR',
@@ -754,7 +752,6 @@ export const T = {
       motivos: {
         videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
         falta_checkin: 'This guard shift has no check-in yet, so it cannot be closed.',
-        continuidad: 'You cannot close this guard shift until your relief arrives. If it is urgent, notify the Coordinator.',
         no_disponible: 'This feature is not switched on at this Provider.',
         faltan_datos: 'Required data is missing. Check the form and try again.',
         password_debil: 'The password must be at least 8 characters long.',
@@ -782,6 +779,7 @@ export const T = {
         codigo_vencido: 'The code has expired. Ask the Provider for a new code.',
         demasiados_pedidos: 'Too many attempts. Wait a minute or choose a reason.',
         ya_comprobada: 'This arrival has already been verified.',
+        salida_sin_comprobar: 'Clocking out needs the QR code or authorization from the Coordinator. Scan the code or ask for authorization.',
         descargo_vacio: 'The reply is empty. Write the reply before saving it.',
         descargo_ya_cargado: 'This rating already has its reply written, and a reply cannot be edited.',
         calificacion_no_encontrada: 'That rating is no longer there.',
@@ -1081,7 +1079,6 @@ export const T = {
       pedir_autorizacion: 'Request authorization',
       pidiendo_autorizacion: 'Requesting authorization…',
       entrar_igual: 'Go in anyway',
-      cerrar_igual: 'Close anyway',
       volver_al_codigo: 'Back to the code',
       esperando: 'Waiting for authorization…',
       pedido_titulo: 'Why can you not read the QR code?',
@@ -1389,7 +1386,6 @@ export const T = {
       motivos: {
         videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
         falta_checkin: 'Este turno de plantão ainda não tem o check-in marcado, então não é possível encerrá-lo.',
-        continuidad: 'Não é possível encerrar este turno de plantão até a substituição chegar. Se for urgente, avise o Coordenador.',
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
         faltan_datos: 'Faltam dados obrigatórios. Revise o formulário e tente novamente.',
         password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
@@ -1417,6 +1413,7 @@ export const T = {
         codigo_vencido: 'O código expirou. Peça um novo código à Prestadora.',
         demasiados_pedidos: 'Tentativas demais. Aguarde um minuto ou escolha um motivo.',
         ya_comprobada: 'Esta chegada já foi verificada.',
+        salida_sin_comprobar: 'A saída precisa do código QR ou da autorização do Coordenador. Escaneie o código ou peça autorização.',
         descargo_vacio: 'A resposta está vazia. Escreva a resposta antes de salvá-la.',
         descargo_ya_cargado: 'Esta avaliação já tem a sua resposta escrita, e uma resposta não se edita.',
         calificacion_no_encontrada: 'Essa avaliação não está mais lá.',
@@ -1716,7 +1713,6 @@ export const T = {
       pedir_autorizacion: 'Pedir autorização',
       pidiendo_autorizacion: 'Pedindo autorização…',
       entrar_igual: 'Entrar mesmo assim',
-      cerrar_igual: 'Encerrar mesmo assim',
       volver_al_codigo: 'Voltar ao código',
       esperando: 'Aguardando a autorização…',
       pedido_titulo: 'Por que não é possível ler o código QR?',

@@ -138,15 +138,6 @@ Servicios, y todos sólo mientras tiene una emergencia abierta
 Asistentes o de las guardias que ve (`interno.personal_ve_la_calificacion`). Lo prueba
 `scripts/probar_altas_con_sesion.mjs`. Falta:
 
-- **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y
-  se habilitan con un permiso. Hoy la facturación del Cliente, sus cobros y correcciones pasan
-  por una sola función, `interno.gestiona_la_facturacion()`, que deja entrar a todo el personal;
-  la lista de precios deja leer al Administrador y a la Coordinadora con la condición copiada en
-  su política. Los consentimientos y documentos del Pagador ya pasan por el permiso
-  `registrar_consentimiento_pagador`, reservado de fábrica a la administración. El arreglo es que esa función
-  sea Administrador o quien tenga el permiso, y que las otras tablas la usen. Espera que el
-  Desarrollador apruebe el nombre del permiso: la propuesta es `ver_facturacion_cliente`,
-  reservado de fábrica a la administración, con el mismo molde que `ver_estado_de_cuenta_cliente`.
 - **El Asistente, en un turno asignado sin responder, ve barrio, distancia, horario, complejidad y
   las tareas especiales que pide el Paciente.** El nombre del Paciente y el domicilio exacto, recién
   al aceptar. Ya le llegan horario, barrio, complejidad, la distancia en línea recta y las tareas
@@ -189,8 +180,7 @@ hasta que se resuelve.
 ### El Paciente nunca queda solo
 
 **31.** **El cierre y el Reporte Diario.** Las cinco formas de cierre, el código QR con la
-ubicación también a la salida, el recordatorio del reporte y «Salida sin Reporte Diario». Sale
-la marca de cierre trabado.
+ubicación también a la salida y «Salida sin Reporte Diario».
 
 **Comprobación:** un turno no se cierra por ningún camino que no sea uno de los cinco, y el que
 entra queda con su entrada aunque el saliente no haya presentado el reporte.

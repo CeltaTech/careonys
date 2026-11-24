@@ -426,13 +426,9 @@ export function TurnoGuardiaAcciones({ turno_guardia, onReasignar, onClose, onAc
         {muestraCheckout && (
           <div className="panel-resultado-calculo">
             <h3>{t.turnos_guardia.detalle.checkout}</h3>
-            {turno_guardia.checkout_bloqueado ? (
-              <Alert variant="error">{t.turnos_guardia.detalle.checkout_bloqueado_explicacion}</Alert>
-            ) : (
-              <Button variant="secondary" onClick={handleRegistrarCheckout} disabled={procesando}>
-                {t.turnos_guardia.detalle.registrar_checkout}
-              </Button>
-            )}
+            <Button variant="secondary" onClick={handleRegistrarCheckout} disabled={procesando}>
+              {t.turnos_guardia.detalle.registrar_checkout}
+            </Button>
           </div>
         )}
 

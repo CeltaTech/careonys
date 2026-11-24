@@ -18,6 +18,7 @@ import {
   motivoQueSeMuestra,
   seReintentaSinContar,
   hayEmergenciaPendiente,
+  esSalidaSinComprobar,
 } from '../reglasDeLaCola.js';
 
 const ANA = 'ana-uuid';
@@ -154,4 +155,22 @@ test('el teléfono vuelve a probar solo mientras quede una emergencia en la cola
   assert.equal(hayEmergenciaPendiente([item(), item({ id: 'e', tipo: 'emergencia' })]), true);
   assert.equal(hayEmergenciaPendiente([item()]), false);
   assert.equal(hayEmergenciaPendiente([]), false);
+});
+
+// ---------------------------------------------------------------------------
+// La salida queda siempre comprobada: sin autorización no sale del teléfono.
+// ---------------------------------------------------------------------------
+
+test('una salida autorizada se manda', () => {
+  assert.equal(esSalidaSinComprobar(item({ tipo: 'checkout', payload: { comprobacion: { autorizada: true } } })), false);
+});
+
+test('una salida sin comprobación no se manda', () => {
+  assert.equal(esSalidaSinComprobar(item({ tipo: 'checkout', payload: { comprobacion: { motivoSinComprobar: 'sin_conexion' } } })), true);
+  assert.equal(esSalidaSinComprobar(item({ tipo: 'checkout', payload: {} })), true);
+  assert.equal(esSalidaSinComprobar(item({ tipo: 'checkout' })), true);
+});
+
+test('la regla de la salida no alcanza a la llegada', () => {
+  assert.equal(esSalidaSinComprobar(item({ tipo: 'checkin', payload: { comprobacion: { motivoSinComprobar: 'sin_conexion' } } })), false);
 });

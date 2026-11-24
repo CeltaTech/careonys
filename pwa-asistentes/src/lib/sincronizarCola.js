@@ -23,7 +23,7 @@ import {
   marcarIntentoFallido,
   descartarLoDeOtrasSesiones,
 } from './colaOffline';
-import { seAgoto, seReintentaSinContar, hayEmergenciaPendiente } from './reglasDeLaCola';
+import { seAgoto, seReintentaSinContar, hayEmergenciaPendiente, esSalidaSinComprobar } from './reglasDeLaCola';
 
 // Cada cuánto se vuelve a probar mientras quede una emergencia sin mandar. Con señal no llega
 // ningún aviso de «volvió la conexión», así que sin esto una emergencia que chocó con una falla
@@ -61,7 +61,13 @@ function mandar(item) {
   const datos = { ...item.payload, ocurrido_at: item.payload?.ocurrido_at ?? item.ocurridoEn, clienteUuid: item.id };
   if (item.tipo === 'checkin') return api.checkin(item.turnoGuardiaId, datos);
   if (item.tipo === 'reporte') return api.confirmarReporte(item.turnoGuardiaId, datos);
-  if (item.tipo === 'checkout') return api.checkout(item.turnoGuardiaId, datos);
+  if (item.tipo === 'checkout') {
+    // Una salida sin comprobación no sale del teléfono. Se rechaza acá con el mismo motivo y el
+    // mismo estado con que la rechazaría el backend, para que quede a la vista igual que
+    // cualquier otro rechazo.
+    if (esSalidaSinComprobar(item)) return Promise.reject(salidaSinComprobar());
+    return api.checkout(item.turnoGuardiaId, datos);
+  }
   if (item.tipo === 'salida') return api.registrarSalida(item.turnoGuardiaId, datos);
   if (item.tipo === 'aviso_demora') return api.avisarDemora(item.turnoGuardiaId, datos);
   if (item.tipo === 'emergencia') return api.avisarEmergencia(item.turnoGuardiaId, datos);
@@ -71,6 +77,13 @@ function mandar(item) {
   // Un tipo que esta versión no conoce no se manda a ningún lado: adivinar la dirección sería
   // registrar una cosa como otra.
   return Promise.reject(new Error('tipo_desconocido'));
+}
+
+function salidaSinComprobar() {
+  const error = new Error('salida_sin_comprobar');
+  error.status = 400;
+  error.motivo = 'salida_sin_comprobar';
+  return error;
 }
 
 export async function sincronizarCola() {

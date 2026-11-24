@@ -401,8 +401,9 @@ export default function TurnoGuardiaActivo() {
     return { ok: true };
   }
 
-  // Mismo contrato que alHacerCheckin: la comprobación llega resuelta por <PaseDeTurnoGuardia/>,
-  // nunca traba el cierre, y viaja junto con la ubicación en el mismo pedido.
+  // La comprobación llega resuelta por <PaseDeTurnoGuardia/> y viaja junto con la ubicación en el
+  // mismo pedido, igual que en la llegada. La diferencia es que la salida queda siempre comprobada:
+  // `comprobacion` es { codigo } o { autorizada: true }, nunca «sin comprobar».
   async function alCerrarTurnoGuardia(comprobacion) {
     setError('');
     setAdvertencia('');
@@ -411,26 +412,30 @@ export default function TurnoGuardiaActivo() {
       const { lat, lng } = await obtenerUbicacion();
       const clienteUuid = nuevoId();
       try {
-        const resultado = await api.checkout(id, { lat, lng, clienteUuid, comprobacion });
-        if (resultado.comprobacion === 'sin_comprobar') setAdvertencia(t.turno_guardia_activo.quedo_sin_comprobar);
+        await api.checkout(id, { lat, lng, clienteUuid, comprobacion });
         setPasandoCheckout(false);
         setConfirmandoCierre(false);
         cargar();
       } catch (e) {
         if (!esErrorDeRed(e)) throw e;
-        // Sin señal: se guarda local y se reintenta solo al volver la conexión, igual que
-        // el check-in, y por el mismo motivo sin el código leído. El Asistente puede irse; el
-        // cierre viaja cuando haya red.
-        const sinRed = { motivoSinComprobar: 'sin_conexion' };
-        await agregarACola({ id: clienteUuid, tipo: 'checkout', turnoGuardiaId: id, payload: { lat, lng, clienteUuid, comprobacion: sinRed } });
+        // Sin señal, el código leído no se guarda: para cuando la cola llegue al backend va a estar
+        // vencido, y la salida no se puede registrar sin comprobar. El pase se queda abierto con
+        // el aviso de que no hay conexión, para volver a escanear o pedir autorización.
+        // La autorización sí viaja en la cola: ya quedó anotada en la base antes de que se cortara
+        // la señal, y el backend la vuelve a encontrar ahí.
+        if (!comprobacion?.autorizada) return { ok: false, mensaje: mensajeDeError(e, t) };
+        await agregarACola({ id: clienteUuid, tipo: 'checkout', turnoGuardiaId: id, payload: { lat, lng, clienteUuid, comprobacion: { autorizada: true } } });
         setCerradoPendiente(true);
-        setAdvertencia(t.turno_guardia_activo.sin_conexion_sin_comprobar);
         setPasandoCheckout(false);
         setConfirmandoCierre(false);
         sincronizarCola();
       }
     } catch (e) {
-      if (MOTIVOS_DEL_CODIGO.includes(e.motivo)) return { ok: false, mensaje: mensajeDeError(e, t) };
+      // Una salida que el backend no da por comprobada tampoco cierra el pase: queda abierto para
+      // escanear el código QR o pedir autorización.
+      if (MOTIVOS_DEL_CODIGO.includes(e.motivo) || e.motivo === 'salida_sin_comprobar') {
+        return { ok: false, mensaje: mensajeDeError(e, t) };
+      }
       setPasandoCheckout(false);
       if (esFalloDeUbicacion(e)) setError(t.turno_guardia_activo[e.message]);
       // `falta_reporte` es el único motivo que se sigue mirando acá, y es a propósito: su
@@ -610,19 +615,13 @@ export default function TurnoGuardiaActivo() {
             </div>
           )}
 
-          {/* La advertencia de antes del intento y el rechazo de después son la misma regla, así que
-              son un solo texto: el del motivo `continuidad` que manda el backend. */}
-          {reportesCompletos && !cerradoPendiente && turno_guardia.checkout_bloqueado && (
-            <div className="alert alert-alerta pwa-card-pie" role="status">{t.errores.motivos.continuidad}</div>
-          )}
-
-          {reportesCompletos && !cerradoPendiente && !turno_guardia.checkout_bloqueado && !confirmandoCierre && (
+          {reportesCompletos && !cerradoPendiente && !confirmandoCierre && (
             <button className="btn btn-primary btn-full pwa-card-pie" onClick={() => setConfirmandoCierre(true)}>
               {t.turno_guardia_activo.hacer_checkout}
             </button>
           )}
 
-          {reportesCompletos && !cerradoPendiente && !turno_guardia.checkout_bloqueado && confirmandoCierre && (
+          {reportesCompletos && !cerradoPendiente && confirmandoCierre && (
             <div className="pwa-card-pie">
               <p className="tarjeta-detalle">{t.turno_guardia_activo.cerrar_pregunta}</p>
 
@@ -642,8 +641,8 @@ export default function TurnoGuardiaActivo() {
               )}
 
               {/* El pase de guardia (pendiente #113): antes de cerrar se comprueba lo mismo que
-                  al llegar, con el mismo criterio de nunca trabar. Es el lugar que ya estaba
-                  marcado para esto (tarea 66a). */}
+                  al llegar, con el código QR o la autorización del Coordinador. A diferencia de
+                  la llegada, la salida no se registra sin comprobar. */}
               {pasandoCheckout && (
                 <PaseDeTurnoGuardia
                   t={t}

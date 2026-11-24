@@ -62,7 +62,7 @@ const TURNO_GUARDIA_CANCELADO = 'cancelada';
 
 /* Lo que se le pide a cada Servicio para la tabla y para el gráfico de modalidades. */
 const CONSULTA_SERVICIOS =
-  'id, etiqueta, estado, created_at, cliente_id, prestaciones(paciente_id), turnos_guardia(paciente_id, canal_modalidad)';
+  'id, etiqueta, estado, created_at, cliente_id, prestaciones:prestaciones_sin_importes(paciente_id), turnos_guardia(paciente_id, canal_modalidad)';
 
 /* Las excepciones que tienen renglón fijo en «Alertas importantes». Las demás aparecen sólo
    cuando tienen algo. */

@@ -2,7 +2,7 @@
 
 Este documento reúne los textos que hoy ven las personas que usan Careonys y que no cumplen las reglas de redacción. Cada ficha muestra el texto actual, una propuesta, dónde aparece y qué regla incumple. Ningún cambio está aplicado: cada ficha espera su decisión.
 
-Se revisaron 4128 textos en castellano: los del Panel, los de la aplicación de Clientes, los de la aplicación de Asistentes y los mensajes que manda el sistema. También se revisaron el inglés y el portugués de las tres partes. Quedaron 44 fichas: 10 de textos al pie del campo, 7 de mensajes de «se guardó», 17 de ventanas de confirmación, 3 de carteles de las dos aplicaciones, ninguna del botón «Habilitar cambio de contraseña», ninguna de tuteo y voseo, y 7 de todo el texto visible contra las cuatro fuentes.
+Se revisaron 4128 textos en castellano: los del Panel, los de la aplicación de Clientes, los de la aplicación de Asistentes y los mensajes que manda el sistema. También se revisaron el inglés y el portugués de las tres partes. Quedaron 43 fichas: 10 de textos al pie del campo, 7 de mensajes de «se guardó», 17 de ventanas de confirmación, 3 de carteles de las dos aplicaciones, ninguna del botón «Habilitar cambio de contraseña», ninguna de tuteo y voseo, y 6 de todo el texto visible contra las cuatro fuentes.
 
 Lo que ya tiene ficha en Frases para aprobar no se repite acá. Se cita con su número.
 
@@ -356,15 +356,7 @@ Sin fichas. En castellano se buscaron las formas de vos y de tú («tenés», «
 - **Por qué:** explica cómo funciona por dentro. Todo error dice qué pasó y qué hacer, en tres oraciones como máximo. Usa «token» en un sentido que el glosario no admite.
 - **Decisión:**
 
-### 42. Salida de una guardia frenada por falta de relevo
-
-- **Texto actual:** «El check-out está bloqueado por el protocolo de continuidad de guardia (no se puede retirar sin relevo). La excepción documentada se gestiona en el módulo de Continuidad de guardia.»
-- **Propuesta:** «El Asistente no puede hacer el check-out hasta que llegue el relevo. Para autorizar la salida sin relevo, vaya a Continuidad de guardia.»
-- **Dónde aparece:** Panel → Guardias → Guardias → una guardia, cuando el Asistente no tiene relevo.
-- **Por qué:** lleva una aclaración entre paréntesis y usa «módulo», que es palabra interna. La propuesta dice qué pasa y qué hacer.
-- **Decisión:**
-
-### 43. Espacios de una plantilla de WhatsApp
+### 42. Espacios de una plantilla de WhatsApp
 
 - **Texto actual:** «En el hueco {número} se completa: {qué}»
 - **Propuesta:** «Espacio {número}: {qué}»
@@ -372,7 +364,7 @@ Sin fichas. En castellano se buscaron las formas de vos y de tú («tenés», «
 - **Por qué:** «hueco» es coloquial y «se completa» es impersonal.
 - **Decisión:**
 
-### 44. Origen de una opción, en inglés
+### 43. Origen de una opción, en inglés
 
 - **Texto actual:** en inglés, «From the Prestadora».
 - **Propuesta:** «From the provider», que es la palabra que usa el resto del Panel en inglés.
@@ -425,6 +417,5 @@ Ubicación de cada ficha: clave de traducción y archivo:renglón donde se usa. 
 39. Panel: `errores.motivos.desactivacion_con_turnos_guardia_por_delante`. Origen: `backend/src/utils/cuentasPanel.js:177`.
 40. Panel: `configuracion.whatsapp_token_cargar`, `whatsapp_token_reemplazar`, `whatsapp_verify_token_cargar`, `whatsapp_verify_token_reemplazar`. Usos: `panel/src/pages/configuracion/Avisos.jsx:981`, `:995`, `:1018`.
 41. Panel: `configuracion.whatsapp_entrada_sin_secretos`, en `panel/src/pages/configuracion/Avisos.jsx`.
-42. Panel: `turnos_guardia.detalle.checkout_bloqueado_explicacion`. Uso: `TurnoGuardiaAcciones.jsx:384`.
-43. Panel: `configuracion.whatsapp_plantillas_hueco`. Uso: `panel/src/pages/configuracion/Avisos.jsx:1234`.
-44. Panel, inglés: `configuracion.listas_origen_propia`. Uso: `panel/src/pages/configuracion/LasListasDeOpciones.jsx:247`.
+42. Panel: `configuracion.whatsapp_plantillas_hueco`. Uso: `panel/src/pages/configuracion/Avisos.jsx:1234`.
+43. Panel, inglés: `configuracion.listas_origen_propia`. Uso: `panel/src/pages/configuracion/LasListasDeOpciones.jsx:247`.

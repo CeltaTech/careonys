@@ -7,6 +7,9 @@
                descuento o un recargo, cada uno por porcentaje o por monto fijo.
      directo — el precio que escribe quien carga, sin pasar por la lista.
 
+   O todavía no tiene precio: la forma queda vacía y el precio lo pone después quien gestiona la
+   facturación. Así carga las prestaciones la Coordinadora que no ve los importes.
+
    Y un precio se cambia desde una fecha sin pisar el anterior: el nuevo es otra Prestación que
    dice a cuál reemplaza (`prestacion_anterior_id`), y la base cierra la anterior el día antes.
    Por eso, en un período de cobro, una misma cadena de reemplazos puede tener dos eslabones que
@@ -66,13 +69,20 @@ export function calcularPrecioFinal({ forma, precioLista, sentido, tipo, valor, 
   return redondear(Math.max(0, resultado));
 }
 
+// Si la forma está vacía: la prestación se guarda sin precio.
+export function esSinPrecio(forma) {
+  return forma === null || forma === undefined || forma === '';
+}
+
 /* Qué casilleros del precio faltan o están mal, por nombre de casillero. Vacío = se puede guardar.
-   - forma: falta elegirla.
+   - forma vacía: prestación sin precio, no falta nada.
+   - forma desconocida: falta elegir una que exista.
    - precio_lista_id: con forma 'lista', falta el renglón.
    - tipo_de_ajuste / valor_del_ajuste: con un sentido elegido, falta cómo o cuánto.
    - tipo_servicio / precio_escrito: con forma 'directo', falta qué se presta o el precio. */
 export function faltantesDelPrecio({ forma, renglon, sentido, tipo, valor, tipoServicio, precioEscrito } = {}) {
   const faltan = [];
+  if (esSinPrecio(forma)) return faltan;
   if (forma === FORMAS_DE_PRECIO.LISTA) {
     if (!renglon || importe(renglon.precio) === null) faltan.push('precio_lista_id');
     if (sentido) {
@@ -91,9 +101,22 @@ export function faltantesDelPrecio({ forma, renglon, sentido, tipo, valor, tipoS
 /* Las columnas del precio para guardar en `prestaciones`, o null si falta algo.
    Con forma 'lista' guarda la copia del precio de ese día (`precio_lista_snapshot`), para que un
    cambio posterior de la lista no altere lo pactado. Con forma 'directo' no apunta a ningún
-   renglón y no lleva ajuste: la base lo exige así. */
+   renglón y no lleva ajuste: la base lo exige así. Sin forma, todas las columnas del precio van
+   vacías, y qué se presta lo pone quien carga aparte. */
 export function columnasDelPrecio({ forma, renglon, sentido, tipo, valor, tipoServicio, precioEscrito } = {}) {
   if (faltantesDelPrecio({ forma, renglon, sentido, tipo, valor, tipoServicio, precioEscrito }).length > 0) return null;
+
+  if (esSinPrecio(forma)) {
+    return {
+      forma_de_precio: null,
+      precio_lista_id: null,
+      precio_lista_snapshot: null,
+      sentido_del_ajuste: null,
+      tipo_descuento: null,
+      valor_descuento: null,
+      precio_final: null,
+    };
+  }
 
   if (forma === FORMAS_DE_PRECIO.DIRECTO) {
     return {

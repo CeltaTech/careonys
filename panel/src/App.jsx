@@ -171,7 +171,12 @@ function App() {
                     <Route path="emergencias" element={<EmergenciasEnTurnoGuardia />} />
                     <Route path="comunicacion" element={<Comunicacion />} />
                     <Route path="verificacion-turnos-guardia" element={<Evv />} />
-                    <Route path="facturacion" element={<Facturacion />} />
+                    {/* La facturación es de la administración o de quien tenga el permiso de verla;
+                        la página muestra además el estado de cuenta, con su propio permiso. */}
+                    <Route
+                      path="facturacion"
+                      element={<ProtectedRoute permiso={['ver_facturacion_cliente', 'ver_estado_de_cuenta_cliente']}><Facturacion /></ProtectedRoute>}
+                    />
                     {/* Lo que se le paga al Asistente es dato sensible (CLAUDE.md §6), así que
                         además de estar en el menú tiene candado propio en la dirección: sin el
                         permiso no se entra ni escribiéndola a mano. */}
@@ -181,7 +186,7 @@ function App() {
                     />
                     <Route path="documentacion" element={<Documentacion />} />
                     <Route path="continuidad" element={<Continuidad />} />
-                    <Route path="lista-precios" element={<ListaPrecios />} />
+                    <Route path="lista-precios" element={<ProtectedRoute permiso="ver_facturacion_cliente"><ListaPrecios /></ProtectedRoute>} />
                     <Route path="revisar-precios" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><AjustesPorIndice /></ProtectedRoute>} />
                     <Route path="importacion" element={<Importacion />} />
                     <Route path="informes-obra-social" element={<InformesObraSocial />} />

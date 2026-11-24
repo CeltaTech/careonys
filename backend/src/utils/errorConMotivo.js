@@ -60,6 +60,9 @@ const ESTADO_POR_MOTIVO = {
   ya_cerrada: 409,
   codigo_incorrecto: 400,
   codigo_vencido: 400,
+  // La salida queda siempre comprobada: sin el código QR ni la autorización del Coordinador, el
+  // pedido está incompleto.
+  salida_sin_comprobar: 400,
   demasiados_intentos: 429,
   // Contesta lo mismo cuando el Paciente no existe y cuando es de otra Prestadora, que desde
   // afuera se tienen que ver iguales.

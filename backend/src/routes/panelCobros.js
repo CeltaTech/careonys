@@ -40,7 +40,7 @@ import { CLASES_DE_DESCUENTO, descuentosDelPeriodo } from '../utils/descuentosDe
 import { DATOS_PARA_FACTURAR } from '../utils/datosParaFacturar.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { anularPendientesDeQuienYaNoEs } from '../utils/consentimientoPagador.js';
-import { requierePermiso } from '../utils/permisos.js';
+import { requierePermiso, tienePermiso } from '../utils/permisos.js';
 import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 
 /* Lo que el Cliente pagó, anotado; y el saldo, que es una resta.
@@ -79,17 +79,19 @@ import { hoyEnLaPrestadora } from '../utils/relojDeLaPrestadora.js';
    de país en país y el producto no conoce ninguno. Y una factura que salió mal no se toca: se anota
    la corrección que emitió ese mismo software, con su monto y para qué lado va.
 
-   QUIÉN PUEDE, Y ACÁ HAY DOS PUERTAS DISTINTAS. Mandar a facturar es trabajo de la Prestadora y
-   entra por el mismo criterio con el que se abre la pantalla: ser de la Prestadora y tener rol de
-   Panel, que es la política `panel_gestiona_facturas_cliente` de la base y la función SQL
-   `gestiona_la_facturacion()`, y que `requiereRolPanel` refleja. Pero **cuánto debe cada Cliente
+   QUIÉN PUEDE, Y ACÁ HAY DOS PUERTAS DISTINTAS. La facturación del Cliente —generar las facturas,
+   verlas con sus renglones y precios, mandarlas a facturar, anotar lo facturado, sus correcciones
+   y sus cobros— es de la administración o de quien tenga la acción `ver_facturacion_cliente` del
+   catálogo `catalogo_acciones_permisos`, además de ser de la Prestadora y tener rol de Panel,
+   que `requiereRolPanel` refleja. Pero **cuánto debe cada Cliente
    y si está atrasada no es información de quien coordina turnos**: eso pasa por la acción
    `ver_estado_de_cuenta_cliente` del catálogo `catalogo_acciones_permisos`, que nace reservada a
    la administración y que cada Prestadora abre o cierra desde su Panel. Lleva ese portero todo lo
    que entrega o mueve el estado de cuenta —los saldos, el estado de cuenta que llegó de afuera, el
-   detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—; no lo lleva lo que
-   sirve para facturar. Que un Cliente haya quedado restringida tampoco: eso no dice cuánto
-   debe, y quien coordina necesita saberlo para trabajar.
+   detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—, y lo que de eso es
+   factura o cobro lleva los dos porteros. Que un Cliente haya quedado restringido no lleva
+   ninguno: eso no dice cuánto debe, y quien coordina necesita saberlo para trabajar. Tampoco la
+   configuración, que entrega un solo dato: si la cobranza la sigue este sistema.
 
    NADA DE PLATA EN LOS REGISTROS NI EN LA DIRECCIÓN. Los importes y los datos de los Clientes
    son dato sensible (CLAUDE.md §6): no se loguean y no viajan por la URL. Por la URL viaja el
@@ -266,6 +268,16 @@ async function saldoDeLaFactura(db, facturaId) {
  * Prestadora decide si se la abre a quien coordina, como con cualquier otra del catálogo.
  */
 const veElEstadoDeCuenta = requierePermiso('ver_estado_de_cuenta_cliente');
+
+/**
+ * El portero de la facturación del Cliente.
+ *
+ * Las facturas, sus renglones con precio, los cobros y las correcciones son del trato económico
+ * entre la Prestadora y su Cliente. Los ve y los mueve la administración, o quien tenga la acción
+ * `ver_facturacion_cliente` del catálogo de permisos.
+ */
+const ACCION_FACTURACION = 'ver_facturacion_cliente';
+const veLaFacturacion = requierePermiso(ACCION_FACTURACION);
 
 /** Lo que se contesta cuando se pide un número que este sistema ya no calcula. */
 function noSeCalculaAca(res) {
@@ -468,7 +480,7 @@ panelCobrosRouter.get('/saldos', requiereRolPanel, veElEstadoDeCuenta, async (re
 });
 
 /** El detalle de una factura: su saldo y todos los cobros que la fueron bajando. */
-panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
+panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veLaFacturacion, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const db = clienteDelPedido(req);
 
@@ -602,6 +614,7 @@ const MOTIVOS_DEL_PRECIO_DEL_ITEM = { sin_permiso: 403, no_encontrado: 404, dato
 panelCobrosRouter.put(
   '/facturas/:facturaId/items/:itemId/precio',
   requiereRolPanel,
+  veLaFacturacion,
   requierePermiso('editar_condiciones_comerciales_servicio'),
   async (req, res) => {
     const precio = Number(req.body?.precio);
@@ -709,7 +722,7 @@ panelCobrosRouter.put(
  * creada: una factura con monto y sin detalle no se puede reclamar ni explicar, y como no tiene
  * ningún cobro todavía, borrarla no pierde nada.
  */
-panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.post('/facturas/generar', requiereRolPanel, veLaFacturacion, async (req, res) => {
   const tramo = tramoPedido(req.body);
   if (!tramo) {
     return res.status(400).json({ error: 'Falta el período. Indique un mes, o las fechas desde y hasta, e intente nuevamente.' });
@@ -770,9 +783,13 @@ async function operarResponsableDePagos({ req, res, funcion, argumentos }) {
     }
 
     // Las facturas que la base borró se vuelven a generar enteras, de a un período de cobro.
+    // Generar facturas es de quien tiene la facturación del Cliente. Quien edita las condiciones
+    // comerciales sin esa acción deja las facturas borradas, y salen en la próxima tanda que mande
+    // a facturar quien sí la tiene.
     let regeneradas = 0;
     const yaHechos = new Set();
-    for (const fila of borradas || []) {
+    const generaFacturas = await tienePermiso({ db, accion: ACCION_FACTURACION });
+    for (const fila of generaFacturas ? borradas || [] : []) {
       const parte = { desde: String(fila.periodo).slice(0, 10), hasta: String(fila.periodo_hasta).slice(0, 10) };
       const tramo = await periodoEnteroDeLaFactura(prestadoraId, servicioId, parte);
       if (yaHechos.has(tramo.desde)) continue;
@@ -903,7 +920,7 @@ panelCobrosRouter.put(
  * SE PUEDE CORREGIR LO ANOTADO MIENTRAS SEA ESO: un dato mal tipeado. Lo que no se corrige por
  * acá es una factura que salió mal, que es otra cosa y tiene su propia puerta más abajo.
  */
-panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, veLaFacturacion, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const cuerpo = req.body || {};
 
@@ -950,6 +967,7 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
 panelCobrosRouter.post(
   '/facturas/:facturaId/comprobante',
   requiereRolPanel,
+  veLaFacturacion,
   express.raw({ type: 'application/pdf', limit: '5mb' }),
   async (req, res) => {
     const prestadoraId = req.usuarioPanel.prestadoraId;
@@ -996,7 +1014,7 @@ panelCobrosRouter.post(
  * UNA FACTURA YA FACTURADA NO SALE. Lo que se manda a facturar es lo que todavía no se facturó;
  * volver a mandar lo emitido llevaría a emitirlo dos veces.
  */
-panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.get('/para-facturar', requiereRolPanel, veLaFacturacion, async (req, res) => {
   const tramo = tramoPedido(req.query);
   if (!tramo) {
     return res.status(400).json({ error: 'Falta el período. Indique un mes, o las fechas desde y hasta, e intente nuevamente.' });
@@ -1050,7 +1068,7 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
  * el archivo compartido. Así el día que un software empuje estos mismos datos por una conexión
  * directa, entra por acá sin pasar por ninguna pantalla.
  */
-panelCobrosRouter.post('/facturado/importar', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.post('/facturado/importar', requiereRolPanel, veLaFacturacion, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const filas = req.body?.filas;
 
@@ -1119,7 +1137,7 @@ panelCobrosRouter.post('/facturado/importar', requiereRolPanel, async (req, res)
  * EL MOTIVO ES OBLIGATORIO. Una corrección sin explicación no se puede revisar después, y lo que
  * se está moviendo es plata de un tercero.
  */
-panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, async (req, res) => {
+panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, veLaFacturacion, async (req, res) => {
   const cuerpo = req.body || {};
 
   const problema = loQueEstaMalEnLaCorreccion(cuerpo);
@@ -1189,7 +1207,7 @@ panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, as
  * Anotar un cobro cargado en el Panel. Puede ser parcial: nada obliga a que cubra el total, y
  * varios cobros contra la misma factura es exactamente cómo se representa el pago en partes.
  */
-panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
+panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veLaFacturacion, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const cuerpo = req.body || {};
 
@@ -1257,7 +1275,7 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEsta
  * contar para el saldo. Una plata que desaparece sin rastro es indistinguible de una que nunca
  * existió, y con plata de un tercero eso es justo lo que no puede pasar.
  */
-panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
+panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, veLaFacturacion, veElEstadoDeCuenta, async (req, res) => {
   const motivo = String(req.body?.motivo ?? '').trim();
   if (!motivo) return res.status(400).json({ error: 'Hace falta decir por qué se anula el cobro' });
 
@@ -1356,7 +1374,7 @@ async function ubicarFactura(db, cobro) {
  * envíos llegan a la vez, uno de los dos choca contra el índice y también se contesta
  * "duplicado".
  */
-panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
+panelCobrosRouter.post('/entrada', requiereRolPanel, veLaFacturacion, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const { origen, cobros } = req.body || {};
 

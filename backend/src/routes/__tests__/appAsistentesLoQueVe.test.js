@@ -78,7 +78,7 @@ async function pedir(camino) {
 const turno_guardia = (id, fecha, estado) => ({
   id, paciente_id: null, fecha, hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0,
   modalidad: null, estado, salida_checkin_at: null, medio_transporte: null,
-  checkin_at: null, checkout_at: null, checkout_bloqueado: false,
+  checkin_at: null, checkout_at: null,
 });
 const COBRADA = turno_guardia('turno-guardia-cobrado', '2026-09-10', 'completada');
 const SIN_COBRAR = turno_guardia('turno-guardia-sin-cobrar', '2026-10-10', 'completada');

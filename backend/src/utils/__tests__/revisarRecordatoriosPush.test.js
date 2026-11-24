@@ -5,8 +5,8 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. `../revisarRecordatoriosPush.js` recorre las Prestadoras de a una y
- * en cada una lee su anticipación, los turnos recién asignados, los mensajes del coordinador y los
- * turnos por empezar. Lo que hay que sostener acá es que todo eso vaya con la credencial del
+ * en cada una lee su anticipación, los turnos recién asignados, los mensajes del coordinador, los
+ * turnos por empezar y los turnos por terminar sin Reporte Diario. Lo que hay que sostener acá es que todo eso vaya con la credencial del
  * trabajo de esa Prestadora y con ninguna otra.
  *
  * Con el sistema roto —una consulta con otra credencial, o la credencial de otra Prestadora— la
@@ -31,6 +31,9 @@ const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 const PRESTADORAS = 'GET /rest/v1/prestadoras';
 const TURNOS_GUARDIA = 'GET /rest/v1/turnos_guardia';
 const MENSAJES = 'GET /rest/v1/mensajes_asistente';
+const PACIENTES_DEL_TURNO = 'GET /rest/v1/turno_guardia_pacientes';
+const REPORTES = 'GET /rest/v1/reportes';
+const MARCAR_TURNO = 'PATCH /rest/v1/turnos_guardia';
 
 /**
  * Qué contesta la base a cada `MÉTODO /ruta`: un valor, o una función que recibe la llamada y
@@ -86,6 +89,9 @@ prepararCredencialDePrueba();
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma en
 // el momento en que se importa el archivo.
 const { revisarLosRecordatoriosDeUnaPrestadora } = await import('../revisarRecordatoriosPush.js');
+const { sembrarMensajesDelSistema } = await import('../../i18n/mensajesDelSistema.js');
+const { filasSembradas } = await import('../../i18n/__tests__/mensajesSembrados.js');
+sembrarMensajesDelSistema(filasSembradas());
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));
@@ -111,7 +117,7 @@ describe('los avisos de rutina a la Asistente', () => {
 
     assert.deepEqual(
       llamadas.map((l) => l.clave),
-      [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA],
+      [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA, TURNOS_GUARDIA],
     );
     for (const llamada of llamadas) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
@@ -155,7 +161,7 @@ describe('el recordatorio de turno próximo se mide en la hora de la Prestadora'
 
     await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T07:45:00Z'));
 
-    assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA]);
+    assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA, TURNOS_GUARDIA]);
   });
 
   it('a las 07:45 de Argentina el turno de las 08:00 entra en la anticipación', async () => {
@@ -181,5 +187,107 @@ describe('el recordatorio de turno próximo se mide en la hora de la Prestadora'
 
     assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES]);
     assert.equal(anotados.length, 1);
+  });
+});
+
+describe('el recordatorio del Reporte Diario antes del fin del turno de guardia', () => {
+  const PACIENTE = '66666666-6666-6666-6666-666666666666';
+  const OTRO_PACIENTE = '77777777-7777-7777-7777-777777777777';
+
+  /** Un turno en curso que termina a las 16:00 de Argentina, que en hora universal son las 19:00. */
+  const turnoEnCurso = {
+    id: '22222222-2222-2222-2222-222222222222',
+    asistente_id: '55555555-5555-5555-5555-555555555555',
+    paciente_id: PACIENTE,
+    fecha: '2026-03-01',
+    hora_inicio: '08:00',
+    hora_fin: '16:00',
+    dias_hasta_el_fin: 0,
+  };
+
+  /** A las 15:40 de Argentina: faltan 20 minutos para el fin. */
+  const VEINTE_ANTES_DEL_FIN = new Date('2026-03-01T18:40:00Z');
+
+  /** Prepara la base: el turno en curso, sus Pacientes y los reportes ya presentados. */
+  function prepararBase({ minutos, pacientes = [PACIENTE], reportes = [] }) {
+    respuestas.set(PRESTADORAS, [{
+      minutos_aviso_previo_turno_guardia: 60,
+      minutos_recordatorio_reporte_diario: minutos,
+      zona_horaria: ZONA,
+      pais: 'AR',
+    }]);
+    respuestas.set(TURNOS_GUARDIA, (llamada) =>
+      (llamada.filtros.has('push_recordatorio_reporte_enviado_at') ? [turnoEnCurso] : []));
+    respuestas.set(MENSAJES, []);
+    respuestas.set(PACIENTES_DEL_TURNO, pacientes.map((id) => ({ turno_guardia_id: turnoEnCurso.id, pacientes: { id } })));
+    respuestas.set(REPORTES, reportes.map((paciente_id) => ({ turno_guardia_id: turnoEnCurso.id, paciente_id })));
+    respuestas.set(MARCAR_TURNO, []);
+  }
+
+  const marcas = () => llamadas.filter((l) => l.clave === MARCAR_TURNO);
+
+  it('sale una sola vez: busca sólo los turnos sin la marca y deja la marca puesta', async () => {
+    prepararBase({ minutos: 30 });
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, VEINTE_ANTES_DEL_FIN);
+
+    const lectura = llamadas.find((l) => l.clave === TURNOS_GUARDIA && l.filtros.has('push_recordatorio_reporte_enviado_at'));
+    assert.equal(lectura.filtros.get('push_recordatorio_reporte_enviado_at'), 'is.null');
+    assert.equal(lectura.filtros.get('estado'), 'eq.activa');
+    assert.equal(marcas().length, 1);
+    assert.equal(marcas()[0].filtros.get('id'), `eq.${turnoEnCurso.id}`);
+    assert.ok(marcas()[0].cuerpo.push_recordatorio_reporte_enviado_at);
+    for (const llamada of llamadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
+  });
+
+  it('del reporte sólo se pregunta qué Paciente lo tiene, nunca el contenido', async () => {
+    prepararBase({ minutos: 30 });
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, VEINTE_ANTES_DEL_FIN);
+
+    const lectura = llamadas.find((l) => l.clave === REPORTES);
+    assert.equal(lectura.filtros.get('select'), 'turno_guardia_id,paciente_id');
+  });
+
+  it('no sale con el Reporte Diario ya presentado', async () => {
+    prepararBase({ minutos: 30, reportes: [PACIENTE] });
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, VEINTE_ANTES_DEL_FIN);
+
+    assert.ok(llamadas.some((l) => l.clave === REPORTES), 'no llegó a mirar los reportes');
+    assert.equal(marcas().length, 0);
+  });
+
+  it('sale si a uno de los Pacientes del turno todavía le falta el reporte', async () => {
+    prepararBase({ minutos: 30, pacientes: [PACIENTE, OTRO_PACIENTE], reportes: [PACIENTE] });
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, VEINTE_ANTES_DEL_FIN);
+
+    assert.equal(marcas().length, 1);
+  });
+
+  it('respeta los minutos de cada Prestadora', async () => {
+    // Con 10 minutos de anticipación, a 20 del fin todavía no es hora.
+    prepararBase({ minutos: 10 });
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, VEINTE_ANTES_DEL_FIN);
+    assert.equal(marcas().length, 0);
+    assert.ok(!llamadas.some((l) => l.clave === REPORTES), 'buscó reportes de un turno que no estaba por terminar');
+
+    // Con 30 minutos, a la misma hora sí.
+    llamadas = [];
+    prepararBase({ minutos: 30 });
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, VEINTE_ANTES_DEL_FIN);
+    assert.equal(marcas().length, 1);
+  });
+
+  it('pasado el fin del turno no sale', async () => {
+    prepararBase({ minutos: 30 });
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T19:05:00Z'));
+
+    assert.equal(marcas().length, 0);
   });
 });

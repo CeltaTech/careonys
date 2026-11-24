@@ -46,6 +46,18 @@ export function seReintentaSinContar(item, situacion) {
   return item?.tipo === 'emergencia' && situacion === 'falla_del_sistema';
 }
 
+/**
+ * ¿Este ítem es una salida que no lleva comprobación?
+ *
+ * La salida queda siempre comprobada: con el código QR o con la autorización del Coordinador. En
+ * la cola sólo puede viajar la autorización, porque un código leído ya está vencido cuando vuelve
+ * la señal. Una salida sin autorización —la que quedó anotada por una versión anterior de la
+ * aplicación— no se manda: el backend la rechazaría igual.
+ */
+export function esSalidaSinComprobar(item) {
+  return item?.tipo === 'checkout' && item?.payload?.comprobacion?.autorizada !== true;
+}
+
 /** ¿Queda alguna emergencia sin mandar? Mientras quede, el teléfono vuelve a probar solo. */
 export function hayEmergenciaPendiente(cola) {
   return (cola ?? []).some((item) => item?.tipo === 'emergencia');

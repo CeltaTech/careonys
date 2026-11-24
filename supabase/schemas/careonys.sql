@@ -526,7 +526,7 @@ BEGIN
       UNION ALL
       SELECT sum(s.saldo), s.moneda,
              coalesce(interno.hoy_de_la_prestadora(v_baja.prestadora_id) - min(s.fecha_vencimiento) FILTER (WHERE s.fecha_vencimiento < interno.hoy_de_la_prestadora(v_baja.prestadora_id)), 0)
-        FROM saldos_cliente s
+        FROM interno.saldos_de_las_facturas s
        WHERE NOT coalesce(v_la_lleva_otro, false)
          AND s.prestadora_id = v_baja.prestadora_id
          AND s.cliente_id = v_servicio.cliente_id
@@ -1795,6 +1795,34 @@ $_$;
 
 
 ALTER FUNCTION "interno"."cumple_modulo_11"("p_numero" "text") OWNER TO "postgres";
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."dar_de_baja_las_prestaciones_del_servicio"("p_servicio" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  -- Sólo para un Servicio de la Prestadora de la sesión que ya tiene su baja anotada.
+  IF NOT EXISTS (SELECT 1 FROM bajas_de_servicio b
+                  WHERE b.servicio_id = p_servicio
+                    AND b.prestadora_id = interno.prestadora_actual()) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+
+  -- La fecha de fin de cada prestación la pone la base al ver la baja.
+  UPDATE prestaciones SET estado = 'de_baja'
+   WHERE servicio_id = p_servicio
+     AND prestadora_id = interno.prestadora_actual()
+     AND estado = 'vigente';
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."dar_de_baja_las_prestaciones_del_servicio"("p_servicio" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "interno"."dar_de_baja_las_prestaciones_del_servicio"("p_servicio" "uuid") IS 'Da de baja las prestaciones vigentes de un Servicio que se está dando de baja. La llama la baja del Servicio.';
 
 
 
@@ -3575,14 +3603,14 @@ CREATE OR REPLACE FUNCTION "interno"."gestiona_la_facturacion"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
     AS $$
-  SELECT interno.es_personal_de_la_prestadora();
+  SELECT interno.es_personal_de_la_prestadora() AND interno.tiene_permiso('ver_facturacion_cliente');
 $$;
 
 
 ALTER FUNCTION "interno"."gestiona_la_facturacion"() OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "interno"."gestiona_la_facturacion"() IS 'Único punto de verdad de quién puede ver y mover la facturación y los cobros de una Prestadora. El tenant se comprueba aparte, en cada política.';
+COMMENT ON FUNCTION "interno"."gestiona_la_facturacion"() IS 'Si quien inició sesión es personal de la Prestadora y tiene el permiso de ver la facturación de los Clientes. La administración lo tiene siempre.';
 
 
 
@@ -6095,6 +6123,58 @@ ALTER FUNCTION "interno"."valor_del_indice_de_la_prestadora"("p_prestadora" "uui
 
 
 
+CREATE OR REPLACE FUNCTION "interno"."ve_el_estado_de_cuenta"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT interno.es_personal_de_la_prestadora() AND interno.tiene_permiso('ver_estado_de_cuenta_cliente');
+$$;
+
+
+ALTER FUNCTION "interno"."ve_el_estado_de_cuenta"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "interno"."ve_el_estado_de_cuenta"() IS 'Si quien inició sesión es personal de la Prestadora y tiene el permiso de ver el estado de cuenta de los Clientes. La administración lo tiene siempre.';
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."ve_la_prestacion"("p_paciente" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT interno.es_superadmin()
+      OR interno.es_admin_prestadora()
+      OR interno.coordinador_ve_al_paciente(p_paciente);
+$$;
+
+
+ALTER FUNCTION "interno"."ve_la_prestacion"("p_paciente" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "interno"."ve_la_prestacion"("p_paciente" "uuid") IS 'Si quien inició sesión ve las prestaciones de ese Paciente: la administración, o la Coordinadora que lo ve. No dice nada del precio.';
+
+
+
+CREATE OR REPLACE FUNCTION "interno"."ve_la_prestacion_por_id"("p_prestacion" bigint, "p_prestadora" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM prestaciones p
+     WHERE p.id = p_prestacion
+       AND p.prestadora_id = p_prestadora
+       AND p.prestadora_id = interno.prestadora_actual()
+       AND interno.ve_la_prestacion(p.paciente_id));
+$$;
+
+
+ALTER FUNCTION "interno"."ve_la_prestacion_por_id"("p_prestacion" bigint, "p_prestadora" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "interno"."ve_la_prestacion_por_id"("p_prestacion" bigint, "p_prestadora" "uuid") IS 'Si la prestación es de la Prestadora de la sesión y quien inició sesión ve a su Paciente. La usa la política del cronograma de guardias.';
+
+
+
 CREATE OR REPLACE FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) RETURNS TABLE("plazo_id" "uuid", "vence_en" timestamp with time zone)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -6540,7 +6620,7 @@ BEGIN
 
   -- Las prestaciones se eligen antes de tocar la lista, con su marca de revisión de ese momento:
   -- reemplazar un renglón de la lista marca a revisar las que apuntan a él, y la que se versiona
-  -- acá no tiene nada que revisar.
+  -- acá no tiene nada que revisar. Las que todavía no tienen precio no se actualizan.
   SELECT coalesce(jsonb_agg(jsonb_build_object(
            'id', p.id, 'servicio_id', p.servicio_id, 'tipo_servicio', p.tipo_servicio,
            'precio_final', p.precio_final, 'precio_lista_snapshot', p.precio_lista_snapshot,
@@ -6559,6 +6639,7 @@ BEGIN
      AND p.vigente_hasta IS NULL
      AND p.vigente_desde < p_desde
      AND p.servicio_id IS NOT NULL
+     AND p.forma_de_precio IS NOT NULL
      AND x.indice IS NOT NULL;
 
   -- La lista de precios de la Prestadora.
@@ -6737,6 +6818,7 @@ BEGIN
   )
   SELECT count(*) INTO sin_efecto FROM vencidas;
 
+  -- Las que todavía no tienen precio no se ajustan.
   FOR v IN
     SELECT p.id, p.servicio_id, p.vigente_desde, p.precio_final, p.precio_lista_snapshot, p.moneda,
            p.precio_turno_guardia_adicional, p.precio_hora_adicional,
@@ -6750,6 +6832,7 @@ BEGIN
        AND p.vigente_hasta IS NULL
        AND p.servicio_id IS NOT NULL
        AND p.vigente_desde <= interno.hoy_de_la_prestadora(v_prest)
+       AND p.forma_de_precio IS NOT NULL
        AND p.precio_final > 0
        AND x.indice IS NOT NULL
        AND NOT EXISTS (SELECT 1 FROM public.propuestas_de_ajuste_por_indice pr
@@ -8320,9 +8403,8 @@ BEGIN
           v_comprobaciones, interno.usuario_de_la_sesion())
   RETURNING id INTO v_baja;
 
-  -- La fecha de fin de cada prestación la pone la base al ver la baja.
-  UPDATE prestaciones SET estado = 'de_baja'
-   WHERE servicio_id = p_servicio AND estado = 'vigente';
+  -- Todas las prestaciones del Servicio, también las que quien da la baja no lee por el precio.
+  PERFORM interno.dar_de_baja_las_prestaciones_del_servicio(p_servicio);
   UPDATE series_turnos_guardia
      SET estado = 'cancelada', cancelacion_origen = 'prestadora', cancelado_at = now()
    WHERE servicio_id = p_servicio AND estado = 'activa';
@@ -11141,6 +11223,28 @@ $$;
 
 
 ALTER FUNCTION "public"."tiene_permiso_la_sesion"("p_accion" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tipos_de_servicio_que_rigen"("p_fecha" "date" DEFAULT "interno"."hoy_de_la_sesion"()) RETURNS TABLE("tipo_servicio" "text", "modalidad" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT DISTINCT l.tipo_servicio, l.modalidad
+    FROM lista_precios l
+   WHERE interno.es_personal_de_la_prestadora()
+     AND l.prestadora_id = interno.prestadora_actual()
+     AND l.activo
+     AND l.vigente_desde <= p_fecha
+     AND (l.vigente_hasta IS NULL OR l.vigente_hasta >= p_fecha)
+   ORDER BY l.tipo_servicio, l.modalidad;
+$$;
+
+
+ALTER FUNCTION "public"."tipos_de_servicio_que_rigen"("p_fecha" "date") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."tipos_de_servicio_que_rigen"("p_fecha" "date") IS 'Los tipos de servicio y las modalidades vigentes de la lista de precios de la Prestadora de la sesión, sin precio. Sólo para su personal.';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."turnos_guardia_asignados_sin_responder"() RETURNS TABLE("asignacion_id" "uuid", "asignado_at" timestamp with time zone, "tipo" "text", "turno_guardia_id" "uuid", "serie_id" "uuid", "ausencia_id" "uuid", "fecha" "date", "hora_inicio" time without time zone, "hora_fin" time without time zone, "dias_hasta_el_fin" smallint, "modalidad" "text", "dias_semana" "text"[], "desde" "date", "hasta" "date", "cantidad" integer, "barrios" "text"[], "niveles_de_complejidad" "text"[], "distancia_m" integer, "tareas" "jsonb")
@@ -14504,6 +14608,7 @@ CREATE TABLE IF NOT EXISTS "public"."turno_guardia_comprobaciones" (
     CONSTRAINT "turno_guardia_comprobaciones_momento_check" CHECK (("momento" = ANY (ARRAY['checkin'::"text", 'checkout'::"text"]))),
     CONSTRAINT "turno_guardia_comprobaciones_motivo_check" CHECK ((("motivo_sin_comprobar" IS NULL) OR ("motivo_sin_comprobar" = ANY (ARRAY['nadie_para_mostrar'::"text", 'prestadora_no_responde'::"text", 'sin_camara'::"text", 'sin_conexion'::"text", 'otro'::"text"])))),
     CONSTRAINT "turno_guardia_comprobaciones_motivo_del_pedido_check" CHECK ((("motivo_del_pedido" IS NULL) OR ("motivo_del_pedido" = ANY (ARRAY['nadie_para_mostrar'::"text", 'sin_camara'::"text", 'otro'::"text"])))),
+    CONSTRAINT "turno_guardia_comprobaciones_salida_comprobada_check" CHECK ((NOT (("momento" = 'checkout'::"text") AND ("estado" = 'sin_comprobar'::"text")))),
     CONSTRAINT "turno_guardia_comprobaciones_sujeto_coherencia_check" CHECK (((("medio" = ANY (ARRAY['codigo_cliente'::"text", 'codigo_asistente_saliente'::"text"])) AND ("sujeto_tipo" IS NOT NULL) AND ("sujeto_id" IS NOT NULL)) OR (("medio" = 'autorizacion_prestadora'::"text") AND ("sujeto_tipo" IS NULL) AND ("sujeto_id" IS NULL)) OR ("medio" IS NULL))),
     CONSTRAINT "turno_guardia_comprobaciones_sujeto_tipo_check" CHECK ((("sujeto_tipo" IS NULL) OR ("sujeto_tipo" = ANY (ARRAY['cliente'::"text", 'asistente'::"text"]))))
 );
@@ -14567,10 +14672,6 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     "checkout_at" timestamp with time zone,
     "checkout_lat" double precision,
     "checkout_lng" double precision,
-    "checkout_bloqueado" boolean DEFAULT false NOT NULL,
-    "checkout_excepcion_motivo" "text",
-    "checkout_excepcion_autorizado_por" "uuid",
-    "checkout_excepcion_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "push_asignacion_enviado_at" timestamp with time zone,
     "push_recordatorio_enviado_at" timestamp with time zone,
@@ -14596,12 +14697,12 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     "horas_extra_motivo" "text",
     "llegada_tarde" boolean DEFAULT false NOT NULL,
     "interrupcion_id" "uuid",
+    "push_recordatorio_reporte_enviado_at" timestamp with time zone,
     CONSTRAINT "turnos_guardia_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_alcance_check" CHECK (("cancelacion_alcance" = ANY (ARRAY['servicio'::"text", 'prestacion'::"text", 'turno_guardia_recurrente'::"text", 'turno_guardia'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelacion_alcance" IS NULL)))),
     CONSTRAINT "turnos_guardia_cancelacion_origen_check" CHECK (("cancelacion_origen" = ANY (ARRAY['cliente'::"text", 'prestadora'::"text"]))),
     CONSTRAINT "turnos_guardia_cerrado_origen_check" CHECK (("cerrada_origen" = ANY (ARRAY['asistente'::"text", 'panel'::"text"]))),
-    CONSTRAINT "turnos_guardia_checkout_bloqueado_requiere_excepcion" CHECK ((("checkout_at" IS NULL) OR (NOT "checkout_bloqueado") OR (("checkout_excepcion_motivo" IS NOT NULL) AND ("checkout_excepcion_autorizado_por" IS NOT NULL) AND ("checkout_excepcion_at" IS NOT NULL)))),
     CONSTRAINT "turnos_guardia_cierre_por_el_asistente_sin_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'asistente'::"text") OR ("cerrada_motivo" IS NULL))),
     CONSTRAINT "turnos_guardia_cierre_por_el_panel_exige_persona_y_motivo" CHECK ((("cerrada_origen" IS DISTINCT FROM 'panel'::"text") OR (("cerrada_por" IS NOT NULL) AND ("cerrada_motivo" IS NOT NULL) AND ("btrim"("cerrada_motivo") <> ''::"text")))),
     CONSTRAINT "turnos_guardia_cierre_rastro_completo" CHECK (((("cerrada_at" IS NULL) AND ("cerrada_origen" IS NULL) AND ("cerrada_por" IS NULL) AND ("cerrada_motivo" IS NULL)) OR (("cerrada_at" IS NOT NULL) AND ("cerrada_origen" IS NOT NULL)))),
@@ -14660,6 +14761,10 @@ COMMENT ON COLUMN "public"."turnos_guardia"."dias_hasta_el_fin" IS 'Cuantos dias
 
 
 COMMENT ON COLUMN "public"."turnos_guardia"."horas_extra" IS 'Horas de mas autorizadas en este turno de guardia, anotadas cuando pasaron. No se deducen de la diferencia entre la marca de salida y la hora de fin planificada: irse tarde no es una hora extra autorizada.';
+
+
+
+COMMENT ON COLUMN "public"."turnos_guardia"."push_recordatorio_reporte_enviado_at" IS 'Cuándo se le recordó al Asistente que presente el Reporte Diario de este turno de guardia. Vacío si todavía no se le recordó.';
 
 
 
@@ -15996,7 +16101,7 @@ CREATE TABLE IF NOT EXISTS "public"."prestaciones" (
     "precio_lista_snapshot" numeric(12,2),
     "tipo_descuento" "text",
     "valor_descuento" numeric(12,2),
-    "precio_final" numeric(12,2) NOT NULL,
+    "precio_final" numeric(12,2),
     "nota" "text",
     "estado" "text" DEFAULT 'vigente'::"text" NOT NULL,
     "requiere_revision" boolean DEFAULT false NOT NULL,
@@ -16007,7 +16112,7 @@ CREATE TABLE IF NOT EXISTS "public"."prestaciones" (
     "moneda" "public"."moneda_iso" NOT NULL,
     "vigente_desde" "date" NOT NULL,
     "vigente_hasta" "date",
-    "forma_de_precio" "text" DEFAULT 'directo'::"text" NOT NULL,
+    "forma_de_precio" "text" DEFAULT 'directo'::"text",
     "sentido_del_ajuste" "text",
     "prestacion_anterior_id" bigint,
     "precio_turno_guardia_adicional" numeric(12,2),
@@ -16018,7 +16123,7 @@ CREATE TABLE IF NOT EXISTS "public"."prestaciones" (
     CONSTRAINT "prestaciones_estado_check" CHECK (("estado" = ANY (ARRAY['vigente'::"text", 'de_baja'::"text"]))),
     CONSTRAINT "prestaciones_forma_de_precio_valida" CHECK (("forma_de_precio" = ANY (ARRAY['lista'::"text", 'directo'::"text"]))),
     CONSTRAINT "prestaciones_no_se_reemplaza_a_si_misma" CHECK ((("prestacion_anterior_id" IS NULL) OR ("prestacion_anterior_id" <> "id"))),
-    CONSTRAINT "prestaciones_precio_coherente_con_su_forma" CHECK (((("forma_de_precio" = 'lista'::"text") AND ("precio_lista_id" IS NOT NULL) AND ("precio_lista_snapshot" IS NOT NULL)) OR (("forma_de_precio" = 'directo'::"text") AND ("precio_lista_id" IS NULL) AND ("tipo_descuento" IS NULL)))),
+    CONSTRAINT "prestaciones_precio_coherente_con_su_forma" CHECK (((("forma_de_precio" IS NULL) AND ("precio_lista_id" IS NULL) AND ("precio_lista_snapshot" IS NULL) AND ("tipo_descuento" IS NULL) AND ("valor_descuento" IS NULL) AND ("sentido_del_ajuste" IS NULL) AND ("precio_final" IS NULL) AND ("precio_turno_guardia_adicional" IS NULL) AND ("precio_hora_adicional" IS NULL) AND (NOT "requiere_revision")) OR (("forma_de_precio" = 'lista'::"text") AND ("precio_lista_id" IS NOT NULL) AND ("precio_lista_snapshot" IS NOT NULL) AND ("precio_final" IS NOT NULL)) OR (("forma_de_precio" = 'directo'::"text") AND ("precio_lista_id" IS NULL) AND ("tipo_descuento" IS NULL) AND ("precio_final" IS NOT NULL)))),
     CONSTRAINT "prestaciones_precio_final_no_negativo" CHECK (("precio_final" >= (0)::numeric)),
     CONSTRAINT "prestaciones_sentido_del_ajuste_valido" CHECK ((("sentido_del_ajuste" IS NULL) OR ("sentido_del_ajuste" = ANY (ARRAY['descuento'::"text", 'recargo'::"text"])))),
     CONSTRAINT "prestaciones_tipo_descuento_check" CHECK (("tipo_descuento" = ANY (ARRAY['porcentaje'::"text", 'monto_fijo'::"text"]))),
@@ -16045,7 +16150,7 @@ COMMENT ON COLUMN "public"."prestaciones"."vigente_hasta" IS 'Ultimo dia en que 
 
 
 
-COMMENT ON COLUMN "public"."prestaciones"."forma_de_precio" IS 'Cómo se llegó al precio: lista (de un renglón de la Lista de Precios, con ajuste optativo) o directo (escrito por quien cargó).';
+COMMENT ON COLUMN "public"."prestaciones"."forma_de_precio" IS 'Cómo se llegó al precio: de la lista o escrito. Vacía quiere decir que la prestación todavía no tiene precio.';
 
 
 
@@ -16073,6 +16178,31 @@ ALTER TABLE "public"."prestaciones" ALTER COLUMN "id" ADD GENERATED ALWAYS AS ID
     NO MAXVALUE
     CACHE 1
 );
+
+
+
+CREATE OR REPLACE VIEW "public"."prestaciones_sin_importes" WITH ("security_barrier"='true') AS
+ SELECT "id",
+    "prestadora_id",
+    "servicio_id",
+    "paciente_id",
+    "tipo_servicio",
+    "configuracion",
+    "nota",
+    "estado",
+    "vigente_desde",
+    "vigente_hasta",
+    "prestacion_anterior_id",
+    "created_at",
+    ("forma_de_precio" IS NOT NULL) AS "tiene_precio"
+   FROM "public"."prestaciones" "p"
+  WHERE (("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."ve_la_prestacion"("paciente_id"));
+
+
+ALTER VIEW "public"."prestaciones_sin_importes" OWNER TO "postgres";
+
+
+COMMENT ON VIEW "public"."prestaciones_sin_importes" IS 'Las prestaciones de los Pacientes que ve quien inició sesión, sin el precio. Es lo que lee la Coordinadora; la tabla con el precio la leen la administración y quien gestiona la facturación.';
 
 
 
@@ -16126,10 +16256,12 @@ CREATE TABLE IF NOT EXISTS "public"."prestadoras" (
     "registro_de_accesos_pacientes_por_dia" integer DEFAULT 20 NOT NULL,
     "registro_de_accesos_horas_alrededor_del_turno_guardia" integer DEFAULT 12 NOT NULL,
     "turnos_guardia_solo_con_firma_del_pagador" boolean DEFAULT false NOT NULL,
+    "minutos_recordatorio_reporte_diario" integer DEFAULT 30 NOT NULL,
     CONSTRAINT "prestadoras_cierre_por_inactividad_minutos_check" CHECK ((("cierre_por_inactividad_minutos" >= 5) AND ("cierre_por_inactividad_minutos" <= 120))),
     CONSTRAINT "prestadoras_dias_para_aceptar_la_ubicacion_check" CHECK ((("dias_para_aceptar_la_ubicacion" >= 1) AND ("dias_para_aceptar_la_ubicacion" <= 365))),
     CONSTRAINT "prestadoras_minutos_aviso_previo_turno_guardia_check" CHECK ((("minutos_aviso_previo_turno_guardia" >= 5) AND ("minutos_aviso_previo_turno_guardia" <= 1440))),
     CONSTRAINT "prestadoras_minutos_entre_controles_de_ubicacion_check" CHECK ((("minutos_entre_controles_de_ubicacion" >= 1) AND ("minutos_entre_controles_de_ubicacion" <= 60))),
+    CONSTRAINT "prestadoras_minutos_recordatorio_reporte_diario_check" CHECK ((("minutos_recordatorio_reporte_diario" >= 5) AND ("minutos_recordatorio_reporte_diario" <= 1440))),
     CONSTRAINT "prestadoras_politica_verificacion_alta_manual_check" CHECK (("politica_verificacion_alta_manual" = ANY (ARRAY['omitir'::"text", 'pendiente'::"text", 'aprobado'::"text"]))),
     CONSTRAINT "prestadoras_registro_de_accesos_horario_valido" CHECK (("registro_de_accesos_hora_de_inicio" <> "registro_de_accesos_hora_de_fin")),
     CONSTRAINT "prestadoras_registro_de_accesos_horas_alrededor_valido" CHECK ((("registro_de_accesos_horas_alrededor_del_turno_guardia" >= 0) AND ("registro_de_accesos_horas_alrededor_del_turno_guardia" <= 72))),
@@ -16210,6 +16342,10 @@ COMMENT ON COLUMN "public"."prestadoras"."dias_para_aceptar_la_ubicacion" IS 'D�
 
 
 COMMENT ON COLUMN "public"."prestadoras"."control_de_ubicacion_en_el_turno_guardia_desde" IS 'Desde cuándo la Prestadora tiene viaje y turno de guardia. Vacía con sólo viaje. La pone la base.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."minutos_recordatorio_reporte_diario" IS 'Cuántos minutos antes del fin del turno de guardia se le recuerda al Asistente que presente el Reporte Diario. Entre 5 y 1440.';
 
 
 
@@ -16686,7 +16822,7 @@ COMMENT ON COLUMN "public"."restricciones_de_cobranza"."numero_del_aviso" IS 'Co
 
 
 
-CREATE OR REPLACE VIEW "public"."saldos_cliente" WITH ("security_invoker"='true') AS
+CREATE OR REPLACE VIEW "interno"."saldos_de_las_facturas" AS
  SELECT "f"."id" AS "factura_id",
     "f"."prestadora_id",
     "f"."cliente_id",
@@ -16699,10 +16835,10 @@ CREATE OR REPLACE VIEW "public"."saldos_cliente" WITH ("security_invoker"='true'
     "f"."facturado_at",
     "co"."neto" AS "correcciones_neto",
     "co"."correcciones_contadas",
-    "public"."monto_a_cobrar_de_factura"("f"."monto_total", "f"."monto_facturado", "f"."id") AS "monto_a_cobrar",
+    ((COALESCE("f"."monto_facturado", "f"."monto_total", (0)::numeric) + "co"."neto"))::numeric(12,2)::numeric AS "monto_a_cobrar",
     "r"."cobrado",
-    (("public"."monto_a_cobrar_de_factura"("f"."monto_total", "f"."monto_facturado", "f"."id") - "r"."cobrado"))::numeric(12,2) AS "saldo",
-    "public"."estado_de_factura"("f"."prestadora_id", "public"."monto_a_cobrar_de_factura"("f"."monto_total", "f"."monto_facturado", "f"."id"), "r"."cobrado", "f"."fecha_vencimiento") AS "estado",
+    (((COALESCE("f"."monto_facturado", "f"."monto_total", (0)::numeric) + "co"."neto") - "r"."cobrado"))::numeric(12,2) AS "saldo",
+    "public"."estado_de_factura"("f"."prestadora_id", ((COALESCE("f"."monto_facturado", "f"."monto_total", (0)::numeric) + "co"."neto"))::numeric(12,2), "r"."cobrado", "f"."fecha_vencimiento") AS "estado",
     "f"."estado" AS "estado_guardado",
     "f"."fecha_emision",
     "f"."fecha_vencimiento",
@@ -16713,8 +16849,57 @@ CREATE OR REPLACE VIEW "public"."saldos_cliente" WITH ("security_invoker"='true'
     "f"."servicio_id",
     "f"."periodo_hasta"
    FROM (("public"."facturas_cliente" "f"
-     CROSS JOIN LATERAL "public"."resumen_cobros_de_factura"("f"."id") "r"("cobrado", "cobros_contados", "ultimo_cobro_fecha", "origenes"))
-     CROSS JOIN LATERAL "public"."correcciones_de_factura"("f"."id") "co"("neto", "correcciones_contadas"));
+     CROSS JOIN LATERAL ( SELECT (COALESCE("sum"("c"."monto"), (0)::numeric))::numeric(12,2)::numeric AS "cobrado",
+            ("count"(*))::integer AS "cobros_contados",
+            "max"("c"."fecha_cobro") AS "ultimo_cobro_fecha",
+            COALESCE("array_agg"(DISTINCT "c"."origen" ORDER BY "c"."origen"), ARRAY[]::"text"[]) AS "origenes"
+           FROM "public"."cobros_cliente" "c"
+          WHERE (("c"."factura_id" = "f"."id") AND ("c"."estado" = 'registrado'::"text"))) "r")
+     CROSS JOIN LATERAL ( SELECT (COALESCE("sum"(
+                CASE
+                    WHEN ("k"."sentido" = 'resta'::"text") THEN (- "k"."monto")
+                    ELSE "k"."monto"
+                END), (0)::numeric))::numeric(12,2)::numeric AS "neto",
+            ("count"(*))::integer AS "correcciones_contadas"
+           FROM "public"."correcciones_factura_cliente" "k"
+          WHERE ("k"."factura_id" = "f"."id")) "co");
+
+
+ALTER VIEW "interno"."saldos_de_las_facturas" OWNER TO "postgres";
+
+
+COMMENT ON VIEW "interno"."saldos_de_las_facturas" IS 'La cuenta del saldo de cada factura, sin filtro. No se publica: la leen la vista de saldos y las funciones de la base.';
+
+
+
+CREATE OR REPLACE VIEW "public"."saldos_cliente" WITH ("security_barrier"='true') AS
+ SELECT "factura_id",
+    "prestadora_id",
+    "cliente_id",
+    "periodo",
+    "moneda",
+    "monto_total",
+    "monto_facturado",
+    "comprobante_tipo",
+    "comprobante_numero",
+    "facturado_at",
+    "correcciones_neto",
+    "correcciones_contadas",
+    "monto_a_cobrar",
+    "cobrado",
+    "saldo",
+    "estado",
+    "estado_guardado",
+    "fecha_emision",
+    "fecha_vencimiento",
+    "cobros_contados",
+    "ultimo_cobro_fecha",
+    "origenes",
+    "actualizado_en",
+    "servicio_id",
+    "periodo_hasta"
+   FROM "interno"."saldos_de_las_facturas" "s"
+  WHERE ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."gestiona_la_facturacion"() OR "interno"."ve_el_estado_de_cuenta"())) OR (("cliente_id" = "interno"."cliente_id_de_usuario"("auth"."uid"())) AND "interno"."persona_autorizada_puede"("auth"."uid"(), 'persona_autorizada_dinero'::"text")));
 
 
 ALTER VIEW "public"."saldos_cliente" OWNER TO "postgres";
@@ -22731,11 +22916,6 @@ ALTER TABLE ONLY "public"."turnos_guardia"
 
 
 
-ALTER TABLE ONLY "public"."turnos_guardia"
-    ADD CONSTRAINT "turnos_guardia_checkout_excepcion_autorizado_por_fkey" FOREIGN KEY ("checkout_excepcion_autorizado_por") REFERENCES "public"."usuarios"("id");
-
-
-
 ALTER TABLE ONLY "public"."turnos_guardia_cobertura"
     ADD CONSTRAINT "turnos_guardia_cobertura_asistente_sustituto_id_fkey" FOREIGN KEY ("asistente_sustituto_id") REFERENCES "public"."asistentes"("id");
 
@@ -26228,6 +26408,10 @@ ALTER TABLE "public"."pacientes" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."pacientes_de_incidentes" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "panel_carga_prestaciones_sin_precio" ON "public"."prestaciones" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."es_personal_de_la_prestadora"() AND "interno"."ve_la_prestacion"("paciente_id") AND ("forma_de_precio" IS NULL) AND ("prestacion_anterior_id" IS NULL)));
+
+
+
 CREATE POLICY "panel_edita_asistentes" ON "public"."asistentes" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"()))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"())));
 
 
@@ -26354,7 +26538,7 @@ CREATE POLICY "panel_gestiona_permisos_personas_autorizadas" ON "public"."permis
 
 
 
-CREATE POLICY "panel_gestiona_prestaciones" ON "public"."prestaciones" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."coordinador_ve_al_paciente"("paciente_id"))));
+CREATE POLICY "panel_gestiona_prestaciones_con_precio" ON "public"."prestaciones" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."ve_la_prestacion"("paciente_id") AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."gestiona_la_facturacion"()))) WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."ve_la_prestacion"("paciente_id") AND ("interno"."es_superadmin"() OR "interno"."es_admin_prestadora"() OR "interno"."gestiona_la_facturacion"())));
 
 
 
@@ -26449,9 +26633,7 @@ CREATE POLICY "panel_lee_extensiones_de_turno_guardia" ON "public"."extensiones_
 
 
 
-CREATE POLICY "panel_lee_lista_precios" ON "public"."lista_precios" FOR SELECT USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."usuarios" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = ANY (ARRAY['admin_prestadora'::"text", 'coordinador'::"text"]))))))));
+CREATE POLICY "panel_lee_lista_precios" ON "public"."lista_precios" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."gestiona_la_facturacion"()));
 
 
 
@@ -28202,6 +28384,12 @@ GRANT ALL ON FUNCTION "interno"."cumple_modulo_11"("p_numero" "text") TO "trabaj
 
 
 
+REVOKE ALL ON FUNCTION "interno"."dar_de_baja_las_prestaciones_del_servicio"("p_servicio" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."dar_de_baja_las_prestaciones_del_servicio"("p_servicio" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."dar_de_baja_las_prestaciones_del_servicio"("p_servicio" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."derechos_por_vencer"("p_prestadora" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."derechos_por_vencer"("p_prestadora" "uuid") TO "service_role";
 
@@ -29278,6 +29466,24 @@ GRANT ALL ON FUNCTION "interno"."valor_del_indice_de_la_prestadora"("p_prestador
 
 
 
+REVOKE ALL ON FUNCTION "interno"."ve_el_estado_de_cuenta"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."ve_el_estado_de_cuenta"() TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."ve_el_estado_de_cuenta"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."ve_la_prestacion"("p_paciente" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."ve_la_prestacion"("p_paciente" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."ve_la_prestacion"("p_paciente" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."ve_la_prestacion_por_id"("p_prestacion" bigint, "p_prestadora" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."ve_la_prestacion_por_id"("p_prestacion" bigint, "p_prestadora" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "interno"."ve_la_prestacion_por_id"("p_prestacion" bigint, "p_prestadora" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) FROM PUBLIC;
 GRANT ALL ON FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) TO "service_role";
 GRANT ALL ON FUNCTION "interno"."vencimiento_de_la_solicitud"("p_prestadora" "uuid", "p_tipo" "text", "p_recibida" timestamp with time zone) TO "authenticated";
@@ -30095,6 +30301,12 @@ GRANT ALL ON FUNCTION "public"."tiene_permiso_de"("p_usuario" "uuid", "p_accion"
 REVOKE ALL ON FUNCTION "public"."tiene_permiso_la_sesion"("p_accion" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."tiene_permiso_la_sesion"("p_accion" "text") TO "service_role";
 GRANT ALL ON FUNCTION "public"."tiene_permiso_la_sesion"("p_accion" "text") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."tipos_de_servicio_que_rigen"("p_fecha" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tipos_de_servicio_que_rigen"("p_fecha" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."tipos_de_servicio_que_rigen"("p_fecha" "date") TO "service_role";
 
 
 
@@ -32503,6 +32715,11 @@ GRANT ALL ON TABLE "public"."prestaciones" TO "service_role";
 
 
 
+GRANT SELECT ON TABLE "public"."prestaciones_sin_importes" TO "authenticated";
+GRANT ALL ON TABLE "public"."prestaciones_sin_importes" TO "service_role";
+
+
+
 GRANT ALL ON SEQUENCE "public"."prestaciones_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."prestaciones_id_seq" TO "service_role";
 
@@ -32592,6 +32809,10 @@ GRANT UPDATE("control_de_ubicacion_en_el_turno_guardia_desde") ON TABLE "public"
 
 
 GRANT UPDATE("turnos_guardia_solo_con_firma_del_pagador") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+
+
+
+GRANT UPDATE("minutos_recordatorio_reporte_diario") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 
@@ -32795,6 +33016,10 @@ GRANT SELECT("origen") ON TABLE "public"."restricciones_de_cobranza" TO "trabajo
 
 
 GRANT SELECT("created_at") ON TABLE "public"."restricciones_de_cobranza" TO "trabajo_sin_persona";
+
+
+
+GRANT SELECT ON TABLE "interno"."saldos_de_las_facturas" TO "service_role";
 
 
 
@@ -34181,11 +34406,10 @@ CREATE INDEX IF NOT EXISTS "cronograma_de_guardias_prestacion_idx" ON "public"."
 
 ALTER TABLE "public"."cronograma_de_guardias" ENABLE ROW LEVEL SECURITY;
 
--- Lo gestiona quien gestiona la Prestación: la condición es la política de la Prestación, que se
--- evalúa sola al consultarla adentro de esta política.
+-- Lo gestiona quien ve al Paciente de la prestación, tenga o no el permiso de ver la facturación.
 CREATE POLICY "panel_gestiona_el_cronograma_de_guardias" ON "public"."cronograma_de_guardias" TO "authenticated"
-  USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1 FROM "public"."prestaciones" "p" WHERE (("p"."id" = "cronograma_de_guardias"."prestacion_id") AND ("p"."prestadora_id" = "cronograma_de_guardias"."prestadora_id"))))))
-  WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1 FROM "public"."prestaciones" "p" WHERE (("p"."id" = "cronograma_de_guardias"."prestacion_id") AND ("p"."prestadora_id" = "cronograma_de_guardias"."prestadora_id"))))));
+  USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."ve_la_prestacion_por_id"("prestacion_id", "prestadora_id")))
+  WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."ve_la_prestacion_por_id"("prestacion_id", "prestadora_id")));
 
 CREATE POLICY "el_trabajo_lee_el_cronograma_de_guardias" ON "public"."cronograma_de_guardias" FOR SELECT TO "trabajo_sin_persona"
   USING (("prestadora_id" = "interno"."prestadora_actual"()));

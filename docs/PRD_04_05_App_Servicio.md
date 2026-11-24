@@ -69,11 +69,11 @@ pasadas que ya cubre una liquidación pagada; una guardia activa queda siempre
 Timer desde el check-in. Datos del paciente (nombre, patologías, medicación habitual).
 Botón "Ver reportes anteriores". Botón "Reporte de emergencia" (formulario
 simplificado + alerta inmediata al coordinador, separado del flujo normal de check-out).
-Botón "Check-out" a la vista cuando cada Paciente del turno tiene su Reporte Diario y la guardia no
-tiene `checkout_bloqueado` (`pwa-asistentes/src/pages/TurnoGuardiaActivo.jsx:615-623`). El backend
-exige el check-in previo, el reporte de cada Paciente y que el protocolo de continuidad no haya
-bloqueado la salida, y pasa la guardia a `completada`; no compara contra ninguna cantidad de horas
-(`backend/src/routes/appAsistentes.js:2006-2081`).
+Botón "Check-out" a la vista cuando cada Paciente del turno tiene su Reporte Diario
+(`pwa-asistentes/src/pages/TurnoGuardiaActivo.jsx`). El backend exige el check-in previo, el
+reporte de cada Paciente y que la salida quede comprobada —en el lugar o con la salida autorizada—,
+y pasa la guardia a `completada`; no compara contra ninguna cantidad de horas
+(`backend/src/routes/appAsistentes.js`).
 
 ### El botón de emergencia — cómo quedó construido
 

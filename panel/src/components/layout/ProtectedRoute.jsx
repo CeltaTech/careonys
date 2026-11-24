@@ -59,11 +59,12 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   // Candado por permiso configurable. El Admin entra siempre, sin esperar nada: para él la
   // respuesta ya se sabe. El Coordinador tiene que esperar a que lleguen sus permisos, y
   // mientras no llegan no entra — si algo falla, la pantalla no se abre, que es el lado
-  // correcto para equivocarse.
+  // correcto para equivocarse. `permiso` puede ser uno o una lista: con una lista, alcanza con
+  // tener cualquiera de ellos.
   if (permiso && !esAdminOSuperior(usuario.rol)) {
     if (estadoPermisos === 'cargando') return <div className="pantalla-cargando">{t.comun.cargando}</div>;
     if (estadoPermisos === 'error') return mensajeDeFalla();
-    if (!puede(permiso)) return <Navigate to="/" replace />;
+    if (![].concat(permiso).some((p) => puede(p))) return <Navigate to="/" replace />;
   }
 
   // Candado por modalidad de negocio. No es un candado por rol y no tiene excepción para el

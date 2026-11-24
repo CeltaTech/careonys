@@ -126,7 +126,7 @@ function manejarErrorMulter(err, req, res, next) {
 async function turnoGuardiaDelAsistente(db, turnoGuardiaId, usuarioAsistente) {
   const { data } = await db
     .from('turnos_guardia')
-    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at')
     .eq('id', turnoGuardiaId)
     .eq('asistente_id', usuarioAsistente.asistenteId)
     .maybeSingle();
@@ -166,7 +166,10 @@ async function turnoGuardiaDelAsistente(db, turnoGuardiaId, usuarioAsistente) {
 // lista puede haber cambiado y el teléfono todavía tener la anterior, y eso es un desajuste de
 // versiones, no una razón para trabar un turno de guardia. Lo que mandó se guarda en el detalle, así el
 // Coordinador ve qué quiso decir.
-function datosDeComprobacion(body) {
+//
+// En la salida no hay «sin comprobar»: ni el pedido viejo sin nada ni un motivo la cierran. Lo que
+// no sea código ni autorización vuelve vacío, y la comprobación lo rechaza con su motivo.
+function datosDeComprobacion(body, momento = 'checkin') {
   const { comprobacion } = body || {};
   if (comprobacion && typeof comprobacion === 'object') {
     if (typeof comprobacion.codigo === 'string' && comprobacion.codigo.trim()) {
@@ -177,6 +180,7 @@ function datosDeComprobacion(body) {
     if (comprobacion.autorizada === true) {
       return { autorizada: true };
     }
+    if (momento === 'checkout') return {};
     if (typeof comprobacion.motivoSinComprobar === 'string') {
       const motivo = comprobacion.motivoSinComprobar.trim();
       if (MOTIVOS_SIN_COMPROBAR.includes(motivo)) {
@@ -185,6 +189,7 @@ function datosDeComprobacion(body) {
       return { motivoSinComprobar: 'otro', detalle: comprobacion.detalle ?? motivo };
     }
   }
+  if (momento === 'checkout') return {};
   return { motivoSinComprobar: 'otro' };
 }
 
@@ -677,7 +682,7 @@ appAsistentesRouter.get('/contenidos/archivos/:id/enlace', requiereRolAsistente,
 appAsistentesRouter.get('/turnos-guardia', requiereRolAsistente, async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('turnos_guardia')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at')
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('fecha', { ascending: false })
     .order('hora_inicio', { ascending: false })
@@ -714,7 +719,7 @@ appAsistentesRouter.get('/turnos-guardia/:id', requiereRolAsistente, async (req,
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('turnos_guardia')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
@@ -2022,11 +2027,9 @@ appAsistentesRouter.post('/turnos-guardia/:id/reporte/confirmar', requiereRolAsi
 //      negocio que antes garantizaba el endpoint del reporte, ahora explícita en vez de
 //      implícita. Se le dice al Asistente de quiénes falta, porque "falta un reporte" en un
 //      turno que cubre a tres personas no le dice cuál le quedó pendiente;
-//   3. si checkout_bloqueado está puesto, rige el protocolo de continuidad de guardia (no
-//      retirarse sin relevo) y el cierre solo lo libera el Panel con excepción documentada.
-//      Sin este guard la base rechazaría el UPDATE por el CHECK
-//      turnos_guardia_checkout_bloqueado_requiere_excepcion (schema_modulo6_turnos_guardia_02.sql) y el
-//      Asistente vería un error genérico sin saber por qué no puede irse.
+//   3. la salida queda siempre comprobada, con el código QR o con la autorización del
+//      Coordinador. Sin ninguna de las dos el pedido se rechaza con `salida_sin_comprobar`, y el
+//      pase de guardia se queda abierto para escanear o pedir autorización.
 // ============================================================================
 
 appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
@@ -2036,7 +2039,7 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, t
   }
   // El código va junto con el GPS, nunca en lugar de él (decisión del Desarrollador, pendiente
   // #113): se junta además de lat/lng de arriba, no en cambio de ellas.
-  const comprobacionPedida = datosDeComprobacion(req.body);
+  const comprobacionPedida = datosDeComprobacion(req.body, 'checkout');
 
   const db = clienteDelPedido(req);
   const turno_guardia = await turnoGuardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
@@ -2063,13 +2066,10 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, t
       pacientesSinReporte: faltan.map((p) => ({ id: p.id, nombre: p.nombre })),
     });
   }
-  if (turno_guardia.checkout_bloqueado) {
-    return res.status(409).json({ error: 'Check-out bloqueado por el protocolo de continuidad de guardia', motivo: 'continuidad' });
-  }
 
   // La comprobación de la salida se resuelve antes de cerrar, por el mismo motivo que en el
-  // check-in: un código equivocado no cierra el turno de guardia, y el camino de «entro/salgo igual con
-  // un motivo» está siempre disponible.
+  // check-in: un código equivocado no cierra el turno de guardia. A diferencia de la llegada, la
+  // salida no tiene el camino de «salgo igual con un motivo»: sin código ni autorización, no cierra.
   let comprobacion;
   try {
     // El código vale sólo para el turno de guardia de hoy, y «hoy» es el de la Prestadora: su

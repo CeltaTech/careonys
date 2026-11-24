@@ -26,6 +26,7 @@ const MIGRACIONES_POSTERIORES = [
   '20270415000000_turno_de_guardia.sql',
   '20270417000000_cronograma_de_guardias_y_turnos_sin_cubrir.sql',
   '20270422000000_veto_de_decisiones.sql',
+  '20270428000000_recordatorio_del_reporte_diario.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;

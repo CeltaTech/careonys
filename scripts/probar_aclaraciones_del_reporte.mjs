@@ -39,6 +39,11 @@ import { fileURLToPath } from 'node:url';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+// La marca que exigen las políticas de la información de salud lleva el código del producto, que
+// sale de su archivo de identidad y no se escribe a mano.
+const { IDENTIDAD } = await import(new URL('../backend/src/config/identidadProducto.js', import.meta.url));
+const MARCA_DE_LECTURA = `${IDENTIDAD.codigo}.lectura_de_salud`;
+
 // El contenedor sale de `supabase/config.toml`, como en `probar_aislamiento_en_la_base.mjs`.
 const CONTENEDOR = process.env.CONTENEDOR_BASE || (() => {
   const toml = readFileSync(join(RAIZ, 'supabase', 'config.toml'), 'utf8');
@@ -210,14 +215,14 @@ BEGIN
   PERFORM pg_temp.entrar(p_cuenta, p_prestadora);
   -- Lo que la información de salud exige para escribir directo: se abre a propósito, así lo único
   -- que puede frenar la escritura es la regla del Reporte.
-  PERFORM set_config('careonys.lectura_de_salud', 'anotada', true);
+  PERFORM set_config('${MARCA_DE_LECTURA}', 'anotada', true);
   BEGIN
     EXECUTE p_sql;
     GET DIAGNOSTICS v_n = ROW_COUNT;
     v_r := 'toco ' || v_n;
   EXCEPTION WHEN OTHERS THEN v_r := 'rechazado';
   END;
-  PERFORM set_config('careonys.lectura_de_salud', '', true);
+  PERFORM set_config('${MARCA_DE_LECTURA}', '', true);
   PERFORM set_config('role', 'postgres', true);
   PERFORM set_config('request.jwt.claims', '', true);
   PERFORM set_config('request.jwt.claim.sub', '', true);

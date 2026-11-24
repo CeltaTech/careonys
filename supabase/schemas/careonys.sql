@@ -4265,9 +4265,13 @@ BEGIN
      AND NEW.reporte_diario_llego_at IS DISTINCT FROM OLD.reporte_diario_llego_at THEN
     RAISE EXCEPTION 'la_falta_no_se_borra' USING ERRCODE = 'P0001';
   END IF;
+  IF OLD.salio_sin_reporte_diario
+     AND NEW.factura_espera_el_reporte_diario IS DISTINCT FROM OLD.factura_espera_el_reporte_diario THEN
+    RAISE EXCEPTION 'la_falta_no_se_borra' USING ERRCODE = 'P0001';
+  END IF;
   RETURN NEW;
 END;
-$$;
+$;
 
 
 ALTER FUNCTION "interno"."la_falta_del_reporte_no_se_borra"() OWNER TO "postgres";
@@ -14720,6 +14724,8 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     "push_recordatorio_reporte_enviado_at" timestamp with time zone,
     "salio_sin_reporte_diario" boolean DEFAULT false NOT NULL,
     "reporte_diario_llego_at" timestamp with time zone,
+    "factura_espera_el_reporte_diario" boolean DEFAULT false NOT NULL,
+    "push_reporte_pendiente_enviado_at" timestamp with time zone,
     CONSTRAINT "turnos_guardia_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_alcance_check" CHECK (("cancelacion_alcance" = ANY (ARRAY['servicio'::"text", 'prestacion'::"text", 'turno_guardia_recurrente'::"text", 'turno_guardia'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelacion_alcance" IS NULL)))),
@@ -14730,6 +14736,7 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     CONSTRAINT "turnos_guardia_cierre_rastro_completo" CHECK (((("cerrada_at" IS NULL) AND ("cerrada_origen" IS NULL) AND ("cerrada_por" IS NULL) AND ("cerrada_motivo" IS NULL)) OR (("cerrada_at" IS NOT NULL) AND ("cerrada_origen" IS NOT NULL)))),
     CONSTRAINT "turnos_guardia_dios_hasta_el_fin_valido" CHECK (("dias_hasta_el_fin" >= 0)),
     CONSTRAINT "turnos_guardia_dura_algo" CHECK ((("dias_hasta_el_fin" > 0) OR ("hora_fin" > "hora_inicio"))),
+    CONSTRAINT "turnos_guardia_factura_espera_el_reporte_diario_check" CHECK (((NOT "factura_espera_el_reporte_diario") OR "salio_sin_reporte_diario")),
     CONSTRAINT "turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['programada'::"text", 'activa'::"text", 'completada'::"text", 'cancelada'::"text", 'ausente'::"text", 'pausada'::"text", 'suspendida'::"text", 'salida_sin_reporte'::"text"]))),
     CONSTRAINT "turnos_guardia_reporte_diario_llego_check" CHECK ((("reporte_diario_llego_at" IS NULL) OR "salio_sin_reporte_diario")),
     CONSTRAINT "turnos_guardia_salida_sin_reporte_check" CHECK ((("estado" <> 'salida_sin_reporte'::"text") OR ("salio_sin_reporte_diario" AND ("reporte_diario_llego_at" IS NULL) AND ("checkout_at" IS NOT NULL)))),
@@ -14797,6 +14804,14 @@ COMMENT ON COLUMN "public"."turnos_guardia"."salio_sin_reporte_diario" IS 'Verda
 
 
 COMMENT ON COLUMN "public"."turnos_guardia"."reporte_diario_llego_at" IS 'Cuándo llegó el Reporte Diario de un turno de guardia del que el Asistente salió sin presentarlo. Vacío mientras sigue pendiente.';
+
+
+
+COMMENT ON COLUMN "public"."turnos_guardia"."factura_espera_el_reporte_diario" IS 'Verdadero si el Asistente salió sin Reporte Diario y la Prestadora había elegido no facturar esos turnos de guardia: se factura cuando llega el reporte, en la factura del período en que llegó si la de su fecha ya estaba hecha.';
+
+
+
+COMMENT ON COLUMN "public"."turnos_guardia"."push_reporte_pendiente_enviado_at" IS 'Cuándo se le avisó por última vez al Asistente que falta su Reporte Diario de este turno de guardia. Vacío si todavía no se le avisó.';
 
 
 
@@ -16289,8 +16304,11 @@ CREATE TABLE IF NOT EXISTS "public"."prestadoras" (
     "registro_de_accesos_horas_alrededor_del_turno_guardia" integer DEFAULT 12 NOT NULL,
     "turnos_guardia_solo_con_firma_del_pagador" boolean DEFAULT false NOT NULL,
     "minutos_recordatorio_reporte_diario" integer DEFAULT 30 NOT NULL,
+    "factura_turnos_sin_reporte_diario" boolean DEFAULT true NOT NULL,
+    "horas_entre_avisos_reporte_pendiente" integer DEFAULT 2 NOT NULL,
     CONSTRAINT "prestadoras_cierre_por_inactividad_minutos_check" CHECK ((("cierre_por_inactividad_minutos" >= 5) AND ("cierre_por_inactividad_minutos" <= 120))),
     CONSTRAINT "prestadoras_dias_para_aceptar_la_ubicacion_check" CHECK ((("dias_para_aceptar_la_ubicacion" >= 1) AND ("dias_para_aceptar_la_ubicacion" <= 365))),
+    CONSTRAINT "prestadoras_horas_entre_avisos_reporte_pendiente_check" CHECK ((("horas_entre_avisos_reporte_pendiente" >= 1) AND ("horas_entre_avisos_reporte_pendiente" <= 24))),
     CONSTRAINT "prestadoras_minutos_aviso_previo_turno_guardia_check" CHECK ((("minutos_aviso_previo_turno_guardia" >= 5) AND ("minutos_aviso_previo_turno_guardia" <= 1440))),
     CONSTRAINT "prestadoras_minutos_entre_controles_de_ubicacion_check" CHECK ((("minutos_entre_controles_de_ubicacion" >= 1) AND ("minutos_entre_controles_de_ubicacion" <= 60))),
     CONSTRAINT "prestadoras_minutos_recordatorio_reporte_diario_check" CHECK ((("minutos_recordatorio_reporte_diario" >= 5) AND ("minutos_recordatorio_reporte_diario" <= 1440))),
@@ -16378,6 +16396,14 @@ COMMENT ON COLUMN "public"."prestadoras"."control_de_ubicacion_en_el_turno_guard
 
 
 COMMENT ON COLUMN "public"."prestadoras"."minutos_recordatorio_reporte_diario" IS 'Cuántos minutos antes del fin del turno de guardia se le recuerda al Asistente que presente el Reporte Diario. Entre 5 y 1440.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."factura_turnos_sin_reporte_diario" IS 'Si se le factura al Cliente el turno de guardia en el que el Asistente salió sin presentar el Reporte Diario. Verdadero: se factura igual. Falso: se factura cuando llega el reporte.';
+
+
+
+COMMENT ON COLUMN "public"."prestadoras"."horas_entre_avisos_reporte_pendiente" IS 'Cada cuántas horas se le repite al Asistente el aviso de que falta su Reporte Diario, mientras no lo presente. Entre 1 y 24.';
 
 
 
@@ -19537,6 +19563,14 @@ CREATE INDEX "turnos_guardia_faltas_del_asistente_idx" ON "public"."turnos_guard
 
 
 
+CREATE INDEX "turnos_guardia_reporte_diario_pendiente_idx" ON "public"."turnos_guardia" USING "btree" ("prestadora_id", "push_reporte_pendiente_enviado_at") WHERE ("estado" = 'salida_sin_reporte'::"text");
+
+
+
+CREATE INDEX "turnos_guardia_reporte_diario_tardio_idx" ON "public"."turnos_guardia" USING "btree" ("prestadora_id", "reporte_diario_llego_at") WHERE ("salio_sin_reporte_diario" AND ("reporte_diario_llego_at" IS NOT NULL));
+
+
+
 CREATE INDEX "turnos_guardia_servicio_id_idx" ON "public"."turnos_guardia" USING "btree" ("servicio_id") WHERE ("servicio_id" IS NOT NULL);
 
 
@@ -20790,7 +20824,7 @@ CREATE OR REPLACE TRIGGER "la_especialidad_es_de_su_tipo" BEFORE INSERT OR UPDAT
 
 
 
-CREATE OR REPLACE TRIGGER "la_falta_del_reporte_no_se_borra" BEFORE UPDATE OF "salio_sin_reporte_diario", "reporte_diario_llego_at" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_falta_del_reporte_no_se_borra"();
+CREATE OR REPLACE TRIGGER "la_falta_del_reporte_no_se_borra" BEFORE UPDATE OF "salio_sin_reporte_diario", "reporte_diario_llego_at", "factura_espera_el_reporte_diario" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_falta_del_reporte_no_se_borra"();
 
 
 
@@ -32858,6 +32892,8 @@ GRANT UPDATE("turnos_guardia_solo_con_firma_del_pagador") ON TABLE "public"."pre
 
 
 GRANT UPDATE("minutos_recordatorio_reporte_diario") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+GRANT UPDATE("factura_turnos_sin_reporte_diario") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
+GRANT UPDATE("horas_entre_avisos_reporte_pendiente") ON TABLE "public"."prestadoras" TO "trabajo_sin_persona";
 
 
 

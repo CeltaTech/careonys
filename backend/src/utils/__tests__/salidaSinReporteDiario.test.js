@@ -32,6 +32,7 @@ const PACIENTES_DEL_TURNO = 'GET /rest/v1/turno_guardia_pacientes';
 const REPORTES = 'GET /rest/v1/reportes';
 const CONSENTIMIENTO = 'POST /rest/v1/rpc/consentimiento_seguimiento_vigente';
 const CAMBIAR_TURNO = 'PATCH /rest/v1/turnos_guardia';
+const PRESTADORA_LEIDA = 'GET /rest/v1/prestadoras';
 
 const respuestas = new Map();
 let llamadas = [];
@@ -88,7 +89,8 @@ function llegadaDelRelevo(cambios = {}) {
   };
 }
 
-function prepararBase({ llegada = llegadaDelRelevo(), conReporte = false } = {}) {
+function prepararBase({ llegada = llegadaDelRelevo(), conReporte = false, factura = true } = {}) {
+  respuestas.set(PRESTADORA_LEIDA, [{ factura_turnos_sin_reporte_diario: factura }]);
   respuestas.set(COMPROBACIONES, (llamada) =>
     llamada.filtros.get('momento') === 'eq.checkin' && llamada.filtros.get('turno_guardia_id') === `eq.${RELEVO}`
       ? [llegada]
@@ -144,6 +146,28 @@ describe('el relevo lee el código del que sale', () => {
     assert.equal(cambio.cuerpo.estado, ESTADO_SALIDA_SIN_REPORTE);
     assert.equal(cambio.cuerpo.salio_sin_reporte_diario, true);
     assert.equal(cambio.cuerpo.checkout_at, HORA_DE_LA_LECTURA);
+    // La Prestadora factura los turnos sin reporte: el turno no espera el reporte para cobrarse.
+    assert.equal(cambio.cuerpo.factura_espera_el_reporte_diario, false);
+    // El primer aviso sale con la salida y anota la hora, para que la insistencia cuente desde ahí.
+    assert.ok(Date.parse(cambio.cuerpo.push_reporte_pendiente_enviado_at) > 0);
+  });
+
+  it('si la Prestadora eligió no facturar los turnos sin reporte, el turno espera el reporte para cobrarse', async () => {
+    prepararBase({ conReporte: false, factura: false });
+
+    await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
+
+    const [cambio] = cambiosDelTurno();
+    assert.equal(cambio.cuerpo.estado, ESTADO_SALIDA_SIN_REPORTE);
+    assert.equal(cambio.cuerpo.factura_espera_el_reporte_diario, true);
+  });
+
+  it('con el reporte presentado, la elección de facturar no se anota', async () => {
+    prepararBase({ conReporte: true, factura: false });
+    await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
+    const [cambio] = cambiosDelTurno();
+    assert.equal(cambio.cuerpo.factura_espera_el_reporte_diario, undefined);
+    assert.equal(cambio.cuerpo.push_reporte_pendiente_enviado_at, undefined);
   });
 
   it('el turno de guardia del propio relevo no se cierra', async () => {

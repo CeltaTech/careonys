@@ -34,6 +34,15 @@ export const MINUTOS_ANTES_RECORDATORIO_REPORTE = 30;
 // Los mismos topes que la regla de la base (`prestadoras_minutos_recordatorio_reporte_diario_check`).
 export const LIMITES_RECORDATORIO_REPORTE_DIARIO = { minimo: 5, maximo: 1440 };
 
+// Cada cuántas horas se le repite al Asistente el aviso de que falta su Reporte Diario, mientras
+// la Prestadora no haya elegido otra cosa. Es el valor por defecto de la columna
+// `prestadoras.horas_entre_avisos_reporte_pendiente`, con el mismo criterio que los de arriba.
+export const HORAS_ENTRE_AVISOS_REPORTE_PENDIENTE = 2;
+
+// Los mismos topes que la regla de la base (`prestadoras_horas_entre_avisos_reporte_pendiente_check`).
+// Más de un aviso por hora deja de leerse; menos de uno por día deja que el reporte se olvide.
+export const LIMITES_INSISTENCIA_REPORTE_DIARIO = { minimo: 1, maximo: 24 };
+
 const EVENTO_AVISO_RUTINA = 'aviso_rutina_asistente';
 
 // Fase 11: estos mensajes son de rutina, no críticos — van solo por push. Si el push falla
@@ -85,7 +94,7 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
   return enLaPrestadora(prestadoraId, 'revisar los avisos al Asistente', async (db) => {
     const { data: prestadora, error } = await db
       .from('prestadoras')
-      .select('minutos_aviso_previo_turno_guardia, minutos_recordatorio_reporte_diario, zona_horaria')
+      .select('minutos_aviso_previo_turno_guardia, minutos_recordatorio_reporte_diario, horas_entre_avisos_reporte_pendiente, zona_horaria')
       .eq('id', prestadoraId)
       .maybeSingle();
     if (error) {
@@ -95,6 +104,10 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
     const minutosAntes = prestadora?.minutos_aviso_previo_turno_guardia ?? MINUTOS_ANTES_RECORDATORIO;
     await revisarTurnosGuardiaAsignados(db, prestadoraId);
     await revisarMensajesCoordinador(db, prestadoraId);
+    // La insistencia por el Reporte Diario pendiente se mide desde el aviso anterior, no desde la
+    // hora del turno: no depende de la zona.
+    const horasEntreAvisos = prestadora?.horas_entre_avisos_reporte_pendiente ?? HORAS_ENTRE_AVISOS_REPORTE_PENDIENTE;
+    await revisarReportesDiariosPendientes(db, prestadoraId, horasEntreAvisos, ahora);
     // El recordatorio se mide contra la hora del turno, que es la de la casa del Paciente. Sin la
     // zona de la Prestadora no se manda: saldría horas corrido.
     if (!prestadora?.zona_horaria) {
@@ -291,5 +304,46 @@ async function revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntes,
       .update({ push_recordatorio_reporte_enviado_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)
       .eq('id', turno_guardia.id);
+  }
+}
+
+// Mientras un turno de guardia sigue en «Salida sin Reporte Diario», al Asistente se le repite el
+// aviso de que falta su reporte cada las horas que eligió la Prestadora, hasta que lo presente. El
+// primer aviso sale en el momento de la salida y anota la hora; de ahí en más se cuenta desde el
+// último. Al Cliente no le llega nada.
+export async function revisarReportesDiariosPendientes(db, prestadoraId, horasEntreAvisos, ahora) {
+  const limite = new Date(ahora.getTime() - horasEntreAvisos * 3_600_000).toISOString();
+  const { data: turnos_guardia, error } = await db
+    .from('turnos_guardia')
+    .select('id, asistente_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('estado', 'salida_sin_reporte')
+    .not('asistente_id', 'is', null)
+    .or(`push_reporte_pendiente_enviado_at.is.null,push_reporte_pendiente_enviado_at.lte."${limite}"`);
+
+  if (error) {
+    console.error(`Error consultando los Reportes Diarios pendientes (prestadora ${prestadoraId}):`, error.message);
+    return;
+  }
+  if (!turnos_guardia?.length) return;
+
+  const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
+  const { titulo, cuerpo } = mensajeDelSistema('reporte_diario_pendiente', idioma, {}, prestadoraId);
+
+  for (const turno_guardia of turnos_guardia) {
+    const enviadoPorPush = await enviarPushAsistente(prestadoraId, turno_guardia.asistente_id, {
+      titulo,
+      cuerpo,
+      url: `/turnos-guardia/${turno_guardia.id}`,
+    });
+    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: turno_guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
+
+    // Sólo si sigue pendiente: si el reporte llegó mientras salía el aviso, no se toca.
+    await db
+      .from('turnos_guardia')
+      .update({ push_reporte_pendiente_enviado_at: ahora.toISOString() })
+      .eq('prestadora_id', prestadoraId)
+      .eq('id', turno_guardia.id)
+      .eq('estado', 'salida_sin_reporte');
   }
 }

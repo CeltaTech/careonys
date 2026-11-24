@@ -319,7 +319,7 @@ export function EstadoActual() {
       } else porVencer.add(d.asistente_id);
     }
 
-    // Reportes que faltan, sólo sobre guardias terminadas.
+    // Reportes pendientes, sólo sobre guardias terminadas.
     const completadas = turnos_guardia.filter((g) => g.estado === 'completada');
     const sinReporte = new Set();
     if (completadas.length > 0) {

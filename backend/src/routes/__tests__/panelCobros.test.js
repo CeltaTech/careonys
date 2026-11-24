@@ -61,7 +61,9 @@ const baseFalsa = createServer((req, res) => {
     });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada(crudo ? JSON.parse(crudo) : null) : preparada;
+    const valor = typeof preparada === 'function'
+      ? preparada(crudo ? JSON.parse(crudo) : null, new URL(req.url, 'http://interno').searchParams)
+      : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -1261,11 +1263,33 @@ function baseConUnCliente({
   respuestas.set('GET /rest/v1/tramos_de_la_factura_del_servicio', () => pagadores);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
   // Los turnos de guardia terminados del período: con la medición de fábrica —lo pactado más el
-  // excedente— y sin cantidad pactada, no cambian lo que se cobra.
-  respuestas.set('GET /rest/v1/turnos_guardia', () => turnos_guardia);
+  // excedente— y sin cantidad pactada, no cambian lo que se cobra. La base de mentira aplica los
+  // filtros que pide el backend, como la de verdad: sin eso, las dos lecturas de turnos de guardia
+  // devolverían los mismos dos veces.
+  respuestas.set('GET /rest/v1/turnos_guardia', (_cuerpo, filtros) => turnos_guardia.filter((g) => cumpleLosFiltros(g, filtros)));
   respuestas.set('GET /rest/v1/facturas_cliente', () => yaFacturadas);
   respuestas.set('POST /rest/v1/facturas_cliente', () => [{ id: FACTURA, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/facturas_cliente_items', () => []);
+}
+
+/** Si la fila cumple los filtros de PostgREST que usa la generación de facturas. */
+function cumpleLosFiltros(fila, filtros) {
+  for (const [columna, condicion] of filtros) {
+    if (columna === 'select') continue;
+    const [operador, ...resto] = condicion.split('.');
+    const esperado = resto.join('.');
+    const valor = fila[columna] === null || fila[columna] === undefined ? null : String(fila[columna]);
+    const cumple = {
+      eq: () => valor === esperado,
+      in: () => esperado.replace(/^\(|\)$/g, '').split(',').includes(valor),
+      gte: () => valor !== null && valor >= esperado,
+      lte: () => valor !== null && valor <= esperado,
+      lt: () => valor !== null && valor < esperado,
+    }[operador];
+    if (!cumple) throw new Error(`la base de mentira no conoce el filtro ${operador}`);
+    if (!cumple()) return false;
+  }
+  return true;
 }
 
 function unaPrestacion(cambios = {}) {
@@ -1617,8 +1641,9 @@ describe('generar las facturas de un período', () => {
 
     await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
 
-    const losTurnosGuardia = llamadas.find((l) => l.clave === 'GET /rest/v1/turnos_guardia');
-    assert.ok(decodeURIComponent(losTurnosGuardia.url).includes('estado=in.(completada,ausente,cancelada)'));
+    // Las dos lecturas de turnos salen a la vez y pueden llegar en cualquier orden.
+    const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/turnos_guardia').map((l) => decodeURIComponent(l.url));
+    assert.ok(lecturas.some((url) => url.includes('estado=in.(completada,ausente,cancelada,salida_sin_reporte)')));
     const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');
     assert.deepEqual(renglones.cuerpo.map((r) => [r.concepto, r.monto]), [
       ['pactado', 10000],
@@ -1633,6 +1658,137 @@ describe('generar las facturas de un período', () => {
     rolDelUsuario = 'cliente';
     const { estado } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
     assert.equal(estado, 403);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// El turno de guardia en el que el Asistente salió sin Reporte Diario
+// ---------------------------------------------------------------------------------------
+
+describe('el turno de guardia sin Reporte Diario en la factura', () => {
+  /** Un turno de guardia de ocho horas del Paciente, con lo que la prueba le cambie. */
+  const unTurno = (cambios) => ({
+    servicio_id: SERVICIO,
+    estado: 'completada',
+    cancelacion_origen: null,
+    hora_inicio: '08:00',
+    hora_fin: '16:00',
+    dias_hasta_el_fin: 0,
+    horas_extra: 0,
+    salio_sin_reporte_diario: false,
+    reporte_diario_llego_at: null,
+    factura_espera_el_reporte_diario: false,
+    turno_guardia_pacientes: [{ paciente_id: PACIENTE }],
+    ...cambios,
+  });
+
+  /** Se cobra por hora, a 100 la hora: cada turno de guardia de ocho horas suma 800. */
+  async function facturarAgosto(turnos_guardia, medicion = 'hora') {
+    baseConUnCliente({ prestaciones: [unaPrestacion({ precio_final: '100.00' })], turnos_guardia });
+    respuestas.set('GET /rest/v1/condiciones_comerciales_servicio', () => [
+      { servicio_id: SERVICIO, dias_hasta_el_vencimiento: null, medicion },
+    ]);
+    const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
+    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
+    return { cuerpo, total: factura?.cuerpo.monto_total ?? null };
+  }
+
+  it('se factura como completado cuando la Prestadora no eligió esperar', async () => {
+    const { total } = await facturarAgosto([
+      unTurno({ id: 'g1', fecha: '2026-08-03' }),
+      unTurno({ id: 'g2', fecha: '2026-08-04', estado: 'salida_sin_reporte', salio_sin_reporte_diario: true }),
+    ]);
+    assert.equal(total, 1600);
+  });
+
+  it('no se factura mientras espera el reporte', async () => {
+    const { total } = await facturarAgosto([
+      unTurno({ id: 'g1', fecha: '2026-08-03' }),
+      unTurno({
+        id: 'g2',
+        fecha: '2026-08-04',
+        estado: 'salida_sin_reporte',
+        salio_sin_reporte_diario: true,
+        factura_espera_el_reporte_diario: true,
+      }),
+    ]);
+    assert.equal(total, 800);
+  });
+
+  it('el reporte que llegó en el período siguiente lo deja para la factura de ese período', async () => {
+    const { total } = await facturarAgosto([
+      unTurno({ id: 'g1', fecha: '2026-08-03' }),
+      unTurno({
+        id: 'g2',
+        fecha: '2026-08-30',
+        salio_sin_reporte_diario: true,
+        factura_espera_el_reporte_diario: true,
+        // El 1 de septiembre a las 10 de la mañana en Buenos Aires.
+        reporte_diario_llego_at: '2026-09-01T13:00:00.000Z',
+      }),
+    ]);
+    assert.equal(total, 800);
+  });
+
+  it('el turno de un período anterior cuyo reporte llegó en éste entra en esta factura, una sola vez', async () => {
+    const { total } = await facturarAgosto([
+      unTurno({ id: 'g1', fecha: '2026-08-03' }),
+      unTurno({
+        id: 'g0',
+        fecha: '2026-07-30',
+        salio_sin_reporte_diario: true,
+        factura_espera_el_reporte_diario: true,
+        reporte_diario_llego_at: '2026-08-02T13:00:00.000Z',
+      }),
+    ]);
+    assert.equal(total, 1600);
+
+    const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/turnos_guardia').map((l) => decodeURIComponent(l.url));
+    assert.equal(lecturas.length, 2);
+    // Las dos lecturas salen a la vez: la de los reportes tardíos es la que pide los que esperan.
+    const tardia = lecturas.find((url) => url.includes('factura_espera_el_reporte_diario=eq.true'));
+    assert.ok(tardia);
+    assert.ok(tardia.includes('fecha=lt.2026-08-01'));
+    // El día empieza a medianoche de Buenos Aires, que son las 3 de la mañana del tiempo universal.
+    assert.ok(tardia.includes('reporte_diario_llego_at=gte.2026-08-01T03:00:00.000Z'));
+    assert.ok(tardia.includes('reporte_diario_llego_at=lt.2026-09-01T03:00:00.000Z'));
+  });
+
+  it('el reporte que llegó en el mismo período deja el turno en su factura', async () => {
+    const { total } = await facturarAgosto([
+      unTurno({
+        id: 'g2',
+        fecha: '2026-08-10',
+        salio_sin_reporte_diario: true,
+        factura_espera_el_reporte_diario: true,
+        reporte_diario_llego_at: '2026-08-12T13:00:00.000Z',
+      }),
+    ]);
+    assert.equal(total, 800);
+  });
+
+  it('con la medición por lo pactado no espera: ya está adentro del precio del período', async () => {
+    const { total } = await facturarAgosto(
+      [
+        unTurno({
+          id: 'g2',
+          fecha: '2026-08-04',
+          estado: 'salida_sin_reporte',
+          salio_sin_reporte_diario: true,
+          factura_espera_el_reporte_diario: true,
+        }),
+        // El de julio no se cuenta otra vez en agosto.
+        unTurno({
+          id: 'g0',
+          fecha: '2026-07-30',
+          salio_sin_reporte_diario: true,
+          factura_espera_el_reporte_diario: true,
+          reporte_diario_llego_at: '2026-08-02T13:00:00.000Z',
+        }),
+      ],
+      'pactado_mas_excedente',
+    );
+    assert.equal(total, 100);
   });
 });
 

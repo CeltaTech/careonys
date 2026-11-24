@@ -28,6 +28,7 @@ const MIGRACIONES_POSTERIORES = [
   '20270422000000_veto_de_decisiones.sql',
   '20270428000000_recordatorio_del_reporte_diario.sql',
   '20270429000000_salida_sin_reporte_diario.sql',
+  '20270430000000_turno_sin_reporte_diario_se_factura.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;
@@ -44,6 +45,9 @@ const MARCADOR = /UPDATE public\.mensajes_del_sistema SET i18n = replace\(i18n::
 // to_jsonb('<frase>'::text)) WHERE prestadora_id IS NULL AND clave = '<clave>'`, con la frase anterior
 // como condición si la dice (`AND i18n->>'<idioma>' = '<frase anterior>'`).
 const FRASE = /UPDATE public\.mensajes_del_sistema SET i18n = jsonb_set\(i18n, '\{([^}]+)\}', to_jsonb\('((?:[^']|'')*)'::text\)\) WHERE prestadora_id IS NULL AND clave = '([^']+)'(?: AND i18n->>'[^']+' = '((?:[^']|'')*)')?/g;
+// Una frase que se reescribe entera, en los tres idiomas a la vez: `SET i18n = '<json>'::jsonb WHERE
+// clave = '<clave>'`, con la frase anterior como condición si la dice (`AND i18n = '<json>'::jsonb`).
+const REESCRITA = /UPDATE public\.mensajes_del_sistema\s+SET i18n = '(\{[^\n]*?\})'::jsonb\s+WHERE clave = '([^']+)'(?:\s+AND i18n = '(\{[^\n]*?\})'::jsonb)?/g;
 const sinComillasDobles = (texto) => texto.replace(/''/g, "'");
 
 /** Lo que hace cada migración posterior, en orden: `{ clave, fila }` siembra, `{ clave }` borra y
@@ -66,6 +70,14 @@ function cambiosPosteriores() {
         clave: m[3],
         frase: { idioma: m[1], texto: sinComillasDobles(m[2]), antes: m[4] === undefined ? null : sinComillasDobles(m[4]) },
       })),
+      ...[...texto.matchAll(REESCRITA)].map((m) => ({
+        donde: m.index,
+        clave: m[2],
+        reescrita: {
+          i18n: JSON.parse(sinComillasDobles(m[1])),
+          antes: m[3] === undefined ? null : JSON.parse(sinComillasDobles(m[3])),
+        },
+      })),
       ...[...texto.matchAll(SIEMBRA)].map(([, clave, i18n, admite, activo], i, todos) => ({
         donde: todos[i].index,
         clave,
@@ -85,6 +97,13 @@ function cambiosPosteriores() {
     ];
     return cambios.sort((a, b) => a.donde - b.donde);
   });
+}
+
+// Dos frases en sus idiomas son iguales si dicen lo mismo en cada idioma, como compara la base un
+// jsonb: el orden de los idiomas no cuenta.
+function mismaFrase(a, b) {
+  const idiomas = new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})]);
+  return [...idiomas].every((idioma) => a?.[idioma] === b?.[idioma]);
 }
 
 /** Las filas sembradas de fábrica, en la forma en que las devuelve la base. */
@@ -114,6 +133,12 @@ export function filasSembradas() {
       const { idioma, texto, antes } = cambio.frase;
       if (fila && (antes === null || fila.i18n?.[idioma] === antes)) {
         porClave.set(cambio.clave, { ...fila, i18n: { ...fila.i18n, [idioma]: texto } });
+      }
+    } else if (cambio.reescrita) {
+      const fila = porClave.get(cambio.clave);
+      const { i18n, antes } = cambio.reescrita;
+      if (fila && (antes === null || mismaFrase(fila.i18n, antes))) {
+        porClave.set(cambio.clave, { ...fila, i18n });
       }
     } else if (cambio.fila) porClave.set(cambio.clave, cambio.fila);
     else if (cambio.nueva) {

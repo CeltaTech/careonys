@@ -73,7 +73,7 @@ import {
   hayReenvioConfigurado,
   respuestasConfirmadas,
 } from '../utils/reenvioDeRespuestas.js';
-import { LIMITES_PREAVISO_TURNO_GUARDIA, LIMITES_RECORDATORIO_REPORTE_DIARIO } from '../utils/revisarRecordatoriosPush.js';
+import { LIMITES_PREAVISO_TURNO_GUARDIA, LIMITES_RECORDATORIO_REPORTE_DIARIO, LIMITES_INSISTENCIA_REPORTE_DIARIO } from '../utils/revisarRecordatoriosPush.js';
 import { reglaDePagoDe, revisarReglaDePago, soloLoQueCorreDelPago } from '../utils/formaDePago.js';
 import { ajusteDelPagoDe, ajusteDelPagoQueSePuedeGuardar } from '../utils/ajusteDelPagoPorIndice.js';
 import {
@@ -1058,6 +1058,64 @@ panelConfiguracionRouter.patch('/recordatorio-reporte-diario', async (req, res) 
   // `prestadoras` al Superadmin.
   const { error } = await enLaPrestadora(prestadoraId, 'recordatorio del Reporte Diario', (dbDelTrabajo) =>
     dbDelTrabajo.from('prestadoras').update({ minutos_recordatorio_reporte_diario: minutos }).eq('id', prestadoraId)
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Cada cuántas horas se le repite al Asistente el aviso de que falta su Reporte Diario,
+//     mientras no lo presente. Mismo patrón que /recordatorio-reporte-diario. ---
+panelConfiguracionRouter.get('/insistencia-reporte-diario', async (req, res) => {
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
+    .from('prestadoras')
+    .select('horas_entre_avisos_reporte_pendiente')
+    .single();
+  if (error) return responderError(res, error);
+  res.json({ horas_entre_avisos_reporte_pendiente: data.horas_entre_avisos_reporte_pendiente });
+});
+
+panelConfiguracionRouter.patch('/insistencia-reporte-diario', async (req, res) => {
+  const { horas } = req.body;
+  if (
+    !Number.isInteger(horas)
+    || horas < LIMITES_INSISTENCIA_REPORTE_DIARIO.minimo
+    || horas > LIMITES_INSISTENCIA_REPORTE_DIARIO.maximo
+  ) {
+    return res.status(400).json({
+      error: `Las horas tienen que ser un número entero, entre ${LIMITES_INSISTENCIA_REPORTE_DIARIO.minimo} y ${LIMITES_INSISTENCIA_REPORTE_DIARIO.maximo}.`,
+    });
+  }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  const { error } = await enLaPrestadora(prestadoraId, 'insistencia del Reporte Diario', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ horas_entre_avisos_reporte_pendiente: horas }).eq('id', prestadoraId)
+  );
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Si se le factura al Cliente el turno de guardia en el que el Asistente salió sin presentar el
+//     Reporte Diario. Mismo patrón que /recordatorio-reporte-diario. ---
+panelConfiguracionRouter.get('/facturar-turnos-sin-reporte', async (req, res) => {
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
+    .from('prestadoras')
+    .select('factura_turnos_sin_reporte_diario')
+    .single();
+  if (error) return responderError(res, error);
+  res.json({ factura_turnos_sin_reporte_diario: data.factura_turnos_sin_reporte_diario });
+});
+
+panelConfiguracionRouter.patch('/facturar-turnos-sin-reporte', async (req, res) => {
+  const { factura } = req.body;
+  if (typeof factura !== 'boolean') {
+    return res.status(400).json({ error: 'Indique si se facturan o no los turnos sin Reporte Diario.' });
+  }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  const { error } = await enLaPrestadora(prestadoraId, 'facturación de los turnos sin Reporte Diario', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ factura_turnos_sin_reporte_diario: factura }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });

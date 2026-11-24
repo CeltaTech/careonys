@@ -254,20 +254,28 @@ function TabNotificaciones() {
         titulo="recordatorio_reporte_diario_titulo"
         etiqueta="recordatorio_reporte_diario_minutos"
       />
+      <TabMinutosDeAnticipacion
+        ruta="/insistencia-reporte-diario"
+        campo="horas_entre_avisos_reporte_pendiente"
+        clave="horas"
+        titulo="insistencia_reporte_diario_titulo"
+        etiqueta="insistencia_reporte_diario_horas"
+      />
       <TabCorreoDeLaPrestadora />
       <TabMensajeDeTexto />
     </>
   );
 }
 
-/* Cuántos minutos antes se le manda un aviso al Asistente: antes de que empiece su turno de
-   guardia, o antes de que termine si todavía no presentó el Reporte Diario.
+/* Cuánto tiempo antes se le manda un aviso al Asistente: antes de que empiece su turno de
+   guardia, o antes de que termine si todavía no presentó el Reporte Diario. Y cada cuántas horas
+   se le repite el aviso mientras el Reporte Diario siga faltando.
    ==========================================================================
 
    Cada Prestadora elige su número, porque una cantidad fija no le sirve a todas: quien trabaja
    con guardias de doce horas quiere avisar la noche anterior. La misma tarjeta sirve para los
-   dos avisos; cambia sólo de dónde lee y dónde guarda. */
-function TabMinutosDeAnticipacion({ ruta, campo, titulo, etiqueta }) {
+   tres números; cambia sólo de dónde lee, dónde guarda y con qué nombre manda el número. */
+function TabMinutosDeAnticipacion({ ruta, campo, titulo, etiqueta, clave = 'minutos' }) {
   const { t } = useLocale();
   const [minutos, setMinutos] = useState('');
   const [estado, setEstado] = useState('cargando');
@@ -298,7 +306,7 @@ function TabMinutosDeAnticipacion({ ruta, campo, titulo, etiqueta }) {
     try {
       await llamarApi(ruta, {
         method: 'PATCH',
-        body: JSON.stringify({ minutos: Number(minutos) }),
+        body: JSON.stringify({ [clave]: Number(minutos) }),
       });
       setGuardado(true);
     } catch (err) {

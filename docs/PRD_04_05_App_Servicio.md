@@ -82,7 +82,18 @@ del que sale pasa a `completada`; sin él, a `salida_sin_reporte`, con la falta 
 `salio_sin_reporte_diario`. El relevo ve el aviso de que el que sale no presentó el reporte, y el
 que sale recibe el aviso de que su reporte está pendiente y lo puede presentar desde la guardia.
 Cuando llega, el turno pasa a `completada`, conserva la hora de salida y anota
-`reporte_diario_llego_at`. Mientras está en `salida_sin_reporte`, esas horas no se liquidan.
+`reporte_diario_llego_at`. Mientras está en `salida_sin_reporte`, esas horas no se liquidan, y
+el que sale recibe el aviso al teléfono cada `prestadoras.horas_entre_avisos_reporte_pendiente`
+horas (2 de fábrica), anotando el último en `push_reporte_pendiente_enviado_at`
+(`backend/src/utils/revisarRecordatoriosPush.js`).
+
+**La factura y la liquidación** (`backend/src/utils/reporteDiarioTardio.js`). El turno sin reporte
+se factura como completado, salvo que la Prestadora tenga apagada
+`prestadoras.factura_turnos_sin_reporte_diario`: esa elección queda anotada en el turno, en
+`factura_espera_el_reporte_diario`, al salir. Si espera, el turno se factura y se liquida en el día
+más tardío entre su fecha y el día en que llegó el reporte, en la zona de la Prestadora; así un
+reporte que llega con el período ya cerrado lleva el turno al período siguiente, una sola vez. Con
+la medición por lo pactado no se espera.
 
 ### El botón de emergencia — cómo quedó construido
 

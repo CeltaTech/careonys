@@ -11,6 +11,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { FacturacionClientesTab } from './FacturacionClientesTab';
+import { FacturarSinReporteDiario } from './FacturarSinReporteDiario';
 import { IndicesDeActualizacion } from './IndicesDeActualizacion';
 import { ConsentimientoPagadorTab } from './ConsentimientoPagadorTab';
 import { ConsentimientoMedicacionTab } from './ConsentimientoMedicacionTab';
@@ -28,6 +29,7 @@ export function ConfiguracionPrestadora() {
       <TabZonas />
       <TabLugares />
       <FacturacionClientesTab />
+      <FacturarSinReporteDiario />
       <IndicesDeActualizacion />
       <ConsentimientoPagadorTab />
       <ConsentimientoMedicacionTab />

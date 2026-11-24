@@ -6,9 +6,13 @@
 //
 // El que sale no necesita haber presentado el Reporte Diario para irse. Si lo presentó, su turno
 // de guardia queda completado. Si no, queda en «Salida sin Reporte Diario»: la salida está hecha,
-// las horas no se le liquidan, y la falta queda anotada en su Legajo. Cuando el reporte llega, el
-// turno de guardia pasa a completado y conserva la hora de salida que ya tenía. La falta no se
-// borra: queda a la vista con la fecha en que llegó el reporte.
+// la falta queda anotada en su Legajo, y el sistema le repite el aviso hasta que presente el
+// reporte. Las horas se le liquidan cuando el reporte llega, en la liquidación del período en que
+// llegó si la del período del turno ya estaba hecha. Al Cliente el turno se le factura igual, salvo
+// que la Prestadora haya elegido esperar el reporte; la elección queda anotada en el turno de
+// guardia en el momento de la salida. Cuando el reporte llega, el turno de guardia pasa a
+// completado y conserva la hora de salida que ya tenía. La falta no se borra: queda a la vista con
+// la fecha en que llegó el reporte.
 //
 // CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA. El relevo cierra un turno de guardia que no es
 // suyo, y el que sale presenta tarde un reporte sobre un turno que ya no puede cambiar de estado
@@ -82,6 +86,8 @@ async function cerrarCon(db, { relevo, lat, lng }) {
   const salientes = (await turnosGuardiaSalientes(db, relevo, await pacientesDelTurnoGuardia(db, relevo)))
     .filter((s) => s.asistente_id === llegada.sujeto_id);
 
+  const facturaSinReporte = await facturaLosTurnosSinReporte(db, prestadoraId);
+
   let salienteSinReporte = false;
   for (const saliente of salientes) {
     const turno_guardia = { ...saliente, prestadora_id: prestadoraId };
@@ -116,7 +122,13 @@ async function cerrarCon(db, { relevo, lat, lng }) {
         checkout_lat: registraUbicacion && Number.isFinite(lat) ? lat : null,
         checkout_lng: registraUbicacion && Number.isFinite(lng) ? lng : null,
         estado: sinReporte ? ESTADO_SALIDA_SIN_REPORTE : 'completada',
-        ...(sinReporte ? { salio_sin_reporte_diario: true } : {}),
+        ...(sinReporte
+          ? {
+            salio_sin_reporte_diario: true,
+            factura_espera_el_reporte_diario: !facturaSinReporte,
+            push_reporte_pendiente_enviado_at: new Date().toISOString(),
+          }
+          : {}),
       })
       .eq('prestadora_id', prestadoraId)
       .eq('id', saliente.id)
@@ -132,6 +144,18 @@ async function cerrarCon(db, { relevo, lat, lng }) {
   }
 
   return { salienteSinReporte };
+}
+
+// Si la Prestadora factura los turnos de guardia sin Reporte Diario. Mientras ella no elija otra
+// cosa, se factura.
+async function facturaLosTurnosSinReporte(db, prestadoraId) {
+  const { data, error } = await db
+    .from('prestadoras')
+    .select('factura_turnos_sin_reporte_diario')
+    .eq('id', prestadoraId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.factura_turnos_sin_reporte_diario !== false;
 }
 
 // El aviso al que salió: su Reporte Diario está pendiente. Si el aviso falla, la salida ya quedó

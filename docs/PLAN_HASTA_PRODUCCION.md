@@ -1057,6 +1057,13 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
 
   La primera opción de cada una lleva advertencia legal si el documento del país dice algo. Un
   turno sin cerrar no se paga hasta que el Coordinador lo cierra con su hora de salida.
+- **El turno sin Reporte Diario se factura igual.** La falta del reporte no es motivo para dejar
+  de facturarle el turno al Cliente, salvo que la Prestadora elija esperar el reporte; viene
+  elegido facturar. Si espera y el reporte llega después de emitida la factura del período, el
+  turno entra en la factura siguiente. Al Asistente se le insiste con un aviso al teléfono cada
+  tantas horas mientras el reporte falte, cada 2 de fábrica, entre 1 y 24 según la Prestadora; al
+  Cliente no le llega nada. Las horas se le liquidan al Asistente cuando presenta el reporte, y si
+  la liquidación del período ya se hizo, entran en la siguiente, una sola vez.
 - **Quedan afuera:** un código fijo en la casa, que el turno se lo lleve el primero que acepta, y
   el cierre automático.
 

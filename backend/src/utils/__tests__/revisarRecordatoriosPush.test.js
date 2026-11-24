@@ -117,7 +117,7 @@ describe('los avisos de rutina a la Asistente', () => {
 
     assert.deepEqual(
       llamadas.map((l) => l.clave),
-      [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA, TURNOS_GUARDIA],
+      [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA, TURNOS_GUARDIA, TURNOS_GUARDIA],
     );
     for (const llamada of llamadas) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
@@ -161,7 +161,7 @@ describe('el recordatorio de turno próximo se mide en la hora de la Prestadora'
 
     await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T07:45:00Z'));
 
-    assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA, TURNOS_GUARDIA]);
+    assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA, TURNOS_GUARDIA, TURNOS_GUARDIA]);
   });
 
   it('a las 07:45 de Argentina el turno de las 08:00 entra en la anticipación', async () => {
@@ -174,8 +174,8 @@ describe('el recordatorio de turno próximo se mide en la hora de la Prestadora'
     await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T10:45:00Z'));
 
     // Pasado el filtro, sigue a buscar las licencias y el idioma antes de mandar: alcanza con ver
-    // que siguió más allá de las cuatro lecturas de siempre.
-    assert.ok(llamadas.length > 4, `no siguió hacia el envío: ${llamadas.map((l) => l.clave).join(', ')}`);
+    // que siguió más allá de las seis lecturas de siempre.
+    assert.ok(llamadas.length > 6, `no siguió hacia el envío: ${llamadas.map((l) => l.clave).join(', ')}`);
   });
 
   it('sin la zona horaria de la Prestadora no manda recordatorios de turno próximo', async () => {
@@ -185,7 +185,7 @@ describe('el recordatorio de turno próximo se mide en la hora de la Prestadora'
 
     await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T10:45:00Z'));
 
-    assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES]);
+    assert.deepEqual(llamadas.map((l) => l.clave), [PRESTADORAS, TURNOS_GUARDIA, MENSAJES, TURNOS_GUARDIA]);
     assert.equal(anotados.length, 1);
   });
 });
@@ -289,5 +289,74 @@ describe('el recordatorio del Reporte Diario antes del fin del turno de guardia'
     await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, new Date('2026-03-01T19:05:00Z'));
 
     assert.equal(marcas().length, 0);
+  });
+});
+
+describe('la insistencia mientras falta el Reporte Diario', () => {
+  const sinReporte = {
+    id: '88888888-8888-8888-8888-888888888888',
+    asistente_id: '55555555-5555-5555-5555-555555555555',
+  };
+  const AHORA = new Date('2026-03-02T15:00:00Z');
+
+  /** Prepara la base: la Prestadora con sus horas entre avisos y un turno que espera el reporte. */
+  function prepararBase({ horas, conZona = true } = {}) {
+    respuestas.set(PRESTADORAS, [{
+      minutos_aviso_previo_turno_guardia: 60,
+      minutos_recordatorio_reporte_diario: 30,
+      ...(horas === undefined ? {} : { horas_entre_avisos_reporte_pendiente: horas }),
+      zona_horaria: conZona ? ZONA : null,
+      pais: 'AR',
+    }]);
+    respuestas.set(TURNOS_GUARDIA, (llamada) =>
+      (llamada.filtros.get('estado') === 'eq.salida_sin_reporte' ? [sinReporte] : []));
+    respuestas.set(MENSAJES, []);
+    respuestas.set(MARCAR_TURNO, []);
+  }
+
+  const lecturaDeLosQueEsperan = () =>
+    llamadas.find((l) => l.clave === TURNOS_GUARDIA && l.filtros.get('estado') === 'eq.salida_sin_reporte');
+  const marcas = () => llamadas.filter((l) => l.clave === MARCAR_TURNO);
+
+  it('busca los turnos sin reporte que nunca se avisaron o cuyo último aviso pasó las horas elegidas', async () => {
+    prepararBase({ horas: 3 });
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, AHORA);
+
+    const lectura = lecturaDeLosQueEsperan();
+    assert.ok(lectura, 'no buscó los turnos que esperan el reporte');
+    assert.equal(
+      lectura.filtros.get('or'),
+      '(push_reporte_pendiente_enviado_at.is.null,push_reporte_pendiente_enviado_at.lte."2026-03-02T12:00:00.000Z")',
+    );
+    assert.equal(lectura.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
+  });
+
+  it('sin horas elegidas, insiste cada 2 horas', async () => {
+    prepararBase();
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, AHORA);
+    assert.match(lecturaDeLosQueEsperan().filtros.get('or'), /lte\."2026-03-02T13:00:00\.000Z"/);
+  });
+
+  it('deja anotada la hora del aviso, sólo si el turno sigue esperando el reporte', async () => {
+    prepararBase({ horas: 2 });
+
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, AHORA);
+
+    const [marca] = marcas().filter((m) => 'push_reporte_pendiente_enviado_at' in (m.cuerpo ?? {}));
+    assert.ok(marca, 'no anotó el aviso');
+    assert.equal(marca.cuerpo.push_reporte_pendiente_enviado_at, AHORA.toISOString());
+    assert.equal(marca.filtros.get('id'), `eq.${sinReporte.id}`);
+    assert.equal(marca.filtros.get('estado'), 'eq.salida_sin_reporte');
+    for (const llamada of llamadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
+  });
+
+  it('insiste aunque la Prestadora no tenga zona horaria: se cuenta desde el aviso anterior', async () => {
+    prepararBase({ horas: 2, conZona: false });
+    await revisarLosRecordatoriosDeUnaPrestadora(PRESTADORA, AHORA);
+    assert.ok(lecturaDeLosQueEsperan(), 'no buscó los turnos que esperan el reporte');
   });
 });

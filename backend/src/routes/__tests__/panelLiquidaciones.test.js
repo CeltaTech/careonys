@@ -750,6 +750,83 @@ describe('generar el mes', () => {
     assert.equal(escritura.cuerpo.total_restas, 0);
   });
 
+  // -------------------------------------------------------------------------------------
+  // El turno de guardia en el que el Asistente salió sin Reporte Diario
+  // -------------------------------------------------------------------------------------
+
+  describe('el turno de guardia sin Reporte Diario', () => {
+    const unTurno = (cambios) => ({
+      estado: 'completada',
+      hora_inicio: '08:00:00',
+      hora_fin: '16:00:00',
+      asistente_id: 'a-1',
+      salio_sin_reporte_diario: false,
+      reporte_diario_llego_at: null,
+      ...cambios,
+      checkin_at: `${cambios.fecha}T11:00:00Z`,
+      checkout_at: `${cambios.fecha}T19:00:00Z`,
+    });
+
+    /** La base contesta a la lectura de los reportes tardíos con `tardios`, y al resto con `delTramo`. */
+    function conLecturas(delTramo, tardios = []) {
+      respuestas.set('GET /rest/v1/turnos_guardia', () => {
+        const pedido = llamadas.filter((l) => l.clave === 'GET /rest/v1/turnos_guardia').at(-1);
+        const filtros = new URL(pedido.url, 'http://interno').searchParams;
+        return filtros.get('salio_sin_reporte_diario') === 'eq.true' ? tardios : delTramo;
+      });
+    }
+
+    const horasDeAgosto = () => llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente')?.cuerpo.horas ?? 0;
+
+    it('mientras falta el reporte, el turno no se liquida', async () => {
+      prepararLaBase();
+      conLecturas([
+        unTurno({ id: 'g-1', fecha: '2026-08-10' }),
+        unTurno({ id: 'g-2', fecha: '2026-08-11', estado: 'salida_sin_reporte', salio_sin_reporte_diario: true }),
+      ]);
+      const { estado } = await pedir('POST', '/generar', { periodo: '2026-08' });
+      assert.equal(estado, 200);
+      assert.equal(horasDeAgosto(), 8);
+    });
+
+    it('el reporte que llegó en el mes siguiente deja el turno para la liquidación de ese mes', async () => {
+      prepararLaBase();
+      conLecturas([
+        unTurno({ id: 'g-1', fecha: '2026-08-10' }),
+        // El 1 de septiembre a las 10 de la mañana en Buenos Aires.
+        unTurno({ id: 'g-2', fecha: '2026-08-30', salio_sin_reporte_diario: true, reporte_diario_llego_at: '2026-09-01T13:00:00.000Z' }),
+      ]);
+      await pedir('POST', '/generar', { periodo: '2026-08' });
+      assert.equal(horasDeAgosto(), 8);
+    });
+
+    it('el turno de un mes anterior cuyo reporte llegó en éste se liquida en éste, una sola vez', async () => {
+      prepararLaBase();
+      const deJunio = unTurno({ id: 'g-0', fecha: '2026-06-28', salio_sin_reporte_diario: true, reporte_diario_llego_at: '2026-08-02T13:00:00.000Z' });
+      // El de julio vuelve en las dos lecturas: se cuenta una sola vez.
+      const deJulio = unTurno({ id: 'g-9', fecha: '2026-07-30', salio_sin_reporte_diario: true, reporte_diario_llego_at: '2026-08-03T13:00:00.000Z' });
+      conLecturas([unTurno({ id: 'g-1', fecha: '2026-08-10' }), deJulio], [deJunio, deJulio]);
+      const { estado } = await pedir('POST', '/generar', { periodo: '2026-08' });
+      assert.equal(estado, 200);
+      assert.equal(horasDeAgosto(), 24);
+
+      const tardia = llamadas
+        .filter((l) => l.clave === 'GET /rest/v1/turnos_guardia')
+        .map((l) => new URL(l.url, 'http://interno').searchParams)
+        .find((f) => f.get('salio_sin_reporte_diario') === 'eq.true');
+      assert.equal(tardia.get('estado'), 'eq.completada');
+      assert.equal(tardia.get('canal_modalidad'), 'eq.directa');
+      assert.deepEqual(tardia.getAll('reporte_diario_llego_at'), ['gte.2026-07-02T03:00:00.000Z', 'lt.2026-09-01T03:00:00.000Z']);
+    });
+
+    it('el reporte que llegó en el mismo mes deja el turno en su liquidación', async () => {
+      prepararLaBase();
+      conLecturas([unTurno({ id: 'g-2', fecha: '2026-08-10', salio_sin_reporte_diario: true, reporte_diario_llego_at: '2026-08-12T13:00:00.000Z' })]);
+      await pedir('POST', '/generar', { periodo: '2026-08' });
+      assert.equal(horasDeAgosto(), 8);
+    });
+  });
+
   it('el período mal escrito se rechaza antes de tocar la base', async () => {
     prepararLaBase();
     const { estado } = await pedir('POST', '/generar', { periodo: 'agosto' });

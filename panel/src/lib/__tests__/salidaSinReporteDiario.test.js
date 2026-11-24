@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-/* La «Salida sin Reporte Diario» en el Panel: el semáforo, los «Reportes que faltan» del tablero y
+/* La «Salida sin Reporte Diario» en el Panel: el semáforo, los «Reportes pendientes» del tablero y
    las faltas del Legajo del Asistente. Con el sistema roto —el estado nuevo leído como un turno
    programado, la excepción que sólo mira los turnos completados o la falta que desaparece cuando
    llega el reporte— alguna de estas pruebas falla. Datos inventados. */
@@ -54,7 +54,7 @@ describe('el semáforo con la salida sin Reporte Diario', () => {
   });
 });
 
-describe('«Reportes que faltan» del tablero', () => {
+describe('«Reportes pendientes» del tablero', () => {
   it('cuenta el turno en «Salida sin Reporte Diario» aunque no esté en la lista de los completados sin reporte', () => {
     expect(faltaElReporteDiario(turno(), { turnosGuardiaSinReporte: new Set() })).toBe(true);
     expect(excepcionPorId('reportes').aplica(turno(), {})).toBe(true);

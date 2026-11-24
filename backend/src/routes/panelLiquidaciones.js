@@ -3,7 +3,9 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { horasRealesDelTurnoGuardia } from '../utils/horasTrabajadas.js';
-import { zonaDeLaPrestadora } from '../utils/relojDeLaPrestadora.js';
+import { momentoEnLaZona, zonaDeLaPrestadora } from '../utils/relojDeLaPrestadora.js';
+import { sumarDias } from '../utils/fechas.js';
+import { fechaDeLiquidacion } from '../utils/reporteDiarioTardio.js';
 import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -411,16 +413,41 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   // tramo. Cada período se queda después con los suyos. Sólo los de prestación directa: en la
   // intermediación al Asistente no le paga la Prestadora sino el Cliente, y ese turno de guardia
   // no entra en esta liquidación.
-  const turnos_guardia = await traerPaginado(() =>
+  //
+  // El turno de guardia en el que el Asistente salió sin Reporte Diario se le paga cuando llega el
+  // reporte: en el período del día más tardío entre su fecha y el día en que llegó, contado en la
+  // zona de la Prestadora (`reporteDiarioTardio.js`). Por eso se leen además los turnos de fecha
+  // anterior cuyo reporte llegó en estos días, y cada turno se reparte por ese día de pago y no
+  // por su fecha. Cada turno tiene un solo día de pago: no se paga dos veces ni se pierde.
+  const COLUMNAS_TURNO = 'id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, checkin_at, checkout_at, asistente_id, salio_sin_reporte_diario, reporte_diario_llego_at';
+  const delTramo = await traerPaginado(() =>
     db
       .from('turnos_guardia')
-      .select('id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, checkin_at, checkout_at, asistente_id')
+      .select(COLUMNAS_TURNO)
       .eq('canal_modalidad', 'directa')
       .gte('fecha', lecturaDesde)
       .lte('fecha', hasta)
       .not('asistente_id', 'is', null)
       .order('id', { ascending: true })
   );
+  const conReporteTardio = await traerPaginado(() =>
+    db
+      .from('turnos_guardia')
+      .select(COLUMNAS_TURNO)
+      .eq('canal_modalidad', 'directa')
+      .eq('estado', ESTADO_HECHA)
+      .eq('salio_sin_reporte_diario', true)
+      .lt('fecha', lecturaDesde)
+      .gte('reporte_diario_llego_at', momentoEnLaZona(lecturaDesde, '00:00', zona).toISOString())
+      .lt('reporte_diario_llego_at', momentoEnLaZona(sumarDias(hasta, 1), '00:00', zona).toISOString())
+      .not('asistente_id', 'is', null)
+      .order('id', { ascending: true })
+  );
+  const porId = new Map();
+  for (const g of [...delTramo, ...conReporteTardio]) porId.set(g.id, g);
+  const turnos_guardia = [...porId.values()]
+    .map((g) => ({ ...g, dia_de_pago: fechaDeLiquidacion(g, zona) }))
+    .filter((g) => g.dia_de_pago && g.dia_de_pago >= lecturaDesde && g.dia_de_pago <= hasta);
   const acumuladoDelTramo = acumularTurnosGuardia(turnos_guardia, zona, reglaDePago);
 
   // La relación laboral vive en su propia tabla, con permiso propio; la liquidación la recibe
@@ -532,7 +559,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
 
     for (const unPeriodo of suyos) {
       const trabajoDelPeriodo = turnos_guardia.some(
-        (g) => g.asistente_id === asistente.id && g.estado === ESTADO_HECHA && g.fecha >= unPeriodo.desde && g.fecha <= unPeriodo.hasta
+        (g) => g.asistente_id === asistente.id && g.estado === ESTADO_HECHA && g.dia_de_pago >= unPeriodo.desde && g.dia_de_pago <= unPeriodo.hasta
       );
       if (!trabajoDelPeriodo && !(asistente.estado === 'activo' && vinculoVigenteEnElPeriodo(asistente, unPeriodo))) continue;
 
@@ -544,7 +571,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
       }
 
       const turnosDelPeriodo = turnos_guardia.filter(
-        (g) => g.asistente_id === asistente.id && g.fecha >= unPeriodo.desde && g.fecha <= unPeriodo.hasta
+        (g) => g.asistente_id === asistente.id && g.dia_de_pago >= unPeriodo.desde && g.dia_de_pago <= unPeriodo.hasta
       );
       const SIN_TRABAJO = { turnos_guardia: 0, horas: 0, horasExtra: 0, detalle: [], sinMarca: 0 };
       const delPeriodo = acumularTurnosGuardia(turnosDelPeriodo, zona, reglaDePago);
@@ -558,7 +585,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         hasta: tramo.hasta,
         valores: tramo.fila,
         acumulado:
-          acumularTurnosGuardia(turnosDelPeriodo.filter((g) => g.fecha >= tramo.desde && g.fecha <= tramo.hasta), zona, reglaDePago).get(asistente.id) ||
+          acumularTurnosGuardia(turnosDelPeriodo.filter((g) => g.dia_de_pago >= tramo.desde && g.dia_de_pago <= tramo.hasta), zona, reglaDePago).get(asistente.id) ||
           SIN_TRABAJO,
       }));
 

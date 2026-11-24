@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 121 fichas.** Panel 20, Sitio web 2, Aplicación de Clientes 20, Aplicación de Asistentes 20, Panel: otros textos cambiados 39, Correos y avisos que envía el sistema 13, Consentimientos y advertencias legales 7.
+**Total: 145 fichas.** Panel 20, Sitio web 2, Aplicación de Clientes 20, Aplicación de Asistentes 24, Panel: otros textos cambiados 56, Correos y avisos que envía el sistema 16, Consentimientos y advertencias legales 7.
 
 ## Panel (20)
 
@@ -684,7 +684,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | mensaje emergente o franja. |
 | **Decisión** | |
 
-## Aplicación de Asistentes (20)
+## Aplicación de Asistentes (24)
 
 ### 102. Enlace para activar la cuenta
 
@@ -1006,7 +1006,71 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | mensaje emergente, franja o etiqueta. |
 | **Decisión** | |
 
-## Panel: otros textos cambiados (39)
+### 200. Salida sin código QR ni autorización
+
+| | |
+|---|---|
+| **Texto actual** | «Para salir, escanee el código QR o pida autorización al Coordinador.» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «La salida necesita el código QR o la autorización del Coordinador. Escanee el código o pida autorización.». Una sola frase dice qué hacer. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | aplicación de Asistentes, pantalla del turno de guardia en curso. |
+| **Qué estaba haciendo** | quiso marcar la salida. |
+| **Qué pasó** | la salida no tiene el código QR ni la autorización del Coordinador. |
+| **Qué puede hacer después** | escanear el código o pedir autorización. |
+| **Cómo se muestra** | franja. |
+| **Decisión** | |
+
+### 201. Estado del turno de guardia sin Reporte Diario
+
+| | |
+|---|---|
+| **Texto actual** | «Sin Reporte Diario» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Salida sin Reporte Diario». Es el mismo texto que ve el Panel. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | aplicación de Asistentes, lista de turnos de guardia. |
+| **Qué estaba haciendo** | mira sus turnos de guardia. |
+| **Qué pasó** | se fue de un turno sin presentar el Reporte Diario. |
+| **Qué puede hacer después** | presentar el Reporte Diario. |
+| **Cómo se muestra** | etiqueta en la lista. |
+| **Decisión** | |
+
+### 202. El Asistente anterior no presentó el Reporte Diario
+
+| | |
+|---|---|
+| **Texto actual** | «El Asistente anterior no presentó el Reporte Diario.» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «El Asistente saliente no presentó el Reporte Diario.». «Anterior» es la palabra de uso corriente. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | aplicación de Asistentes, pantalla del turno de guardia en curso. |
+| **Qué estaba haciendo** | llegó a tomar el turno de guardia. |
+| **Qué pasó** | el Asistente que se fue no presentó el Reporte Diario. |
+| **Qué puede hacer después** | seguir con su turno. |
+| **Cómo se muestra** | franja. |
+| **Decisión** | |
+
+### 203. Reporte Diario pendiente
+
+| | |
+|---|---|
+| **Texto actual** | «Falta su Reporte Diario. Preséntelo ahora.» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Su Reporte Diario está pendiente. Preséntelo ahora.». Dice primero qué falta. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | aplicación de Asistentes, pantalla del turno de guardia en curso. |
+| **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte Diario. |
+| **Qué pasó** | el turno quedó sin Reporte Diario. |
+| **Qué puede hacer después** | presentar el Reporte Diario. |
+| **Cómo se muestra** | franja. |
+| **Decisión** | |
+
+## Panel: otros textos cambiados (56)
 
 ### 122. Alertas
 
@@ -1632,7 +1696,279 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | texto al pie del campo. |
 | **Decisión** | |
 
-## Correos y avisos que envía el sistema (13)
+### 183. Título del aviso antes del turno de guardia
+
+| | |
+|---|---|
+| **Texto actual** | «Aviso de inicio de turno» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Recordatorio del próximo turno de guardia». El título nuevo es más corto y se lee mejor. |
+| **Quién lo lee** | el Administrador de la Prestadora. |
+| **Dónde está** | Panel → Configuración → Avisos. |
+| **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
+| **Qué pasó** | ve la tarjeta de ese aviso. |
+| **Qué puede hacer después** | cambiar el número y guardar. |
+| **Cómo se muestra** | título de la tarjeta. |
+| **Decisión** | |
+
+### 184. Casillero de los minutos del aviso antes del turno de guardia
+
+| | |
+|---|---|
+| **Texto actual** | «Minutos de anticipación» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Minutos antes de que empiece el turno de guardia». El título de la tarjeta ya dice de qué aviso se trata. |
+| **Quién lo lee** | el Administrador de la Prestadora. |
+| **Dónde está** | Panel → Configuración → Avisos. |
+| **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
+| **Qué pasó** | ve la tarjeta de ese aviso. |
+| **Qué puede hacer después** | cambiar el número y guardar. |
+| **Cómo se muestra** | etiqueta del casillero. |
+| **Decisión** | |
+
+### 185. Título del aviso del Reporte Diario
+
+| | |
+|---|---|
+| **Texto actual** | «Aviso de Reporte Diario» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Recordatorio del Reporte Diario». Se llama «Aviso», igual que la tarjeta de al lado. |
+| **Quién lo lee** | el Administrador de la Prestadora. |
+| **Dónde está** | Panel → Configuración → Avisos. |
+| **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
+| **Qué pasó** | ve la tarjeta de ese aviso. |
+| **Qué puede hacer después** | cambiar el número y guardar. |
+| **Cómo se muestra** | título de la tarjeta. |
+| **Decisión** | |
+
+### 186. Casillero de los minutos del aviso del Reporte Diario
+
+| | |
+|---|---|
+| **Texto actual** | «Minutos antes del fin del turno» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Minutos antes de que termine el turno de guardia». Es más corto y dice lo mismo. |
+| **Quién lo lee** | el Administrador de la Prestadora. |
+| **Dónde está** | Panel → Configuración → Avisos. |
+| **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
+| **Qué pasó** | ve la tarjeta de ese aviso. |
+| **Qué puede hacer después** | cambiar el número y guardar. |
+| **Cómo se muestra** | etiqueta del casillero. |
+| **Decisión** | |
+
+### 187. Título del aviso de Reporte Diario pendiente
+
+| | |
+|---|---|
+| **Texto actual** | «Aviso de Reporte Diario pendiente» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: es nuevo, está escrito y todavía no se publicó. |
+| **Por qué** | antes no había texto: la tarjeta es nueva. Ahí la Prestadora elige cada cuántas horas se le repite el aviso al Asistente que se fue sin presentar el Reporte Diario. |
+| **Quién lo lee** | el Administrador de la Prestadora. |
+| **Dónde está** | Panel → Configuración → Avisos. |
+| **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
+| **Qué pasó** | ve la tarjeta de ese aviso. |
+| **Qué puede hacer después** | cambiar el número y guardar. |
+| **Cómo se muestra** | título de la tarjeta. |
+| **Decisión** | |
+
+### 188. Casillero de cada cuántas horas se repite el aviso
+
+| | |
+|---|---|
+| **Texto actual** | «Repetir cada (horas)» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: es nuevo, está escrito y todavía no se publicó. |
+| **Por qué** | antes no había texto: el casillero es nuevo. Viene en 2 horas y admite de 1 a 24. |
+| **Quién lo lee** | el Administrador de la Prestadora. |
+| **Dónde está** | Panel → Configuración → Avisos. |
+| **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
+| **Qué pasó** | ve la tarjeta de ese aviso. |
+| **Qué puede hacer después** | cambiar el número y guardar. |
+| **Cómo se muestra** | etiqueta del casillero. |
+| **Decisión** | |
+
+### 189. Título de la opción de facturar los turnos sin Reporte Diario
+
+| | |
+|---|---|
+| **Texto actual** | «Turnos sin Reporte Diario» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: es nuevo, está escrito y todavía no se publicó. |
+| **Por qué** | antes no había texto: la tarjeta es nueva. |
+| **Quién lo lee** | el Administrador de la Prestadora. |
+| **Dónde está** | Panel → Configuración → La Prestadora. |
+| **Qué estaba haciendo** | revisa cómo trabaja su Prestadora. |
+| **Qué pasó** | ve la tarjeta. |
+| **Qué puede hacer después** | marcar o desmarcar la opción y guardar. |
+| **Cómo se muestra** | título de la tarjeta. |
+| **Decisión** | |
+
+### 190. Opción de facturar los turnos sin Reporte Diario
+
+| | |
+|---|---|
+| **Texto actual** | «Facturar turnos sin Reporte Diario» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: es nuevo, está escrito y todavía no se publicó. |
+| **Por qué** | antes no había texto: la opción es nueva. |
+| **Quién lo lee** | el Administrador de la Prestadora. |
+| **Dónde está** | Panel → Configuración → La Prestadora, tarjeta «Turnos sin Reporte Diario». |
+| **Qué estaba haciendo** | revisa cómo trabaja su Prestadora. |
+| **Qué pasó** | ve la opción, marcada de fábrica. |
+| **Qué puede hacer después** | desmarcarla para que esos turnos se facturen recién cuando llegue el Reporte Diario, y guardar. |
+| **Cómo se muestra** | casilla para marcar. |
+| **Decisión** | |
+
+### 191. Columna de la fecha en la lista de faltas
+
+| | |
+|---|---|
+| **Texto actual** | «Fecha» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Fecha del turno de guardia». En esa lista no hay otra fecha. |
+| **Quién lo lee** | el Coordinador o el Administrador. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de faltas. |
+| **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
+| **Qué pasó** | ve la lista de faltas. |
+| **Qué puede hacer después** | nada. |
+| **Cómo se muestra** | título de la columna. |
+| **Decisión** | |
+
+### 192. Columna de la falta en la lista de faltas
+
+| | |
+|---|---|
+| **Texto actual** | «Motivo» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Falta», que repetía el título de la lista. |
+| **Quién lo lee** | el Coordinador o el Administrador. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de faltas. |
+| **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
+| **Qué pasó** | ve la lista de faltas. |
+| **Qué puede hacer después** | nada. |
+| **Cómo se muestra** | título de la columna. |
+| **Decisión** | |
+
+### 193. Columna del reporte en la lista de faltas
+
+| | |
+|---|---|
+| **Texto actual** | «Reporte presentado» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Reporte Diario recibido». Habla de lo que hizo el Asistente. |
+| **Quién lo lee** | el Coordinador o el Administrador. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de faltas. |
+| **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
+| **Qué pasó** | ve la lista de faltas. |
+| **Qué puede hacer después** | nada. |
+| **Cómo se muestra** | título de la columna. |
+| **Decisión** | |
+
+### 194. Lista de faltas vacía
+
+| | |
+|---|---|
+| **Texto actual** | «Sin faltas registradas» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Sin faltas». Dice que no hay ninguna anotada. |
+| **Quién lo lee** | el Coordinador o el Administrador. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de faltas. |
+| **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
+| **Qué pasó** | ve la lista de faltas. |
+| **Qué puede hacer después** | nada. |
+| **Cómo se muestra** | texto de la lista vacía. |
+| **Decisión** | |
+
+### 195. Excepción de los Reportes Diarios que faltan
+
+| | |
+|---|---|
+| **Texto actual** | «Reportes pendientes» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Reportes que faltan». Es más corto y es la palabra de uso corriente. |
+| **Quién lo lee** | el Coordinador o el Administrador. |
+| **Dónde está** | Panel → Estado actual, franja de excepciones. |
+| **Qué estaba haciendo** | mira cómo está el día. |
+| **Qué pasó** | hay turnos de guardia sin Reporte Diario. |
+| **Qué puede hacer después** | abrir la excepción y pedirle el reporte al Asistente. |
+| **Cómo se muestra** | etiqueta de la excepción. |
+| **Decisión** | |
+
+### 196. Estado del turno de guardia sin Reporte Diario
+
+| | |
+|---|---|
+| **Texto actual** | «Sin Reporte Diario» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Salida sin Reporte Diario». El estado dice lo que falta; la salida ya se ve en el horario. |
+| **Quién lo lee** | el Coordinador o el Administrador. |
+| **Dónde está** | Panel, en las listas de turnos de guardia. |
+| **Qué estaba haciendo** | revisa los turnos de guardia. |
+| **Qué pasó** | el Asistente se fue sin presentar el Reporte Diario. |
+| **Qué puede hacer después** | pedirle el reporte al Asistente. |
+| **Cómo se muestra** | etiqueta de color en la lista. |
+| **Decisión** | |
+
+### 197. Situación del turno de guardia sin Reporte Diario
+
+| | |
+|---|---|
+| **Texto actual** | «Sin Reporte Diario» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Salida sin Reporte Diario». Es el mismo texto que el estado del turno. |
+| **Quién lo lee** | el Coordinador o el Administrador. |
+| **Dónde está** | Panel → Turnos de guardia, en la grilla; y en el Legajo del Asistente y en la ficha del Cliente, en la lista de turnos de guardia. |
+| **Qué estaba haciendo** | revisa los turnos de guardia. |
+| **Qué pasó** | el Asistente se fue sin presentar el Reporte Diario. |
+| **Qué puede hacer después** | pedirle el reporte al Asistente. |
+| **Cómo se muestra** | etiqueta de color. |
+| **Decisión** | |
+
+### 198. Servicios sin facturar por falta de precio
+
+| | |
+|---|---|
+| **Texto actual** | «[cantidad] Servicios sin facturar por Prestaciones sin precio. Cargue los precios y genere las facturas otra vez.» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Servicios sin facturar porque tienen Prestaciones sin precio: [cantidad]. Cargue el precio y genere nuevamente.». El número va primero y la frase dice qué hay que generar. |
+| **Quién lo lee** | la administración de la Prestadora. |
+| **Dónde está** | Panel → Facturación, resultado de generar las facturas. |
+| **Qué estaba haciendo** | generó las facturas de un período. |
+| **Qué pasó** | algunos Servicios no se facturaron porque tienen Prestaciones sin precio. |
+| **Qué puede hacer después** | cargar los precios y generar las facturas otra vez. |
+| **Cómo se muestra** | franja. |
+| **Decisión** | |
+
+### 199. Botón para cargar el precio de una Prestación
+
+| | |
+|---|---|
+| **Texto actual** | «Cargar precio» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **Por qué** | antes decía «Poner precio». «Cargar» es el verbo que usa el resto del Panel. |
+| **Quién lo lee** | la administración de la Prestadora. |
+| **Dónde está** | Panel → Clientes, ficha del Paciente, Prestaciones. |
+| **Qué estaba haciendo** | revisa las Prestaciones del Paciente. |
+| **Qué pasó** | una Prestación no tiene precio. |
+| **Qué puede hacer después** | apretar el botón y cargar el precio. |
+| **Cómo se muestra** | botón y título de la ventana. |
+| **Decisión** | |
+
+## Correos y avisos que envía el sistema (16)
 
 ### 160. Correo de activación de la cuenta
 
@@ -1840,6 +2176,54 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Qué pasó** | ve el texto. |
 | **Qué puede hacer después** | lo que dice el aviso. |
 | **Cómo se muestra** | aviso al celular o correo. |
+| **Decisión** | |
+
+### 204. Aviso del Reporte Diario antes del fin del turno
+
+| | |
+|---|---|
+| **Texto actual** | «Presente el Reporte Diario antes de terminar el turno.» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
+| **Por qué** | antes decía «Presente el Reporte Diario antes del fin del turno de guardia.». Es más corto y suena natural. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | aviso que recibe minutos antes de que termine su turno de guardia, si todavía no presentó el Reporte Diario. |
+| **Qué estaba haciendo** | está terminando el turno de guardia. |
+| **Qué pasó** | no presentó el Reporte Diario. |
+| **Qué puede hacer después** | presentarlo desde la aplicación. |
+| **Cómo se muestra** | aviso al celular. |
+| **Decisión** | |
+
+### 205. Título del aviso de Reporte Diario pendiente
+
+| | |
+|---|---|
+| **Texto actual** | «Falta su Reporte Diario» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
+| **Por qué** | antes decía «Reporte Diario pendiente». Le habla a la persona. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | aviso que recibe al irse sin presentar el Reporte Diario, y que se repite cada tantas horas mientras siga faltando. |
+| **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte Diario. |
+| **Qué pasó** | el turno quedó sin Reporte Diario. |
+| **Qué puede hacer después** | presentarlo desde la aplicación. |
+| **Cómo se muestra** | aviso al celular. |
+| **Decisión** | |
+
+### 206. Texto del aviso de Reporte Diario pendiente
+
+| | |
+|---|---|
+| **Texto actual** | «Preséntelo cuanto antes desde la aplicación.» |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
+| **Por qué** | antes decía «Su Reporte Diario está pendiente. Preséntelo ahora.», que repetía el título. El aviso se repite cada tantas horas, así que dice qué hacer y dónde. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | el mismo aviso, debajo del título «Falta su Reporte Diario». |
+| **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte Diario. |
+| **Qué pasó** | el turno quedó sin Reporte Diario. |
+| **Qué puede hacer después** | presentarlo desde la aplicación. |
+| **Cómo se muestra** | aviso al celular. |
 | **Decisión** | |
 
 ## Consentimientos y advertencias legales (7)

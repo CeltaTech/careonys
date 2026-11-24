@@ -297,6 +297,33 @@ export function horaDelMomento(momento, locale) {
 }
 
 /**
+ * La fecha y la hora de un momento guardado (`2026-11-24T20:52:36Z` → `24/11/2026, 17:52:36`), en
+ * la zona horaria de la Prestadora y con el orden de la fecha que pide el idioma.
+ *
+ * RELOJ DE 24 HORAS SIEMPRE, por la misma razón que `horaDelMomento`. Y además porque, sin decirlo,
+ * el castellano de Argentina escribe la hora con reloj de 12 y sin «a. m.» ni «p. m.»: las 17:52
+ * salen como «05:52», que se lee como de madrugada.
+ *
+ * Devuelve cadena vacía cuando no hay momento: quien llama decide qué dice cuando no hay dato.
+ */
+export function fechaYHoraDelMomento(momento, locale) {
+  if (!momento) return '';
+  const fecha = new Date(momento);
+  if (Number.isNaN(fecha.getTime())) return '';
+  const opciones = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  };
+  if (zonaAnotada) opciones.timeZone = zonaAnotada;
+  return fecha.toLocaleString(locale, opciones);
+}
+
+/**
  * Corre una hora de reloj una cantidad de minutos, dando la vuelta al día si hace falta.
  * `correrHora('23:30', 60)` → `'00:30'`. La usa la acción de "correr el horario" de a muchas.
  */

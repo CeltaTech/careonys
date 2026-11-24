@@ -12,7 +12,7 @@ const CONTACTO = {
   email: 'contacto.inventado@ejemplo.test',
 };
 
-// Cómo llega ese mismo contacto desde el Directorio de Personas: los datos de quien
+// Cómo llega ese mismo contacto desde Contactos: los datos de quien
 // contrata, su lugar y sus teléfonos.
 const PERSONA = {
   nombre_visible: 'Cliente Gómez',

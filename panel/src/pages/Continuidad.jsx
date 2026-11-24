@@ -155,9 +155,9 @@ export function Continuidad() {
       const idsPacientesNotificaciones = (notificacionesData ?? []).map((n) => n.paciente_id);
       const idsPacientes = Array.from(new Set([...idsPacientesTurnosGuardia, ...idsPacientesNotificaciones]));
 
-      // El familiar que se quedó es una persona del Directorio, y el nombre no está
-      // copiado en la fila: se lo busca cada vez, que es lo que permite que cambiarlo en el
-      // Directorio de Personas se vea en todos lados. `nombre_visible` lo arma la base.
+      // El familiar que se quedó es una persona de Contactos, y el nombre no está
+      // copiado en la fila: se lo busca cada vez, que es lo que permite que cambiarlo en
+      // Contactos se vea en todos lados. `nombre_visible` lo arma la base.
       const idsPersonasFamiliares = Array.from(
         new Set((excepcionesData ?? []).map((e) => e.familiar_persona_id).filter(Boolean)),
       );

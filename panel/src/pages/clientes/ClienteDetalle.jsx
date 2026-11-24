@@ -103,8 +103,8 @@ export function ClienteDetalle() {
       .from('clientes')
       .select(
         `id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}), ` +
-          // Quién es el Cliente se lee de los datos de quien contrata, en el Directorio de
-          // Personas, y se corrige allá.
+          // Quién es el Cliente se lee de los datos de quien contrata, en Contactos, y se
+          // corrige allá.
           'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, lugares!personas_lugar_fkey(nombre), ' +
           'telefonos_de_la_persona!el_telefono_es_de_una_persona_de_esta_prestadora(telefono))',
       )

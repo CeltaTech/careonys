@@ -138,7 +138,7 @@ queda a la vista en todas las páginas mientras la persona recorre el sitio, y a
 conversación de WhatsApp con el número comercial mediante un enlace `wa.me/{número}`, la misma
 forma con la que el Panel arma el enlace de cualquier teléfono (`panel/src/lib/telefono.js:5`).
 El número sale de la configuración del sitio y no se escribe en la página. Quien pide una
-demostración no es persona del Directorio de Personas de ninguna Prestadora: el Directorio es
+demostración no es persona de Contactos de ninguna Prestadora: Contactos es
 de cada una y todo lo que se guarda ahí lleva la Prestadora como dato obligatorio.
 
 ## 6. Idiomas y direcciones

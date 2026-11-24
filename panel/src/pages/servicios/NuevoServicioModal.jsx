@@ -25,9 +25,9 @@ const ORDEN_DE_LOS_CASILLEROS = ['cliente', 'contratante', 'paciente', 'etiqueta
    ==========================================================================
 
    Un Servicio es de un Cliente. Se elige uno que ya existe, o se crea el Cliente junto con el
-   Servicio a partir de dos personas del Directorio de Personas: quien contrata y quien recibe el
-   cuidado. Si alguna de las dos todavía no existe, se carga ahí mismo con el alta del
-   Directorio, que es la única que da de alta a una persona. */
+   Servicio a partir de dos personas de Contactos: quien contrata y quien recibe el
+   cuidado. Si alguna de las dos todavía no existe, se carga ahí mismo con el alta de
+   Contactos, que es la única que da de alta a una persona. */
 export function NuevoServicioModal({ onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();

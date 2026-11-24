@@ -48,8 +48,8 @@
 // ----------------------------------------------------------------------------
 //
 // "La autorización de la Obra Social está agotada."
-// Ese dato no existe todavía en ningún lado. El Paciente guarda cuál persona del
-// Directorio es su obra social, no un cupo de horas autorizadas ni un saldo. Haría falta guardar
+// Ese dato no existe todavía en ningún lado. El Paciente guarda cuál persona de
+// Contactos es su obra social, no un cupo de horas autorizadas ni un saldo. Haría falta guardar
 // la autorización (período, horas o guardias autorizadas, consumidas) para poder avisarlo.
 //
 // Mientras eso no exista, este archivo no lo nombra. Cuando exista, es un peso más en `PESOS`

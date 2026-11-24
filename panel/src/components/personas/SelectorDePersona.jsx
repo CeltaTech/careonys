@@ -6,14 +6,14 @@ import { Alert } from '../ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
-/* El casillero que nombra a una Persona del Directorio de Personas.
+/* El casillero que nombra a una Persona de Contactos.
    ==========================================================================
 
-   Donde antes se tecleaba un nombre, se elige una persona del Directorio. Un nombre tecleado crea un ente
+   Donde antes se tecleaba un nombre, se elige una persona de Contactos. Un nombre tecleado crea un ente
    nuevo que no existe: la misma obra social escrita en los datos de cien Pacientes son cien entidades
    distintas, y una mal tipeada no se cruza nunca con la buena.
 
-   ACÁ SE ELIGE Y NADA MÁS. Una persona nueva se carga desde el Directorio de Personas, con el botón que
+   ACÁ SE ELIGE Y NADA MÁS. Una persona nueva se carga desde Contactos, con el botón que
    lo dice.
 
    CÓMO SE LLAMA CADA PERSONA LO DICE LA BASE, en una sola columna calculada, para que todas las

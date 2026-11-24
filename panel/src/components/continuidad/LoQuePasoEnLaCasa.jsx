@@ -293,7 +293,7 @@ export function RegistrarFamiliarQueSeQuedo({ turnoGuardiaId, origen, incidenteI
         {/* Se dice antes de cargarlo, mientras todavía se puede elegir otra cosa. */}
         <Alert variant="error">{t.continuidad.resolver_familiar_es_defecto_grave}</Alert>
 
-        {/* Quién se quedó se elige del Directorio de Personas: es una Persona con la que la
+        {/* Quién se quedó se elige de Contactos: es una Persona con la que la
             Prestadora se vuelve a cruzar, y un nombre tecleado la convertiría cada vez en alguien
             distinto. */}
         <SelectorDePersona

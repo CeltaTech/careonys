@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 124 fichas.** Panel 20, Sitio web 2, Aplicación de Clientes 20, Aplicación de Asistentes 20, Panel: otros textos cambiados 42, Correos y avisos que envía el sistema 13, Consentimientos y advertencias legales 7.
+**Total: 125 fichas.** Panel 20, Sitio web 2, Aplicación de Clientes 20, Aplicación de Asistentes 20, Panel: otros textos cambiados 43, Correos y avisos que envía el sistema 13, Consentimientos y advertencias legales 7.
 
 ## Panel (20)
 
@@ -1006,7 +1006,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | franja. |
 | **Decisión** | |
 
-## Panel: otros textos cambiados (42)
+## Panel: otros textos cambiados (43)
 
 ### 122. Alertas
 
@@ -1108,7 +1108,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | etiquetas y columnas: «Correo» (importación desde planilla, postulaciones, datos del Asistente, Directorio de Personas, lista de Clientes, personas autorizadas de un Cliente y su casillero, lista de usuarios); Configuración: «Correo de contacto» y «Correos que avisar»; buscadores: «Buscar por nombre, correo o teléfono» y «Nombre o correo». |
+| **Texto actual** | etiquetas y columnas: «Correo» (importación desde planilla, postulaciones, datos del Asistente, Contactos, lista de Clientes, personas autorizadas de un Cliente y su casillero, lista de usuarios); Configuración: «Correo de contacto» y «Correos que avisar»; buscadores: «Buscar por nombre, correo o teléfono» y «Nombre o correo». |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decían «Email», «Email de contacto», «Emails que avisar», «Buscar por nombre, email o teléfono» y «Nombre o email». El glosario dice «correo». En portugués dice «E-mail»; en inglés sigue «Email». |
@@ -1124,7 +1124,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | correo en uso: «Correo en uso. Ingrese otro.»; falta el correo: «Falta el correo de quien contrata. Complételo en el Directorio de Personas.»; reactivar una cuenta: «Otra cuenta activa usa ese correo. Cámbielo en esa cuenta e intente nuevamente.» |
+| **Texto actual** | correo en uso: «Correo en uso. Ingrese otro.»; falta el correo: «Falta el correo de quien contrata. Complételo en Contactos.»; reactivar una cuenta: «Otra cuenta activa usa ese correo. Cámbielo en esa cuenta e intente nuevamente.» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decían «Email en uso…», «Falta el email de quien contrata…» y «Otra cuenta activa usa ese email…». |
@@ -1476,7 +1476,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | rechazo: «¿Confirma rechazar este lote? Se revierten todos los datos creados con este lote y no se puede deshacer.»; persona existente: «La persona con CUIT/CUIL [número] ya existía en el Directorio de Personas; se vinculó como Contratante en la Ficha del Cliente N.º [número].» |
+| **Texto actual** | rechazo: «¿Confirma rechazar este lote? Se revierten todos los datos creados con este lote y no se puede deshacer.»; persona existente: «La persona con CUIT/CUIL [número] ya existía en Contactos; se vinculó como Contratante en la Ficha del Cliente N.º [número].» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decían «…Se revierte todo lo creado…» y «…fue vinculada exitosamente como Contratante…». |
@@ -1679,6 +1679,22 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Qué puede hacer después** | apretar el botón y cargar el precio. |
 | **Cómo se muestra** | botón y título de la ventana. |
 | **Decisión** | |
+
+### 201. Contactos: el nuevo nombre del Directorio de Personas
+
+| | |
+|---|---|
+| **Texto actual** | menú y título de la página: «Contactos»; buscador para elegir una persona: «Buscar en Contactos»; mientras carga: «Cargando Contactos…»; permiso: «Ver Contactos»; falta el correo: «Falta el correo de quien contrata. Complételo en Contactos.»; importación: «La persona con CUIT/CUIL [número] ya existía en Contactos; se vinculó como Contratante en la Ficha del Cliente N.º [número].» En inglés «Contacts» y en portugués «Contatos». |
+| **Propuesta** | igual. |
+| **¿Aparece hoy?** | sí. |
+| **Por qué** | antes decía «Directorio de Personas», «Buscar en el Directorio de Personas», «Cargando el Directorio de Personas…», «Ver el Directorio de Personas», «Complételo en el Directorio de Personas» y «ya existía en el Directorio de Personas». En cualquier programa de gestión de clientes esa lista se llama Contactos. |
+| **Quién lo lee** | la administración de la Prestadora y quien tenga el permiso de ver Contactos. |
+| **Dónde está** | Panel → Clientes → Contactos; el casillero que elige una persona en las fichas del Cliente, del Paciente y del Servicio; Configuración → Accesos, lista de permisos; Panel → Importación, resultado. |
+| **Qué estaba haciendo** | busca, carga o elige una persona de los Clientes de la Prestadora. |
+| **Qué pasó** | ve el nombre de la lista donde están todas esas personas. |
+| **Qué puede hacer después** | entrar a Contactos y buscar o cargar la persona. |
+| **Cómo se muestra** | enlace del menú, título de la página, etiqueta del buscador, nombre del permiso y franja. |
+| **Decisión** | el Desarrollador decidió el nombre «Contactos». |
 
 ## Correos y avisos que envía el sistema (13)
 

@@ -27,7 +27,7 @@ que ya existe.
 
 **Y Careonys entrega a quién se le factura, con sus datos.** Cada renglón lleva el nombre, el
 documento —tipo, número y país—, el domicilio, el código postal y el email de esa persona, tomados
-del Directorio de Personas (`aQuienFacturarle`, en `panel/src/lib/intercambioDeFacturacion.js`).
+de Contactos (`aQuienFacturarle`, en `panel/src/lib/intercambioDeFacturacion.js`).
 La condición frente al organismo fiscal y qué clase de comprobante corresponde los decide el
 software de facturación.
 

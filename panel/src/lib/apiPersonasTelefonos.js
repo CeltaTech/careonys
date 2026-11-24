@@ -13,8 +13,8 @@ import { llamadorDe } from './apiPanel';
    @param {object} opciones  Lo mismo que acepta `fetch`. */
 export const llamarApiPersonasTelefonos = llamadorDe('/personas/telefonos');
 
-/** Todos los teléfonos del Directorio de Personas, para agruparlos por persona en la lista. */
-export function pedirLosTelefonosDelDirectorio() {
+/** Todos los teléfonos de Contactos, para agruparlos por persona en la lista. */
+export function pedirLosTelefonosDeLosContactos() {
   return llamarApiPersonasTelefonos('/');
 }
 

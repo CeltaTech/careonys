@@ -104,8 +104,8 @@ CONTRATANTE                   PAGADOR                      PACIENTE
 | **Pagador** | Persona física o jurídica que **asume la obligación de pagar el servicio y firma su consentimiento**. | Registro individual. Forma parte y es integrante del cliente y por lo tanto ha de estar incluido en la Ficha del Cliente. | Identificador en código: pagador. Puede ser el mismo Contratante o un tercero (Obra Social, prepaga, familiar). **Prohibido:** "financiador". |
 | **Paciente** | Persona física que **recibe el cuidado o la atención médica**. Es el titular de la Historia Clínica Electrónica (HCE). | Registro individual. Forma parte y es integrante del cliente y por lo tanto ha de estar incluido en la Ficha del Cliente. | **Prohibido:** "adulto mayor" (salvo contexto clínico específico). |
 | **Personas autorizadas** | Familiares o allegados que tienen permiso de la Ficha del Cliente para recibir novedades o acompañar al Paciente. | Registro individual. Forma parte y es integrante del cliente y por lo tanto ha de estar incluido en la Ficha del Cliente. | Forman parte de la Ficha del Cliente junto con el Contratante, Pagador y Paciente. |
-| **Contacto** | Persona externa que muestra interés inicial en los servicios (1ª etapa del pipeline comercial). | Registro Comercial | **Prohibido:** "solicitud" o "lead". |
-| **Prospecto** | Contacto que tiene un Presupuesto de servicio en negociación sin firmar (2ª etapa comercial). | Registro Comercial | Pasa a ser Cliente al firmar; si fracasa vuelve a ser Contacto. **Prohibido:** "prospect". |
+| **Prospecto** | Persona externa que muestra interés inicial en los servicios (1ª etapa comercial). | Registro Comercial | **Prohibido:** "solicitud", "lead" o "prospect". |
+| **Oportunidad** | Prospecto que tiene un Presupuesto de servicio en negociación sin firmar (2ª etapa comercial). | Registro Comercial | Pasa a ser Cliente al firmar; si fracasa vuelve a ser Prospecto. |
 
 **3. Personal Operativo, de Cuidado y Supervisión**
 
@@ -123,6 +123,7 @@ CONTRATANTE                   PAGADOR                      PACIENTE
 |---|---|---|---|
 | **Padrón** | Registro centralizado y exclusivo de todo el personal operativo de cuidado (cuidadores, enfermeros, kinesiólogos, etc.) vinculado a una Prestadora. | Por Prestadora | **Prohibido:** "fichero", "base de asistentes", "listado" o "la lista de Careonys". |
 | **Directorio de Clientes** | Registro centralizado de todas las cuentas comerciales gestionadas por la Prestadora. | Por Prestadora | Prohibido: fichero, base de clientes, lista de clientes. |
+| **Contactos** | Registro único de todas las personas físicas y jurídicas de los Clientes de la Prestadora: quien contrata, quien recibe el cuidado, quien paga, la obra social. Cada una se guarda una sola vez y los roles la citan. | Por Prestadora | Prohibido: Directorio de Personas. |
 | **Legajo del Asistente** | Expediente de un Asistente en el Padrón. Guarda su historial laboral, matrículas, tipo de Asistente y especialidades, capacitaciones, documentación, evaluaciones, etc. | Permanente e Histórico | Prohibido: ficha, perfil, alta o file. |
 | **Ficha del Cliente** | Expediente que agrupa a los integrantes de una cuenta (Contratante, Pagador, Paciente, Autorizados). Así como observaciones y otras informaciones que correspondan al cliente | Permanente e Histórico | **Prohibido:** legajo de cliente, perfil de cliente. |
 | **Número de Legajo** | Identificador numérico e inmutable asignado a un Asistente en su Legajo laboral. | Único por Prestadora | Arranca en 1 por Prestadora. En inglés: record number. **Prohibido:** "código", "número de ficha" o confundir con Número de cliente. |

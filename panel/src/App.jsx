@@ -144,7 +144,7 @@ function App() {
                     <Route path="postulaciones" element={<Postulaciones />} />
                     <Route path="asistentes" element={<Asistentes />} />
                     <Route path="asistentes/:id" element={<AsistenteDetalle />} />
-                    {/* El Directorio de Personas de la Prestadora. Sin candado de modalidad: con
+                    {/* Contactos de la Prestadora. Sin candado de modalidad: con
                         las dos hay personas que contratan, que pagan y que reciben el cuidado, y
                         todas se cargan una sola vez acá. Quién lo ve y quién lo escribe lo decide la
                         base con sus políticas. */}

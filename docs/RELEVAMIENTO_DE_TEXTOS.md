@@ -12,7 +12,7 @@ Lo que ya tiene ficha en Frases para aprobar no se repite acá. Se cita con su n
 
 - **Texto actual:** «Falta el DNI.», «Falta el género.» y «Falta el documento.»
 - **Propuesta:** «Ingrese el DNI.», «Elija el género.» y «Suba el documento.»
-- **Dónde aparece:** Panel → Asistentes → Padrón de Asistentes, al agregar un Asistente. Panel → Clientes → Directorio de Personas, al cargar una persona. Aparece al apretar guardar con el casillero vacío.
+- **Dónde aparece:** Panel → Asistentes → Padrón de Asistentes, al agregar un Asistente. Panel → Clientes → Contactos, al cargar una persona. Aparece al apretar guardar con el casillero vacío.
 - **Por qué:** el glosario pide que el error de un casillero vacío sea una orden que sigue a la etiqueta, como «Ingrese el apellido». «Falta…» describe y no dice qué hacer.
 - **Decisión:**
 
@@ -376,7 +376,7 @@ Sin fichas. En castellano se buscaron las formas de vos y de tú («tenés», «
 
 Ubicación de cada ficha: clave de traducción y archivo:renglón donde se usa. Las rutas son desde la raíz del producto. Las claves están en el archivo de traducciones de cada parte.
 
-1. Panel: `errores.motivos.falta_el_dni`, `falta_el_genero`, `falta_el_documento` y `personas.falta_el_dni`, `falta_el_genero`, `falta_el_documento`. Usos: `panel/src/pages/asistentes/NuevoAsistenteModal.jsx:94`, `:96`, `:98`; Directorio de Personas por `panel/src/lib/documentoDeIdentidad.js:65`.
+1. Panel: `errores.motivos.falta_el_dni`, `falta_el_genero`, `falta_el_documento` y `personas.falta_el_dni`, `falta_el_genero`, `falta_el_documento`. Usos: `panel/src/pages/asistentes/NuevoAsistenteModal.jsx:94`, `:96`, `:98`; Contactos por `panel/src/lib/documentoDeIdentidad.js:65`.
 2. Panel: `formularios.falta_un_dato_obligatorio`. Usos: `panel/src/pages/servicios/ActualizacionDelServicio.jsx:151`, `panel/src/components/ImportarListaDePrecios.jsx:145`, `:170`, `:189`.
 3. Panel: `formularios.falta_hasta_cuando_vale`. Uso: `panel/src/lib/motorDeFormularios.js`, renglones 197 y 223.
 4. Clientes: `medicacion.error_campos_obligatorios`. Uso: `pwa-clientes/src/pages/Medicacion.jsx:146`.

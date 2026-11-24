@@ -80,7 +80,7 @@ blanco. El botón «Limpiar filtros» se iría con el cartel, que es el único l
 **Problemas que se ven acá.** Tres.
 
 El primero es que afirma un hecho que no comprobó. Dice «Hay registros cargados», y eso no se
-miró: lo único que se sabe es que la consulta con filtro volvió vacía. En el Directorio de Personas sin ni una
+miró: lo único que se sabe es que la consulta con filtro volvió vacía. En Contactos sin ni una
 persona cargada, basta teclear una letra en el buscador para que la pantalla diga que hay registros
 cargados, que es exactamente lo contrario de la verdad.
 

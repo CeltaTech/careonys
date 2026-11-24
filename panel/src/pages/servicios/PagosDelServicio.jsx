@@ -25,8 +25,8 @@ import '../../styles/molde-paginas.css';
    ==========================================================================
 
    Es del Servicio y no del Cliente: un mismo Cliente puede tener dos Servicios con distintos
-   Responsables de pagos. La deuda sigue siendo del Cliente. Las personas se eligen del Directorio
-   de Personas y no se teclean.
+   Responsables de pagos. La deuda sigue siendo del Cliente. Las personas se eligen de
+   Contactos y no se teclean.
 
    Vive en su propia tabla, que la base le abre sólo a quien tiene el permiso de lo comercial o el
    de lo que firma el Responsable de pagos.

@@ -129,7 +129,7 @@ describe('revisarFamiliarQueSeQuedo', () => {
       .toEqual({ ok: false, campo: 'origen' });
   });
 
-  it('exige cuál persona del Directorio se quedó', () => {
+  it('exige cuál persona de Contactos se quedó', () => {
     expect(revisarFamiliarQueSeQuedo(familiar({ familiar_persona_id: null })))
       .toEqual({ ok: false, campo: 'familiar_persona_id' });
   });

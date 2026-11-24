@@ -1,4 +1,4 @@
-/* El documento con que se identifica una Persona del Directorio.
+/* El documento con que se identifica una Persona de Contactos.
    ==========================================================================
 
    Lo mismo que controla la base al guardar, hecho antes en el navegador para que el aviso aparezca

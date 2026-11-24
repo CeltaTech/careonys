@@ -73,7 +73,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
 
         <form onSubmit={handleSubmit}>
           {/* Quién es el Paciente —nombre, fecha de nacimiento, domicilio— está en sus datos de
-              persona y se corrige en el Directorio de Personas. Acá queda lo que es propio de
+              persona y se corrige en Contactos. Acá queda lo que es propio de
               recibir el cuidado. */}
           <FormField label={t.clientes.nivel_complejidad} name="nivel_complejidad" type="select" value={nivelComplejidad} onChange={(e) => setNivelComplejidad(e.target.value)}>
             <option value="">{t.comun.todos}</option>
@@ -82,7 +82,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
             <option value="III">III</option>
           </FormField>
           <FormField label={t.clientes.editar_paciente.patologias} name="patologias" value={patologias} onChange={(e) => setPatologias(e.target.value)} />
-          {/* La obra social se elige del Directorio de Personas, donde es una Persona jurídica.
+          {/* La obra social se elige de Contactos, donde es una Persona jurídica.
               Escrita a mano, la misma obra social en los datos de cien Pacientes serían cien
               Pagadores distintos. */}
           <SelectorDePersona

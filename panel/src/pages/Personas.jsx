@@ -16,11 +16,11 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { PersonaModal } from './personas/PersonaModal';
 import { mensajeDeError } from '../lib/errores';
 import { palabrasDelDomicilio, partesDesdeFila, renglonDelDomicilio } from '../lib/partesDeDomicilio';
-import { pedirLosTelefonosDelDirectorio } from '../lib/apiPersonasTelefonos';
+import { pedirLosTelefonosDeLosContactos } from '../lib/apiPersonasTelefonos';
 import '../styles/molde-paginas.css';
 import './tarjetas.css';
 
-/* El Directorio de Personas de la Prestadora.
+/* Contactos de la Prestadora.
    ==========================================================================
 
    La lista de todas las Personas de los Clientes de la Prestadora: quien contrata, quien paga,
@@ -47,7 +47,7 @@ export function Personas() {
   const puedeEditar = esAdmin || puede('editar_personas');
 
   const [filas, setFilas] = useState([]);
-  // Los teléfonos vienen del backend, en un solo pedido para todo el Directorio: pedirlos persona por persona
+  // Los teléfonos vienen del backend, en un solo pedido para todos los Contactos: pedirlos persona por persona
   // sería un pedido por renglón. Vienen con el preferido ya resuelto.
   const [telefonos, setTelefonos] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -80,7 +80,7 @@ export function Personas() {
     setFilas(data ?? []);
 
     try {
-      const respuesta = await pedirLosTelefonosDelDirectorio();
+      const respuesta = await pedirLosTelefonosDeLosContactos();
       setTelefonos(respuesta?.telefonos ?? []);
     } catch (errorTelefonos) {
       setError(mensajeDeError(errorTelefonos, t));

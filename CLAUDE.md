@@ -248,9 +248,9 @@ reservados a la administración.
 **Cada Prestadora con lo suyo, sin mezclar.** Una conexión con un software de facturación o de
 cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.
 
-### Directorio de Personas y roles de una contratación
+### Contactos y roles de una contratación
 
-**Toda persona de los Clientes de la Prestadora vive en un solo lugar —el Directorio de Personas— y
+**Toda persona de los Clientes de la Prestadora vive en un solo lugar —Contactos— y
 de ahí se nutre todo el que la consuma.** Quien contrata, recibe el cuidado o paga puede ser una
 persona, una obra social, una prepaga o lo que sea, y en todos los casos se guarda una sola vez,
 con todos sus datos: quién es, cómo se la ubica y cómo figura ante
@@ -304,12 +304,12 @@ se configure su aplicación, pero el documento no lo ve nunca. Textual del Desar
 persona tiene acceso a ver lo que firma, no asi a lo que firma otra persona, salvo que sea parte
 involucrada»*. **Es el piso:** la norma de cada país sobre seguridad y confidencialidad se revisa,
 y si pide más, manda la norma. Para que se pueda cumplir, **quien firma queda guardado con sus
-datos en el Directorio de Personas** —o en su Legajo, si es un Asistente—, nunca como un nombre tecleado.
+datos en Contactos** —o en su Legajo, si es un Asistente—, nunca como un nombre tecleado.
 
 **La persona se guarda una sola vez, y los roles la citan.** El rol es una anotación de la Ficha
-del Cliente que apunta a una persona del Directorio, nunca una copia de sus datos ni una persona cargada de nuevo. Si
+del Cliente que apunta a una persona de Contactos, nunca una copia de sus datos ni una persona cargada de nuevo. Si
 la misma persona contrata, recibe el cuidado y paga, hay una persona y tres anotaciones.
-**El Paciente también está en el Directorio de Personas, y su historia clínica cuelga de sus
+**El Paciente también está en Contactos, y su historia clínica cuelga de sus
 datos.**
 
 **Los datos de una persona no se borran nunca, y un Legajo tampoco.** Que termine el Servicio a un
@@ -332,12 +332,12 @@ cargada, el casillero ofrece esa lista y se elige una. **Un nombre tecleado crea
 existe**: se parece a la de al lado, no es la misma para el sistema, y nadie se entera. La lista
 puede tener buscador, pero lo que queda guardado es cuál, no cómo se llama.
 
-**Una persona nueva se carga desde el Directorio de Personas, y un Legajo nuevo desde el
+**Una persona nueva se carga desde Contactos, y un Legajo nuevo desde el
 Padrón, cada uno con el botón que lo dice.** Un casillero que elige de una de esas listas sólo
 elige: no da de alta. Y el botón que guarda una corrección dice guardar, porque ahí se están
 cambiando datos de algo que ya existe; agregar es otra cosa y tiene su propio botón.
 
-**El número interno de una persona del Directorio no se muestra en ningún lado.** A la persona se la
+**El número interno de una persona de Contactos no se muestra en ningún lado.** A la persona se la
 reconoce por su nombre y su número fiscal. **El Número de Legajo sí es del Asistente**: se asigna
 solo, arranca en uno en cada Prestadora, no cambia y no se reasigna.
 

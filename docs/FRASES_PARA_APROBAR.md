@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 145 fichas.** Panel 20, Sitio web 2, Aplicación de Clientes 20, Aplicación de Asistentes 24, Panel: otros textos cambiados 56, Correos y avisos que envía el sistema 16, Consentimientos y advertencias legales 7.
+**Total: 144 fichas.** Panel 20, Sitio web 2, Aplicación de Clientes 20, Aplicación de Asistentes 24, Panel: otros textos cambiados 55, Correos y avisos que envía el sistema 16, Consentimientos y advertencias legales 7.
 
 ## Panel (20)
 
@@ -1070,7 +1070,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | franja. |
 | **Decisión** | |
 
-## Panel: otros textos cambiados (56)
+## Panel: otros textos cambiados (55)
 
 ### 122. Alertas
 
@@ -1716,10 +1716,10 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | «Minutos de anticipación» |
+| **Texto actual** | «Preaviso [30] min», con el número en un casillero. |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
-| **Por qué** | antes decía «Minutos antes de que empiece el turno de guardia». El título de la tarjeta ya dice de qué aviso se trata. |
+| **Por qué** | antes decía «Minutos antes de que empiece el turno de guardia». Sigue la forma que usted fijó para el aviso del Reporte Diario: el título de la tarjeta dice de qué aviso se trata. |
 | **Quién lo lee** | el Administrador de la Prestadora. |
 | **Dónde está** | Panel → Configuración → Avisos. |
 | **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
@@ -1744,22 +1744,6 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | título de la tarjeta. |
 | **Decisión** | |
 
-### 186. Casillero de los minutos del aviso del Reporte Diario
-
-| | |
-|---|---|
-| **Texto actual** | «Minutos antes del fin del turno» |
-| **Propuesta** | igual. |
-| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
-| **Por qué** | antes decía «Minutos antes de que termine el turno de guardia». Es más corto y dice lo mismo. |
-| **Quién lo lee** | el Administrador de la Prestadora. |
-| **Dónde está** | Panel → Configuración → Avisos. |
-| **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
-| **Qué pasó** | ve la tarjeta de ese aviso. |
-| **Qué puede hacer después** | cambiar el número y guardar. |
-| **Cómo se muestra** | etiqueta del casillero. |
-| **Decisión** | |
-
 ### 187. Título del aviso de Reporte Diario pendiente
 
 | | |
@@ -1780,7 +1764,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | «Repetir cada (horas)» |
+| **Texto actual** | «Repetir cada [2] h», con el número en un casillero. |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: es nuevo, está escrito y todavía no se publicó. |
 | **Por qué** | antes no había texto: el casillero es nuevo. Viene en 2 horas y admite de 1 a 24. |

@@ -258,6 +258,7 @@ function TabNotificaciones() {
         ruta="/insistencia-reporte-diario"
         campo="horas_entre_avisos_reporte_pendiente"
         clave="horas"
+        unidad="aviso_unidad_horas"
         titulo="insistencia_reporte_diario_titulo"
         etiqueta="insistencia_reporte_diario_horas"
       />
@@ -275,7 +276,7 @@ function TabNotificaciones() {
    Cada Prestadora elige su número, porque una cantidad fija no le sirve a todas: quien trabaja
    con guardias de doce horas quiere avisar la noche anterior. La misma tarjeta sirve para los
    tres números; cambia sólo de dónde lee, dónde guarda y con qué nombre manda el número. */
-function TabMinutosDeAnticipacion({ ruta, campo, titulo, etiqueta, clave = 'minutos' }) {
+function TabMinutosDeAnticipacion({ ruta, campo, titulo, etiqueta, clave = 'minutos', unidad = 'aviso_unidad_minutos' }) {
   const { t } = useLocale();
   const [minutos, setMinutos] = useState('');
   const [estado, setEstado] = useState('cargando');
@@ -328,6 +329,7 @@ function TabMinutosDeAnticipacion({ ruta, campo, titulo, etiqueta, clave = 'minu
           <div className="molde-formgrid">
             <FormField
               label={t.configuracion[etiqueta]}
+              unidad={t.configuracion[unidad]}
               name={campo}
               type="number"
               value={minutos}

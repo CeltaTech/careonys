@@ -67,6 +67,7 @@ import {
   camposQueCambiaron,
   registrarActividad,
 } from '../utils/registroDeActividad.js';
+import { cerrarLaSalidaDelSaliente, completarSiLlegoElReporte, ESTADO_SALIDA_SIN_REPORTE } from '../utils/salidaSinReporteDiario.js';
 
 export const appAsistentesRouter = Router();
 
@@ -126,7 +127,7 @@ function manejarErrorMulter(err, req, res, next) {
 async function turnoGuardiaDelAsistente(db, turnoGuardiaId, usuarioAsistente) {
   const { data } = await db
     .from('turnos_guardia')
-    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at')
+    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte_diario, reporte_diario_llego_at')
     .eq('id', turnoGuardiaId)
     .eq('asistente_id', usuarioAsistente.asistenteId)
     .maybeSingle();
@@ -682,7 +683,7 @@ appAsistentesRouter.get('/contenidos/archivos/:id/enlace', requiereRolAsistente,
 appAsistentesRouter.get('/turnos-guardia', requiereRolAsistente, async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('turnos_guardia')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte_diario, reporte_diario_llego_at')
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('fecha', { ascending: false })
     .order('hora_inicio', { ascending: false })
@@ -700,11 +701,13 @@ appAsistentesRouter.get('/turnos-guardia', requiereRolAsistente, async (req, res
     const db = clienteDelPedido(req);
     // De las pasadas quedan sólo las que todavía no se le pagaron: las que cubre el período de
     // una liquidación pagada ya no tiene nada que reclamar. Una que sigue en curso queda siempre,
-    // porque todavía la tiene que cerrar.
+    // porque todavía la tiene que cerrar, y una que espera el Reporte Diario también, porque
+    // todavía lo tiene que presentar.
     const { data: pagados, error: errorPagados } = await db.rpc('periodos_pagados_de_la_sesion');
     if (errorPagados) throw errorPagados;
     const yaPagada = (g) =>
-      g.estado !== 'activa' && (pagados ?? []).some((p) => p.desde <= g.fecha && g.fecha <= p.hasta);
+      g.estado !== 'activa' && g.estado !== ESTADO_SALIDA_SIN_REPORTE
+      && (pagados ?? []).some((p) => p.desde <= g.fecha && g.fecha <= p.hasta);
     const visibles = (data ?? []).filter((g) => !deLicencia.has(g.id) && !yaPagada(g));
 
     const visibilidad = await visibilidadDelPedido(req);
@@ -719,7 +722,7 @@ appAsistentesRouter.get('/turnos-guardia/:id', requiereRolAsistente, async (req,
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('turnos_guardia')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte_diario, reporte_diario_llego_at')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
@@ -894,6 +897,20 @@ async function coberturaDeLosPacientes(db, prestadoraId, pacienteIds) {
 // intentos, sólo se renueva cada pocos segundos— se podía probar sin freno.
 const trajoUnCodigo = (req) => Boolean(req.body?.comprobacion?.codigo);
 
+// Cierra la salida del Asistente que deja la guardia, cuando el relevo marcó la llegada con su
+// código. Nunca hace fallar la llegada del relevo, que ya quedó marcada: si algo falla, queda en
+// el registro del servidor y el reintento de la llegada lo vuelve a intentar. Devuelve verdadero
+// si el que sale no había presentado el Reporte Diario.
+async function salidaDelSaliente(turno_guardia, lat, lng) {
+  try {
+    const { salienteSinReporte } = await cerrarLaSalidaDelSaliente({ relevo: turno_guardia, lat, lng });
+    return salienteSinReporte;
+  } catch (err) {
+    console.error('Error cerrando la salida del Asistente que deja la guardia:', err.message);
+    return false;
+  }
+}
+
 appAsistentesRouter.post('/turnos-guardia/:id/checkin', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
   const { lat, lng } = req.body;
   if (typeof lat !== 'number' || typeof lng !== 'number') {
@@ -909,6 +926,9 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkin', requiereRolAsistente, to
     return res.status(404).json({ error: 'Turno de guardia no encontrado' });
   }
   if (turno_guardia.checkin_at) {
+    // Si la llegada ya estaba marcada pero la salida del que sale no llegó a cerrarse, este
+    // reintento la cierra. Si ya estaba cerrada, no cambia nada.
+    await salidaDelSaliente(turno_guardia, lat, lng);
     // yaRegistrado: true — permite que el cliente offline (Fase 9) distinga "ya se había
     // sincronizado antes" de un error real, y dé la acción encolada por sincronizada.
     return res.status(400).json({ error: 'Este turno de guardia ya tiene check-in registrado', yaRegistrado: true });
@@ -993,6 +1013,9 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkin', requiereRolAsistente, to
     return responderError(res, error);
   }
 
+  // El relevo leyó el código del que sale: esa lectura es la salida del que sale.
+  const salienteSinReporte = await salidaDelSaliente(turno_guardia, lat, lng);
+
   // El titular llegó sobre un turno de guardia ya marcado ausente: la base la anota como llegada tarde, y el
   // pedido de relevo de ese turno de guardia se cierra como resuelto por él, para que deje de insistirse.
   // El Asistente no puede tocar el incidente, así que va con el trabajo de la Prestadora. Si falla,
@@ -1071,7 +1094,7 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkin', requiereRolAsistente, to
     });
   }
 
-  res.json({ ok: true, dentroDeRango, distanciaMetros: distancia, comprobacion: comprobacion.estado });
+  res.json({ ok: true, dentroDeRango, distanciaMetros: distancia, comprobacion: comprobacion.estado, salienteSinReporte });
 });
 
 // ============================================================================
@@ -1875,6 +1898,17 @@ appAsistentesRouter.post(
 // reporte, y el pase de guardia por QR necesita que cerrar sea un acto con entidad propia.
 // El orden de negocio no cambió: sigue sin poder cerrarse un turno de guardia sin reporte — eso ahora
 // lo valida POST /turnos-guardia/:id/checkout.
+// Nunca hace fallar el reporte, que ya quedó guardado: si algo falla, queda en el registro del
+// servidor y el reintento del envío lo vuelve a intentar.
+async function completarElTurnoGuardiaQueEsperabaElReporte(turno_guardia) {
+  if (turno_guardia.estado !== ESTADO_SALIDA_SIN_REPORTE) return;
+  try {
+    await completarSiLlegoElReporte(turno_guardia);
+  } catch (err) {
+    console.error('Error completando el turno de guardia que esperaba el Reporte Diario:', err.message);
+  }
+}
+
 appAsistentesRouter.post('/turnos-guardia/:id/reporte/confirmar', requiereRolAsistente, async (req, res) => {
   const { pacienteId, textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl, pasoPorLaIa } = req.body;
 
@@ -1917,6 +1951,7 @@ appAsistentesRouter.post('/turnos-guardia/:id/reporte/confirmar', requiereRolAsi
     // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline). Antes
     // esta protección contra el envío duplicado la daba el guard de checkout_at; al separar
     // el cierre del reporte, la da la existencia del reporte mismo.
+    await completarElTurnoGuardiaQueEsperabaElReporte(turno_guardia);
     return res.status(400).json({ error: `${paciente.nombre} ya tiene su Reporte Diario cargado en este turno`, yaRegistrado: true });
   }
 
@@ -1971,6 +2006,10 @@ appAsistentesRouter.post('/turnos-guardia/:id/reporte/confirmar', requiereRolAsi
   if (errorTurnoGuardia) {
     return responderError(res, errorTurnoGuardia);
   }
+
+  // El Asistente salió sin el reporte y lo presenta ahora: si era el último que faltaba, el turno
+  // de guardia queda completado y conserva la hora de salida.
+  await completarElTurnoGuardiaQueEsperabaElReporte(turno_guardia);
 
   // El mensaje va al Cliente de este Paciente y a ningún otro: el reporte habla de él. Si el
   // turno cubre a dos hermanos, cada Cliente recibe el suyo cuando le toca, no el del otro.

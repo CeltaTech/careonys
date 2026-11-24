@@ -10,6 +10,23 @@ administración, del paso 27.
 
 ## Lo que se hizo
 
+**Paso 31, la salida sin Reporte Diario.** El relevo lee con la ubicación el código QR del
+Asistente que sale y toma la guardia aunque el que sale no haya presentado el Reporte Diario. La
+hora de la lectura es la hora de salida del que sale. Si el que sale ya presentó el reporte, su
+turno de guardia queda completado. Si no, queda en «Salida sin Reporte Diario». Mientras el turno
+de guardia está así, esas horas no se le liquidan al Asistente, y no suena la alarma de Paciente
+solo. El relevo recibe en el teléfono el aviso de que el que sale no presentó el reporte. El que
+sale recibe el aviso de que su reporte está pendiente, y desde la aplicación lo puede presentar
+después. Cuando el reporte llega, el turno de guardia pasa a completado y conserva la hora de
+salida. En el Panel, el tablero cuenta estos turnos de guardia en «Reportes que faltan», nunca en
+rojo, y el estado nuevo se ve en los tres idiomas.
+
+**Paso 31, las faltas en el Legajo del Asistente.** El Legajo del Asistente tiene un bloque nuevo,
+Faltas, que se llena solo. Cada renglón dice la fecha del turno de guardia, el Paciente, «Salida
+sin Reporte Diario» y la fecha en que llegó el reporte, o «Pendiente». La falta queda a la vista
+aunque el reporte haya llegado. El sistema no aplica ninguna consecuencia: las decide la
+Prestadora.
+
 **Paso 27, las sugerencias al armar el equipo del Servicio.** Al sumar a alguien al equipo de un
 Servicio, la lista de Asistentes viene ordenada por lugar, tareas, Especialidades, antecedentes y
 acuerdo económico, con los mismos criterios que la asignación de turnos de guardia. Si el Servicio

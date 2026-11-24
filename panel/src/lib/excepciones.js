@@ -24,7 +24,7 @@
 // pueden contestar mirando el turno de guardia sola, así que se resuelven con dos conjuntos que la
 // pantalla arma una vez y pasa en `ctx`. La cuenta sigue estando escrita una sola vez.
 
-import { SITUACION, UMBRALES, situacionDeTurnoGuardia } from './semaforoTurnoGuardia';
+import { SITUACION, SITUACIONES_CERRADAS, UMBRALES, situacionDeTurnoGuardia } from './semaforoTurnoGuardia';
 
 /**
  * Lo que hay que pasarle a `aplica`. Todo es opcional: si falta un dato, la excepción que lo
@@ -52,6 +52,18 @@ export function contextoVacio() {
 }
 
 const conjunto = (c) => (c instanceof Set ? c : new Set());
+
+/**
+ * ¿A este turno de guardia le falta el Reporte Diario? Es la única definición de «reporte que
+ * falta». Caen dos casos: el turno completado al que le falta el reporte de algún Paciente, que
+ * la pantalla resuelve en `turnosGuardiaSinReporte`, y el turno en «Salida sin Reporte Diario»,
+ * que lo dice su estado: el Asistente dejó la guardia al relevo sin presentarlo.
+ */
+export function faltaElReporteDiario(turno_guardia, ctx) {
+  const s = situacionDeTurnoGuardia(turno_guardia, ctx);
+  if (s === SITUACION.SALIDA_SIN_REPORTE) return true;
+  return s === SITUACION.COMPLETADA && conjunto(ctx?.turnosGuardiaSinReporte).has(turno_guardia?.id);
+}
 
 /**
  * Las siete excepciones, en el orden en que se muestran: primero lo que deja a un Paciente sin
@@ -113,8 +125,7 @@ export const EXCEPCIONES = [
     // ya ocurrió, pero sí invalida lo que está por venir.
     aplica: (g, ctx) => {
       if (!g?.asistente_id) return false;
-      const s = situacionDeTurnoGuardia(g, ctx);
-      if (s === SITUACION.CANCELADA || s === SITUACION.COMPLETADA) return false;
+      if (SITUACIONES_CERRADAS.has(situacionDeTurnoGuardia(g, ctx))) return false;
       return (
         conjunto(ctx?.asistentesConDocumentoPorVencer).has(g.asistente_id) ||
         conjunto(ctx?.asistentesConDocumentoVencido).has(g.asistente_id)
@@ -135,8 +146,7 @@ export const EXCEPCIONES = [
        persona". */
     aplica: (g, ctx) => {
       if (!g?.asistente_id) return false;
-      const s = situacionDeTurnoGuardia(g, ctx);
-      if (s === SITUACION.CANCELADA || s === SITUACION.COMPLETADA) return false;
+      if (SITUACIONES_CERRADAS.has(situacionDeTurnoGuardia(g, ctx))) return false;
       return conjunto(ctx?.asistentesConDocumentosPendientes).has(g.asistente_id);
     },
     // Siempre rojo: el Asistente no puede tomar ese turno de guardia.
@@ -146,9 +156,7 @@ export const EXCEPCIONES = [
     id: 'reportes',
     claveEtiqueta: 'exc_reportes',
     parametros: () => ({}),
-    aplica: (g, ctx) =>
-      situacionDeTurnoGuardia(g, ctx) === SITUACION.COMPLETADA &&
-      conjunto(ctx?.turnosGuardiaSinReporte).has(g.id),
+    aplica: (g, ctx) => faltaElReporteDiario(g, ctx),
     // Nunca rojo. Falta un documento, no falta una persona: se reclama, no se corre.
     esCritica: () => false,
   },

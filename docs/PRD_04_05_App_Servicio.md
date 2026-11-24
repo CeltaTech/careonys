@@ -75,6 +75,15 @@ reporte de cada Paciente y que la salida quede comprobada —en el lugar o con l
 y pasa la guardia a `completada`; no compara contra ninguna cantidad de horas
 (`backend/src/routes/appAsistentes.js`).
 
+**La salida con el relevo.** El relevo lee el código QR del Asistente que sale y toma la guardia
+aunque el que sale no haya presentado el Reporte Diario; la hora de la lectura es la hora de salida
+del que sale (`backend/src/utils/salidaSinReporteDiario.js`). Con el reporte presentado, el turno
+del que sale pasa a `completada`; sin él, a `salida_sin_reporte`, con la falta anotada en
+`salio_sin_reporte_diario`. El relevo ve el aviso de que el que sale no presentó el reporte, y el
+que sale recibe el aviso de que su reporte está pendiente y lo puede presentar desde la guardia.
+Cuando llega, el turno pasa a `completada`, conserva la hora de salida y anota
+`reporte_diario_llego_at`. Mientras está en `salida_sin_reporte`, esas horas no se liquidan.
+
 ### El botón de emergencia — cómo quedó construido
 
 **La palabra no aparece escrita en ninguna línea de la aplicación.** El botón, el formulario y los

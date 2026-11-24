@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { mensajeDeError } from '../../lib/errores';
-import { claseBadgeTono } from '../../lib/tonos';
+import { TONO, claseBadgeTono } from '../../lib/tonos';
 import { hoyISO, horaDelMomento } from '../../lib/horarios';
-import { textoDelDia, textoDelHorario } from '../../lib/horarioDeTurnoGuardia';
+import { fechaDelMomento, textoDelDia, textoDelHorario } from '../../lib/horarioDeTurnoGuardia';
 import { textoDePacientes } from '../../lib/pacientesDeTurnoGuardia';
 import { TRAMOS, cargarPaginaDeTurnosGuardia } from '../../lib/turnosGuardiaDelAsistente';
+import { cargarFaltasDelAsistente } from '../../lib/faltasDelAsistente';
+import { fechaVisible } from '../../lib/fechaVisible';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
@@ -132,6 +134,79 @@ function ListaDeTurnosGuardia({ asistenteId, tramo, titulo, mensajeVacio }) {
   );
 }
 
+/* Las faltas del Asistente. Se llenan solas: cada turno de guardia en el que dejó la guardia al
+   relevo sin presentar el Reporte Diario. La falta queda aunque el reporte llegue después, con la
+   fecha en que llegó; mientras no llega, dice «Pendiente». */
+export function FaltasDelAsistente({ asistenteId }) {
+  const { t, locale } = useLocale();
+  const [filas, setFilas] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+
+  const cargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      setFilas(await cargarFaltasDelAsistente(asistenteId));
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [asistenteId, t]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const tf = t.asistentes.faltas;
+  const opcionesDelHorario = {
+    locale,
+    hoy: hoyISO(),
+    textos: { hoy: t.turnos_guardia.dia_hoy, manana: t.turnos_guardia.listado.dia_manana, duracion: t.turnos_guardia.duracion_horas },
+  };
+
+  return (
+    <section className="panel-tarjeta tarjeta-desplazable">
+      <div className="panel-tarjeta-titulo">
+        <h2>{tf.titulo}</h2>
+      </div>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && filas.length === 0}
+        mensajeVacio={tf.sin_faltas}
+        recargar={cargar}
+      >
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{tf.col_fecha}</th>
+              <th>{tf.col_paciente}</th>
+              <th>{tf.col_falta}</th>
+              <th>{tf.col_reporte}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.id}>
+                <td><b>{textoDelDia(f.fecha, opcionesDelHorario)}</b></td>
+                <td>{textoDePacientes(f.pacientes_nombres, t.turnos_guardia.pacientes_y_mas)}</td>
+                <td>{tf[f.falta]}</td>
+                <td>
+                  {f.reporteLlegoAt
+                    ? fechaVisible(fechaDelMomento(f.reporteLlegoAt), locale)
+                    : <span className={claseBadgeTono(TONO.ATENCION)}>{tf.pendiente}</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+    </section>
+  );
+}
+
 export function TurnosGuardiaTab({ asistente }) {
   const { t } = useLocale();
   const th = t.asistentes.historial;
@@ -149,6 +224,7 @@ export function TurnosGuardiaTab({ asistente }) {
         titulo={th.titulo_anteriores}
         mensajeVacio={th.sin_anteriores}
       />
+      <FaltasDelAsistente asistenteId={asistente.id} />
     </>
   );
 }

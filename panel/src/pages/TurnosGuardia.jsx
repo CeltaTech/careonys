@@ -56,7 +56,7 @@ import './listadosMaqueta.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 
-const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', 'pausada', 'suspendida'];
+const ESTADOS = ['programada', 'activa', 'completada', 'salida_sin_reporte', 'cancelada', 'ausente', 'pausada', 'suspendida'];
 
 /** Las dos formas de ver los turnos de guardia. La grilla es la principal. */
 const FORMAS = ['grilla', 'lista'];

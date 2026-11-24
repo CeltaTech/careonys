@@ -114,6 +114,9 @@ export const SITUACION = {
   EN_CURSO: 'en_curso',
   PROGRAMADA: 'programada',
   COMPLETADA: 'completada',
+  // El Asistente dejó la guardia al relevo sin presentar el Reporte Diario. La salida está hecha;
+  // falta el reporte.
+  SALIDA_SIN_REPORTE: 'salida_sin_reporte',
   CANCELADA: 'cancelada',
 };
 
@@ -127,6 +130,8 @@ const TONO_POR_SITUACION = {
 
   // Falta cerrar algo, pero hay tiempo.
   [SITUACION.HUECO]: TONO.ATENCION,
+  // Falta un documento, no una persona: nunca rojo.
+  [SITUACION.SALIDA_SIN_REPORTE]: TONO.ATENCION,
 
   // Va bien.
   [SITUACION.EN_CURSO]: TONO.EXITO,
@@ -163,6 +168,7 @@ export function situacionDeTurnoGuardia(turno_guardia, ctx = {}) {
   // 1. Lo que ya está cerrado no vuelve a abrirse.
   if (turno_guardia.estado === 'cancelada') return SITUACION.CANCELADA;
   if (turno_guardia.estado === 'completada') return SITUACION.COMPLETADA;
+  if (turno_guardia.estado === 'salida_sin_reporte') return SITUACION.SALIDA_SIN_REPORTE;
   if (turno_guardia.estado === 'ausente') return SITUACION.AUSENTE;
   // Interrumpido: mientras dure la pausa o la suspensión no se espera a nadie.
   if (turno_guardia.estado === 'pausada' || turno_guardia.estado === 'suspendida') return SITUACION.PROGRAMADA;
@@ -198,12 +204,17 @@ export function situacionDeTurnoGuardia(turno_guardia, ctx = {}) {
 }
 
 /**
- * Las dos situaciones en las que un turno de guardia ya no espera nada de nadie.
+ * Las situaciones en las que un turno de guardia ya no espera a ninguna persona en la casa.
  *
- * La ausente no está acá a propósito: aunque el turno no se cumplió, alguien tiene que cubrirlo,
- * así que sigue esperando algo.
+ * La salida sin Reporte Diario está acá: la salida está hecha y lo único que falta es el
+ * reporte, igual que en un turno completado al que le falta. La ausente no está a propósito:
+ * aunque el turno no se cumplió, alguien tiene que cubrirlo, así que sigue esperando algo.
  */
-export const SITUACIONES_CERRADAS = new Set([SITUACION.COMPLETADA, SITUACION.CANCELADA]);
+export const SITUACIONES_CERRADAS = new Set([
+  SITUACION.COMPLETADA,
+  SITUACION.SALIDA_SIN_REPORTE,
+  SITUACION.CANCELADA,
+]);
 
 /**
  * ¿Este turno de guardia todavía espera algo? Es lo que cualquier pantalla quiere decir cuando habla de

@@ -132,7 +132,7 @@ export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) 
   });
 }
 
-async function pacientesDelTurnoGuardia(db, turno_guardia) {
+export async function pacientesDelTurnoGuardia(db, turno_guardia) {
   const { data: filas } = await db
     .from('turno_guardia_pacientes')
     .select('paciente_id')
@@ -149,7 +149,7 @@ async function pacientesDelTurnoGuardia(db, turno_guardia) {
  * que se va cuando hay relevo. Se los busca por estado, no por horario: quien todavía no cerró es
  * quien todavía está.
  */
-async function turnosGuardiaSalientes(db, turno_guardia, pacienteIds) {
+export async function turnosGuardiaSalientes(db, turno_guardia, pacienteIds) {
   if (pacienteIds.length === 0) return [];
 
   const { data: otrosTurnosGuardia } = await db
@@ -223,7 +223,7 @@ export async function comprobacionDe({ prestadoraId, turnoGuardiaId, momento }) 
     comprobacionCon(db, { prestadoraId, turnoGuardiaId, momento }));
 }
 
-async function comprobacionCon(db, { prestadoraId, turnoGuardiaId, momento }) {
+export async function comprobacionCon(db, { prestadoraId, turnoGuardiaId, momento }) {
   const { data } = await db
     .from('turno_guardia_comprobaciones')
     .select('*')
@@ -238,7 +238,7 @@ function ahora() {
   return new Date().toISOString();
 }
 
-async function guardarComprobacion(db, fila) {
+export async function guardarComprobacion(db, fila) {
   if (!fila.prestadora_id) {
     throw new ErrorConMotivo('faltan_datos', 'No se escribe una comprobación sin saber de qué Organización es');
   }

@@ -157,6 +157,7 @@ const DATOS = {
   turno_guardia_asignado: { fecha: '2026-10-07', horaInicio: '08:00' },
   recordatorio_de_turno_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
   recordatorio_del_reporte_diario: {},
+  reporte_diario_pendiente: {},
   fin_periodo_sin_cargo: { dia: '7/10/2026', importe: '4500.00 ARS' },
   cobro_no_realizado: { importe: '4500.00 ARS', dia: '7/10/2026' },
   cierre_del_servicio: {},

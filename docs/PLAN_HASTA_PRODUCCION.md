@@ -179,11 +179,10 @@ hasta que se resuelve.
 
 ### El Paciente nunca queda solo
 
-**31.** **El cierre y el Reporte Diario.** Las cinco formas de cierre, el código QR con la
-ubicación también a la salida y «Salida sin Reporte Diario».
+**31.** **El cierre y el Reporte Diario.** Las cinco formas de cierre y el código QR con la
+ubicación también a la salida.
 
-**Comprobación:** un turno no se cierra por ningún camino que no sea uno de los cinco, y el que
-entra queda con su entrada aunque el saliente no haya presentado el reporte.
+**Comprobación:** un turno no se cierra por ningún camino que no sea uno de los cinco.
 
 **32.** **Las alarmas y la configuración obligatoria.** El aviso al teléfono del Coordinador, el
 sonido persistente del Panel con su insistencia, y la configuración sin valores de fábrica que
@@ -983,12 +982,6 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
     la casa— y registro de quién lo cerró y cuándo.
 - **El código QR va siempre junto con la ubicación.** «Sin comprobar» queda para la entrada y sale
   de la salida. La marca de cierre trabado, que nunca se usó, sale.
-- **El Reporte Diario.** Antes de que termine el turno le llega un recordatorio al Asistente;
-  cuánto antes lo fija la Prestadora. Si no lo presentó, el relevo escanea y toma la guardia igual,
-  con la hora del escaneo como hora de salida del saliente: el que entra no carga con la falla del
-  que sale. El turno saliente queda en «Salida sin Reporte Diario» hasta que el reporte llega, y
-  mientras tanto esas horas no se liquidan. La falta queda en el Legajo y las consecuencias las
-  decide la Prestadora. No dispara la alarma de Paciente solo.
 - **La presencia durante la guardia.** La aplicación queda abierta todo el turno, y si se cierra
   más tiempo del que fija la Prestadora, hay alarma. La ubicación se toma cada tantos minutos,
   según la Prestadora, y se guarda sólo dentro o fuera y la hora; las coordenadas se borran al
@@ -1245,7 +1238,7 @@ fue otra cosa, busca la solución; si no puede resolverlo, lo pasa al escalón d
 
 **Cómo se cierra un turno, qué pasa sin Reporte Diario y qué se le avisa al Cliente** está en la
 sección «El Paciente nunca queda solo». De ahí salen también los estados nuevos que este tablero
-tiene que mostrar: Salida sin Reporte Diario, Egreso sin relevo y Relevo de emergencia.
+tiene que mostrar: Egreso sin relevo y Relevo de emergencia.
 
 **Lo que sale del tablero.** Turnos de hoy, Servicios en curso y Asistentes trabajando, porque no
 piden hacer nada. Y las cuentas esperando su contraseña, que desaparecen con la regla del número nuevo,

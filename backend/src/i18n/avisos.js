@@ -714,6 +714,12 @@ const ARMADORES = {
     cuerpo: t('recordatorio_del_reporte_diario.cuerpo'),
   }),
 
+  // Al Asistente que dejó la guardia al relevo sin haber presentado el Reporte Diario.
+  reporte_diario_pendiente: (t) => ({
+    titulo: t('reporte_diario_pendiente.titulo'),
+    cuerpo: t('reporte_diario_pendiente.cuerpo'),
+  }),
+
   fin_periodo_sin_cargo: (t, d) => ({
     titulo: t('fin_periodo_sin_cargo.titulo'),
     cuerpo: t('fin_periodo_sin_cargo.cuerpo', { dia: d.dia, importe: d.importe }),

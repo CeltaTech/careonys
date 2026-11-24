@@ -87,7 +87,7 @@ export function Evv() {
         .eq('prestadora_id', prestadoraId)
         .gte('fecha', f.desde)
         .lte('fecha', f.hasta)
-        .in('estado', ['activa', 'completada'])
+        .in('estado', ['activa', 'completada', 'salida_sin_reporte'])
         .order('fecha', { ascending: false })
         .order('hora_inicio', { ascending: true }),
       supabase.from('asistentes').select('id, nombre').eq('prestadora_id', prestadoraId),

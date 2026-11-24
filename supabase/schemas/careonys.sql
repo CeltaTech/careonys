@@ -4253,6 +4253,26 @@ $$;
 ALTER FUNCTION "interno"."la_especialidad_es_de_su_tipo"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "interno"."la_falta_del_reporte_no_se_borra"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF OLD.salio_sin_reporte_diario AND NOT NEW.salio_sin_reporte_diario THEN
+    RAISE EXCEPTION 'la_falta_no_se_borra' USING ERRCODE = 'P0001';
+  END IF;
+  IF OLD.reporte_diario_llego_at IS NOT NULL
+     AND NEW.reporte_diario_llego_at IS DISTINCT FROM OLD.reporte_diario_llego_at THEN
+    RAISE EXCEPTION 'la_falta_no_se_borra' USING ERRCODE = 'P0001';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."la_falta_del_reporte_no_se_borra"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."la_firma_es_sobre_el_texto_de_la_prestadora"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'interno'
@@ -9115,9 +9135,9 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Que la guardia efectivamente quede cerrada. Marcar la salida sin dar por terminada la
-  -- guardia no es un cierre.
-  IF NEW.estado IS DISTINCT FROM 'completada' THEN
+  -- Que la guardia efectivamente quede cerrada: completada, o con la salida hecha y el Reporte
+  -- Diario pendiente. Marcar la salida sin dar por terminada la guardia no es un cierre.
+  IF NEW.estado IS NULL OR NEW.estado NOT IN ('completada', 'salida_sin_reporte') THEN
     RETURN NEW;
   END IF;
 
@@ -14698,6 +14718,8 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     "llegada_tarde" boolean DEFAULT false NOT NULL,
     "interrupcion_id" "uuid",
     "push_recordatorio_reporte_enviado_at" timestamp with time zone,
+    "salio_sin_reporte_diario" boolean DEFAULT false NOT NULL,
+    "reporte_diario_llego_at" timestamp with time zone,
     CONSTRAINT "turnos_guardia_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_alcance_check" CHECK (("cancelacion_alcance" = ANY (ARRAY['servicio'::"text", 'prestacion'::"text", 'turno_guardia_recurrente'::"text", 'turno_guardia'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelacion_alcance" IS NULL)))),
@@ -14708,7 +14730,9 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     CONSTRAINT "turnos_guardia_cierre_rastro_completo" CHECK (((("cerrada_at" IS NULL) AND ("cerrada_origen" IS NULL) AND ("cerrada_por" IS NULL) AND ("cerrada_motivo" IS NULL)) OR (("cerrada_at" IS NOT NULL) AND ("cerrada_origen" IS NOT NULL)))),
     CONSTRAINT "turnos_guardia_dios_hasta_el_fin_valido" CHECK (("dias_hasta_el_fin" >= 0)),
     CONSTRAINT "turnos_guardia_dura_algo" CHECK ((("dias_hasta_el_fin" > 0) OR ("hora_fin" > "hora_inicio"))),
-    CONSTRAINT "turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['programada'::"text", 'activa'::"text", 'completada'::"text", 'cancelada'::"text", 'ausente'::"text", 'pausada'::"text", 'suspendida'::"text"]))),
+    CONSTRAINT "turnos_guardia_estado_check" CHECK (("estado" = ANY (ARRAY['programada'::"text", 'activa'::"text", 'completada'::"text", 'cancelada'::"text", 'ausente'::"text", 'pausada'::"text", 'suspendida'::"text", 'salida_sin_reporte'::"text"]))),
+    CONSTRAINT "turnos_guardia_reporte_diario_llego_check" CHECK ((("reporte_diario_llego_at" IS NULL) OR "salio_sin_reporte_diario")),
+    CONSTRAINT "turnos_guardia_salida_sin_reporte_check" CHECK ((("estado" <> 'salida_sin_reporte'::"text") OR ("salio_sin_reporte_diario" AND ("reporte_diario_llego_at" IS NULL) AND ("checkout_at" IS NOT NULL)))),
     CONSTRAINT "turnos_guardia_interrupcion_check" CHECK ((("interrupcion_id" IS NULL) OR ("estado" = ANY (ARRAY['pausada'::"text", 'suspendida'::"text"])))),
     CONSTRAINT "turnos_guardia_horos_extra_con_motivo" CHECK ((("horas_extra" = (0)::numeric) OR (("horas_extra_motivo" IS NOT NULL) AND ("btrim"("horas_extra_motivo") <> ''::"text")))),
     CONSTRAINT "turnos_guardia_horos_extra_no_negativas" CHECK (("horas_extra" >= (0)::numeric)),
@@ -14765,6 +14789,14 @@ COMMENT ON COLUMN "public"."turnos_guardia"."horas_extra" IS 'Horas de mas autor
 
 
 COMMENT ON COLUMN "public"."turnos_guardia"."push_recordatorio_reporte_enviado_at" IS 'Cuándo se le recordó al Asistente que presente el Reporte Diario de este turno de guardia. Vacío si todavía no se le recordó.';
+
+
+
+COMMENT ON COLUMN "public"."turnos_guardia"."salio_sin_reporte_diario" IS 'Verdadero si el Asistente salió del turno de guardia sin haber presentado el Reporte Diario. Queda verdadero aunque el reporte llegue después.';
+
+
+
+COMMENT ON COLUMN "public"."turnos_guardia"."reporte_diario_llego_at" IS 'Cuándo llegó el Reporte Diario de un turno de guardia del que el Asistente salió sin presentarlo. Vacío mientras sigue pendiente.';
 
 
 
@@ -19501,6 +19533,10 @@ CREATE INDEX "turnos_guardia_en_curso_por_fecha" ON "public"."turnos_guardia" US
 
 
 
+CREATE INDEX "turnos_guardia_faltas_del_asistente_idx" ON "public"."turnos_guardia" USING "btree" ("prestadora_id", "asistente_id", "fecha" DESC) WHERE "salio_sin_reporte_diario";
+
+
+
 CREATE INDEX "turnos_guardia_servicio_id_idx" ON "public"."turnos_guardia" USING "btree" ("servicio_id") WHERE ("servicio_id" IS NOT NULL);
 
 
@@ -20751,6 +20787,10 @@ CREATE OR REPLACE TRIGGER "la_especialidad_es_de_su_tipo" BEFORE INSERT OR UPDAT
 
 
 CREATE OR REPLACE TRIGGER "la_especialidad_es_de_su_tipo" BEFORE INSERT OR UPDATE ON "public"."especialidades_asistente" FOR EACH ROW EXECUTE FUNCTION "interno"."la_especialidad_es_de_su_tipo"();
+
+
+
+CREATE OR REPLACE TRIGGER "la_falta_del_reporte_no_se_borra" BEFORE UPDATE OF "salio_sin_reporte_diario", "reporte_diario_llego_at" ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."la_falta_del_reporte_no_se_borra"();
 
 
 
@@ -28949,6 +28989,11 @@ GRANT ALL ON FUNCTION "interno"."la_especialidad_es_de_su_tipo"() TO "service_ro
 
 
 
+REVOKE ALL ON FUNCTION "interno"."la_falta_del_reporte_no_se_borra"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."la_falta_del_reporte_no_se_borra"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "interno"."la_firma_es_sobre_el_texto_de_la_prestadora"() TO "authenticated";
 GRANT ALL ON FUNCTION "interno"."la_firma_es_sobre_el_texto_de_la_prestadora"() TO "service_role";
 
@@ -35640,10 +35685,11 @@ BEGIN
   END IF;
   v_detalle := interno.validar_motivo_de_la_interrupcion(v_prest, 'cancelacion', p_motivo, p_detalle);
 
-  -- Lo asignado no se cancela solo: se le quita primero el Asistente.
+  -- Lo asignado no se cancela solo: se le quita primero el Asistente. Un turno de guardia con
+  -- la salida hecha, aunque espere el Reporte Diario, ya no está asignado.
   IF EXISTS (SELECT 1 FROM turnos_guardia t
               WHERE t.id = ANY (v_turnos) AND t.asistente_id IS NOT NULL
-                AND t.estado NOT IN ('cancelada', 'completada', 'ausente'))
+                AND t.estado NOT IN ('cancelada', 'completada', 'ausente', 'salida_sin_reporte'))
      OR EXISTS (SELECT 1 FROM series_turnos_guardia s
                  WHERE s.id = ANY (v_series) AND s.asistente_id IS NOT NULL
                    AND (s.vigente_hasta IS NULL OR s.vigente_hasta >= p_desde)) THEN

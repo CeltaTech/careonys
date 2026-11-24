@@ -365,6 +365,7 @@ export default function TurnoGuardiaActivo() {
         const advertencias = [];
         if (!resultado.dentroDeRango) advertencias.push(t.turno_guardia_activo.fuera_de_rango);
         if (resultado.comprobacion === 'sin_comprobar') advertencias.push(t.turno_guardia_activo.quedo_sin_comprobar);
+        if (resultado.salienteSinReporte) advertencias.push(t.turno_guardia_activo.saliente_sin_reporte);
         if (advertencias.length > 0) setAdvertencia(advertencias.join(' '));
         setPasandoCheckin(false);
         cargar();
@@ -720,7 +721,26 @@ export default function TurnoGuardiaActivo() {
         </section>
       )}
 
-      {turno_guardia.checkout_at && <div className="alert alert-info" role="status">{t.turno_guardia_activo.cerrar_ok}</div>}
+      {/* Salió al llegar el relevo sin haber presentado el Reporte Diario: la salida está hecha
+          y el reporte se presenta desde acá. Cuando llega el último, el turno pasa a completado. */}
+      {turno_guardia.checkout_at && turno_guardia.estado === 'salida_sin_reporte' && (
+        <section className="pwa-card">
+          <div className="alert alert-alerta" role="status">{t.turno_guardia_activo.reporte_pendiente}</div>
+          {faltanReporte.map((p) => (
+            <Link
+              key={p.id}
+              to={`/turnos-guardia/${id}/reporte/${p.id}`}
+              className="btn btn-exito btn-full pwa-card-pie"
+            >
+              {sonVarios ? con(t.turno_guardia_activo.cargar_reporte_de, { nombre: p.nombre }) : t.turno_guardia_activo.cargar_reporte}
+            </Link>
+          ))}
+        </section>
+      )}
+
+      {turno_guardia.checkout_at && turno_guardia.estado !== 'salida_sin_reporte' && (
+        <div className="alert alert-info" role="status">{t.turno_guardia_activo.cerrar_ok}</div>
+      )}
 
       {/* Qué le toca hacer en este turno de guardia y qué no. Sale del mismo catálogo que ve el Cliente
           en su pantalla, así que las dos partes leen exactamente lo mismo: es lo que corta la

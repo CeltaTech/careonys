@@ -70,6 +70,7 @@ const TONO_POR_ESTADO = {
   // --- Falta algo, mirálo ---
   amarilla: TONO.ATENCION,
   ausente: TONO.ATENCION,
+  salida_sin_reporte: TONO.ATENCION,
   borrador: TONO.ATENCION,
   en_certificacion: TONO.ATENCION,
   en_gracia: TONO.ATENCION,

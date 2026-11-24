@@ -20,6 +20,7 @@ import { yaEmpezo } from '../../lib/moverTurnoGuardia';
 import { esAdminOSuperior } from '../../lib/roles';
 import { CoberturaModal } from '../servicios/CoberturaModal';
 import { ElegirAsistente } from '../../components/turnos_guardia/ElegirAsistente';
+import { CerrarTurnoGuardiaModal } from '../../components/turnos_guardia/CerrarTurnoGuardiaModal';
 import { textoDelDia, textoDelHorario } from '../../lib/horarioDeTurnoGuardia';
 import { EditarRecurrenteModal } from '../servicios/EditarRecurrenteModal';
 
@@ -77,6 +78,9 @@ export function TurnoGuardiaAcciones({ turno_guardia, onReasignar, onClose, onAc
   // cambio de días y horario del recurrente. Mientras una de esas ventanas está abierta, ésta no se
   // dibuja: nunca dos ventanas una encima de la otra.
   const [accionCobertura, setAccionCobertura] = useState(null);
+  // La salida registrada desde acá es un cierre a mano: se hace en la ventana compartida, con
+  // motivo y hora de salida, por el único camino del cierre.
+  const [cerrandoTurno, setCerrandoTurno] = useState(false);
   // La cobertura la gestiona la administración o el Coordinador que coordina el Servicio. La base
   // aplica el mismo corte; esto sólo decide si se muestran los botones.
   const esAdministracion = esAdminOSuperior(usuario?.rol);
@@ -165,10 +169,6 @@ export function TurnoGuardiaAcciones({ turno_guardia, onReasignar, onClose, onAc
     actualizar({ checkin_at: new Date().toISOString(), checkin_lat: lat, checkin_lng: lng, estado: 'activa' });
   }
 
-  async function handleRegistrarCheckout() {
-    const { lat, lng } = await obtenerUbicacion();
-    actualizar({ checkout_at: new Date().toISOString(), checkout_lat: lat, checkout_lng: lng, estado: 'completada' });
-  }
 
   /* Cancelar una Guardia no es pisar su estado: es dejar escrito por qué se canceló y quién lo
      decidió. La resolución se escribe primero, y el estado en el que queda la Guardia sale del
@@ -344,6 +344,18 @@ export function TurnoGuardiaAcciones({ turno_guardia, onReasignar, onClose, onAc
     await onActualizada?.();
   }
 
+  if (cerrandoTurno) {
+    return (
+      <CerrarTurnoGuardiaModal
+        turno_guardia={turno_guardia}
+        onClose={() => setCerrandoTurno(false)}
+        onCerrada={async () => {
+          await onActualizada?.();
+          onClose();
+        }}
+      />
+    );
+  }
   if (accionCobertura?.tipo === 'editar_recurrente') {
     return <EditarRecurrenteModal serieId={turno_guardia.serie_id} onClose={() => setAccionCobertura(null)} onHecho={coberturaHecha} />;
   }
@@ -426,7 +438,7 @@ export function TurnoGuardiaAcciones({ turno_guardia, onReasignar, onClose, onAc
         {muestraCheckout && (
           <div className="panel-resultado-calculo">
             <h3>{t.turnos_guardia.detalle.checkout}</h3>
-            <Button variant="secondary" onClick={handleRegistrarCheckout} disabled={procesando}>
+            <Button variant="secondary" onClick={() => setCerrandoTurno(true)} disabled={procesando}>
               {t.turnos_guardia.detalle.registrar_checkout}
             </Button>
           </div>

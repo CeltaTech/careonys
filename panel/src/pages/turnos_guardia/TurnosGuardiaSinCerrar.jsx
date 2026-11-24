@@ -2,17 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
-import { useAuth } from '../../context/AuthContext';
-import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { CerrarTurnoGuardiaModal } from '../../components/turnos_guardia/CerrarTurnoGuardiaModal';
 import { Button } from '../../components/ui/Button';
-import { FormField } from '../../components/ui/FormField';
-import { Alert } from '../../components/ui/Alert';
 import { ESTADO_EN_CURSO, turnosGuardiaSinCerrar } from '../../lib/turnoGuardiaSinCerrar';
 import { diasDeEspera, hoyISO } from '../../lib/horarios';
 import { cargarPacientesDeTurnosGuardia, conPacientes, textoDePacientes } from '../../lib/pacientesDeTurnoGuardia';
 import { mensajeDeError } from '../../lib/errores';
-import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { useAlarmasTomadas } from '../../hooks/useAlarmasTomadas';
 import { LaTomoYo } from '../../components/continuidad/LaTomoYo';
 import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
@@ -31,22 +27,22 @@ import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
 // arriba. Es un componente cerrado sobre sí mismo: si más adelante se decide que su lugar es el
 // Estado actual, se mueve la etiqueta y ya está.
 //
-// QUÉ HACE EL CIERRE, Y SOBRE TODO QUÉ NO HACE
-// Deja el turno de guardia en `completada` y anota quién la cerró, cuándo y que fue desde el Panel. No
-// escribe hora ni lugar de salida: el check-out dice que el Asistente se fue de la casa, y eso
-// nadie lo vio. Poner una hora inventada la volvería indistinguible de una salida marcada de
-// verdad, y el informe a la Obra Social necesita poder diferenciarlas.
+// QUÉ HACE EL CIERRE
+// Lo hace la ventana compartida de cierre a mano, la misma del botón «Registrar check-out» del
+// detalle. Pide un motivo de la lista de la Prestadora y la hora de salida, que se propone con la
+// última vez que se supo que el Asistente estaba en la casa. El turno de guardia queda marcado como
+// cerrado desde el Panel, con el motivo y quién lo cerró, así una salida cargada a mano se
+// distingue siempre de una marcada por el Asistente. Si el Reporte está pendiente, queda en
+// «Salida sin Reporte».
 //
-// Y no cierra nada por su cuenta: cada turno de guardia se cierra de a una, con una persona apretando el
-// botón, escribiendo por qué y confirmando.
+// Y no cierra nada por su cuenta: cada turno de guardia se cierra de a uno, con una persona
+// apretando el botón, eligiendo el motivo y confirmando.
 
 const ID_DE_LA_SECCION = 'turnos-guardia-sin-cerrar';
 
 export function TurnosGuardiaSinCerrar({ onCerrada }) {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
-  const { usuario } = useAuth();
-  const confirmarDestructivo = useConfirmarDestructivo();
   const [filas, setFilas] = useState([]);
   const [estadoCarga, setEstadoCarga] = useState('cargando');
   const [error, setError] = useState(null);
@@ -182,95 +178,22 @@ export function TurnosGuardiaSinCerrar({ onCerrada }) {
       {aCerrar && (
         <CerrarTurnoGuardiaModal
           turno_guardia={aCerrar}
-          usuario={usuario}
-          confirmarDestructivo={confirmarDestructivo}
+          detalle={(
+            <dl className="panel-detalle-lista">
+              <dt>{t.turnos_guardia_sin_cerrar.col_fecha}</dt>
+              <dd>{aCerrar.fecha}</dd>
+              <dt>{t.turnos_guardia_sin_cerrar.col_horario}</dt>
+              <dd>{aCerrar.hora_inicio} – {aCerrar.hora_fin}</dd>
+              <dt>{t.turnos_guardia_sin_cerrar.col_asistente}</dt>
+              <dd>{aCerrar.asistente_nombre}</dd>
+              <dt>{t.turnos_guardia_sin_cerrar.col_paciente}</dt>
+              <dd>{textoDePacientes(aCerrar.pacientes_nombres, t.turnos_guardia.pacientes_y_mas)}</dd>
+            </dl>
+          )}
           onClose={() => setACerrar(null)}
           onCerrada={alCerrarUna}
         />
       )}
-    </div>
-  );
-}
-
-// El cierre se hace en su propia ventana y no con un botón suelto en la fila, porque hay que
-// escribir por qué se cierra y hay que dejar leído que no se va a anotar ninguna hora de salida.
-function CerrarTurnoGuardiaModal({ turno_guardia, usuario, confirmarDestructivo, onClose, onCerrada }) {
-  const modal = useModalAccesible(onClose);
-  const { t } = useLocale();
-  const [motivo, setMotivo] = useState('');
-  const [procesando, setProcesando] = useState(false);
-  const [error, setError] = useState(null);
-
-  async function handleCerrar() {
-    if (!(await confirmarDestructivo(t.turnos_guardia_sin_cerrar.confirmar))) return;
-
-    setError(null);
-    setProcesando(true);
-
-    // Las cuatro columnas del rastro, y ninguna más. `checkout_at`, `checkout_lat` y
-    // `checkout_lng` ni se nombran: quedan vacías, que es exactamente lo que hace falta para
-    // que después se sepa que este turno de guardia se cerró sin que nadie marcara la salida.
-    const { error: errorUpdate } = await supabase
-      .from('turnos_guardia')
-      .update({
-        estado: 'completada',
-        cerrada_at: new Date().toISOString(),
-        cerrada_por: usuario.id,
-        cerrada_origen: 'panel',
-        cerrada_motivo: motivo.trim(),
-      })
-      .eq('id', turno_guardia.id);
-
-    if (errorUpdate) {
-      setProcesando(false);
-      setError(mensajeDeError(errorUpdate, t));
-      return;
-    }
-
-    await onCerrada();
-    setProcesando(false);
-    onClose();
-  }
-
-  return (
-    <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.turnos_guardia_sin_cerrar.modal_titulo}</h2>
-
-        {error && <Alert variant="error">{error}</Alert>}
-
-        <dl className="panel-detalle-lista">
-          <dt>{t.turnos_guardia_sin_cerrar.col_fecha}</dt>
-          <dd>{turno_guardia.fecha}</dd>
-          <dt>{t.turnos_guardia_sin_cerrar.col_horario}</dt>
-          <dd>{turno_guardia.hora_inicio} – {turno_guardia.hora_fin}</dd>
-          <dt>{t.turnos_guardia_sin_cerrar.col_asistente}</dt>
-          <dd>{turno_guardia.asistente_nombre}</dd>
-          <dt>{t.turnos_guardia_sin_cerrar.col_paciente}</dt>
-          <dd>{textoDePacientes(turno_guardia.pacientes_nombres, t.turnos_guardia.pacientes_y_mas)}</dd>
-        </dl>
-
-
-        <FormField
-          label={t.turnos_guardia_sin_cerrar.motivo_label}
-          name="cerrada_motivo"
-          type="textarea"
-          required
-          rows={3}
-          value={motivo}
-          placeholder={t.turnos_guardia_sin_cerrar.motivo_placeholder}
-          onChange={(e) => setMotivo(e.target.value)}
-        />
-
-        <div className="panel-modal-acciones">
-          <Button onClick={handleCerrar} disabled={procesando || motivo.trim() === ''}>
-            {procesando ? t.turnos_guardia_sin_cerrar.cerrando : t.turnos_guardia_sin_cerrar.cerrar_confirmar}
-          </Button>
-          <Button variant="secondary" onClick={onClose} disabled={procesando}>
-            {t.comun.cerrar}
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -198,6 +198,20 @@ const ESTADO_POR_MOTIVO = {
   // Desactivar una cuenta con turnos de guardia por delante: primero se le quitan los turnos.
   desactivacion_con_turnos_guardia_por_delante: 409,
   desactivacion_con_turnos_guardia_sin_cerrar: 409,
+  // El cierre de un turno de guardia (`utils/cierreDelTurnoGuardia.js`). Un turno ya cerrado, un
+  // Reporte que cambió mientras se cerraba o una alarma tomada por otra persona son 409: el pedido
+  // está bien armado y choca con el estado de las cosas. El motivo y la hora mal cargados son 400.
+  // Escribir el cierre por fuera de la función es 403.
+  turno_guardia_ya_cerrado: 409,
+  reporte_no_coincide: 409,
+  alarma_tomada_por_otra_persona: 409,
+  motivo_de_salida_inexistente: 400,
+  motivo_de_salida_pide_detalle: 400,
+  hora_de_salida_obligatoria: 400,
+  hora_de_salida_futura: 400,
+  hora_de_salida_anterior_a_la_llegada: 400,
+  hora_de_salida_posterior_al_relevo: 400,
+  el_cierre_pasa_por_la_funcion: 403,
   via_de_telefono_no_disponible: 409,
   clave_actual_incorrecta: 400,
   no_puede_habilitar: 403,

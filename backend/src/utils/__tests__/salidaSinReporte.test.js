@@ -32,6 +32,7 @@ const PACIENTES_DEL_TURNO = 'GET /rest/v1/turno_guardia_pacientes';
 const REPORTES = 'GET /rest/v1/reportes';
 const CONSENTIMIENTO = 'POST /rest/v1/rpc/consentimiento_seguimiento_vigente';
 const CAMBIAR_TURNO = 'PATCH /rest/v1/turnos_guardia';
+const CERRAR = 'POST /rest/v1/rpc/cerrar_turno_guardia';
 const PRESTADORA_LEIDA = 'GET /rest/v1/prestadoras';
 
 const respuestas = new Map();
@@ -106,9 +107,13 @@ function prepararBase({ llegada = llegadaDelRelevo(), conReporte = false, factur
   respuestas.set(REPORTES, conReporte ? [{ paciente_id: PACIENTE }] : []);
   respuestas.set(CONSENTIMIENTO, true);
   respuestas.set(CAMBIAR_TURNO, (llamada) => [{ id: llamada.filtros.get('id').replace('eq.', '') }]);
+  respuestas.set(CERRAR, (llamada) => (llamada.cuerpo.p_reporte_atrasado ? ESTADO_SALIDA_SIN_REPORTE : 'completada'));
 }
 
 const cambiosDelTurno = () => llamadas.filter((l) => l.clave === CAMBIAR_TURNO);
+// El cierre pasa por la función de la base, que valida y escribe; la elección de la Prestadora
+// sobre la factura la anota la base y la prueba `scripts/probar_cierre_de_turnos_guardia.mjs`.
+const cierres = () => llamadas.filter((l) => l.clave === CERRAR);
 
 beforeEach(() => {
   respuestas.clear();
@@ -116,17 +121,20 @@ beforeEach(() => {
 });
 
 describe('el relevo lee el código del que sale', () => {
-  it('con el Reporte Diario presentado, el turno del que sale queda completado a la hora de la lectura', async () => {
+  it('con el Reporte Diario presentado, el turno del que sale se cierra a la hora de la lectura, sin Reporte pendiente', async () => {
     prepararBase({ conReporte: true });
 
     await cerrarLaSalidaDelSaliente({ relevo, lat: -34.6, lng: -58.4 });
 
-    const [cambio] = cambiosDelTurno();
-    assert.equal(cambio.filtros.get('id'), `eq.${SALIENTE}`);
-    assert.equal(cambio.filtros.get('estado'), 'eq.activa');
-    assert.equal(cambio.cuerpo.estado, 'completada');
-    assert.equal(cambio.cuerpo.checkout_at, HORA_DE_LA_LECTURA);
-    assert.equal(cambio.cuerpo.salio_sin_reporte, undefined);
+    const [cierre] = cierres();
+    assert.equal(cierre.cuerpo.p_turno_guardia, SALIENTE);
+    assert.equal(cierre.cuerpo.p_hora, HORA_DE_LA_LECTURA);
+    assert.equal(cierre.cuerpo.p_reporte_atrasado, false);
+    // El relevo no lleva motivo: no es un cierre del Panel.
+    assert.equal(cierre.cuerpo.p_motivo, null);
+    assert.equal(cierre.cuerpo.p_lat, -34.6);
+    // Nadie escribe el cierre en la tabla por fuera de la función.
+    assert.equal(cambiosDelTurno().length, 0);
 
     const salida = llamadas.find((l) => l.clave === GUARDAR_COMPROBACION);
     assert.equal(salida.cuerpo.turno_guardia_id, SALIENTE);
@@ -135,55 +143,42 @@ describe('el relevo lee el código del que sale', () => {
     assert.equal(salida.cuerpo.comprobada_en, HORA_DE_LA_LECTURA);
   });
 
-  it('sin el Reporte Diario, el turno del que sale queda en «Salida sin Reporte Diario» con la falta anotada', async () => {
+  it('con el Reporte Diario pendiente, el cierre se lo dice a la base, que deja el turno en «Salida sin Reporte Diario»', async () => {
     prepararBase({ conReporte: false });
 
     await cerrarLaSalidaDelSaliente({ relevo, lat: -34.6, lng: -58.4 });
 
-    const [cambio] = cambiosDelTurno();
-    assert.equal(cambio.cuerpo.estado, ESTADO_SALIDA_SIN_REPORTE);
-    assert.equal(cambio.cuerpo.salio_sin_reporte, true);
-    assert.equal(cambio.cuerpo.checkout_at, HORA_DE_LA_LECTURA);
-    // La Prestadora factura los turnos sin reporte: el turno no espera el reporte para cobrarse.
-    assert.equal(cambio.cuerpo.factura_espera_el_reporte, false);
-    // El primer aviso sale con la salida y anota la hora, para que la insistencia cuente desde ahí.
-    assert.ok(Date.parse(cambio.cuerpo.push_reporte_pendiente_enviado_at) > 0);
+    const [cierre] = cierres();
+    assert.equal(cierre.cuerpo.p_reporte_atrasado, true);
+    assert.equal(cierre.cuerpo.p_hora, HORA_DE_LA_LECTURA);
   });
 
-  it('si la Prestadora eligió no facturar los turnos sin reporte, el turno espera el reporte para cobrarse', async () => {
-    prepararBase({ conReporte: false, factura: false });
-
-    await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
-
-    const [cambio] = cambiosDelTurno();
-    assert.equal(cambio.cuerpo.estado, ESTADO_SALIDA_SIN_REPORTE);
-    assert.equal(cambio.cuerpo.factura_espera_el_reporte, true);
-  });
-
-  it('con el reporte presentado, la elección de facturar no se anota', async () => {
-    prepararBase({ conReporte: true, factura: false });
-    await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
-    const [cambio] = cambiosDelTurno();
-    assert.equal(cambio.cuerpo.factura_espera_el_reporte, undefined);
-    assert.equal(cambio.cuerpo.push_reporte_pendiente_enviado_at, undefined);
+  it('sin consentimiento de ubicación vigente, la coordenada no viaja', async () => {
+    prepararBase({ conReporte: true });
+    respuestas.set(CONSENTIMIENTO, false);
+    await cerrarLaSalidaDelSaliente({ relevo, lat: -34.6, lng: -58.4 });
+    const [cierre] = cierres();
+    assert.equal(cierre.cuerpo.p_lat, null);
+    assert.equal(cierre.cuerpo.p_lng, null);
   });
 
   it('el turno de guardia del propio relevo no se cierra', async () => {
     prepararBase({ conReporte: true });
     await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
-    assert.ok(cambiosDelTurno().every((l) => l.filtros.get('id') !== `eq.${RELEVO}`));
+    assert.ok(cierres().length > 0);
+    assert.ok(cierres().every((l) => l.cuerpo.p_turno_guardia !== RELEVO));
   });
 
   it('si la llegada se comprobó con el código del Cliente, el que sale no se toca', async () => {
     prepararBase({ llegada: llegadaDelRelevo({ medio: 'codigo_cliente', sujeto_tipo: 'cliente' }) });
     await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
-    assert.equal(cambiosDelTurno().length, 0);
+    assert.equal(cierres().length, 0);
   });
 
   it('si la llegada no está comprobada, el que sale no se toca', async () => {
     prepararBase({ llegada: llegadaDelRelevo({ estado: 'esperando_autorizacion' }) });
     await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
-    assert.equal(cambiosDelTurno().length, 0);
+    assert.equal(cierres().length, 0);
   });
 });
 

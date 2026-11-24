@@ -2080,7 +2080,6 @@ DECLARE
   v_suyas constant text[] := ARRAY[
     'salida_checkin_at', 'salida_lat', 'salida_lng', 'medio_transporte',
     'checkin_at', 'checkin_lat', 'checkin_lng',
-    'checkout_at', 'checkout_lat', 'checkout_lng',
     'estado',
     'ubicacion_actual_lat', 'ubicacion_actual_lng', 'ubicacion_actual_at',
     'push_llegada_enviado_at', 'push_reporte_enviado_at'
@@ -2097,7 +2096,7 @@ BEGIN
     RAISE EXCEPTION 'la_persona_cambia_solo_lo_suyo' USING ERRCODE = '42501';
   END IF;
 
-  -- La salida, la llegada y el cierre: se marcan una vez, con todo lo suyo, y no se reescriben.
+  -- La salida hacia la casa y la llegada: se marcan una vez, con todo lo suyo, y no se reescriben.
   IF (NEW.salida_checkin_at, NEW.salida_lat, NEW.salida_lng, NEW.medio_transporte)
        IS DISTINCT FROM (OLD.salida_checkin_at, OLD.salida_lat, OLD.salida_lng, OLD.medio_transporte)
      AND (OLD.salida_checkin_at IS NOT NULL OR NEW.salida_checkin_at IS NULL) THEN
@@ -2108,22 +2107,12 @@ BEGIN
      AND (OLD.checkin_at IS NOT NULL OR NEW.checkin_at IS NULL OR NEW.estado IS DISTINCT FROM 'activa') THEN
     RAISE EXCEPTION 'la_persona_cambia_solo_lo_suyo' USING ERRCODE = '42501';
   END IF;
-  IF (NEW.checkout_at, NEW.checkout_lat, NEW.checkout_lng)
-       IS DISTINCT FROM (OLD.checkout_at, OLD.checkout_lat, OLD.checkout_lng)
-     AND (OLD.checkout_at IS NOT NULL OR NEW.checkout_at IS NULL OR NEW.estado IS DISTINCT FROM 'completada') THEN
-    RAISE EXCEPTION 'la_persona_cambia_solo_lo_suyo' USING ERRCODE = '42501';
-  END IF;
 
-  -- El estado: a empezada al llegar, desde una guardia que todavía no empezó y no se canceló; a
-  -- terminada al cerrar, desde una empezada. Ningún otro cambio es del Asistente.
+  -- El estado: a empezada al llegar, desde una guardia que todavía no empezó y no se canceló.
+  -- Ningún otro cambio es del Asistente.
   IF NEW.estado IS DISTINCT FROM OLD.estado
-     AND NOT (
-       (NEW.estado = 'activa' AND OLD.estado IN ('programada', 'ausente', 'pausada')
-          AND OLD.checkin_at IS NULL AND NEW.checkin_at IS NOT NULL)
-       OR
-       (NEW.estado = 'completada' AND OLD.estado = 'activa'
-          AND OLD.checkout_at IS NULL AND NEW.checkout_at IS NOT NULL)
-     ) THEN
+     AND NOT (NEW.estado = 'activa' AND OLD.estado IN ('programada', 'ausente', 'pausada')
+              AND OLD.checkin_at IS NULL AND NEW.checkin_at IS NOT NULL) THEN
     RAISE EXCEPTION 'la_persona_cambia_solo_lo_suyo' USING ERRCODE = '42501';
   END IF;
 
@@ -2136,7 +2125,6 @@ BEGIN
   -- La hora de cada marca es la de la base, no la que mande el teléfono.
   IF NEW.salida_checkin_at IS DISTINCT FROM OLD.salida_checkin_at THEN NEW.salida_checkin_at := now(); END IF;
   IF NEW.checkin_at IS DISTINCT FROM OLD.checkin_at THEN NEW.checkin_at := now(); END IF;
-  IF NEW.checkout_at IS DISTINCT FROM OLD.checkout_at THEN NEW.checkout_at := now(); END IF;
   IF NEW.ubicacion_actual_at IS NOT NULL AND NEW.ubicacion_actual_at IS DISTINCT FROM OLD.ubicacion_actual_at THEN
     NEW.ubicacion_actual_at := now();
   END IF;
@@ -2149,6 +2137,337 @@ $$;
 
 
 ALTER FUNCTION "interno"."el_asistente_marca_solo_su_turno_guardia"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION interno.cerrar_el_turno_guardia(
+  p_turno_guardia uuid,
+  p_hora timestamp with time zone,
+  p_reporte_atrasado boolean,
+  p_motivo uuid,
+  p_detalle text,
+  p_cerrada_por uuid,
+  p_lat double precision,
+  p_lng double precision,
+  p_motivo_del_sistema boolean
+)
+ RETURNS text
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'interno'
+AS $$
+DECLARE
+  v_prestadora uuid := interno.prestadora_actual();
+  v_persona boolean := current_user = 'authenticated';
+  v_quien uuid;
+  v_turno turnos_guardia%ROWTYPE;
+  v_motivo motivos_cierre_turno_guardia%ROWTYPE;
+  v_detalle text := NULLIF(btrim(COALESCE(p_detalle, '')), '');
+  v_texto text;
+  v_hora timestamp with time zone;
+  v_atrasado boolean := COALESCE(p_reporte_atrasado, false);
+  v_estado text;
+  v_relevo timestamp with time zone;
+BEGIN
+  IF v_prestadora IS NULL THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+
+  -- Quién cierra. Una persona con sesión cierra desde el Panel, siempre con motivo, y queda
+  -- anotada ella. El backend, con el trabajo de la Prestadora, cierra lo que hizo el Asistente
+  -- —sin motivo— o lo que autorizó alguien del Panel, en nombre de esa persona.
+  IF v_persona THEN
+    v_quien := interno.usuario_de_la_sesion();
+    IF v_quien IS NULL
+       OR NOT interno.es_personal_de_la_prestadora()
+       OR NOT (interno.es_superadmin()
+               OR interno.es_admin_prestadora()
+               OR interno.coordinador_ve_el_turno_guardia(p_turno_guardia)) THEN
+      RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+    END IF;
+    IF p_motivo IS NULL THEN
+      RAISE EXCEPTION 'falta_el_motivo' USING ERRCODE = 'P0001';
+    END IF;
+  ELSIF p_motivo IS NOT NULL THEN
+    IF NOT interno.es_del_panel_de_la_prestadora(p_cerrada_por) THEN
+      RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+    END IF;
+    v_quien := p_cerrada_por;
+  END IF;
+
+  SELECT * INTO v_turno
+    FROM turnos_guardia
+   WHERE id = p_turno_guardia
+     AND prestadora_id = v_prestadora
+   FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'no_encontrado' USING ERRCODE = 'P0001';
+  END IF;
+  IF v_turno.estado IS DISTINCT FROM 'activa' OR v_turno.checkout_at IS NOT NULL THEN
+    RAISE EXCEPTION 'turno_guardia_ya_cerrado' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF p_motivo IS NOT NULL THEN
+    SELECT * INTO v_motivo
+      FROM motivos_cierre_turno_guardia
+     WHERE id = p_motivo
+       AND prestadora_id = v_prestadora
+       AND activo;
+    IF NOT FOUND
+       OR (v_motivo.lo_escribe_el_sistema AND NOT COALESCE(p_motivo_del_sistema, false)) THEN
+      RAISE EXCEPTION 'motivo_de_salida_inexistente' USING ERRCODE = 'P0001';
+    END IF;
+    IF v_motivo.pide_detalle AND v_detalle IS NULL THEN
+      RAISE EXCEPTION 'motivo_de_salida_pide_detalle' USING ERRCODE = 'P0001';
+    END IF;
+    v_texto := COALESCE(v_motivo.nombre, v_motivo.clave)
+               || CASE WHEN v_detalle IS NULL THEN '' ELSE ' — ' || v_detalle END;
+  END IF;
+
+  -- La hora de salida: obligatoria, no en el futuro y no antes de la llegada. Un minuto de
+  -- tolerancia en cada punta, porque el Panel la elige sin segundos.
+  IF p_hora IS NULL THEN
+    RAISE EXCEPTION 'hora_de_salida_obligatoria' USING ERRCODE = 'P0001';
+  END IF;
+  IF p_hora > now() + interval '1 minute' THEN
+    RAISE EXCEPTION 'hora_de_salida_futura' USING ERRCODE = 'P0001';
+  END IF;
+  v_hora := LEAST(p_hora, now());
+  IF v_turno.checkin_at IS NOT NULL AND v_hora < v_turno.checkin_at THEN
+    IF v_hora >= date_trunc('minute', v_turno.checkin_at) THEN
+      v_hora := v_turno.checkin_at;
+    ELSE
+      RAISE EXCEPTION 'hora_de_salida_anterior_a_la_llegada' USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  -- Quien cierra desde el Panel, o autoriza la salida, tampoco puede poner una hora posterior a la
+  -- llegada ya registrada del Asistente que tomó el turno siguiente del mismo Paciente.
+  IF p_motivo IS NOT NULL THEN
+    v_relevo := interno.llegada_del_turno_siguiente(p_turno_guardia);
+    IF v_relevo IS NOT NULL AND v_hora > v_relevo THEN
+      RAISE EXCEPTION 'hora_de_salida_posterior_al_relevo' USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  -- El Reporte pendiente lo decide el backend. Lo que la base no acepta es un cierre que diga que
+  -- están todos cuando a algún Paciente todavía le queda el suyo.
+  IF NOT v_atrasado AND interno.el_reporte_esta_atrasado(p_turno_guardia) THEN
+    RAISE EXCEPTION 'reporte_no_coincide' USING ERRCODE = 'P0001';
+  END IF;
+
+  v_estado := CASE WHEN v_atrasado THEN 'salida_sin_reporte' ELSE 'completada' END;
+
+  PERFORM set_config('careonys.cierre_por_la_funcion', 'si', true);
+
+  UPDATE turnos_guardia SET
+    checkout_at  = v_hora,
+    checkout_lat = CASE WHEN v_persona THEN NULL ELSE p_lat END,
+    checkout_lng = CASE WHEN v_persona THEN NULL ELSE p_lng END,
+    estado       = v_estado,
+    salio_sin_reporte = salio_sin_reporte OR v_atrasado,
+    factura_espera_el_reporte = CASE WHEN v_atrasado
+                                     THEN NOT interno.factura_los_turnos_sin_reporte()
+                                     ELSE factura_espera_el_reporte END,
+    push_reporte_pendiente_enviado_at = CASE WHEN v_atrasado
+                                             THEN now()
+                                             ELSE push_reporte_pendiente_enviado_at END,
+    cerrada_at        = CASE WHEN p_motivo IS NULL THEN cerrada_at ELSE now() END,
+    cerrada_origen    = CASE WHEN p_motivo IS NULL THEN cerrada_origen ELSE 'panel' END,
+    cerrada_por       = CASE WHEN p_motivo IS NULL THEN cerrada_por ELSE v_quien END,
+    cerrada_motivo    = CASE WHEN p_motivo IS NULL THEN cerrada_motivo ELSE v_texto END,
+    cerrada_motivo_id = CASE WHEN p_motivo IS NULL THEN cerrada_motivo_id ELSE p_motivo END
+  WHERE id = p_turno_guardia
+    AND prestadora_id = v_prestadora;
+
+  PERFORM set_config('careonys.cierre_por_la_funcion', '', true);
+
+  RETURN v_estado;
+END;
+$$;
+
+ALTER FUNCTION interno.cerrar_el_turno_guardia(uuid, timestamp with time zone, boolean, uuid, text, uuid, double precision, double precision, boolean) OWNER TO postgres;
+REVOKE ALL ON FUNCTION interno.cerrar_el_turno_guardia(uuid, timestamp with time zone, boolean, uuid, text, uuid, double precision, double precision, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION interno.cerrar_el_turno_guardia(uuid, timestamp with time zone, boolean, uuid, text, uuid, double precision, double precision, boolean) TO authenticated, trabajo_sin_persona, service_role;
+
+COMMENT ON FUNCTION interno.cerrar_el_turno_guardia(uuid, timestamp with time zone, boolean, uuid, text, uuid, double precision, double precision, boolean) IS 'Único camino por el que un turno de guardia empezado se cierra: valida quién cierra, el motivo y la hora —no antes de la llegada, no después de este momento ni de la llegada del turno siguiente del mismo Paciente—, y lo deja completado o en Salida sin Reporte con la elección de la Prestadora sobre la factura.';
+
+
+CREATE OR REPLACE FUNCTION interno.coordina_el_servicio_del_turno_guardia(p_turno_guardia uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'interno'
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM turnos_guardia g
+     WHERE g.id = p_turno_guardia
+       AND g.prestadora_id = interno.prestadora_actual()
+       AND interno.coordina_el_servicio(g.servicio_id)
+  );
+$$;
+
+ALTER FUNCTION interno.coordina_el_servicio_del_turno_guardia(uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION interno.coordina_el_servicio_del_turno_guardia(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION interno.coordina_el_servicio_del_turno_guardia(uuid) TO authenticated, service_role;
+
+
+CREATE OR REPLACE FUNCTION interno.el_cierre_pasa_por_la_funcion()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $$
+BEGIN
+  IF current_user <> 'authenticated'
+     OR COALESCE(current_setting('careonys.cierre_por_la_funcion', true), '') = 'si' THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.checkout_at IS NOT NULL OR NEW.checkout_lat IS NOT NULL OR NEW.checkout_lng IS NOT NULL
+       OR NEW.estado IN ('completada', 'salida_sin_reporte')
+       OR NEW.cerrada_at IS NOT NULL OR NEW.cerrada_origen IS NOT NULL
+       OR NEW.cerrada_por IS NOT NULL OR NEW.cerrada_motivo IS NOT NULL
+       OR NEW.cerrada_motivo_id IS NOT NULL
+       OR NEW.salio_sin_reporte OR NEW.factura_espera_el_reporte
+       OR NEW.reporte_llego_at IS NOT NULL THEN
+      RAISE EXCEPTION 'el_cierre_pasa_por_la_funcion' USING ERRCODE = '42501';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF (NEW.checkout_at, NEW.checkout_lat, NEW.checkout_lng,
+      NEW.cerrada_at, NEW.cerrada_origen, NEW.cerrada_por, NEW.cerrada_motivo, NEW.cerrada_motivo_id,
+      NEW.salio_sin_reporte, NEW.factura_espera_el_reporte, NEW.reporte_llego_at)
+     IS DISTINCT FROM
+     (OLD.checkout_at, OLD.checkout_lat, OLD.checkout_lng,
+      OLD.cerrada_at, OLD.cerrada_origen, OLD.cerrada_por, OLD.cerrada_motivo, OLD.cerrada_motivo_id,
+      OLD.salio_sin_reporte, OLD.factura_espera_el_reporte, OLD.reporte_llego_at)
+     OR (NEW.estado IN ('completada', 'salida_sin_reporte') AND NEW.estado IS DISTINCT FROM OLD.estado) THEN
+    RAISE EXCEPTION 'el_cierre_pasa_por_la_funcion' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+ALTER FUNCTION interno.el_cierre_pasa_por_la_funcion() OWNER TO postgres;
+REVOKE ALL ON FUNCTION interno.el_cierre_pasa_por_la_funcion() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION interno.el_cierre_pasa_por_la_funcion() TO authenticated, trabajo_sin_persona, service_role;
+
+COMMENT ON FUNCTION interno.el_cierre_pasa_por_la_funcion() IS 'Una persona con sesión no escribe la salida, el cierre ni la marca del Reporte pendiente de un turno de guardia: eso lo hace sólo interno.cerrar_el_turno_guardia.';
+
+
+CREATE OR REPLACE FUNCTION interno.el_reporte_esta_atrasado(p_turno_guardia uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'interno'
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+      FROM turno_guardia_pacientes tp
+     WHERE tp.turno_guardia_id = p_turno_guardia
+       AND tp.prestadora_id = interno.prestadora_actual()
+       AND NOT EXISTS (
+         SELECT 1 FROM reportes r
+          WHERE r.prestadora_id = tp.prestadora_id
+            AND r.turno_guardia_id = p_turno_guardia
+            AND r.paciente_id = tp.paciente_id
+       )
+  );
+$$;
+
+ALTER FUNCTION interno.el_reporte_esta_atrasado(uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION interno.el_reporte_esta_atrasado(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION interno.el_reporte_esta_atrasado(uuid) TO authenticated, trabajo_sin_persona, service_role;
+
+
+CREATE OR REPLACE FUNCTION interno.es_del_panel_de_la_prestadora(p_usuario uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'interno'
+AS $$
+  SELECT p_usuario IS NOT NULL AND EXISTS (
+    SELECT 1 FROM usuarios u
+     WHERE u.id = p_usuario
+       AND (u.rol = 'superadmin'
+            OR (u.rol IN ('admin_prestadora', 'coordinador')
+                AND u.prestadora_id = interno.prestadora_actual()))
+  );
+$$;
+
+ALTER FUNCTION interno.es_del_panel_de_la_prestadora(uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION interno.es_del_panel_de_la_prestadora(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION interno.es_del_panel_de_la_prestadora(uuid) TO authenticated, trabajo_sin_persona, service_role;
+
+
+CREATE OR REPLACE FUNCTION interno.factura_los_turnos_sin_reporte()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'interno'
+AS $$
+  SELECT COALESCE(
+    (SELECT p.factura_turnos_sin_reporte FROM prestadoras p WHERE p.id = interno.prestadora_actual()),
+    true
+  );
+$$;
+
+ALTER FUNCTION interno.factura_los_turnos_sin_reporte() OWNER TO postgres;
+REVOKE ALL ON FUNCTION interno.factura_los_turnos_sin_reporte() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION interno.factura_los_turnos_sin_reporte() TO authenticated, trabajo_sin_persona, service_role;
+
+
+CREATE OR REPLACE FUNCTION interno.llegada_del_turno_siguiente(p_turno_guardia uuid)
+ RETURNS timestamp with time zone
+ LANGUAGE sql
+ STABLE
+ SECURITY DEFINER
+ SET search_path TO 'public', 'interno'
+AS $$
+  WITH este AS (
+    SELECT g.id, g.prestadora_id, g.checkin_at
+      FROM turnos_guardia g
+     WHERE g.id = p_turno_guardia
+       AND g.prestadora_id = interno.prestadora_actual()
+  ),
+  sus_pacientes AS (
+    SELECT tp.paciente_id
+      FROM turno_guardia_pacientes tp
+      JOIN este ON tp.turno_guardia_id = este.id AND tp.prestadora_id = este.prestadora_id
+    UNION
+    SELECT g.paciente_id
+      FROM turnos_guardia g
+      JOIN este ON g.id = este.id
+     WHERE g.paciente_id IS NOT NULL
+  ),
+  otros AS (
+    SELECT tp.turno_guardia_id AS id
+      FROM turno_guardia_pacientes tp
+      JOIN este ON tp.prestadora_id = este.prestadora_id
+     WHERE tp.paciente_id IN (SELECT paciente_id FROM sus_pacientes)
+    UNION
+    SELECT g.id
+      FROM turnos_guardia g
+      JOIN este ON g.prestadora_id = este.prestadora_id
+     WHERE g.paciente_id IN (SELECT paciente_id FROM sus_pacientes)
+  )
+  SELECT min(g.checkin_at)
+    FROM turnos_guardia g
+    JOIN este ON g.prestadora_id = este.prestadora_id
+   WHERE g.id IN (SELECT id FROM otros)
+     AND g.id <> este.id
+     AND g.checkin_at IS NOT NULL
+     AND (este.checkin_at IS NULL OR g.checkin_at > este.checkin_at);
+$$;
+
+ALTER FUNCTION interno.llegada_del_turno_siguiente(uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION interno.llegada_del_turno_siguiente(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION interno.llegada_del_turno_siguiente(uuid) TO authenticated, trabajo_sin_persona, service_role;
+
+COMMENT ON FUNCTION interno.llegada_del_turno_siguiente(uuid) IS 'Llegada registrada del primer turno de guardia posterior que comparte un Paciente con éste, en la Prestadora de la sesión. Límite de la hora de salida que se pone desde el Panel.';
+
+
 
 
 CREATE OR REPLACE FUNCTION "interno"."el_contratante_lo_fija_la_administracion"() RETURNS "trigger"
@@ -10989,6 +11308,104 @@ $$;
 ALTER FUNCTION "public"."revisar_indicacion_medicacion"("p_indicacion" "uuid", "p_estado" "text", "p_motivo" "text", "p_motivo_clave" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION public.cerrar_turno_guardia(
+  p_turno_guardia uuid,
+  p_hora timestamp with time zone,
+  p_reporte_atrasado boolean,
+  p_motivo uuid DEFAULT NULL,
+  p_detalle text DEFAULT NULL,
+  p_cerrada_por uuid DEFAULT NULL,
+  p_lat double precision DEFAULT NULL,
+  p_lng double precision DEFAULT NULL
+)
+ RETURNS text
+ LANGUAGE sql
+ SECURITY INVOKER
+ SET search_path TO 'public', 'interno'
+AS $$
+  SELECT interno.cerrar_el_turno_guardia(
+    p_turno_guardia, p_hora, p_reporte_atrasado, p_motivo, p_detalle, p_cerrada_por, p_lat, p_lng, false
+  );
+$$;
+
+ALTER FUNCTION public.cerrar_turno_guardia(uuid, timestamp with time zone, boolean, uuid, text, uuid, double precision, double precision) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.cerrar_turno_guardia(uuid, timestamp with time zone, boolean, uuid, text, uuid, double precision, double precision) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cerrar_turno_guardia(uuid, timestamp with time zone, boolean, uuid, text, uuid, double precision, double precision) TO authenticated, trabajo_sin_persona, service_role;
+
+COMMENT ON FUNCTION public.cerrar_turno_guardia(uuid, timestamp with time zone, boolean, uuid, text, uuid, double precision, double precision) IS 'Cierra un turno de guardia empezado. Resuelve la Prestadora adentro, corre con los permisos de quien llama y devuelve el estado en que quedó.';
+
+
+CREATE OR REPLACE FUNCTION public.permitir_que_el_paciente_quede_solo(
+  p_turno_guardia uuid,
+  p_paciente uuid,
+  p_quien text,
+  p_medio text,
+  p_desde timestamp with time zone,
+  p_hasta timestamp with time zone,
+  p_nota text,
+  p_reporte_atrasado boolean
+)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY INVOKER
+ SET search_path TO 'public', 'interno'
+AS $$
+DECLARE
+  v_prestadora uuid := interno.prestadora_actual();
+  v_yo uuid := interno.usuario_de_la_sesion();
+  v_motivo uuid;
+  v_checkin timestamp with time zone;
+  v_id uuid;
+BEGIN
+  IF v_prestadora IS NULL OR v_yo IS NULL
+     OR NOT interno.es_personal_de_la_prestadora()
+     OR NOT (interno.es_superadmin()
+             OR interno.es_admin_prestadora()
+             OR interno.coordina_el_servicio_del_turno_guardia(p_turno_guardia)) THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT m.id INTO v_motivo
+    FROM motivos_cierre_turno_guardia m
+   WHERE m.prestadora_id = v_prestadora
+     AND m.clave = 'paciente_solo_con_permiso'
+     AND m.activo;
+  IF v_motivo IS NULL THEN
+    RAISE EXCEPTION 'motivo_de_salida_inexistente' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT g.checkin_at INTO v_checkin
+    FROM turnos_guardia g
+   WHERE g.id = p_turno_guardia
+     AND g.prestadora_id = v_prestadora;
+
+  PERFORM set_config('careonys.cierre_por_la_funcion', 'si', true);
+  INSERT INTO consentimientos_paciente_solo
+    (prestadora_id, turno_guardia_id, paciente_id, quien_consintio, medio, desde_at, hasta_at, registrado_por, nota)
+  VALUES
+    (v_prestadora, p_turno_guardia, p_paciente, btrim(COALESCE(p_quien, '')), p_medio, p_desde, p_hasta, v_yo,
+     NULLIF(btrim(COALESCE(p_nota, '')), ''))
+  RETURNING id INTO v_id;
+
+  -- El turno de guardia se cierra a la hora desde la que el Paciente quedó solo, que no puede
+  -- ser antes de la llegada del Asistente ni después de este momento.
+  PERFORM interno.cerrar_el_turno_guardia(
+    p_turno_guardia,
+    GREATEST(COALESCE(v_checkin, '-infinity'::timestamptz), LEAST(p_desde, now())),
+    p_reporte_atrasado, v_motivo, NULL, NULL, NULL, NULL, true
+  );
+
+  RETURN v_id;
+END;
+$$;
+
+ALTER FUNCTION public.permitir_que_el_paciente_quede_solo(uuid, uuid, text, text, timestamp with time zone, timestamp with time zone, text, boolean) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.permitir_que_el_paciente_quede_solo(uuid, uuid, text, text, timestamp with time zone, timestamp with time zone, text, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.permitir_que_el_paciente_quede_solo(uuid, uuid, text, text, timestamp with time zone, timestamp with time zone, text, boolean) TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.permitir_que_el_paciente_quede_solo(uuid, uuid, text, text, timestamp with time zone, timestamp with time zone, text, boolean) IS 'Guarda el permiso del Cliente para que el Paciente quede solo y cierra, en la misma operación, el turno de guardia del Asistente que se fue. Sólo el Administrador o el Coordinador de ese Servicio.';
+
+
 CREATE OR REPLACE FUNCTION "public"."sembrar_configuracion_prestadora"("p_prestadora_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -11064,6 +11481,19 @@ BEGIN
     (p_prestadora_id, 'quedo_solo_con_consentimiento', true,  false, false, 50),
     (p_prestadora_id, 'no_fue_nadie',                  true,  false, false, 60),
     (p_prestadora_id, 'se_resolvio_de_otra_manera',    false, true,  false, 99)
+  ON CONFLICT DO NOTHING;
+
+  -- Y por qué se cierra un turno de guardia desde el Panel. El del Paciente solo lo escribe la
+  -- base cuando se da ese permiso; los demás los elige quien cierra.
+  INSERT INTO motivos_cierre_turno_guardia
+    (prestadora_id, clave, pide_detalle, lo_escribe_el_sistema, orden)
+  VALUES
+    (p_prestadora_id, 'fallo_el_telefono_del_asistente',  false, false, 10),
+    (p_prestadora_id, 'fallo_la_ubicacion_del_asistente', false, false, 20),
+    (p_prestadora_id, 'lo_cubrio_el_coordinador',         false, false, 30),
+    (p_prestadora_id, 'se_olvido_de_marcar_la_salida',    false, false, 40),
+    (p_prestadora_id, 'paciente_solo_con_permiso',        false, true,  50),
+    (p_prestadora_id, 'otro',                             true,  false, 99)
   ON CONFLICT DO NOTHING;
 
   -- Y los motivos con los que se resuelve una postulación o una Guardia. La lista la arma
@@ -13365,7 +13795,7 @@ CREATE TABLE IF NOT EXISTS "public"."consentimientos_paciente_solo" (
 ALTER TABLE "public"."consentimientos_paciente_solo" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."consentimientos_paciente_solo" IS 'El Cliente supo y acepto que la persona atendida quedara sola durante un rato de este turno de guardia. Registra una conversacion que ya ocurrio; no cubre el turno de guardia ni lo cierra.';
+COMMENT ON TABLE public.consentimientos_paciente_solo IS 'El Cliente supo y aceptó que la persona atendida quedara sola durante un rato. Cada permiso cierra, en la misma operación, el turno de guardia del Asistente que se fue, con su motivo.';
 
 
 
@@ -14844,6 +15274,7 @@ CREATE TABLE IF NOT EXISTS "public"."turnos_guardia" (
     "reporte_llego_at" timestamp with time zone,
     "factura_espera_el_reporte" boolean DEFAULT false NOT NULL,
     "push_reporte_pendiente_enviado_at" timestamp with time zone,
+    "cerrada_motivo_id" "uuid",
     CONSTRAINT "turnos_guardia_canal_modalidad_check" CHECK (("canal_modalidad" = ANY (ARRAY['directa'::"text", 'intermediacion'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_alcance_check" CHECK (("cancelacion_alcance" = ANY (ARRAY['servicio'::"text", 'prestacion'::"text", 'turno_guardia_recurrente'::"text", 'turno_guardia'::"text"]))),
     CONSTRAINT "turnos_guardia_cancelacion_check" CHECK ((("estado" = 'cancelada'::"text") OR (("cancelacion_origen" IS NULL) AND ("cancelacion_alcance" IS NULL)))),
@@ -14898,6 +15329,10 @@ COMMENT ON COLUMN "public"."turnos_guardia"."cerrada_origen" IS 'Desde dónde se
 
 
 COMMENT ON COLUMN "public"."turnos_guardia"."cerrada_motivo" IS 'Por qué se cerró desde el Panel, escrito por la persona que la cerró. Solo se llena cuando el origen es panel: el Asistente que marca su salida no explica nada.';
+
+
+
+COMMENT ON COLUMN public.turnos_guardia.cerrada_motivo_id IS 'El motivo de la lista con el que se cerró desde el Panel. El texto que quedó escrito en ese momento está en cerrada_motivo.';
 
 
 
@@ -15582,6 +16017,35 @@ CREATE TABLE IF NOT EXISTS "public"."motivos_aviso_previo_turno_guardia" (
 
 
 ALTER TABLE "public"."motivos_aviso_previo_turno_guardia" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS public.motivos_cierre_turno_guardia (
+  id uuid DEFAULT gen_random_uuid() NOT NULL,
+  prestadora_id uuid NOT NULL,
+  clave text,
+  nombre text,
+  pide_detalle boolean DEFAULT false NOT NULL,
+  lo_escribe_el_sistema boolean DEFAULT false NOT NULL,
+  activo boolean DEFAULT true NOT NULL,
+  orden integer DEFAULT 100 NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT motivos_cierre_turno_guardia_pkey PRIMARY KEY (id),
+  CONSTRAINT motivos_cierre_turno_guardia_los_del_sistema_no_se_apagan
+    CHECK ((NOT lo_escribe_el_sistema) OR activo),
+  CONSTRAINT motivos_cierre_turno_guardia_del_sistema_son_del_producto
+    CHECK ((NOT lo_escribe_el_sistema) OR (clave IS NOT NULL)),
+  CONSTRAINT motivos_cierre_turno_guardia_nombre_segun_nivel
+    CHECK (((clave IS NOT NULL) AND (nombre IS NULL)) OR ((clave IS NULL) AND (nombre IS NOT NULL)))
+);
+
+ALTER TABLE public.motivos_cierre_turno_guardia OWNER TO postgres;
+
+COMMENT ON TABLE public.motivos_cierre_turno_guardia IS 'Por qué se cerró un turno de guardia desde el Panel. Cada Prestadora arma su lista: nace con los que trae el producto y a partir de ahí agrega y saca los que quiera.';
+COMMENT ON COLUMN public.motivos_cierre_turno_guardia.clave IS 'Motivo que trajo el producto. El texto visible sale de las traducciones, buscándolo por esta clave.';
+COMMENT ON COLUMN public.motivos_cierre_turno_guardia.nombre IS 'Motivo que escribió la Prestadora. Se muestra tal cual, sin traducir.';
+COMMENT ON COLUMN public.motivos_cierre_turno_guardia.pide_detalle IS 'Cerrar con este motivo obliga a escribir qué pasó.';
+COMMENT ON COLUMN public.motivos_cierre_turno_guardia.lo_escribe_el_sistema IS 'El motivo no se elige: lo escribe la base cuando el cierre sale de otra operación, como el permiso para que el Paciente quede solo. No se ofrece para elegir y no se puede apagar.';
 
 
 CREATE TABLE IF NOT EXISTS "public"."motivos_cierre_servicio" (
@@ -20532,6 +20996,14 @@ CREATE INDEX "mensajes_whatsapp_meta_message_id_idx" ON "public"."mensajes_whats
 
 
 
+CREATE UNIQUE INDEX motivos_cierre_turno_guardia_clave_unica
+  ON public.motivos_cierre_turno_guardia USING btree (prestadora_id, clave) WHERE (clave IS NOT NULL);
+CREATE UNIQUE INDEX motivos_cierre_turno_guardia_nombre_unico
+  ON public.motivos_cierre_turno_guardia USING btree (prestadora_id, lower(nombre)) WHERE (nombre IS NOT NULL);
+CREATE INDEX motivos_cierre_turno_guardia_activos
+  ON public.motivos_cierre_turno_guardia USING btree (prestadora_id, orden) WHERE activo;
+
+
 CREATE INDEX "motivos_cierre_servicio_activos" ON "public"."motivos_cierre_servicio" USING "btree" ("prestadora_id", "orden") WHERE "activo";
 
 
@@ -20789,6 +21261,10 @@ CREATE OR REPLACE TRIGGER "asignar_numero_de_legajo" BEFORE INSERT ON "public"."
 
 
 CREATE OR REPLACE TRIGGER "asistente_carga_solo_su_descargo" BEFORE UPDATE ON "public"."calificaciones_asistente" FOR EACH ROW EXECUTE FUNCTION "interno"."la_persona_cambia_solo_estas_columnas"('descargo_asistente', 'descargo_en');
+
+
+
+CREATE OR REPLACE TRIGGER "el_cierre_pasa_por_la_funcion" BEFORE INSERT OR UPDATE ON "public"."turnos_guardia" FOR EACH ROW EXECUTE FUNCTION "interno"."el_cierre_pasa_por_la_funcion"();
 
 
 
@@ -23488,6 +23964,16 @@ ALTER TABLE ONLY "public"."motivos_aviso_previo_turno_guardia"
 
 
 
+ALTER TABLE ONLY "public"."motivos_cierre_turno_guardia"
+    ADD CONSTRAINT "motivos_cierre_turno_guardia_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."turnos_guardia"
+    ADD CONSTRAINT "turnos_guardia_cerrada_motivo_id_fkey" FOREIGN KEY ("cerrada_motivo_id") REFERENCES "public"."motivos_cierre_turno_guardia"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."motivos_cierre_servicio"
     ADD CONSTRAINT "motivos_cierre_servicio_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id") ON DELETE CASCADE;
 
@@ -25449,6 +25935,26 @@ CREATE POLICY "consentimientos_medicacion_los_lee_la_familia" ON "public"."conse
 ALTER TABLE "public"."consentimientos_paciente_solo" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY personal_ve_consentimientos_paciente_solo
+  ON public.consentimientos_paciente_solo FOR SELECT TO authenticated
+  USING ((prestadora_id = interno.prestadora_actual())
+         AND (interno.es_superadmin()
+              OR interno.es_admin_prestadora()
+              OR interno.coordinador_ve_el_turno_guardia(turno_guardia_id)));
+
+-- Se carga sólo junto con el cierre del turno de guardia, y sólo el Administrador o el
+-- Coordinador de ese Servicio. Una vez cargado no se cambia ni se borra.
+CREATE POLICY quien_coordina_carga_consentimientos_paciente_solo
+  ON public.consentimientos_paciente_solo FOR INSERT TO authenticated
+  WITH CHECK ((prestadora_id = interno.prestadora_actual())
+              AND COALESCE(current_setting('careonys.cierre_por_la_funcion', true), '') = 'si'
+              AND (interno.es_superadmin()
+                   OR interno.es_admin_prestadora()
+                   OR interno.coordina_el_servicio_del_turno_guardia(turno_guardia_id)));
+
+
+
+
 ALTER TABLE "public"."consentimientos_pagador" ENABLE ROW LEVEL SECURITY;
 
 
@@ -25572,10 +26078,6 @@ CREATE POLICY "coordinador_gestiona_certificados_de_su_zona" ON "public"."certif
 
 
 CREATE POLICY "coordinador_gestiona_comprobaciones_de_sus_servicios" ON "public"."turno_guardia_comprobaciones" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
-
-
-
-CREATE POLICY "coordinador_gestiona_consentimientos_paciente_solo" ON "public"."consentimientos_paciente_solo" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
@@ -26596,6 +27098,26 @@ ALTER TABLE "public"."motivos_aviso_previo_turno_guardia" ENABLE ROW LEVEL SECUR
 ALTER TABLE "public"."motivos_cierre_servicio" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE public.motivos_cierre_turno_guardia ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY admin_prestadora_gestiona_motivos_cierre_turno_guardia
+  ON public.motivos_cierre_turno_guardia TO authenticated
+  USING ((prestadora_id = interno.prestadora_actual())
+         AND (interno.es_superadmin() OR interno.es_admin_prestadora()))
+  WITH CHECK ((prestadora_id = interno.prestadora_actual())
+         AND (interno.es_superadmin() OR interno.es_admin_prestadora()));
+
+CREATE POLICY coordinador_lee_motivos_cierre_turno_guardia
+  ON public.motivos_cierre_turno_guardia FOR SELECT TO authenticated
+  USING ((prestadora_id = interno.prestadora_actual()) AND interno.es_coordinador());
+
+CREATE POLICY trabajo_sin_persona_lee_motivos_cierre_turno_guardia
+  ON public.motivos_cierre_turno_guardia FOR SELECT TO trabajo_sin_persona
+  USING (prestadora_id = interno.prestadora_actual());
+
+
+
+
 ALTER TABLE "public"."motivos_reactivacion_servicio" ENABLE ROW LEVEL SECURITY;
 
 
@@ -26712,12 +27234,6 @@ CREATE POLICY "panel_gestiona_cobros_cliente" ON "public"."cobros_cliente" USING
 
 
 CREATE POLICY "panel_gestiona_comprobaciones" ON "public"."turno_guardia_comprobaciones" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
-   FROM "public"."usuarios" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
-
-
-
-CREATE POLICY "panel_gestiona_consentimientos_paciente_solo" ON "public"."consentimientos_paciente_solo" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -32687,6 +33203,15 @@ GRANT ALL ON TABLE "public"."motivos_aviso_previo_turno_guardia" TO "service_rol
 
 GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."motivos_cierre_servicio" TO "authenticated";
 GRANT ALL ON TABLE "public"."motivos_cierre_servicio" TO "service_role";
+
+
+
+REVOKE ALL ON TABLE public.motivos_cierre_turno_guardia FROM PUBLIC, anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.motivos_cierre_turno_guardia TO authenticated;
+GRANT ALL ON TABLE public.motivos_cierre_turno_guardia TO service_role;
+GRANT SELECT ON TABLE public.motivos_cierre_turno_guardia TO trabajo_sin_persona;
+
+
 
 
 

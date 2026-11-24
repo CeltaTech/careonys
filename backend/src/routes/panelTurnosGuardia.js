@@ -7,7 +7,15 @@ import { cubrirTurnoGuardiaConSustituto } from '../utils/cubrirTurnoGuardia.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
 import { avisarAsignacionDeTurnoGuardia, avisarAsignacionDeSerie } from '../utils/avisoAsignacionDeTurnoGuardia.js';
 import { sugerirMotivoDelAviso } from '../utils/motivoSugeridoDelAviso.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
+import {
+  CAMPOS_PARA_CERRAR,
+  cerrarElTurnoGuardia,
+  despuesDelCierre,
+  errorDelCierre,
+  reportePendiente,
+} from '../utils/cierreDelTurnoGuardia.js';
+import { pacientesDelTurnoGuardia, turnosGuardiaSalientes } from '../utils/comprobacionDePresencia.js';
 import { documentosDelBloqueo } from '../utils/erroresDeDocumentos.js';
 
 export const panelTurnosGuardiaRouter = Router();
@@ -485,4 +493,83 @@ panelTurnosGuardiaRouter.post('/:id/descansos', requiereRolPanel, exigirOrganiza
   if (errorAlta) return responderError(res, errorAlta);
 
   res.status(201).json({ descanso: data });
+});
+
+/* CIERRE DE UN TURNO DE GUARDIA DESDE EL PANEL. Siempre con un motivo del catálogo de la
+   Prestadora y una hora de salida, y con la credencial de quien pide: la base decide si puede
+   (el Administrador, o el Coordinador que ve ese turno de guardia), valida el motivo y la hora, y
+   anota quién lo cerró y cuándo. El Reporte Diario no traba el cierre: si queda pendiente, el turno
+   queda en «Salida sin Reporte Diario» por el mismo camino que las demás formas de cerrar
+   (`utils/cierreDelTurnoGuardia.js`). */
+panelTurnosGuardiaRouter.post('/:id/cerrar', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  try {
+    const motivoId = typeof req.body?.motivoId === 'string' ? req.body.motivoId : null;
+    const hora = typeof req.body?.hora === 'string' ? req.body.hora : null;
+    const detalle = typeof req.body?.detalle === 'string' ? req.body.detalle : null;
+    if (!motivoId) throw new ErrorConMotivo('falta_el_motivo', 'Sin motivo de salida');
+    if (!hora) throw new ErrorConMotivo('hora_de_salida_obligatoria', 'Sin hora de salida');
+
+    const db = clienteDelPedido(req);
+    const { data: turno_guardia, error } = await db
+      .from('turnos_guardia')
+      .select(CAMPOS_PARA_CERRAR)
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!turno_guardia) throw new ErrorConMotivo('no_encontrado', 'No se encontró ese turno de guardia');
+
+    const estado = await cerrarElTurnoGuardia(db, { turno_guardia, hora, motivoId, detalle });
+    res.json({ estado });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+/* PERMISO PARA QUE EL PACIENTE QUEDE SOLO. Lo da el Administrador o el Coordinador del Servicio,
+   y la base lo hace cumplir. Guarda el permiso del Cliente y cierra, en la misma operación, el
+   turno de guardia del Asistente que salió, con el motivo del sistema. El turno que se cierra es
+   éste si sigue empezado, o el del Asistente que todavía no salió de alguno de sus Pacientes. */
+panelTurnosGuardiaRouter.post('/:id/paciente-solo', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  try {
+    const cuerpo = req.body ?? {};
+    const texto = (v) => (typeof v === 'string' ? v : null);
+
+    const db = clienteDelPedido(req);
+    const { data: turno_guardia, error } = await db
+      .from('turnos_guardia')
+      .select(CAMPOS_PARA_CERRAR)
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!turno_guardia) throw new ErrorConMotivo('no_encontrado', 'No se encontró ese turno de guardia');
+
+    let aCerrar = turno_guardia.estado === 'activa' && !turno_guardia.checkout_at ? turno_guardia : null;
+    if (!aCerrar) {
+      const saliente = await enLaPrestadora(turno_guardia.prestadora_id, 'Turno de guardia que deja solo al Paciente', async (dbTrabajo) => {
+        const salientes = await turnosGuardiaSalientes(dbTrabajo, turno_guardia, await pacientesDelTurnoGuardia(dbTrabajo, turno_guardia));
+        return salientes[0] ?? null;
+      });
+      if (!saliente) throw new ErrorConMotivo('turno_guardia_ya_cerrado', 'No hay un turno de guardia empezado para cerrar');
+      aCerrar = { ...saliente, prestadora_id: turno_guardia.prestadora_id, paciente_id: turno_guardia.paciente_id };
+    }
+
+    const reporteAtrasado = await reportePendiente(aCerrar);
+    const { data: consentimientoId, error: errorDelPermiso } = await db.rpc('permitir_que_el_paciente_quede_solo', {
+      p_turno_guardia: aCerrar.id,
+      p_paciente: texto(cuerpo.pacienteId),
+      p_quien: texto(cuerpo.quien),
+      p_medio: texto(cuerpo.medio),
+      p_desde: texto(cuerpo.desde),
+      p_hasta: texto(cuerpo.hasta),
+      p_nota: texto(cuerpo.nota),
+      p_reporte_atrasado: reporteAtrasado,
+    });
+    if (errorDelPermiso) throw errorDelCierre(errorDelPermiso);
+
+    const estado = reporteAtrasado ? 'salida_sin_reporte' : 'completada';
+    await despuesDelCierre(aCerrar, estado);
+    res.json({ id: consentimientoId, turnoGuardiaCerrado: aCerrar.id, estado });
+  } catch (e) {
+    responderError(res, e);
+  }
 });

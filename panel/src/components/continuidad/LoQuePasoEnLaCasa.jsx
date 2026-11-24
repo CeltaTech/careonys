@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { llamarApiPanel } from '../../lib/apiPanel';
 import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
 import { Alert } from '../ui/Alert';
@@ -18,8 +19,8 @@ import {
 
 /* LO QUE PASÓ EN LA CASA CUANDO NO FUE NADIE
 
-   Dos hechos y ningún cierre. Ninguno de los dos botones de acá termina el expediente del turno,
-   y ninguno lo cuenta como cubierto: la Prestadora no mandó a quien tenía que mandar, y contarlo
+   Ninguno de los dos botones de acá termina el expediente del turno, y ninguno lo cuenta como
+   cubierto: la Prestadora no mandó a quien tenía que mandar, y contarlo
    como prestado sería taparle su propia falla y cobrarle al Cliente un servicio que prestó ella.
    Cómo terminó el turno se elige aparte, al cerrarlo.
 
@@ -36,7 +37,6 @@ import {
    persona atendida, el texto sale del documento legal de ese país y de ningún otro lado. Hoy
    ninguno lo dice, así que el producto registra el hecho y se calla. */
 
-const TABLA_CONSENTIMIENTOS = 'consentimientos_paciente_solo';
 const TABLA_FAMILIAR = 'excepciones_familiar_relevo';
 
 /**
@@ -106,8 +106,6 @@ function ahoraParaElCampo(desplazamientoEnHoras = 0) {
 export function RegistrarConsentimiento({ turnoGuardiaId, pacientes, onClose, onGuardado, alGuardar }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
-  const { usuario } = useAuth();
-  const prestadoraId = usePrestadoraActual();
   const [anotado, setAnotado] = useState(false);
   const [pacienteId, setPacienteId] = useState(pacientes[0].id);
   const [quien, setQuien] = useState('');
@@ -132,18 +130,19 @@ export function RegistrarConsentimiento({ turnoGuardiaId, pacientes, onClose, on
     setError(null);
     try {
       if (!anotado) {
-        const { error: errorInsert } = await supabase.from(TABLA_CONSENTIMIENTOS).insert({
-          prestadora_id: prestadoraId,
-          turno_guardia_id: turnoGuardiaId,
-          paciente_id: pacienteId,
-          quien_consintio: quien.trim(),
-          medio,
-          desde_at: momentoDelCampo(desde).toISOString(),
-          hasta_at: momentoDelCampo(hasta).toISOString(),
-          registrado_por: usuario?.id ?? null,
-          nota: nota.trim() || null,
+        // El permiso y el cierre del turno de guardia que se va son una sola operación, y la
+        // base sólo la deja hacer al Coordinador del Servicio o al Administrador.
+        await llamarApiPanel(`/turnos-guardia/${turnoGuardiaId}/paciente-solo`, {
+          method: 'POST',
+          body: JSON.stringify({
+            pacienteId,
+            quien: quien.trim(),
+            medio,
+            desde: momentoDelCampo(desde).toISOString(),
+            hasta: momentoDelCampo(hasta).toISOString(),
+            nota: nota.trim() || null,
+          }),
         });
-        if (errorInsert) throw errorInsert;
         setAnotado(true);
       }
       if (alGuardar) await alGuardar();

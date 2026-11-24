@@ -29,6 +29,15 @@ test('el relevo no se entera de si el que sale presentó el Reporte', () => {
   for (const idioma of Object.keys(T)) assert.equal(T[idioma].turno_guardia_activo.saliente_sin_reporte, undefined);
 });
 
+test('el Reporte pendiente no traba la salida', () => {
+  assert.doesNotMatch(pantalla, /reportesCompletos|falta_reporte/);
+  assert.match(pantalla, /\{!cerradoPendiente && !confirmandoCierre && \(/);
+  for (const idioma of Object.keys(T)) {
+    assert.equal(T[idioma].turno_guardia_activo.cerrar_falta_reporte, undefined);
+    assert.equal(T[idioma].turno_guardia_activo.cerrar_faltan_reportes, undefined);
+  }
+});
+
 test('el que salió sin reporte ve el aviso y el camino para presentarlo', () => {
   assert.match(pantalla, /'salida_sin_reporte'/);
   assert.match(pantalla, /t\.turno_guardia_activo\.reporte_pendiente/);

@@ -447,18 +447,6 @@ export default function TurnoGuardiaActivo() {
       }
       setPasandoCheckout(false);
       if (esFalloDeUbicacion(e)) setError(t.turno_guardia_activo[e.message]);
-      // `falta_reporte` es el único motivo que se sigue mirando acá, y es a propósito: su
-      // frase lleva adentro los nombres de los Pacientes cuyo reporte falta, y eso una
-      // búsqueda por motivo no lo hace. Si el turno de guardia cubrió a dos personas y se escribió una
-      // sola reporte, hay que decir cuál falta, no que "falta el reporte".
-      else if (e.motivo === 'falta_reporte')
-        setError(
-          e.pacientesSinReporte?.length
-            ? con(t.turno_guardia_activo.cerrar_faltan_reportes, {
-                nombres: e.pacientesSinReporte.map((p) => p.nombre).join(', '),
-              })
-            : t.turno_guardia_activo.cerrar_falta_reporte,
-        );
       // El resto de los motivos los explica lib/errores.js con las traducciones: el motivo
       // que se agregue mañana en el backend va a salir explicado acá sin tocar esta pantalla.
       else setError(mensajeDeError(e, t, 'cerrar el turno de guardia'));
@@ -483,7 +471,6 @@ export default function TurnoGuardiaActivo() {
   const veDomicilio = seVe('asistente_domicilio_del_paciente');
   const vePatologias = seVe('asistente_patologias_del_paciente');
   const faltanReporte = pacientes.filter((p) => !conReporte.includes(p.id));
-  const reportesCompletos = pacientes.length > 0 && faltanReporte.length === 0;
 
   return (
     <div>
@@ -610,27 +597,26 @@ export default function TurnoGuardiaActivo() {
                   {sonVarios ? con(t.turno_guardia_activo.cargar_reporte_de, { nombre: p.nombre }) : t.turno_guardia_activo.cargar_reporte}
                 </Link>
               ))}
-              {/* Cada botón dice qué reporte falta, y el de cerrar aparece solo cuando están todos:
-                  no hace falta ninguna frase debajo. */}
             </>
           )}
 
           {/* El cierre es un acto propio, no un efecto secundario de mandar el reporte
-              (tarea 66a). El pase por QR (pendiente #113) quedó enchufado más abajo, entre
-              la pregunta de cierre y el cierre en sí. */}
-          {reportesCompletos && cerradoPendiente && (
+              (tarea 66a), y el Reporte no lo traba: con el Reporte pendiente la salida queda
+              registrada igual, como salida sin Reporte. El pase por QR (pendiente #113) quedó
+              enchufado más abajo, entre la pregunta de cierre y el cierre en sí. */}
+          {cerradoPendiente && (
             <div className="alert alert-info pwa-card-pie" role="status">
               <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
             </div>
           )}
 
-          {reportesCompletos && !cerradoPendiente && !confirmandoCierre && (
+          {!cerradoPendiente && !confirmandoCierre && (
             <button className="btn btn-primary btn-full pwa-card-pie" onClick={() => setConfirmandoCierre(true)}>
               {t.turno_guardia_activo.hacer_checkout}
             </button>
           )}
 
-          {reportesCompletos && !cerradoPendiente && confirmandoCierre && (
+          {!cerradoPendiente && confirmandoCierre && (
             <div className="pwa-card-pie">
               <p className="tarjeta-detalle">{t.turno_guardia_activo.cerrar_pregunta}</p>
 

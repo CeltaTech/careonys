@@ -69,6 +69,7 @@ import {
   registrarActividad,
 } from '../utils/registroDeActividad.js';
 import { cerrarLaSalidaDelSaliente, completarSiLlegoElReporte, ESTADO_SALIDA_SIN_REPORTE } from '../utils/salidaSinReporte.js';
+import { cerrarElTurnoGuardia } from '../utils/cierreDelTurnoGuardia.js';
 
 export const appAsistentesRouter = Router();
 
@@ -227,17 +228,6 @@ async function reportesDelTurnoGuardia(db, turnoGuardiaId) {
     .eq('turno_guardia_id', turnoGuardiaId);
   if (error) throw error;
   return data ?? [];
-}
-
-// A quiénes del turno todavía les falta el reporte. Es lo que decide si el turno de guardia se puede
-// cerrar, y lo que la pantalla del Asistente muestra como lo que le queda por hacer.
-async function pacientesSinReporte(db, turno_guardia) {
-  const [pacientes, reportes] = await Promise.all([
-    pacientesDeTurnoGuardia(db, turno_guardia.prestadora_id, turno_guardia, `id, ${FICHA_NOMBRE}`),
-    reportesDelTurnoGuardia(db, turno_guardia.id),
-  ]);
-  const conReporte = new Set(reportes.map((r) => r.paciente_id));
-  return pacientes.filter((p) => !conReporte.has(p.id));
 }
 
 // ============================================================================
@@ -2058,15 +2048,18 @@ appAsistentesRouter.post('/turnos-guardia/:id/reporte/confirmar', requiereRolAsi
 // Check-out — cerrar el turno de guardia. Acto con entidad propia desde el 2026-08-06 (tarea 66a):
 // antes ocurría solo como efecto secundario de confirmar el Reporte Diario.
 //
-// Tres condiciones, en este orden, porque cada una dice algo distinto al Asistente:
+// Dos condiciones, en este orden, porque cada una dice algo distinto al Asistente:
 //   1. sin check-in previo no hay nada que cerrar;
-//   2. no se cierra hasta que cada Paciente del turno tenga su Reporte Diario — la regla de
-//      negocio que antes garantizaba el endpoint del reporte, ahora explícita en vez de
-//      implícita. Se le dice al Asistente de quiénes falta, porque "falta un reporte" en un
-//      turno que cubre a tres personas no le dice cuál le quedó pendiente;
-//   3. la salida queda siempre comprobada, con el código QR o con la autorización del
+//   2. la salida queda siempre comprobada, con el código QR o con la autorización del
 //      Coordinador. Sin ninguna de las dos el pedido se rechaza con `salida_sin_comprobar`, y el
 //      pase de guardia se queda abierto para escanear o pedir autorización.
+//
+// El Reporte Diario no traba la salida. Si a algún Paciente todavía le queda el suyo, el turno
+// queda en «Salida sin Reporte Diario» por el único camino del cierre
+// (`utils/cierreDelTurnoGuardia.js`), igual que cuando lo cierra el relevo.
+//
+// Un turno de guardia que ya está cerrado —lo cerró la autorización de la salida desde el Panel,
+// o la cola del teléfono manda dos veces lo mismo— contesta que sí con `yaRegistrado`.
 // ============================================================================
 
 appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_probar_codigo', soloSi: trajoUnCodigo }), async (req, res) => {
@@ -2088,20 +2081,7 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, t
   }
   if (turno_guardia.checkout_at) {
     // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline).
-    return res.status(400).json({ error: 'Este turno de guardia ya tiene check-out registrado', yaRegistrado: true });
-  }
-  let faltan;
-  try {
-    faltan = await pacientesSinReporte(db, turno_guardia);
-  } catch (e) {
-    return responderError(res, e);
-  }
-  if (faltan.length > 0) {
-    return res.status(400).json({
-      error: `Cargue el Reporte de${faltan.map((p) => p.nombre).join(' y ')} antes de cerrar el turno de guardia`,
-      motivo: 'falta_reporte',
-      pacientesSinReporte: faltan.map((p) => ({ id: p.id, nombre: p.nombre })),
-    });
+    return res.json({ ok: true, yaRegistrado: true });
   }
 
   // La comprobación de la salida se resuelve antes de cerrar, por el mismo motivo que en el
@@ -2121,33 +2101,23 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, t
     return responderError(res, e);
   }
 
-  // Se cierra solamente si sigue activa, y se comprueba que se haya cerrado de verdad. Los
-  // controles de arriba se hicieron sobre una lectura anterior: si en el medio entró otro
-  // check-out —dos toques seguidos al botón, la aplicación reintentando— acá no queda nada por
-  // cambiar, y contestar que sí sin haber cambiado nada es lo que hace que dos turnos de guardia
-  // superpuestas parezcan cerradas cuando solo se cerró una.
-  // Misma regla que en el check-in: la salida se marca siempre, la coordenada solamente con el
-  // consentimiento de seguimiento vigente.
+  // El cierre pasa por el único camino. Misma regla que en el check-in: la salida se marca
+  // siempre, la coordenada solamente con el consentimiento de seguimiento vigente. Lo escribe el
+  // trabajo de la Prestadora porque el Asistente no puede escribir el cierre con su sesión.
   const registraUbicacion = await puedeRegistrarUbicacion(turno_guardia.asistente_id, turno_guardia.prestadora_id);
-
-  const { data: cerrada, error } = await db
-    .from('turnos_guardia')
-    .update({
-      checkout_at: new Date().toISOString(),
-      checkout_lat: registraUbicacion ? lat : null,
-      checkout_lng: registraUbicacion ? lng : null,
-      estado: 'completada',
-    })
-    .eq('id', turno_guardia.id)
-    .eq('estado', 'activa')
-    .select('id');
-  if (error) {
-    return responderError(res, error);
-  }
-  if (!cerrada?.length) {
-    // Misma respuesta que el control de arriba: para quien está del otro lado es el mismo caso,
-    // y el cliente sin conexión ya sabe qué hacer con `yaRegistrado`.
-    return res.status(400).json({ error: 'Este turno de guardia ya tiene check-out registrado', yaRegistrado: true });
+  try {
+    await enLaPrestadora(turno_guardia.prestadora_id, 'Salida del Asistente', (dbTrabajo) =>
+      cerrarElTurnoGuardia(dbTrabajo, {
+        turno_guardia,
+        hora: new Date().toISOString(),
+        lat: registraUbicacion ? lat : null,
+        lng: registraUbicacion ? lng : null,
+      }));
+  } catch (e) {
+    // Dos toques seguidos al botón, o la autorización del Panel que lo cerró en el medio: para
+    // quien está del otro lado la salida ya está hecha.
+    if (e?.motivo === 'turno_guardia_ya_cerrado') return res.json({ ok: true, yaRegistrado: true });
+    return responderError(res, e);
   }
 
   res.json({ ok: true, comprobacion: comprobacion.estado });

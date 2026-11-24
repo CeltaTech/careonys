@@ -540,3 +540,94 @@ describe('la tarea prohibida para el tipo del Asistente, en cada ruta que asigna
     assert.equal(cobertura.credencial, lectura.credencial);
   });
 });
+
+// ============================================================================
+// El cierre de un turno de guardia desde el Panel
+// ============================================================================
+
+describe('cerrar un turno de guardia desde el Panel', () => {
+  const MOTIVO = '77777777-7777-7777-7777-777777777777';
+  const HORA = '2026-09-05T19:30:00.000Z';
+  const CERRAR = 'POST /rest/v1/rpc/cerrar_turno_guardia';
+  const PERMITIR = 'POST /rest/v1/rpc/permitir_que_el_paciente_quede_solo';
+  const EMPEZADO = { ...TURNO_GUARDIA_VACIA, estado: 'activa', checkin_at: '2026-09-05T08:00:00.000Z', checkout_at: null };
+  const DATOS_DEL_PERMISO = {
+    pacienteId: ELLA, quien: 'Hija de prueba', medio: 'telefono', desde: HORA, hasta: '2026-09-05T23:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    respuestas.set('GET /rest/v1/turnos_guardia', () => [EMPEZADO]);
+    respuestas.set('GET /rest/v1/reportes', () => [{ paciente_id: ELLA }]);
+    respuestas.set(CERRAR, ({ cuerpo }) => (cuerpo.p_reporte_atrasado ? 'salida_sin_reporte' : 'completada'));
+  });
+
+  it('cierra por la función de la base, con el motivo y la hora, y con la credencial de quien pide', async () => {
+    const { estado, cuerpo } = await pedir('POST', `/${TURNO_GUARDIA}/cerrar`, { motivoId: MOTIVO, hora: HORA });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.estado, 'completada');
+    const cierre = llamadas.find((l) => l.clave === CERRAR);
+    assert.equal(cierre.cuerpo.p_turno_guardia, TURNO_GUARDIA);
+    assert.equal(cierre.cuerpo.p_motivo, MOTIVO);
+    assert.equal(cierre.cuerpo.p_hora, HORA);
+    assert.equal(cierre.cuerpo.p_reporte_atrasado, false);
+    assert.equal(cierre.credencial, credencialEnviada);
+    // Nadie escribe el cierre en la tabla por fuera de la función.
+    assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/turnos_guardia'), false);
+  });
+
+  it('con el Reporte Diario pendiente, el turno queda en «Salida sin Reporte Diario»', async () => {
+    respuestas.set('GET /rest/v1/reportes', () => []);
+    const { estado, cuerpo } = await pedir('POST', `/${TURNO_GUARDIA}/cerrar`, { motivoId: MOTIVO, hora: HORA });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.estado, 'salida_sin_reporte');
+    assert.equal(llamadas.find((l) => l.clave === CERRAR).cuerpo.p_reporte_atrasado, true);
+  });
+
+  for (const [caso, cuerpo, motivo] of [
+    ['sin motivo', { hora: HORA }, 'falta_el_motivo'],
+    ['sin hora', { motivoId: MOTIVO }, 'hora_de_salida_obligatoria'],
+  ]) {
+    it(`${caso} no llega a la base`, async () => {
+      const respuesta = await pedir('POST', `/${TURNO_GUARDIA}/cerrar`, cuerpo);
+      assert.equal(respuesta.estado, 400);
+      assert.equal(respuesta.cuerpo.motivo, motivo);
+      assert.equal(llamadas.some((l) => l.clave === CERRAR), false);
+    });
+  }
+
+  for (const motivo of ['hora_de_salida_futura', 'hora_de_salida_anterior_a_la_llegada', 'hora_de_salida_posterior_al_relevo']) {
+    it(`el límite «${motivo}» de la base llega a la pantalla con su motivo`, async () => {
+      respuestas.set(CERRAR, () => ({ rechazo: motivo }));
+      const respuesta = await pedir('POST', `/${TURNO_GUARDIA}/cerrar`, { motivoId: MOTIVO, hora: HORA });
+      assert.equal(respuesta.estado, 400);
+      assert.equal(respuesta.cuerpo.motivo, motivo);
+    });
+  }
+
+  it('un turno de guardia que la base no deja ver no se distingue de uno que no existe', async () => {
+    respuestas.set('GET /rest/v1/turnos_guardia', () => []);
+    const respuesta = await pedir('POST', `/${TURNO_GUARDIA_AJENA}/cerrar`, { motivoId: MOTIVO, hora: HORA });
+    assert.equal(respuesta.estado, 404);
+    assert.equal(llamadas.some((l) => l.clave === CERRAR), false);
+  });
+
+  it('el permiso para que el Paciente quede solo cierra el turno empezado en la misma operación', async () => {
+    respuestas.set(PERMITIR, () => '88888888-8888-8888-8888-888888888888');
+    const { estado, cuerpo } = await pedir('POST', `/${TURNO_GUARDIA}/paciente-solo`, DATOS_DEL_PERMISO);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.turnoGuardiaCerrado, TURNO_GUARDIA);
+    assert.equal(cuerpo.estado, 'completada');
+    const permiso = llamadas.find((l) => l.clave === PERMITIR);
+    assert.equal(permiso.cuerpo.p_turno_guardia, TURNO_GUARDIA);
+    assert.equal(permiso.cuerpo.p_reporte_atrasado, false);
+    assert.equal(permiso.credencial, credencialEnviada);
+    assert.equal(llamadas.some((l) => l.clave === CERRAR), false);
+  });
+
+  it('si la base rechaza el permiso, la pantalla recibe el motivo', async () => {
+    respuestas.set(PERMITIR, () => ({ rechazo: 'sin_permiso' }));
+    const { estado, cuerpo } = await pedir('POST', `/${TURNO_GUARDIA}/paciente-solo`, DATOS_DEL_PERMISO);
+    assert.equal(estado, 403);
+    assert.equal(cuerpo.motivo, 'sin_permiso');
+  });
+});

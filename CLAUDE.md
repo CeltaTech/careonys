@@ -421,6 +421,19 @@ permisos de quien llama, resuelven la Prestadora adentro y guardan en una sola o
 —con la lista de comprobación, el cierre de la atención, las Prestaciones y las guardias sin
 asignar, y el aviso de la deuda si la hay— o la reactivación con su motivo; la baja se rechaza
 mientras el Servicio tenga guardias asignadas;
+`cerrar_turno_guardia`, que recibe un turno de guardia, la hora de salida y si queda el Reporte
+pendiente, corre con los permisos de quien llama, resuelve la Prestadora adentro y es el único
+camino por el que un turno de guardia empezado se cierra: el backend la llama con la credencial
+del Administrador o del Coordinador que cierra desde el Panel, siempre con un motivo de la lista,
+y con la del trabajo sin persona cuando la salida la marca el Asistente con el código QR o la
+autoriza alguien del Panel, en nombre de esa persona. La hora no puede ser anterior a la llegada,
+ni posterior a este momento, ni posterior a la llegada ya registrada del turno siguiente del mismo
+Paciente. El Reporte pendiente nunca traba el cierre: deja el turno en salida sin Reporte. Escribir
+la salida o el cierre directo en la tabla lo rechaza la base con el motivo
+`el_cierre_pasa_por_la_funcion`, y lo prueba `scripts/probar_cierre_de_turnos_guardia.mjs`;
+`permitir_que_el_paciente_quede_solo`, que corre con los permisos de quien llama, sólo deja al
+Administrador o al Coordinador de ese Servicio, y guarda en una sola operación el permiso del
+Cliente y el cierre del turno de guardia;
 `asistentes_asignados_al_paciente`, que devuelve sólo quiénes tienen guardia con un Paciente de la
 Prestadora de quien pide, en todas las zonas, y sólo al Administrador y a los Coordinadores; y
 `revisar_indicacion_medicacion` y `cerrar_firma_medicacion_con_documento_firmado`, que le dejan al

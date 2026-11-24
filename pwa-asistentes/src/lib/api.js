@@ -25,9 +25,6 @@ async function pedido(ruta, opciones = {}) {
     // motivo, que es lo que después le permite a la pantalla explicar por qué no se pudo.
     const error = errorDeLaRespuesta(respuesta, datos);
     if (datos.yaRegistrado) error.yaRegistrado = true;
-    // Cuando falta un reporte, el backend dice de quiénes falta. Con un turno de guardia que cubre a
-    // tres personas, "falta un reporte" no le dice al Asistente cuál le quedó pendiente.
-    if (datos.pacientesSinReporte) error.pacientesSinReporte = datos.pacientesSinReporte;
     // Un documento ya vencido trae la fecha después de la cual tiene que estar emitido el nuevo,
     // y un turno de guardia que no se puede aceptar trae qué documentos lo impiden.
     if (datos.fecha) error.fecha = datos.fecha;

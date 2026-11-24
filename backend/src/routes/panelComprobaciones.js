@@ -40,7 +40,8 @@ panelComprobacionesRouter.get('/pedidos', requiereRolPanel, exigirOrganizacionAc
 });
 
 /* Autoriza el ingreso de ese pedido. La llegada queda comprobada, con quién la autorizó y a qué
- * hora, y si hay un Asistente que se va, su salida queda autorizada en el mismo acto.
+ * hora, y si hay un Asistente que se va, su salida queda autorizada en el mismo acto. La
+ * autorización de una salida lleva la hora de salida que puso quien registra (`horaDeSalida`).
  *
  * LLEVA TOPE DE PEDIDOS POR MINUTO, como toda ruta que cambia el estado de un turno de guardia desde
  * afuera del domicilio. */
@@ -51,6 +52,7 @@ panelComprobacionesRouter.post('/:id/autorizar', requiereRolPanel, exigirOrganiz
         comprobacionId: req.params.id,
         prestadoraId: req.usuarioPanel.prestadoraId,
         autorizadaPor: req.usuarioPanel.id,
+        horaDeSalida: req.body?.horaDeSalida ?? null,
       }),
     );
   } catch (e) {

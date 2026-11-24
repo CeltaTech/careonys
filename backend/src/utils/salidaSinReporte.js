@@ -27,10 +27,7 @@ import {
 } from './comprobacionDePresencia.js';
 import { idsDePacientesDeTurnoGuardia } from './pacientesDeTurnoGuardia.js';
 import { puedeRegistrarUbicacion } from './consentimientoUbicacion.js';
-import { enviarPushAsistente } from './push.js';
-import { respaldoWhatsappSiFalla } from './revisarRecordatoriosPush.js';
-import { mensajeDelSistema } from '../i18n/avisos.js';
-import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { cerrarElTurnoGuardia } from './cierreDelTurnoGuardia.js';
 
 export const ESTADO_SALIDA_SIN_REPORTE = 'salida_sin_reporte';
 const MEDIO_CODIGO_DEL_SALIENTE = 'codigo_asistente_saliente';
@@ -83,8 +80,6 @@ async function cerrarCon(db, { relevo, lat, lng }) {
   const salientes = (await turnosGuardiaSalientes(db, relevo, await pacientesDelTurnoGuardia(db, relevo)))
     .filter((s) => s.asistente_id === llegada.sujeto_id);
 
-  const facturaSinReporte = await facturaLosTurnosSinReporte(db, prestadoraId);
-
   for (const saliente of salientes) {
     const turno_guardia = { ...saliente, prestadora_id: prestadoraId };
 
@@ -108,69 +103,20 @@ async function cerrarCon(db, { relevo, lat, lng }) {
       });
     }
 
-    const sinReporte = await faltaElReporte(db, turno_guardia);
+    // El cierre pasa por el único camino, que decide el Reporte pendiente y avisa. La ubicación
+    // se guarda sólo si el consentimiento del que sale está vigente.
     const registraUbicacion = await puedeRegistrarUbicacion(saliente.asistente_id, prestadoraId);
-
-    const { data: cerrado, error } = await db
-      .from('turnos_guardia')
-      .update({
-        checkout_at: hora,
-        checkout_lat: registraUbicacion && Number.isFinite(lat) ? lat : null,
-        checkout_lng: registraUbicacion && Number.isFinite(lng) ? lng : null,
-        estado: sinReporte ? ESTADO_SALIDA_SIN_REPORTE : 'completada',
-        ...(sinReporte
-          ? {
-            salio_sin_reporte: true,
-            factura_espera_el_reporte: !facturaSinReporte,
-            push_reporte_pendiente_enviado_at: new Date().toISOString(),
-          }
-          : {}),
-      })
-      .eq('prestadora_id', prestadoraId)
-      .eq('id', saliente.id)
-      .eq('estado', 'activa')
-      .is('checkout_at', null)
-      .select('id');
-    if (error) throw new Error(error.message);
-
-    if (sinReporte && cerrado?.length) {
-      await avisarAlSaliente(db, turno_guardia);
+    try {
+      await cerrarElTurnoGuardia(db, {
+        turno_guardia,
+        hora,
+        lat: registraUbicacion ? lat : null,
+        lng: registraUbicacion ? lng : null,
+      });
+    } catch (error) {
+      // Otro camino lo cerró mientras tanto: la salida ya está hecha.
+      if (error?.motivo !== 'turno_guardia_ya_cerrado') throw error;
     }
-  }
-}
-
-// Si la Prestadora factura los turnos de guardia sin Reporte Diario. Mientras ella no elija otra
-// cosa, se factura.
-async function facturaLosTurnosSinReporte(db, prestadoraId) {
-  const { data, error } = await db
-    .from('prestadoras')
-    .select('factura_turnos_sin_reporte')
-    .eq('id', prestadoraId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data?.factura_turnos_sin_reporte !== false;
-}
-
-// El aviso al que salió: su Reporte Diario está pendiente. Si el aviso falla, la salida ya quedó
-// cerrada y la falta anotada; el teléfono se lo muestra igual la próxima vez que abra la lista.
-async function avisarAlSaliente(db, turno_guardia) {
-  try {
-    const idioma = await idiomaDeLaPrestadora(db, turno_guardia.prestadora_id);
-    const { titulo, cuerpo } = mensajeDelSistema('reporte_pendiente', idioma, { fecha: turno_guardia.fecha }, turno_guardia.prestadora_id);
-    const enviadoPorPush = await enviarPushAsistente(turno_guardia.prestadora_id, turno_guardia.asistente_id, {
-      titulo,
-      cuerpo,
-      url: `/turnos-guardia/${turno_guardia.id}`,
-    });
-    await respaldoWhatsappSiFalla({
-      prestadoraId: turno_guardia.prestadora_id,
-      asistenteId: turno_guardia.asistente_id,
-      enviadoPorPush,
-      titulo,
-      cuerpo,
-    });
-  } catch (err) {
-    console.error('Error avisando el Reporte pendiente:', err.message);
   }
 }
 

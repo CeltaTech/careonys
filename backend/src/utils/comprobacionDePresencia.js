@@ -9,6 +9,15 @@ import {
 import { MOTIVOS_SIN_COMPROBAR, MOTIVOS_DEL_PEDIDO } from './motivosSinComprobar.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 import { diaEnLaZona, finDeTurnoGuardiaEnLaZona } from './relojDeLaPrestadora.js';
+import { CAMPOS_PARA_CERRAR, cerrarElTurnoGuardia, motivoDeSalida } from './cierreDelTurnoGuardia.js';
+import { puedeRegistrarUbicacion } from './consentimientoUbicacion.js';
+
+// Qué motivo de salida corresponde a lo que pidió el Asistente al pedir autorización.
+const CLAVE_DEL_MOTIVO_POR_PEDIDO = Object.freeze({
+  sin_camara: 'fallo_el_telefono_del_asistente',
+  nadie_para_mostrar: 'fallo_la_ubicacion_del_asistente',
+  otro: 'fallo_la_ubicacion_del_asistente',
+});
 
 // Cómo se comprueba que el Asistente está realmente en el domicilio cuando marca la llegada y
 // cuando cierra (pendiente #113). El GPS sigue diciendo dónde está el teléfono; esto dice que
@@ -493,18 +502,31 @@ async function pedidosCon(db, prestadoraId) {
  * código QR: la comprobación queda hecha, con quién la autorizó y a qué hora. Si lo que se
  * autoriza es una llegada, la salida del Asistente que se va queda autorizada en el mismo acto,
  * así su teléfono cierra el turno de guardia sin pedirle ningún código QR.
+ *
+ * `horaDeSalida` es la que pone quien registra la autorización de una salida: pudo autorizar de
+ * palabra y registrarlo después. Si no viene, es este momento. Los límites —no antes de la llegada
+ * del turno, no después de este momento ni de la llegada del turno siguiente del mismo Paciente—
+ * los valida la base, en el mismo camino que el cierre a mano desde el Panel.
  */
-export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizadaPor }) {
+export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizadaPor, horaDeSalida = null }) {
   if (!autorizadaPor) throw new ErrorConMotivo('faltan_datos', 'Falta quién autoriza');
 
   return enLaPrestadora(prestadoraId, 'Autorizar un ingreso', (db) =>
-    autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor }));
+    autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor, horaDeSalida }));
 }
 
-async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor }) {
+/** La hora de salida que se registra con la autorización: la que vino, o este momento. */
+export function horaDeSalidaAutorizada(horaDeSalida, cuando) {
+  if (horaDeSalida == null || horaDeSalida === '') return cuando;
+  const hora = new Date(horaDeSalida);
+  if (Number.isNaN(hora.getTime())) throw new ErrorConMotivo('hora_de_salida_obligatoria', 'Hora de salida inválida');
+  return hora.toISOString();
+}
+
+async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor, horaDeSalida }) {
   const { data: fila } = await db
     .from('turno_guardia_comprobaciones')
-    .select('id, estado, momento, turno_guardia_id')
+    .select('id, estado, momento, turno_guardia_id, motivo_del_pedido, lat, lng')
     .eq('id', comprobacionId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
@@ -515,12 +537,52 @@ async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor })
   }
 
   const cuando = ahora();
+  const { data: turno_guardia } = await db
+    .from('turnos_guardia')
+    .select(CAMPOS_PARA_CERRAR)
+    .eq('id', fila.turno_guardia_id)
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+
+  // La salida autorizada lleva la hora que puso quien registra; la llegada, la de este momento.
+  const horaDelHecho = fila.momento === 'checkout' ? horaDeSalidaAutorizada(horaDeSalida, cuando) : cuando;
+
+  // La autorización de una salida cierra ese turno de guardia en el mismo momento, y la de una
+  // llegada cierra el del Asistente que se va. El cierre queda a nombre de quien autorizó, con el
+  // motivo que corresponde a lo que pidió el Asistente: sin cámara, falló el teléfono; cualquier
+  // otro pedido, falló la ubicación.
+  const motivoId = await motivoDeSalida(db, prestadoraId, CLAVE_DEL_MOTIVO_POR_PEDIDO[fila.motivo_del_pedido]
+    ?? 'fallo_la_ubicacion_del_asistente');
+  const cerrar = async (turno, { lat = null, lng = null } = {}) => {
+    try {
+      const registraUbicacion = await puedeRegistrarUbicacion(turno.asistente_id, prestadoraId);
+      await cerrarElTurnoGuardia(db, {
+        turno_guardia: turno,
+        hora: horaDelHecho,
+        motivoId,
+        cerradaPor: autorizadaPor,
+        lat: registraUbicacion ? lat : null,
+        lng: registraUbicacion ? lng : null,
+      });
+    } catch (error) {
+      // Otro camino lo cerró mientras tanto: la salida ya está hecha.
+      if (error?.motivo !== 'turno_guardia_ya_cerrado') throw error;
+    }
+  };
+
+  // Una salida se cierra primero: si la base rechaza la hora, el pedido sigue esperando y quien
+  // registra la corrige.
+  if (turno_guardia && fila.momento === 'checkout'
+    && turno_guardia.estado === 'activa' && !turno_guardia.checkout_at) {
+    await cerrar(turno_guardia, { lat: fila.lat, lng: fila.lng });
+  }
+
   const autorizada = {
     estado: 'comprobada',
     medio: 'autorizacion_prestadora',
     sujeto_tipo: null,
     sujeto_id: null,
-    comprobada_en: cuando,
+    comprobada_en: horaDelHecho,
     autorizada_por: autorizadaPor,
     motivo_sin_comprobar: null,
     motivo_detalle: null,
@@ -536,19 +598,11 @@ async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor })
   if (error) throw new Error(error.message);
   if (!cambiada?.length) throw new ErrorConMotivo('ya_resuelta', 'Ese pedido ya no está esperando autorización');
 
-  if (fila.momento === 'checkin') {
-    const { data: turno_guardia } = await db
-      .from('turnos_guardia')
-      .select('id, prestadora_id, asistente_id, paciente_id')
-      .eq('id', fila.turno_guardia_id)
-      .eq('prestadora_id', prestadoraId)
-      .maybeSingle();
-
-    if (turno_guardia) {
-      const salientes = await turnosGuardiaSalientes(db, turno_guardia, await pacientesDelTurnoGuardia(db, turno_guardia));
-      for (const saliente of salientes) {
-        const suya = await comprobacionCon(db, { prestadoraId, turnoGuardiaId: saliente.id, momento: 'checkout' });
-        if (suya?.estado === 'comprobada') continue;
+  if (turno_guardia && fila.momento === 'checkin') {
+    const salientes = await turnosGuardiaSalientes(db, turno_guardia, await pacientesDelTurnoGuardia(db, turno_guardia));
+    for (const saliente of salientes) {
+      const suya = await comprobacionCon(db, { prestadoraId, turnoGuardiaId: saliente.id, momento: 'checkout' });
+      if (suya?.estado !== 'comprobada') {
         await guardarComprobacion(db, {
           prestadora_id: prestadoraId,
           turno_guardia_id: saliente.id,
@@ -557,6 +611,7 @@ async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor })
           ...autorizada,
         });
       }
+      await cerrar({ ...saliente, prestadora_id: prestadoraId });
     }
   }
 
@@ -564,5 +619,5 @@ async function autorizarCon(db, { comprobacionId, prestadoraId, autorizadaPor })
   // desaparecer solo, en vez de quedarse con un pedido que alguien ya resolvió.
   empujar(prestadoraId, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
 
-  return { estado: 'comprobada', comprobadaEn: cuando };
+  return { estado: 'comprobada', comprobadaEn: horaDelHecho };
 }

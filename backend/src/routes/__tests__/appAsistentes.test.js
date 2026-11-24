@@ -170,9 +170,12 @@ function comprobacionesGuardadas() {
     .map((l) => (Array.isArray(l.cuerpo) ? l.cuerpo[0] : l.cuerpo));
 }
 
+// La llegada se escribe en la tabla; la salida, por la función que cierra el turno de guardia.
+const CERRAR = 'POST /rest/v1/rpc/cerrar_turno_guardia';
 function turnoGuardiaMarcado() {
-  return llamadas.some((l) => l.clave === 'PATCH /rest/v1/turnos_guardia');
+  return llamadas.some((l) => l.clave === 'PATCH /rest/v1/turnos_guardia' || l.clave === CERRAR);
 }
+const cierres = () => llamadas.filter((l) => l.clave === CERRAR);
 
 // Cómo se ve desde afuera que salió el mensaje de llegada: para armarlo, el backend va a buscar el
 // nombre del Asistente a `asistentes`. El push en sí no se puede observar acá —sin claves VAPID no
@@ -221,6 +224,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/prestadoras', () => [{ zona_horaria: 'America/Argentina/Buenos_Aires' }]);
   respuestas.set('GET /rest/v1/turnos_guardia', () => [turnoGuardiaActual]);
   respuestas.set('PATCH /rest/v1/turnos_guardia', () => [{ id: TURNO_GUARDIA }]);
+  respuestas.set(CERRAR, ({ cuerpo }) => (cuerpo.p_reporte_atrasado ? 'salida_sin_reporte' : 'completada'));
   respuestas.set('GET /rest/v1/turno_guardia_pacientes', turnoGuardiaPacientesRespuesta);
   respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, cliente_id: CLIENTE }]);
   // Dos consultas distintas a la misma tabla: la del middleware, que busca el Legajo por la
@@ -248,8 +252,8 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/codigos_de_presencia', codigosDePresenciaRespuesta);
   respuestas.set('POST /rest/v1/codigos_de_presencia', () => []);
   respuestas.set('DELETE /rest/v1/codigos_de_presencia', () => []);
-  // Por omisión, con el Reporte Diario ya cargado: así las pruebas de check-out que no hablan
-  // de reportes no tropiezan con el guard de "falta_reporte", que se prueba aparte.
+  // Por omisión, con el Reporte Diario ya presentado: así las pruebas de check-out que no hablan
+  // del Reporte cierran como completadas. La salida con el Reporte pendiente se prueba aparte.
   respuestas.set('GET /rest/v1/reportes', () => [{ id: 'reporte-1', paciente_id: PACIENTE }]);
 });
 
@@ -858,9 +862,9 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
     assert.equal(turnoGuardiaMarcado(), false);
   });
 
-  // Regresión: separar la comprobación del check-out no puede aflojar la regla que ya existía para
-  // cerrar un turno de guardia.
-  it('sigue sin poder cerrarse sin el Reporte Diario, aunque el código sea correcto', async () => {
+  // El Reporte Diario no traba la salida: si está pendiente, el turno queda en «Salida sin
+  // Reporte Diario» por el mismo camino.
+  it('con el Reporte Diario pendiente, la salida se cierra igual y la base sabe que está pendiente', async () => {
     respuestas.set('GET /rest/v1/reportes', () => []);
     codigosEnPantalla = [
       { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
@@ -871,10 +875,40 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
       lng: LNG,
       comprobacion: { codigo: '123456' },
     });
-    assert.equal(estado, 400);
-    assert.equal(cuerpo.motivo, 'falta_reporte');
-    assert.equal(turnoGuardiaMarcado(), false);
-    assert.equal(comprobacionesGuardadas().length, 0);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.ok, true);
+    const [cierre] = cierres();
+    assert.equal(cierre.cuerpo.p_turno_guardia, TURNO_GUARDIA);
+    assert.equal(cierre.cuerpo.p_reporte_atrasado, true);
+    assert.equal(cierre.cuerpo.p_motivo, null);
+    // Nadie escribe el cierre en la tabla por fuera de la función.
+    assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/turnos_guardia'), false);
+  });
+
+  it('con el Reporte Diario presentado, la base sabe que no queda ninguno pendiente', async () => {
+    codigosEnPantalla = [
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
+    ];
+    const { estado } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '123456' },
+    });
+    assert.equal(estado, 200);
+    assert.equal(cierres()[0].cuerpo.p_reporte_atrasado, false);
+  });
+
+  it('un turno de guardia ya cerrado contesta que la salida ya está registrada', async () => {
+    turnoGuardiaActual.checkout_at = '2026-09-09T19:00:00.000Z';
+    turnoGuardiaActual.estado = 'completada';
+    const { estado, cuerpo } = await pedir('POST', `/turnos-guardia/${TURNO_GUARDIA}/checkout`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '123456' },
+    });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.yaRegistrado, true);
+    assert.equal(cierres().length, 0);
   });
 });
 

@@ -1313,77 +1313,6 @@ revisa antes del siguiente.
 
 ---
 
-## Los carteles y el texto visible del Panel
-
-**Todo lo de esta sección es texto que ve alguien, así que lo aprueba usted, uno por uno.** El
-relevamiento completo está en `docs/CARTELES_DEL_PANEL.md`, cartel por cartel y con la pantalla
-donde se ve cada uno; sus decisiones ya tomadas están en `docs/CARTELES_DEL_PANEL.docx`, que es
-fuente y no se modifica.
-
-**Va acá, pegada a los huecos del Panel, porque es el mismo ámbito.**
-
-**Y va antes del paso que decide si los idiomas pasan a la base**, más abajo, por un motivo de
-orden: los mensajes que manda el producto ya viven en la base, con su texto en los tres idiomas y
-lugar para una fila propia por Prestadora, que hoy ninguna tiene; lo que sigue escrito en un archivo es el texto de las pantallas del
-Panel, que es exactamente lo que barre esta sección. **No se muda lo que se va a sacar.**
-
-**La regla de fondo:** cuantos menos carteles haya, más atención recibe cada uno — es inversamente
-proporcional. Y **cuando un texto sale, sale el cartel entero**: no queda el recuadro vacío
-diciendo nada.
-
-**Contra qué choca esta revisión en el resto de la lista.** Son tres:
-
-- **La advertencia legal del código no la contesta usted.** Por regla el aviso sale del documento
-  legal de ese país, y ese documento no existe. Espera a lo del abogado, más abajo, no a una
-  respuesta suya.
-- **El barrido del tuteo alcanza pantallas que todavía no están escritas** —el formulario de
-  postulación, lo que falta de las dos aplicaciones—. No se barre dos veces: la regla queda
-  escrita y cada pantalla nueva nace cumpliéndola.
-
-**Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
-la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.
-
-**54. Usted** — Los carteles que esperan su texto, cuyo detalle está en
-`docs/CARTELES_DEL_PANEL.md`. Las fichas 2, 9 y 12 ya tienen el texto o el molde escrito en el
-`.docx` y lo único que falta es confirmarlo.
-
-**55. Usted** — La pregunta que usted dejó escrita en el `.docx`: si alguna pantalla dice «La
-Prestadora». Sí lo dicen, y el relevamiento completo está en `docs/NOMBRAR_A_LA_PRESTADORA.md`. La
-otra pregunta, qué es un selector, era de la fila 4, un cartel que ya no está en el código.
-
-**56. Usted** — El cartel que quedó parado porque no ubicó la situación: la ficha 21 de
-`docs/CARTELES_DEL_PANEL.md`. Va con la pantalla delante.
-
-**57. Usted** — Los tres grupos que quedaron sin autorizar: los once textos que salen por ser una
-aclaración debajo de un casillero, los catorce que pasarían a formar parte de la etiqueta del
-casillero, y los nueve casilleros que están mal hechos y por eso necesitaban esa aclaración.
-
-**58. Usted** — Habilitar cambio de contraseña, que `docs/CARTELES_DEL_PANEL.md` deja afuera por
-su decisión: qué carteles lleva se decide después de analizar el procedimiento y su lógica, no
-antes.
-
-**60. Usted** — Tres cosas que son texto visible y no se pueden decidir de mi lado: la
-contradicción del certificado, donde dos textos dicen cosas distintas del mismo código; las cuatro
-frases que le nombran al usuario el permiso de acceso, que la regla del producto dice que la
-Prestadora no ve ni sabe que existe; y la advertencia legal escrita adentro del
-código de la aplicación del Asistente, que según la regla tiene que salir del documento legal de ese
-país.
-
-**153. Usted** — Las 18 fichas de `docs/FRASES_PARA_APROBAR.md` que tienen la decisión en blanco.
-
-**61.** Aplicar todo lo contestado.
-
-**63. Usted** — Aprobar las 44 fichas de redacción de `docs/RELEVAMIENTO_DE_TEXTOS.md`: 10 textos
-al pie del campo, 7 mensajes de «se guardó», 17 ventanas de confirmación, 3 carteles de las dos
-aplicaciones del teléfono y 7 textos que no cumplen las cuatro fuentes de `..\..\CLAUDE.md` §8. El
-relevamiento está hecho: no hay tuteo ni voseo en las traducciones, y el botón «Habilitar cambio de
-contraseña» no necesita cambio. Se cierra cuando usted contesta cada ficha y se aplica.
-
-Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
-
-
----
-
 ## Reclutamiento
 
 **Al llegar acá se vuelve a analizar entera contra Match.** Match tiene un reclutamiento más
@@ -1631,20 +1560,6 @@ ya está fijado:**
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
 
 
-**108. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un
-idioma es una publicación o una carga de datos. **Y está contestado a medias sin que nadie lo
-anotara**, así que la pregunta es más chica de lo que parece:
-
-- **Las listas de opciones ya viven en la base**, con la traducción adentro de cada opción.
-- **Los mensajes que manda el producto también**, en `mensajes_del_sistema`, con su columna de
-  traducciones. Admite una fila propia por Prestadora, y hoy no hay ninguna. El Panel ya lee de ahí
-  el pie de firmas (`panel/src/hooks/useFrasesDelSistema.js:27`).
-- **Lo que sigue en un archivo es el resto del texto de las pantallas del Panel** —`panel/src/i18n/translations.js`—.
-
-Así que lo único que esto decide es ese último resto. **Y se contesta después de la sección de los
-carteles**, más arriba: es justamente ese archivo el que se barre ahí, y no tiene sentido mudar
-texto que va a salir.
-
 **109. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone el Cliente? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. La tabla donde iría ya existe, con su permiso (`datos_reservados_asistente`), y no tiene la columna del puntaje.
 
 **Usted — para analizar, no para resolver ahora.** Un registro de cambios general: qué dato
@@ -1798,6 +1713,93 @@ en «Los cimientos», y por eso está ahí y no acá. El procedimiento está en
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
 `docs/legal/argentina.md:146`, que es otra cosa—, y la regla del producto prohíbe improvisarlo. Sin
 documento no hay advertencia; la mecánica se construye igual, porque no depende de ninguna ley.
+
+---
+
+## Los carteles y el texto visible del Panel
+
+**Todo lo de esta sección es texto que ve alguien, así que lo aprueba usted, uno por uno.** El
+relevamiento completo está en `docs/CARTELES_DEL_PANEL.md`, cartel por cartel y con la pantalla
+donde se ve cada uno; sus decisiones ya tomadas están en `docs/CARTELES_DEL_PANEL.docx`, que es
+fuente y no se modifica.
+
+**Va al final, antes del cierre: primero tienen que funcionar todos los sistemas.**
+
+**Y va antes del paso que decide si los idiomas pasan a la base**, que es el último de esta sección, por un motivo de
+orden: los mensajes que manda el producto ya viven en la base, con su texto en los tres idiomas y
+lugar para una fila propia por Prestadora, que hoy ninguna tiene; lo que sigue escrito en un archivo es el texto de las pantallas del
+Panel, que es exactamente lo que barre esta sección. **No se muda lo que se va a sacar.**
+
+**La regla de fondo:** cuantos menos carteles haya, más atención recibe cada uno — es inversamente
+proporcional. Y **cuando un texto sale, sale el cartel entero**: no queda el recuadro vacío
+diciendo nada.
+
+**Contra qué choca esta revisión en el resto de la lista.** Son tres:
+
+- **La advertencia legal del código no la contesta usted.** Por regla el aviso sale del documento
+  legal de ese país, y ese documento no existe. Espera a lo del abogado, más abajo, no a una
+  respuesta suya.
+- **El barrido del tuteo alcanza pantallas que todavía no están escritas** —el formulario de
+  postulación, lo que falta de las dos aplicaciones—. No se barre dos veces: la regla queda
+  escrita y cada pantalla nueva nace cumpliéndola.
+
+**Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
+la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.
+
+**54. Usted** — Los carteles que esperan su texto, cuyo detalle está en
+`docs/CARTELES_DEL_PANEL.md`. Las fichas 2, 9 y 12 ya tienen el texto o el molde escrito en el
+`.docx` y lo único que falta es confirmarlo.
+
+**55. Usted** — La pregunta que usted dejó escrita en el `.docx`: si alguna pantalla dice «La
+Prestadora». Sí lo dicen, y el relevamiento completo está en `docs/NOMBRAR_A_LA_PRESTADORA.md`. La
+otra pregunta, qué es un selector, era de la fila 4, un cartel que ya no está en el código.
+
+**56. Usted** — El cartel que quedó parado porque no ubicó la situación: la ficha 21 de
+`docs/CARTELES_DEL_PANEL.md`. Va con la pantalla delante.
+
+**57. Usted** — Los tres grupos que quedaron sin autorizar: los once textos que salen por ser una
+aclaración debajo de un casillero, los catorce que pasarían a formar parte de la etiqueta del
+casillero, y los nueve casilleros que están mal hechos y por eso necesitaban esa aclaración.
+
+**58. Usted** — Habilitar cambio de contraseña, que `docs/CARTELES_DEL_PANEL.md` deja afuera por
+su decisión: qué carteles lleva se decide después de analizar el procedimiento y su lógica, no
+antes.
+
+**60. Usted** — Tres cosas que son texto visible y no se pueden decidir de mi lado: la
+contradicción del certificado, donde dos textos dicen cosas distintas del mismo código; las cuatro
+frases que le nombran al usuario el permiso de acceso, que la regla del producto dice que la
+Prestadora no ve ni sabe que existe; y la advertencia legal escrita adentro del
+código de la aplicación del Asistente, que según la regla tiene que salir del documento legal de ese
+país.
+
+**153. Usted** — Las fichas de `docs/FRASES_PARA_APROBAR.md` que tienen la decisión en blanco.
+
+**61.** Aplicar todo lo contestado.
+
+**63. Usted** — Aprobar las 44 fichas de redacción de `docs/RELEVAMIENTO_DE_TEXTOS.md`: 10 textos
+al pie del campo, 7 mensajes de «se guardó», 17 ventanas de confirmación, 3 carteles de las dos
+aplicaciones del teléfono y 7 textos que no cumplen las cuatro fuentes de `..\..\CLAUDE.md` §8. El
+relevamiento está hecho: no hay tuteo ni voseo en las traducciones, y el botón «Habilitar cambio de
+contraseña» no necesita cambio. Se cierra cuando usted contesta cada ficha y se aplica.
+
+Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
+
+
+---
+
+**108. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un
+idioma es una publicación o una carga de datos. **Y está contestado a medias sin que nadie lo
+anotara**, así que la pregunta es más chica de lo que parece:
+
+- **Las listas de opciones ya viven en la base**, con la traducción adentro de cada opción.
+- **Los mensajes que manda el producto también**, en `mensajes_del_sistema`, con su columna de
+  traducciones. Admite una fila propia por Prestadora, y hoy no hay ninguna. El Panel ya lee de ahí
+  el pie de firmas (`panel/src/hooks/useFrasesDelSistema.js:27`).
+- **Lo que sigue en un archivo es el resto del texto de las pantallas del Panel** —`panel/src/i18n/translations.js`—.
+
+Así que lo único que esto decide es ese último resto. **Y se contesta después de los
+carteles**, que están más arriba en esta misma sección: es justamente ese archivo el que se barre ahí, y no tiene sentido mudar
+texto que va a salir.
 
 ---
 

@@ -973,7 +973,11 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
     hora de salida del saliente y cierra su turno si el Reporte está presentado;
   - el saliente escanea el código QR del Cliente, de una persona autorizada o de otro Asistente
     que cuida al mismo Paciente. El código registra que el Asistente salió, y con eso alcanza;
-  - el Coordinador lo autoriza desde el Panel, y autorizar es cerrar el turno en ese momento. Los
+  - el Coordinador lo autoriza desde el Panel, y registrar la autorización cierra el turno. La
+    hora de salida es la que él registra: el sistema le propone la fecha y la hora de ese momento
+    y él la cambia antes de registrar, porque pudo autorizar de palabra y registrarlo después. La
+    hora de salida no puede ser anterior a la entrada del turno, ni posterior al momento en que se
+    registra, ni posterior a la entrada del Asistente que toma el turno siguiente. Los
     casos son dos: alguien recibió al Paciente y falló el teléfono o la ubicación, o el
     Coordinador fue a cubrir en persona. En ese segundo caso se autoriza a sí mismo y queda
     registrado que lo hizo; lo que eso cuesta lo ve la Prestadora;

@@ -138,12 +138,7 @@ Servicios, y todos sólo mientras tiene una emergencia abierta
 Asistentes o de las guardias que ve (`interno.personal_ve_la_calificacion`). Lo prueba
 `scripts/probar_altas_con_sesion.mjs`. Falta:
 
-- **El Asistente, en un turno asignado sin responder, ve barrio, distancia, horario, complejidad y
-  las tareas especiales que pide el Paciente.** El nombre del Paciente y el domicilio exacto, recién
-  al aceptar. Ya le llegan horario, barrio, complejidad, la distancia en línea recta y las tareas
-  acordadas en el Servicio para su tipo; la aplicación todavía no muestra la distancia ni las
-  tareas: dónde y cómo espera la aprobación del Desarrollador.
-  **De las guardias pasadas que todavía no se le pagaron, ningún dato del Paciente.** Las ya pagadas
+- **De las guardias pasadas que todavía no se le pagaron, ningún dato del Paciente.** Las ya pagadas
   dejaron de llegarle. Sacarle el Paciente a las otras cambia lo que muestra la tarjeta de la
   guardia, que hoy lleva su nombre y sin él diría «Sin Paciente asignado»: espera que el
   Desarrollador apruebe qué muestra en su lugar.

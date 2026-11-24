@@ -5,6 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { mensajeDeError } from '../lib/errores';
 import { nombreDelMotivo } from '../lib/nombreDelMotivo';
 import { con } from '../lib/textos';
+import { nombreTarea } from '../lib/tipoDeAsistente';
 
 // Los turnos de guardia que se le asignaron y todavía no respondió.
 //
@@ -58,11 +59,16 @@ function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, loc
   const refMotivo = useRef(null);
   const refDetalle = useRef(null);
 
-  // Antes de responder se ve lo necesario para decidir: día, horario, barrio y nivel de
-  // complejidad. El nombre del Paciente y el domicilio exacto aparecen en el turno de guardia, al aceptarlo.
+  // Antes de responder se ve lo necesario para decidir: día, horario, barrio, nivel de
+  // complejidad, distancia en línea recta y las tareas que pide el Servicio. El nombre del Paciente y el domicilio exacto aparecen en el turno de guardia, al aceptarlo.
   const turno_guardia = asignacion.turno_guardia;
   const barrios = turno_guardia.barrios ?? [];
   const niveles = turno_guardia.niveles_de_complejidad ?? [];
+  const tareas = (turno_guardia.tareas ?? []).map((tarea) => nombreTarea(tarea, t));
+  const distancia = typeof turno_guardia.distancia_m === 'number'
+    ? new Intl.NumberFormat(locale, { style: 'unit', unit: 'kilometer', maximumFractionDigits: 1 })
+      .format(turno_guardia.distancia_m / 1000)
+    : null;
   const ocupado = enCurso !== null;
   const motivoElegido = motivos.find((m) => m.id === motivoId);
   const pideDetalle = Boolean(motivoElegido?.pide_detalle);
@@ -94,6 +100,12 @@ function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, loc
       {niveles.length > 0 && (
         <div className="tarjeta-detalle">
           {t.asignaciones.nivel_complejidad}: {niveles.join(' · ')}
+        </div>
+      )}
+      {distancia && <div className="tarjeta-detalle">{con(t.asignaciones.distancia, { distancia })}</div>}
+      {tareas.length > 0 && (
+        <div className="tarjeta-detalle">
+          {t.asignaciones.tareas}: {tareas.join(' · ')}
         </div>
       )}
 

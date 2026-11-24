@@ -2150,10 +2150,10 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | «El Reporte correspondiente a su turno de guardia del día 7/10/2026 no ha sido enviado. Por favor, hágalo a la brevedad.» La fecha es la del turno de guardia sin Reporte. |
+| **Texto actual** | «No envió el Reporte de su turno de guardia del día 7/10/2026. Envíelo a la brevedad.» La fecha es la del turno de guardia sin Reporte. |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
-| **Por qué** | antes decía «Preséntelo cuanto antes desde la aplicación.». Ahora dice de qué turno de guardia falta el Reporte. |
+| **Por qué** | antes decía «Preséntelo cuanto antes desde la aplicación.». Ahora dice de qué turno de guardia falta el Reporte, en voz activa, en imperativo y sin «por favor», como piden las reglas de redacción. |
 | **Quién lo lee** | el Asistente. |
 | **Dónde está** | el mismo aviso, debajo del título «Reporte pendiente». |
 | **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte. |

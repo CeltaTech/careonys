@@ -33,6 +33,7 @@ const MIGRACIONES_POSTERIORES = [
   '20270503000000_los_nombres_guardados_dicen_reporte.sql',
   '20270504000000_no_olvide_enviar_el_reporte.sql',
   '20270505000000_el_reporte_pendiente_dice_la_fecha.sql',
+  '20270506000000_el_reporte_pendiente_en_voz_activa.sql',
 ];
 
 const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;

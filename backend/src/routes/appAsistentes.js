@@ -1905,7 +1905,7 @@ async function completarElTurnoGuardiaQueEsperabaElReporte(turno_guardia) {
   try {
     await completarSiLlegoElReporte(turno_guardia);
   } catch (err) {
-    console.error('Error completando el turno de guardia que esperaba el Reporte Diario:', err.message);
+    console.error('Error completando el turno de guardia que esperaba el Reporte:', err.message);
   }
 }
 
@@ -1952,7 +1952,7 @@ appAsistentesRouter.post('/turnos-guardia/:id/reporte/confirmar', requiereRolAsi
     // esta protección contra el envío duplicado la daba el guard de checkout_at; al separar
     // el cierre del reporte, la da la existencia del reporte mismo.
     await completarElTurnoGuardiaQueEsperabaElReporte(turno_guardia);
-    return res.status(400).json({ error: `${paciente.nombre} ya tiene su Reporte Diario cargado en este turno`, yaRegistrado: true });
+    return res.status(400).json({ error: `${paciente.nombre} ya tiene su Reporte cargado en este turno`, yaRegistrado: true });
   }
 
   // Lo que la Prestadora apagó tampoco se guarda, aunque venga en el pedido: la pantalla no lo
@@ -2100,7 +2100,7 @@ appAsistentesRouter.post('/turnos-guardia/:id/checkout', requiereRolAsistente, t
   }
   if (faltan.length > 0) {
     return res.status(400).json({
-      error: `Falta cargar el Reporte Diario de ${faltan.map((p) => p.nombre).join(' y ')} antes de cerrar el turno de guardia`,
+      error: `Cargue el Reporte de${faltan.map((p) => p.nombre).join(' y ')} antes de cerrar el turno de guardia`,
       motivo: 'falta_reporte',
       pacientesSinReporte: faltan.map((p) => ({ id: p.id, nombre: p.nombre })),
     });

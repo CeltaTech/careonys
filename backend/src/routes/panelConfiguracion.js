@@ -1056,7 +1056,7 @@ panelConfiguracionRouter.patch('/recordatorio-reporte-diario', async (req, res) 
   if (!prestadoraId) return;
   // Con el trabajo de la Prestadora, igual que el aviso previo: la base sólo le deja cambiar
   // `prestadoras` al Superadmin.
-  const { error } = await enLaPrestadora(prestadoraId, 'recordatorio del Reporte Diario', (dbDelTrabajo) =>
+  const { error } = await enLaPrestadora(prestadoraId, 'recordatorio del Reporte', (dbDelTrabajo) =>
     dbDelTrabajo.from('prestadoras').update({ minutos_recordatorio_reporte_diario: minutos }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
@@ -1088,7 +1088,7 @@ panelConfiguracionRouter.patch('/insistencia-reporte-diario', async (req, res) =
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  const { error } = await enLaPrestadora(prestadoraId, 'insistencia del Reporte Diario', (dbDelTrabajo) =>
+  const { error } = await enLaPrestadora(prestadoraId, 'insistencia del Reporte', (dbDelTrabajo) =>
     dbDelTrabajo.from('prestadoras').update({ horas_entre_avisos_reporte_pendiente: horas }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
@@ -1110,11 +1110,11 @@ panelConfiguracionRouter.get('/facturar-turnos-sin-reporte', async (req, res) =>
 panelConfiguracionRouter.patch('/facturar-turnos-sin-reporte', async (req, res) => {
   const { factura } = req.body;
   if (typeof factura !== 'boolean') {
-    return res.status(400).json({ error: 'Indique si se facturan o no los turnos sin Reporte Diario.' });
+    return res.status(400).json({ error: 'Indique si se facturan o no los turnos sin Reporte.' });
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  const { error } = await enLaPrestadora(prestadoraId, 'facturación de los turnos sin Reporte Diario', (dbDelTrabajo) =>
+  const { error } = await enLaPrestadora(prestadoraId, 'facturación de los turnos sin Reporte', (dbDelTrabajo) =>
     dbDelTrabajo.from('prestadoras').update({ factura_turnos_sin_reporte_diario: factura }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);

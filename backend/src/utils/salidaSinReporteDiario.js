@@ -177,7 +177,7 @@ async function avisarAlSaliente(db, turno_guardia) {
       cuerpo,
     });
   } catch (err) {
-    console.error('Error avisando el Reporte Diario pendiente:', err.message);
+    console.error('Error avisando el Reporte pendiente:', err.message);
   }
 }
 
@@ -188,7 +188,7 @@ async function avisarAlSaliente(db, turno_guardia) {
  */
 export async function completarSiLlegoElReporte(turno_guardia) {
   if (turno_guardia?.estado !== ESTADO_SALIDA_SIN_REPORTE) return false;
-  return enLaPrestadora(turno_guardia.prestadora_id, 'Llegada del Reporte Diario pendiente', async (db) => {
+  return enLaPrestadora(turno_guardia.prestadora_id, 'Llegada del Reporte pendiente', async (db) => {
     if (await faltaElReporteDiario(db, turno_guardia)) return false;
 
     const { data, error } = await db

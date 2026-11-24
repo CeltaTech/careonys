@@ -257,7 +257,7 @@ async function revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntes,
     .not('asistente_id', 'is', null);
 
   if (error) {
-    console.error(`Error consultando guardias para el recordatorio del Reporte Diario (prestadora ${prestadoraId}):`, error.message);
+    console.error(`Error consultando guardias para el recordatorio del Reporte (prestadora ${prestadoraId}):`, error.message);
     return;
   }
   if (!turnos_guardia?.length) return;
@@ -277,7 +277,7 @@ async function revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntes,
     .eq('prestadora_id', prestadoraId)
     .in('turno_guardia_id', porTerminar.map((g) => g.id));
   if (errorReportes) {
-    console.error(`Error consultando los reportes para el recordatorio del Reporte Diario (prestadora ${prestadoraId}):`, errorReportes.message);
+    console.error(`Error consultando los reportes para el recordatorio del Reporte (prestadora ${prestadoraId}):`, errorReportes.message);
     return;
   }
   const conReporte = new Set((reportes ?? []).map((r) => `${r.turno_guardia_id}:${r.paciente_id}`));
@@ -322,7 +322,7 @@ export async function revisarReportesDiariosPendientes(db, prestadoraId, horasEn
     .or(`push_reporte_pendiente_enviado_at.is.null,push_reporte_pendiente_enviado_at.lte."${limite}"`);
 
   if (error) {
-    console.error(`Error consultando los Reportes Diarios pendientes (prestadora ${prestadoraId}):`, error.message);
+    console.error(`Error consultando los Reportes pendientes (prestadora ${prestadoraId}):`, error.message);
     return;
   }
   if (!turnos_guardia?.length) return;

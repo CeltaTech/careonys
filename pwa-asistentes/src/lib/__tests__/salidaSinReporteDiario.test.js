@@ -21,9 +21,9 @@ for (const idioma of Object.keys(T)) {
 }
 
 test('los avisos en castellano, de usted y en imperativo', () => {
-  assert.equal(T['es-AR'].turnos_guardia.estado_salida_sin_reporte, 'Sin Reporte Diario');
-  assert.equal(T['es-AR'].turno_guardia_activo.saliente_sin_reporte, 'El Asistente anterior no presentó el Reporte Diario.');
-  assert.equal(T['es-AR'].turno_guardia_activo.reporte_pendiente, 'Su Reporte Diario está pendiente. Preséntelo ahora.');
+  assert.equal(T['es-AR'].turnos_guardia.estado_salida_sin_reporte, 'Sin Reporte');
+  assert.equal(T['es-AR'].turno_guardia_activo.saliente_sin_reporte, 'El Asistente anterior no presentó el Reporte.');
+  assert.equal(T['es-AR'].turno_guardia_activo.reporte_pendiente, 'Su Reporte está pendiente. Preséntelo ahora.');
 });
 
 test('el relevo ve el aviso cuando el backend contesta que el que sale no presentó el reporte', () => {

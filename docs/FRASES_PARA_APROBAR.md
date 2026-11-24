@@ -871,14 +871,14 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decían «Escuchando — tocar para parar», «…se va escribiendo abajo.» y «…Se habilita desde los permisos…». El botón ahora dice qué hace. |
 | **Quién lo lee** | el Asistente. |
-| **Dónde está** | aplicación de Asistentes, botón de dictado del Reporte diario. |
+| **Dónde está** | aplicación de Asistentes, botón de dictado del Reporte. |
 | **Qué estaba haciendo** | tocó el botón de dictado. |
 | **Qué pasó** | según el caso, el teléfono escucha o no tiene permiso para el micrófono. |
 | **Qué puede hacer después** | hablar, parar el dictado, o activar el permiso. |
 | **Cómo se muestra** | botón y franja. |
 | **Decisión** | |
 
-### 114. Reporte diario
+### 114. Reporte
 
 | | |
 |---|---|
@@ -887,8 +887,8 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decían «Ej: el paciente almorzó bien, tomó la medicación de las 14hs…», «Sin conexión — la foto se puede agregar…», «Sin conexión — el análisis con IA necesita internet. Con "Completar a mano" se puede seguir…» y «Reporte guardado correctamente.». |
 | **Quién lo lee** | el Asistente. |
-| **Dónde está** | aplicación de Asistentes, Reporte diario. |
-| **Qué estaba haciendo** | está cargando el Reporte diario. |
+| **Dónde está** | aplicación de Asistentes, Reporte. |
+| **Qué estaba haciendo** | está cargando el Reporte. |
 | **Qué pasó** | según el caso, ve el ejemplo, no tiene señal, o se guardó. |
 | **Qué puede hacer después** | escribir el reporte, completarlo a mano o agregar la foto después. |
 | **Cómo se muestra** | ejemplo dentro del casillero, franja y mensaje emergente. |
@@ -994,7 +994,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 
 | | |
 |---|---|
-| **Texto actual** | en español no cambian: el aviso de algo no encontrado, el de dato mal cargado, la falla del servidor, el error general, el dictado que no oyó nada, la etiqueta del casillero del Reporte diario, el error de las notificaciones y el error al enviar un documento. |
+| **Texto actual** | en español no cambian: el aviso de algo no encontrado, el de dato mal cargado, la falla del servidor, el error general, el dictado que no oyó nada, la etiqueta del casillero del Reporte, el error de las notificaciones y el error al enviar un documento. |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | en inglés se sacaron «Please» y «We», y en inglés y portugués «invalid» e «inválidos», para que digan lo mismo que el español. |
@@ -1022,34 +1022,34 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | franja. |
 | **Decisión** | |
 
-### 201. Estado del turno de guardia sin Reporte Diario
+### 201. Estado del turno de guardia sin Reporte
 
 | | |
 |---|---|
-| **Texto actual** | «Sin Reporte Diario» |
+| **Texto actual** | «Sin Reporte» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Salida sin Reporte Diario». Es el mismo texto que ve el Panel. |
 | **Quién lo lee** | el Asistente. |
 | **Dónde está** | aplicación de Asistentes, lista de turnos de guardia. |
 | **Qué estaba haciendo** | mira sus turnos de guardia. |
-| **Qué pasó** | se fue de un turno sin presentar el Reporte Diario. |
-| **Qué puede hacer después** | presentar el Reporte Diario. |
+| **Qué pasó** | se fue de un turno sin presentar el Reporte. |
+| **Qué puede hacer después** | presentar el Reporte. |
 | **Cómo se muestra** | etiqueta en la lista. |
 | **Decisión** | |
 
-### 202. El Asistente anterior no presentó el Reporte Diario
+### 202. El Asistente anterior no presentó el Reporte
 
 | | |
 |---|---|
-| **Texto actual** | «El Asistente anterior no presentó el Reporte Diario.» |
+| **Texto actual** | «El Asistente anterior no presentó el Reporte.» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «El Asistente saliente no presentó el Reporte Diario.». «Anterior» es la palabra de uso corriente. |
 | **Quién lo lee** | el Asistente. |
 | **Dónde está** | aplicación de Asistentes, pantalla del turno de guardia en curso. |
 | **Qué estaba haciendo** | llegó a tomar el turno de guardia. |
-| **Qué pasó** | el Asistente que se fue no presentó el Reporte Diario. |
+| **Qué pasó** | el Asistente que se fue no presentó el Reporte. |
 | **Qué puede hacer después** | seguir con su turno. |
 | **Cómo se muestra** | franja. |
 | **Decisión** | |
@@ -1712,11 +1712,11 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | etiqueta del casillero. |
 | **Decisión** | |
 
-### 185. Título del aviso del Reporte Diario
+### 185. Título del aviso del Reporte
 
 | | |
 |---|---|
-| **Texto actual** | «Aviso de Reporte Diario» |
+| **Texto actual** | «Aviso de Reporte» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Recordatorio del Reporte Diario». Se llama «Aviso», igual que la tarjeta de al lado. |
@@ -1728,11 +1728,11 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | título de la tarjeta. |
 | **Decisión** | |
 
-### 187. Título del aviso de Reporte Diario pendiente
+### 187. Título del aviso de Reporte pendiente
 
 | | |
 |---|---|
-| **Texto actual** | «Aviso de Reporte Diario pendiente» |
+| **Texto actual** | «Aviso de Reporte pendiente» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: es nuevo, está escrito y todavía no se publicó. |
 | **Por qué** | antes no había texto: la tarjeta es nueva. Ahí la Prestadora elige cada cuántas horas se le repite el aviso al Asistente que se fue sin presentar el Reporte Diario. |
@@ -1760,11 +1760,11 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | etiqueta del casillero. |
 | **Decisión** | |
 
-### 189. Título de la opción de facturar los turnos sin Reporte Diario
+### 189. Título de la opción de facturar los turnos sin Reporte
 
 | | |
 |---|---|
-| **Texto actual** | «Turnos sin Reporte Diario» |
+| **Texto actual** | «Turnos sin Reporte» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: es nuevo, está escrito y todavía no se publicó. |
 | **Por qué** | antes no había texto: la tarjeta es nueva. |
@@ -1776,23 +1776,23 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | título de la tarjeta. |
 | **Decisión** | |
 
-### 190. Opción de facturar los turnos sin Reporte Diario
+### 190. Opción de facturar los turnos sin Reporte
 
 | | |
 |---|---|
-| **Texto actual** | «Facturar turnos sin Reporte Diario» |
+| **Texto actual** | «Facturar turnos sin Reporte» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: es nuevo, está escrito y todavía no se publicó. |
 | **Por qué** | antes no había texto: la opción es nueva. |
 | **Quién lo lee** | el Administrador de la Prestadora. |
-| **Dónde está** | Panel → Configuración → La Prestadora, tarjeta «Turnos sin Reporte Diario». |
+| **Dónde está** | Panel → Configuración → La Prestadora, tarjeta «Turnos sin Reporte». |
 | **Qué estaba haciendo** | revisa cómo trabaja su Prestadora. |
 | **Qué pasó** | ve la opción, marcada de fábrica. |
-| **Qué puede hacer después** | desmarcarla para que esos turnos se facturen recién cuando llegue el Reporte Diario, y guardar. |
+| **Qué puede hacer después** | desmarcarla para que esos turnos se facturen recién cuando llegue el Reporte, y guardar. |
 | **Cómo se muestra** | casilla para marcar. |
 | **Decisión** | |
 
-### 191. Columna de la fecha en la lista de Reportes Diarios atrasados
+### 191. Columna de la fecha en la lista de Reportes atrasados
 
 | | |
 |---|---|
@@ -1801,14 +1801,14 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Fecha del turno de guardia». En esa lista no hay otra fecha. |
 | **Quién lo lee** | el Coordinador o el Administrador. |
-| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes Diarios atrasados. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes atrasados. |
 | **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
-| **Qué pasó** | ve la lista de Reportes Diarios atrasados. |
+| **Qué pasó** | ve la lista de Reportes atrasados. |
 | **Qué puede hacer después** | nada. |
 | **Cómo se muestra** | título de la columna. |
 | **Decisión** | |
 
-### 192. Columna del motivo en la lista de Reportes Diarios atrasados
+### 192. Columna del motivo en la lista de Reportes atrasados
 
 | | |
 |---|---|
@@ -1817,14 +1817,14 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Falta», que repetía el título de la lista. |
 | **Quién lo lee** | el Coordinador o el Administrador. |
-| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes Diarios atrasados. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes atrasados. |
 | **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
-| **Qué pasó** | ve la lista de Reportes Diarios atrasados. |
+| **Qué pasó** | ve la lista de Reportes atrasados. |
 | **Qué puede hacer después** | nada. |
 | **Cómo se muestra** | título de la columna. |
 | **Decisión** | |
 
-### 193. Columna del reporte en la lista de Reportes Diarios atrasados
+### 193. Columna del reporte en la lista de Reportes atrasados
 
 | | |
 |---|---|
@@ -1833,14 +1833,14 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Reporte Diario recibido». Habla de lo que hizo el Asistente. |
 | **Quién lo lee** | el Coordinador o el Administrador. |
-| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes Diarios atrasados. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes atrasados. |
 | **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
-| **Qué pasó** | ve la lista de Reportes Diarios atrasados. |
+| **Qué pasó** | ve la lista de Reportes atrasados. |
 | **Qué puede hacer después** | nada. |
 | **Cómo se muestra** | título de la columna. |
 | **Decisión** | |
 
-### 195. Excepción de los Reportes Diarios pendientes
+### 195. Excepción de los Reportes pendientes
 
 | | |
 |---|---|
@@ -1851,39 +1851,39 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Quién lo lee** | el Coordinador o el Administrador. |
 | **Dónde está** | Panel → Estado actual, franja de excepciones. |
 | **Qué estaba haciendo** | mira cómo está el día. |
-| **Qué pasó** | hay turnos de guardia sin Reporte Diario. |
+| **Qué pasó** | hay turnos de guardia sin Reporte. |
 | **Qué puede hacer después** | abrir la excepción y pedirle el reporte al Asistente. |
 | **Cómo se muestra** | etiqueta de la excepción. |
 | **Decisión** | |
 
-### 196. Estado del turno de guardia sin Reporte Diario
+### 196. Estado del turno de guardia sin Reporte
 
 | | |
 |---|---|
-| **Texto actual** | «Sin Reporte Diario» |
+| **Texto actual** | «Sin Reporte» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Salida sin Reporte Diario». El estado dice lo que falta; la salida ya se ve en el horario. |
 | **Quién lo lee** | el Coordinador o el Administrador. |
 | **Dónde está** | Panel, en las listas de turnos de guardia. |
 | **Qué estaba haciendo** | revisa los turnos de guardia. |
-| **Qué pasó** | el Asistente se fue sin presentar el Reporte Diario. |
+| **Qué pasó** | el Asistente se fue sin presentar el Reporte. |
 | **Qué puede hacer después** | pedirle el reporte al Asistente. |
 | **Cómo se muestra** | etiqueta de color en la lista. |
 | **Decisión** | |
 
-### 197. Situación del turno de guardia sin Reporte Diario
+### 197. Situación del turno de guardia sin Reporte
 
 | | |
 |---|---|
-| **Texto actual** | «Sin Reporte Diario» |
+| **Texto actual** | «Sin Reporte» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Salida sin Reporte Diario». Es el mismo texto que el estado del turno. |
 | **Quién lo lee** | el Coordinador o el Administrador. |
 | **Dónde está** | Panel → Turnos de guardia, en la grilla; y en el Legajo del Asistente y en la ficha del Cliente, en la lista de turnos de guardia. |
 | **Qué estaba haciendo** | revisa los turnos de guardia. |
-| **Qué pasó** | el Asistente se fue sin presentar el Reporte Diario. |
+| **Qué pasó** | el Asistente se fue sin presentar el Reporte. |
 | **Qué puede hacer después** | pedirle el reporte al Asistente. |
 | **Cómo se muestra** | etiqueta de color. |
 | **Decisión** | |
@@ -2130,23 +2130,23 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | aviso al celular o correo. |
 | **Decisión** | |
 
-### 204. Aviso del Reporte Diario antes del fin del turno
+### 204. Aviso del Reporte antes del fin del turno
 
 | | |
 |---|---|
-| **Texto actual** | «Presente el Reporte Diario antes de terminar el turno.» |
+| **Texto actual** | «Presente el Reporte antes de terminar el turno.» |
 | **Propuesta** | igual. |
 | **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
 | **Por qué** | antes decía «Presente el Reporte Diario antes del fin del turno de guardia.». Es más corto y suena natural. |
 | **Quién lo lee** | el Asistente. |
-| **Dónde está** | aviso que recibe minutos antes de que termine su turno de guardia, si todavía no presentó el Reporte Diario. |
+| **Dónde está** | aviso que recibe minutos antes de que termine su turno de guardia, si todavía no presentó el Reporte. |
 | **Qué estaba haciendo** | está terminando el turno de guardia. |
-| **Qué pasó** | no presentó el Reporte Diario. |
+| **Qué pasó** | no presentó el Reporte. |
 | **Qué puede hacer después** | presentarlo desde la aplicación. |
 | **Cómo se muestra** | aviso al celular. |
 | **Decisión** | |
 
-### 206. Texto del aviso de Reporte Diario pendiente
+### 206. Texto del aviso de Reporte pendiente
 
 | | |
 |---|---|
@@ -2155,9 +2155,9 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
 | **Por qué** | antes decía «Su Reporte Diario está pendiente. Preséntelo ahora.», que repetía el título. El aviso se repite cada tantas horas, así que dice qué hacer y dónde. |
 | **Quién lo lee** | el Asistente. |
-| **Dónde está** | el mismo aviso, debajo del título «Reporte Diario pendiente». |
-| **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte Diario. |
-| **Qué pasó** | el turno quedó sin Reporte Diario. |
+| **Dónde está** | el mismo aviso, debajo del título «Reporte pendiente». |
+| **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte. |
+| **Qué pasó** | el turno quedó sin Reporte. |
 | **Qué puede hacer después** | presentarlo desde la aplicación. |
 | **Cómo se muestra** | aviso al celular. |
 | **Decisión** | |

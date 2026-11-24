@@ -139,8 +139,8 @@ BEGIN
   -- 4. Los dos rigen hoy, y la factura desde el 16 de agosto sale a nombre del segundo.
   v_resultados := v_resultados
     || (SELECT count(*)::text FROM public.pagadores_del_servicio
-         WHERE servicio_id = '${SERVICIO}' AND vigente_desde <= current_date
-           AND (vigente_hasta IS NULL OR vigente_hasta >= current_date))
+         WHERE servicio_id = '${SERVICIO}' AND vigente_desde <= interno.hoy_de_la_sesion()
+           AND (vigente_hasta IS NULL OR vigente_hasta >= interno.hoy_de_la_sesion()))
     || (SELECT coalesce(string_agg(coalesce(rige_desde::text, 'siempre') || '>' || coalesce(responsable_que_recibe_la_factura::text, 'contratante'), ',' ORDER BY rige_desde NULLS FIRST), '')
           FROM public.tramos_de_la_factura_del_servicio WHERE servicio_id = '${SERVICIO}');
 
@@ -198,7 +198,7 @@ BEGIN
     || coalesce(public.falta_la_firma_del_pagador('${SERVICIO}')::text, 'nada');
   v_r := 'aceptado';
   BEGIN
-    PERFORM public.terminar_responsable_de_pagos(v_primero, current_date - 1);
+    PERFORM public.terminar_responsable_de_pagos(v_primero, interno.hoy_de_la_sesion() - 1);
   EXCEPTION WHEN OTHERS THEN v_r := SQLERRM;
   END;
   v_resultados := v_resultados || v_r

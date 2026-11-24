@@ -67,7 +67,7 @@ import {
   camposQueCambiaron,
   registrarActividad,
 } from '../utils/registroDeActividad.js';
-import { cerrarLaSalidaDelSaliente, completarSiLlegoElReporte, ESTADO_SALIDA_SIN_REPORTE } from '../utils/salidaSinReporteDiario.js';
+import { cerrarLaSalidaDelSaliente, completarSiLlegoElReporte, ESTADO_SALIDA_SIN_REPORTE } from '../utils/salidaSinReporte.js';
 
 export const appAsistentesRouter = Router();
 
@@ -127,7 +127,7 @@ function manejarErrorMulter(err, req, res, next) {
 async function turnoGuardiaDelAsistente(db, turnoGuardiaId, usuarioAsistente) {
   const { data } = await db
     .from('turnos_guardia')
-    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte_diario, reporte_diario_llego_at')
+    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte, reporte_llego_at')
     .eq('id', turnoGuardiaId)
     .eq('asistente_id', usuarioAsistente.asistenteId)
     .maybeSingle();
@@ -683,7 +683,7 @@ appAsistentesRouter.get('/contenidos/archivos/:id/enlace', requiereRolAsistente,
 appAsistentesRouter.get('/turnos-guardia', requiereRolAsistente, async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('turnos_guardia')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte_diario, reporte_diario_llego_at')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte, reporte_llego_at')
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('fecha', { ascending: false })
     .order('hora_inicio', { ascending: false })
@@ -722,7 +722,7 @@ appAsistentesRouter.get('/turnos-guardia/:id', requiereRolAsistente, async (req,
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('turnos_guardia')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte_diario, reporte_diario_llego_at')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, salio_sin_reporte, reporte_llego_at')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();

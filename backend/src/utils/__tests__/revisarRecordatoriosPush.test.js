@@ -212,7 +212,7 @@ describe('el recordatorio del Reporte Diario antes del fin del turno de guardia'
   function prepararBase({ minutos, pacientes = [PACIENTE], reportes = [] }) {
     respuestas.set(PRESTADORAS, [{
       minutos_aviso_previo_turno_guardia: 60,
-      minutos_recordatorio_reporte_diario: minutos,
+      minutos_recordatorio_reporte: minutos,
       zona_horaria: ZONA,
       pais: 'AR',
     }]);
@@ -303,7 +303,7 @@ describe('la insistencia mientras falta el Reporte Diario', () => {
   function prepararBase({ horas, conZona = true } = {}) {
     respuestas.set(PRESTADORAS, [{
       minutos_aviso_previo_turno_guardia: 60,
-      minutos_recordatorio_reporte_diario: 30,
+      minutos_recordatorio_reporte: 30,
       ...(horas === undefined ? {} : { horas_entre_avisos_reporte_pendiente: horas }),
       zona_horaria: conZona ? ZONA : null,
       pais: 'AR',

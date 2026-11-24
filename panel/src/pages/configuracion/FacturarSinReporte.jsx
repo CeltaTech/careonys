@@ -16,7 +16,7 @@ import '../../styles/molde-paginas.css';
    se prestó. Apagada, el turno se factura recién cuando llega el reporte, en la factura del
    período en que llegó si la de su fecha ya estaba hecha. La elección se anota en cada turno de
    guardia en el momento de la salida, así que cambiarla no toca los que ya salieron. */
-export function FacturarSinReporteDiario() {
+export function FacturarSinReporte() {
   const { t } = useLocale();
   const [factura, setFactura] = useState(true);
   const [estado, setEstado] = useState('cargando');
@@ -29,7 +29,7 @@ export function FacturarSinReporteDiario() {
     setError(null);
     try {
       const datos = await llamarApi('/facturar-turnos-sin-reporte');
-      setFactura(datos.factura_turnos_sin_reporte_diario !== false);
+      setFactura(datos.factura_turnos_sin_reporte !== false);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -70,7 +70,7 @@ export function FacturarSinReporteDiario() {
           <div className="molde-ancho">
             <FormField
               label={t.configuracion.facturar_sin_reporte_activa}
-              name="factura_turnos_sin_reporte_diario"
+              name="factura_turnos_sin_reporte"
               type="checkbox"
               checked={factura}
               onChange={(e) => { setFactura(e.target.checked); setGuardado(false); }}

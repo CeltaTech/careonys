@@ -6,7 +6,7 @@
    el turno de guardia: se prestó. Sale en la factura de su fecha, como cualquier turno completado.
 
    SALVO QUE LA PRESTADORA HAYA ELEGIDO ESPERAR. Esa elección queda anotada en el turno en el
-   momento de la salida (`factura_espera_el_reporte_diario`). Mientras el reporte no llega, el
+   momento de la salida (`factura_espera_el_reporte`). Mientras el reporte no llega, el
    turno no se factura. Cuando llega, se factura en el día más tardío entre su fecha y el día en
    que llegó el reporte, contado en la zona horaria de la Prestadora. Así, si el reporte llegó
    después de cerrado el período de su fecha, el turno entra en el período siguiente y no se
@@ -27,8 +27,8 @@ const ESTADO_SIN_REPORTE = 'salida_sin_reporte';
 
 /** El día en que llegó el Reporte Diario tardío, en la zona de la Prestadora, o null. */
 export function diaDeLlegadaDelReporte(turno, zona) {
-  if (!turno?.salio_sin_reporte_diario || !turno.reporte_diario_llego_at) return null;
-  const momento = new Date(turno.reporte_diario_llego_at);
+  if (!turno?.salio_sin_reporte || !turno.reporte_llego_at) return null;
+  const momento = new Date(turno.reporte_llego_at);
   if (Number.isNaN(momento.getTime())) return null;
   return diaEnLaZona(momento, zona);
 }
@@ -39,15 +39,15 @@ const masTardio = (a, b) => (b && b > a ? b : a);
 /**
  * El turno de guardia como lo cuenta la factura del Cliente, o null si todavía no se factura.
  *
- * @param {object} turno   la fila del turno, con `fecha`, `estado`, `salio_sin_reporte_diario`,
- *                         `reporte_diario_llego_at` y `factura_espera_el_reporte_diario`
+ * @param {object} turno   la fila del turno, con `fecha`, `estado`, `salio_sin_reporte`,
+ *                         `reporte_llego_at` y `factura_espera_el_reporte`
  * @param {object} p
  * @param {string} p.zona       la zona horaria de la Prestadora
  * @param {string} p.medicion   la medición del Servicio
  * @returns {object|null}  el turno con `estado` y `fecha` de facturación
  */
 export function comoSeFactura(turno, { zona, medicion }) {
-  const espera = turno?.factura_espera_el_reporte_diario === true && medicion !== MEDICIONES.PACTADO_MAS_EXCEDENTE;
+  const espera = turno?.factura_espera_el_reporte === true && medicion !== MEDICIONES.PACTADO_MAS_EXCEDENTE;
   if (turno?.estado === ESTADO_SIN_REPORTE) {
     if (espera) return null;
     return { ...turno, estado: 'completada' };
@@ -68,6 +68,6 @@ export function comoSeFactura(turno, { zona, medicion }) {
 export function fechaDeLiquidacion(turno, zona) {
   if (turno?.estado === ESTADO_SIN_REPORTE) return null;
   const fecha = fechaDe(turno);
-  if (!turno?.salio_sin_reporte_diario) return fecha;
+  if (!turno?.salio_sin_reporte) return fecha;
   return masTardio(fecha, diaDeLlegadaDelReporte(turno, zona));
 }

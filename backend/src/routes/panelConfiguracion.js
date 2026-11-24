@@ -73,7 +73,7 @@ import {
   hayReenvioConfigurado,
   respuestasConfirmadas,
 } from '../utils/reenvioDeRespuestas.js';
-import { LIMITES_PREAVISO_TURNO_GUARDIA, LIMITES_RECORDATORIO_REPORTE_DIARIO, LIMITES_INSISTENCIA_REPORTE_DIARIO } from '../utils/revisarRecordatoriosPush.js';
+import { LIMITES_PREAVISO_TURNO_GUARDIA, LIMITES_RECORDATORIO_REPORTE, LIMITES_INSISTENCIA_REPORTE } from '../utils/revisarRecordatoriosPush.js';
 import { reglaDePagoDe, revisarReglaDePago, soloLoQueCorreDelPago } from '../utils/formaDePago.js';
 import { ajusteDelPagoDe, ajusteDelPagoQueSePuedeGuardar } from '../utils/ajusteDelPagoPorIndice.js';
 import {
@@ -1031,25 +1031,25 @@ panelConfiguracionRouter.patch('/aviso-previo-turno-guardia', async (req, res) =
 
 // --- Cuánto antes del fin del turno de guardia se le recuerda al Asistente que presente el
 //     Reporte Diario. Mismo patrón que /aviso-previo-turno-guardia. ---
-panelConfiguracionRouter.get('/recordatorio-reporte-diario', async (req, res) => {
+panelConfiguracionRouter.get('/recordatorio-reporte', async (req, res) => {
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('prestadoras')
-    .select('minutos_recordatorio_reporte_diario')
+    .select('minutos_recordatorio_reporte')
     .single();
   if (error) return responderError(res, error);
-  res.json({ minutos_recordatorio_reporte_diario: data.minutos_recordatorio_reporte_diario });
+  res.json({ minutos_recordatorio_reporte: data.minutos_recordatorio_reporte });
 });
 
-panelConfiguracionRouter.patch('/recordatorio-reporte-diario', async (req, res) => {
+panelConfiguracionRouter.patch('/recordatorio-reporte', async (req, res) => {
   const { minutos } = req.body;
   if (
     !Number.isInteger(minutos)
-    || minutos < LIMITES_RECORDATORIO_REPORTE_DIARIO.minimo
-    || minutos > LIMITES_RECORDATORIO_REPORTE_DIARIO.maximo
+    || minutos < LIMITES_RECORDATORIO_REPORTE.minimo
+    || minutos > LIMITES_RECORDATORIO_REPORTE.maximo
   ) {
     return res.status(400).json({
-      error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_RECORDATORIO_REPORTE_DIARIO.minimo} y ${LIMITES_RECORDATORIO_REPORTE_DIARIO.maximo}.`,
+      error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_RECORDATORIO_REPORTE.minimo} y ${LIMITES_RECORDATORIO_REPORTE.maximo}.`,
     });
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
@@ -1057,15 +1057,15 @@ panelConfiguracionRouter.patch('/recordatorio-reporte-diario', async (req, res) 
   // Con el trabajo de la Prestadora, igual que el aviso previo: la base sólo le deja cambiar
   // `prestadoras` al Superadmin.
   const { error } = await enLaPrestadora(prestadoraId, 'recordatorio del Reporte', (dbDelTrabajo) =>
-    dbDelTrabajo.from('prestadoras').update({ minutos_recordatorio_reporte_diario: minutos }).eq('id', prestadoraId)
+    dbDelTrabajo.from('prestadoras').update({ minutos_recordatorio_reporte: minutos }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
 // --- Cada cuántas horas se le repite al Asistente el aviso de que falta su Reporte Diario,
-//     mientras no lo presente. Mismo patrón que /recordatorio-reporte-diario. ---
-panelConfiguracionRouter.get('/insistencia-reporte-diario', async (req, res) => {
+//     mientras no lo presente. Mismo patrón que /recordatorio-reporte. ---
+panelConfiguracionRouter.get('/insistencia-reporte', async (req, res) => {
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('prestadoras')
@@ -1075,15 +1075,15 @@ panelConfiguracionRouter.get('/insistencia-reporte-diario', async (req, res) => 
   res.json({ horas_entre_avisos_reporte_pendiente: data.horas_entre_avisos_reporte_pendiente });
 });
 
-panelConfiguracionRouter.patch('/insistencia-reporte-diario', async (req, res) => {
+panelConfiguracionRouter.patch('/insistencia-reporte', async (req, res) => {
   const { horas } = req.body;
   if (
     !Number.isInteger(horas)
-    || horas < LIMITES_INSISTENCIA_REPORTE_DIARIO.minimo
-    || horas > LIMITES_INSISTENCIA_REPORTE_DIARIO.maximo
+    || horas < LIMITES_INSISTENCIA_REPORTE.minimo
+    || horas > LIMITES_INSISTENCIA_REPORTE.maximo
   ) {
     return res.status(400).json({
-      error: `Las horas tienen que ser un número entero, entre ${LIMITES_INSISTENCIA_REPORTE_DIARIO.minimo} y ${LIMITES_INSISTENCIA_REPORTE_DIARIO.maximo}.`,
+      error: `Las horas tienen que ser un número entero, entre ${LIMITES_INSISTENCIA_REPORTE.minimo} y ${LIMITES_INSISTENCIA_REPORTE.maximo}.`,
     });
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
@@ -1096,15 +1096,15 @@ panelConfiguracionRouter.patch('/insistencia-reporte-diario', async (req, res) =
 });
 
 // --- Si se le factura al Cliente el turno de guardia en el que el Asistente salió sin presentar el
-//     Reporte Diario. Mismo patrón que /recordatorio-reporte-diario. ---
+//     Reporte Diario. Mismo patrón que /recordatorio-reporte. ---
 panelConfiguracionRouter.get('/facturar-turnos-sin-reporte', async (req, res) => {
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('prestadoras')
-    .select('factura_turnos_sin_reporte_diario')
+    .select('factura_turnos_sin_reporte')
     .single();
   if (error) return responderError(res, error);
-  res.json({ factura_turnos_sin_reporte_diario: data.factura_turnos_sin_reporte_diario });
+  res.json({ factura_turnos_sin_reporte: data.factura_turnos_sin_reporte });
 });
 
 panelConfiguracionRouter.patch('/facturar-turnos-sin-reporte', async (req, res) => {
@@ -1115,7 +1115,7 @@ panelConfiguracionRouter.patch('/facturar-turnos-sin-reporte', async (req, res) 
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
   const { error } = await enLaPrestadora(prestadoraId, 'facturación de los turnos sin Reporte', (dbDelTrabajo) =>
-    dbDelTrabajo.from('prestadoras').update({ factura_turnos_sin_reporte_diario: factura }).eq('id', prestadoraId)
+    dbDelTrabajo.from('prestadoras').update({ factura_turnos_sin_reporte: factura }).eq('id', prestadoraId)
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });

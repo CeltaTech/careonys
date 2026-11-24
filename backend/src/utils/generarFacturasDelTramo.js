@@ -31,7 +31,7 @@ import { condicionDe, condicionesDe } from './condicionesDelCliente.js';
 import { horasEntre } from './horasDeTurnoGuardia.js';
 import { hoyEnLaPrestadora, momentoEnLaZona, zonaDeLaPrestadora } from './relojDeLaPrestadora.js';
 import { sumarDias } from './fechas.js';
-import { comoSeFactura } from './reporteDiarioTardio.js';
+import { comoSeFactura } from './reporteTardio.js';
 import { FICHA_NOMBRE, conSusFichas } from './fichaDelPaciente.js';
 
 /** Un error de la base, con el código de respuesta que le corresponde. */
@@ -179,14 +179,14 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
   //
   // El turno en el que el Asistente salió sin Reporte Diario también entra, y se cobra como
   // completado, salvo que la Prestadora haya elegido esperar al reporte: entonces entra el día en
-  // que llegó, si es más tardío que su fecha (`reporteDiarioTardio.js`). Por eso se leen además los
+  // que llegó, si es más tardío que su fecha (`reporteTardio.js`). Por eso se leen además los
   // turnos de fechas anteriores cuyo reporte llegó en estas fechas.
   let turnos_guardia = [];
   const serviciosConPeriodos = [...periodosDelServicio.keys()];
   if (serviciosConPeriodos.length > 0) {
     const columnas =
       'id, fecha, servicio_id, estado, cancelacion_origen, hora_inicio, hora_fin, dias_hasta_el_fin, horas_extra, '
-      + 'salio_sin_reporte_diario, reporte_diario_llego_at, factura_espera_el_reporte_diario, turno_guardia_pacientes(paciente_id)';
+      + 'salio_sin_reporte, reporte_llego_at, factura_espera_el_reporte, turno_guardia_pacientes(paciente_id)';
     const [delTramo, tardios] = await Promise.all([
       db
         .from('turnos_guardia')
@@ -199,11 +199,11 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
         .from('turnos_guardia')
         .select(columnas)
         .eq('estado', 'completada')
-        .eq('factura_espera_el_reporte_diario', true)
+        .eq('factura_espera_el_reporte', true)
         .in('servicio_id', serviciosConPeriodos)
         .lt('fecha', primerDia)
-        .gte('reporte_diario_llego_at', momentoEnLaZona(primerDia, '00:00', zona).toISOString())
-        .lt('reporte_diario_llego_at', momentoEnLaZona(sumarDias(ultimoDia, 1), '00:00', zona).toISOString()),
+        .gte('reporte_llego_at', momentoEnLaZona(primerDia, '00:00', zona).toISOString())
+        .lt('reporte_llego_at', momentoEnLaZona(sumarDias(ultimoDia, 1), '00:00', zona).toISOString()),
     ]);
     if (delTramo.error) throw fallaDeLaBase(delTramo.error);
     if (tardios.error) throw fallaDeLaBase(tardios.error);
@@ -216,9 +216,9 @@ export async function generarFacturasDelTramo({ req, prestadoraId, tramo, vencim
       horas: horasEntre(g.hora_inicio, g.hora_fin, g.dias_hasta_el_fin),
       horas_extra: Number(g.horas_extra) || 0,
       pacientes: (g.turno_guardia_pacientes || []).map((gp) => gp.paciente_id),
-      salio_sin_reporte_diario: g.salio_sin_reporte_diario === true,
-      reporte_diario_llego_at: g.reporte_diario_llego_at ?? null,
-      factura_espera_el_reporte_diario: g.factura_espera_el_reporte_diario === true,
+      salio_sin_reporte: g.salio_sin_reporte === true,
+      reporte_llego_at: g.reporte_llego_at ?? null,
+      factura_espera_el_reporte: g.factura_espera_el_reporte === true,
     }));
   }
 

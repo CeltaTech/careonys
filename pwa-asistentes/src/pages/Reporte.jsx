@@ -34,7 +34,7 @@ function signosIniciales(signosIA) {
   };
 }
 
-export default function ReporteDiario() {
+export default function Reporte() {
   const { id, pacienteId } = useParams();
   const { t, locale } = useLocale();
   const navigate = useNavigate();

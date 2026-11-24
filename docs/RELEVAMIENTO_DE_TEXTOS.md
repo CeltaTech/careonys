@@ -390,7 +390,7 @@ Ubicación de cada ficha: clave de traducción y archivo:renglón donde se usa. 
 12. Panel: `turnos_guardia.seleccion.hecho`, `hecho_una`, `error_parcial`. Uso: `panel/src/components/BarraAccionesMasivas.jsx`, alrededor de los renglones 376 y 379.
 13. Panel, Clientes y Asistentes: `auth.clave_nueva_exito`. Usos: `panel/src/pages/ClaveNueva.jsx:136`, y `ClaveNueva.jsx:137` en las dos aplicaciones.
 14. Panel: `importacion.conformidad_exito`, `rechazo_exito`. Usos: `panel/src/pages/Importacion.jsx:478` y `:479`.
-15. Asistentes: `reporte.guardado_pendiente`. Uso: `pwa-asistentes/src/pages/ReporteDiario.jsx:215`.
+15. Asistentes: `reporte.guardado_pendiente`. Uso: `pwa-asistentes/src/pages/Reporte.jsx:215`.
 16. Asistentes: `antes_de_llegar.aviso_enviado`. Uso: `pwa-asistentes/src/pages/AntesDeLlegar.jsx:105`.
 17. Asistentes: `documentos.enviados`. Uso: `pwa-asistentes/src/pages/Documentos.jsx:118`.
 18. Panel: `configuracion.lista_baja.confirmar_borrar` y `motivos_reactivacion.confirmar_borrar` en `panel/src/pages/configuracion/ElCuidado.jsx:294` y `:305`; `configuracion.relaciones_laborales.confirmar_borrar` en `panel/src/pages/configuracion/Asistentes.jsx:37`. Los tres pasan por `ListaPropiaDeLaPrestadora.jsx:67`.

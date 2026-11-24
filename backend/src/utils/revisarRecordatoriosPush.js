@@ -28,11 +28,11 @@ export const LIMITES_PREAVISO_TURNO_GUARDIA = { minimo: 5, maximo: 1440 };
 
 // Cuánto antes del fin del turno de guardia se le recuerda al Asistente que presente el Reporte
 // Diario, mientras la Prestadora no haya elegido otra cosa. Es el valor por defecto de la columna
-// `prestadoras.minutos_recordatorio_reporte_diario`, con el mismo criterio que el de arriba.
+// `prestadoras.minutos_recordatorio_reporte`, con el mismo criterio que el de arriba.
 export const MINUTOS_ANTES_RECORDATORIO_REPORTE = 30;
 
-// Los mismos topes que la regla de la base (`prestadoras_minutos_recordatorio_reporte_diario_check`).
-export const LIMITES_RECORDATORIO_REPORTE_DIARIO = { minimo: 5, maximo: 1440 };
+// Los mismos topes que la regla de la base (`prestadoras_minutos_recordatorio_reporte_check`).
+export const LIMITES_RECORDATORIO_REPORTE = { minimo: 5, maximo: 1440 };
 
 // Cada cuántas horas se le repite al Asistente el aviso de que falta su Reporte Diario, mientras
 // la Prestadora no haya elegido otra cosa. Es el valor por defecto de la columna
@@ -41,7 +41,7 @@ export const HORAS_ENTRE_AVISOS_REPORTE_PENDIENTE = 2;
 
 // Los mismos topes que la regla de la base (`prestadoras_horas_entre_avisos_reporte_pendiente_check`).
 // Más de un aviso por hora deja de leerse; menos de uno por día deja que el reporte se olvide.
-export const LIMITES_INSISTENCIA_REPORTE_DIARIO = { minimo: 1, maximo: 24 };
+export const LIMITES_INSISTENCIA_REPORTE = { minimo: 1, maximo: 24 };
 
 const EVENTO_AVISO_RUTINA = 'aviso_rutina_asistente';
 
@@ -94,7 +94,7 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
   return enLaPrestadora(prestadoraId, 'revisar los avisos al Asistente', async (db) => {
     const { data: prestadora, error } = await db
       .from('prestadoras')
-      .select('minutos_aviso_previo_turno_guardia, minutos_recordatorio_reporte_diario, horas_entre_avisos_reporte_pendiente, zona_horaria')
+      .select('minutos_aviso_previo_turno_guardia, minutos_recordatorio_reporte, horas_entre_avisos_reporte_pendiente, zona_horaria')
       .eq('id', prestadoraId)
       .maybeSingle();
     if (error) {
@@ -107,7 +107,7 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
     // La insistencia por el Reporte Diario pendiente se mide desde el aviso anterior, no desde la
     // hora del turno: no depende de la zona.
     const horasEntreAvisos = prestadora?.horas_entre_avisos_reporte_pendiente ?? HORAS_ENTRE_AVISOS_REPORTE_PENDIENTE;
-    await revisarReportesDiariosPendientes(db, prestadoraId, horasEntreAvisos, ahora);
+    await revisarReportesPendientes(db, prestadoraId, horasEntreAvisos, ahora);
     // El recordatorio se mide contra la hora del turno, que es la de la casa del Paciente. Sin la
     // zona de la Prestadora no se manda: saldría horas corrido.
     if (!prestadora?.zona_horaria) {
@@ -115,8 +115,8 @@ export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
       return;
     }
     await revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutosAntes, ahora, prestadora.zona_horaria);
-    const minutosAntesDelFin = prestadora.minutos_recordatorio_reporte_diario ?? MINUTOS_ANTES_RECORDATORIO_REPORTE;
-    await revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntesDelFin, ahora, prestadora.zona_horaria);
+    const minutosAntesDelFin = prestadora.minutos_recordatorio_reporte ?? MINUTOS_ANTES_RECORDATORIO_REPORTE;
+    await revisarRecordatoriosReporte(db, prestadoraId, minutosAntesDelFin, ahora, prestadora.zona_horaria);
   });
 }
 
@@ -246,7 +246,7 @@ async function revisarRecordatoriosTurnoGuardiaProximo(db, prestadoraId, minutos
 // y el Asistente todavía no presentó el Reporte Diario, se lo recuerda. Una sola vez por turno.
 // El reporte está presentado cuando cada Paciente del turno tiene el suyo: es la misma cuenta que
 // decide si el turno se puede cerrar en la aplicación del Asistente.
-async function revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntes, ahora, zona) {
+async function revisarRecordatoriosReporte(db, prestadoraId, minutosAntes, ahora, zona) {
   const { data: turnos_guardia, error } = await db
     .from('turnos_guardia')
     .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
@@ -289,7 +289,7 @@ async function revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntes,
   if (!sinReporte.length) return;
 
   const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
-  const { titulo, cuerpo } = mensajeDelSistema('recordatorio_del_reporte_diario', idioma);
+  const { titulo, cuerpo } = mensajeDelSistema('recordatorio_del_reporte', idioma);
 
   for (const turno_guardia of sinReporte) {
     const enviadoPorPush = await enviarPushAsistente(prestadoraId, turno_guardia.asistente_id, {
@@ -311,7 +311,7 @@ async function revisarRecordatoriosReporteDiario(db, prestadoraId, minutosAntes,
 // aviso de que falta su reporte cada las horas que eligió la Prestadora, hasta que lo presente. El
 // primer aviso sale en el momento de la salida y anota la hora; de ahí en más se cuenta desde el
 // último. Al Cliente no le llega nada.
-export async function revisarReportesDiariosPendientes(db, prestadoraId, horasEntreAvisos, ahora) {
+export async function revisarReportesPendientes(db, prestadoraId, horasEntreAvisos, ahora) {
   const limite = new Date(ahora.getTime() - horasEntreAvisos * 3_600_000).toISOString();
   const { data: turnos_guardia, error } = await db
     .from('turnos_guardia')
@@ -328,7 +328,7 @@ export async function revisarReportesDiariosPendientes(db, prestadoraId, horasEn
   if (!turnos_guardia?.length) return;
 
   const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
-  const { titulo, cuerpo } = mensajeDelSistema('reporte_diario_pendiente', idioma, {}, prestadoraId);
+  const { titulo, cuerpo } = mensajeDelSistema('reporte_pendiente', idioma, {}, prestadoraId);
 
   for (const turno_guardia of turnos_guardia) {
     const enviadoPorPush = await enviarPushAsistente(prestadoraId, turno_guardia.asistente_id, {

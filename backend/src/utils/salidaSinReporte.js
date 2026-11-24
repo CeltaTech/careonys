@@ -39,7 +39,7 @@ const MEDIO_CODIGO_DEL_SALIENTE = 'codigo_asistente_saliente';
  * ¿A algún Paciente de este turno de guardia le falta el Reporte Diario? Pregunta sólo de quién
  * hay reporte, nunca qué dice.
  */
-export async function faltaElReporteDiario(db, turno_guardia) {
+export async function faltaElReporte(db, turno_guardia) {
   const prestadoraId = turno_guardia.prestadora_id;
   const pacienteIds = await idsDePacientesDeTurnoGuardia(db, prestadoraId, turno_guardia);
   if (pacienteIds.length === 0) return false;
@@ -112,7 +112,7 @@ async function cerrarCon(db, { relevo, lat, lng }) {
       });
     }
 
-    const sinReporte = await faltaElReporteDiario(db, turno_guardia);
+    const sinReporte = await faltaElReporte(db, turno_guardia);
     const registraUbicacion = await puedeRegistrarUbicacion(saliente.asistente_id, prestadoraId);
 
     const { data: cerrado, error } = await db
@@ -124,8 +124,8 @@ async function cerrarCon(db, { relevo, lat, lng }) {
         estado: sinReporte ? ESTADO_SALIDA_SIN_REPORTE : 'completada',
         ...(sinReporte
           ? {
-            salio_sin_reporte_diario: true,
-            factura_espera_el_reporte_diario: !facturaSinReporte,
+            salio_sin_reporte: true,
+            factura_espera_el_reporte: !facturaSinReporte,
             push_reporte_pendiente_enviado_at: new Date().toISOString(),
           }
           : {}),
@@ -151,11 +151,11 @@ async function cerrarCon(db, { relevo, lat, lng }) {
 async function facturaLosTurnosSinReporte(db, prestadoraId) {
   const { data, error } = await db
     .from('prestadoras')
-    .select('factura_turnos_sin_reporte_diario')
+    .select('factura_turnos_sin_reporte')
     .eq('id', prestadoraId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data?.factura_turnos_sin_reporte_diario !== false;
+  return data?.factura_turnos_sin_reporte !== false;
 }
 
 // El aviso al que salió: su Reporte Diario está pendiente. Si el aviso falla, la salida ya quedó
@@ -163,7 +163,7 @@ async function facturaLosTurnosSinReporte(db, prestadoraId) {
 async function avisarAlSaliente(db, turno_guardia) {
   try {
     const idioma = await idiomaDeLaPrestadora(db, turno_guardia.prestadora_id);
-    const { titulo, cuerpo } = mensajeDelSistema('reporte_diario_pendiente', idioma, {}, turno_guardia.prestadora_id);
+    const { titulo, cuerpo } = mensajeDelSistema('reporte_pendiente', idioma, {}, turno_guardia.prestadora_id);
     const enviadoPorPush = await enviarPushAsistente(turno_guardia.prestadora_id, turno_guardia.asistente_id, {
       titulo,
       cuerpo,
@@ -189,11 +189,11 @@ async function avisarAlSaliente(db, turno_guardia) {
 export async function completarSiLlegoElReporte(turno_guardia) {
   if (turno_guardia?.estado !== ESTADO_SALIDA_SIN_REPORTE) return false;
   return enLaPrestadora(turno_guardia.prestadora_id, 'Llegada del Reporte pendiente', async (db) => {
-    if (await faltaElReporteDiario(db, turno_guardia)) return false;
+    if (await faltaElReporte(db, turno_guardia)) return false;
 
     const { data, error } = await db
       .from('turnos_guardia')
-      .update({ estado: 'completada', reporte_diario_llego_at: new Date().toISOString() })
+      .update({ estado: 'completada', reporte_llego_at: new Date().toISOString() })
       .eq('prestadora_id', turno_guardia.prestadora_id)
       .eq('id', turno_guardia.id)
       .eq('estado', ESTADO_SALIDA_SIN_REPORTE)

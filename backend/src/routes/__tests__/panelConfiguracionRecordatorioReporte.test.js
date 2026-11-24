@@ -71,14 +71,14 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 const { default: express } = await import('express');
 await import('express-async-errors');
 const { panelConfiguracionRouter } = await import('../panelConfiguracion.js');
-const { LIMITES_RECORDATORIO_REPORTE_DIARIO } = await import('../../utils/revisarRecordatoriosPush.js');
+const { LIMITES_RECORDATORIO_REPORTE } = await import('../../utils/revisarRecordatoriosPush.js');
 
 const app = express();
 app.use(express.json());
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/configuracion/recordatorio-reporte-diario`;
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/configuracion/recordatorio-reporte`;
 
 after(() => {
   backend.close();
@@ -106,7 +106,7 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, minutos_recordatorio_reporte_diario: 45 }]);
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, minutos_recordatorio_reporte: 45 }]);
   respuestas.set('PATCH /rest/v1/prestadoras', () => []);
 });
 
@@ -115,9 +115,9 @@ describe('el recordatorio del Reporte Diario en la configuración', () => {
     const { estado, cuerpo } = await leer();
 
     assert.equal(estado, 200);
-    assert.deepEqual(cuerpo, { minutos_recordatorio_reporte_diario: 45 });
+    assert.deepEqual(cuerpo, { minutos_recordatorio_reporte: 45 });
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras');
-    assert.equal(lectura.filtros.get('select'), 'minutos_recordatorio_reporte_diario');
+    assert.equal(lectura.filtros.get('select'), 'minutos_recordatorio_reporte');
     assert.equal(lectura.credencial?.role, 'authenticated');
   });
 
@@ -128,15 +128,15 @@ describe('el recordatorio del Reporte Diario en la configuración', () => {
     assert.deepEqual(cuerpo, { ok: true });
     assert.equal(escrituras().length, 1);
     const [escritura] = escrituras();
-    assert.deepEqual(escritura.cuerpo, { minutos_recordatorio_reporte_diario: 20 });
+    assert.deepEqual(escritura.cuerpo, { minutos_recordatorio_reporte: 20 });
     assert.equal(escritura.filtros.get('id'), `eq.${PRESTADORA}`);
     assert.equal(escritura.credencial?.role, 'trabajo_sin_persona');
     assert.equal(escritura.credencial.prestadora_id, PRESTADORA);
   });
 
   for (const minutos of [
-    LIMITES_RECORDATORIO_REPORTE_DIARIO.minimo - 1,
-    LIMITES_RECORDATORIO_REPORTE_DIARIO.maximo + 1,
+    LIMITES_RECORDATORIO_REPORTE.minimo - 1,
+    LIMITES_RECORDATORIO_REPORTE.maximo + 1,
     12.5,
     '30',
     null,
@@ -151,8 +151,8 @@ describe('el recordatorio del Reporte Diario en la configuración', () => {
   }
 
   it('acepta los dos topes', async () => {
-    assert.equal((await guardar({ minutos: LIMITES_RECORDATORIO_REPORTE_DIARIO.minimo })).estado, 200);
-    assert.equal((await guardar({ minutos: LIMITES_RECORDATORIO_REPORTE_DIARIO.maximo })).estado, 200);
+    assert.equal((await guardar({ minutos: LIMITES_RECORDATORIO_REPORTE.minimo })).estado, 200);
+    assert.equal((await guardar({ minutos: LIMITES_RECORDATORIO_REPORTE.maximo })).estado, 200);
     assert.equal(escrituras().length, 2);
   });
 });

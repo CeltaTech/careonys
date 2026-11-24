@@ -24,7 +24,7 @@ function consulta(tabla) {
 vi.mock('../supabaseClient', () => ({ supabase: { from: (tabla) => consulta(tabla) } }));
 
 import { SITUACION, estaActiva, situacionDeTurnoGuardia, tonoDeTurnoGuardia } from '../semaforoTurnoGuardia';
-import { excepcionPorId, faltaElReporteDiario, resumenDeExcepciones } from '../excepciones';
+import { excepcionPorId, faltaElReporte, resumenDeExcepciones } from '../excepciones';
 import { TONO, tonoDeEstado } from '../tonos';
 import { FALTA, cargarFaltasDelAsistente, faltaDelTurnoGuardia } from '../faltasDelAsistente';
 import { T as translations } from '../../i18n/translations';
@@ -56,14 +56,14 @@ describe('el semáforo con la salida sin Reporte Diario', () => {
 
 describe('«Reportes pendientes» del tablero', () => {
   it('cuenta el turno en «Salida sin Reporte Diario» aunque no esté en la lista de los completados sin reporte', () => {
-    expect(faltaElReporteDiario(turno(), { turnosGuardiaSinReporte: new Set() })).toBe(true);
+    expect(faltaElReporte(turno(), { turnosGuardiaSinReporte: new Set() })).toBe(true);
     expect(excepcionPorId('reportes').aplica(turno(), {})).toBe(true);
   });
 
   it('sigue contando el turno completado al que le falta el reporte, y no el que lo tiene', () => {
     const completado = turno({ estado: 'completada' });
-    expect(faltaElReporteDiario(completado, { turnosGuardiaSinReporte: new Set(['g1']) })).toBe(true);
-    expect(faltaElReporteDiario(completado, { turnosGuardiaSinReporte: new Set() })).toBe(false);
+    expect(faltaElReporte(completado, { turnosGuardiaSinReporte: new Set(['g1']) })).toBe(true);
+    expect(faltaElReporte(completado, { turnosGuardiaSinReporte: new Set() })).toBe(false);
   });
 
   it('nunca va en rojo', () => {
@@ -81,7 +81,7 @@ describe('«Reportes pendientes» del tablero', () => {
 
 describe('las faltas del Legajo del Asistente', () => {
   it('la falta queda aunque el reporte haya llegado, con la fecha en que llegó', () => {
-    const falta = faltaDelTurnoGuardia({ id: 'g1', fecha: '2026-11-20', reporte_diario_llego_at: '2026-11-21T13:00:00Z' });
+    const falta = faltaDelTurnoGuardia({ id: 'g1', fecha: '2026-11-20', reporte_llego_at: '2026-11-21T13:00:00Z' });
     expect(falta.falta).toBe(FALTA.SALIDA_SIN_REPORTE);
     expect(falta.reporteLlegoAt).toBe('2026-11-21T13:00:00Z');
   });
@@ -92,7 +92,7 @@ describe('las faltas del Legajo del Asistente', () => {
 
   it('se piden sólo los turnos del Asistente con la falta anotada, y vienen con el Paciente', async () => {
     respuestas.set('turnos_guardia', {
-      data: [{ id: 'g1', fecha: '2026-11-20', hora_inicio: '08:00:00', paciente_id: 'p1', reporte_diario_llego_at: null }],
+      data: [{ id: 'g1', fecha: '2026-11-20', hora_inicio: '08:00:00', paciente_id: 'p1', reporte_llego_at: null }],
       error: null,
     });
     respuestas.set('turno_guardia_pacientes', { data: [{ turno_guardia_id: 'g1', paciente_id: 'p1' }], error: null });
@@ -102,7 +102,7 @@ describe('las faltas del Legajo del Asistente', () => {
 
     const pedido = pedidos.find((p) => p.tabla === 'turnos_guardia');
     expect(pedido.filtros).toContainEqual(['eq', 'asistente_id', 'a1']);
-    expect(pedido.filtros).toContainEqual(['eq', 'salio_sin_reporte_diario', true]);
+    expect(pedido.filtros).toContainEqual(['eq', 'salio_sin_reporte', true]);
     expect(faltas).toHaveLength(1);
     expect(faltas[0].pacientes_nombres).toEqual(['Elsa Prueba']);
     expect(faltas[0].reporteLlegoAt).toBeNull();

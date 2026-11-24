@@ -249,18 +249,18 @@ function TabNotificaciones() {
         etiqueta="aviso_previo_turno_guardia_minutos"
       />
       <TabMinutosDeAnticipacion
-        ruta="/recordatorio-reporte-diario"
-        campo="minutos_recordatorio_reporte_diario"
-        titulo="recordatorio_reporte_diario_titulo"
-        etiqueta="recordatorio_reporte_diario_minutos"
+        ruta="/recordatorio-reporte"
+        campo="minutos_recordatorio_reporte"
+        titulo="recordatorio_reporte_titulo"
+        etiqueta="recordatorio_reporte_minutos"
       />
       <TabMinutosDeAnticipacion
-        ruta="/insistencia-reporte-diario"
+        ruta="/insistencia-reporte"
         campo="horas_entre_avisos_reporte_pendiente"
         clave="horas"
         unidad="aviso_unidad_horas"
-        titulo="insistencia_reporte_diario_titulo"
-        etiqueta="insistencia_reporte_diario_horas"
+        titulo="insistencia_reporte_titulo"
+        etiqueta="insistencia_reporte_horas"
       />
       <TabCorreoDeLaPrestadora />
       <TabMensajeDeTexto />

@@ -709,15 +709,15 @@ const ARMADORES = {
     cuerpo: t('recordatorio_de_turno_guardia.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio }),
   }),
 
-  recordatorio_del_reporte_diario: (t) => ({
-    titulo: t('recordatorio_del_reporte_diario.titulo'),
-    cuerpo: t('recordatorio_del_reporte_diario.cuerpo'),
+  recordatorio_del_reporte: (t) => ({
+    titulo: t('recordatorio_del_reporte.titulo'),
+    cuerpo: t('recordatorio_del_reporte.cuerpo'),
   }),
 
   // Al Asistente que dejó la guardia al relevo sin haber presentado el Reporte Diario.
-  reporte_diario_pendiente: (t) => ({
-    titulo: t('reporte_diario_pendiente.titulo'),
-    cuerpo: t('reporte_diario_pendiente.cuerpo'),
+  reporte_pendiente: (t) => ({
+    titulo: t('reporte_pendiente.titulo'),
+    cuerpo: t('reporte_pendiente.cuerpo'),
   }),
 
   fin_periodo_sin_cargo: (t, d) => ({

@@ -72,7 +72,7 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 const { default: express } = await import('express');
 await import('express-async-errors');
 const { panelConfiguracionRouter } = await import('../panelConfiguracion.js');
-const { LIMITES_INSISTENCIA_REPORTE_DIARIO } = await import('../../utils/revisarRecordatoriosPush.js');
+const { LIMITES_INSISTENCIA_REPORTE } = await import('../../utils/revisarRecordatoriosPush.js');
 
 const app = express();
 app.use(express.json());
@@ -119,14 +119,14 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/prestadoras', () => [{
     id: PRESTADORA,
     horas_entre_avisos_reporte_pendiente: 3,
-    factura_turnos_sin_reporte_diario: false,
+    factura_turnos_sin_reporte: false,
   }]);
   respuestas.set('PATCH /rest/v1/prestadoras', () => []);
 });
 
 describe('cada cuántas horas se repite el aviso del Reporte Diario', () => {
   it('lee el número de la Prestadora con la sesión de quien pide', async () => {
-    const { estado, cuerpo } = await leer('insistencia-reporte-diario');
+    const { estado, cuerpo } = await leer('insistencia-reporte');
 
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { horas_entre_avisos_reporte_pendiente: 3 });
@@ -136,7 +136,7 @@ describe('cada cuántas horas se repite el aviso del Reporte Diario', () => {
   });
 
   it('guarda el número sólo en la fila de esa Prestadora, con la credencial de su trabajo', async () => {
-    const { estado, cuerpo } = await guardar('insistencia-reporte-diario', { horas: 6 });
+    const { estado, cuerpo } = await guardar('insistencia-reporte', { horas: 6 });
 
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { ok: true });
@@ -144,14 +144,14 @@ describe('cada cuántas horas se repite el aviso del Reporte Diario', () => {
   });
 
   for (const horas of [
-    LIMITES_INSISTENCIA_REPORTE_DIARIO.minimo - 1,
-    LIMITES_INSISTENCIA_REPORTE_DIARIO.maximo + 1,
+    LIMITES_INSISTENCIA_REPORTE.minimo - 1,
+    LIMITES_INSISTENCIA_REPORTE.maximo + 1,
     1.5,
     '2',
     null,
   ]) {
     it(`rechaza ${JSON.stringify(horas)} sin tocar la base`, async () => {
-      const { estado, cuerpo } = await guardar('insistencia-reporte-diario', { horas });
+      const { estado, cuerpo } = await guardar('insistencia-reporte', { horas });
 
       assert.equal(estado, 400);
       assert.ok(cuerpo.error);
@@ -160,9 +160,9 @@ describe('cada cuántas horas se repite el aviso del Reporte Diario', () => {
   }
 
   it('acepta los dos topes', async () => {
-    const { minimo, maximo } = LIMITES_INSISTENCIA_REPORTE_DIARIO;
-    assert.equal((await guardar('insistencia-reporte-diario', { horas: minimo })).estado, 200);
-    assert.equal((await guardar('insistencia-reporte-diario', { horas: maximo })).estado, 200);
+    const { minimo, maximo } = LIMITES_INSISTENCIA_REPORTE;
+    assert.equal((await guardar('insistencia-reporte', { horas: minimo })).estado, 200);
+    assert.equal((await guardar('insistencia-reporte', { horas: maximo })).estado, 200);
     assert.equal(escrituras().length, 2);
   });
 });
@@ -172,9 +172,9 @@ describe('si se facturan los turnos de guardia sin Reporte Diario', () => {
     const { estado, cuerpo } = await leer('facturar-turnos-sin-reporte');
 
     assert.equal(estado, 200);
-    assert.deepEqual(cuerpo, { factura_turnos_sin_reporte_diario: false });
+    assert.deepEqual(cuerpo, { factura_turnos_sin_reporte: false });
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras');
-    assert.equal(lectura.filtros.get('select'), 'factura_turnos_sin_reporte_diario');
+    assert.equal(lectura.filtros.get('select'), 'factura_turnos_sin_reporte');
     assert.equal(lectura.credencial?.role, 'authenticated');
   });
 
@@ -184,7 +184,7 @@ describe('si se facturan los turnos de guardia sin Reporte Diario', () => {
 
       assert.equal(estado, 200);
       assert.deepEqual(cuerpo, { ok: true });
-      comprobarEscritura({ factura_turnos_sin_reporte_diario: factura });
+      comprobarEscritura({ factura_turnos_sin_reporte: factura });
     });
   }
 

@@ -59,7 +59,7 @@ const conjunto = (c) => (c instanceof Set ? c : new Set());
  * la pantalla resuelve en `turnosGuardiaSinReporte`, y el turno en «Salida sin Reporte Diario»,
  * que lo dice su estado: el Asistente dejó la guardia al relevo sin presentarlo.
  */
-export function faltaElReporteDiario(turno_guardia, ctx) {
+export function faltaElReporte(turno_guardia, ctx) {
   const s = situacionDeTurnoGuardia(turno_guardia, ctx);
   if (s === SITUACION.SALIDA_SIN_REPORTE) return true;
   return s === SITUACION.COMPLETADA && conjunto(ctx?.turnosGuardiaSinReporte).has(turno_guardia?.id);
@@ -156,7 +156,7 @@ export const EXCEPCIONES = [
     id: 'reportes',
     claveEtiqueta: 'exc_reportes',
     parametros: () => ({}),
-    aplica: (g, ctx) => faltaElReporteDiario(g, ctx),
+    aplica: (g, ctx) => faltaElReporte(g, ctx),
     // Nunca rojo. Falta un documento, no falta una persona: se reclama, no se corre.
     esCritica: () => false,
   },

@@ -12,7 +12,7 @@ import MisTurnosGuardia from './pages/MisTurnosGuardia';
 import Servicio from './pages/Servicio';
 import AsignacionesSinResponder from './pages/AsignacionesSinResponder';
 import TurnoGuardiaActivo from './pages/TurnoGuardiaActivo';
-import ReporteDiario from './pages/ReporteDiario';
+import Reporte from './pages/Reporte';
 import MiPerfil from './pages/MiPerfil';
 import MiClave from './pages/MiClave';
 import TextoDeConsentimiento from './pages/TextoDeConsentimiento';
@@ -84,7 +84,7 @@ function Rutas() {
         <Route path="turnos-guardia/:id" element={<TurnoGuardiaActivo />} />
         {/* El reporte lleva el Paciente en la dirección: un turno de guardia puede cubrir a varias
             personas y cada una tiene su propio reporte (tarea 93h). */}
-        <Route path="turnos-guardia/:id/reporte/:pacienteId" element={<ReporteDiario />} />
+        <Route path="turnos-guardia/:id/reporte/:pacienteId" element={<Reporte />} />
         {/* El chat con un Cliente de la vidriera. El hilo lo abre siempre él: acá se
             contestan los que llegaron. */}
         <Route

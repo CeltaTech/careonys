@@ -1675,9 +1675,9 @@ describe('el turno de guardia sin Reporte Diario en la factura', () => {
     hora_fin: '16:00',
     dias_hasta_el_fin: 0,
     horas_extra: 0,
-    salio_sin_reporte_diario: false,
-    reporte_diario_llego_at: null,
-    factura_espera_el_reporte_diario: false,
+    salio_sin_reporte: false,
+    reporte_llego_at: null,
+    factura_espera_el_reporte: false,
     turno_guardia_pacientes: [{ paciente_id: PACIENTE }],
     ...cambios,
   });
@@ -1696,7 +1696,7 @@ describe('el turno de guardia sin Reporte Diario en la factura', () => {
   it('se factura como completado cuando la Prestadora no eligió esperar', async () => {
     const { total } = await facturarAgosto([
       unTurno({ id: 'g1', fecha: '2026-08-03' }),
-      unTurno({ id: 'g2', fecha: '2026-08-04', estado: 'salida_sin_reporte', salio_sin_reporte_diario: true }),
+      unTurno({ id: 'g2', fecha: '2026-08-04', estado: 'salida_sin_reporte', salio_sin_reporte: true }),
     ]);
     assert.equal(total, 1600);
   });
@@ -1708,8 +1708,8 @@ describe('el turno de guardia sin Reporte Diario en la factura', () => {
         id: 'g2',
         fecha: '2026-08-04',
         estado: 'salida_sin_reporte',
-        salio_sin_reporte_diario: true,
-        factura_espera_el_reporte_diario: true,
+        salio_sin_reporte: true,
+        factura_espera_el_reporte: true,
       }),
     ]);
     assert.equal(total, 800);
@@ -1721,10 +1721,10 @@ describe('el turno de guardia sin Reporte Diario en la factura', () => {
       unTurno({
         id: 'g2',
         fecha: '2026-08-30',
-        salio_sin_reporte_diario: true,
-        factura_espera_el_reporte_diario: true,
+        salio_sin_reporte: true,
+        factura_espera_el_reporte: true,
         // El 1 de septiembre a las 10 de la mañana en Buenos Aires.
-        reporte_diario_llego_at: '2026-09-01T13:00:00.000Z',
+        reporte_llego_at: '2026-09-01T13:00:00.000Z',
       }),
     ]);
     assert.equal(total, 800);
@@ -1736,9 +1736,9 @@ describe('el turno de guardia sin Reporte Diario en la factura', () => {
       unTurno({
         id: 'g0',
         fecha: '2026-07-30',
-        salio_sin_reporte_diario: true,
-        factura_espera_el_reporte_diario: true,
-        reporte_diario_llego_at: '2026-08-02T13:00:00.000Z',
+        salio_sin_reporte: true,
+        factura_espera_el_reporte: true,
+        reporte_llego_at: '2026-08-02T13:00:00.000Z',
       }),
     ]);
     assert.equal(total, 1600);
@@ -1746,12 +1746,12 @@ describe('el turno de guardia sin Reporte Diario en la factura', () => {
     const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/turnos_guardia').map((l) => decodeURIComponent(l.url));
     assert.equal(lecturas.length, 2);
     // Las dos lecturas salen a la vez: la de los reportes tardíos es la que pide los que esperan.
-    const tardia = lecturas.find((url) => url.includes('factura_espera_el_reporte_diario=eq.true'));
+    const tardia = lecturas.find((url) => url.includes('factura_espera_el_reporte=eq.true'));
     assert.ok(tardia);
     assert.ok(tardia.includes('fecha=lt.2026-08-01'));
     // El día empieza a medianoche de Buenos Aires, que son las 3 de la mañana del tiempo universal.
-    assert.ok(tardia.includes('reporte_diario_llego_at=gte.2026-08-01T03:00:00.000Z'));
-    assert.ok(tardia.includes('reporte_diario_llego_at=lt.2026-09-01T03:00:00.000Z'));
+    assert.ok(tardia.includes('reporte_llego_at=gte.2026-08-01T03:00:00.000Z'));
+    assert.ok(tardia.includes('reporte_llego_at=lt.2026-09-01T03:00:00.000Z'));
   });
 
   it('el reporte que llegó en el mismo período deja el turno en su factura', async () => {
@@ -1759,9 +1759,9 @@ describe('el turno de guardia sin Reporte Diario en la factura', () => {
       unTurno({
         id: 'g2',
         fecha: '2026-08-10',
-        salio_sin_reporte_diario: true,
-        factura_espera_el_reporte_diario: true,
-        reporte_diario_llego_at: '2026-08-12T13:00:00.000Z',
+        salio_sin_reporte: true,
+        factura_espera_el_reporte: true,
+        reporte_llego_at: '2026-08-12T13:00:00.000Z',
       }),
     ]);
     assert.equal(total, 800);
@@ -1774,16 +1774,16 @@ describe('el turno de guardia sin Reporte Diario en la factura', () => {
           id: 'g2',
           fecha: '2026-08-04',
           estado: 'salida_sin_reporte',
-          salio_sin_reporte_diario: true,
-          factura_espera_el_reporte_diario: true,
+          salio_sin_reporte: true,
+          factura_espera_el_reporte: true,
         }),
         // El de julio no se cuenta otra vez en agosto.
         unTurno({
           id: 'g0',
           fecha: '2026-07-30',
-          salio_sin_reporte_diario: true,
-          factura_espera_el_reporte_diario: true,
-          reporte_diario_llego_at: '2026-08-02T13:00:00.000Z',
+          salio_sin_reporte: true,
+          factura_espera_el_reporte: true,
+          reporte_llego_at: '2026-08-02T13:00:00.000Z',
         }),
       ],
       'pactado_mas_excedente',

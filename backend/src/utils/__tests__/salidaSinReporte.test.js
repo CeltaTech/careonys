@@ -63,7 +63,7 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 prepararCredencialDePrueba();
 
 const { cerrarLaSalidaDelSaliente, completarSiLlegoElReporte, ESTADO_SALIDA_SIN_REPORTE } =
-  await import('../salidaSinReporteDiario.js');
+  await import('../salidaSinReporte.js');
 
 // El aviso al que sale no tiene respuesta preparada: falla y se anota, y la salida queda igual.
 const avisarDeVerdad = console.error;
@@ -90,7 +90,7 @@ function llegadaDelRelevo(cambios = {}) {
 }
 
 function prepararBase({ llegada = llegadaDelRelevo(), conReporte = false, factura = true } = {}) {
-  respuestas.set(PRESTADORA_LEIDA, [{ factura_turnos_sin_reporte_diario: factura }]);
+  respuestas.set(PRESTADORA_LEIDA, [{ factura_turnos_sin_reporte: factura }]);
   respuestas.set(COMPROBACIONES, (llamada) =>
     llamada.filtros.get('momento') === 'eq.checkin' && llamada.filtros.get('turno_guardia_id') === `eq.${RELEVO}`
       ? [llegada]
@@ -127,7 +127,7 @@ describe('el relevo lee el código del que sale', () => {
     assert.equal(cambio.filtros.get('estado'), 'eq.activa');
     assert.equal(cambio.cuerpo.estado, 'completada');
     assert.equal(cambio.cuerpo.checkout_at, HORA_DE_LA_LECTURA);
-    assert.equal(cambio.cuerpo.salio_sin_reporte_diario, undefined);
+    assert.equal(cambio.cuerpo.salio_sin_reporte, undefined);
 
     const salida = llamadas.find((l) => l.clave === GUARDAR_COMPROBACION);
     assert.equal(salida.cuerpo.turno_guardia_id, SALIENTE);
@@ -144,10 +144,10 @@ describe('el relevo lee el código del que sale', () => {
     assert.equal(salienteSinReporte, true);
     const [cambio] = cambiosDelTurno();
     assert.equal(cambio.cuerpo.estado, ESTADO_SALIDA_SIN_REPORTE);
-    assert.equal(cambio.cuerpo.salio_sin_reporte_diario, true);
+    assert.equal(cambio.cuerpo.salio_sin_reporte, true);
     assert.equal(cambio.cuerpo.checkout_at, HORA_DE_LA_LECTURA);
     // La Prestadora factura los turnos sin reporte: el turno no espera el reporte para cobrarse.
-    assert.equal(cambio.cuerpo.factura_espera_el_reporte_diario, false);
+    assert.equal(cambio.cuerpo.factura_espera_el_reporte, false);
     // El primer aviso sale con la salida y anota la hora, para que la insistencia cuente desde ahí.
     assert.ok(Date.parse(cambio.cuerpo.push_reporte_pendiente_enviado_at) > 0);
   });
@@ -159,14 +159,14 @@ describe('el relevo lee el código del que sale', () => {
 
     const [cambio] = cambiosDelTurno();
     assert.equal(cambio.cuerpo.estado, ESTADO_SALIDA_SIN_REPORTE);
-    assert.equal(cambio.cuerpo.factura_espera_el_reporte_diario, true);
+    assert.equal(cambio.cuerpo.factura_espera_el_reporte, true);
   });
 
   it('con el reporte presentado, la elección de facturar no se anota', async () => {
     prepararBase({ conReporte: true, factura: false });
     await cerrarLaSalidaDelSaliente({ relevo, lat: null, lng: null });
     const [cambio] = cambiosDelTurno();
-    assert.equal(cambio.cuerpo.factura_espera_el_reporte_diario, undefined);
+    assert.equal(cambio.cuerpo.factura_espera_el_reporte, undefined);
     assert.equal(cambio.cuerpo.push_reporte_pendiente_enviado_at, undefined);
   });
 
@@ -202,7 +202,7 @@ describe('el Reporte Diario llega después de la salida', () => {
     const [cambio] = cambiosDelTurno();
     assert.equal(cambio.filtros.get('estado'), `eq.${ESTADO_SALIDA_SIN_REPORTE}`);
     assert.equal(cambio.cuerpo.estado, 'completada');
-    assert.ok(Date.parse(cambio.cuerpo.reporte_diario_llego_at) >= antes - 1000);
+    assert.ok(Date.parse(cambio.cuerpo.reporte_llego_at) >= antes - 1000);
     // La hora de salida ya fijada no se toca.
     assert.equal(cambio.cuerpo.checkout_at, undefined);
   });

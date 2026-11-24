@@ -5,7 +5,7 @@ import { requierePermiso } from '../utils/permisos.js';
 import { horasRealesDelTurnoGuardia } from '../utils/horasTrabajadas.js';
 import { momentoEnLaZona, zonaDeLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 import { sumarDias } from '../utils/fechas.js';
-import { fechaDeLiquidacion } from '../utils/reporteDiarioTardio.js';
+import { fechaDeLiquidacion } from '../utils/reporteTardio.js';
 import { resolverEscalasVigentes } from '../utils/escalasLegales.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -416,10 +416,10 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
   //
   // El turno de guardia en el que el Asistente salió sin Reporte Diario se le paga cuando llega el
   // reporte: en el período del día más tardío entre su fecha y el día en que llegó, contado en la
-  // zona de la Prestadora (`reporteDiarioTardio.js`). Por eso se leen además los turnos de fecha
+  // zona de la Prestadora (`reporteTardio.js`). Por eso se leen además los turnos de fecha
   // anterior cuyo reporte llegó en estos días, y cada turno se reparte por ese día de pago y no
   // por su fecha. Cada turno tiene un solo día de pago: no se paga dos veces ni se pierde.
-  const COLUMNAS_TURNO = 'id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, checkin_at, checkout_at, asistente_id, salio_sin_reporte_diario, reporte_diario_llego_at';
+  const COLUMNAS_TURNO = 'id, fecha, estado, hora_inicio, hora_fin, dias_hasta_el_fin, checkin_at, checkout_at, asistente_id, salio_sin_reporte, reporte_llego_at';
   const delTramo = await traerPaginado(() =>
     db
       .from('turnos_guardia')
@@ -436,10 +436,10 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
       .select(COLUMNAS_TURNO)
       .eq('canal_modalidad', 'directa')
       .eq('estado', ESTADO_HECHA)
-      .eq('salio_sin_reporte_diario', true)
+      .eq('salio_sin_reporte', true)
       .lt('fecha', lecturaDesde)
-      .gte('reporte_diario_llego_at', momentoEnLaZona(lecturaDesde, '00:00', zona).toISOString())
-      .lt('reporte_diario_llego_at', momentoEnLaZona(sumarDias(hasta, 1), '00:00', zona).toISOString())
+      .gte('reporte_llego_at', momentoEnLaZona(lecturaDesde, '00:00', zona).toISOString())
+      .lt('reporte_llego_at', momentoEnLaZona(sumarDias(hasta, 1), '00:00', zona).toISOString())
       .not('asistente_id', 'is', null)
       .order('id', { ascending: true })
   );

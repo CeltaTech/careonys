@@ -77,20 +77,20 @@ y pasa la guardia a `completada`; no compara contra ninguna cantidad de horas
 
 **La salida con el relevo.** El relevo lee el código QR del Asistente que sale y toma la guardia
 aunque el que sale no haya presentado el Reporte Diario; la hora de la lectura es la hora de salida
-del que sale (`backend/src/utils/salidaSinReporteDiario.js`). Con el reporte presentado, el turno
+del que sale (`backend/src/utils/salidaSinReporte.js`). Con el reporte presentado, el turno
 del que sale pasa a `completada`; sin él, a `salida_sin_reporte`, con la falta anotada en
-`salio_sin_reporte_diario`. El relevo ve el aviso de que el que sale no presentó el reporte, y el
+`salio_sin_reporte`. El relevo ve el aviso de que el que sale no presentó el reporte, y el
 que sale recibe el aviso de que su reporte está pendiente y lo puede presentar desde la guardia.
 Cuando llega, el turno pasa a `completada`, conserva la hora de salida y anota
-`reporte_diario_llego_at`. Mientras está en `salida_sin_reporte`, esas horas no se liquidan, y
+`reporte_llego_at`. Mientras está en `salida_sin_reporte`, esas horas no se liquidan, y
 el que sale recibe el aviso al teléfono cada `prestadoras.horas_entre_avisos_reporte_pendiente`
 horas (2 de fábrica), anotando el último en `push_reporte_pendiente_enviado_at`
 (`backend/src/utils/revisarRecordatoriosPush.js`).
 
-**La factura y la liquidación** (`backend/src/utils/reporteDiarioTardio.js`). El turno sin reporte
+**La factura y la liquidación** (`backend/src/utils/reporteTardio.js`). El turno sin reporte
 se factura como completado, salvo que la Prestadora tenga apagada
-`prestadoras.factura_turnos_sin_reporte_diario`: esa elección queda anotada en el turno, en
-`factura_espera_el_reporte_diario`, al salir. Si espera, el turno se factura y se liquida en el día
+`prestadoras.factura_turnos_sin_reporte`: esa elección queda anotada en el turno, en
+`factura_espera_el_reporte`, al salir. Si espera, el turno se factura y se liquida en el día
 más tardío entre su fecha y el día en que llegó el reporte, en la zona de la Prestadora; así un
 reporte que llega con el período ya cerrado lleva el turno al período siguiente, una sola vez. Con
 la medición por lo pactado no se espera.
@@ -130,12 +130,12 @@ dos las deduce un programa, y ésta la apretó una persona que está adentro de 
 
 ### Flujo de Reporte Diario (IA Nivel 1)
 
-Se carga uno por cada Paciente del turno (`pwa-asistentes/src/pages/ReporteDiario.jsx`).
+Se carga uno por cada Paciente del turno (`pwa-asistentes/src/pages/Reporte.jsx`).
 
 1. **Dictado o escritura libre** — textarea grande + botón de micrófono, placeholder
    invitando a hablar en lenguaje natural. Aparece con la opción `asistente_relato_con_ia`
    encendida; apagada, la pantalla va directo a los campos y el Asistente los completa a mano
-   (`pwa-asistentes/src/pages/ReporteDiario.jsx:67`, `:111`).
+   (`pwa-asistentes/src/pages/Reporte.jsx:67`, `:111`).
 2. **Revisión del reporte estructurado** — la IA devuelve el JSON de `AI_PROMPTS.md`
    (Nivel 1) en campos editables: alimentación, medicación, signos vitales, estado de ánimo,
    incidentes, observaciones. El Asistente corrige antes de confirmar — **nunca guardar sin

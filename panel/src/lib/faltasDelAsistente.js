@@ -15,7 +15,7 @@ import { FICHA_NOMBRE, conSusFichas } from './fichaDelPaciente';
 /** Las clases de falta que hoy existen. Cada una tiene su nombre en las traducciones. */
 export const FALTA = { SALIDA_SIN_REPORTE: 'salida_sin_reporte' };
 
-const COLUMNAS = 'id, fecha, hora_inicio, paciente_id, reporte_diario_llego_at';
+const COLUMNAS = 'id, fecha, hora_inicio, paciente_id, reporte_llego_at';
 
 /**
  * Convierte un turno de guardia con la falta anotada en la fila que muestra el Legajo.
@@ -27,7 +27,7 @@ export function faltaDelTurnoGuardia(turno_guardia) {
     fecha: turno_guardia.fecha,
     pacientes_nombres: turno_guardia.pacientes_nombres ?? [],
     falta: FALTA.SALIDA_SIN_REPORTE,
-    reporteLlegoAt: turno_guardia.reporte_diario_llego_at ?? null,
+    reporteLlegoAt: turno_guardia.reporte_llego_at ?? null,
   };
 }
 
@@ -40,7 +40,7 @@ export async function cargarFaltasDelAsistente(asistenteId) {
     .from('turnos_guardia')
     .select(COLUMNAS)
     .eq('asistente_id', asistenteId)
-    .eq('salio_sin_reporte_diario', true)
+    .eq('salio_sin_reporte', true)
     .order('fecha', { ascending: false })
     .order('hora_inicio', { ascending: false })
     .order('id', { ascending: true });

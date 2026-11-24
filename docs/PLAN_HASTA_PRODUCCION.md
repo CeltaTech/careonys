@@ -179,7 +179,7 @@ hasta que se resuelve.
 
 ### El Paciente nunca queda solo
 
-**31.** **El cierre y el Reporte Diario.** Las cinco formas de cierre y el código QR con la
+**31.** **El cierre y el Reporte.** Las cinco formas de cierre y el código QR con la
 ubicación también a la salida.
 
 **Comprobación:** un turno no se cierra por ningún camino que no sea uno de los cinco.
@@ -970,7 +970,7 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
 
 - **Un turno se cierra de cinco formas, y de ninguna otra:**
   - el relevo escanea el código QR del saliente, con la ubicación: abre el turno que entra, fija la
-    hora de salida del saliente y cierra su turno si el Reporte Diario está presentado;
+    hora de salida del saliente y cierra su turno si el Reporte está presentado;
   - el saliente escanea el código QR del Cliente o de una persona autorizada;
   - el Coordinador lo autoriza desde el Panel, en dos casos: alguien recibió al Paciente y falló el
     teléfono o la ubicación, o el Coordinador fue a cubrir en persona, que se anota en el Panel y
@@ -1057,7 +1057,7 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
 
   La primera opción de cada una lleva advertencia legal si el documento del país dice algo. Un
   turno sin cerrar no se paga hasta que el Coordinador lo cierra con su hora de salida.
-- **El turno sin Reporte Diario se factura igual.** La falta del reporte no es motivo para dejar
+- **El turno sin Reporte se factura igual.** La falta del reporte no es motivo para dejar
   de facturarle el turno al Cliente, salvo que la Prestadora elija esperar el reporte; viene
   elegido facturar. Si espera y el reporte llega después de emitida la factura del período, el
   turno entra en la factura siguiente. Al Asistente se le insiste con un aviso al teléfono cada
@@ -1069,7 +1069,7 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
 
 **Las palabras nuevas ya están aprobadas** y entran al glosario: Paciente sin Asistente, Egreso sin
 relevo, Horas no cubiertas, Salida con el Paciente, Relevo de emergencia y Salida sin
-Reporte Diario.
+Reporte.
 
 **Cada pantalla nueva espera su sí para tocar la interfaz, y cada texto visible su aprobación,
 uno por uno.**
@@ -1243,7 +1243,7 @@ saltar la alarma del relevo que no llegó, salvo que sea el último turno de la 
 coordinación consulta a los Asistentes involucrados: si fue un olvido, cierra el turno a mano; si
 fue otra cosa, busca la solución; si no puede resolverlo, lo pasa al escalón de arriba.
 
-**Cómo se cierra un turno, qué pasa sin Reporte Diario y qué se le avisa al Cliente** está en la
+**Cómo se cierra un turno, qué pasa sin Reporte y qué se le avisa al Cliente** está en la
 sección «El Paciente nunca queda solo». De ahí salen también los estados nuevos que este tablero
 tiene que mostrar: Egreso sin relevo y Relevo de emergencia.
 

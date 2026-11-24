@@ -996,7 +996,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 |---|---|
 | **Texto actual** | «Para salir, escanee el código QR o pida autorización al Coordinador.» |
 | **Propuesta** | igual. |
-| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **¿Aparece hoy?** | sí. |
 | **Por qué** | antes decía «La salida necesita el código QR o la autorización del Coordinador. Escanee el código o pida autorización.». Una sola frase dice qué hacer. |
 | **Quién lo lee** | el Asistente. |
 | **Dónde está** | aplicación de Asistentes, pantalla del turno de guardia en curso. |
@@ -1638,7 +1638,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 |---|---|
 | **Texto actual** | «Aviso de inicio de turno» |
 | **Propuesta** | igual. |
-| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **¿Aparece hoy?** | sí. |
 | **Por qué** | antes decía «Recordatorio del próximo turno de guardia». El título nuevo es más corto y se lee mejor. |
 | **Quién lo lee** | el Administrador de la Prestadora. |
 | **Dónde está** | Panel → Configuración → Avisos. |
@@ -1654,7 +1654,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 |---|---|
 | **Texto actual** | «[cantidad] Servicios sin facturar por Prestaciones sin precio. Cargue los precios y genere las facturas otra vez.» |
 | **Propuesta** | igual. |
-| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **¿Aparece hoy?** | sí. |
 | **Por qué** | antes decía «Servicios sin facturar porque tienen Prestaciones sin precio: [cantidad]. Cargue el precio y genere nuevamente.». El número va primero y la frase dice qué hay que generar. |
 | **Quién lo lee** | la administración de la Prestadora. |
 | **Dónde está** | Panel → Facturación, resultado de generar las facturas. |
@@ -1670,7 +1670,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 |---|---|
 | **Texto actual** | «Cargar precio» |
 | **Propuesta** | igual. |
-| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
+| **¿Aparece hoy?** | sí. |
 | **Por qué** | antes decía «Poner precio». «Cargar» es el verbo que usa el resto del Panel. |
 | **Quién lo lee** | la administración de la Prestadora. |
 | **Dónde está** | Panel → Clientes, ficha del Paciente, Prestaciones. |

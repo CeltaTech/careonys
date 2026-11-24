@@ -7,6 +7,7 @@ import {
 import { IDIOMA_POR_DEFECTO, IDIOMAS_SOPORTADOS, normalizarIdioma } from './idiomas.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { frase } from './mensajesDelSistema.js';
+import { fechaParaLeer } from '../utils/fechas.js';
 
 /* Cómo se arma cada mensaje del sistema que sale del backend.
    ==========================================
@@ -704,9 +705,9 @@ const ARMADORES = {
       : t('reemplazo_para_responder.cuerpo_sin_fin', { desde: d.desde }),
   }),
 
-  recordatorio_de_turno_guardia: (t, d) => ({
+  recordatorio_de_turno_guardia: (t, d, idioma) => ({
     titulo: t('recordatorio_de_turno_guardia.titulo'),
-    cuerpo: t('recordatorio_de_turno_guardia.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio }),
+    cuerpo: t('recordatorio_de_turno_guardia.cuerpo', { fecha: fechaParaLeer(d.fecha, idioma), horaInicio: d.horaInicio }),
   }),
 
   recordatorio_del_reporte: (t) => ({
@@ -714,10 +715,10 @@ const ARMADORES = {
     cuerpo: t('recordatorio_del_reporte.cuerpo'),
   }),
 
-  // Al Asistente que dejó la guardia al relevo sin haber presentado el Reporte Diario.
-  reporte_pendiente: (t) => ({
+  // Al Asistente que dejó la guardia sin haber enviado el Reporte de ese turno de guardia.
+  reporte_pendiente: (t, d, idioma) => ({
     titulo: t('reporte_pendiente.titulo'),
-    cuerpo: t('reporte_pendiente.cuerpo'),
+    cuerpo: t('reporte_pendiente.cuerpo', { fecha: fechaParaLeer(d.fecha, idioma) }),
   }),
 
   fin_periodo_sin_cargo: (t, d) => ({
@@ -866,7 +867,7 @@ export function mensajeDelSistema(clave, idioma, datos = {}, prestadoraId = null
   if (!armar) throw new Error(`Aviso desconocido: ${clave}`);
   const idiomaFirme = normalizarIdioma(idioma);
   const t = (claveDelMensaje, valores) => frase(claveDelMensaje, idiomaFirme, valores, prestadoraId);
-  return armar(t, datos);
+  return armar(t, datos, idiomaFirme);
 }
 
 export { IDIOMA_POR_DEFECTO };

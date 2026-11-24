@@ -315,7 +315,7 @@ export async function revisarReportesPendientes(db, prestadoraId, horasEntreAvis
   const limite = new Date(ahora.getTime() - horasEntreAvisos * 3_600_000).toISOString();
   const { data: turnos_guardia, error } = await db
     .from('turnos_guardia')
-    .select('id, asistente_id')
+    .select('id, asistente_id, fecha')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'salida_sin_reporte')
     .not('asistente_id', 'is', null)
@@ -328,9 +328,9 @@ export async function revisarReportesPendientes(db, prestadoraId, horasEntreAvis
   if (!turnos_guardia?.length) return;
 
   const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
-  const { titulo, cuerpo } = mensajeDelSistema('reporte_pendiente', idioma, {}, prestadoraId);
 
   for (const turno_guardia of turnos_guardia) {
+    const { titulo, cuerpo } = mensajeDelSistema('reporte_pendiente', idioma, { fecha: turno_guardia.fecha }, prestadoraId);
     const enviadoPorPush = await enviarPushAsistente(prestadoraId, turno_guardia.asistente_id, {
       titulo,
       cuerpo,

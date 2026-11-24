@@ -154,7 +154,7 @@ export async function turnosGuardiaSalientes(db, turno_guardia, pacienteIds) {
 
   const { data: otrosTurnosGuardia } = await db
     .from('turno_guardia_pacientes')
-    .select('turno_guardia_id, turnos_guardia!inner(id, asistente_id, estado, checkout_at)')
+    .select('turno_guardia_id, turnos_guardia!inner(id, asistente_id, estado, checkout_at, fecha)')
     .in('paciente_id', pacienteIds)
     .eq('prestadora_id', turno_guardia.prestadora_id)
     .eq('turnos_guardia.estado', 'activa')

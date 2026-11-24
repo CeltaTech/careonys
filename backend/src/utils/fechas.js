@@ -72,3 +72,13 @@ export function semanaQueContiene(diaISO) {
     semanaSiguiente: sumarDias(lunes, DIAS_POR_SEMANA),
   };
 }
+
+/**
+ * Una fecha del calendario (`2026-10-07`) escrita como se lee en ese idioma: `7/10/2026` en
+ * castellano, `10/7/2026` en inglés. Se ancla en UTC por la misma razón que las demás cuentas de
+ * este archivo: es un día, no un momento, y no debe correrse según el huso del servidor.
+ */
+export function fechaParaLeer(fechaISO, idioma) {
+  if (!esFechaISO(String(fechaISO ?? '').slice(0, 10))) return '';
+  return new Date(`${String(fechaISO).slice(0, 10)}T00:00:00Z`).toLocaleDateString(idioma, { timeZone: 'UTC' });
+}

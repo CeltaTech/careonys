@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { esFechaISO, semanaQueContiene, sumarDias } from '../fechas.js';
+import { esFechaISO, fechaParaLeer, semanaQueContiene, sumarDias } from '../fechas.js';
 
 describe('esFechaISO', () => {
   it('una fecha bien escrita', () => {
@@ -114,5 +114,18 @@ describe('semanaQueContiene', () => {
     const semana = semanaQueContiene('2026-09-01');
     assert.equal(semana.desde, '2026-08-31');
     assert.equal(semana.hasta, '2026-09-06');
+  });
+});
+
+describe('fechaParaLeer', () => {
+  it('escribe el día como se lee en cada idioma, sin correrse por el huso', () => {
+    assert.equal(fechaParaLeer('2026-10-07', 'es-AR'), '7/10/2026');
+    assert.equal(fechaParaLeer('2026-10-07', 'en'), '10/7/2026');
+    assert.equal(fechaParaLeer('2026-10-07', 'pt-BR'), '07/10/2026');
+  });
+
+  it('una fecha que no existe no se escribe', () => {
+    assert.equal(fechaParaLeer('2026-02-31', 'es-AR'), '');
+    assert.equal(fechaParaLeer(null, 'es-AR'), '');
   });
 });

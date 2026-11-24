@@ -163,7 +163,7 @@ async function facturaLosTurnosSinReporte(db, prestadoraId) {
 async function avisarAlSaliente(db, turno_guardia) {
   try {
     const idioma = await idiomaDeLaPrestadora(db, turno_guardia.prestadora_id);
-    const { titulo, cuerpo } = mensajeDelSistema('reporte_pendiente', idioma, {}, turno_guardia.prestadora_id);
+    const { titulo, cuerpo } = mensajeDelSistema('reporte_pendiente', idioma, { fecha: turno_guardia.fecha }, turno_guardia.prestadora_id);
     const enviadoPorPush = await enviarPushAsistente(turno_guardia.prestadora_id, turno_guardia.asistente_id, {
       titulo,
       cuerpo,

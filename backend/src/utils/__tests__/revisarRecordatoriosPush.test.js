@@ -296,6 +296,7 @@ describe('la insistencia mientras falta el Reporte Diario', () => {
   const sinReporte = {
     id: '88888888-8888-8888-8888-888888888888',
     asistente_id: '55555555-5555-5555-5555-555555555555',
+    fecha: '2026-03-01',
   };
   const AHORA = new Date('2026-03-02T15:00:00Z');
 

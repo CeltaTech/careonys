@@ -14,6 +14,7 @@ import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import '../styles/molde-paginas.css';
+import { fechaYHoraDelMomento } from '../lib/horarios';
 
 /* LA SEGURIDAD DE LA PROPIA CUENTA, en una sola página y tres bloques: Contraseña, Verificación
    de identidad, y Dispositivos y sesiones.
@@ -167,7 +168,7 @@ function DispositivosYSesiones({ datos, locale }) {
   const [claveActual, setClaveActual] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
-  const fecha = (valor) => (valor ? new Date(valor).toLocaleString(locale) : '—');
+  const fecha = (valor) => (valor ? fechaYHoraDelMomento(valor, locale) : '—');
 
   async function cerrar(evento) {
     evento.preventDefault();

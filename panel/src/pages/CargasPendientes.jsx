@@ -12,6 +12,7 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { informacionDeSalud } from '../lib/informacionDeSalud';
 import '../styles/molde-paginas.css';
+import { fechaYHoraDelMomento } from '../lib/horarios';
 
 // Lo que cargó un Coordinador sobre un Paciente que no coordina, esperando que lo acepte el
 // Coordinador asignado o el Administrador. Qué filas ve cada uno lo decide la base: quien la
@@ -130,7 +131,7 @@ export function CargasPendientes() {
                   ))}
                 </dl>
                 <span className="panel-mini">
-                  {carga.cargador?.nombre} · {new Date(carga.cargado_en).toLocaleString(locale)}
+                  {carga.cargador?.nombre} · {fechaYHoraDelMomento(carga.cargado_en, locale)}
                 </span>
 
                 {propia ? null : rechazando === carga.id ? (

@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { EstadoLista } from '../layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
+import { fechaYHoraDelMomento } from '../../lib/horarios';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -142,7 +143,7 @@ export function HiloWhatsapp({ conversacionId, onCambio }) {
                 {esBorrador(m) && ` · ${t.comunicacion.sin_enviar}`}
               </div>
               <div className="panel-chat-burbuja-texto">{m.texto}</div>
-              <div className="panel-chat-burbuja-hora">{new Date(m.created_at).toLocaleString(locale)}</div>
+              <div className="panel-chat-burbuja-hora">{fechaYHoraDelMomento(m.created_at, locale)}</div>
             </div>
           ))}
         </div>

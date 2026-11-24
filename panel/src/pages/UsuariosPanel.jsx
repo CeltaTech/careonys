@@ -19,6 +19,7 @@ import { AusenciasDelCoordinador } from './AusenciasDelCoordinador';
 import { TurnosGuardiaQueTraban } from '../components/cuenta/TurnosGuardiaQueTraban';
 import '../styles/molde-paginas.css';
 import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
+import { fechaYHoraDelMomento } from '../lib/horarios';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -427,7 +428,7 @@ function CuentasDesactivadas({ filtro, aviso, onReactivada }) {
                 <tr key={c.id} {...propsDeFilaQueAbre(() => setAbierta(c))}>
                   <td><b>{c.nombre}</b></td>
                   <td><span className="badge badge-neutro">{t.usuarios_panel[`rol_${c.rol}`]}</span></td>
-                  <td className="panel-mini">{new Date(c.desactivada_en).toLocaleString(locale)}</td>
+                  <td className="panel-mini">{fechaYHoraDelMomento(c.desactivada_en, locale)}</td>
                 </tr>
               ))}
             </tbody>
@@ -489,7 +490,7 @@ export function VerCuentaDesactivada({ cuenta, rol = null, onClose, onReactivada
     }
   }
 
-  const fecha = (valor) => (valor ? new Date(valor).toLocaleString(locale) : '—');
+  const fecha = (valor) => (valor ? fechaYHoraDelMomento(valor, locale) : '—');
   const c = datos?.cuenta;
   const historial = datos?.historial ?? [];
 

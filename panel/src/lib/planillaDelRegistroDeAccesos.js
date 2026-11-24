@@ -1,3 +1,5 @@
+import { fechaYHoraDelMomento } from './horarios';
+
 // Cómo se escribe un renglón del registro de accesos a la información de salud, en la Ficha del
 // Cliente y en la descarga del año que se va a borrar: las mismas columnas en los dos lados.
 export function encabezadosDelRegistroDeAccesos(t) {
@@ -8,7 +10,7 @@ export function encabezadosDelRegistroDeAccesos(t) {
 export function renglonDelRegistroDeAccesos(acceso, t, locale) {
   const textos = t.clientes.accesos_salud;
   return [
-    new Date(acceso.momento).toLocaleString(locale),
+    fechaYHoraDelMomento(acceso.momento, locale),
     acceso.persona ?? textos.sistema,
     acceso.paciente ?? '—',
     (acceso.categorias ?? []).map((c) => t.clientes.accesos_salud.categorias[c] ?? textos.categorias.otra).join(', '),

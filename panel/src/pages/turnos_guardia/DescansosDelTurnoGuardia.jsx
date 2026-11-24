@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
-import { momentoDelCampo } from '../../lib/horarios';
+import { momentoDelCampo, fechaYHoraDelMomento } from '../../lib/horarios';
 
 /**
  * Los descansos de un turno de guardia largo, vistos y anotados desde el Panel.
@@ -89,8 +89,8 @@ export function DescansosDelTurnoGuardia({ turnoGuardiaId }) {
         <ul className="panel-momentos-registrados">
           {descansos.map((d) => (
             <li key={d.id}>
-              {new Date(d.inicio_at).toLocaleString(locale)} –{' '}
-              {d.fin_at ? new Date(d.fin_at).toLocaleString(locale) : tr.en_curso}
+              {fechaYHoraDelMomento(d.inicio_at, locale)} –{' '}
+              {d.fin_at ? fechaYHoraDelMomento(d.fin_at, locale) : tr.en_curso}
               {d.nota ? ` · ${d.nota}` : ''}
             </li>
           ))}

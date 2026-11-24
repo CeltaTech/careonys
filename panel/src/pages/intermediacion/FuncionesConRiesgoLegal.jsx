@@ -9,6 +9,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { llamarApiDeMatch } from './llamarApiDeMatch';
 import '../../styles/molde-paginas.css';
+import { fechaYHoraDelMomento } from '../../lib/horarios';
 
 // Las dos funciones de riesgo legal conocido de la modalidad Match
 // (backend/src/routes/panelIntermediacion.js). Lo que se avisó al encenderlas es un informe y vive
@@ -110,7 +111,7 @@ export function IntermediacionFuncionesConRiesgoLegal() {
                   </td>
                   <td>
                     {f.advertida_en ? (
-                      <span className="panel-mini">{new Date(f.advertida_en).toLocaleString(locale)}</span>
+                      <span className="panel-mini">{fechaYHoraDelMomento(f.advertida_en, locale)}</span>
                     ) : (
                       <span className="panel-dato-vacio">
                         {f.texto_advertencia ? '—' : t.intermediacion.funciones_riesgo_sin_documento}

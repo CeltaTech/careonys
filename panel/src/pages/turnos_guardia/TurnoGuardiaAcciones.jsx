@@ -23,6 +23,7 @@ import { ElegirAsistente } from '../../components/turnos_guardia/ElegirAsistente
 import { CerrarTurnoGuardiaModal } from '../../components/turnos_guardia/CerrarTurnoGuardiaModal';
 import { textoDelDia, textoDelHorario } from '../../lib/horarioDeTurnoGuardia';
 import { EditarRecurrenteModal } from '../servicios/EditarRecurrenteModal';
+import { fechaYHoraDelMomento } from '../../lib/horarios';
 
 // Qué se resuelve en esta pantalla y en qué estado queda. Es el nombre guardado de la tabla, y con
 // él salen los motivos del catálogo de la Prestadora y se escribe la resolución. El estado se nombra
@@ -405,7 +406,7 @@ export function TurnoGuardiaAcciones({ turno_guardia, onReasignar, onClose, onAc
         <ul className="panel-momentos-registrados">
           {momentosDelTurnoGuardia.map(({ clave, at }) => (
             <li key={clave}>
-              {t.turnos_guardia.detalle[clave]} · {at ? new Date(at).toLocaleString(locale) : t.turnos_guardia.detalle.momento_sin_registro}
+              {t.turnos_guardia.detalle[clave]} · {at ? fechaYHoraDelMomento(at, locale) : t.turnos_guardia.detalle.momento_sin_registro}
             </li>
           ))}
         </ul>

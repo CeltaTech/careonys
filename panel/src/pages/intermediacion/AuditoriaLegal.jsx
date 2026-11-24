@@ -5,6 +5,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { llamarApiDeMatch } from './llamarApiDeMatch';
 import '../../styles/molde-paginas.css';
+import { fechaYHoraDelMomento } from '../../lib/horarios';
 
 // Qué advertencia legal se mostró al encender cada función de riesgo de Match, cuándo y a quién.
 // Es un informe de la administración: vive en la sección Informes y lo ve sólo el Administrador.
@@ -50,7 +51,7 @@ export function IntermediacionAuditoriaLegal() {
             <tbody>
               {eventos.map((e) => (
                 <tr key={e.id}>
-                  <td className="panel-mini">{new Date(e.created_at).toLocaleString(locale)}</td>
+                  <td className="panel-mini">{fechaYHoraDelMomento(e.created_at, locale)}</td>
                   <td><b>{e.usuarios?.nombre || '—'}</b></td>
                   <td>{t.intermediacion[`funcion_${e.funcion_clave}`] || e.funcion_clave}</td>
                   <td>{e.texto_mostrado}</td>

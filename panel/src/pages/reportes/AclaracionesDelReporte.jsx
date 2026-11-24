@@ -11,6 +11,7 @@ import {
   leerAclaraciones,
   puedeAclarar,
 } from '../../lib/aclaracionesDelReporte';
+import { fechaYHoraDelMomento } from '../../lib/horarios';
 
 // Las aclaraciones al pie de un Reporte. El Reporte de arriba no cambia nunca: lo que se corrige
 // se agrega acá abajo, firmado con el nombre de quien lo escribió, la fecha y la hora.
@@ -94,7 +95,7 @@ export function AclaracionesDelReporte({ reporteId }) {
           <div className="panel-mini">
             {t.reportes.aclaracion_firma
               .replace('{nombre}', a.escrita_por_nombre)
-              .replace('{fecha}', new Date(a.escrita_at).toLocaleString(locale))}
+              .replace('{fecha}', fechaYHoraDelMomento(a.escrita_at, locale))}
           </div>
           <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{a.texto}</p>
         </div>

@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { armarCsv, bajarCsv } from '../lib/exportarCsv';
 import { encabezadosDelRegistroDeAccesos, renglonDelRegistroDeAccesos } from '../lib/planillaDelRegistroDeAccesos';
 import '../styles/molde-paginas.css';
+import { fechaYHoraDelMomento } from '../lib/horarios';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -164,7 +165,7 @@ export function Auditoria() {
               <tbody>
                 {eventos.map((evento) => (
                   <tr key={evento.id}>
-                    <td className="panel-mini">{new Date(evento.created_at).toLocaleString(locale)}</td>
+                    <td className="panel-mini">{fechaYHoraDelMomento(evento.created_at, locale)}</td>
                     <td><b>{evento.usuarios?.nombre || '—'}</b></td>
                     <td>{evento.prestadoras?.nombre_fantasia || '—'}</td>
                     <td>{descripcionEvento(evento)}</td>
@@ -198,7 +199,7 @@ export function Auditoria() {
               <tbody>
                 {actividad.map((fila) => (
                   <tr key={fila.id}>
-                    <td className="panel-mini">{new Date(fila.created_at).toLocaleString(locale)}</td>
+                    <td className="panel-mini">{fechaYHoraDelMomento(fila.created_at, locale)}</td>
                     <td><b>{fila.usuarios?.nombre || (fila.usuario_id ? '—' : t.clientes.accesos_salud.sistema)}</b></td>
                     <td>{nombreDeLaAccion(fila, t)}</td>
                     <td>{queCambio(fila, t)}</td>

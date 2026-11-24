@@ -134,9 +134,10 @@ function ListaDeTurnosGuardia({ asistenteId, tramo, titulo, mensajeVacio }) {
   );
 }
 
-/* Las faltas del Asistente. Se llenan solas: cada turno de guardia en el que dejó la guardia al
-   relevo sin presentar el Reporte Diario. La falta queda aunque el reporte llegue después, con la
-   fecha en que llegó; mientras no llega, dice «Pendiente». */
+/* Los Reportes Diarios atrasados del Asistente. Se llenan solos: cada turno de guardia en el que
+   dejó la guardia al relevo sin presentar el Reporte Diario. El renglón queda aunque el reporte
+   llegue después, con la fecha en que llegó; mientras no llega, dice «Pendiente». Sin ninguno, el
+   bloque no se dibuja: un recuadro que dice que no hay nada no le sirve a nadie. */
 export function FaltasDelAsistente({ asistenteId }) {
   const { t, locale } = useLocale();
   const [filas, setFilas] = useState([]);
@@ -160,6 +161,7 @@ export function FaltasDelAsistente({ asistenteId }) {
   }, [cargar]);
 
   const tf = t.asistentes.faltas;
+  if (estado === 'cargando' || (estado === 'listo' && filas.length === 0)) return null;
   const opcionesDelHorario = {
     locale,
     hoy: hoyISO(),
@@ -174,8 +176,6 @@ export function FaltasDelAsistente({ asistenteId }) {
       <EstadoLista
         estado={estado}
         error={error}
-        vacio={estado === 'listo' && filas.length === 0}
-        mensajeVacio={tf.sin_faltas}
         recargar={cargar}
       >
         <table className="panel-tabla">

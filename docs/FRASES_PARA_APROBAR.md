@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oraciones completas, en voz activa; primero qué pasó y después qué hacer; sin culpar a quien lee y sin palabras internas del sistema. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 144 fichas.** Panel 20, Sitio web 2, Aplicación de Clientes 20, Aplicación de Asistentes 24, Panel: otros textos cambiados 55, Correos y avisos que envía el sistema 16, Consentimientos y advertencias legales 7.
+**Total: 141 fichas.** Panel 20, Sitio web 2, Aplicación de Clientes 20, Aplicación de Asistentes 23, Panel: otros textos cambiados 54, Correos y avisos que envía el sistema 15, Consentimientos y advertencias legales 7.
 
 ## Panel (20)
 
@@ -684,7 +684,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | mensaje emergente o franja. |
 | **Decisión** | |
 
-## Aplicación de Asistentes (24)
+## Aplicación de Asistentes (23)
 
 ### 102. Enlace para activar la cuenta
 
@@ -1054,23 +1054,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | franja. |
 | **Decisión** | |
 
-### 203. Reporte Diario pendiente
-
-| | |
-|---|---|
-| **Texto actual** | «Falta su Reporte Diario. Preséntelo ahora.» |
-| **Propuesta** | igual. |
-| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
-| **Por qué** | antes decía «Su Reporte Diario está pendiente. Preséntelo ahora.». Dice primero qué falta. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | aplicación de Asistentes, pantalla del turno de guardia en curso. |
-| **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte Diario. |
-| **Qué pasó** | el turno quedó sin Reporte Diario. |
-| **Qué puede hacer después** | presentar el Reporte Diario. |
-| **Cómo se muestra** | franja. |
-| **Decisión** | |
-
-## Panel: otros textos cambiados (55)
+## Panel: otros textos cambiados (54)
 
 ### 122. Alertas
 
@@ -1808,7 +1792,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | casilla para marcar. |
 | **Decisión** | |
 
-### 191. Columna de la fecha en la lista de faltas
+### 191. Columna de la fecha en la lista de Reportes Diarios atrasados
 
 | | |
 |---|---|
@@ -1817,14 +1801,14 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Fecha del turno de guardia». En esa lista no hay otra fecha. |
 | **Quién lo lee** | el Coordinador o el Administrador. |
-| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de faltas. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes Diarios atrasados. |
 | **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
-| **Qué pasó** | ve la lista de faltas. |
+| **Qué pasó** | ve la lista de Reportes Diarios atrasados. |
 | **Qué puede hacer después** | nada. |
 | **Cómo se muestra** | título de la columna. |
 | **Decisión** | |
 
-### 192. Columna de la falta en la lista de faltas
+### 192. Columna del motivo en la lista de Reportes Diarios atrasados
 
 | | |
 |---|---|
@@ -1833,14 +1817,14 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Falta», que repetía el título de la lista. |
 | **Quién lo lee** | el Coordinador o el Administrador. |
-| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de faltas. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes Diarios atrasados. |
 | **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
-| **Qué pasó** | ve la lista de faltas. |
+| **Qué pasó** | ve la lista de Reportes Diarios atrasados. |
 | **Qué puede hacer después** | nada. |
 | **Cómo se muestra** | título de la columna. |
 | **Decisión** | |
 
-### 193. Columna del reporte en la lista de faltas
+### 193. Columna del reporte en la lista de Reportes Diarios atrasados
 
 | | |
 |---|---|
@@ -1849,30 +1833,14 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
 | **Por qué** | antes decía «Reporte Diario recibido». Habla de lo que hizo el Asistente. |
 | **Quién lo lee** | el Coordinador o el Administrador. |
-| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de faltas. |
+| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de Reportes Diarios atrasados. |
 | **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
-| **Qué pasó** | ve la lista de faltas. |
+| **Qué pasó** | ve la lista de Reportes Diarios atrasados. |
 | **Qué puede hacer después** | nada. |
 | **Cómo se muestra** | título de la columna. |
 | **Decisión** | |
 
-### 194. Lista de faltas vacía
-
-| | |
-|---|---|
-| **Texto actual** | «Sin faltas registradas» |
-| **Propuesta** | igual. |
-| **¿Aparece hoy?** | no: está escrito y todavía no se publicó. Hoy se ve el texto anterior. |
-| **Por qué** | antes decía «Sin faltas». Dice que no hay ninguna anotada. |
-| **Quién lo lee** | el Coordinador o el Administrador. |
-| **Dónde está** | Panel → Asistentes, Legajo del Asistente, lista de faltas. |
-| **Qué estaba haciendo** | revisa el Legajo de un Asistente. |
-| **Qué pasó** | ve la lista de faltas. |
-| **Qué puede hacer después** | nada. |
-| **Cómo se muestra** | texto de la lista vacía. |
-| **Decisión** | |
-
-### 195. Excepción de los Reportes Diarios que faltan
+### 195. Excepción de los Reportes Diarios pendientes
 
 | | |
 |---|---|
@@ -1952,7 +1920,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | botón y título de la ventana. |
 | **Decisión** | |
 
-## Correos y avisos que envía el sistema (16)
+## Correos y avisos que envía el sistema (15)
 
 ### 160. Correo de activación de la cuenta
 
@@ -2178,22 +2146,6 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **Cómo se muestra** | aviso al celular. |
 | **Decisión** | |
 
-### 205. Título del aviso de Reporte Diario pendiente
-
-| | |
-|---|---|
-| **Texto actual** | «Falta su Reporte Diario» |
-| **Propuesta** | igual. |
-| **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
-| **Por qué** | antes decía «Reporte Diario pendiente». Le habla a la persona. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | aviso que recibe al irse sin presentar el Reporte Diario, y que se repite cada tantas horas mientras siga faltando. |
-| **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte Diario. |
-| **Qué pasó** | el turno quedó sin Reporte Diario. |
-| **Qué puede hacer después** | presentarlo desde la aplicación. |
-| **Cómo se muestra** | aviso al celular. |
-| **Decisión** | |
-
 ### 206. Texto del aviso de Reporte Diario pendiente
 
 | | |
@@ -2203,7 +2155,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | sí: ya está aplicado en la base de la nube, en las Prestadoras que no lo habían cambiado. |
 | **Por qué** | antes decía «Su Reporte Diario está pendiente. Preséntelo ahora.», que repetía el título. El aviso se repite cada tantas horas, así que dice qué hacer y dónde. |
 | **Quién lo lee** | el Asistente. |
-| **Dónde está** | el mismo aviso, debajo del título «Falta su Reporte Diario». |
+| **Dónde está** | el mismo aviso, debajo del título «Reporte Diario pendiente». |
 | **Qué estaba haciendo** | se fue del turno de guardia sin presentar el Reporte Diario. |
 | **Qué pasó** | el turno quedó sin Reporte Diario. |
 | **Qué puede hacer después** | presentarlo desde la aplicación. |

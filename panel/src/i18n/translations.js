@@ -1638,14 +1638,13 @@ export const T = {
         sin_anteriores: 'Sin turnos de guardia anteriores',
       },
       faltas: {
-        titulo: 'Faltas',
+        titulo: 'Reportes Diarios atrasados',
         col_fecha: 'Fecha',
         col_paciente: 'Paciente',
         col_falta: 'Motivo',
         col_reporte: 'Reporte presentado',
         salida_sin_reporte: 'Salida sin Reporte Diario',
         pendiente: 'Pendiente',
-        sin_faltas: 'Sin faltas registradas',
       },
       tabs: {
         perfil: 'Perfil',
@@ -4999,14 +4998,13 @@ export const T = {
         sin_anteriores: 'No previous guard shifts',
       },
       faltas: {
-        titulo: 'Lapses',
+        titulo: 'Late Daily Reports',
         col_fecha: 'Date',
         col_paciente: 'Patient',
         col_falta: 'Reason',
         col_reporte: 'Report submitted',
         salida_sin_reporte: 'Check-out without Daily Report',
         pendiente: 'Pending',
-        sin_faltas: 'No lapses recorded',
       },
       tabs: {
         perfil: 'Profile',
@@ -8346,14 +8344,13 @@ export const T = {
         sin_anteriores: 'Sem turnos de plantão anteriores',
       },
       faltas: {
-        titulo: 'Faltas',
+        titulo: 'Relatórios Diários atrasados',
         col_fecha: 'Data',
         col_paciente: 'Paciente',
         col_falta: 'Motivo',
         col_reporte: 'Relatório apresentado',
         salida_sin_reporte: 'Saída sem Relatório Diário',
         pendiente: 'Pendente',
-        sin_faltas: 'Sem faltas registradas',
       },
       tabs: {
         perfil: 'Perfil',

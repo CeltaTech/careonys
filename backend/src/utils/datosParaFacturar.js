@@ -1,4 +1,4 @@
-/* Qué datos de una persona del Directorio salen hacia el software de facturación.
+/* Qué datos de una persona de Contactos salen hacia el software de facturación.
    ==========================================================================
 
    Una sola lista para todo lo que se manda a facturar —la prestación directa y los accesos del

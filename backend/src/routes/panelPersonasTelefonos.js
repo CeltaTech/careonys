@@ -6,13 +6,13 @@ import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDeLaPersona.js';
 
-// Los teléfonos de contacto de una persona del Directorio de Personas.
+// Los teléfonos de contacto de una persona de Contactos.
 //
 // QUÉ RESUELVE. Los datos de la persona guardaban un teléfono solo. Un Cliente tiene el fijo de la casa y los
 // celulares de los dos o tres que atienden. Ahora se cargan todos, y todos quedan habilitados.
 //
 // SE PUEDEN REPETIR. Dos hermanos que viven juntos dan el mismo número, y acá no hay nada que lo
-// impida ni que lo avise: un teléfono del Directorio es un dato de contacto, no una llave para
+// impida ni que lo avise: un teléfono de Contactos es un dato de contacto, no una llave para
 // entrar. La regla del celular único es de las cuentas y no llega hasta acá.
 //
 // CUÁL ES EL PREFERIDO NO SE GUARDA: se deduce comparando contra el teléfono de la cuenta de esa
@@ -25,7 +25,7 @@ import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDeLaPer
 //
 // LEER VA CON LA CREDENCIAL DE QUIEN PIDE. Las dos lecturas entran a la base con
 // `clienteDelPedido(req)`, no con la llave maestra: la base sabe quién pide y le contesta sólo lo de
-// su Prestadora, y sólo si tiene el permiso de ver el Directorio de Personas. Por eso esas
+// su Prestadora, y sólo si tiene el permiso de ver Contactos. Por eso esas
 // consultas no llevan el filtro de la Prestadora de la sesión.
 //
 // EL PREFERIDO Y LAS ESCRITURAS VAN CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA ACTIVA, que la
@@ -66,7 +66,7 @@ function noEncontrado(res) {
   return res.status(404).json({ error: 'persona_no_encontrada', motivo: 'persona_no_encontrada' });
 }
 
-// Todos los teléfonos del Directorio de esta Organización, de una sola vez. La pantalla muestra una
+// Todos los teléfonos de Contactos de esta Organización, de una sola vez. La pantalla muestra una
 // lista de personas y cada una con los suyos: pedirlos persona por persona sería un pedido por renglón.
 panelPersonasTelefonosRouter.get(
   '/',

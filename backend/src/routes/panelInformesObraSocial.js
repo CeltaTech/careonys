@@ -60,7 +60,7 @@ async function construirContenido(db, { pacienteId, tipo, periodoDesde, periodoH
   if (!paciente) throw new ErrorConMotivo('paciente_no_encontrado', `paciente ${pacienteId}`);
 
   // Cómo se llama la obra social no está copiado en el Paciente: el Paciente guarda cuál persona
-  // del Directorio de Personas es, y el nombre se busca acá, al armar el informe. Si el Paciente no tiene
+  // de Contactos es, y el nombre se busca acá, al armar el informe. Si el Paciente no tiene
   // ninguna, no hay nada que buscar y el informe sale con el renglón vacío, como antes.
   let obraSocialNombre = null;
   if (paciente.obra_social_persona_id) {

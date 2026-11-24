@@ -1,5 +1,5 @@
 /**
- * Un Cliente que llega en una planilla importada nace en el Directorio de Personas, con su Paciente
+ * Un Cliente que llega en una planilla importada nace en Contactos, con su Paciente
  * reconocido y con el lugar puesto en los datos del Paciente.
  *
  *   npm test --prefix backend
@@ -19,7 +19,7 @@
  * LA PRESTADORA DE LA PRUEBA NO TIENE SERVICIO DE MAPAS. Así la prueba no sale a preguntarle a un
  * tercero por una dirección: acá se comprueba la localidad, no las coordenadas.
  *
- * LA PERSONA SE BUSCA POR SU DOCUMENTO ANTES DE CREARLA. Si ya está en el Directorio, se usan sus
+ * LA PERSONA SE BUSCA POR SU DOCUMENTO ANTES DE CREARLA. Si ya está en Contactos, se usan sus
  * datos tal como están y sólo se le suma lo que no tenía: una persona se guarda una sola vez.
  *
  * UNA FILA QUE YA ENTRÓ NO ENTRA DOS VECES. Así la planilla corregida se puede volver a importar
@@ -33,7 +33,7 @@ import { createServer } from 'node:http';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
-// El identificador que la base le da a la persona en el Directorio. Es a propósito otro número que el de
+// El identificador que la base le da a la persona en Contactos. Es a propósito otro número que el de
 // la cuenta: la misma persona puede estar cargada también en otra Prestadora, colgando de esta misma
 // cuenta.
 const NUEVA_PERSONA = '66666666-6666-6666-6666-666666666666';
@@ -116,8 +116,8 @@ function seLlamo(clave) {
 
 /** Lo que trae la planilla, con datos inventados. */
 let fila;
-/** Las personas que ya están en el Directorio, por documento. */
-let enElDirectorio;
+/** Las personas que ya están en Contactos, por documento. */
+let enContactos;
 /** Lo que ya tiene escrito la persona a la que se le completan datos. */
 let loQueYaTieneLaFicha;
 
@@ -128,7 +128,7 @@ function darDeAlta() {
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
-  enElDirectorio = {};
+  enContactos = {};
   loQueYaTieneLaFicha = {};
   fila = {
     nombreContacto: 'Alba',
@@ -165,7 +165,7 @@ beforeEach(() => {
   // La misma tabla se lee para buscar por documento y para ver qué tiene escrito una persona.
   respuestas.set('GET /rest/v1/personas', (filtros) => {
     if (filtros.has('documento_numero')) {
-      const id = enElDirectorio[filtros.get('documento_numero').replace(/^eq\./, '')];
+      const id = enContactos[filtros.get('documento_numero').replace(/^eq\./, '')];
       return id ? [{ id }] : [];
     }
     return [loQueYaTieneLaFicha];
@@ -195,7 +195,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------------------
 
 describe('el Cliente que llega en una planilla importada', () => {
-  it('quien contrata nace en el Directorio de Personas, con su nombre, su apellido, su correo y su teléfono', async () => {
+  it('quien contrata nace en Contactos, con su nombre, su apellido, su correo y su teléfono', async () => {
     await darDeAlta();
 
     const persona = loEscritoEn('personas');
@@ -296,8 +296,8 @@ describe('el Cliente que llega en una planilla importada', () => {
     assert.equal(busqueda.filtros.get('documento_tipo'), 'in.(cuil,cuit)');
   });
 
-  it('si la persona ya está en el Directorio, se usan sus datos y no se crea otra', async () => {
-    enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
+  it('si la persona ya está en Contactos, se usan sus datos y no se crea otra', async () => {
+    enContactos[CUIL] = PERSONA_QUE_YA_ESTABA;
 
     const alta = await darDeAlta();
 
@@ -308,7 +308,7 @@ describe('el Cliente que llega en una planilla importada', () => {
   });
 
   it('a la persona que ya estaba se le suma el teléfono que no tenía', async () => {
-    enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
+    enContactos[CUIL] = PERSONA_QUE_YA_ESTABA;
 
     await darDeAlta();
 
@@ -318,7 +318,7 @@ describe('el Cliente que llega en una planilla importada', () => {
   });
 
   it('el teléfono que la persona ya tenía no se escribe dos veces', async () => {
-    enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
+    enContactos[CUIL] = PERSONA_QUE_YA_ESTABA;
     respuestas.set('GET /rest/v1/telefonos_de_la_persona', () => [{ id: 'uno' }]);
 
     await darDeAlta();
@@ -394,8 +394,8 @@ describe('quién es el Paciente', () => {
 
 describe('una fila que ya entró', () => {
   beforeEach(() => {
-    enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
-    enElDirectorio[CUIL_DEL_PACIENTE] = PERSONA_DEL_PACIENTE;
+    enContactos[CUIL] = PERSONA_QUE_YA_ESTABA;
+    enContactos[CUIL_DEL_PACIENTE] = PERSONA_DEL_PACIENTE;
     respuestas.set('GET /rest/v1/pacientes', () => [{ cliente_id: CLIENTE_QUE_YA_ESTABA }]);
     respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE_QUE_YA_ESTABA, numero_cliente: 3 }]);
   });

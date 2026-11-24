@@ -3,7 +3,7 @@
 //
 // QUÉ RESUELVE
 // El Paciente no guarda su nombre, su fecha de nacimiento ni su domicilio: eso
-// está en sus datos de persona, en el Directorio, que es el único lugar donde se
+// está en sus datos de persona, en Contactos, que es el único lugar donde se
 // guarda a una persona. Cada consulta de Pacientes trae esos datos pegados, y acá
 // se los aplana para que quien la usa siga leyendo `nombre`, `fecha_nacimiento`,
 // `domicilio`, `lat` y `lng` sobre el Paciente, como antes.
@@ -20,8 +20,8 @@
 
 import { domicilioEscrito } from './domicilioEscrito.js';
 
-// La relación tiene nombre porque el Paciente apunta al Directorio por más de un
-// lado —su obra social también es una persona del Directorio— y sin nombre la base no
+// La relación tiene nombre porque el Paciente apunta a Contactos por más de un
+// lado —su obra social también es una persona de Contactos— y sin nombre la base no
 // sabe cuál de las dos se pide.
 const LA_FICHA = 'persona:personas!pacientes_persona_de_la_misma_prestadora';
 

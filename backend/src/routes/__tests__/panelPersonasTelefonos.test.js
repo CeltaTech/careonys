@@ -1,5 +1,5 @@
 /**
- * Pruebas de los teléfonos de contacto de una persona del Directorio de Personas.
+ * Pruebas de los teléfonos de contacto de una persona de Contactos.
  *
  * Se corren con el banco de pruebas que ya trae Node, sin instalar nada:
  *
@@ -124,8 +124,8 @@ after(() => {
 /** La credencial que mandó el último pedido: las lecturas tienen que llegar con esa. */
 let credencialEnviada = null;
 
-/** Si la base, con la credencial de quien pide, le deja ver el Directorio (`ver_personas`). */
-let laBaseLeDejaVerElDirectorio = true;
+/** Si la base, con la credencial de quien pide, le deja ver Contactos (`ver_personas`). */
+let laBaseLeDejaVerContactos = true;
 
 async function pedir(metodo, ruta, cuerpo) {
   credencialEnviada = sesionDePrueba(USUARIO);
@@ -171,9 +171,9 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => tienePermiso);
   // Sin cuentas cargadas: entonces no hay ningún preferido, que es el caso más común al empezar.
   lasCuentasLlevan();
-  laBaseLeDejaVerElDirectorio = true;
-  // El Directorio de la base, con personas de dos Prestadoras. Con la credencial de quien pide, la
-  // base contesta sólo las de su Prestadora, y ninguna si no tiene el permiso de ver el Directorio;
+  laBaseLeDejaVerContactos = true;
+  // Contactos, en la base, con personas de dos Prestadoras. Con la credencial de quien pide, la
+  // base contesta sólo las de su Prestadora, y ninguna si no tiene el permiso de ver Contactos;
   // con la del trabajo, sólo las de la Prestadora que lleva adentro; con cualquier otra, ninguna.
   // Es la única forma de que esta prueba pueda fallar: si la escritura fuera con la credencial de
   // otra Prestadora, la persona ajena aparecería. Una base de mentira que devuelve vacío por su cuenta
@@ -184,7 +184,7 @@ beforeEach(() => {
     const id = valorDe('id');
     const prestadora = valorDe('prestadora_id');
     const conSesion = credencial === credencialEnviada;
-    if (conSesion && !laBaseLeDejaVerElDirectorio) return [];
+    if (conSesion && !laBaseLeDejaVerContactos) return [];
     const delTrabajo = leerCredencial(credencial);
     let alcance;
     if (conSesion) alcance = PRESTADORA;
@@ -426,8 +426,8 @@ describe('la credencial de quien pide', () => {
     }
   });
 
-  it('quien puede editar el Directorio y no verlo carga, corrige y saca igual', async () => {
-    laBaseLeDejaVerElDirectorio = false;
+  it('quien puede editar Contactos y no verlos carga, corrige y saca igual', async () => {
+    laBaseLeDejaVerContactos = false;
     assert.equal((await pedir('POST', `/${PERSONA}`, { telefono: CASA })).estado, 200);
     assert.equal((await pedir('PATCH', `/${PERSONA}/${TELEFONO_ID}`, { telefono: CELULAR })).estado, 200);
     assert.equal((await pedir('DELETE', `/${PERSONA}/${TELEFONO_ID}`)).estado, 200);
@@ -523,14 +523,14 @@ describe('cargar, corregir y sacar', () => {
     assert.equal(cuerpo.ok, true);
   });
 
-  it('sin el permiso del Directorio no se escribe', async () => {
+  it('sin el permiso de Contactos no se escribe', async () => {
     tienePermiso = false;
     const { estado } = await pedir('POST', `/${PERSONA}`, { telefono: CASA });
     assert.equal(estado, 403);
     assert.equal(consultasDeDatos().length, 0);
   });
 
-  it('sin el permiso del Directorio tampoco se lee', async () => {
+  it('sin el permiso de Contactos tampoco se lee', async () => {
     tienePermiso = false;
     const { estado } = await pedir('GET', '/');
     assert.equal(estado, 403);

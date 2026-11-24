@@ -537,7 +537,7 @@ export async function revertirClienteImportada(db, clienteId, prestadoraId) {
 // `crearCuentaConPerfil` igual que cualquier otro rol de login propio, y en vez de una fila en
 // `clientes` (eso es solo para el titular) crea la fila en `personas_autorizadas` que la vincula.
 //
-// La persona queda en el Directorio de Personas, buscada por su CUIL: si ya está se usa esa,
+// La persona queda en Contactos, buscada por su CUIL: si ya está se usa esa,
 // y si no se crea. El DNI no se pide aparte: son los ocho dígitos del medio del CUIL.
 //
 // No se le escribe ningún acceso. Anotada no ve nada: los accesos rigen recién cuando el titular
@@ -636,10 +636,10 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
 // Da de alta un Cliente que llega en una planilla importada: es la cartera que la Prestadora ya
 // atendía antes de usar Careonys.
 //
-// Quien contrata y el Paciente están en el Directorio de Personas: cada uno tiene sus datos,
+// Quien contrata y el Paciente están en Contactos: cada uno tiene sus datos,
 // buscados por su documento, y la Ficha del cliente y el Paciente los apuntan. Los datos de una
 // persona no se borran nunca, así que si el alta se corta después de crearlas, las personas quedan
-// en el Directorio, y la próxima vez que llegue esa fila se las encuentra por su documento.
+// en Contactos, y la próxima vez que llegue esa fila se las encuentra por su documento.
 //
 // El Paciente se reconoce por su documento. Si la fila no lo trae, se lo da por la misma persona
 // que contrata solamente cuando el nombre es el mismo; si no, la fila no se carga: adivinar quién
@@ -836,7 +836,7 @@ export function periodoDelServicio({ vigenteDesde, vigenteHasta } = {}) {
 }
 
 // Un Cliente nuevo con su primer Servicio, desde Servicios del Panel. Quien contrata y el Paciente
-// ya están en el Directorio de Personas: el Panel manda cuáles, no sus datos. El email y el teléfono
+// ya están en Contactos: el Panel manda cuáles, no sus datos. El email y el teléfono
 // de la cuenta salen de los datos de quien contrata, que es donde viven.
 //
 // Si esa persona ya contrata en esta Prestadora para ese mismo Paciente, el Cliente ya existe y no
@@ -929,7 +929,7 @@ function mismoNombre(uno, otro) {
   return a.length > 0 && a.length === b.length && a.every((palabra, i) => palabra === b[i]);
 }
 
-// Un nombre que llega entero, partido como lo partió el pase de los Pacientes al Directorio: la
+// Un nombre que llega entero, partido como lo partió el pase de los Pacientes a Contactos: la
 // última palabra es el apellido y lo anterior son los nombres.
 function nombreYApellido(texto) {
   const palabras = String(texto ?? '').trim().split(/\s+/).filter(Boolean);
@@ -940,7 +940,7 @@ function nombreYApellido(texto) {
 // Lo que la base contesta cuando el documento, el DNI o el género no sirven. Viajan como motivo: son
 // códigos, y la frase está en las traducciones. Los del Paciente tienen su propio código, porque en
 // la fila hay dos personas y la frase tiene que decir cuál es. El documento repetido de un
-// Asistente dice Legajo, y el de una persona del Directorio dice persona.
+// Asistente dice Legajo, y el de una persona de Contactos dice persona.
 const MOTIVOS_DEL_DOCUMENTO = {
   contratante: {
     falta_el_documento: 'falta_el_documento',
@@ -1047,7 +1047,7 @@ export async function identidadDelAsistente(db, {
 }
 
 // Los datos de una persona, buscada por su documento. Una persona se guarda una sola vez: si ya está
-// en el Directorio, se usan esos datos tal como están —nombre, apellido y correo quedan los que
+// en Contactos, se usan esos datos tal como están —nombre, apellido y correo quedan los que
 // tenía— y lo único que se le suma es el teléfono, si no lo tenía. Si no está, se crea.
 //
 // Se busca entre los tipos del país que llevan dígito verificador, porque el mismo número puede

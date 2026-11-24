@@ -115,7 +115,7 @@ export function revisarConsentimiento(datos) {
  * El motivo no se pide. El familiar no tiene que justificar por qué se quedó en su propia casa; si
  * hay algo que dejar escrito, se escribe, y si no, no.
  *
- * Quién se quedó se elige del Directorio de Personas y se guarda cuál persona es, nunca su
+ * Quién se quedó se elige de Contactos y se guarda cuál persona es, nunca su
  * nombre tecleado. Que sea una Persona física lo comprueba además la base, al dar de alta.
  */
 export function revisarFamiliarQueSeQuedo(datos) {

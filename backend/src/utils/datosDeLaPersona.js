@@ -51,7 +51,7 @@ export async function datosDeLaPersona(db, personaId, prestadoraId) {
   };
 }
 
-/** La persona del Directorio que es quien usa la aplicación del Cliente: la del titular o la de la
+/** La persona de Contactos que es quien usa la aplicación del Cliente: la del titular o la de la
     persona autorizada. null si no tiene ninguna. */
 export async function personaDeQuienUsaLaAplicacion(db, { usuarioId, clienteId, esTitular, prestadoraId }) {
   if (esTitular) {
@@ -69,7 +69,7 @@ export async function personaDeQuienUsaLaAplicacion(db, { usuarioId, clienteId, 
   return autorizada?.persona_id ?? null;
 }
 
-/** Las personas del Directorio que son los Pacientes de un Cliente. */
+/** Las personas de Contactos que son los Pacientes de un Cliente. */
 export async function personasDeLosPacientesDelCliente(db, { clienteId, prestadoraId }) {
   const pacientes = await leer(db.from('pacientes').select('persona_id')
     .eq('cliente_id', clienteId)

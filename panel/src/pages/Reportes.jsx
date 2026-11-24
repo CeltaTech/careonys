@@ -19,6 +19,7 @@ import './tarjetas.css';
 import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
 import { informacionDeSalud } from '../lib/informacionDeSalud';
 import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
+import { AclaracionesDelReporte } from './reportes/AclaracionesDelReporte';
 
 // Tope de filas por consulta. Con el rango de fechas por defecto (una semana) no se alcanza
 // nunca; existe para que un rango muy ancho no traiga miles de filas de golpe.
@@ -252,6 +253,8 @@ function DetalleReporte({ reporte, rangoDe, onCerrar }) {
       {reporte.foto_url && (
         <img src={reporte.foto_url} alt="" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px' }} />
       )}
+
+      <AclaracionesDelReporte reporteId={reporte.id} />
     </section>
   );
 }

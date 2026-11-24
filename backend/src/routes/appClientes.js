@@ -26,6 +26,7 @@ import { agregarPersonaAutorizada } from '../utils/cuentasPanel.js';
 import { mezclarAccesosConCatalogo } from '../utils/catalogoPersonasAutorizadas.js';
 import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
+import { conSusAclaraciones, hayAclaraciones } from '../utils/aclaracionesDelReporte.js';
 import { ARCHIVOS_DE_LA_PIEZA, conArchivosEnOrden, enlaceDelArchivo } from '../utils/archivosDeContenidos.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeTurnoGuardia } from '../utils/estimarLlegadaDeTurnoGuardia.js';
@@ -711,10 +712,14 @@ function columnasDelReporte(visibilidad) {
   ], visibilidad);
 }
 
-// De qué tablas salió lo que se entrega de los reportes: los reportes siempre, y los rangos
-// normales de los signos vitales sólo cuando viajan.
-function categoriasDelReporte(vitales) {
-  return vitales?.rangos ? ['reportes', 'rangos_referencia_vitales'] : ['reportes'];
+// De qué tablas salió lo que se entrega de los reportes: los reportes siempre, los rangos
+// normales de los signos vitales sólo cuando viajan, y las aclaraciones al pie sólo cuando hay.
+function categoriasDelReporte(vitales, reportes) {
+  return [
+    'reportes',
+    ...(vitales?.rangos ? ['rangos_referencia_vitales'] : []),
+    ...(hayAclaraciones(reportes) ? ['aclaraciones_reporte'] : []),
+  ];
 }
 
 appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_reportes'), async (req, res) => {
@@ -757,7 +762,8 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
         .order('created_at', { ascending: false })
         .limit(60);
       if (error) throw error;
-      return filas;
+      // Cada Reporte con sus aclaraciones al pie, leídas con el mismo trabajo y por lo mismo.
+      return conSusAclaraciones(dbTrabajo, filas);
     });
   } catch (e) {
     return responderError(res, e);
@@ -772,7 +778,7 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
   try {
     await anotarConsultaAHce(
       req.usuarioCliente,
-      { pacienteId: paciente.id, categorias: categoriasDelReporte(vitales), origen: origenDelPedido(req) },
+      { pacienteId: paciente.id, categorias: categoriasDelReporte(vitales, data), origen: origenDelPedido(req) },
       { cliente: db },
     );
   } catch (e) {
@@ -816,7 +822,9 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
         .eq('paciente_id', paciente.id)
         .maybeSingle();
       if (error) throw error;
-      return fila;
+      if (!fila) return null;
+      const [conAclaraciones] = await conSusAclaraciones(dbTrabajo, [fila]);
+      return conAclaraciones;
     });
   } catch (e) {
     return responderError(res, e);
@@ -832,7 +840,7 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
   try {
     await anotarConsultaAHce(
       req.usuarioCliente,
-      { pacienteId: paciente.id, categorias: categoriasDelReporte(vitales), origen: origenDelPedido(req) },
+      { pacienteId: paciente.id, categorias: categoriasDelReporte(vitales, [data]), origen: origenDelPedido(req) },
       { cliente: db },
     );
   } catch (e) {

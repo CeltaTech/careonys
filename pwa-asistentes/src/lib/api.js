@@ -139,6 +139,12 @@ export const api = {
   },
   confirmarReporte: (id, datos) => pedido(`/turnos-guardia/${id}/reporte/confirmar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   reportesDelPaciente: (pacienteId) => pedido(`/pacientes/${pacienteId}/reportes`),
+  // El Reporte que presentó en un turno de guardia, con sus aclaraciones al pie. El Reporte no se
+  // modifica nunca: se corrige agregando una aclaración.
+  reportePresentado: (turnoGuardiaId, pacienteId) =>
+    pedido(`/aclaraciones/turnos-guardia/${turnoGuardiaId}/pacientes/${pacienteId}`),
+  agregarAclaracion: (reporteId, texto) =>
+    pedido(`/aclaraciones/reportes/${reporteId}`, { method: 'POST', body: JSON.stringify({ texto }) }),
   medicacionDelPaciente: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
   // El enlace a la receta se pide al tocar el botón: preparado de antemano se vence antes de usarlo.
   recetaDeLaOrden: (pacienteId, indicacionId) => pedido(`/medicacion/${pacienteId}/receta/${indicacionId}`),

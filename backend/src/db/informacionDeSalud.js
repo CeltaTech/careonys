@@ -20,9 +20,9 @@
 // copia que el backend necesita para saber qué consulta desviar, y `scripts/probar_aislamiento.mjs`
 // rompe si se despegan.
 export const TABLAS_DE_SALUD = new Set([
-  'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_turno_guardia', 'hospitalizaciones_paciente',
-  'indicaciones_medicacion', 'informacion_de_salud_del_paciente', 'informes_obra_social',
-  'rangos_referencia_vitales', 'reportes', 'versiones_registro_clinico',
+  'aclaraciones_reporte', 'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_turno_guardia',
+  'hospitalizaciones_paciente', 'indicaciones_medicacion', 'informacion_de_salud_del_paciente',
+  'informes_obra_social', 'rangos_referencia_vitales', 'reportes', 'versiones_registro_clinico',
 ]);
 
 // Lo que una consulta de salud puede traer pegado, y por qué columna de la fila se lo encuentra.

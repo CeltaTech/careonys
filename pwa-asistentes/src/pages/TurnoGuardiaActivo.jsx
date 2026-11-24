@@ -21,6 +21,8 @@ import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import PaseDeTurnoGuardia from '../components/PaseDeTurnoGuardia';
 import CodigoDePresencia from '../components/CodigoDePresencia';
 import TareasDelTipo from '../components/TareasDelTipo';
+import AclaracionesAlPie from '../components/AclaracionesAlPie';
+import ReportePresentado from '../components/ReportePresentado';
 
 /**
  * Lo que se puede consultar de UN Paciente durante el turno de guardia: sus órdenes de medicación y sus
@@ -39,7 +41,7 @@ import TareasDelTipo from '../components/TareasDelTipo';
  * Las dos consultas se apagan por separado desde el Panel. Si la Prestadora apagó las dos, el
  * bloque entero desaparece: quedaría un nombre solo, sin nada abajo.
  */
-function DatosDelPaciente({ paciente, mostrarNombre, t }) {
+function DatosDelPaciente({ paciente, mostrarNombre, t, locale }) {
   const [reportes, setReportes] = useState(null);
   const [mostrandoReportes, setMostrandoReportes] = useState(false);
   const [ordenesMedicacion, setOrdenesMedicacion] = useState(null);
@@ -164,6 +166,13 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
                   <div key={r.id} className="tarjeta">
                     <div className="tarjeta-detalle">{r.turnos_guardia?.fecha}</div>
                     {r.observaciones && <p>{r.observaciones}</p>}
+                    <AclaracionesAlPie
+                      reporteId={r.id}
+                      aclaraciones={r.aclaraciones}
+                      puedeAclarar={r.propio === true}
+                      t={t}
+                      locale={locale}
+                    />
                   </div>
                 ))}
               </>
@@ -755,8 +764,22 @@ export default function TurnoGuardiaActivo() {
       )}
 
       {pacientes.map((p) => (
-        <DatosDelPaciente key={p.id} paciente={p} mostrarNombre={sonVarios} t={t} />
+        <DatosDelPaciente key={p.id} paciente={p} mostrarNombre={sonVarios} t={t} locale={locale} />
       ))}
+
+      {/* El Reporte que ya presentó de cada Paciente, para corregirlo con una aclaración al pie. */}
+      {pacientes
+        .filter((p) => conReporte.includes(p.id))
+        .map((p) => (
+          <ReportePresentado
+            key={`presentado-${p.id}`}
+            turnoGuardiaId={id}
+            paciente={p}
+            mostrarNombre={sonVarios}
+            t={t}
+            locale={locale}
+          />
+        ))}
     </div>
   );
 }

@@ -451,6 +451,15 @@ export const T = {
       reintentar: 'Reintentar',
       sin_codigo: 'No hay ningún QR para mostrar en este momento.',
     },
+    aclaraciones: {
+      titulo: 'Aclaraciones',
+      firma: '{nombre} · {fecha}',
+      agregar: 'Agregar aclaración',
+      campo: 'Aclaración',
+      sin_texto: 'Escriba la aclaración.',
+      ver_reporte: 'Ver el Reporte presentado',
+      ver_reporte_de: 'Ver el Reporte presentado de {nombre}',
+    },
     medicacion: {
       titulo: 'Medicación',
       sin_ordenes: 'No hay órdenes de medicación vigentes de este Paciente que a usted le corresponda administrar.',
@@ -1105,6 +1114,15 @@ export const T = {
       reintentar: 'Retry',
       sin_codigo: 'There is no QR code to show right now.',
     },
+    aclaraciones: {
+      titulo: 'Clarifications',
+      firma: '{nombre} · {fecha}',
+      agregar: 'Add clarification',
+      campo: 'Clarification',
+      sin_texto: 'Enter the clarification.',
+      ver_reporte: 'View the submitted Report',
+      ver_reporte_de: 'View the submitted Report for {nombre}',
+    },
     medicacion: {
       titulo: 'Medication',
       sin_ordenes: 'There are no active medication orders for this Patient that are yours to administer.',
@@ -1740,6 +1758,15 @@ export const T = {
       pidiendo: 'Pedindo…',
       reintentar: 'Tentar novamente',
       sin_codigo: 'Não há nenhum QR para mostrar neste momento.',
+    },
+    aclaraciones: {
+      titulo: 'Esclarecimentos',
+      firma: '{nombre} · {fecha}',
+      agregar: 'Adicionar esclarecimento',
+      campo: 'Esclarecimento',
+      sin_texto: 'Escreva o esclarecimento.',
+      ver_reporte: 'Ver o Relatório apresentado',
+      ver_reporte_de: 'Ver o Relatório apresentado de {nombre}',
     },
     medicacion: {
       titulo: 'Medicação',

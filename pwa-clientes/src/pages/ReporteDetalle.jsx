@@ -5,12 +5,13 @@ import { useLocale } from '../i18n/LocaleContext';
 import { useSeVe } from '../context/PerfilContext';
 import { SIGNOS_VITALES, SIGNOS_VITALES_LEGADO, colorSigno } from '../lib/signosVitales';
 import { caraDelAnimo } from '../lib/animoDelReporte';
+import { con } from '../lib/textos';
 
 const CAMPOS_TEXTO = ['incidentes', 'observaciones'];
 
 export default function ReporteDetalle() {
   const { id, reporteId } = useParams();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const seVe = useSeVe();
   const [reporte, setReporte] = useState(null);
   const [rangosVitales, setRangosVitales] = useState({});
@@ -138,6 +139,24 @@ export default function ReporteDetalle() {
       {reporte.foto_url && (
         <section className="pwa-card">
           <img src={reporte.foto_url} alt="" className="foto-ancha" />
+        </section>
+      )}
+
+      {/* El Reporte no se modifica: lo que se corrigió va al pie, firmado y con fecha y hora. */}
+      {reporte.aclaraciones?.length > 0 && (
+        <section className="pwa-card">
+          <h2>{t.reporte_detalle.aclaraciones}</h2>
+          {reporte.aclaraciones.map((a) => (
+            <div key={a.id}>
+              <div className="tarjeta-detalle">
+                {con(t.reporte_detalle.aclaracion_firma, {
+                  nombre: a.escrita_por_nombre,
+                  fecha: new Date(a.escrita_at).toLocaleString(locale),
+                })}
+              </div>
+              <div className="pwa-card-dato texto-con-renglones">{a.texto}</div>
+            </div>
+          ))}
         </section>
       )}
     </>

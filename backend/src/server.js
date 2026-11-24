@@ -77,6 +77,7 @@ import { appClientesVitalesAutorizacionRouter } from './routes/appClientesVitale
 import { appClientesApoderadoRouter } from './routes/appClientesApoderado.js';
 import { panelApoderadoRouter } from './routes/panelApoderado.js';
 import { appAsistentesMedicacionRouter } from './routes/appAsistentesMedicacion.js';
+import { appAsistentesAclaracionesRouter } from './routes/appAsistentesAclaraciones.js';
 import { appAsistentesConsentimientosRouter } from './routes/appAsistentesConsentimientos.js';
 import { appAsistentesDocumentosRouter } from './routes/appAsistentesDocumentos.js';
 import { appAsistentesAsignacionesRouter } from './routes/appAsistentesAsignaciones.js';
@@ -198,6 +199,7 @@ app.use('/api/entrevista', entrevistaPublicaRouter);
 app.use('/api/documento-para-firmar', documentoParaFirmarRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/app-asistentes/medicacion', appAsistentesMedicacionRouter);
+app.use('/api/app-asistentes/aclaraciones', appAsistentesAclaracionesRouter);
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);
 app.use('/api/app-asistentes/documentos', appAsistentesDocumentosRouter);
 app.use('/api/app-asistentes/asignaciones', appAsistentesAsignacionesRouter);

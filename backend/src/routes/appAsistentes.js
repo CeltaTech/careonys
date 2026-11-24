@@ -31,6 +31,7 @@ import {
   registrarComprobacion,
 } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
+import { conSusAclaraciones, hayAclaraciones } from '../utils/aclaracionesDelReporte.js';
 import { ARCHIVOS_DE_LA_PIEZA, conArchivosEnOrden, enlaceDelArchivo } from '../utils/archivosDeContenidos.js';
 import { lugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { nombresDeLugares } from '../utils/catalogoDeLugares.js';
@@ -2303,13 +2304,14 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
     data = await enLaPrestadora(req.usuarioAsistente.prestadoraId, 'reportes anteriores', async (dbTrabajo) => {
       const { data: filas, error } = await dbTrabajo
         .from('reportes')
-        .select('id, observaciones, created_at, turnos_guardia!inner(fecha, servicio_id)')
+        .select('id, observaciones, created_at, turnos_guardia!inner(fecha, servicio_id, asistente_id)')
         .eq('paciente_id', req.params.id)
         .eq('turnos_guardia.servicio_id', servicioId)
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw error;
-      return filas;
+      // Cada Reporte con sus aclaraciones al pie, leídas con el mismo trabajo y por lo mismo.
+      return conSusAclaraciones(dbTrabajo, filas);
     });
   } catch (e) {
     return responderError(res, e);
@@ -2321,7 +2323,11 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
     try {
       await anotarConsultaAHce(
         req.usuarioAsistente,
-        { pacienteId: req.params.id, categorias: ['reportes'], origen: origenDelPedido(req) },
+        {
+          pacienteId: req.params.id,
+          categorias: hayAclaraciones(data) ? ['reportes', 'aclaraciones_reporte'] : ['reportes'],
+          origen: origenDelPedido(req),
+        },
         { cliente: clienteDelPedido(req) },
       );
     } catch (e) {
@@ -2329,7 +2335,14 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
     }
   }
 
-  res.json({ reportes: data });
+  // Quién presentó cada Reporte no sale: sólo si lo presentó él, que es quien puede aclararlo.
+  res.json({
+    reportes: (data ?? []).map(({ turnos_guardia: turno, ...reporte }) => ({
+      ...reporte,
+      turnos_guardia: { fecha: turno?.fecha, servicio_id: turno?.servicio_id },
+      propio: turno?.asistente_id === req.usuarioAsistente.asistenteId,
+    })),
+  });
 });
 
 // ============================================================================

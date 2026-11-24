@@ -2278,6 +2278,20 @@ $$;
 ALTER FUNCTION "interno"."el_domicilio_temporal_no_se_borra"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "interno"."el_reporte_no_se_modifica"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  RAISE EXCEPTION 'El Reporte forma parte de la historia clínica y no se modifica ni se borra: se corrige con una aclaración'
+    USING ERRCODE = '42501';
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."el_reporte_no_se_modifica"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."el_email_de_la_cuenta_pasa_a_los_demas"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -4118,6 +4132,53 @@ $$;
 ALTER FUNCTION "interno"."la_asignacion_cambia_de_estado"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "interno"."la_aclaracion_no_se_modifica"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+BEGIN
+  RAISE EXCEPTION 'La aclaración del Reporte forma parte de la historia clínica y no se modifica ni se borra'
+    USING ERRCODE = '42501';
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."la_aclaracion_no_se_modifica"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "interno"."la_aclaracion_se_firma"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+DECLARE
+  v_prestadora uuid;
+  v_paciente   uuid;
+BEGIN
+  SELECT r.prestadora_id, r.paciente_id INTO v_prestadora, v_paciente
+    FROM reportes r
+   WHERE r.id = NEW.reporte_id;
+  IF v_prestadora IS NULL THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+
+  NEW.prestadora_id := v_prestadora;
+  NEW.paciente_id   := v_paciente;
+  NEW.escrita_por   := interno.usuario_de_la_sesion();
+  NEW.escrita_at    := now();
+  SELECT coalesce(nullif(btrim(u.nombre), ''), u.nombre_de_usuario) INTO NEW.escrita_por_nombre
+    FROM usuarios u
+   WHERE u.id = NEW.escrita_por;
+  IF NEW.escrita_por IS NULL OR NEW.escrita_por_nombre IS NULL THEN
+    RAISE EXCEPTION 'sin_permiso' USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "interno"."la_aclaracion_se_firma"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."la_carga_queda_pendiente"("p_paciente" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public', 'interno'
@@ -5445,6 +5506,28 @@ $$;
 ALTER FUNCTION "interno"."prestadora_del_estado_de_cuenta"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "interno"."puede_aclarar_el_reporte"("p_reporte" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT p_reporte IS NOT NULL
+     AND EXISTS (
+       SELECT 1
+         FROM reportes r
+         JOIN turnos_guardia g ON g.id = r.turno_guardia_id AND g.prestadora_id = r.prestadora_id
+        WHERE r.id = p_reporte
+          AND r.prestadora_id = interno.prestadora_actual()
+          AND interno.alcanza_la_informacion_de_salud(r.paciente_id)
+          AND (g.asistente_id = interno.asistente_de_la_sesion()
+               OR (interno.es_coordinador() AND interno.coordina_al_paciente(r.paciente_id))
+               OR interno.es_admin_prestadora())
+     );
+$$;
+
+
+ALTER FUNCTION "interno"."puede_aclarar_el_reporte"("p_reporte" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "interno"."puede_configurar_accesos_de_personas_autorizadas"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'interno'
@@ -5532,6 +5615,30 @@ ALTER FUNCTION "interno"."quien_tiene_la_alarma"("p_prestadora" "uuid", "p_tipo"
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."aclaraciones_reporte" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "prestadora_id" "uuid" NOT NULL,
+    "reporte_id" "uuid" NOT NULL,
+    "paciente_id" "uuid" NOT NULL,
+    "texto" "text" NOT NULL,
+    "escrita_por" "uuid" NOT NULL,
+    "escrita_por_nombre" "text" NOT NULL,
+    "escrita_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "aclaraciones_reporte_texto_check" CHECK ((("btrim"("texto") <> ''::"text") AND ("char_length"("texto") <= 5000)))
+);
+
+
+ALTER TABLE "public"."aclaraciones_reporte" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."aclaraciones_reporte" IS 'Lo que se agrega al pie de un Reporte presentado para corregirlo. El Reporte no se modifica nunca, y la aclaración tampoco: una aclaración equivocada se corrige con otra.';
+
+
+
+COMMENT ON COLUMN "public"."aclaraciones_reporte"."escrita_por_nombre" IS 'El nombre de quien la escribió, tal como estaba el día que la escribió. Es la firma de la aclaración y no cambia si después cambia el nombre de la cuenta.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."consultas_a_hce" (
@@ -5903,9 +6010,9 @@ CREATE OR REPLACE FUNCTION "interno"."tablas_de_salud"() RETURNS "text"[]
     LANGUAGE "sql" IMMUTABLE
     AS $$
   SELECT ARRAY[
-    'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_turno_guardia', 'hospitalizaciones_paciente',
-    'indicaciones_medicacion', 'informacion_de_salud_del_paciente', 'informes_obra_social',
-    'rangos_referencia_vitales', 'reportes', 'versiones_registro_clinico'
+    'aclaraciones_reporte', 'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_turno_guardia',
+    'hospitalizaciones_paciente', 'indicaciones_medicacion', 'informacion_de_salud_del_paciente',
+    'informes_obra_social', 'rangos_referencia_vitales', 'reportes', 'versiones_registro_clinico'
   ]::text[];
 $$;
 
@@ -9756,6 +9863,17 @@ $$;
 
 
 ALTER FUNCTION "public"."nombrar_apoderado"("p_cliente" "uuid", "p_funcion" "text", "p_nombre" "text", "p_apellido" "text", "p_cuil" "text", "p_archivo" "text", "p_usuario" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."puede_aclarar_el_reporte"("p_reporte" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public', 'interno'
+    AS $$
+  SELECT interno.puede_aclarar_el_reporte(p_reporte);
+$$;
+
+
+ALTER FUNCTION "public"."puede_aclarar_el_reporte"("p_reporte" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."pedir_medicacion"("p_paciente" "uuid", "p_medicamento" "text", "p_dosis" "text", "p_frecuencia" "text", "p_via" "uuid", "p_prescripcion" "text", "p_desde" "date", "p_hasta" "date", "p_documento" "jsonb") RETURNS "uuid"
@@ -18965,6 +19083,16 @@ ALTER TABLE ONLY "public"."reportes"
 
 
 
+ALTER TABLE ONLY "public"."reportes"
+    ADD CONSTRAINT "reportes_id_prestadora_paciente_key" UNIQUE ("id", "prestadora_id", "paciente_id");
+
+
+
+ALTER TABLE ONLY "public"."aclaraciones_reporte"
+    ADD CONSTRAINT "aclaraciones_reporte_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."requerimientos_legales_de_hce_por_pais"
     ADD CONSTRAINT "requerimientos_legales_de_hce_por_pais_pkey" PRIMARY KEY ("id");
 
@@ -20512,6 +20640,14 @@ CREATE UNIQUE INDEX "reportes_uno_por_paciente_y_turno_guardia" ON "public"."rep
 
 
 
+CREATE INDEX "aclaraciones_reporte_reporte_idx" ON "public"."aclaraciones_reporte" USING "btree" ("reporte_id", "escrita_at");
+
+
+
+CREATE INDEX "aclaraciones_reporte_prestadora_idx" ON "public"."aclaraciones_reporte" USING "btree" ("prestadora_id");
+
+
+
 CREATE INDEX "resoluciones_por_fila" ON "public"."resoluciones" USING "btree" ("prestadora_id", "tabla", "fila_id", "created_at" DESC, "secuencia" DESC);
 
 
@@ -21439,6 +21575,18 @@ CREATE OR REPLACE TRIGGER "trg_registro_actividad_solo_lo_permitido" BEFORE INSE
 
 
 CREATE OR REPLACE TRIGGER "trg_reporte_paciente_del_turno_guardia" BEFORE INSERT OR UPDATE OF "turno_guardia_id", "paciente_id" ON "public"."reportes" FOR EACH ROW EXECUTE FUNCTION "public"."exigir_paciente_del_turno_guardia"();
+
+
+
+CREATE OR REPLACE TRIGGER "el_reporte_no_se_modifica" BEFORE DELETE OR UPDATE ON "public"."reportes" FOR EACH ROW EXECUTE FUNCTION "interno"."el_reporte_no_se_modifica"();
+
+
+
+CREATE OR REPLACE TRIGGER "la_aclaracion_se_firma" BEFORE INSERT ON "public"."aclaraciones_reporte" FOR EACH ROW EXECUTE FUNCTION "interno"."la_aclaracion_se_firma"();
+
+
+
+CREATE OR REPLACE TRIGGER "la_aclaracion_no_se_modifica" BEFORE DELETE OR UPDATE ON "public"."aclaraciones_reporte" FOR EACH ROW EXECUTE FUNCTION "interno"."la_aclaracion_no_se_modifica"();
 
 
 
@@ -23800,6 +23948,21 @@ ALTER TABLE ONLY "public"."reportes"
 
 
 
+ALTER TABLE ONLY "public"."aclaraciones_reporte"
+    ADD CONSTRAINT "aclaraciones_reporte_prestadora_id_fkey" FOREIGN KEY ("prestadora_id") REFERENCES "public"."prestadoras"("id");
+
+
+
+ALTER TABLE ONLY "public"."aclaraciones_reporte"
+    ADD CONSTRAINT "aclaraciones_reporte_escrita_por_fkey" FOREIGN KEY ("escrita_por") REFERENCES "public"."usuarios"("id");
+
+
+
+ALTER TABLE ONLY "public"."aclaraciones_reporte"
+    ADD CONSTRAINT "aclaraciones_reporte_reporte_fk" FOREIGN KEY ("reporte_id", "prestadora_id", "paciente_id") REFERENCES "public"."reportes"("id", "prestadora_id", "paciente_id");
+
+
+
 ALTER TABLE ONLY "public"."resoluciones"
     ADD CONSTRAINT "resoluciones_motivo_fkey" FOREIGN KEY ("motivo_id", "prestadora_id", "tabla", "estado") REFERENCES "public"."motivos_resolucion"("id", "prestadora_id", "tabla", "estado");
 
@@ -25458,7 +25621,7 @@ CREATE POLICY "coordinador_gestiona_personas_autorizadas" ON "public"."personas_
 
 
 
-CREATE POLICY "coordinador_gestiona_reportes_de_sus_servicios" ON "public"."reportes" TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
+CREATE POLICY "coordinador_lee_reportes_de_sus_servicios" ON "public"."reportes" FOR SELECT TO "authenticated" USING ((("prestadora_id" = "interno"."prestadora_actual"()) AND "interno"."coordinador_ve_el_turno_guardia"("turno_guardia_id")));
 
 
 
@@ -26185,6 +26348,28 @@ CREATE POLICY "la_informacion_de_salud_pasa_por_el_registro" ON "public"."report
 
 
 
+CREATE POLICY "la_informacion_de_salud_la_ve_quien_atiende" ON "public"."aclaraciones_reporte" AS RESTRICTIVE FOR SELECT TO "authenticated" USING ("interno"."alcanza_la_informacion_de_salud"("paciente_id"));
+
+
+
+CREATE POLICY "la_informacion_de_salud_pasa_por_el_registro" ON "public"."aclaraciones_reporte" AS RESTRICTIVE TO "authenticated" USING ("interno"."lectura_de_salud_anotada"()) WITH CHECK ("interno"."lectura_de_salud_anotada"());
+
+
+
+CREATE POLICY "quien_lee_el_reporte_lee_sus_aclaraciones" ON "public"."aclaraciones_reporte" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."reportes" "r"
+  WHERE (("r"."id" = "aclaraciones_reporte"."reporte_id") AND ("r"."prestadora_id" = "aclaraciones_reporte"."prestadora_id")))));
+
+
+
+CREATE POLICY "quien_puede_aclarar_agrega_la_aclaracion" ON "public"."aclaraciones_reporte" FOR INSERT TO "authenticated" WITH CHECK ((("prestadora_id" = "interno"."prestadora_actual"()) AND ("escrita_por" = "interno"."usuario_de_la_sesion"()) AND "interno"."puede_aclarar_el_reporte"("reporte_id")));
+
+
+
+CREATE POLICY "trabajo_sin_persona_lee_de_esta_prestadora" ON "public"."aclaraciones_reporte" FOR SELECT TO "trabajo_sin_persona" USING (("prestadora_id" = "interno"."prestadora_actual"()));
+
+
+
 CREATE POLICY "la_informacion_de_salud_pasa_por_el_registro" ON "public"."versiones_registro_clinico" AS RESTRICTIVE TO "authenticated" USING ((("paciente_id" IS NULL) OR "interno"."lectura_de_salud_anotada"())) WITH CHECK ((("paciente_id" IS NULL) OR "interno"."lectura_de_salud_anotada"()));
 
 
@@ -26616,7 +26801,7 @@ CREATE POLICY "panel_gestiona_prestaciones_con_precio" ON "public"."prestaciones
 
 
 
-CREATE POLICY "panel_gestiona_reportes" ON "public"."reportes" USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "panel_lee_reportes" ON "public"."reportes" FOR SELECT USING ((("interno"."es_superadmin"() AND ("prestadora_id" = "interno"."prestadora_actual"())) OR (("prestadora_id" = "interno"."prestadora_actual"()) AND (EXISTS ( SELECT 1
    FROM "public"."usuarios" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."rol" = 'admin_prestadora'::"text")))))));
 
@@ -27006,6 +27191,10 @@ ALTER TABLE "public"."remuneraciones_asistente" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."reportes" ENABLE ROW LEVEL SECURITY;
+
+
+
+ALTER TABLE "public"."aclaraciones_reporte" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."requerimientos_legales_de_hce_por_pais" ENABLE ROW LEVEL SECURITY;
@@ -29002,6 +29191,30 @@ GRANT ALL ON FUNCTION "interno"."la_carga_queda_pendiente"("p_paciente" "uuid") 
 
 
 
+REVOKE ALL ON FUNCTION "interno"."el_reporte_no_se_modifica"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."el_reporte_no_se_modifica"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."el_reporte_no_se_modifica"() TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."la_aclaracion_no_se_modifica"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."la_aclaracion_no_se_modifica"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."la_aclaracion_no_se_modifica"() TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."la_aclaracion_se_firma"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."la_aclaracion_se_firma"() TO "service_role";
+GRANT ALL ON FUNCTION "interno"."la_aclaracion_se_firma"() TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "interno"."puede_aclarar_el_reporte"("p_reporte" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "interno"."puede_aclarar_el_reporte"("p_reporte" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "interno"."puede_aclarar_el_reporte"("p_reporte" "uuid") TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "interno"."la_clave_de_la_administracion_la_cambia_celtatech"() FROM PUBLIC;
 
 
@@ -30116,6 +30329,12 @@ GRANT ALL ON FUNCTION "public"."intercambiar_orden_etapas_incorporacion"("p_id_a
 REVOKE ALL ON FUNCTION "public"."la_carga_queda_pendiente"("p_paciente" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."la_carga_queda_pendiente"("p_paciente" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "public"."la_carga_queda_pendiente"("p_paciente" "uuid") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."puede_aclarar_el_reporte"("p_reporte" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."puede_aclarar_el_reporte"("p_reporte" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."puede_aclarar_el_reporte"("p_reporte" "uuid") TO "authenticated";
 
 
 
@@ -33038,9 +33257,15 @@ GRANT INSERT("rige_desde") ON TABLE "public"."remuneraciones_asistente" TO "trab
 
 
 
-GRANT SELECT,INSERT,DELETE,MAINTAIN,UPDATE ON TABLE "public"."reportes" TO "authenticated";
+GRANT SELECT,INSERT,MAINTAIN ON TABLE "public"."reportes" TO "authenticated";
 GRANT ALL ON TABLE "public"."reportes" TO "service_role";
 GRANT SELECT ON TABLE "public"."reportes" TO "trabajo_sin_persona";
+
+
+
+GRANT SELECT,INSERT ON TABLE "public"."aclaraciones_reporte" TO "authenticated";
+GRANT ALL ON TABLE "public"."aclaraciones_reporte" TO "service_role";
+GRANT SELECT ON TABLE "public"."aclaraciones_reporte" TO "trabajo_sin_persona";
 
 
 

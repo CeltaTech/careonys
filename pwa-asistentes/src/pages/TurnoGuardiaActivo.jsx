@@ -23,6 +23,7 @@ import CodigoDePresencia from '../components/CodigoDePresencia';
 import TareasDelTipo from '../components/TareasDelTipo';
 import AclaracionesAlPie from '../components/AclaracionesAlPie';
 import ReportePresentado from '../components/ReportePresentado';
+import ContactosDeEmergencia from '../components/ContactosDeEmergencia';
 
 /**
  * Lo que se puede consultar de UN Paciente durante el turno de guardia: sus órdenes de medicación y sus
@@ -259,12 +260,16 @@ export default function TurnoGuardiaActivo() {
   // mayoría de los turnos de guardia, y cuando viene algo es lo único que le contesta la pregunta de en qué
   // anda la búsqueda de quien la reemplace.
   const [extension, setExtension] = useState(null);
+  // Los contactos de emergencia de cada Paciente. El backend los manda sólo entre la llegada y la
+  // salida del turno de guardia; fuera de ese rato llega vacío.
+  const [contactosDeEmergencia, setContactosDeEmergencia] = useState({});
 
   function cargar() {
     api
       .turno_guardia(id)
-      .then(({ turno_guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas, descansoAbierto: elDescanso, extension: laExtension }) => {
+      .then(({ turno_guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas, descansoAbierto: elDescanso, extension: laExtension, contactosDeEmergenciaPorPaciente }) => {
         setTurnoGuardia(data);
+        setContactosDeEmergencia(contactosDeEmergenciaPorPaciente ?? {});
         setDescansoAbierto(elDescanso ?? null);
         setExtension(laExtension ?? null);
         setConReporte(pacientesConReporte ?? []);
@@ -714,6 +719,14 @@ export default function TurnoGuardiaActivo() {
           />
         </section>
       )}
+
+      {/* Los contactos de emergencia de cada Paciente, debajo del turno de guardia en curso. */}
+      <ContactosDeEmergencia
+        pacientes={pacientes}
+        porPaciente={contactosDeEmergencia}
+        mostrarNombre={sonVarios}
+        t={t}
+      />
 
       {/* Salió al llegar el relevo sin haber presentado el Reporte Diario: la salida está hecha
           y el reporte se presenta desde acá. Cuando llega el último, el turno pasa a completado. */}

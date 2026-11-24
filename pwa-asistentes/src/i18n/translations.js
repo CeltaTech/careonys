@@ -329,6 +329,9 @@ export const T = {
       patologias: 'Patologías',
       tipo: 'Tipo de Asistente',
       tareas_vacio: 'La Prestadora todavía no cargó esta lista.',
+      contactos_de_emergencia: 'Contactos de emergencia',
+      llamar_al_telefono: 'Llamar al {telefono}',
+      llamar_a_contacto: 'Llamar a {nombre} al {telefono}',
     },
     // Los dos actos de antes de llegar (pendiente #101). Todo lo de acá está escrito como hecho
     // y nunca como veredicto: «Aviso de demora dado a las 14:19, motivo: transporte». Ninguna
@@ -1012,6 +1015,9 @@ export const T = {
       patologias: 'Conditions',
       tipo: 'Assistant type',
       tareas_vacio: 'The Provider hasn\'t filled in this list yet.',
+      contactos_de_emergencia: 'Emergency contacts',
+      llamar_al_telefono: 'Call {telefono}',
+      llamar_a_contacto: 'Call {nombre} at {telefono}',
     },
     antes_de_llegar: {
       titulo: 'Before arriving',
@@ -1655,6 +1661,9 @@ export const T = {
       patologias: 'Condições',
       tipo: 'Tipo de Assistente',
       tareas_vacio: 'A Prestadora ainda não preencheu esta lista.',
+      contactos_de_emergencia: 'Contatos de emergência',
+      llamar_al_telefono: 'Ligar para {telefono}',
+      llamar_a_contacto: 'Ligar para {nombre} no número {telefono}',
     },
     antes_de_llegar: {
       titulo: 'Antes de chegar',

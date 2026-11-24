@@ -15,6 +15,7 @@ import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
 import { PersonaModal } from './personas/PersonaModal';
 import { mensajeDeError } from '../lib/errores';
+import { propsDeFilaQueAbre } from '../lib/filaQueAbre';
 import { palabrasDelDomicilio, partesDesdeFila, renglonDelDomicilio } from '../lib/partesDeDomicilio';
 import { pedirLosTelefonosDeLosContactos } from '../lib/apiPersonasTelefonos';
 import '../styles/molde-paginas.css';
@@ -208,7 +209,6 @@ export function Personas() {
                 <th>{t.personas.telefono}</th>
                 <th>{t.personas.email}</th>
                 <th>{t.personas.domicilio}</th>
-                {puedeEditar && <th />}
               </tr>
             </thead>
             <tbody>
@@ -217,7 +217,7 @@ export function Personas() {
                    porque contratan y pagan igual, pero no son la misma cosa: una entidad tiene razón
                    social y clave fiscal; una persona tiene apellido, nombre y documento, y se
                    representa sola. */
-                <tr key={fila.id}>
+                <tr key={fila.id} {...(puedeEditar ? propsDeFilaQueAbre(() => setEnEdicion(fila)) : {})}>
                   <td>
                     <b>{comoSeLlama(fila)}</b>
                     <div className="panel-mini">
@@ -239,13 +239,6 @@ export function Personas() {
                   <td>
                     {renglonDelDomicilio(partesDesdeFila(fila), catalogo.lugares, palabrasDelDomicilio(t)) || '—'}
                   </td>
-                  {puedeEditar && (
-                    <td>
-                      <button type="button" className="panel-enlace" onClick={() => setEnEdicion(fila)}>
-                        {t.comun.editar}
-                      </button>
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>

@@ -21,6 +21,14 @@ import {
   textoDelError,
 } from '../../lib/contactosDeEmergencia';
 import { AgregarContactoDeEmergenciaModal } from './AgregarContactoDeEmergenciaModal';
+import { PersonaModal } from '../personas/PersonaModal';
+import { propsDeFilaQueAbre } from '../../lib/filaQueAbre';
+import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { usePermisos } from '../../context/PermisosContext';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { useTiposDeDocumento } from '../../hooks/useTiposDeDocumento';
+import { esAdminOSuperior } from '../../lib/roles';
 
 /* La pestaña «Contactos de emergencia» de la Ficha del Cliente.
 
@@ -42,6 +50,13 @@ export function ContactosDeEmergencia({ clienteId, puedeEditar }) {
   const [errorAlGuardar, setErrorAlGuardar] = useState(null);
   // Cada persona nueva lleva una clave propia mientras no se guarda, para separar su renglón.
   const siguienteClave = useRef(0);
+  // La persona de Contactos que se abrió con un clic en su renglón, igual que en la lista de Contactos.
+  const { usuario } = useAuth();
+  const { puede } = usePermisos();
+  const prestadoraId = usePrestadoraActual();
+  const documentos = useTiposDeDocumento(prestadoraId);
+  const puedeAbrirLaPersona = esAdminOSuperior(usuario?.rol) || puede('editar_personas');
+  const [personaAbierta, setPersonaAbierta] = useState(null);
 
   const aplicarRespuesta = useCallback((respuesta) => {
     const contactos = deLaRespuesta(respuesta?.contactos);
@@ -97,6 +112,21 @@ export function ContactosDeEmergencia({ clienteId, puedeEditar }) {
     }
   }
 
+  async function abrirLaPersona(personaId) {
+    setErrorAlGuardar(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('personas')
+      .select('*')
+      .eq('prestadora_id', prestadoraId)
+      .eq('id', personaId)
+      .maybeSingle();
+    if (errorConsulta || !data) {
+      setErrorAlGuardar(mensajeDeError(errorConsulta, t));
+      return;
+    }
+    setPersonaAbierta(data);
+  }
+
   const cambiada = hayCambios(lista, guardada);
 
   return (
@@ -129,7 +159,12 @@ export function ContactosDeEmergencia({ clienteId, puedeEditar }) {
           </thead>
           <tbody>
             {lista.map((contacto, i) => (
-              <tr key={contacto.clave}>
+              <tr
+                key={contacto.clave}
+                {...(puedeAbrirLaPersona && contacto.personaId && prestadoraId
+                  ? propsDeFilaQueAbre(() => abrirLaPersona(contacto.personaId))
+                  : {})}
+              >
                 <td>{i + 1}</td>
                 <td><b>{contacto.nombre || '—'}</b></td>
                 <td>{lugaresDe(contacto, textosDeLaBase).join(' · ') || '—'}</td>
@@ -181,6 +216,20 @@ export function ContactosDeEmergencia({ clienteId, puedeEditar }) {
             {guardando ? t.comun.guardando : t.comun.guardar}
           </Button>
         </div>
+      )}
+
+      {personaAbierta && (
+        <PersonaModal
+          persona={personaAbierta}
+          prestadoraId={prestadoraId}
+          tiposDeDocumento={documentos.porClase}
+          onClose={() => setPersonaAbierta(null)}
+          onGuardado={() => {
+            setPersonaAbierta(null);
+            // Con cambios sin guardar en la lista, recargarla los borraría: se recarga sólo sin ellos.
+            if (!cambiada) cargar();
+          }}
+        />
       )}
 
       {agregando && (

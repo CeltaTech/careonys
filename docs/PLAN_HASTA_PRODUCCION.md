@@ -158,9 +158,11 @@ Asistentes o de las guardias que ve (`interno.personal_ve_la_calificacion`). Lo 
   cambian la administración, el Coordinador que ve al Cliente con el permiso de editar sus datos y,
   desde su aplicación, el titular del Cliente, que elige entre las personas de su propio Cliente o
   escribe una nueva. Cada cambio queda en el registro de actividad. El Asistente recibe los
-  contactos, con nombre y teléfonos, sólo entre la llegada y la salida del turno. Está construido
-  en la base y en el backend. Dónde y cómo se cargan en el Panel y en la aplicación del Cliente, y
-  dónde los ve el Asistente, espera la aprobación del Desarrollador.
+  contactos, con nombre y teléfonos, sólo entre la llegada y la salida del turno. Está construido:
+  en el Panel, la pestaña «Contactos de emergencia» de la Ficha del Cliente; en la aplicación del
+  Cliente, la lista en el perfil, que ve y cambia sólo el titular; y en la aplicación del
+  Asistente, los contactos de cada Paciente en la pantalla del turno en curso, con un botón para
+  llamar a cada teléfono.
 
 Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
 lo suyo y nada de la otra, salvo durante una emergencia abierta, extendida a lo que falta.

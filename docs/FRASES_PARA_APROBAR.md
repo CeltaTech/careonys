@@ -1641,7 +1641,7 @@ Cada propuesta sigue las pautas de Microsoft y de Google para mensajes: oracione
 | **¿Aparece hoy?** | sí. |
 | **Por qué** | antes decía «Recordatorio del próximo turno de guardia». El título nuevo es más corto y se lee mejor. |
 | **Quién lo lee** | el Administrador de la Prestadora. |
-| **Dónde está** | Panel → Configuración → Avisos. |
+| **Dónde está** | Panel → Configuración → Mensajes. |
 | **Qué estaba haciendo** | revisa los avisos que reciben los Asistentes. |
 | **Qué pasó** | ve la tarjeta de ese aviso. |
 | **Qué puede hacer después** | cambiar el número y guardar. |

@@ -129,7 +129,7 @@ de guardia, sueltos y recurrentes, de esos Servicios con todo lo que cuelga de e
 guardia. El equipo del Servicio muestra como Coordinador a quien lo coordina. Las tomas
 de alarma y las reasignaciones por emergencia se leen sólo de lo que ve; WhatsApp, por zona del
 Asistente; y los archivos de prescripciones, documento firmado y autorizaciones de monitoreo, sólo de
-los Pacientes que ve. Del Directorio de Personas lee las que tienen un rol en sus Clientes y
+los Pacientes que ve. De Contactos lee las que tienen un rol en sus Clientes y
 Pacientes, salvo que tenga el permiso de editar personas. De cada Asistente recibe la distancia al
 Paciente, redondeada a cien metros, y nunca el domicilio
 (`distancias_de_asistentes_a_pacientes`); del Padrón lee los Asistentes de su zona y los de sus
@@ -149,9 +149,18 @@ Asistentes o de las guardias que ve (`interno.personal_ve_la_calificacion`). Lo 
   Desarrollador apruebe qué muestra en su lugar.
 - **Durante la guardia, el Asistente recibe el contacto de emergencia del Paciente.** La obra
   social y el número de afiliado ya le llegan con la guardia en curso, y la aplicación todavía no
-  los muestra: dónde y cómo se muestran espera la aprobación del Desarrollador. El contacto de
-  emergencia no existe como dato del Paciente: falta decidir quién es —el Cliente que contrata,
-  una Persona autorizada marcada, u otro— antes de construirlo.
+  los muestra: dónde y cómo se muestran espera la aprobación del Desarrollador.
+  **El Cliente designa hasta tres contactos de emergencia, en orden de prioridad.** Puede ser
+  cualquiera de las personas del Cliente, una Persona autorizada u otra persona. La persona que
+  todavía no está en Contactos se da de alta al escribirla, con nombre, apellido y teléfono, y sin
+  documento. **Una persona sin documento sólo puede ser contacto de emergencia**: para darle
+  cualquier otro lugar primero se le completa el documento, y la base lo hace cumplir. La lista la
+  cambian la administración, el Coordinador que ve al Cliente con el permiso de editar sus datos y,
+  desde su aplicación, el titular del Cliente, que elige entre las personas de su propio Cliente o
+  escribe una nueva. Cada cambio queda en el registro de actividad. El Asistente recibe los
+  contactos, con nombre y teléfonos, sólo entre la llegada y la salida del turno. Está construido
+  en la base y en el backend. Dónde y cómo se cargan en el Panel y en la aplicación del Cliente, y
+  dónde los ve el Asistente, espera la aprobación del Desarrollador.
 
 Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
 lo suyo y nada de la otra, salvo durante una emergencia abierta, extendida a lo que falta.
@@ -1240,7 +1249,7 @@ Los renglones, en este orden:
   se ve qué documento tiene el problema. El mismo aviso le aparece al Asistente en su aplicación.
 - **Informes.** Turnos terminados sin informe. Al hacer clic, quien coordina o administra ve de qué
   se trata.
-- **Contacto, Prospecto o Cliente**, según la etapa comercial en que esté cada uno.
+- **Prospecto, Oportunidad o Cliente**, según la etapa comercial en que esté cada uno.
 - **Postulante.** Personas que se postularon para trabajar. Es parte de Reclutamiento.
 
 **Salida sin registrar, y lo mismo con la entrada.** Si el turno terminó y la salida no se
@@ -1272,20 +1281,20 @@ salen del tablero— y `panel/src/pages/Dashboard.jsx` no tiene ningún gráfico
 
 **53.** Las tres etapas comerciales:
 
-- **Contacto:** alguien de afuera de los clientes que mostró interés en los servicios de la
+- **Prospecto:** alguien de afuera de los clientes que mostró interés en los servicios de la
   Prestadora, porque se comunicó o porque la Prestadora lo contactó.
-- **Prospecto:** tiene un presupuesto de un servicio que se está negociando, con las condiciones
+- **Oportunidad:** tiene un presupuesto de un servicio que se está negociando, con las condiciones
   cargadas y sin firmar.
 - **Cliente:** desde que se cierra el trato y se empieza a preparar el servicio, mientras dure
   —pueden ser años— y también después de terminado, aunque esté inactivo.
 
-**La etapa no la marca nadie: sale de lo que pasa.** Cargar un presupuesto convierte al Contacto
-en Prospecto; cerrar la negociación de forma positiva lo convierte en Cliente; si la negociación
-fracasa, vuelve a ser Contacto con todo su historial. Es la misma persona del Directorio de Personas en
+**La etapa no la marca nadie: sale de lo que pasa.** Cargar un presupuesto convierte al Prospecto
+en Oportunidad; cerrar la negociación de forma positiva lo convierte en Cliente; si la negociación
+fracasa, vuelve a ser Prospecto con todo su historial. Es la misma persona de Contactos en
 las tres etapas, nunca una tabla aparte. Sin presupuesto aprobado no hay Cliente, y no hay alta manual de
 Cliente desde el Panel; la cartera que una Prestadora ya tenía se migra aparte (paso 29).
 
-Contactos y Prospectos son asunto de la comercialización, que es la administración. Los Clientes
+Prospectos y Oportunidades son asunto de la comercialización, que es la administración. Los Clientes
 les importan a la administración y a la coordinación, y a los Asistentes involucrados en lo suyo.
 En definitiva es un CRM, con todo lo que eso trae, y es OctoCRM: Careonys lo usa a través de su
 API, pero los datos viven en Careonys: la persona, los presupuestos, la etapa y el historial.

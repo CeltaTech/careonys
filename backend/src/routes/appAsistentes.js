@@ -57,6 +57,7 @@ import { identificadorDelTelefono, filaDeEsteMensaje } from '../utils/reenvioDeL
 import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
 import { notificarCoordinador } from '../utils/whatsapp.js';
 import { devolverAlTitular } from '../utils/coberturaDeAusencia.js';
+import { contactosParaElAsistente } from '../utils/contactosDeEmergencia.js';
 import { hoyEnLaPrestadora, zonaDeLaPrestadora } from '../utils/relojDeLaPrestadora.js';
 import { respuestaValida, minutosPorGps } from '../utils/respuestaAlRelevo.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
@@ -778,13 +779,29 @@ appAsistentesRouter.get('/turnos-guardia/:id', requiereRolAsistente, async (req,
 
   // La obra social y el número de afiliado de cada Paciente van sólo mientras el turno de guardia está en
   // curso: es cuando el Asistente puede necesitarlos, si hay que llamar a una ambulancia. El
-  // nombre de la obra social está en el Directorio de Personas, donde el Asistente no lee: se
+  // nombre de la obra social está en Contactos, donde el Asistente no lee: se
   // busca con el trabajo de la Prestadora y sólo las personas que nombran sus Pacientes.
   let coberturaPorPaciente = {};
   if (data.estado === 'activa') {
     try {
       coberturaPorPaciente = await coberturaDeLosPacientes(
         db,
+        req.usuarioAsistente.prestadoraId,
+        (turno_guardia.pacientes ?? []).map((p) => p.id),
+      );
+    } catch (e) {
+      return responderError(res, e);
+    }
+  }
+
+  // Los contactos de emergencia de cada Paciente van sólo mientras el turno de guardia está en curso:
+  // desde que el Asistente marcó la llegada hasta que marcó la salida. Es cuando puede tener que
+  // llamarlos. Están en Contactos, donde el Asistente no lee: se buscan con el
+  // trabajo de la Prestadora y sólo los de los Clientes de los Pacientes de este turno.
+  let contactosDeEmergenciaPorPaciente = {};
+  if (data.checkin_at && !data.checkout_at) {
+    try {
+      contactosDeEmergenciaPorPaciente = await contactosDeEmergenciaDeLosPacientes(
         req.usuarioAsistente.prestadoraId,
         (turno_guardia.pacientes ?? []).map((p) => p.id),
       );
@@ -853,8 +870,22 @@ appAsistentesRouter.get('/turnos-guardia/:id', requiereRolAsistente, async (req,
     reporteCargado: (turno_guardia.pacientes ?? []).every((p) => conReporte.includes(p.id)),
     vitalesPorPaciente,
     coberturaPorPaciente,
+    contactosDeEmergenciaPorPaciente,
   });
 });
+
+async function contactosDeEmergenciaDeLosPacientes(prestadoraId, pacienteIds) {
+  if (!pacienteIds.length) return {};
+  return enLaPrestadora(prestadoraId, 'contactos de emergencia del Paciente en la guardia', async (dbp) => {
+    const { data: pacientes, error } = await dbp
+      .from('pacientes')
+      .select('id, cliente_id')
+      .eq('prestadora_id', prestadoraId)
+      .in('id', pacienteIds);
+    if (error) throw error;
+    return contactosParaElAsistente({ db: dbp, pacientes });
+  });
+}
 
 async function coberturaDeLosPacientes(db, prestadoraId, pacienteIds) {
   if (!pacienteIds.length) return {};

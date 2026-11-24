@@ -167,6 +167,11 @@ const ESTADO_POR_MOTIVO = {
   responsable_de_pagos_con_otra_marca: 409,
   responsable_de_pagos_hasta_antes_del_desde: 400,
   dato_invalido: 400,
+  // Los contactos de emergencia de un Cliente. Los tres son 400 porque el dato vino mal cargado: más
+  // de tres, la misma persona dos veces, o una persona que no está disponible para ese Cliente.
+  demasiados_contactos_de_emergencia: 400,
+  contacto_de_emergencia_repetido: 400,
+  contacto_de_emergencia_inexistente: 400,
   // Los formularios declarados. El incompleto es 400 porque el dato vino mal cargado, y viaja con
   // la lista de lo que falta para que quien trabaja vea todo junto y no de a un renglón por vez.
   // El no declarado es 404 y contesta lo mismo cuando el formulario no existe y cuando es de otra
@@ -273,7 +278,22 @@ const ESTADO_POR_MOTIVO = {
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.
+  // Una persona sin documento sólo puede ser contacto de emergencia. Darle cualquier otro lugar es
+  // 409: el pedido está bien armado y choca con los datos de esa persona, y se arregla completándole
+  // el documento en Contactos.
+  la_persona_no_tiene_documento: 409,
 };
+
+// Los motivos que la base levanta en cualquier tabla, sin importar qué ruta escribió. Llegan como el
+// mensaje del error de la base, y se responden con su motivo aunque la ruta no los haya traducido.
+// La lista es cerrada: cualquier otro mensaje de la base sigue siendo una falla del sistema.
+const MOTIVOS_DE_LA_BASE_EN_TODA_RUTA = new Set(['la_persona_no_tiene_documento']);
+
+function motivoDelError(error) {
+  if (error?.motivo) return error.motivo;
+  if (MOTIVOS_DE_LA_BASE_EN_TODA_RUTA.has(error?.message)) return error.message;
+  return null;
+}
 
 // Lo que una ruta contesta cuando algo falló. Se escribe una sola vez para que ninguna ruta
 // se olvide de mandar el motivo, que es justamente lo que le permite a la pantalla explicar.
@@ -295,14 +315,15 @@ const ESTADO_POR_MOTIVO = {
 const SIN_MOTIVO = 'falla_del_sistema';
 
 export function responderError(res, error, estadoPorOmision = 500) {
-  const estado = ESTADO_POR_MOTIVO[error?.motivo] ?? estadoPorOmision;
-  const motivo = error?.motivo ?? SIN_MOTIVO;
+  const conocido = motivoDelError(error);
+  const estado = ESTADO_POR_MOTIVO[conocido] ?? estadoPorOmision;
+  const motivo = conocido ?? SIN_MOTIVO;
 
   // El detalle, acá. Es lo que hay que mirar cuando algo falla, y el único lugar donde está.
   const donde = res?.req ? `${res.req.method} ${res.req.originalUrl ?? res.req.url}` : 'sin ruta';
   console.error(`[${estado}] ${donde} — ${motivo}:`, error?.message ?? error);
 
-  const cuerpo = error?.motivo ? { error: motivo, motivo } : { error: motivo };
+  const cuerpo = conocido ? { error: motivo, motivo } : { error: motivo };
   // Lo que la pantalla necesita para decir qué hacer: todos los motivos y los turnos de cada uno.
   if (error?.motivo && Array.isArray(error.motivos)) cuerpo.motivos = error.motivos;
   if (error?.motivo && Array.isArray(error.turnos_guardia)) cuerpo.turnos_guardia = error.turnos_guardia;

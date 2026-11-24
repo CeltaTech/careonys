@@ -971,15 +971,20 @@ contratantes. Qué se delega en la aplicación del Contratante se evalúa en la 
 - **Un turno se cierra de cinco formas, y de ninguna otra:**
   - el relevo escanea el código QR del saliente, con la ubicación: abre el turno que entra, fija la
     hora de salida del saliente y cierra su turno si el Reporte está presentado;
-  - el saliente escanea el código QR del Cliente o de una persona autorizada;
-  - el Coordinador lo autoriza desde el Panel, en dos casos: alguien recibió al Paciente y falló el
-    teléfono o la ubicación, o el Coordinador fue a cubrir en persona, que se anota en el Panel y
-    apaga las alarmas;
-  - la indicación del Cliente, que carga sólo el Coordinador en el registro de consentimientos, con
-    fecha de vencimiento;
+  - el saliente escanea el código QR del Cliente, de una persona autorizada o de otro Asistente
+    que cuida al mismo Paciente. El código registra que el Asistente salió, y con eso alcanza;
+  - el Coordinador lo autoriza desde el Panel, y autorizar es cerrar el turno en ese momento. Los
+    casos son dos: alguien recibió al Paciente y falló el teléfono o la ubicación, o el
+    Coordinador fue a cubrir en persona. En ese segundo caso se autoriza a sí mismo y queda
+    registrado que lo hizo; lo que eso cuesta lo ve la Prestadora;
+  - el Paciente queda solo: hace falta el permiso explícito del Coordinador cada vez que pasa, y
+    ese permiso cierra el turno. Lo carga sólo el Coordinador, en el registro de consentimientos,
+    con fecha de vencimiento;
   - el cierre a mano desde el Panel, para los olvidos: motivo obligatorio de una lista, hora de
     salida que pone el Coordinador —el sistema le sugiere la última confirmación del Asistente en
     la casa— y registro de quién lo cerró y cuándo.
+- **Todo cierre desde el Panel lo hace el Coordinador o la administración, por uno de los motivos
+  de la lista, y pasa por un solo camino.** En el Panel no hay código QR.
 - **El código QR va siempre junto con la ubicación.** «Sin comprobar» queda para la entrada y sale
   de la salida. La marca de cierre trabado, que nunca se usó, sale.
 - **La presencia durante la guardia.** La aplicación queda abierta todo el turno, y si se cierra

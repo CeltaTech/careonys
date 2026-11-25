@@ -139,11 +139,9 @@ Asistentes o de las guardias que ve (`interno.personal_ve_la_calificacion`). Lo 
 `scripts/probar_altas_con_sesion.mjs`. Al Asistente, las guardias pasadas que ya se le pagaron
 dejan de llegarle; las que todavía no se le pagaron le siguen llegando con el Paciente, el
 domicilio donde prestó el servicio, la fecha y el horario, porque tiene derecho a saber qué
-guardias todavía no cobró. Falta:
-
-- **Durante la guardia, el Asistente ve la obra social y el número de afiliado del Paciente.** Ya
-  le llegan con la guardia en curso, y la aplicación todavía no los muestra: dónde y cómo se
-  muestran espera la aprobación del Desarrollador.
+guardias todavía no cobró. La obra social y el número de afiliado del Paciente le llegan sólo entre
+la llegada y la salida, y sólo si el Cliente firmó la Autorización al Asistente; se muestran debajo
+de los contactos de emergencia.
 
 Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
 lo suyo y nada de la otra, salvo durante una emergencia abierta, extendida a lo que falta.

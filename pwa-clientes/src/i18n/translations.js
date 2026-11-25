@@ -667,10 +667,10 @@ export const T = {
       persona_autorizada_califica_al_asistente: 'Calificar al Asistente',
       persona_autorizada_pide_medicacion: 'Pedir un cambio de medicación',
     },
-    // La autorización para que un Asistente le tome los signos vitales al Paciente. Firmar y subir
+    // La Autorización al Asistente: tomar los signos vitales y ver la obra social del Paciente. Firmar y subir
     // el documento son sólo del titular; tocar «Firmar» con el texto delante es la firma.
     vitales_autorizacion: {
-      titulo: 'Signos vitales',
+      titulo: 'Autorización al Asistente',
       autorizacion: 'Autorización',
       ver: 'Ver',
       firmar: 'Firmar',
@@ -1321,7 +1321,7 @@ export const T = {
       persona_autorizada_pide_medicacion: 'Requesting a medication change',
     },
     vitales_autorizacion: {
-      titulo: 'Vital signs',
+      titulo: 'Authorization for the Assistant',
       autorizacion: 'Authorization',
       ver: 'View',
       firmar: 'Sign',
@@ -1968,7 +1968,7 @@ export const T = {
       persona_autorizada_pide_medicacion: 'Pedir uma mudança de medicação',
     },
     vitales_autorizacion: {
-      titulo: 'Sinais vitais',
+      titulo: 'Autorização ao Assistente',
       autorizacion: 'Autorização',
       ver: 'Ver',
       firmar: 'Assinar',

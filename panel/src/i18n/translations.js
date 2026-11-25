@@ -1899,7 +1899,7 @@ export const T = {
         },
         categorias: {
           alertas: 'Alertas',
-          autorizaciones_monitoreo_paciente: 'Autorización de signos vitales',
+          autorizaciones_monitoreo_paciente: 'Autorización al Asistente',
           cargas_sujetas_a_aprobacion: 'Cargas pendientes',
           emergencias_turno_guardia: 'Emergencias',
           hospitalizaciones_paciente: 'Internaciones',
@@ -3108,9 +3108,9 @@ export const T = {
       precio_invalido: 'Ingrese un valor mayor o igual a cero.',
     },
     vitales_autorizacion: {
-      titulo: 'Signos vitales',
+      titulo: 'Autorización al Asistente',
       autorizacion: 'Autorización',
-      titulo_texto: 'Autorización control de signos vitales',
+      titulo_texto: 'Autorización al Asistente',
       ver: 'Ver',
       imprimir: 'Imprimir',
       subir_documento: 'Subir documento',
@@ -5317,7 +5317,7 @@ export const T = {
         },
         categorias: {
           alertas: 'Alerts',
-          autorizaciones_monitoreo_paciente: 'Vital signs authorization',
+          autorizaciones_monitoreo_paciente: 'Authorization for the Assistant',
           cargas_sujetas_a_aprobacion: 'Pending entries',
           emergencias_turno_guardia: 'Emergencies',
           hospitalizaciones_paciente: 'Hospital stays',
@@ -6520,9 +6520,9 @@ export const T = {
       precio_invalido: 'Enter a value greater than or equal to zero.',
     },
     vitales_autorizacion: {
-      titulo: 'Vital signs',
+      titulo: 'Authorization for the Assistant',
       autorizacion: 'Authorization',
-      titulo_texto: 'Vital signs monitoring authorization',
+      titulo_texto: 'Authorization for the Assistant',
       ver: 'View',
       imprimir: 'Print',
       subir_documento: 'Upload document',
@@ -8721,7 +8721,7 @@ export const T = {
         },
         categorias: {
           alertas: 'Alertas',
-          autorizaciones_monitoreo_paciente: 'Autorização de sinais vitais',
+          autorizaciones_monitoreo_paciente: 'Autorização ao Assistente',
           cargas_sujetas_a_aprobacion: 'Registros pendentes',
           emergencias_turno_guardia: 'Emergências',
           hospitalizaciones_paciente: 'Internações',
@@ -9924,9 +9924,9 @@ export const T = {
       precio_invalido: 'Insira um valor maior ou igual a zero.',
     },
     vitales_autorizacion: {
-      titulo: 'Sinais vitais',
+      titulo: 'Autorização ao Assistente',
       autorizacion: 'Autorização',
-      titulo_texto: 'Autorização de controle de sinais vitais',
+      titulo_texto: 'Autorização ao Assistente',
       ver: 'Ver',
       imprimir: 'Imprimir',
       subir_documento: 'Enviar documento',

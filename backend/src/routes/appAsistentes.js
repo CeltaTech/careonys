@@ -777,12 +777,14 @@ appAsistentesRouter.get('/turnos-guardia/:id', requiereRolAsistente, async (req,
     }
   }
 
-  // La obra social y el número de afiliado de cada Paciente van sólo mientras el turno de guardia está en
-  // curso: es cuando el Asistente puede necesitarlos, si hay que llamar a una ambulancia. El
-  // nombre de la obra social está en Contactos, donde el Asistente no lee: se
-  // busca con el trabajo de la Prestadora y sólo las personas que nombran sus Pacientes.
+  // La obra social y el número de afiliado de cada Paciente van sólo si el Cliente firmó la
+  // Autorización al Asistente, y sólo en el mismo rato que los contactos de emergencia —desde la
+  // llegada hasta la salida—, que es cuando el Asistente puede necesitarlos para llamar a una
+  // ambulancia. Sin la autorización aceptada, ese Paciente no viene. El nombre de la obra social
+  // está en Contactos, donde el Asistente no lee: se busca con el trabajo de la Prestadora y sólo
+  // las personas que nombran sus Pacientes.
   let coberturaPorPaciente = {};
-  if (data.estado === 'activa') {
+  if (data.checkin_at && !data.checkout_at) {
     try {
       coberturaPorPaciente = await coberturaDeLosPacientes(
         db,
@@ -889,10 +891,21 @@ async function contactosDeEmergenciaDeLosPacientes(prestadoraId, pacienteIds) {
 
 async function coberturaDeLosPacientes(db, prestadoraId, pacienteIds) {
   if (!pacienteIds.length) return {};
+  // La Autorización al Asistente la lee el trabajo de la Prestadora: el Asistente no tiene permiso
+  // sobre esa tabla. Sólo cuenta la aceptada; la pendiente todavía no autoriza nada.
+  const { data: autorizadas, error: errorAutorizadas } = await enLaPrestadora(prestadoraId, 'autorización de la obra social en la guardia', (dbp) =>
+    dbp.from('autorizaciones_monitoreo_paciente')
+      .select('paciente_id')
+      .eq('prestadora_id', prestadoraId)
+      .eq('estado', 'aceptada')
+      .in('paciente_id', pacienteIds));
+  if (errorAutorizadas) throw errorAutorizadas;
+  const conAutorizacion = [...new Set((autorizadas ?? []).map((a) => a.paciente_id))];
+  if (!conAutorizacion.length) return {};
   const { data: pacientes, error } = await db
     .from('pacientes')
     .select('id, obra_social_persona_id, numero_afiliado')
-    .in('id', pacienteIds);
+    .in('id', conAutorizacion);
   if (error) throw error;
   const fichas = [...new Set((pacientes ?? []).map((p) => p.obra_social_persona_id).filter(Boolean))];
   const nombres = {};

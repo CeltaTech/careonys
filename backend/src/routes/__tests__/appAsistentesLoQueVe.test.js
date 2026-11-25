@@ -7,13 +7,15 @@
  * pagaron: las que cubre el período de una liquidación pagada salen de la lista. Qué períodos se le
  * pagaron lo contesta la base con `periodos_pagados_de_la_sesion`, con su propia credencial. Los
  * reportes de otros Asistentes los lee sólo con un turno de guardia en curso con ese Paciente, y sólo los
- * del Servicio de ese turno de guardia. Durante un turno de guardia en curso recibe la obra social y el número de
- * afiliado de sus Pacientes, y en ninguna otra. Y su perfil no lleva la credencial interna del
+ * del Servicio de ese turno de guardia. La obra social y el número de afiliado de un Paciente los
+ * recibe sólo entre la llegada y la salida, y sólo si el Cliente firmó la Autorización al
+ * Asistente. Y su perfil no lleva la credencial interna del
  * código QR.
  *
  * Qué daría con el sistema roto: si la lista dejara de preguntar los períodos pagados, el turno de guardia
  * de septiembre volvería a aparecer; si se preguntara con otra credencial, falla la comprobación de
- * cuál viajó; si `qr_token` volviera al `select` del perfil, falla la comprobación del pedido. La
+ * cuál viajó; si la obra social dejara de pedir la autorización aceptada, el Paciente sin firma
+ * volvería a recibirla; si `qr_token` volviera al `select` del perfil, falla la comprobación del pedido. La
  * base de mentira no aplica políticas: qué períodos contesta la función lo prueba la base.
  */
 import { strict as assert } from 'node:assert';
@@ -152,9 +154,10 @@ describe('GET /pacientes/:id/reportes — sólo con una guardia en curso, y de e
   });
 });
 
-describe('GET /turnos-guardia/:id — la obra social y el número de afiliado, sólo en curso', () => {
+describe('GET /turnos-guardia/:id — la obra social y el número de afiliado, sólo en curso y con la autorización', () => {
   const PACIENTE = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
   const FICHA_OBRA_SOCIAL = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  const EN_CURSO = { ...SIN_CERRAR, paciente_id: PACIENTE, checkin_at: '2026-09-20T11:00:00Z' };
 
   beforeEach(() => {
     respuestas.set('GET /rest/v1/pacientes', () => [{
@@ -162,17 +165,37 @@ describe('GET /turnos-guardia/:id — la obra social y el número de afiliado, s
       personas: { nombre_visible: 'Paciente Inventado' },
     }]);
     respuestas.set('GET /rest/v1/personas', () => [{ id: FICHA_OBRA_SOCIAL, nombre_visible: 'Obra Social Inventada' }]);
+    respuestas.set('GET /rest/v1/autorizaciones_monitoreo_paciente', () => [{ paciente_id: PACIENTE }]);
   });
 
-  it('en curso, la manda junto al Paciente', async () => {
-    respuestas.set('GET /rest/v1/turnos_guardia', () => [{ ...SIN_CERRAR, paciente_id: PACIENTE }]);
+  it('en curso y con la autorización aceptada, la manda junto al Paciente', async () => {
+    respuestas.set('GET /rest/v1/turnos_guardia', () => [EN_CURSO]);
     const { estado, cuerpo } = await pedir('/turnos-guardia/turno-guardia-sin-cerrar');
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo.coberturaPorPaciente, {
       [PACIENTE]: { obra_social: 'Obra Social Inventada', numero_afiliado: 'INV-0001' },
     });
+    const autorizacion = llamadas.find((l) => l.clave === 'GET /rest/v1/autorizaciones_monitoreo_paciente');
+    assert.ok(autorizacion.url.includes('estado=eq.aceptada'), 'no pidió que la autorización esté aceptada');
     const ficha = llamadas.find((l) => l.clave === 'GET /rest/v1/personas');
     assert.ok(ficha.url.includes(FICHA_OBRA_SOCIAL), 'no acotó la lectura a los datos de su obra social');
+  });
+
+  it('en curso y sin la autorización aceptada, no la manda ni la busca', async () => {
+    respuestas.set('GET /rest/v1/turnos_guardia', () => [EN_CURSO]);
+    respuestas.set('GET /rest/v1/autorizaciones_monitoreo_paciente', () => []);
+    const { estado, cuerpo } = await pedir('/turnos-guardia/turno-guardia-sin-cerrar');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.coberturaPorPaciente, {});
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/personas'), 'buscó la obra social sin la autorización');
+  });
+
+  it('antes de la llegada, no la manda ni busca la autorización', async () => {
+    respuestas.set('GET /rest/v1/turnos_guardia', () => [{ ...SIN_CERRAR, paciente_id: PACIENTE }]);
+    const { estado, cuerpo } = await pedir('/turnos-guardia/turno-guardia-sin-cerrar');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.coberturaPorPaciente, {});
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/autorizaciones_monitoreo_paciente'), 'buscó la autorización fuera de la guardia');
   });
 
   it('terminada, no la manda ni la busca', async () => {

@@ -24,6 +24,7 @@ import TareasDelTipo from '../components/TareasDelTipo';
 import AclaracionesAlPie from '../components/AclaracionesAlPie';
 import ReportePresentado from '../components/ReportePresentado';
 import ContactosDeEmergencia from '../components/ContactosDeEmergencia';
+import ObraSocialDelPaciente from '../components/ObraSocialDelPaciente';
 
 /**
  * Lo que se puede consultar de UN Paciente durante el turno de guardia: sus órdenes de medicación y sus
@@ -263,13 +264,17 @@ export default function TurnoGuardiaActivo() {
   // Los contactos de emergencia de cada Paciente. El backend los manda sólo entre la llegada y la
   // salida del turno de guardia; fuera de ese rato llega vacío.
   const [contactosDeEmergencia, setContactosDeEmergencia] = useState({});
+  // La obra social y el número de afiliado de cada Paciente. Llegan en el mismo rato, y sólo de los
+  // Pacientes cuyo Cliente firmó la Autorización al Asistente.
+  const [coberturaDelPaciente, setCoberturaDelPaciente] = useState({});
 
   function cargar() {
     api
       .turno_guardia(id)
-      .then(({ turno_guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas, descansoAbierto: elDescanso, extension: laExtension, contactosDeEmergenciaPorPaciente }) => {
+      .then(({ turno_guardia: data, pacientesConReporte, tipo: elTipo, tareas: lasTareas, descansoAbierto: elDescanso, extension: laExtension, contactosDeEmergenciaPorPaciente, coberturaPorPaciente }) => {
         setTurnoGuardia(data);
         setContactosDeEmergencia(contactosDeEmergenciaPorPaciente ?? {});
+        setCoberturaDelPaciente(coberturaPorPaciente ?? {});
         setDescansoAbierto(elDescanso ?? null);
         setExtension(laExtension ?? null);
         setConReporte(pacientesConReporte ?? []);
@@ -724,6 +729,14 @@ export default function TurnoGuardiaActivo() {
       <ContactosDeEmergencia
         pacientes={pacientes}
         porPaciente={contactosDeEmergencia}
+        mostrarNombre={sonVarios}
+        t={t}
+      />
+
+      {/* La obra social y el número de afiliado, debajo de los contactos de emergencia. */}
+      <ObraSocialDelPaciente
+        pacientes={pacientes}
+        porPaciente={coberturaDelPaciente}
         mostrarNombre={sonVarios}
         t={t}
       />

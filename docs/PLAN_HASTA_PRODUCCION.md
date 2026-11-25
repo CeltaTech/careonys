@@ -136,12 +136,11 @@ Paciente, redondeada a cien metros, y nunca el domicilio
 Servicios, y todos sólo mientras tiene una emergencia abierta
 (`coordinador_lee_asistentes_de_sus_servicios`); y las calificaciones, sólo de esos mismos
 Asistentes o de las guardias que ve (`interno.personal_ve_la_calificacion`). Lo prueba
-`scripts/probar_altas_con_sesion.mjs`. Falta:
+`scripts/probar_altas_con_sesion.mjs`. Al Asistente, las guardias pasadas que ya se le pagaron
+dejan de llegarle; las que todavía no se le pagaron le siguen llegando con el Paciente, el
+domicilio donde prestó el servicio, la fecha y el horario, porque tiene derecho a saber qué
+guardias todavía no cobró. Falta:
 
-- **De las guardias pasadas que todavía no se le pagaron, ningún dato del Paciente.** Las ya pagadas
-  dejaron de llegarle. Sacarle el Paciente a las otras cambia lo que muestra la tarjeta de la
-  guardia, que hoy lleva su nombre y sin él diría «Sin Paciente asignado»: espera que el
-  Desarrollador apruebe qué muestra en su lugar.
 - **Durante la guardia, el Asistente ve la obra social y el número de afiliado del Paciente.** Ya
   le llegan con la guardia en curso, y la aplicación todavía no los muestra: dónde y cómo se
   muestran espera la aprobación del Desarrollador.

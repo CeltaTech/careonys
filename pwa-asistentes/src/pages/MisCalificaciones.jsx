@@ -179,12 +179,15 @@ export default function MisCalificaciones() {
             </div>
             <p>{calificacion.comentario || t.calificaciones.sin_comentario}</p>
             {/* Que se vea o no en el perfil público cambia el peso de dejar un descargo, así
-                que se dice antes de ofrecerlo, no después. */}
-            <p className="tarjeta-detalle">
-              {calificacion.visible_publica
-                ? t.calificaciones.visible_publica
-                : t.calificaciones.no_visible_publica}
-            </p>
+                que se dice antes de ofrecerlo, no después. Sólo las de Match tienen perfil
+                público: las de prestación directa no las ve ningún otro Cliente. */}
+            {calificacion.canal_modalidad === 'intermediacion' && (
+              <p className="tarjeta-detalle">
+                {calificacion.visible_publica
+                  ? t.calificaciones.visible_publica
+                  : t.calificaciones.no_visible_publica}
+              </p>
+            )}
             <Descargo
               calificacion={calificacion}
               t={t}

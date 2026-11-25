@@ -11,9 +11,12 @@ import '../tarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Cuáles calificaciones de Match ven los Clientes de Match. La elige sólo el Administrador de la
+// Prestadora, y la lista trae sólo las de Match: en la prestación directa no hay nada que elegir.
+
 async function llamarApi(path, opciones = {}) {
   const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/intermediacion${path}`, {
+  const respuesta = await fetch(`${API_URL}/api/panel/calificaciones${path}`, {
     ...opciones,
     headers: {
       'Content-Type': 'application/json',
@@ -37,7 +40,7 @@ export function IntermediacionCalificaciones() {
     setEstado('cargando');
     setError(null);
     try {
-      const { calificaciones: filas } = await llamarApi('/calificaciones');
+      const { calificaciones: filas } = await llamarApi('/?modalidad=intermediacion');
       setCalificaciones(filas);
       setEstado('listo');
     } catch (err) {
@@ -54,7 +57,7 @@ export function IntermediacionCalificaciones() {
     setCambiandoId(calificacion.id);
     setError(null);
     try {
-      await llamarApi(`/calificaciones/${calificacion.id}/visibilidad`, {
+      await llamarApi(`/${calificacion.id}/visibilidad`, {
         method: 'PATCH',
         body: JSON.stringify({ visible_publica: !calificacion.visible_publica }),
       });

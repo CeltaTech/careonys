@@ -2,10 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
-import { useModalidades } from '../../context/ModalidadesContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { esAdminOSuperior } from '../../lib/roles';
-import { MODALIDAD } from '../../lib/modalidades';
 import { pestanasDe } from '../../lib/pestanasDelAsistente';
 import { supabase } from '../../lib/supabaseClient';
 import { PerfilTab } from './PerfilTab';
@@ -34,7 +32,6 @@ export function AsistenteDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { usuario } = useAuth();
-  const { tieneModalidad } = useModalidades();
   const { puede } = usePermisos();
   const [asistente, setAsistente] = useState(null);
   const [estado, setEstado] = useState('cargando');
@@ -45,7 +42,6 @@ export function AsistenteDetalle() {
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const puedeDarDeBaja = esAdmin || puede('gestionar_asistentes');
   const documentosDelAsistente = useDocumentosDelAsistente(id);
-  const intermediacion = tieneModalidad(MODALIDAD.INTERMEDIACION);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -144,7 +140,7 @@ export function AsistenteDetalle() {
 
       <section className="panel-tarjeta">
         <div className="panel-tabs" role="tablist">
-          {pestanasDe({ esAdmin, intermediacion, puede }).map((tabId) => (
+          {pestanasDe({ esAdmin, puede }).map((tabId) => (
             <button
               key={tabId}
               type="button"
@@ -167,7 +163,7 @@ export function AsistenteDetalle() {
           <DatosBancariosTab asistente={asistente} />
         )}
         {tab === 'turnos_guardia' && <TurnosGuardiaTab asistente={asistente} />}
-        {tab === 'evaluaciones' && intermediacion && <EvaluacionesTab asistente={asistente} />}
+        {tab === 'evaluaciones' && <EvaluacionesTab asistente={asistente} />}
         {tab === 'ausencias' && <AusenciasCoberturaTab asistente={asistente} />}
         {tab === 'comunicacion' && <ComunicacionTab asistente={asistente} />}
       </div>

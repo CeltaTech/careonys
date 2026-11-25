@@ -256,7 +256,9 @@ function App() {
                     <Route
                       path="intermediacion/calificaciones"
                       element={
-                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.INTERMEDIACION}>
+                        /* Elegir cuáles calificaciones ven los Clientes de Match es del
+                           Administrador: en Match no hay Coordinador. */
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.INTERMEDIACION}>
                           <IntermediacionCalificaciones />
                         </ProtectedRoute>
                       }

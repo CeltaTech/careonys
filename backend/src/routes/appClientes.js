@@ -1531,6 +1531,8 @@ async function calificacionesDeVarios(dbTrabajo, asistenteIds, visibilidad) {
     .from('calificaciones_asistente')
     .select('asistente_id, estrellas')
     .eq('visible_publica', true)
+    // La vidriera es de Match: las de prestación directa no se publican nunca.
+    .eq('canal_modalidad', 'intermediacion')
     .in('asistente_id', asistenteIds);
   if (error) throw error;
 
@@ -1656,7 +1658,7 @@ appClientesRouter.get('/intermediacion/asistentes/:id', requiereRolCliente, asyn
       ]);
 
       // Las opiniones escritas, sin quién las escribió: quien calificó es un Cliente, y su
-      // nombre no es parte de lo que se publica. Van sólo las que la Prestadora dejó públicas.
+      // nombre no es parte de lo que se publica. Van sólo las de Match que el Administrador dejó públicas.
       let escritas = [];
       if (visibilidad.cliente_califica_al_asistente) {
         const { data, error: errorOpiniones } = await dbTrabajo
@@ -1664,6 +1666,7 @@ appClientesRouter.get('/intermediacion/asistentes/:id', requiereRolCliente, asyn
           .select('id, estrellas, comentario, created_at')
           .eq('asistente_id', delPool.id)
           .eq('visible_publica', true)
+          .eq('canal_modalidad', 'intermediacion')
           .order('created_at', { ascending: false })
           .limit(TOPE_DE_OPINIONES);
         if (errorOpiniones) throw errorOpiniones;

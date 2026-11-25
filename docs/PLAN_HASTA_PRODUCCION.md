@@ -877,9 +877,8 @@ sola Prestadora, sin versión y sin dónde queden guardados.
 
 **22. Usted** — Decidir qué secciones de Match quedan en el Panel. Match no tiene panel aparte:
 sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la
-intermediación. Son cinco: Calificaciones, Clientes, Formas de cobro —con su detalle—, Auditoría legal y Funciones con riesgo legal. Clientes y Formas de cobro las ve
-sólo la administración, en el menú (`panel/src/components/layout/Layout.jsx:236` y `:246`) y en
-la ruta. En el Legajo del Asistente, la pestaña de evaluaciones sigue la misma regla.
+intermediación. Son cinco: Calificaciones, Clientes, Formas de cobro —con su detalle—, Auditoría legal y Funciones con riesgo legal. Calificaciones, Clientes, Formas de cobro y Auditoría legal las ve
+sólo la administración, en el menú y en la ruta: en Match no hay Coordinador.
 
 ---
 
@@ -1300,12 +1299,8 @@ revisa antes del siguiente.
    Cada nombre lo aprueba usted.
 4. **La apariencia de las páginas**, que es el cambio de más riesgo.
 5. **La franja fija de Emergencias**, que hoy no existe.
-6. **Calificaciones pasa a Asistentes, para las dos modalidades.** Hoy está en
-   `/intermediacion/calificaciones` (`panel/src/components/layout/Layout.jsx:207`,
-   `panel/src/App.jsx:251`) y la pide a la ruta del backend de Match
-   (`backend/src/routes/panelIntermediacion.js`), que se muda con ella.
-7. **Las cuatro secciones de Match**, que se deciden junto con el paso 22.
-8. **La columna Modalidad en el Directorio de Clientes** (`panel/src/pages/clientes/Clientes.jsx:161`):
+6. **Las cuatro secciones de Match**, que se deciden junto con el paso 22.
+7. **La columna Modalidad en el Directorio de Clientes** (`panel/src/pages/clientes/Clientes.jsx:161`):
    primero, si se quiere.
 
 **155.** Aplicar cada uno a medida que se apruebe.

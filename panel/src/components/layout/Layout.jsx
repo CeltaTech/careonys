@@ -214,7 +214,7 @@ export function Layout() {
         { a: '/asistentes', texto: t.nav.asistentes, ver: hayPadron },
         { a: '/documentacion', texto: t.nav.documentacion, ver: hayPadron },
         { a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPadron },
-        { a: '/intermediacion/calificaciones', texto: t.nav.intermediacion_calificaciones, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION },
+        { a: '/intermediacion/calificaciones', texto: t.nav.intermediacion_calificaciones, ver: verMatch && esAdmin, modalidad: MODALIDAD.INTERMEDIACION },
         // Una remuneración es dato sensible: el Admin la ve siempre, el Coordinador sólo si su
         // Prestadora se lo habilitó.
         { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPadron && (esAdmin || puede('ver_pagos_asistente')) },

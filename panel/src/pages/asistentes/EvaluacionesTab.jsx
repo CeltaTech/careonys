@@ -10,18 +10,18 @@ import '../tarjetas.css';
 /* Lo que los Clientes dijeron de este Asistente.
    ==========================================================================
 
-   El dato ya existía y ya tenía pantalla: Calificaciones muestra todas las de la Prestadora,
-   juntas. Lo que faltaba era mirarlo desde la persona, que es como se mira cuando hay que
+   Se ven todas, en las dos modalidades: el Administrador y el Coordinador de la prestación
+   directa miran desde la persona lo que se dijo de ella, que es como se mira cuando hay que
    decidir algo sobre ella —renovarle el vínculo, ofrecerle un Paciente, atender un reclamo—.
 
-   SE MIRA, NO SE TOCA. Que una evaluación se vea o no en el perfil público es una decisión de
-   la Prestadora sobre su vidriera, y se toma mirándolas todas: esconder una desde el Legajo del
-   Asistente que la recibió es decidir sobre el perfil público sin ver el perfil público. Esa acción se
-   queda donde está, y acá se dice dónde.
+   SE MIRA, NO SE TOCA. Cuáles calificaciones de Match ven los Clientes de Match lo elige el
+   Administrador en la pantalla de Match, mirándolas todas juntas. Acá sólo se dice, en las de
+   Match, si se publican. En las de prestación directa no hay nada que decir: el Cliente nunca ve
+   las calificaciones que dejaron otros.
 
    NO SE MUESTRA NINGÚN PROMEDIO, a propósito. El promedio que existe es el del perfil público,
-   y se calcula sólo sobre las visibles. Un promedio calculado acá —sobre todas, incluidas las
-   escondidas— sería otro número, distinto del que ve el Cliente, y quedarían dos puntajes de la
+   y se calcula sólo sobre las publicadas. Un promedio calculado acá —sobre todas, incluidas las
+   no publicadas— sería otro número, distinto del que ve el Cliente, y quedarían dos puntajes de la
    misma persona sin ninguna forma de saber cuál es cuál.
 
    El nombre de quien evaluó no se muestra. Quien decide sobre el Padrón necesita saber qué se
@@ -33,7 +33,7 @@ import '../tarjetas.css';
 const TOPE = 50;
 
 /* `cliente_id` no se pide: no se muestra, y lo que no se muestra no se trae. */
-const COLUMNAS = 'id, estrellas, comentario, descargo_asistente, descargo_en, visible_publica, created_at';
+const COLUMNAS = 'id, estrellas, comentario, descargo_asistente, descargo_en, visible_publica, canal_modalidad, created_at';
 
 export function EvaluacionesTab({ asistente }) {
   const { t, locale } = useLocale();
@@ -70,6 +70,9 @@ export function EvaluacionesTab({ asistente }) {
     cargar();
   }, [cargar]);
 
+  // La columna de publicada sólo dice algo en las de Match. Sin ninguna de Match, no se dibuja.
+  const hayDeMatch = datos.filas.some((c) => c.canal_modalidad === 'intermediacion');
+
   return (
     <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-tarjeta-titulo">
@@ -92,7 +95,7 @@ export function EvaluacionesTab({ asistente }) {
               <th>{t.asistentes.evaluaciones.col_estrellas}</th>
               <th>{t.asistentes.evaluaciones.col_comentario}</th>
               <th>{t.asistentes.evaluaciones.col_descargo}</th>
-              <th>{t.asistentes.evaluaciones.col_visible}</th>
+              {hayDeMatch && <th>{t.asistentes.evaluaciones.col_visible}</th>}
             </tr>
           </thead>
           <tbody>
@@ -107,11 +110,15 @@ export function EvaluacionesTab({ asistente }) {
                     escribe una sola vez. Se muestra al lado de lo que contesta, nunca aparte:
                     leídos en columnas distintas serían dos textos sueltos. */}
                 <td>{c.descargo_asistente || t.asistentes.evaluaciones.sin_descargo}</td>
-                <td>
-                  {c.visible_publica
-                    ? t.asistentes.evaluaciones.visible
-                    : t.asistentes.evaluaciones.no_visible}
-                </td>
+                {hayDeMatch && (
+                  <td>
+                    {c.canal_modalidad !== 'intermediacion'
+                      ? '—'
+                      : c.visible_publica
+                        ? t.asistentes.evaluaciones.visible
+                        : t.asistentes.evaluaciones.no_visible}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

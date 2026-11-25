@@ -2417,7 +2417,7 @@ appAsistentesRouter.get('/calificaciones', requiereRolAsistente, async (req, res
   // la Prestadora la base deja ver las calificaciones de todos.
   const { data, error } = await clienteDelPedido(req)
     .from('calificaciones_asistente')
-    .select('id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
+    .select('id, estrellas, comentario, visible_publica, canal_modalidad, descargo_asistente, descargo_en, created_at')
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);

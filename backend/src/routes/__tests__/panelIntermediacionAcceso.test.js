@@ -174,15 +174,7 @@ describe('el Coordinador no llega a la plata del Match', () => {
   }
 });
 
-describe('lo que sí es del Coordinador', () => {
-  it('ve las calificaciones', async () => {
-    rolDelUsuario = 'coordinador';
-    respuestas.set('GET /rest/v1/calificaciones_asistente', () => []);
-    const { estado, cuerpo } = await pedir('GET', '/calificaciones');
-    assert.equal(estado, 200);
-    assert.deepEqual(cuerpo.calificaciones, []);
-  });
-
+describe('la auditoría de advertencias legales', () => {
   it('no ve la auditoría de advertencias legales, que es de la administración', async () => {
     rolDelUsuario = 'coordinador';
     respuestas.set('GET /rest/v1/catalogo_funciones_intermediacion', () => [
@@ -352,7 +344,7 @@ describe('lo que sale hacia el software de facturación', () => {
 describe('sin Prestadora activa no hay Match', () => {
   it('contesta que hay que entrar a una, y no que falta permiso', async () => {
     prestadoraDelUsuario = null;
-    const { estado, cuerpo } = await pedir('GET', '/calificaciones');
+    const { estado, cuerpo } = await pedir('GET', '/auditoria-legal');
     assert.equal(estado, 400);
     assert.match(cuerpo.error, /entrar a una prestadora/);
   });
@@ -371,7 +363,6 @@ describe('sin Prestadora activa no hay Match', () => {
 describe('sin la modalidad Match no se entra', () => {
   const TODAS_LAS_RUTAS = [
     ...RUTAS_DE_PLATA,
-    ['GET', '/calificaciones', undefined],
     ['GET', '/auditoria-legal', undefined],
   ];
 

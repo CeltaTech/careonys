@@ -45,8 +45,8 @@ panelIntermediacionRouter.use(exigirModalidad('intermediacion'));
 
 // La plata del Match es de la administración de la Prestadora, no del Coordinador
 // (Desarrollador, 2026-09-04: «absolutamente no puede ni debe»). Alcanza a todo lo que sea un
-// cobro: las formas de cobro, la lista de accesos con sus importes y el historial de cobros. Lo que sí
-// queda para el Coordinador es lo que no es plata: las calificaciones y la auditoría de advertencias legales.
+// cobro: las formas de cobro, la lista de accesos con sus importes y el historial de cobros. Las
+// calificaciones no viven acá: son de las dos modalidades y están en panelCalificaciones.js.
 //
 // Hasta el 2026-09-04 este archivo tenía una función llamada `requiereAdminOSuperior` que
 // dejaba pasar al Coordinador; las otras dos del backend, con el mismo nombre, no. Ahora el
@@ -427,58 +427,6 @@ panelIntermediacionRouter.get('/accesos/:id/cobros', soloAdministracion, async (
   );
   if (error) return responderError(res, error);
   res.json({ cobros: data });
-});
-
-// ============================================================================
-// Calificaciones y descargos — visibilidad pública queda como único campo editable por la
-// Prestadora (schema_calificaciones_asistente.sql), el contenido (incluido el descargo del
-// Asistente) nunca se edita desde acá.
-// ============================================================================
-
-panelIntermediacionRouter.get('/calificaciones', async (req, res) => {
-  const db = clienteDelPedido(req);
-  const { data, error } = await db
-    .from('calificaciones_asistente')
-    .select('id, asistente_id, paciente_id, cliente_id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
-    .order('created_at', { ascending: false });
-  if (error) return responderError(res, error);
-
-  const asistenteIds = [...new Set(data.map((c) => c.asistente_id).filter(Boolean))];
-  // Los nombres, con el trabajo de la Prestadora: el Coordinador sólo alcanza los Asistentes de su
-  // zona, y una calificación de un Asistente de otra zona quedaría sin nombre en la lista.
-  const { data: asistentes } = asistenteIds.length
-    ? await enLaPrestadora(req.usuarioPanel.prestadoraId, 'nombres de las calificaciones', (dbDelTrabajo) =>
-        dbDelTrabajo.from('asistentes').select('id, nombre').in('id', asistenteIds))
-    : { data: [] };
-  const nombreAsistente = new Map((asistentes || []).map((a) => [a.id, a.nombre]));
-
-  const calificaciones = data.map((c) => ({ ...c, asistente_nombre: nombreAsistente.get(c.asistente_id) || null }));
-
-  res.json({ calificaciones });
-});
-
-panelIntermediacionRouter.patch('/calificaciones/:id/visibilidad', async (req, res) => {
-  const { visible_publica: visiblePublica } = req.body || {};
-  if (typeof visiblePublica !== 'boolean') {
-    return res.status(400).json({ error: 'Falta visible_publica (booleano)' });
-  }
-  // La escritura devuelve la fila tocada: sin esto la base contesta que salió bien aunque no
-  // haya encontrado ninguna, y la pantalla muestra un cambio de visibilidad que no ocurrió.
-  // Con el trabajo de la Prestadora: la política de modificación de `calificaciones_asistente` no
-  // incluye a Superadmin. El trabajo sólo puede tocar la visibilidad.
-  const { data: modificada, error } = await enLaPrestadora(req.usuarioPanel.prestadoraId, 'visibilidad de una calificación', (dbDelTrabajo) =>
-    dbDelTrabajo
-      .from('calificaciones_asistente')
-      .update({ visible_publica: visiblePublica })
-      .eq('id', req.params.id)
-      .select('id')
-  );
-  if (error) return responderError(res, error);
-  if (!modificada?.length) {
-    // No existe, o es de otra Prestadora. Se contesta lo mismo en los dos casos.
-    return res.status(404).json({ error: 'No se encontró esa calificación' });
-  }
-  res.json({ ok: true });
 });
 
 // ============================================================================

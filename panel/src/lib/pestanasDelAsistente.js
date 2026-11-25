@@ -11,10 +11,8 @@
 // es el candado —el candado es la base—, es no ofrecerle una pestaña que le va a contestar que
 // no. Lo operativo lo ve todo: la protección por fila de su zona ya decide qué filas alcanza.
 //
-// Y hay una segunda pregunta, que no es quién mira sino cómo trabaja la Prestadora. Una
-// Prestadora que no trabaja en modalidad Match no tiene Clientes evaluando Asistentes:
-// esa pestaña no le mostraría poco, le mostraría siempre nada. Es el mismo recorte que ya hace
-// la pantalla de Calificaciones, que existe sólo en esa modalidad.
+// Las calificaciones se ven en las dos modalidades: el Cliente califica al Asistente que lo
+// atendió, sea de prestación directa o de Match.
 // ---------------------------------------------------------------------------
 
 export const PESTANAS = [
@@ -40,13 +38,6 @@ export const PESTANAS_COORDINADOR = [
 ];
 
 /**
- * Las que dependen de que la Prestadora trabaje en modalidad Match. Se nombran acá, y no
- * con un `if` adentro del Legajo del Asistente, porque el día que haya una segunda el `if` se convierte en
- * dos lugares donde recordar lo mismo.
- */
-export const PESTANAS_SOLO_INTERMEDIACION = ['evaluaciones'];
-
-/**
  * Las que además dependen de una acción que la Prestadora puede reservar. Dónde cobra un
  * Asistente nace reservado a la administración, pero la Prestadora puede habilitárselo a quien
  * coordina, así que no alcanza con preguntar el rol. El candado de verdad está en el backend y en
@@ -59,16 +50,15 @@ export const PESTANAS_POR_PERMISO = {
 /**
  * Las que se le muestran a quien está mirando.
  *
- * Recibe un objeto y no dos valores sueltos: dos banderas seguidas en la llamada se invierten
- * sin que nada avise, y las dos preguntas que contestan no se parecen en nada.
+ * Recibe un objeto y no valores sueltos: una bandera y una función seguidas en la llamada se
+ * leen mal sin que nada avise.
  *
  * `puede` es la de los permisos efectivos de la sesión. Si no viene ninguna, se contesta que no:
  * un permiso que no se pudo resolver no es un permiso concedido.
  */
-export function pestanasDe({ esAdmin, intermediacion, puede = () => false }) {
+export function pestanasDe({ esAdmin, puede = () => false }) {
   const todas = esAdmin ? PESTANAS : PESTANAS_COORDINADOR;
   return todas.filter((pestana) => {
-    if (!intermediacion && PESTANAS_SOLO_INTERMEDIACION.includes(pestana)) return false;
     const permiso = PESTANAS_POR_PERMISO[pestana];
     if (permiso) return esAdmin || puede(permiso);
     return true;

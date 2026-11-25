@@ -124,7 +124,21 @@ describe('las calificaciones no dependen de la modalidad', () => {
     noPreguntoPorLaModalidad();
   });
 
-  it('cambia la visibilidad sólo adentro de su Prestadora', async () => {
+  it('pedidas las de Match, trae sólo las de Match; una modalidad desconocida no llega a la base', async () => {
+    respuestas.set('GET /rest/v1/calificaciones_asistente', () => []);
+    const { estado } = await pedir('GET', '/?modalidad=intermediacion');
+    assert.equal(estado, 200);
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/calificaciones_asistente');
+    assert.match(lectura.busqueda, /canal_modalidad=eq\.intermediacion/);
+
+    llamadas.length = 0;
+    const { estado: mal } = await pedir('GET', '/?modalidad=cualquiera');
+    assert.equal(mal, 400);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/calificaciones_asistente'), false);
+  });
+
+  it('cambia la visibilidad sólo adentro de su Prestadora y sólo de Match', async () => {
+    rolDelUsuario = 'admin_prestadora';
     respuestas.set('PATCH /rest/v1/calificaciones_asistente', () => [{ id: CALIFICACION }]);
     const { estado } = await pedir('PATCH', `/${CALIFICACION}/visibilidad`, { visible_publica: false });
     assert.equal(estado, 200);
@@ -133,16 +147,25 @@ describe('las calificaciones no dependen de la modalidad', () => {
     const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/calificaciones_asistente');
     assert.equal(escritura.credencial, sesionDePrueba(USUARIO), 'se escribió con otra credencial');
     assert.deepEqual(escritura.cuerpo, { visible_publica: false });
-    noPreguntoPorLaModalidad();
+    assert.match(escritura.busqueda, /canal_modalidad=eq\.intermediacion/, 'pudo tocar una de prestación directa');
+  });
+
+  it('el Coordinador no elige cuáles se publican', async () => {
+    respuestas.set('PATCH /rest/v1/calificaciones_asistente', () => [{ id: CALIFICACION }]);
+    const { estado } = await pedir('PATCH', `/${CALIFICACION}/visibilidad`, { visible_publica: false });
+    assert.equal(estado, 403);
+    assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/calificaciones_asistente'), false);
   });
 
   it('una calificación de otra Prestadora se contesta como si no existiera', async () => {
+    rolDelUsuario = 'admin_prestadora';
     respuestas.set('PATCH /rest/v1/calificaciones_asistente', () => []);
     const { estado } = await pedir('PATCH', `/${CALIFICACION}/visibilidad`, { visible_publica: true });
     assert.equal(estado, 404);
   });
 
   it('sin un booleano no escribe nada', async () => {
+    rolDelUsuario = 'admin_prestadora';
     const { estado } = await pedir('PATCH', `/${CALIFICACION}/visibilidad`, { visible_publica: 'si' });
     assert.equal(estado, 400);
     assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/calificaciones_asistente'), false);

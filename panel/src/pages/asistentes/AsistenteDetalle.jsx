@@ -163,7 +163,7 @@ export function AsistenteDetalle() {
           <DatosBancariosTab asistente={asistente} />
         )}
         {tab === 'turnos_guardia' && <TurnosGuardiaTab asistente={asistente} />}
-        {tab === 'evaluaciones' && <EvaluacionesTab asistente={asistente} />}
+        {tab === 'evaluaciones' && <EvaluacionesTab asistente={asistente} esAdmin={esAdmin} />}
         {tab === 'ausencias' && <AusenciasCoberturaTab asistente={asistente} />}
         {tab === 'comunicacion' && <ComunicacionTab asistente={asistente} />}
       </div>

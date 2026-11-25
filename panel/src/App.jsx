@@ -69,7 +69,6 @@ import { Auditoria } from './pages/Auditoria';
 import { Contenidos } from './pages/contenidos/Contenidos';
 import { IntermediacionClientes } from './pages/intermediacion/Clientes';
 import { FormasDeCobro } from './pages/intermediacion/FormasDeCobro';
-import { IntermediacionCalificaciones } from './pages/intermediacion/Calificaciones';
 import { IntermediacionAuditoriaLegal } from './pages/intermediacion/AuditoriaLegal';
 import { IntermediacionFuncionesConRiesgoLegal } from './pages/intermediacion/FuncionesConRiesgoLegal';
 import { MensajeEmergente } from './lib/mensajeEmergente';
@@ -250,16 +249,6 @@ function App() {
                            backend, que es donde el permiso niega de verdad. */
                         <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.INTERMEDIACION}>
                           <FormasDeCobro />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="intermediacion/calificaciones"
-                      element={
-                        /* Elegir cuáles calificaciones ven los Clientes de Match es del
-                           Administrador: en Match no hay Coordinador. */
-                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.INTERMEDIACION}>
-                          <IntermediacionCalificaciones />
                         </ProtectedRoute>
                       }
                     />

@@ -1,45 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useModalidades } from '../../context/ModalidadesContext';
+import { MODALIDAD } from '../../lib/modalidades';
 import { supabase } from '../../lib/supabaseClient';
 import { mensajeDeError } from '../../lib/errores';
-import { con } from '../../lib/textos';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Estrellas } from '../../components/ui/Estrellas';
+import { Button } from '../../components/ui/Button';
+import { Alert } from '../../components/ui/Alert';
 import '../tarjetas.css';
 
 /* Lo que los Clientes dijeron de este Asistente.
    ==========================================================================
 
-   Se ven todas, en las dos modalidades: el Administrador y el Coordinador de la prestación
-   directa miran desde la persona lo que se dijo de ella, que es como se mira cuando hay que
-   decidir algo sobre ella —renovarle el vínculo, ofrecerle un Paciente, atender un reclamo—.
+   Cada Asistente tiene un solo Legajo, y sus calificaciones son una sola lista, común a las dos
+   modalidades. El Administrador y el Coordinador las ven todas acá.
 
-   SE MIRA, NO SE TOCA. Cuáles calificaciones de Match ven los Clientes de Match lo elige el
-   Administrador en la pantalla de Match, mirándolas todas juntas. Acá sólo se dice, en las de
-   Match, si se publican. En las de prestación directa no hay nada que decir: el Cliente nunca ve
-   las calificaciones que dejaron otros.
+   Si la Prestadora tiene Match habilitado, el Administrador elige al lado de cada calificación si
+   la ven los Clientes de Match en la página del Asistente. Sólo él ve esa elección. Nadie cambia
+   las estrellas ni el comentario: la base sólo deja tocar la marca de visible y el descargo.
 
-   NO SE MUESTRA NINGÚN PROMEDIO, a propósito. El promedio que existe es el del perfil público,
-   y se calcula sólo sobre las publicadas. Un promedio calculado acá —sobre todas, incluidas las
-   no publicadas— sería otro número, distinto del que ve el Cliente, y quedarían dos puntajes de la
-   misma persona sin ninguna forma de saber cuál es cuál.
+   NO SE MUESTRA NINGÚN PROMEDIO, a propósito. El promedio que ve el Cliente de Match se calcula
+   sólo sobre las visibles. Un promedio calculado acá sobre todas sería otro número, y quedarían
+   dos puntajes de la misma persona sin forma de saber cuál es cuál.
 
    El nombre de quien evaluó no se muestra. Quien decide sobre el Padrón necesita saber qué se
-   dijo, no quién lo dijo, y una queja con nombre y apellido al lado cambia lo que pasa después.
-   Es el mismo criterio con el que la evaluación le llega al Asistente en su propia aplicación. */
-
-/* Cuántas filas como mucho. Igual que en el historial de guardias: esto es el Legajo del Asistente, y cuando
-   se llega al tope se avisa, para que nadie crea que está viendo todo lo que se dijo. */
-const TOPE = 50;
+   dijo, no quién lo dijo. Es el mismo criterio con el que la calificación le llega al Asistente
+   en su propia aplicación. */
 
 /* `cliente_id` no se pide: no se muestra, y lo que no se muestra no se trae. */
-const COLUMNAS = 'id, estrellas, comentario, descargo_asistente, descargo_en, visible_publica, canal_modalidad, created_at';
+const COLUMNAS = 'id, estrellas, comentario, descargo_asistente, descargo_en, visible_publica, created_at';
 
-export function EvaluacionesTab({ asistente }) {
+export function EvaluacionesTab({ asistente, esAdmin = false }) {
   const { t, locale } = useLocale();
-  const [datos, setDatos] = useState({ filas: [], tope: false });
+  const { tieneModalidad } = useModalidades();
+  const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
+  const [errorAlCambiar, setErrorAlCambiar] = useState(null);
+  const [cambiandoId, setCambiandoId] = useState(null);
+
+  const eligeLasVisibles = esAdmin && tieneModalidad(MODALIDAD.INTERMEDIACION);
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
@@ -52,13 +53,11 @@ export function EvaluacionesTab({ asistente }) {
         .from('calificaciones_asistente')
         .select(COLUMNAS)
         .eq('asistente_id', asistente.id)
-        .order('created_at', { ascending: false })
-        .limit(TOPE);
+        .order('created_at', { ascending: false });
 
       if (errorConsulta) throw errorConsulta;
 
-      const filas = data ?? [];
-      setDatos({ filas, tope: filas.length === TOPE });
+      setFilas(data ?? []);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -70,24 +69,41 @@ export function EvaluacionesTab({ asistente }) {
     cargar();
   }, [cargar]);
 
-  // La columna de publicada sólo dice algo en las de Match. Sin ninguna de Match, no se dibuja.
-  const hayDeMatch = datos.filas.some((c) => c.canal_modalidad === 'intermediacion');
+  async function alternarVisible(calificacion) {
+    setCambiandoId(calificacion.id);
+    setErrorAlCambiar(null);
+    try {
+      // Se pide la fila de vuelta: si la protección por fila no deja cambiarla, la base no da
+      // error, devuelve cero filas, y eso también es una falla.
+      const { data, error: errorCambio } = await supabase
+        .from('calificaciones_asistente')
+        .update({ visible_publica: !calificacion.visible_publica })
+        .eq('id', calificacion.id)
+        .select('id');
+
+      if (errorCambio) throw errorCambio;
+      if (!data || data.length === 0) throw { code: '42501' };
+
+      await cargar();
+    } catch (err) {
+      setErrorAlCambiar(mensajeDeError(err, t));
+    } finally {
+      setCambiandoId(null);
+    }
+  }
 
   return (
     <section className="panel-tarjeta tarjeta-desplazable">
       <div className="panel-tarjeta-titulo">
         <h2>{t.asistentes.tabs.evaluaciones}</h2>
-        {datos.tope && (
-          <span className="panel-mini">{con(t.asistentes.evaluaciones.tope, { n: TOPE })}</span>
-        )}
       </div>
-    <EstadoLista
-      estado={estado}
-      error={error}
-      vacio={estado === 'listo' && datos.filas.length === 0}
-      recargar={cargar}
-    >
-      <>
+      {errorAlCambiar && <Alert variant="error">{errorAlCambiar}</Alert>}
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && filas.length === 0}
+        recargar={cargar}
+      >
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -95,36 +111,40 @@ export function EvaluacionesTab({ asistente }) {
               <th>{t.asistentes.evaluaciones.col_estrellas}</th>
               <th>{t.asistentes.evaluaciones.col_comentario}</th>
               <th>{t.asistentes.evaluaciones.col_descargo}</th>
-              {hayDeMatch && <th>{t.asistentes.evaluaciones.col_visible}</th>}
+              {eligeLasVisibles && <th>{t.asistentes.evaluaciones.col_visible}</th>}
+              {eligeLasVisibles && <th />}
             </tr>
           </thead>
           <tbody>
-            {datos.filas.map((c) => (
+            {filas.map((c) => (
               <tr key={c.id}>
                 <td>{new Date(c.created_at).toLocaleDateString(locale)}</td>
                 <td>
                   <Estrellas cantidad={c.estrellas} />
                 </td>
                 <td>{c.comentario || t.asistentes.evaluaciones.sin_comentario}</td>
-                {/* El descargo es la única respuesta que la persona evaluada puede dar, y se
-                    escribe una sola vez. Se muestra al lado de lo que contesta, nunca aparte:
-                    leídos en columnas distintas serían dos textos sueltos. */}
+                {/* El descargo es la única respuesta que la persona evaluada puede dar. Se
+                    muestra al lado de lo que contesta, nunca aparte. */}
                 <td>{c.descargo_asistente || t.asistentes.evaluaciones.sin_descargo}</td>
-                {hayDeMatch && (
+                {eligeLasVisibles && (
+                  <td>{c.visible_publica ? t.asistentes.evaluaciones.visible : t.asistentes.evaluaciones.no_visible}</td>
+                )}
+                {eligeLasVisibles && (
                   <td>
-                    {c.canal_modalidad !== 'intermediacion'
-                      ? '—'
-                      : c.visible_publica
-                        ? t.asistentes.evaluaciones.visible
-                        : t.asistentes.evaluaciones.no_visible}
+                    <Button
+                      variant="secondary"
+                      onClick={() => alternarVisible(c)}
+                      disabled={cambiandoId !== null}
+                    >
+                      {c.visible_publica ? t.asistentes.evaluaciones.ocultar : t.asistentes.evaluaciones.mostrar}
+                    </Button>
                   </td>
                 )}
               </tr>
             ))}
           </tbody>
         </table>
-      </>
-    </EstadoLista>
+      </EstadoLista>
     </section>
   );
 }

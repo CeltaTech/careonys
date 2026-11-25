@@ -877,8 +877,9 @@ sola Prestadora, sin versión y sin dónde queden guardados.
 
 **22. Usted** — Decidir qué secciones de Match quedan en el Panel. Match no tiene panel aparte:
 sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la
-intermediación. Son cinco: Calificaciones, Clientes, Formas de cobro —con su detalle—, Auditoría legal y Funciones con riesgo legal. Calificaciones, Clientes, Formas de cobro y Auditoría legal las ve
-sólo la administración, en el menú y en la ruta: en Match no hay Coordinador.
+intermediación. Son cuatro: Clientes, Formas de cobro —con su detalle—, Auditoría legal y Funciones con riesgo legal. Clientes, Formas de cobro y Auditoría legal las ve
+sólo la administración, en el menú y en la ruta: en Match no hay Coordinador. Las calificaciones no
+son de Match: son comunes a las dos modalidades y viven en el Legajo del Asistente.
 
 ---
 

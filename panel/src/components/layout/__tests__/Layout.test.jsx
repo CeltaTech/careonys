@@ -84,8 +84,6 @@ describe('El menú del Panel', () => {
     rol = 'coordinador';
     const enlaces = enlacesDelMenu();
     for (const a of PLATA_DE_MATCH) expect(enlaces.has(a), a).toBe(false);
-    // Elegir las calificaciones que ven los Clientes de Match es del Administrador.
-    expect(enlaces.has('/intermediacion/calificaciones')).toBe(false);
   });
 
   it('a la administración sí se los muestra', () => {

@@ -4,6 +4,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { avisar } from '../lib/mensajeEmergente';
+import { useOfreceIntermediacion } from '../context/PerfilContext';
 
 // Las calificaciones que le pusieron a este Asistente, y el descargo que puede dejar ante cada
 // una.
@@ -140,6 +141,7 @@ function Descargo({ calificacion, onGuardado, t, locale }) {
 
 export default function MisCalificaciones() {
   const { t, locale } = useLocale();
+  const conMatch = useOfreceIntermediacion();
   const [calificaciones, setCalificaciones] = useState(null);
   const [error, setError] = useState('');
 
@@ -178,10 +180,10 @@ export default function MisCalificaciones() {
               })}
             </div>
             <p>{calificacion.comentario || t.calificaciones.sin_comentario}</p>
-            {/* Que se vea o no en el perfil público cambia el peso de dejar un descargo, así
-                que se dice antes de ofrecerlo, no después. Sólo las de Match tienen perfil
-                público: las de prestación directa no las ve ningún otro Cliente. */}
-            {calificacion.canal_modalidad === 'intermediacion' && (
+            {/* Si la Prestadora tiene Match, se dice si los Clientes de Match ven esta calificación
+                antes de ofrecer el descargo: eso cambia el peso de dejarlo. Es la misma elección que
+                hizo el Administrador en el Legajo. */}
+            {conMatch && (
               <p className="tarjeta-detalle">
                 {calificacion.visible_publica
                   ? t.calificaciones.visible_publica

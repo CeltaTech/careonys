@@ -52,11 +52,12 @@ describe('pestanasDelAsistente', () => {
       'sin_descargo',
       'visible',
       'no_visible',
+      'mostrar',
+      'ocultar',
     ]) {
       expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
       expect(textos[clave].length).toBeGreaterThan(0);
     }
-    expect(textos.tope).toContain('{n}');
   });
 
   it.each(IDIOMAS)('%s nombra los textos de los datos bancarios', (idioma) => {

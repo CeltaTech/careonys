@@ -46,7 +46,7 @@ panelIntermediacionRouter.use(exigirModalidad('intermediacion'));
 // La plata del Match es de la administración de la Prestadora, no del Coordinador
 // (Desarrollador, 2026-09-04: «absolutamente no puede ni debe»). Alcanza a todo lo que sea un
 // cobro: las formas de cobro, la lista de accesos con sus importes y el historial de cobros. Las
-// calificaciones no viven acá: son de las dos modalidades y están en panelCalificaciones.js.
+// calificaciones no viven acá: son comunes a las dos modalidades y se ven en el Legajo.
 //
 // Hasta el 2026-09-04 este archivo tenía una función llamada `requiereAdminOSuperior` que
 // dejaba pasar al Coordinador; las otras dos del backend, con el mismo nombre, no. Ahora el

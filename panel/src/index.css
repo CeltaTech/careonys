@@ -2189,6 +2189,29 @@ button.panel-kpi-card[aria-pressed='true'] {
   max-width: 800px;
 }
 
+/* La marca del informe anulado: en pantalla y también impreso. */
+.informe-obra-social-anulado {
+  border: 2px solid var(--tono-critico-texto);
+  background: var(--tono-critico-fondo);
+  color: var(--tono-critico-texto);
+  border-radius: var(--radio-card);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.informe-obra-social-anulado strong {
+  display: block;
+  font-size: 2rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.informe-obra-social-anulado p {
+  margin: 0.5rem 0 0;
+}
+
 .informe-obra-social-acciones-no-imprimir {
   display: flex;
   justify-content: flex-end;

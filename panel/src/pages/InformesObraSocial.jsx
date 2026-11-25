@@ -191,6 +191,16 @@ function VistaImpresion({ informe, onCerrar, t }) {
           <Button onClick={() => window.print()}>{t.informesObraSocial.imprimir}</Button>
         </div>
         <div id="area-imprimible">
+          {/* Un informe anulado no puede salir igual que uno válido: arriba de todo lo dice, con
+              el motivo que se escribió al anularlo. */}
+          {informe.estado === 'anulado' && (
+            <div className="informe-obra-social-anulado">
+              <strong>{t.informesObraSocial.estado_anulado}</strong>
+              <p>
+                {t.informesObraSocial.motivo_de_la_anulacion}: {informe.motivo_anulacion}
+              </p>
+            </div>
+          )}
           <ContenidoInforme contenido={informe.contenido} t={t} />
         </div>
       </div>

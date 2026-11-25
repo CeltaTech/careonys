@@ -1097,6 +1097,7 @@ export const T = {
       imprimir: 'Imprimir',
       anular: 'Anular',
       motivo_anulacion: 'Motivo de la anulación (obligatorio):',
+      motivo_de_la_anulacion: 'Motivo de la anulación',
       confirmar_anular: '¿Confirma anular este informe? Queda registrado como anulado, no se borra, y se puede generar uno nuevo.',
     },
     dashboard: {
@@ -4521,6 +4522,7 @@ export const T = {
       imprimir: 'Print',
       anular: 'Void',
       motivo_anulacion: 'Reason for voiding (required):',
+      motivo_de_la_anulacion: 'Reason for voiding',
       confirmar_anular: 'Do you confirm voiding this report? It stays on record as voided, it is not deleted, and a new one can be generated.',
     },
     dashboard: {
@@ -7916,6 +7918,7 @@ export const T = {
       imprimir: 'Imprimir',
       anular: 'Anular',
       motivo_anulacion: 'Motivo da anulação (obrigatório):',
+      motivo_de_la_anulacion: 'Motivo da anulação',
       confirmar_anular: 'Confirma a anulação deste relatório? Ele permanece registrado como anulado, não é excluído, e um novo pode ser gerado.',
     },
     dashboard: {

@@ -578,7 +578,7 @@ export const EXCEPCIONES = [
   })),
   {
     regla: 'mi',
-    clave: 'textos_consentimiento.cuerpo:AR / autorizacion_signos_vitales / v1',
+    clave: 'textos_consentimiento.cuerpo:AR / autorizacion_signos_vitales / v2',
     motivo: 'Es la autorización que firma el titular, en primera persona: «mi carácter» es de quien firma, no del sistema.',
   },
   ...['La Rioja', 'La Pampa'].map((texto) => ({

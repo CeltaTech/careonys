@@ -123,6 +123,28 @@ function consultarBase(sql) {
   return salida.trim().split('\n').filter(Boolean).map((l) => l.split('|'));
 }
 
+// Un turno de guardia sólo se programa adentro del cronograma del Servicio. A un Servicio que nace
+// para una prueba se le siembra una Prestación con guardias de 08:00 a 12:00 todos los días, y se
+// la saca al terminar. Datos inventados.
+function sembrarCronogramaDelServicio(d, servicio) {
+  consultarBase(
+    `WITH p AS (
+       INSERT INTO public.prestaciones (prestadora_id, servicio_id, paciente_id, tipo_servicio, vigente_desde, forma_de_precio)
+       VALUES ('${d.prestadora}', '${servicio}', '${d.paciente}', 'Prestación inventada de prueba', current_date, NULL)
+       RETURNING id, prestadora_id)
+     INSERT INTO public.cronograma_de_guardias (prestadora_id, prestacion_id, dias_semana, hora_inicio, hora_fin)
+     SELECT prestadora_id, id, '{lunes,martes,miercoles,jueves,viernes,sabado,domingo}', '08:00', '12:00' FROM p;`,
+  );
+}
+
+function borrarCronogramaDelServicio(servicio) {
+  consultarBase(
+    `DELETE FROM public.cronograma_de_guardias
+      WHERE prestacion_id IN (SELECT id FROM public.prestaciones WHERE servicio_id = '${servicio}');
+     DELETE FROM public.prestaciones WHERE servicio_id = '${servicio}';`,
+  );
+}
+
 // Entra como esa persona en esa Prestadora. La siembra la conoce por su email, que es dato de
 // contacto; el servicio de acceso la conoce por otra dirección, que no es la misma para todas:
 // coordinación, Asistentes y Clientes entran con `<cuenta>@acceso.careonys.invalid`, y
@@ -1185,7 +1207,9 @@ async function probarQueCadaPersonaEscribeSoloLoSuyo(entorno, d) {
       else mal('el Asistente SÍ lee el reporte de su guardia', motivo(lee));
     }
   } finally {
-    if (reporte) consultarBase(`DELETE FROM public.reportes WHERE id = '${reporte}';`);
+    // El Reporte no se borra por ningún camino: el de prueba sale saltando los disparadores.
+    if (reporte) consultarBase(`SET session_replication_role = replica;
+      DELETE FROM public.reportes WHERE id = '${reporte}';`);
   }
 
   // ---- La suscripción a las notificaciones ------------------------------------
@@ -1259,6 +1283,7 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
   }
 
   try {
+    sembrarCronogramaDelServicio(d, servicio);
     const turno_guardia = {
       prestadora_id: d.prestadora,
       paciente_id: d.paciente,
@@ -1311,6 +1336,7 @@ async function probarElCoordinadorDelServicio({ base, llavePublica }, d) {
     }
   } finally {
     consultarBase(`DELETE FROM public.turnos_guardia WHERE servicio_id = '${servicio}';`);
+    borrarCronogramaDelServicio(servicio);
     consultarBase(`DELETE FROM public.servicios WHERE id = '${servicio}';`);
   }
 
@@ -1384,6 +1410,7 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
   });
 
   try {
+    sembrarCronogramaDelServicio(d, servicio);
     await pedir(admin, 'PATCH', `servicios?id=eq.${servicio}`, { coordinador_id: carla });
 
     opcion(false);
@@ -1436,6 +1463,7 @@ async function probarLaFirmaDelResponsableDePagos({ base, llavePublica }, d) {
     consultarBase(`DELETE FROM public.consentimientos_pagador WHERE servicio_id = '${servicio}';`);
     consultarBase(`DELETE FROM public.pagadores_del_servicio WHERE servicio_id = '${servicio}';`);
     consultarBase(`DELETE FROM public.condiciones_comerciales_servicio WHERE servicio_id = '${servicio}';`);
+    borrarCronogramaDelServicio(servicio);
     consultarBase(`DELETE FROM public.servicios WHERE id = '${servicio}';`);
   }
 
@@ -1602,6 +1630,33 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
   }
   const [servicio, cliente, paciente, turno_guardia] = ajeno;
   const [[contratante]] = consultarBase(`SELECT contratante_persona_id FROM public.clientes WHERE id = '${cliente}';`);
+  const [[personaDelPaciente]] = consultarBase(`SELECT persona_id FROM public.pacientes WHERE id = '${paciente}';`);
+
+  // Un Asistente de otra zona que no trabaja en ningún otro Servicio de ella: lo ve sólo por el
+  // Servicio que se le va a pasar a la otra, o con una emergencia abierta.
+  const [lejano] = consultarBase(`
+    SELECT a.id, (da.asistente_id IS NULL) FROM public.asistentes a
+      LEFT JOIN public.domicilio_asistente da ON da.asistente_id = a.id
+     WHERE a.prestadora_id = '${d.prestadora}'
+       AND interno.coordinador_alcanza_asistente_de('${carla}', a.id) = false
+       AND NOT EXISTS (SELECT 1 FROM public.turnos_guardia g JOIN public.servicios s ON s.id = g.servicio_id
+                        WHERE g.asistente_id = a.id AND s.coordinador_id = '${carla}' AND s.id <> '${servicio}')
+       AND NOT EXISTS (SELECT 1 FROM public.series_turnos_guardia x JOIN public.servicios s ON s.id = x.servicio_id
+                        WHERE x.asistente_id = a.id AND s.coordinador_id = '${carla}' AND s.id <> '${servicio}')
+       AND (da.asistente_id IS NULL OR (da.lat IS NOT NULL AND da.lng IS NOT NULL))
+     ORDER BY a.id LIMIT 1;`);
+  if (!lejano) {
+    mal('la siembra trae un Asistente de otra zona que no trabaja con ella', 'no lo encontré');
+    return problemas;
+  }
+  const [asistenteLejano, lejanoSinDomicilio] = lejano;
+  const [[pacienteSinLugar]] = consultarBase(`SELECT lat IS NULL OR lng IS NULL FROM public.personas WHERE id = '${personaDelPaciente}';`);
+  const SEMBRADO = (n) => `40000000-0000-4000-8000-0000000000d${n}`;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const deSalud = (tabla) => ['rpc/leer_informacion_de_salud', {
+    p_tabla: tabla, p_origen: 'prueba de permisos', p_columnas: ['id'],
+    p_filtros: [{ columna: 'paciente_id', op: 'eq', valor: paciente }],
+  }];
 
   // La información de salud se lee por el registro de accesos, como la lee el backend: directo, la
   // base no la entrega.
@@ -1620,6 +1675,17 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
       p_filtros: [{ columna: 'paciente_id', op: 'eq', valor: paciente }],
     }],
     'la guardia': `turnos_guardia?id=eq.${turno_guardia}&select=id`,
+    'las alertas': deSalud('alertas'),
+    'la medicación': deSalud('indicaciones_medicacion'),
+    'los rangos de signos vitales': deSalud('rangos_referencia_vitales'),
+    'las personas autorizadas': `personas_autorizadas?cliente_id=eq.${cliente}&select=usuario_id`,
+    'la guardia que se repite': `series_turnos_guardia?id=eq.${SEMBRADO(5)}&select=id`,
+    'los datos del Paciente en Contactos': `personas?id=eq.${personaDelPaciente}&select=id`,
+    'la calificación de la guardia': `calificaciones_asistente?id=eq.${SEMBRADO(6)}&select=id`,
+    'el Asistente de la guardia, de otra zona': `asistentes?id=eq.${asistenteLejano}&select=id`,
+    'la distancia del Asistente al Paciente': ['rpc/distancias_de_asistentes_a_pacientes', {
+      p_asistentes: [asistenteLejano], p_pacientes: [paciente], p_fecha: hoy,
+    }],
   };
   const mirar = async (que, espera) => {
     for (const [nombre, ruta] of Object.entries(lecturas)) {
@@ -1650,10 +1716,47 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     return n;
   };
 
-  // Antes de pasarlo, lo ve: si no lo viera, el «no lo ve» de después no probaría nada.
-  await mirar('mientras lo coordina', true);
-
   try {
+    // Lo que cuelga del Servicio y del Paciente, sembrado para que cada «no lo ve» tenga algo que
+    // no ver. La guardia que se repite lleva al Asistente de otra zona, que es por donde ella lo
+    // conoce; la calificación es de la guardia ajena y de ese Asistente, así que sólo la alcanza
+    // por la guardia. Los domicilios con lugar en el mapa hacen falta para que haya distancia.
+    consultarBase(`SET session_replication_role = replica;
+      INSERT INTO public.alertas (id, prestadora_id, paciente_id, nivel, descripcion)
+        VALUES ('${SEMBRADO(1)}', '${d.prestadora}', '${paciente}', 'amarilla', 'prueba');
+      INSERT INTO public.indicaciones_medicacion (id, prestadora_id, paciente_id, cliente_id, medicamento, dosis,
+          frecuencia, fecha_desde, solicitado_por, via_administracion_id)
+        VALUES ('${SEMBRADO(2)}', '${d.prestadora}', '${paciente}', '${cliente}', 'Medicamento inventado', '1',
+          'cada 8 horas', current_date, '${carla}', (SELECT id FROM public.vias_administracion ORDER BY id LIMIT 1));
+      INSERT INTO public.rangos_referencia_vitales (id, prestadora_id, paciente_id, signo, valor_min, valor_max, unidad, fuente)
+        VALUES ('${SEMBRADO(3)}', '${d.prestadora}', '${paciente}', 'temperatura', 35, 37.5, '°C', 'prueba');
+      INSERT INTO public.personas_autorizadas (usuario_id, cliente_id, email, persona_id, prestadora_id)
+        VALUES ('${SEMBRADO(9)}', '${cliente}', 'autorizada.prueba@ejemplo.test', '${contratante}', '${d.prestadora}')
+        ON CONFLICT DO NOTHING;
+      INSERT INTO public.series_turnos_guardia (id, prestadora_id, asistente_id, paciente_id, dias_semana, hora_inicio,
+          hora_fin, modalidad, vigente_desde, servicio_id)
+        SELECT '${SEMBRADO(5)}', '${d.prestadora}', '${asistenteLejano}', '${paciente}', '{lunes}', '08:00', '12:00',
+               g.modalidad, current_date, '${servicio}' FROM public.turnos_guardia g WHERE g.id = '${turno_guardia}';
+      INSERT INTO public.series_turnos_guardia_pacientes (serie_id, paciente_id, prestadora_id)
+        VALUES ('${SEMBRADO(5)}', '${paciente}', '${d.prestadora}');
+      INSERT INTO public.calificaciones_asistente (id, asistente_id, paciente_id, cliente_id, turno_guardia_id, prestadora_id, estrellas)
+        VALUES ('${SEMBRADO(6)}', '${asistenteLejano}', '${paciente}', '${cliente}', '${turno_guardia}', '${d.prestadora}', 4);
+      ${lejanoSinDomicilio === 't' ? `INSERT INTO public.domicilio_asistente (asistente_id, prestadora_id, domicilio, lat, lng)
+        VALUES ('${asistenteLejano}', '${d.prestadora}', 'Calle inventada 123', -34.60, -58.40);` : ''}
+      ${pacienteSinLugar === 't' ? `UPDATE public.personas SET lat = -34.61, lng = -58.41 WHERE id = '${personaDelPaciente}';` : ''}`);
+
+    // No puede leer el domicilio del Asistente, aunque le llegue la distancia.
+    const domicilio = await cuenta(`domicilio_asistente?asistente_id=eq.${asistenteLejano}&select=asistente_id`);
+    if (domicilio === 0) bien('no lee el domicilio del Asistente de otra zona');
+    else mal('no lee el domicilio del Asistente de otra zona', `filas=${domicilio}`);
+    const distancia = await pedir(entorno, coordinadora, 'POST', ...lecturas['la distancia del Asistente al Paciente']);
+    const columnas = Object.keys(distancia.filas[0] ?? {}).sort().join(',');
+    if (columnas === 'asistente_id,metros' && distancia.filas[0].metros % 100 === 0) bien('la distancia llega redondeada y sin domicilio');
+    else mal('la distancia llega redondeada y sin domicilio', JSON.stringify(distancia.cuerpo));
+
+    // Antes de pasarlo, lo ve: si no lo viera, el «no lo ve» de después no probaría nada.
+    await mirar('mientras lo coordina', true);
+
     consultarBase(`INSERT INTO auth.users (id, instance_id, aud, role, email)
       VALUES ('${otro}', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'otra.coordinadora@ejemplo.test');`);
     consultarBase(`INSERT INTO public.usuarios (id, prestadora_id, rol, nombre)
@@ -1664,6 +1767,23 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
     const suyo = await cuenta(`servicios?id=eq.${propio[0]}&select=id`);
     if (suyo === 1) bien('sigue viendo su propio Servicio');
     else mal('sigue viendo su propio Servicio', `filas=${suyo}`);
+
+    // El Padrón: el Asistente de otra zona lo vuelve a ver sólo mientras haya una emergencia abierta
+    // en una guardia suya, y deja de verlo cuando se atiende.
+    const [[guardiaPropia, asistentePropio]] = consultarBase(`SELECT g.id, g.asistente_id FROM public.turnos_guardia g
+      WHERE g.servicio_id = '${propio[0]}' AND g.asistente_id IS NOT NULL ORDER BY g.id LIMIT 1;`);
+    const padron = lecturas['el Asistente de la guardia, de otra zona'];
+    consultarBase(`SET session_replication_role = replica;
+      INSERT INTO public.emergencias_turno_guardia (id, prestadora_id, turno_guardia_id, reportado_por, detalle)
+        VALUES ('${SEMBRADO(7)}', '${d.prestadora}', '${guardiaPropia}', '${asistentePropio}', 'prueba');`);
+    const conEmergencia = await cuenta(padron);
+    if (conEmergencia === 1) bien('con una emergencia abierta ve al Asistente de otra zona');
+    else mal('con una emergencia abierta ve al Asistente de otra zona', `filas=${conEmergencia}`);
+    consultarBase(`UPDATE public.emergencias_turno_guardia SET atendida_at = now() WHERE id = '${SEMBRADO(7)}';`);
+    const atendida = await cuenta(padron);
+    if (atendida === 0) bien('con la emergencia atendida deja de verlo');
+    else mal('con la emergencia atendida deja de verlo', `filas=${atendida}`);
+    consultarBase(`DELETE FROM public.emergencias_turno_guardia WHERE id = '${SEMBRADO(7)}';`);
 
     // No puede tomar una alarma de un turno de guardia que no ve, que sería otra puerta para verla.
     const intento = await pedir(entorno, coordinadora, 'POST', 'alarmas_tomadas', {
@@ -1770,7 +1890,52 @@ async function probarCadaCoordinadorVeSoloLoSuyo(entorno, d) {
       DELETE FROM storage.objects WHERE name LIKE '${d.prestadora}/%prueba-coordinador%';
       DELETE FROM public.ausencias WHERE usuario_id = '${otro}';
       DELETE FROM public.usuarios WHERE id = '${otro}';
-      DELETE FROM auth.users WHERE id = '${otro}';`);
+      DELETE FROM auth.users WHERE id = '${otro}';
+      DELETE FROM public.emergencias_turno_guardia WHERE id = '${SEMBRADO(7)}';
+      DELETE FROM public.calificaciones_asistente WHERE id = '${SEMBRADO(6)}';
+      DELETE FROM public.series_turnos_guardia_pacientes WHERE serie_id = '${SEMBRADO(5)}';
+      DELETE FROM public.series_turnos_guardia WHERE id = '${SEMBRADO(5)}';
+      DELETE FROM public.personas_autorizadas WHERE usuario_id = '${SEMBRADO(9)}';
+      DELETE FROM public.rangos_referencia_vitales WHERE id = '${SEMBRADO(3)}';
+      DELETE FROM public.indicaciones_medicacion WHERE id = '${SEMBRADO(2)}';
+      DELETE FROM public.alertas WHERE id = '${SEMBRADO(1)}';
+      ${lejanoSinDomicilio === 't' ? `DELETE FROM public.domicilio_asistente WHERE asistente_id = '${asistenteLejano}';` : ''}
+      ${pacienteSinLugar === 't' ? `UPDATE public.personas SET lat = NULL, lng = NULL WHERE id = '${personaDelPaciente}';` : ''}`);
+  }
+
+  // Del lado del Asistente: la base le contesta sólo sus períodos pagados, con las fechas y sin
+  // importes. Se siembran uno pagado de él, uno pendiente de él y uno pagado de otro Asistente, así
+  // que una función que contestara de más, o nada, falla.
+  const [[ana]] = consultarBase(`SELECT a.id FROM public.asistentes a JOIN public.usuarios u ON u.id = a.usuario_id
+     WHERE u.email = '${ASISTENTE}' AND a.prestadora_id = '${d.prestadora}' LIMIT 1;`);
+  const [[ajenoPagado]] = consultarBase(`SELECT id FROM public.asistentes
+     WHERE prestadora_id = '${d.prestadora}' AND id <> '${ana}' ORDER BY id LIMIT 1;`);
+  const liquidacion = (n, asistente, estado, desde) => `INSERT INTO public.liquidaciones_asistente (id, prestadora_id,
+      asistente_id, periodo, periodo_desde, periodo_hasta, relacion_laboral, base_unidad, base_valor, bruto, neto,
+      moneda, estado, fecha_pago)
+    SELECT '${SEMBRADO(n)}', '${d.prestadora}', '${asistente}', '${desde}', '${desde}', ('${desde}'::date + 14),
+      'Monotributo', 'valor_hora', 1, 1, 1, 'ARS', '${estado}', ${estado === 'pagada' ? `'${desde}'::date + 20` : 'NULL'}
+      FROM public.asistentes a WHERE a.id = '${asistente}';`;
+  try {
+    consultarBase(`SET session_replication_role = replica;
+      ${liquidacion(8, ana, 'pagada', '2001-01-01')}
+      ${liquidacion('a', ana, 'pendiente', '2001-02-01')}
+      ${liquidacion('b', ajenoPagado, 'pagada', '2001-03-01')}`);
+    const [[sembradas]] = consultarBase(`SELECT count(*) FROM public.liquidaciones_asistente
+      WHERE id IN ('${SEMBRADO(8)}', '${SEMBRADO('a')}', '${SEMBRADO('b')}');`);
+    const delAsistente = await entrar(entorno.base, entorno.llavePublica, ASISTENTE, d.prestadora);
+    const pagados = await pedir(entorno, delAsistente, 'POST', 'rpc/periodos_pagados_de_la_sesion', {});
+    const sembrados = (pagados.filas ?? []).filter((f) => String(f.desde).startsWith('2001-'));
+    if (Number(sembradas) === 3 && sembrados.length === 1 && sembrados[0].desde === '2001-01-01'
+      && Object.keys(sembrados[0]).sort().join(',') === 'desde,hasta') {
+      bien('el Asistente recibe sólo su período pagado, con las fechas y sin importes');
+    } else {
+      mal('el Asistente recibe sólo su período pagado, con las fechas y sin importes',
+        `sembradas=${sembradas} ${JSON.stringify(pagados.cuerpo)}`);
+    }
+  } finally {
+    consultarBase(`DELETE FROM public.liquidaciones_asistente
+      WHERE id IN ('${SEMBRADO(8)}', '${SEMBRADO('a')}', '${SEMBRADO('b')}');`);
   }
 
   return problemas;

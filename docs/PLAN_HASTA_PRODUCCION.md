@@ -118,34 +118,6 @@ de una Prestadora no lee nada de otra.
      Asistente se admite. Es información de salud: no viaja al Panel, la base contesta sólo si la
      Asistente alcanza o no.
 
-**28.** **Lo que ve cada uno se recorta a lo que necesita para trabajar**, y se cumple en la base y
-en el backend, que hoy filtra sólo por Prestadora.
-
-La base ya recorta a la Coordinadora a sus Servicios
-(`interno.coordina_el_servicio`, `supabase/schemas/careonys.sql:1206`): los Servicios
-que coordina y los de quien cubre por ausencia; los Clientes que los contratan y sus Pacientes, con
-su información de salud, medicación, alertas, rangos vitales y personas autorizadas; y los turnos
-de guardia, sueltos y recurrentes, de esos Servicios con todo lo que cuelga de ellas. Una alarma tomada le deja ver esa
-guardia. El equipo del Servicio muestra como Coordinador a quien lo coordina. Las tomas
-de alarma y las reasignaciones por emergencia se leen sólo de lo que ve; WhatsApp, por zona del
-Asistente; y los archivos de prescripciones, documento firmado y autorizaciones de monitoreo, sólo de
-los Pacientes que ve. De Contactos lee las que tienen un rol en sus Clientes y
-Pacientes, salvo que tenga el permiso de editar personas. De cada Asistente recibe la distancia al
-Paciente, redondeada a cien metros, y nunca el domicilio
-(`distancias_de_asistentes_a_pacientes`); del Padrón lee los Asistentes de su zona y los de sus
-Servicios, y todos sólo mientras tiene una emergencia abierta
-(`coordinador_lee_asistentes_de_sus_servicios`); y las calificaciones, sólo de esos mismos
-Asistentes o de las guardias que ve (`interno.personal_ve_la_calificacion`). Lo prueba
-`scripts/probar_altas_con_sesion.mjs`. Al Asistente, las guardias pasadas que ya se le pagaron
-dejan de llegarle; las que todavía no se le pagaron le siguen llegando con el Paciente, el
-domicilio donde prestó el servicio, la fecha y el horario, porque tiene derecho a saber qué
-guardias todavía no cobró. La obra social y el número de afiliado del Paciente le llegan sólo entre
-la llegada y la salida, y sólo si el Cliente firmó la Autorización al Asistente; se muestran debajo
-de los contactos de emergencia.
-
-Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
-lo suyo y nada de la otra, salvo durante una emergencia abierta, extendida a lo que falta.
-
 **29.** Agregar el tipo «Servicio» a Ajustes › Importación, que hoy no está entre los tipos que se
 pueden importar. Va después de que el acto exista: importar un Servicio sin coordinador asignado
 sería dar de alta algo que el producto no habilita.

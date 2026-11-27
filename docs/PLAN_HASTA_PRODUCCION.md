@@ -1763,5 +1763,29 @@ los temas marcados «No existe», que no tienen pantalla en el Panel, o construi
 
 Los pasos ya comenzados de este tema están al principio, en la sección «Los pasos comenzados».
 
+**166.** Probar las importaciones con todos los casos imaginables, con el sistema entero terminado y
+con datos inventados. La regla que se prueba es una sola: **ninguna información de la importación
+se pierde ni se descarta, y el Administrador de cada Prestadora accede a toda la de la suya, y a
+la de ninguna otra.** Cada caso termina contando la información que entró contra la del archivo:
+si no cierra, la prueba falla. Los casos, para Asistentes, Clientes, Servicios en curso y
+historias clínicas:
+
+- Planilla de una hoja, de varias hojas, con hojas vacías, con títulos en otro renglón que el
+  primero y con celdas combinadas.
+- Texto separado por comas, por punto y coma o por tabulaciones, en distintas codificaciones, con
+  acentos y eñes, con comas, paréntesis, punto y coma y saltos de línea dentro de una celda.
+- Copia de los datos de una base, con una tabla y con varias, con comillas, paréntesis, punto y
+  coma y valores vacíos dentro de los textos.
+- Archivo de otro sistema que lee la IA, corto y largo, para comprobar que se lee entero.
+- PDF, documento de Word, foto, escaneo y texto pegado, con y sin el documento del Paciente en el
+  nombre del archivo.
+- Columnas que el sistema no prevé, columnas repetidas y columnas en otro idioma.
+- Fechas en las dos formas, día primero y mes primero, y números con punto y con coma decimal.
+- Renglones sin el documento de la persona, con un documento que no existe, repetidos dentro del
+  mismo archivo y de personas que ya estaban cargadas.
+- Guardias ya cumplidas, facturas viejas e internaciones anteriores.
+- Medicación con y sin receta, y con y sin la firma de la familia.
+- Un archivo cortado a la mitad, un archivo vacío y un archivo que no es lo que dice su nombre.
+- Dos Prestadoras importando a la vez: ninguna ve nada de la otra.
 
 **135.** Correr las pruebas y publicar.

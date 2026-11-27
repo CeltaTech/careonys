@@ -51,7 +51,7 @@ export function HojaDeImportacion({
             <label htmlFor={`clase-hoja-${hoja.indice}`}>{textos.clase_de_hoja}</label>
             <select id={`clase-hoja-${hoja.indice}`} value={clase ?? ''} onChange={(e) => onClase(e.target.value)}>
               {clasesDeHoja.map((una) => (
-                <option key={una} value={una}>{textos.clases_hoja[una] ?? textos.clases_hoja.otro}</option>
+                <option key={una} value={una}>{t.importacion.clases_hoja[una] ?? textos.clases_hoja.otro}</option>
               ))}
             </select>
           </div>

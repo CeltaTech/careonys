@@ -63,9 +63,11 @@ for (const m of migraciones.matchAll(/INSERT INTO "?storage"?\."?buckets"?\s*\([
   for (const fila of m[1].matchAll(/\(\s*'([^']+)'/g)) depositos.add(fila[1]);
 }
 
-// Las políticas de `storage.objects` pueden estar en el esquema declarado o en una migración.
+// Las políticas de `storage.objects` pueden estar en el esquema declarado o en una migración. El
+// nombre de la política puede ir entre comillas o sin ellas, y `ON` puede ir en el renglón
+// siguiente: así se escriben a mano.
 const politicasDeArchivos = [...`${esquema}\n${migraciones}`.matchAll(
-  /CREATE POLICY "[^"]+" ON "?storage"?\."?objects"?[\s\S]*?;\n/g,
+  /CREATE POLICY (?:"[^"]+"|[a-z_][a-z0-9_]*)\s+ON "?storage"?\."?objects"?[\s\S]*?;\n/g,
 )].map((m) => m[0]);
 
 for (const deposito of [...depositos].sort()) {

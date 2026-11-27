@@ -56,7 +56,7 @@ export function BloqueDeAntecedentes({ sujeto, id, titulo }) {
             {antecedentesOrdenados(antecedentes).map((antecedente) => (
               <tr key={antecedente.id}>
                 <td>{fechaLegible(antecedente.fecha, locale)}</td>
-                <td>{textos.clases[antecedente.clase] ?? textos.clases.otro}</td>
+                <td>{t.antecedentes.clases[antecedente.clase] ?? textos.clases.otro}</td>
                 <td>{antecedente.etiqueta || '—'}</td>
                 <td>{valorDelAntecedente(antecedente) || '—'}</td>
                 <td>

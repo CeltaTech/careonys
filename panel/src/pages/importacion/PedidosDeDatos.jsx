@@ -103,8 +103,8 @@ function EncabezadoDelPedido({ pedido }) {
   const codigo = String(pedido.motivo ?? '');
   // Lo encontrado en un documento trae como motivo qué se encontró —una indicación de
   // medicación, unos valores normales—, que tiene su propia frase.
-  const delHallazgo = pedido.dato === 'hallazgo' && Object.hasOwn(textos.hallazgos ?? {}, codigo)
-    ? textos.hallazgos[codigo]
+  const delHallazgo = pedido.dato === 'hallazgo' && Object.hasOwn(t.importacion.pedidos.hallazgos ?? {}, codigo)
+    ? t.importacion.pedidos.hallazgos[codigo]
     : '';
   const frase = delHallazgo || (codigo
     ? mensajeDeModalidad(codigo, t.modalidades) ?? mensajeDeError({ motivo: codigo.split(':')[0] }, t, 'pedido de dato')

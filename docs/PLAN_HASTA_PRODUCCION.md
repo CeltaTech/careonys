@@ -130,6 +130,16 @@ mano no existe para ninguno. Falta decidir cómo se llaman, en pantalla, la carg
 sección, cuyo título habla sólo de archivos. Cierre: cada cosa que se migra entra por las dos
 formas, por el mismo lote y la misma revisión.
 
+En la importación nada queda afuera y nada se inventa. De cada renglón entra cada dato que no es
+dudoso. El dato que falta o que es dudoso la IA lo busca primero en la misma planilla; si no lo
+encuentra con certeza, se lo pide a la Prestadora en pantalla apenas termina la importación, la
+ayuda a completarlo y mantiene el pedido abierto hasta que se completa. La Prestadora conoce a sus
+Clientes y los datos de ellos: ella contesta, y ni la IA ni el sistema completan un dato con el
+más probable. Hoy un renglón con un dato dudoso no entra y vuelve en una planilla de renglones no
+cargados: esa planilla deja de existir. Cierre: después de una importación no queda ningún renglón
+afuera, cada dato que faltaba lo pidió la IA y lo contestó la Prestadora, y ningún dato guardado
+salió de una suposición.
+
 Un Servicio que ya estaba en curso entra completo: con sus guardias y con los Asistentes asignados
 a cada una. **Los Clientes heredados que tienen un Servicio en curso se tratan aparte y primero.**
 Existen desde que entran y se opera con ellos desde el primer momento. La Prestadora no puede

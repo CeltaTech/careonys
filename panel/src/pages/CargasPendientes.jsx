@@ -46,6 +46,7 @@ function valorDelCampo(t, campo, valor) {
   if (valor === null || valor === undefined || valor === '') {
     return campo === 'fecha_fin' ? t.domicilios_temporales.sin_fecha_fin : '—';
   }
+  if (campo === 'nivel_complejidad') return t.clientes.niveles_complejidad[valor] ?? String(valor);
   return String(valor);
 }
 

@@ -274,6 +274,7 @@ export const T = {
       aceptada: 'Turno de guardia aceptado.',
       ver_el_turno_guardia: 'Ver turno de guardia',
       nivel_complejidad: 'Nivel de complejidad',
+      niveles_complejidad: { I: 'Independiente', II: 'Semidependiente', III: 'Dependiente' },
       distancia: 'A {distancia}',
       tareas: 'Tareas',
       // La línea de arriba de la tarjeta de un turno de guardia fijo y la de un reemplazo.
@@ -977,6 +978,7 @@ export const T = {
       aceptada: 'Guard shift accepted.',
       ver_el_turno_guardia: 'View guard shift',
       nivel_complejidad: 'Complexity level',
+      niveles_complejidad: { I: 'Independent', II: 'Semi-dependent', III: 'Dependent' },
       distancia: '{distancia} away',
       tareas: 'Tasks',
       turno_guardia_fijo: '{dias}, {inicio} to {fin}',
@@ -1627,6 +1629,7 @@ export const T = {
       aceptada: 'Turno de plantão aceito.',
       ver_el_turno_guardia: 'Ver turno de plantão',
       nivel_complejidad: 'Nível de complexidade',
+      niveles_complejidad: { I: 'Independente', II: 'Semidependente', III: 'Dependente' },
       distancia: 'A {distancia}',
       tareas: 'Tarefas',
       turno_guardia_fijo: '{dias}, das {inicio} às {fin}',

@@ -89,8 +89,7 @@ y si se aplica solo o con revisión previa. Los ajustes con revisión previa apa
 De paso quedó corregido un defecto: al cubrir un turno de guardia, si la base rechazaba al
 sustituto, quedaba guardada una cobertura sin turno. Ahora esa cobertura se borra.
 
-No se hizo el nivel de complejidad, que espera la pregunta 82. Tampoco el valor del Legajo por
-mes, que espera que se decida cómo se liquida un mes.
+No se hizo el valor del Legajo por mes, que espera que se decida cómo se liquida un mes.
 
 **Paso 25, el nombre «turno de guardia».** Todo lo guardado que es un turno de guardia ya se llama
 turno de guardia, nunca «turno» a secas ni «guardia»: las tablas, las columnas, las funciones, las

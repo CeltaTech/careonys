@@ -99,7 +99,7 @@ function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, loc
       {barrios.length > 0 && <div className="tarjeta-detalle">{barrios.join(' · ')}</div>}
       {niveles.length > 0 && (
         <div className="tarjeta-detalle">
-          {t.asignaciones.nivel_complejidad}: {niveles.join(' · ')}
+          {t.asignaciones.nivel_complejidad}: {niveles.map((n) => t.asignaciones.niveles_complejidad[n] ?? n).join(' · ')}
         </div>
       )}
       {distancia && <div className="tarjeta-detalle">{con(t.asignaciones.distancia, { distancia })}</div>}

@@ -273,7 +273,7 @@ export function ClienteDetalle() {
                     <tr key={p.id}>
                       <td><b>{p.nombre}</b></td>
                       <td>{p.fecha_nacimiento || '—'}</td>
-                      <td>{p.nivel_complejidad || '—'}</td>
+                      <td>{t.clientes.niveles_complejidad[p.nivel_complejidad] || '—'}</td>
                       <td>{p.domicilio || '—'}</td>
                       <td>
                         {puedeEditarPaciente && (

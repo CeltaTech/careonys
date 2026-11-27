@@ -110,14 +110,6 @@ de una Prestadora no lee nada de otra.
 
 ### El acto de armar un Servicio
 
-**27.** Terminar el acto de armar un Servicio. Lo demás del acto ya está construido.
-
-1. **El nivel de complejidad entra en el cálculo de candidatas.**
-   - **Hoy:** se carga y se edita, y nadie lo mira.
-   - **Espera la pregunta 82**, que dice qué significa cada nivel y si condiciona qué tipo de
-     Asistente se admite. Es información de salud: no viaja al Panel, la base contesta sólo si la
-     Asistente alcanza o no.
-
 **29.** Migrar las historias clínicas de una Prestadora que ya trabajaba. Los Clientes, los
 Asistentes y los Servicios en curso ya se migran por planilla o cargados uno por uno, en el mismo
 lote y con la misma revisión; las historias clínicas todavía no tienen ninguna de las dos formas.
@@ -887,8 +879,12 @@ títulos:
   una (sección «El Paciente nunca queda solo»), y el aviso del turno sin cubrir no puede ser
   de ésas: usted fijó que no puede haber un turno sin cubrir que nadie vea.
 - **La sugerencia de Asistentes ya mira el lugar, las tareas, la Especialidad, los antecedentes y
-  el valor acordado**, y aparece al asignar un turno de guardia. Le falta el nivel de complejidad,
-  que espera la pregunta 82.
+  el valor acordado**, y aparece al asignar un turno de guardia.
+- **El nivel de complejidad describe al Paciente y no entra en la sugerencia.** Sigue la
+  Resolución 374/2002 del Ministerio de Salud: I independiente, II semidependiente, III
+  dependiente, y así se muestra. Al Asistente no le exige nada por sí solo: qué tipo de Asistente
+  hace cada cosa lo deciden las tareas del Servicio, porque un mismo Paciente puede tener cuidadora
+  todo el día y enfermería en una visita corta.
 - **Un coordinador de sólo lectura no puede ser el asignado.** Más abajo se pregunta cómo entra un
   Pagador que sólo consulta, y una de las salidas propuestas es un Coordinador de sólo lectura.
   Quien tiene el Servicio asignado arma el equipo: si esa salida se elige, tiene que decir que ese
@@ -1381,10 +1377,6 @@ Y algo que hoy está mal pensado y se corrige acá: **a qué número se llama.**
 ---
 
 ## Configuración que todavía está escrita en el código
-
-**82. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
-
-**83.** Que el cálculo de candidatos lo use.
 
 **88. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
 

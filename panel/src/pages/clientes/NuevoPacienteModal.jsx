@@ -72,9 +72,9 @@ export function NuevoPacienteModal({ clienteId, onClose, onCreado }) {
           />
           <FormField label={t.clientes.nivel_complejidad} name="nivel_complejidad" type="select" value={nivelComplejidad} onChange={(e) => setNivelComplejidad(e.target.value)}>
             <option value="">{t.comun.todos}</option>
-            <option value="I">I</option>
-            <option value="II">II</option>
-            <option value="III">III</option>
+            <option value="I">{t.clientes.niveles_complejidad.I}</option>
+            <option value="II">{t.clientes.niveles_complejidad.II}</option>
+            <option value="III">{t.clientes.niveles_complejidad.III}</option>
           </FormField>
 
           <div className="panel-modal-acciones">

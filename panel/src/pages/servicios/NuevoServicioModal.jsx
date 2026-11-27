@@ -27,8 +27,11 @@ const ORDEN_DE_LOS_CASILLEROS = ['cliente', 'contratante', 'paciente', 'etiqueta
    Un Servicio es de un Cliente. Se elige uno que ya existe, o se crea el Cliente junto con el
    Servicio a partir de dos personas de Contactos: quien contrata y quien recibe el
    cuidado. Si alguna de las dos todavía no existe, se carga ahí mismo con el alta de
-   Contactos, que es la única que da de alta a una persona. */
-export function NuevoServicioModal({ onClose, onCreado }) {
+   Contactos, que es la única que da de alta a una persona.
+
+   Con `importacionId` es la carga uno por uno de la importación: el Cliente nace siempre junto
+   con el Servicio, entra en ese lote y pasa por su revisión. */
+export function NuevoServicioModal({ onClose, onCreado, importacionId = null }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
@@ -39,7 +42,7 @@ export function NuevoServicioModal({ onClose, onCreado }) {
 
   const [clientes, setClientes] = useState([]);
   const [estadoClientes, setEstadoClientes] = useState('cargando');
-  const [cliente, setCliente] = useState('');
+  const [cliente, setCliente] = useState(importacionId ? CLIENTE_NUEVO : '');
   const [contratante, setContratante] = useState(null);
   const [paciente, setPaciente] = useState(null);
   const [etiqueta, setEtiqueta] = useState('');
@@ -126,6 +129,7 @@ export function NuevoServicioModal({ onClose, onCreado }) {
           etiqueta: etiqueta.trim(),
           vigenteDesde: vigenteDesde || null,
           vigenteHasta: vigenteHasta || null,
+          ...(importacionId ? { importacionId } : {}),
         }),
       });
       const resultado = await respuesta.json();
@@ -169,24 +173,26 @@ export function NuevoServicioModal({ onClose, onCreado }) {
           {error && <Alert variant="error">{error}</Alert>}
 
           <form onSubmit={handleSubmit} noValidate>
-            <FormField
-              label={t.servicios.nuevo.cliente}
-              name="cliente"
-              type="select"
-              required
-              value={cliente}
-              onChange={(e) => setCliente(e.target.value)}
-              disabled={guardando || estadoClientes !== 'listo'}
-              error={avisoDe('cliente')}
-            >
-              <option value="">
-                {estadoClientes === 'cargando' ? t.personas.selector_cargando : t.personas.selector_sin_elegir}
-              </option>
-              <option value={CLIENTE_NUEVO}>{t.servicios.nuevo.cliente_nuevo}</option>
-              {clientes.map((uno) => (
-                <option key={uno.id} value={uno.id}>{uno.nombre}</option>
-              ))}
-            </FormField>
+            {!importacionId && (
+              <FormField
+                label={t.servicios.nuevo.cliente}
+                name="cliente"
+                type="select"
+                required
+                value={cliente}
+                onChange={(e) => setCliente(e.target.value)}
+                disabled={guardando || estadoClientes !== 'listo'}
+                error={avisoDe('cliente')}
+              >
+                <option value="">
+                  {estadoClientes === 'cargando' ? t.personas.selector_cargando : t.personas.selector_sin_elegir}
+                </option>
+                <option value={CLIENTE_NUEVO}>{t.servicios.nuevo.cliente_nuevo}</option>
+                {clientes.map((uno) => (
+                  <option key={uno.id} value={uno.id}>{uno.nombre}</option>
+                ))}
+              </FormField>
+            )}
 
             {esNuevo && selectorConAlta('contratante', contratante, setContratante)}
             {esNuevo && selectorConAlta('paciente', paciente, setPaciente)}

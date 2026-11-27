@@ -652,7 +652,7 @@ export async function crearClienteImportado({
   nombreContacto, apellidoContacto, documentoContacto, dniContacto, generoContacto, telefono, email,
   nombrePaciente, documentoPaciente, dniPaciente, generoPaciente, domicilioPaciente, domicilioDelPacientePartido,
   fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente, servicio,
-  prestadoraId, importacionId, db,
+  prestadoraId, importacionId, pendienteConformidad = Boolean(importacionId), db,
 }) {
   if (!nombreContacto || !apellidoContacto || !email || !nombrePaciente) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, apellidoContacto, email, nombrePaciente)');
@@ -712,7 +712,11 @@ export async function crearClienteImportado({
   const yaEstaba = await clienteQueYaEstaba(db, {
     prestadoraId, contratanteId: persona.id, pacientePersonaId: fichaDelPaciente.id,
   });
-  if (yaEstaba) return { yaEstaba: true, numeroCliente: yaEstaba.numero_cliente };
+  if (yaEstaba) {
+    return {
+      yaEstaba: true, clienteId: yaEstaba.id, pacienteId: yaEstaba.pacienteId, numeroCliente: yaEstaba.numero_cliente,
+    };
+  }
 
   // Igual que en el alta de Asistente: la cuenta es la persona y la Ficha del cliente es lo suyo en
   // esta Prestadora. La misma persona puede ser Cliente en otra sin volver a darse de alta.
@@ -730,7 +734,7 @@ export async function crearClienteImportado({
         contratante_persona_id: persona.id,
         prestadora_id: prestadoraId,
         importacion_id: importacionId || null,
-        pendiente_conformidad: Boolean(importacionId),
+        pendiente_conformidad: Boolean(importacionId) && pendienteConformidad,
       })
       .select('id, numero_cliente')
       .single();
@@ -744,7 +748,7 @@ export async function crearClienteImportado({
         persona_id: fichaDelPaciente.id,
         prestadora_id: prestadoraId,
         importacion_id: importacionId || null,
-        pendiente_conformidad: Boolean(importacionId),
+        pendiente_conformidad: Boolean(importacionId) && pendienteConformidad,
       })
       .select('id')
       .single();
@@ -841,8 +845,13 @@ export function periodoDelServicio({ vigenteDesde, vigenteHasta } = {}) {
 //
 // Si esa persona ya contrata en esta Prestadora para ese mismo Paciente, el Cliente ya existe y no
 // se crea otro: se lo elige de la lista.
+//
+// Cuando se carga uno por uno dentro de un lote de importación, `importacionId` es ese lote: el
+// Cliente y su Paciente quedan marcados con él y esperan la misma revisión que los importados. La
+// ruta comprueba antes que el lote esté abierto y sea de esta Prestadora.
 export async function crearClienteConServicio(db, {
   prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
+  importacionId,
 }) {
   if (!prestadoraId || !contratantePersonaId || !pacientePersonaId || !String(etiqueta ?? '').trim()) {
     throw new ErrorConMotivo('faltan_datos');
@@ -889,7 +898,13 @@ export async function crearClienteConServicio(db, {
 
     const { data: clienteNuevo, error: errorCliente } = await db
       .from('clientes')
-      .insert({ usuario_id: cuentaId, contratante_persona_id: contratantePersonaId, prestadora_id: prestadoraId })
+      .insert({
+        usuario_id: cuentaId,
+        contratante_persona_id: contratantePersonaId,
+        prestadora_id: prestadoraId,
+        importacion_id: importacionId || null,
+        pendiente_conformidad: Boolean(importacionId),
+      })
       .select('id, numero_cliente')
       .single();
     if (errorCliente) throw new Error(errorCliente.message);
@@ -897,7 +912,13 @@ export async function crearClienteConServicio(db, {
 
     const { error: errorPaciente } = await db
       .from('pacientes')
-      .insert({ cliente_id: clienteId, persona_id: pacientePersonaId, prestadora_id: prestadoraId });
+      .insert({
+        cliente_id: clienteId,
+        persona_id: pacientePersonaId,
+        prestadora_id: prestadoraId,
+        importacion_id: importacionId || null,
+        pendiente_conformidad: Boolean(importacionId),
+      });
     if (errorPaciente) throw new Error(errorPaciente.message);
 
     const servicioId = await crearServicioDelCliente(db, {
@@ -1147,7 +1168,7 @@ async function completarFicha(db, { prestadoraId, personaId, datos }) {
 async function clienteQueYaEstaba(db, { prestadoraId, contratanteId, pacientePersonaId }) {
   const { data: pacientes, error: errorPacientes } = await db
     .from('pacientes')
-    .select('cliente_id')
+    .select('id, cliente_id')
     .eq('prestadora_id', prestadoraId)
     .eq('persona_id', pacientePersonaId);
   if (errorPacientes) throw new Error(errorPacientes.message);
@@ -1163,7 +1184,10 @@ async function clienteQueYaEstaba(db, { prestadoraId, contratanteId, pacientePer
     .limit(1)
     .maybeSingle();
   if (errorCliente) throw new Error(errorCliente.message);
-  return cliente ?? null;
+  if (!cliente) return null;
+  // El Paciente de ese Cliente, para quien tenga que colgarle una Prestación.
+  const delPaciente = pacientes.find((fila) => fila.cliente_id === cliente.id);
+  return { ...cliente, pacienteId: delPaciente?.id ?? null };
 }
 
 // Un teléfono más en los datos de la persona, salvo que ya lo tenga escrito igual.

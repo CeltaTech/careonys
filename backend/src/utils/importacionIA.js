@@ -28,6 +28,7 @@ const PARTES_DEL_DOMICILIO = ['Calle', 'Numero', 'Piso', 'Unidad', 'Localidad', 
 export const CAMPOS_DOMICILIO = {
   asistente: 'domicilio',
   cliente: 'domicilioPaciente',
+  servicio: 'domicilioPaciente',
 };
 
 export const CAMPOS_IMPORTACION = {
@@ -45,15 +46,33 @@ export const CAMPOS_IMPORTACION = {
     'fechaNacimientoPaciente', 'nivelComplejidadPaciente', 'patologiasPaciente',
     'servicio',
   ],
+  // Un Servicio que ya está en curso: cada renglón es un turno de guardia semanal fijo. Quien
+  // contrata y el Paciente, con los mismos campos que un Cliente; el tipo de servicio y la
+  // modalidad, como figuran en la lista de precios; el Coordinador, por su nombre, su correo o su
+  // nombre de usuario; los días y el horario, escritos de cualquier forma; y el Asistente, sólo por
+  // su CUIL. Al Asistente nunca se lo busca por el nombre.
+  servicio: [
+    'nombreContacto', 'apellidoContacto', 'documentoContacto', 'dniContacto', 'generoContacto',
+    'telefono', 'email',
+    'nombrePaciente', 'documentoPaciente', 'dniPaciente', 'generoPaciente',
+    'domicilioPaciente', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilioPaciente${parte}`),
+    'fechaNacimientoPaciente', 'nivelComplejidadPaciente', 'patologiasPaciente',
+    'tipoServicio', 'modalidad', 'coordinador', 'dias', 'horario', 'cuilAsistente', 'vigenteDesde',
+  ],
 };
 
-// Los campos sin los cuales una fila no se carga. Si la planilla no trae la columna, el archivo de
-// no cargados la suma vacía, para que se complete ahí y se vuelva a importar.
+// Los campos que la pantalla marca como obligatorios al revisar qué columna es cuál. Un renglón al que
+// le falta uno no queda afuera: entra con lo demás y queda un pedido de dato para la Prestadora.
 export const CAMPOS_OBLIGATORIOS = {
   asistente: ['documento', 'dni', 'genero'],
   cliente: [
     'documentoContacto', 'dniContacto', 'generoContacto',
     'documentoPaciente', 'dniPaciente', 'generoPaciente',
+  ],
+  servicio: [
+    'documentoContacto', 'dniContacto', 'generoContacto',
+    'documentoPaciente', 'dniPaciente', 'generoPaciente',
+    'tipoServicio', 'modalidad', 'dias', 'horario',
   ],
 };
 
@@ -82,6 +101,7 @@ export function domicilioDesdeFila(fila, mapeo, tipo) {
 export const CAMPOS_LISTA = {
   asistente: new Set(['dondeAceptaTrabajar']),
   cliente: new Set(['patologiasPaciente']),
+  servicio: new Set(['patologiasPaciente']),
 };
 
 export function valorDesdeFila(fila, mapeo, campo, esLista) {
@@ -98,7 +118,7 @@ export function valorDesdeFila(fila, mapeo, campo, esLista) {
  * La fecha de una celda, en la forma que guarda la base.
  *
  * La celda vacía no trae fecha. La que trae algo que no es una fecha del calendario es un dato mal
- * cargado: la fila vuelve con ese motivo en el archivo de no cargados, y la fecha nunca se adivina.
+ * cargado: la fila vuelve con ese motivo, y la fecha nunca se adivina.
  */
 export function fechaDeLaCelda(valor) {
   const fecha = fechaDeArchivo(valor);
@@ -230,11 +250,18 @@ ${muestraTexto}`;
 
 const SYSTEM_PROMPT = `Este asistente ayuda a mapear columnas de una planilla (Excel/CSV)
 subida por una Prestadora de cuidado domiciliario a los campos internos del sistema ${IDENTIDAD.nombre},
-para importar Asistentes o Clientes/Pacientes en forma masiva. Cada Prestadora
+para importar Asistentes, Clientes/Pacientes o Servicios en curso en forma masiva. Cada Prestadora
 nombra sus columnas distinto (puede venir en español, con abreviaturas, en otro orden, con
 columnas de más que no aplican). La tarea es proponer, para cada columna del archivo, a qué
 campo interno corresponde (o null si no aplica a ninguno), y marcar advertencias sobre datos
 que parezcan faltantes, ambiguos o de formato dudoso mirando las filas de muestra.
+
+En una importación de Servicios en curso (tipo "servicio") cada fila es un turno de guardia semanal
+fijo: quien contrata y el Paciente, el tipo de servicio y la modalidad como figuran en la lista de
+precios ("tipoServicio", "modalidad"), el Coordinador ("coordinador"), los días de la semana
+("dias"), el horario ("horario") y el CUIL del Asistente ("cuilAsistente"). Una columna con el
+nombre del Asistente no se mapea a ningún campo: al Asistente se lo identifica sólo por su CUIL.
+Si los días y el horario vienen juntos en una sola columna, esa columna va a "dias".
 
 ${TRATO_IA}
 Alcanza a "advertencias", que se muestran en pantalla a quien subió la planilla.

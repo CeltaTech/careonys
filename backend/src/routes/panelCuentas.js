@@ -4,7 +4,8 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora, TRABAJO_DE_LA_IMPORTACION } from '../db/connection.js';
+import { exigirLoteAbierto } from '../utils/loteManual.js';
 import {
   crearCuentaConPerfil,
   crearAsistenteDirecto,
@@ -265,18 +266,25 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_asistentes'), exigirConfiguracionInicial, async (req, res) => {
-  const { nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, valor_hora, horas_semanales, modalidades, rige_desde } = req.body;
+  const { nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, valor_hora, horas_semanales, modalidades, rige_desde, importacionId } = req.body;
   try {
     // Con el trabajo de la Prestadora, porque el permiso se le puede dar a quien coordina, y
     // `asistentes` y `remuneraciones_asistente` sólo aceptan altas de la administración. La
     // Prestadora es la de la sesión, que `exigirOrganizacionActiva` ya comprobó.
     const prestadoraId = req.usuarioPanel.prestadoraId;
+    // Cargado uno por uno dentro de un lote de importación: el lote tiene que ser de esta
+    // Prestadora, de Asistentes y estar todavía sin revisar.
+    if (importacionId) {
+      await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, (dbLote) =>
+        exigirLoteAbierto(dbLote, { prestadoraId, importacionId, tipo: 'asistente' }));
+    }
     const { asistenteId } = await enLaPrestadora(prestadoraId, 'alta de Asistente', (dbTrabajo) =>
       crearAsistenteDirecto({
         nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
         valor_hora, horas_semanales, modalidades, rige_desde,
         prestadoraId,
         usuarioPanelId: req.usuarioPanel.id,
+        importacionId: importacionId || null,
         db: dbTrabajo,
       }));
     res.json({ ok: true, asistenteId });
@@ -451,7 +459,7 @@ async function servicioDelPedido(req) {
 panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('gestionar_servicios'), exigirConfiguracionInicial, async (req, res) => {
   try {
     const {
-      clienteId, contratantePersonaId, pacientePersonaId, etiqueta, vigenteDesde, vigenteHasta,
+      clienteId, contratantePersonaId, pacientePersonaId, etiqueta, vigenteDesde, vigenteHasta, importacionId,
     } = req.body ?? {};
     if (!String(etiqueta ?? '').trim()) throw new ErrorConMotivo('faltan_datos');
     periodoDelServicio({ vigenteDesde, vigenteHasta });
@@ -482,9 +490,16 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
 
     const prestadoraId = req.usuarioPanel?.prestadoraId;
     if (!prestadoraId || !contratantePersonaId || !pacientePersonaId) throw new ErrorConMotivo('faltan_datos');
+    // Cargado uno por uno dentro de un lote de importación: el lote tiene que ser de esta
+    // Prestadora, de Clientes y estar todavía sin revisar.
+    if (importacionId) {
+      await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, (dbLote) =>
+        exigirLoteAbierto(dbLote, { prestadoraId, importacionId, tipo: 'cliente' }));
+    }
     const alta = await enLaPrestadora(prestadoraId, 'alta de Cliente con Servicio', (db) =>
       crearClienteConServicio(db, {
         prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
+        importacionId: importacionId || null,
       }));
     res.json({ ok: true, servicioId: alta.servicioId, clienteId: alta.clienteId });
   } catch (error) {

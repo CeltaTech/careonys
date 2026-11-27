@@ -3,25 +3,23 @@ import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido, enLaPrestadora, TRABAJO_DE_LA_IMPORTACION } from '../db/connection.js';
 import { negarSinPermiso, requierePermiso, tienePermiso } from '../utils/permisos.js';
-import { anotarExportacion } from '../utils/registroDeActividad.js';
 import {
-  crearAsistenteDirecto, crearClienteImportado,
   activarVerificacionAltaAsistente, revertirAsistenteImportado, revertirClienteImportada,
 } from '../utils/cuentasPanel.js';
 import {
   parsearArchivo, intentarParsearSQL, evaluarViabilidadIA, proponerMapeoIA,
   CAMPOS_IMPORTACION, CAMPOS_OBLIGATORIOS, CAMPOS_LISTA, CAMPOS_DOMICILIO, valorDesdeFila, domicilioDesdeFila,
-  reescritorDeLocalidades, lectorDeGeneros, fechaDeLaCelda, fechaDelValorHora,
 } from '../utils/importacionIA.js';
-import { resolverGeneros } from '../utils/generosDeLaImportacion.js';
-import { catalogoDeLugares, paisDeLaPrestadora, agregarLugar } from '../utils/catalogoDeLugares.js';
-import { obtenerGeocodificador } from '../geocodificacion/index.js';
-import { resolverLocalidades } from '../utils/localidadesDeLaImportacion.js';
+import { contextoDeLaImportacion, leerLocalidades } from '../utils/contextoDeLaImportacion.js';
+import {
+  altaConPedidos, quienDelRenglon, listarPedidos, contarAbiertos, cerrarPedidosDelLote, responderPedido,
+} from '../utils/pedidosDeImportacion.js';
+import { agruparRenglones, procesarGrupo, continuarGrupo, responderDeServicio } from '../utils/servicioImportado.js';
+import { abrirLoteManual, anotarLote, esIdentificador, TIPOS_DE_CARGA_MANUAL } from '../utils/loteManual.js';
 import { proponerConfiguracionInicial } from '../utils/propuestaConfiguracionInicial.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { exigirConfiguracionInicial } from '../utils/configuracionInicial.js';
 import { FICHA_DOMICILIO, conSusFichas } from '../utils/fichaDelPaciente.js';
-import { informeDeFilasNoCargadas } from '../utils/informeDeFilasNoCargadas.js';
 import {
   CAMPOS_DE_LA_LISTA_DE_PRECIOS, errorDeLaBase, esLoteDePersonas, fechaDelDia, mapeoPropuestoDeLaLista, renglonesDeLaLista,
 } from '../utils/actualizacionDePrecios.js';
@@ -116,7 +114,7 @@ async function analizarPlanillaSubida({ tipo, archivo, prestadoraId }) {
 }
 
 function tipoValido(tipo) {
-  return ['asistente', 'cliente'].includes(tipo);
+  return ['asistente', 'cliente', 'servicio'].includes(tipo);
 }
 
 // Sube un archivo (Excel/CSV), lo interpreta y devuelve un mapeo propuesto por IA para que
@@ -204,47 +202,71 @@ panelImportacionRouter.post(
   }
 );
 
-// Confirma la importación: recorre cada fila del archivo (ya con el mapeo corregido por el
-// Admin_prestadora) y reutiliza exactamente crearAsistenteDirecto/crearClienteImportado — el
-// mismo camino de creación que el alta manual de la Fase 1 (ver alcance de la Fase 3: "no se
-// construye un camino de creación de datos paralelo"). Un error en una fila no aborta el
-// resto del lote; se acumula en el resumen y queda en el registro de auditoría.
+// El texto del domicilio tal como vino en la planilla, para mostrarle a la Prestadora qué decía.
+function domicilioComoVino(domicilio) {
+  if (!domicilio) return null;
+  return domicilio.renglon
+    ?? ([domicilio.calle, domicilio.numero, domicilio.localidad, domicilio.partido, domicilio.provincia]
+      .filter(Boolean).join(', ') || null);
+}
+
+// Los datos de un renglón, listos para crear a la persona. No llevan la conexión ni la Prestadora:
+// si el renglón queda esperando un dato se guarda entero en el pedido, y eso lo agrega el alta.
+function datosDelRenglon({ tipo, fila, mapeo, camposDelDomicilio, lectura }) {
+  const datos = {};
+  for (const campo of CAMPOS_IMPORTACION[tipo]) {
+    if (camposDelDomicilio.has(campo)) continue;
+    datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA[tipo].has(campo));
+  }
+  // La localidad dudosa no deja afuera a la persona: entra con la calle, y la localidad se pide.
+  const partes = lectura.partes ?? lectura.domicilioQueEntra ?? null;
+  if (tipo === 'asistente') {
+    datos.domicilioPartido = partes;
+    datos.lugares = lectura.lugares ?? [];
+  } else {
+    datos.domicilioDelPacientePartido = partes;
+    datos.domicilioPaciente = valorDesdeFila(fila, mapeo, 'domicilioPaciente', false);
+  }
+  return datos;
+}
+
+// Confirma la importación: recorre cada fila del archivo, ya con el mapeo corregido por la
+// Prestadora, y crea con el mismo camino que el alta a mano. En una importación nada queda afuera:
+// el dato que falta o es dudoso queda como pedido de dato abierto, que la Prestadora contesta en
+// pantalla apenas termina, y lo que esperaba ese dato se completa al contestarlo.
 //
-// Las filas creadas acá quedan con `pendiente_conformidad=true` (ocultas por la política
-// RESTRICTIVE de RLS) hasta que la Prestadora revise el resultado real y lo conforme o lo
-// rechace vía /conformar o /rechazar — un filtro de conformidad que dejara pasar los datos
-// antes de obtenerla no cumpliría ninguna función.
+// Los Asistentes y Clientes creados acá quedan con `pendiente_conformidad=true` (ocultos por la
+// política RESTRICTIVE de RLS) hasta que la Prestadora revise el resultado real y lo conforme o lo
+// rechace vía /conformar o /rechazar. El lote de Servicios en curso es la excepción: son personas
+// que ya se están atendiendo, y entran visibles, con el lote confirmado y sin rechazo.
 panelImportacionRouter.post(
   '/confirmar',
   requiereRolPanel,
   requierePermiso('importar_datos_masivos'),
-  // Ni Asistentes ni Clientes entran por planilla mientras la Prestadora no completó su
-  // configuración inicial: es el mismo candado que el alta a mano.
+  // Nadie entra por planilla mientras la Prestadora no completó su configuración inicial: es el
+  // mismo candado que el alta a mano.
   exigirConfiguracionInicial,
   async (req, res) => {
     const { tipo, filas, mapeo, archivoNombre } = req.body;
-    if (!['asistente', 'cliente'].includes(tipo) || !Array.isArray(filas) || !mapeo) {
+    if (!tipoValido(tipo) || !Array.isArray(filas) || !mapeo) {
       return res.status(400).json({ error: 'Datos de importación incompletos' });
     }
 
     const prestadoraId = req.usuarioPanel.prestadoraId;
+    const usuarioPanelId = req.usuarioPanel.id;
 
     await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, async (db) => {
-      const { data: lote, error: errorLote } = await db
-        .from('importaciones_prestadora')
-        .insert({
-          prestadora_id: prestadoraId,
-          usuario_id: req.usuarioPanel.id,
-          tipo,
-          archivo_nombre: archivoNombre || null,
-          filas_totales: filas.length,
-        })
-        .select()
-        .single();
-      if (errorLote) {
+      let lote;
+      try {
+        lote = { id: await anotarLote(db, { prestadoraId, usuarioPanelId, tipo, archivoNombre, filasTotales: filas.length }) };
+      } catch (errorLote) {
+        console.error('Importación, anotación del lote:', errorLote.message);
         return res.status(500).json({ error: 'No se pudo registrar el lote de importación' });
       }
 
+      const ctx = await contextoDeLaImportacion({
+        db, prestadoraId, importacionId: lote.id, usuarioPanelId, conexionDeQuienPide: clienteDelPedido(req),
+      });
       const errores = [];
       // Las filas cuya persona ya estaba en Contactos: no se cargó de nuevo, se usó la que
       // había. Viaja sólo el documento y el número de cliente, que la pantalla arma en una frase.
@@ -255,35 +277,16 @@ panelImportacionRouter.post(
       let creadas = 0;
 
       // Las localidades se resuelven antes de crear a nadie y todas juntas, para consultar el
-      // servicio de direcciones por tandas y no fila por fila. Lo que no se reconoce sin duda vuelve
-      // con su motivo en el archivo de no cargados: nadie elige a ojo cuál de dos localidades era.
+      // servicio de direcciones por tandas y no fila por fila. Lo que no se reconoce sin duda queda
+      // como pedido de dato con las opciones: nadie elige a ojo cuál de dos localidades era.
+      const domicilios = filas.map((fila) => domicilioDesdeFila(fila, mapeo, tipo));
+      const trabajos = filas.map((fila) => (tipo === 'asistente' ? valorDesdeFila(fila, mapeo, 'dondeAceptaTrabajar', true) : []));
       let localidades;
       try {
-        const [{ lugares, zonas }, pais] = await Promise.all([
-          catalogoDeLugares(db, prestadoraId),
-          paisDeLaPrestadora(db, prestadoraId),
-        ]);
-        localidades = await resolverLocalidades({
-          filas: filas.map((fila) => ({
-            domicilio: domicilioDesdeFila(fila, mapeo, tipo),
-            lugaresDeTrabajo: tipo === 'asistente' ? valorDesdeFila(fila, mapeo, 'dondeAceptaTrabajar', true) : [],
-          })),
-          lugares,
-          zonas,
-          herramientas: obtenerGeocodificador(pais),
-          proponer: reescritorDeLocalidades({ pais, prestadoraId }),
-          agregar: (lugar) => agregarLugar(db, {
-            prestadoraId,
-            pais,
-            nombre: lugar.nombre,
-            provincia: lugar.provincia,
-            municipio: lugar.municipio ?? lugar.departamento,
-            idOficial: lugar.idOficial,
-            localidadCensal: lugar.localidadCensal,
-            lat: lugar.lat,
-            lng: lugar.lng,
-          }),
-        });
+        localidades = await leerLocalidades(db, prestadoraId, filas.map((_, i) => ({
+          domicilio: domicilios[i],
+          lugaresDeTrabajo: trabajos[i],
+        })));
       } catch (error) {
         console.error(`Importación ${lote.id}, localidades:`, error?.message ?? error);
         localidades = filas.map(() => ({ partes: null, lugares: [], motivo: { codigo: 'falla_del_sistema' } }));
@@ -295,81 +298,91 @@ panelImportacionRouter.post(
       camposDelDomicilio.add('dondeAceptaTrabajar');
 
       // El género mal escrito se corrige antes de crear a nadie y todo junto: cada forma distinta una
-      // sola vez. Lo que no se resuelve con certeza queda como estaba y vuelve con su motivo.
+      // sola vez. Lo que no se resuelve con certeza queda como estaba y vuelve como pedido de dato.
       const camposDeGenero = tipo === 'asistente' ? ['genero'] : ['generoContacto', 'generoPaciente'];
-      const generos = await resolverGeneros({
-        valores: filas.flatMap((fila) => camposDeGenero.map((campo) => valorDesdeFila(fila, mapeo, campo, false))),
-        proponer: lectorDeGeneros({ prestadoraId }),
-      });
-      const conGeneroLeido = (datos) => {
+      const generos = await ctx.leerGeneros(
+        filas.flatMap((fila) => camposDeGenero.map((campo) => valorDesdeFila(fila, mapeo, campo, false))),
+      );
+
+      const renglones = filas.map((fila, i) => {
+        const lectura = localidades[i];
+        const datos = datosDelRenglon({ tipo, fila, mapeo, camposDelDomicilio, lectura });
         for (const campo of camposDeGenero) {
           const leido = generos.get(String(datos[campo] ?? ''));
           if (leido) datos[campo] = leido;
         }
-        return datos;
+        const localidad = {
+          motivo: lectura.motivo ?? null,
+          domicilioQueEntra: lectura.domicilioQueEntra ?? null,
+          trabajoNoReconocido: lectura.trabajoNoReconocido ?? null,
+          valorOriginal: domicilioComoVino(domicilios[i]),
+          valorTrabajo: trabajos[i]?.length ? trabajos[i].join(', ') : null,
+        };
+        return { fila: i + 1, datos, localidad };
+      });
+
+      // Un error que no tiene pedido —una falla de este lado— no corta el lote: queda con su fila y
+      // su motivo, que la pantalla traduce. El texto crudo va sólo al registro del servidor, porque
+      // este arreglo viaja al navegador y se guarda en `importaciones_prestadora.errores`.
+      const anotarFalla = (filasAfectadas, error) => {
+        console.error(`Importación ${lote.id}, fila ${filasAfectadas[0]}:`, error?.message ?? error);
+        for (const fila of filasAfectadas) errores.push({ fila, motivo: error?.motivo ?? 'falla_del_sistema' });
+      };
+      const anotarResultado = (resultado, renglon, cuantas) => {
+        if (resultado.estado === 'yaEstaba') {
+          yaEstaban.push({ fila: renglon.fila, numeroCliente: resultado.alta?.numeroCliente });
+          return;
+        }
+        if (resultado.estado !== 'creada') return;
+        creadas += cuantas;
+        if (resultado.alta?.fichaQueYaExistia) {
+          vinculadas.push({
+            fila: renglon.fila,
+            documento: String(renglon.datos.documentoContacto ?? '').replace(/[\s.-]/g, ''),
+            numeroCliente: resultado.alta.numeroCliente,
+          });
+        }
       };
 
-      for (let i = 0; i < filas.length; i += 1) {
-        const fila = filas[i];
-        const { partes, lugares: lugaresDeTrabajo, motivo } = localidades[i];
-        if (motivo) {
-          errores.push({ fila: i + 1, motivo: motivo.codigo, opciones: motivo.opciones, hayMas: motivo.hayMas });
-          continue;
-        }
-        try {
-          if (tipo === 'asistente') {
-            const datos = { prestadoraId, usuarioPanelId: req.usuarioPanel.id, importacionId: lote.id, db: db };
-            for (const campo of CAMPOS_IMPORTACION.asistente) {
-              if (camposDelDomicilio.has(campo)) continue;
-              datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.asistente.has(campo));
-            }
-            datos.domicilioPartido = partes;
-            datos.lugares = lugaresDeTrabajo;
-            datos.rige_desde = fechaDelValorHora(datos);
-            delete datos.valor_hora_rige_desde;
-            await crearAsistenteDirecto(conGeneroLeido(datos));
-          } else {
-            const datos = { prestadoraId, importacionId: lote.id, db: db };
-            for (const campo of CAMPOS_IMPORTACION.cliente) {
-              if (camposDelDomicilio.has(campo)) continue;
-              datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.cliente.has(campo));
-            }
-            datos.domicilioDelPacientePartido = partes;
-            datos.domicilioPaciente = valorDesdeFila(fila, mapeo, 'domicilioPaciente', false);
-            datos.fechaNacimientoPaciente = fechaDeLaCelda(datos.fechaNacimientoPaciente);
-            const alta = await crearClienteImportado(conGeneroLeido(datos));
-            if (alta.yaEstaba) {
-              yaEstaban.push({ fila: i + 1, numeroCliente: alta.numeroCliente });
-              continue;
-            }
-            if (alta.fichaQueYaExistia) {
-              vinculadas.push({
-                fila: i + 1,
-                documento: String(datos.documentoContacto ?? '').replace(/[\s.-]/g, ''),
-                numeroCliente: alta.numeroCliente,
-              });
-            }
+      if (tipo === 'servicio') {
+        // Varios renglones del mismo Cliente con el mismo Paciente son un solo Servicio, con una
+        // guardia por renglón.
+        for (const grupo of agruparRenglones(renglones)) {
+          const filasDelGrupo = grupo.guardias.map((g) => g.fila);
+          try {
+            anotarResultado(await procesarGrupo(ctx, grupo), grupo, filasDelGrupo.length);
+          } catch (error) {
+            anotarFalla(filasDelGrupo, error);
           }
-          creadas += 1;
-        } catch (error) {
-          // Acá no sirve `responderError`: esto es un renglón de un lote, y contestar cortaría la
-          // importación en la primera fila que falla, que es justo lo que no se quiere. Pero el
-          // texto crudo tampoco puede salir: este arreglo viaja al navegador en la respuesta de
-          // `/confirmar` y además se guarda en `importaciones_prestadora.errores`, así que un
-          // mensaje de Postgres quedaría escrito en la base y a la vista (`celtatech/CLAUDE.md`
-          // §6). Afuera va el motivo, que la pantalla traduce; el detalle, al registro.
-          console.error(`Importación ${lote.id}, fila ${i + 1}:`, error?.message ?? error);
-          errores.push({ fila: i + 1, motivo: error?.motivo ?? 'falla_del_sistema' });
+        }
+      } else {
+        for (const renglon of renglones) {
+          try {
+            const resultado = await altaConPedidos(ctx, {
+              tipo, ...renglon, quien: quienDelRenglon(tipo, renglon.datos),
+            });
+            anotarResultado(resultado, renglon, 1);
+          } catch (error) {
+            anotarFalla([renglon.fila], error);
+          }
         }
       }
 
       // El lote se cierra nombrando la Organización, no sólo con su identificador: una escritura
-      // que sólo dice el número de la fila alcanza a cualquier Prestadora.
-      await db
+      // que sólo dice el número de la fila alcanza a cualquier Prestadora. El de Servicios en curso
+      // queda además confirmado: no espera revisión.
+      const cierre = { filas_creadas: creadas, filas_error: errores.length, errores };
+      if (tipo === 'servicio') {
+        Object.assign(cierre, {
+          estado_conformidad: 'confirmada', revisada_en: new Date().toISOString(), revisada_por: usuarioPanelId,
+        });
+      }
+      const { error: errorCierre } = await db
         .from('importaciones_prestadora')
-        .update({ filas_creadas: creadas, filas_error: errores.length, errores })
+        .update(cierre)
         .eq('id', lote.id)
         .eq('prestadora_id', prestadoraId);
+      if (errorCierre) console.error(`Importación ${lote.id}, cierre del lote:`, errorCierre.message);
 
       res.json({
         ok: true,
@@ -380,39 +393,80 @@ panelImportacionRouter.post(
         errores,
         vinculadas,
         yaEstaban,
+        pedidosAbiertos: await contarAbiertos(db, { prestadoraId, importacionId: lote.id }),
       });
     });
   }
 );
 
-// Las filas que no se cargaron, de vuelta en un archivo para completarlas y volver a importarlas.
-// El nombre viaja en el encabezado, y se deja leer desde la pantalla, porque la extensión la decide
-// `informeDeFilasNoCargadas`.
-panelImportacionRouter.post(
-  '/filas-no-cargadas',
+// Los pedidos de dato abiertos de la Prestadora, o sólo los de un lote. Los ve quien puede
+// importar, igual que la revisión del lote.
+panelImportacionRouter.get(
+  '/pedidos',
   requiereRolPanel,
   requierePermiso('importar_datos_masivos'),
-  anotarExportacion(),
-  (req, res) => {
-    const { archivoNombre, encabezados, filas } = req.body ?? {};
-    if (!Array.isArray(encabezados) || !encabezados.length || !Array.isArray(filas) || !filas.length) {
-      return res.status(400).json({ error: 'Faltan las filas del informe' });
+  async (req, res) => {
+    const { importacionId } = req.query;
+    if (importacionId !== undefined && !esIdentificador(importacionId)) {
+      return responderError(res, new ErrorConMotivo('dato_invalido'), 400);
     }
-    // Las listas se aceptan sólo sobre columnas del informe y con opciones cortas: Excel no admite
-    // más de 255 caracteres en una lista escrita adentro de la planilla.
-    const listas = Object.fromEntries(
-      Object.entries(req.body.listas && typeof req.body.listas === 'object' ? req.body.listas : {})
-        .filter(([columna, opciones]) => encabezados.includes(columna)
-          && Array.isArray(opciones)
-          && opciones.every((opcion) => typeof opcion === 'string' && opcion && !opcion.includes(','))
-          && opciones.join(',').length <= 255),
-    );
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+    try {
+      const pedidos = await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, (db) =>
+        listarPedidos(db, { prestadoraId, importacionId: importacionId ?? null }));
+      res.json({ pedidos });
+    } catch (error) {
+      responderError(res, error);
+    }
+  }
+);
 
-    const { contenido, tipo, nombre } = informeDeFilasNoCargadas({ archivoNombre, encabezados, filas, listas });
-    res.set('Content-Type', tipo);
-    res.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(nombre)}`);
-    res.set('Access-Control-Expose-Headers', 'Content-Disposition');
-    res.send(contenido);
+// Contesta un pedido de dato: aplica la respuesta y completa lo que esperaba —crea la persona, la
+// serie de turnos de guardia, asigna al Asistente—. Si la respuesta no sirve, el pedido queda
+// abierto y vuelve el motivo.
+panelImportacionRouter.post(
+  '/pedidos/:id/responder',
+  requiereRolPanel,
+  requierePermiso('importar_datos_masivos'),
+  async (req, res) => {
+    if (!esIdentificador(req.params.id)) {
+      return responderError(res, new ErrorConMotivo('pedido_inexistente'));
+    }
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+    try {
+      const resultado = await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, async (db) => {
+        const ctx = await contextoDeLaImportacion({
+          db, prestadoraId, usuarioPanelId: req.usuarioPanel.id, conexionDeQuienPide: clienteDelPedido(req),
+        });
+        return responderPedido(ctx, req.params.id, req.body?.valor, { responderDeServicio, continuarGrupo });
+      });
+      res.json(resultado);
+    } catch (error) {
+      responderError(res, error, error instanceof ErrorConMotivo ? 400 : 500);
+    }
+  }
+);
+
+// Abre el lote de la carga uno por uno, o devuelve el que la persona abrió hoy y todavía no se
+// revisó. Lo cargado con los formularios de alta entra ahí y pasa por la misma revisión.
+panelImportacionRouter.post(
+  '/lote-manual',
+  requiereRolPanel,
+  requierePermiso('importar_datos_masivos'),
+  exigirConfiguracionInicial,
+  async (req, res) => {
+    const { tipo } = req.body ?? {};
+    if (!TIPOS_DE_CARGA_MANUAL.includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo de importación inválido' });
+    }
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+    try {
+      const importacionId = await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, (db) =>
+        abrirLoteManual(db, { prestadoraId, usuarioPanelId: req.usuarioPanel.id, tipo }));
+      res.json({ importacionId });
+    } catch (error) {
+      responderError(res, error);
+    }
   }
 );
 
@@ -435,8 +489,9 @@ panelImportacionRouter.get(
         return res.status(404).json({ error: 'Lote de importación no encontrado' });
       }
       // El lote de una lista de precios trae precios en sus renglones dudosos: sólo lo abre quien
-      // tiene la facturación del Cliente. La pregunta va con la sesión de quien pide.
-      if (!esLoteDePersonas(lote) && !(await tienePermiso({ db: clienteDelPedido(req), accion: ACCION_FACTURACION }))) {
+      // tiene la facturación del Cliente. La pregunta va con la sesión de quien pide. El de Servicios
+      // en curso no trae precios: lo abre quien puede importar.
+      if (!esLoteDePersonas(lote) && lote.tipo !== 'servicio' && !(await tienePermiso({ db: clienteDelPedido(req), accion: ACCION_FACTURACION }))) {
         return negarSinPermiso(res);
       }
 
@@ -510,6 +565,18 @@ panelImportacionRouter.post(
         return res.status(500).json({ error: 'No se pudo conformar el lote' });
       }
 
+      // Cada Cliente del lote entró con su Paciente, también pendiente: se conforman juntos.
+      if (tabla === 'clientes') {
+        const { error: errorPacientes } = await db
+          .from('pacientes')
+          .update({ pendiente_conformidad: false })
+          .eq('importacion_id', lote.id)
+          .eq('prestadora_id', prestadoraId);
+        if (errorPacientes) {
+          return res.status(500).json({ error: 'No se pudo conformar el lote' });
+        }
+      }
+
       if (lote.tipo === 'asistente') {
         for (const fila of filas) {
           try {
@@ -579,6 +646,9 @@ panelImportacionRouter.post(
           : await revertirClienteImportada(db, fila.id, prestadoraId);
         if (limpia) revertidas += 1;
       }
+
+      // Lo que el lote todavía esperaba ya no se va a cargar: sus pedidos de dato se cierran.
+      await cerrarPedidosDelLote(db, { prestadoraId, importacionId: lote.id, usuarioPanelId: req.usuarioPanel.id });
 
       await db
         .from('importaciones_prestadora')
@@ -666,14 +736,16 @@ panelImportacionRouter.post(
     let loteId = null;
     try {
       loteId = await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, async (db) => {
-        const { data: lote, error: errorLote } = await db
+        const id = await anotarLote(db, {
+          prestadoraId,
+          usuarioPanelId: req.usuarioPanel.id,
+          tipo: 'lista_precios',
+          archivoNombre,
+          filasTotales: renglones.length,
+        });
+        const { error: errorResultado } = await db
           .from('importaciones_prestadora')
-          .insert({
-            prestadora_id: prestadoraId,
-            usuario_id: req.usuarioPanel.id,
-            tipo: 'lista_precios',
-            archivo_nombre: archivoNombre || null,
-            filas_totales: renglones.length,
+          .update({
             filas_creadas: (resultado?.agregados ?? 0) + (resultado?.cambiados ?? 0),
             filas_error: dudosos.length,
             errores: dudosos,
@@ -681,10 +753,10 @@ panelImportacionRouter.post(
             revisada_en: new Date().toISOString(),
             revisada_por: req.usuarioPanel.id,
           })
-          .select('id')
-          .single();
-        if (errorLote) throw errorLote;
-        return lote.id;
+          .eq('id', id)
+          .eq('prestadora_id', prestadoraId);
+        if (errorResultado) throw errorResultado;
+        return id;
       });
     } catch (errorLote) {
       // Los precios ya entraron: lo que falló es la anotación del lote, y eso no se le cobra a

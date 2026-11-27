@@ -396,14 +396,16 @@ describe('una fila que ya entró', () => {
   beforeEach(() => {
     enContactos[CUIL] = PERSONA_QUE_YA_ESTABA;
     enContactos[CUIL_DEL_PACIENTE] = PERSONA_DEL_PACIENTE;
-    respuestas.set('GET /rest/v1/pacientes', () => [{ cliente_id: CLIENTE_QUE_YA_ESTABA }]);
+    respuestas.set('GET /rest/v1/pacientes', () => [{ id: 'paciente-que-ya-estaba', cliente_id: CLIENTE_QUE_YA_ESTABA }]);
     respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE_QUE_YA_ESTABA, numero_cliente: 3 }]);
   });
 
   it('no crea ni cuenta, ni Ficha del cliente, ni Paciente, y dice en qué Ficha del cliente está', async () => {
     const alta = await darDeAlta();
 
-    assert.deepEqual(alta, { yaEstaba: true, numeroCliente: 3 });
+    assert.deepEqual(alta, {
+      yaEstaba: true, clienteId: CLIENTE_QUE_YA_ESTABA, pacienteId: 'paciente-que-ya-estaba', numeroCliente: 3,
+    });
     assert.equal(seLlamo('POST /rest/v1/rpc/dar_de_alta_la_cuenta'), false);
     assert.equal(loEscritoEn('clientes'), undefined);
     assert.equal(loEscritoEn('pacientes'), undefined);

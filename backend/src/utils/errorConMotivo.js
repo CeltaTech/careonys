@@ -282,6 +282,15 @@ const ESTADO_POR_MOTIVO = {
   // 409: el pedido está bien armado y choca con los datos de esa persona, y se arregla completándole
   // el documento en Contactos.
   la_persona_no_tiene_documento: 409,
+  // Los pedidos de dato de una importación. El que no existe y el que es de otra Prestadora
+  // contestan lo mismo. El que ya se contestó es 409: el pedido está bien armado y choca con el
+  // estado de las cosas. La respuesta que no sirve para ese dato —una localidad que no es de la
+  // Prestadora, un coordinador que no es coordinador, un horario sin hora— es 400. Y cargar uno
+  // por uno en un lote que ya se revisó, o que es de otra Prestadora, es 409.
+  pedido_inexistente: 404,
+  pedido_ya_resuelto: 409,
+  respuesta_invalida: 400,
+  lote_no_abierto: 409,
 };
 
 // Los motivos que la base levanta en cualquier tabla, sin importar qué ruta escribió. Llegan como el

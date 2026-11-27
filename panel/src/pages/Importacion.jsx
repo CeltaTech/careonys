@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { usePermisos } from '../context/PermisosContext';
+import { useAuth } from '../context/AuthContext';
 import { usePuestaEnMarchaAlDia } from '../context/PuestaEnMarchaContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
@@ -11,10 +12,11 @@ import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { con } from '../lib/textos';
 import { numeroConGuiones } from '../lib/documentoDeIdentidad';
 import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
+import { esAdminOSuperior } from '../lib/roles';
 import { useModalAccesible } from '../hooks/useModalAccesible';
-import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
-import { useGeneros } from '../hooks/useGeneros';
-import { bajarArchivo } from '../lib/exportarCsv';
+import { NuevoAsistenteModal } from './asistentes/NuevoAsistenteModal';
+import { NuevoServicioModal } from './servicios/NuevoServicioModal';
+import { PedidosDeDatos } from './importacion/PedidosDeDatos';
 import '../styles/molde-paginas.css';
 import './importacion.css';
 
@@ -34,6 +36,9 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
+// Qué se puede importar. Cada clase tiene su resumen y su lista de renglones no cargados.
+const TIPOS = ['asistente', 'cliente', 'servicio'];
+
 // Qué dice una fila del archivo en el campo que se le pide, con el mapeo ya revisado. Es la misma
 // lectura que hace el backend (`valorDesdeFila`), para nombrar a la persona que no se cargó.
 function valorDeLaFila(fila, mapeo, campo) {
@@ -52,11 +57,18 @@ function nombreDeLaFila(fila, mapeo, tipo) {
 
 export function Importacion() {
   const modal = useModalAccesible(() => setConfirmandoRechazo(false));
+  const modalCarga = useModalAccesible(() => setEligiendoCarga(false));
   const { t, locale } = useLocale();
+  const { usuario } = useAuth();
   const { puede, cargado } = usePermisos();
   // Sin la configuración inicial completa no se importa gente: los botones se ven, apagados.
   const { cargaDeGenteBloqueada } = usePuestaEnMarchaAlDia();
-  const { generos } = useGeneros(usePrestadoraActual());
+  // La carga uno por uno usa los formularios de alta, con el mismo permiso que en sus pantallas.
+  const esAdmin = esAdminOSuperior(usuario?.rol);
+  const tiposUnoPorUno = [
+    ...(esAdmin || puede('gestionar_asistentes') ? ['asistente'] : []),
+    ...(esAdmin || puede('gestionar_servicios') ? ['cliente'] : []),
+  ];
 
   const [tipo, setTipo] = useState('asistente');
   const [archivo, setArchivo] = useState(null);
@@ -70,7 +82,11 @@ export function Importacion() {
   const [revision, setRevision] = useState(null);
   const [revisionFinal, setRevisionFinal] = useState(null);
   const [confirmandoRechazo, setConfirmandoRechazo] = useState(false);
-  const [descargando, setDescargando] = useState(false);
+  // La carga uno por uno: la ventana de elegir qué se carga, el lote abierto y su formulario.
+  const [eligiendoCarga, setEligiendoCarga] = useState(false);
+  const [abriendoLote, setAbriendoLote] = useState(false);
+  const [loteManual, setLoteManual] = useState(null);
+  const [formularioManual, setFormularioManual] = useState(false);
 
   // Si se llegó desde la guía de primeros pasos, la planilla ya fue leída allá: se arranca en
   // el paso de revisar el mapeo, sin volver a pedir el archivo ni a preguntarle a la IA por el
@@ -159,89 +175,49 @@ export function Importacion() {
     return con(frase, { opciones: e.hayMas ? `${opciones}…` : opciones });
   }
 
-  const noCargados = tipo === 'asistente' ? 'asistente' : 'cliente';
+  const noCargados = TIPOS.includes(tipo) ? tipo : 'cliente';
 
-  // Las filas que no se cargaron vuelven en el mismo formato que el archivo original, y además en
-  // Excel moderno si el original era otro, con sus columnas tal cual y una más con el motivo, para
-  // completarlas y volver a importarlas.
-  async function handleDescargarNoCargadas() {
-    setDescargando(true);
-    setError(null);
-    try {
-      // Cada dato obligatorio que la planilla no traía vuelve como columna vacía, para completarlo.
-      const columnaMotivo = t.importacion.col_motivo;
-      const mapeados = Object.values(mapeo);
-      const columnasQueFaltan = (analisis.camposObligatorios ?? [])
-        .filter((campo) => !mapeados.includes(campo))
-        .map((campo) => t.importacion[`campo_${campo}`]);
-      const encabezados = [...analisis.headers, ...columnasQueFaltan, columnaMotivo];
-      const filas = resultado.errores.map((e) => ({
-        ...analisis.filas[e.fila - 1],
-        ...Object.fromEntries(columnasQueFaltan.map((columna) => [columna, ''])),
-        [columnaMotivo]: motivoDe(e),
-      }));
-      // La columna del género vuelve con la lista de los aceptados, para elegir y no escribir.
-      const columnaDe = (campo) => Object.keys(mapeo).find((columna) => mapeo[columna] === campo)
-        ?? t.importacion[`campo_${campo}`];
-      const opcionesDeGenero = generos.map((uno) => t.generos[uno.codigo] ?? uno.codigo);
-      const listas = opcionesDeGenero.length
-        ? Object.fromEntries(
-          ['genero', 'generoContacto', 'generoPaciente']
-            .map(columnaDe)
-            .filter((columna) => columna && encabezados.includes(columna))
-            .map((columna) => [columna, opcionesDeGenero]),
-        )
-        : {};
-
-      const { data } = await supabase.auth.getSession();
-      async function pedir(archivoNombre) {
-        const respuesta = await fetch(`${API_URL}/api/panel/importacion/filas-no-cargadas`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${data.session?.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ archivoNombre, encabezados, filas, listas }),
-        });
-        if (!respuesta.ok) {
-          throw errorDeLaRespuesta(respuesta, await respuesta.json().catch(() => ({})));
-        }
-        // El formato lo decide el backend, y la extensión llega en el nombre que manda.
-        const nombre = decodeURIComponent(
-          respuesta.headers.get('Content-Disposition')?.match(/filename\*=UTF-8''(.+)$/)?.[1] ?? '',
-        );
-        return { extension: nombre.match(/\.([a-z0-9]+)$/i)?.[1] ?? 'xlsx', contenido: await respuesta.blob() };
-      }
-      // Sale en el formato en que llegó y, si ése no es Excel moderno, también en Excel moderno,
-      // que es el que lleva las listas para elegir.
-      const original = await pedir(analisis.archivoNombre);
-      const archivos = [original];
-      if (!['xlsx', 'xlsm'].includes(original.extension.toLowerCase())) {
-        const sinExtension = String(analisis.archivoNombre ?? '').replace(/\.[a-z0-9]+$/i, '') || 'importacion';
-        archivos.push(await pedir(`${sinExtension}.xlsx`));
-      }
-      for (const { extension, contenido } of archivos) {
-        bajarArchivo(`${t.importacion[`no_cargados_${noCargados}`]}.${extension}`, contenido);
-      }
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setDescargando(false);
-    }
-  }
-
-  async function handleVerRevision() {
+  async function verRevision(importacionId) {
     setCargando(true);
     setError(null);
     try {
-      const resultadoJson = await llamarApi(`/revision/${resultado.importacionId}`);
+      const resultadoJson = await llamarApi(`/revision/${importacionId}`);
       setRevision(resultadoJson);
+      setRevisionFinal(null);
       setPaso(4);
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
       setCargando(false);
     }
+  }
+
+  // Abre el lote de carga uno por uno del día, o recibe el que ya está abierto, y abre el
+  // formulario de alta de lo elegido. Lo cargado pasa por la misma revisión que una planilla.
+  async function abrirCargaManual(tipoDeCarga) {
+    setAbriendoLote(true);
+    setError(null);
+    try {
+      const { importacionId } = await llamarApi('/lote-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: tipoDeCarga }),
+      });
+      setLoteManual({ tipo: tipoDeCarga, importacionId });
+      setFormularioManual(true);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setEligiendoCarga(false);
+      setAbriendoLote(false);
+    }
+  }
+
+  function alCrearManual() {
+    setFormularioManual(false);
+    setTipo(loteManual.tipo);
+    setResultado({ importacionId: loteManual.importacionId, manual: true });
+    verRevision(loteManual.importacionId);
   }
 
   async function handleConformar() {
@@ -279,40 +255,58 @@ export function Importacion() {
     setResultado(null);
     setRevision(null);
     setRevisionFinal(null);
+    setLoteManual(null);
     setError(null);
   }
 
+  // El lote de Servicios en curso nace confirmado: se mira, y no se conforma ni se rechaza.
+  const loteDeServicios = revision?.lote?.tipo === 'servicio';
+
   return (
     <div>
-      <Cabecera titulo={t.importacion.titulo} />
+      <Cabecera titulo={t.importacion.titulo}>
+        {tiposUnoPorUno.length > 0 && (
+          <Button
+            variant="secondary"
+            onClick={() => setEligiendoCarga(true)}
+            disabled={cargando || abriendoLote || cargaDeGenteBloqueada}
+          >
+            {t.importacion.uno_por_uno.boton}
+          </Button>
+        )}
+      </Cabecera>
 
       {error && <Alert variant="error">{error}</Alert>}
 
       {paso === 1 && (
-        <section className="panel-tarjeta">
-          <div className="panel-tarjeta-titulo">
-            <h2>{t.importacion.paso1_titulo}</h2>
-          </div>
-          <form onSubmit={handleAnalizar}>
-            <div className="molde-formgrid">
-              <FormField label={t.importacion.paso1_tipo} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-                <option value="asistente">{t.importacion.tipo_asistente}</option>
-                <option value="cliente">{t.importacion.tipo_cliente}</option>
-              </FormField>
-              <FormField
-                label={t.importacion.paso1_archivo}
-                name="archivo"
-                type="file"
-                onChange={(e) => setArchivo(e.target.files?.[0] || null)}
-              />
+        <div className="molde-pila">
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.importacion.paso1_titulo}</h2>
             </div>
-            <div className="molde-acciones">
-              <Button type="submit" disabled={cargando || cargaDeGenteBloqueada}>
-                {cargando ? t.importacion.analizando : t.importacion.analizar}
-              </Button>
-            </div>
-          </form>
-        </section>
+            <form onSubmit={handleAnalizar}>
+              <div className="molde-formgrid">
+                <FormField label={t.importacion.paso1_tipo} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                  <option value="asistente">{t.importacion.tipo_asistente}</option>
+                  <option value="cliente">{t.importacion.tipo_cliente}</option>
+                  <option value="servicio">{t.importacion.tipo_servicio}</option>
+                </FormField>
+                <FormField
+                  label={t.importacion.paso1_archivo}
+                  name="archivo"
+                  type="file"
+                  onChange={(e) => setArchivo(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div className="molde-acciones">
+                <Button type="submit" disabled={cargando || cargaDeGenteBloqueada}>
+                  {cargando ? t.importacion.analizando : t.importacion.analizar}
+                </Button>
+              </div>
+            </form>
+          </section>
+          <PedidosDeDatos soloSiHay />
+        </div>
       )}
 
       {paso === 2 && analisis && (
@@ -404,75 +398,75 @@ export function Importacion() {
       )}
 
       {paso === 3 && resultado && (
-        <section className="panel-tarjeta">
-          <div className="panel-tarjeta-titulo">
-            <h2>{t.importacion.paso3_titulo}</h2>
-          </div>
-          <Alert variant={resultado.filasError > 0 ? 'info' : 'success'}>
-            {con(t.importacion[`resumen_${noCargados}`], {
-              creadas: resultado.filasCreadas,
-              total: resultado.filasTotales,
-            })}
-          </Alert>
-
-          {resultado.vinculadas?.length > 0 && (
-            <Alert variant="info">
-              <ul>
-                {resultado.vinculadas.map((v) => (
-                  <li key={v.fila}>
-                    {t.importacion.vinculada
-                      .replace('{documento}', numeroConGuiones(v.documento))
-                      .replace('{numero}', v.numeroCliente)}
-                  </li>
-                ))}
-              </ul>
+        <div className="molde-pila">
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.importacion.paso3_titulo}</h2>
+            </div>
+            <Alert variant={resultado.filasError > 0 ? 'info' : 'success'}>
+              {con(t.importacion[`resumen_${noCargados}`], {
+                creadas: resultado.filasCreadas,
+                total: resultado.filasTotales,
+              })}
             </Alert>
-          )}
 
-          {resultado.yaEstaban?.length > 0 && (
-            <Alert variant="info">
-              {con(t.importacion.ya_estaban, { n: resultado.yaEstaban.length })}
-            </Alert>
-          )}
-
-          {resultado.errores.length > 0 && (
-            <Alert variant="error">
-              <strong>{t.importacion[`no_cargados_${noCargados}`]}</strong>
-              <ul>
-                {resultado.errores.map((e) => {
-                  const nombre = nombreDeLaFila(analisis.filas[e.fila - 1], mapeo, tipo);
-                  return (
-                    <li key={e.fila}>
-                      {nombre ? con(t.importacion.no_cargado, { nombre, error: motivoDe(e) }) : motivoDe(e)}
+            {resultado.vinculadas?.length > 0 && (
+              <Alert variant="info">
+                <ul>
+                  {resultado.vinculadas.map((v) => (
+                    <li key={v.fila}>
+                      {t.importacion.vinculada
+                        .replace('{documento}', numeroConGuiones(v.documento))
+                        .replace('{numero}', v.numeroCliente)}
                     </li>
-                  );
-                })}
-              </ul>
-            </Alert>
-          )}
+                  ))}
+                </ul>
+              </Alert>
+            )}
 
-          <div className="molde-acciones">
-            <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
-              {t.importacion.nueva_importacion}
-            </Button>
-            {resultado.errores.length > 0 && (
-              <Button variant="secondary" onClick={handleDescargarNoCargadas} disabled={descargando}>
-                {descargando ? t.importacion.descargando : t.importacion[`descargar_no_cargados_${noCargados}`]}
-              </Button>
+            {resultado.yaEstaban?.length > 0 && (
+              <Alert variant="info">
+                {con(t.importacion.ya_estaban, { n: resultado.yaEstaban.length })}
+              </Alert>
             )}
-            {resultado.filasCreadas > 0 && (
-              <Button onClick={handleVerRevision} disabled={cargando}>
-                {cargando ? t.importacion.cargando_revision : t.importacion.revisar_resultado}
-              </Button>
+
+            {resultado.errores?.length > 0 && (
+              <Alert variant="error">
+                <strong>{t.importacion[`no_cargados_${noCargados}`]}</strong>
+                <ul>
+                  {resultado.errores.map((e) => {
+                    const nombre = nombreDeLaFila(analisis.filas[e.fila - 1], mapeo, tipo);
+                    return (
+                      <li key={e.fila}>
+                        {nombre ? con(t.importacion.no_cargado, { nombre, error: motivoDe(e) }) : motivoDe(e)}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Alert>
             )}
-          </div>
-        </section>
+
+            <div className="molde-acciones">
+              <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
+                {t.importacion.nueva_importacion}
+              </Button>
+              {resultado.filasCreadas > 0 && (
+                <Button onClick={() => verRevision(resultado.importacionId)} disabled={cargando}>
+                  {cargando
+                    ? t.importacion.cargando_revision
+                    : tipo === 'servicio' ? t.importacion.ver_resultado : t.importacion.revisar_resultado}
+                </Button>
+              )}
+            </div>
+          </section>
+          {resultado.pedidosAbiertos > 0 && <PedidosDeDatos importacionId={resultado.importacionId} />}
+        </div>
       )}
 
       {paso === 4 && revision && (
         <section className="panel-tarjeta">
           <div className="panel-tarjeta-titulo">
-            <h2>{t.importacion.paso4_titulo}</h2>
+            <h2>{loteDeServicios ? t.importacion.paso4_titulo_servicio : t.importacion.paso4_titulo}</h2>
           </div>
 
           {revisionFinal === 'conformada' && <Alert variant="success">{t.importacion.conformidad_exito}</Alert>}
@@ -522,7 +516,15 @@ export function Importacion() {
           )}
 
           <div className="molde-acciones">
-            {!revisionFinal && (
+            {resultado?.manual && !revisionFinal && (
+              <Button variant="secondary" onClick={() => setFormularioManual(true)} disabled={cargando}>
+                {t.importacion.uno_por_uno.otro}
+              </Button>
+            )}
+            {loteDeServicios && (
+              <Button onClick={handleReiniciar}>{t.importacion.nueva_importacion}</Button>
+            )}
+            {!revisionFinal && !loteDeServicios && (
               <>
                 <Button variant="secondary" onClick={() => setConfirmandoRechazo(true)} disabled={cargando}>
                   {cargando ? t.importacion.rechazando : t.importacion.rechazar}
@@ -554,6 +556,39 @@ export function Importacion() {
             </div>
           )}
         </section>
+      )}
+
+      {eligiendoCarga && (
+        <div className="panel-modal-fondo" onClick={() => setEligiendoCarga(false)}>
+          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modalCarga.props}>
+            <h2 id={modalCarga.idTitulo}>{t.importacion.uno_por_uno.boton}</h2>
+            <div className="panel-modal-acciones">
+              <Button variant="secondary" onClick={() => setEligiendoCarga(false)} disabled={abriendoLote}>
+                {t.comun.cancelar}
+              </Button>
+              {tiposUnoPorUno.map((tipoDeCarga) => (
+                <Button key={tipoDeCarga} onClick={() => abrirCargaManual(tipoDeCarga)} disabled={abriendoLote}>
+                  {t.importacion.uno_por_uno[tipoDeCarga]}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {formularioManual && loteManual?.tipo === 'asistente' && (
+        <NuevoAsistenteModal
+          importacionId={loteManual.importacionId}
+          onClose={() => setFormularioManual(false)}
+          onCreado={alCrearManual}
+        />
+      )}
+      {formularioManual && loteManual?.tipo === 'cliente' && (
+        <NuevoServicioModal
+          importacionId={loteManual.importacionId}
+          onClose={() => setFormularioManual(false)}
+          onCreado={alCrearManual}
+        />
       )}
     </div>
   );

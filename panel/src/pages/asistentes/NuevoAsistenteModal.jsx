@@ -35,7 +35,8 @@ const CASILLERO_DEL_MOTIVO = {
 // En el orden en que aparecen, para saltar al primero que tenga aviso.
 const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais', 'email'];
 
-export function NuevoAsistenteModal({ onClose, onCreado }) {
+// Con `importacionId`, el Asistente entra en ese lote de carga uno por uno y pasa por su revisión.
+export function NuevoAsistenteModal({ onClose, onCreado, importacionId = null }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
@@ -158,6 +159,7 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           tipo_asistente_id: tipoAsistenteId || null,
           lugares,
           modalidades: modalidadesMarcadas,
+          ...(importacionId ? { importacionId } : {}),
         }),
       });
       const resultado = await respuesta.json();

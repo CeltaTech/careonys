@@ -258,7 +258,7 @@ test('dónde acepta trabajar: la zona se abre en sus lugares, lo de la lista se 
   assert.equal(agregados.length, 1);
 });
 
-test('dónde acepta trabajar: lo que no se reconoce devuelve la fila entera', async () => {
+test('dónde acepta trabajar: lo que no se reconoce vuelve con su motivo y el domicilio entra completo', async () => {
   const { agregar, agregados } = agregador();
   const [r] = await resolverLocalidades({
     filas: [fila({ calle: 'A', numero: '1', localidad: 'Villa Adelina' }, ['Por todos lados'])],
@@ -268,7 +268,30 @@ test('dónde acepta trabajar: lo que no se reconoce devuelve la fila entera', as
   });
   assert.deepEqual(r.motivo, { codigo: 'lugar_de_trabajo_no_reconocido' });
   assert.equal(r.partes, null);
-  assert.equal(agregados.length, 0, 'una fila que vuelve no agrega su localidad a la lista');
+  assert.equal(r.domicilioQueEntra.lugar_id, 'nuevo-06756010');
+  assert.equal(r.domicilioQueEntra.calle, 'A');
+  assert.equal(agregados.length, 1, 'la persona entra, y su localidad reconocida se agrega a la lista');
+});
+
+test('una localidad ambigua trae sus candidatos y el domicilio sin la localidad', async () => {
+  const { agregar, agregados } = agregador();
+  const [r] = await resolverLocalidades({
+    filas: [fila({ calle: 'B', numero: '2', localidad: 'San Martín' })],
+    lugares: [], zonas: [],
+    herramientas: servicio({ localidades: { 'San Martín': [
+      oficial('06560010', 'San Martín', 'General San Martín'),
+      oficial('14070010', 'San Martín', 'San Martín'),
+    ] } }),
+    proponer: null, agregar,
+  });
+  assert.equal(r.motivo.codigo, 'localidad_ambigua');
+  assert.equal(r.motivo.candidatos.length, r.motivo.opciones.length);
+  assert.equal(r.motivo.candidatos[0].texto, r.motivo.opciones[0]);
+  assert.ok(r.motivo.candidatos[0].lugar, 'cada candidato trae el lugar para agregarlo al contestar');
+  assert.equal(r.partes, null);
+  assert.equal(r.domicilioQueEntra.calle, 'B');
+  assert.equal(r.domicilioQueEntra.lugar_id, null);
+  assert.equal(agregados.length, 0, 'una localidad dudosa no se agrega a la lista');
 });
 
 test('dónde acepta trabajar: lo que no está en su provincia se busca en todo el país', async () => {

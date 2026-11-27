@@ -12,10 +12,10 @@
 // **La IA propone y nunca confirma**: lo que devuelve vuelve a pasar por la lista y por el servicio
 // de direcciones, como si lo hubiera escrito la Prestadora.
 //
-// **No hay paso de revisión.** Lo dudoso no se le deja decidir a nadie: vuelve en el archivo de las
-// filas no cargadas, con su motivo, y si es ambiguo, con las opciones. Lo que se reconoce sin duda
-// y todavía no estaba en la lista se agrega solo: si la cartera que se está migrando vive ahí, la
-// Prestadora ya trabaja ahí.
+// **Lo dudoso no se elige a ojo.** Vuelve con su motivo y, si es ambiguo, con las opciones; la persona
+// entra igual con el resto de su domicilio, y la importación le deja a la Prestadora un pedido de
+// dato para que elija la localidad. Lo que se reconoce sin duda y todavía no estaba en la lista se
+// agrega solo: si la cartera que se está migrando vive ahí, la Prestadora ya trabaja ahí.
 //
 // Las dependencias entran por parámetro —el servicio de direcciones, la IA y la escritura del lugar
 // nuevo— para que las pruebas las reemplacen y se vea qué decide esta pieza sin depender de ellas.
@@ -66,10 +66,21 @@ function textoDeOpcion(lugar) {
 
 function ambigua(candidatos) {
   const opciones = [...new Set(candidatos.map(textoDeOpcion))];
+  // Cada opción con el lugar del que sale, para que el pedido de dato pueda agregarlo a la lista el día
+  // que la Prestadora lo elija. Uno por texto, en el mismo orden que las opciones.
+  const vistos = new Set();
+  const lugares = [];
+  for (const candidato of candidatos) {
+    const texto = textoDeOpcion(candidato);
+    if (vistos.has(texto)) continue;
+    vistos.add(texto);
+    lugares.push({ texto, lugar: candidato });
+  }
   return {
     codigo: 'localidad_ambigua',
     opciones: opciones.slice(0, OPCIONES_A_MOSTRAR),
     hayMas: opciones.length > OPCIONES_A_MOSTRAR,
+    candidatos: lugares.slice(0, OPCIONES_A_MOSTRAR),
   };
 }
 
@@ -118,7 +129,11 @@ function leerDomicilio(domicilio, esProvincia) {
  * @param {object|null} p.herramientas El adaptador de direcciones del país, o nulo si no tiene.
  * @param {Function|null} p.proponer La IA: recibe lo que no se reconoció y devuelve lo reescrito.
  * @param {Function} p.agregar Agrega a la lista una localidad oficial y devuelve su identificador.
- * @returns {Promise<{ partes: object|null, lugares: string[], motivo: object|null }[]>}
+ * Cuando hay motivo, `partes` es nula y `domicilioQueEntra` trae lo que se pudo leer del domicilio: sin
+ * la localidad si la dudosa es ésa, o completo si lo que no se reconoció es un lugar de trabajo.
+ * `trabajoNoReconocido` dice que algún lugar de trabajo quedó sin reconocer, aunque el motivo sea el
+ * del domicilio. `lugares` trae siempre los lugares de trabajo reconocidos, haya motivo o no.
+ * @returns {Promise<{ partes: object|null, lugares: string[], motivo: object|null, domicilioQueEntra?: object|null, trabajoNoReconocido?: boolean }[]>}
  */
 export async function resolverLocalidades({ filas, lugares, zonas, herramientas, proponer, agregar }) {
   const lista = [...(lugares ?? [])];
@@ -214,9 +229,10 @@ export async function resolverLocalidades({ filas, lugares, zonas, herramientas,
 
   // --- Dónde acepta trabajar ---
 
+  // Se leen aunque el domicilio haya quedado dudoso: nada de la fila queda afuera, y la duda del
+  // domicilio se le pregunta aparte.
   const textosDeTrabajo = [];
   filas.forEach((fila, i) => {
-    if (resultados[i].motivo) return;
     for (const texto of fila.lugaresDeTrabajo ?? []) {
       if (limpio(texto)) textosDeTrabajo.push({ fila: i, texto: limpio(texto), provincia: provinciaDe(encontrado.get(i)) });
     }
@@ -240,11 +256,15 @@ export async function resolverLocalidades({ filas, lugares, zonas, herramientas,
       }));
       pendientes = pendientes.filter((k) => !otraVez.includes(k) || siguen.has(k));
     }
+    // El motivo del domicilio no se pisa: la fila lleva las dos dudas, cada una con su pedido.
     for (const k of pendientes) {
-      resultados[textosDeTrabajo[k].fila].motivo = { codigo: 'lugar_de_trabajo_no_reconocido' };
+      const resultado = resultados[textosDeTrabajo[k].fila];
+      resultado.trabajoNoReconocido = true;
+      if (!resultado.motivo) resultado.motivo = { codigo: 'lugar_de_trabajo_no_reconocido' };
     }
   } catch {
     for (const { fila } of textosDeTrabajo) {
+      resultados[fila].trabajoNoReconocido = true;
       if (!resultados[fila].motivo) resultados[fila].motivo = { codigo: 'servicio_de_direcciones_caido' };
     }
   }
@@ -258,19 +278,25 @@ export async function resolverLocalidades({ filas, lugares, zonas, herramientas,
     return agregados.get(lugar.idOficial);
   };
 
-  // Una fila que vuelve no agrega nada a la lista: lo que se agrega es porque se cargó alguien ahí.
+  // Una localidad dudosa no agrega nada a la lista: lo que se agrega es porque se cargó alguien ahí.
   for (let i = 0; i < filas.length; i += 1) {
-    if (resultados[i].motivo) continue;
-    const lugar = encontrado.get(i);
     const pedido = pedidos[i];
-    resultados[i].partes = {
+    const soloElTrabajo = resultados[i].motivo?.codigo === 'lugar_de_trabajo_no_reconocido';
+    const conLugar = (lugarId) => ({
       calle: pedido.calle,
       numero: pedido.numero || null,
       piso: pedido.piso || null,
       unidad: pedido.unidad || null,
       codigo_postal: pedido.codigoPostal || null,
-      lugar_id: await idDe(lugar),
-    };
+      lugar_id: lugarId,
+    });
+    if (resultados[i].motivo && !soloElTrabajo) {
+      resultados[i].domicilioQueEntra = pedido.calle ? conLugar(null) : null;
+    } else {
+      const partes = conLugar(await idDe(encontrado.get(i)));
+      if (soloElTrabajo) resultados[i].domicilioQueEntra = partes;
+      else resultados[i].partes = partes;
+    }
     const ids = [];
     for (const lugarDeTrabajo of trabajo.get(i) ?? []) ids.push(...(Array.isArray(lugarDeTrabajo) ? lugarDeTrabajo : [await idDe(lugarDeTrabajo)]));
     resultados[i].lugares = [...new Set(ids)];

@@ -1682,6 +1682,11 @@ orden: los mensajes que manda el producto ya viven en la base, con su texto en l
 lugar para una fila propia por Prestadora, que hoy ninguna tiene; lo que sigue escrito en un archivo es el texto de las pantallas del
 Panel, que es exactamente lo que barre esta sección. **No se muda lo que se va a sacar.**
 
+**Esta revisión simplifica el Panel entero, no sólo los carteles: cada botón y cada frase.** Queda
+sólo lo esencial con lo que la persona trabaja, ningún detalle interno del sistema, y el error se
+evita en vez de explicarlo. Entran también las frases de error de la importación de Servicios en
+curso. **Cada cambio lo aprueba usted, uno por uno, antes de hacerlo.**
+
 **La regla de fondo:** cuantos menos carteles haya, más atención recibe cada uno — es inversamente
 proporcional. Y **cuando un texto sale, sale el cartel entero**: no queda el recuadro vacío
 diciendo nada.

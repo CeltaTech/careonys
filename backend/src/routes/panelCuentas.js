@@ -19,6 +19,7 @@ import {
   crearServicioDelCliente,
   periodoDelServicio,
   crearClienteConServicio,
+  datosDeQuienContrata,
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { configuracionInicialDe, exigirConfiguracionInicial } from '../utils/configuracionInicial.js';
@@ -278,7 +279,10 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizaci
       await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, (dbLote) =>
         exigirLoteAbierto(dbLote, { prestadoraId, importacionId, tipo: 'asistente' }));
     }
-    const { asistenteId } = await enLaPrestadora(prestadoraId, 'alta de Asistente', (dbTrabajo) =>
+    // Dentro de un lote, el Legajo nace pendiente de conformidad, y la base sólo deja escribir
+    // una fila pendiente a la importación. Por eso el alta del lote corre con ese trabajo.
+    const trabajo = importacionId ? TRABAJO_DE_LA_IMPORTACION : 'alta de Asistente';
+    const { asistenteId } = await enLaPrestadora(prestadoraId, trabajo, (dbTrabajo) =>
       crearAsistenteDirecto({
         nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
         valor_hora, horas_semanales, modalidades, rige_desde,
@@ -496,9 +500,17 @@ panelCuentasRouter.post('/servicio', requiereRolPanel, exigirOrganizacionActiva,
       await enLaPrestadora(prestadoraId, TRABAJO_DE_LA_IMPORTACION, (dbLote) =>
         exigirLoteAbierto(dbLote, { prestadoraId, importacionId, tipo: 'cliente' }));
     }
-    const alta = await enLaPrestadora(prestadoraId, 'alta de Cliente con Servicio', (db) =>
+    // Los datos de quien contrata se leen con la credencial de quien pide: el trabajo sin persona no
+    // puede leer el email.
+    const contratante = await datosDeQuienContrata(clienteDelPedido(req), {
+      prestadoraId, contratantePersonaId, pacientePersonaId,
+    });
+    // Dentro de un lote, el Cliente y el Paciente nacen pendientes de conformidad, y la base sólo
+    // deja escribir una fila pendiente a la importación. Por eso el alta del lote corre con ese trabajo.
+    const trabajo = importacionId ? TRABAJO_DE_LA_IMPORTACION : 'alta de Cliente con Servicio';
+    const alta = await enLaPrestadora(prestadoraId, trabajo, (db) =>
       crearClienteConServicio(db, {
-        prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
+        prestadoraId, contratantePersonaId, pacientePersonaId, contratante, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
         importacionId: importacionId || null,
       }));
     res.json({ ok: true, servicioId: alta.servicioId, clienteId: alta.clienteId });

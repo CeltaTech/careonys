@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { avisosDelDocumento, cumpleModulo11, dniCoincide, nombreDelTipo, normalizarNumero } from '../documentoDeIdentidad';
+import { avisandoLoQueFalta } from '../../i18n/faltaLaFrase';
 
 const CUIL = { codigo: 'cuil', sigla: 'CUIL', verifica_modulo_11: true, lleva_pais: false };
 const CUIL_CON_DNI = { ...CUIL, contiene_dni: true };
@@ -96,5 +97,11 @@ describe('nombreDelTipo', () => {
     expect(nombreDelTipo(PASAPORTE, { pasaporte: 'Passport' })).toBe('Passport');
     expect(nombreDelTipo(CUIL, { pasaporte: 'Passport' })).toBe('CUIL');
     expect(nombreDelTipo(null, {})).toBe('');
+  });
+
+  it('usa la sigla aunque los nombres vengan del árbol de traducciones, que marca lo que falta', () => {
+    const nombres = avisandoLoQueFalta({ pasaporte: 'Pasaporte' });
+    expect(nombreDelTipo(CUIL, nombres)).toBe('CUIL');
+    expect(nombreDelTipo(PASAPORTE, nombres)).toBe('Pasaporte');
   });
 });

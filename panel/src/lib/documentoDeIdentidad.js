@@ -69,8 +69,10 @@ export function avisosDelDocumento({ tipo, numero, pais, dni, genero, pideGenero
 }
 
 /** Cómo se nombra un tipo en pantalla: por su nombre en el idioma de quien mira si lo tiene, y si
-    no por la sigla que trae el catálogo, que es como lo dice el país. */
+    no por la sigla que trae el catálogo, que es como lo dice el país. Se pregunta si el nombre
+    existe antes de leerlo: el árbol de traducciones contesta una frase faltante con una marca
+    visible, nunca con vacío, y leerlo directo taparía la sigla. */
 export function nombreDelTipo(tipo, nombres) {
   if (!tipo) return '';
-  return nombres?.[tipo.codigo] ?? tipo.sigla;
+  return nombres && tipo.codigo in nombres ? nombres[tipo.codigo] : tipo.sigla;
 }

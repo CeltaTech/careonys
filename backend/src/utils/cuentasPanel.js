@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { supabase, enLaPrestadora } from '../db/connection.js';
+import { supabase, enLaPrestadora, TRABAJO_DE_LA_IMPORTACION } from '../db/connection.js';
 import { enviarActivacionCuenta } from './activacionCuenta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from './celularDeUnaSolaPersona.js';
@@ -524,12 +524,16 @@ export async function activarVerificacionAltaAsistente(db, asistenteId, prestado
 // el lote importado, y buscan de qué cuenta cuelga: son dos números distintos desde que ese
 // renglón dejó de ser la cuenta.
 export async function revertirAsistenteImportado(db, asistenteId, prestadoraId) {
-  const cuentaId = await cuentaDeLaFila('asistentes', asistenteId, prestadoraId);
+  const cuentaId = await cuentaDeLaFila('asistentes', asistenteId, prestadoraId, {
+    trabajo: TRABAJO_DE_LA_IMPORTACION,
+  });
   return deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
 }
 
 export async function revertirClienteImportada(db, clienteId, prestadoraId) {
-  const cuentaId = await cuentaDeLaFila('clientes', clienteId, prestadoraId);
+  const cuentaId = await cuentaDeLaFila('clientes', clienteId, prestadoraId, {
+    trabajo: TRABAJO_DE_LA_IMPORTACION,
+  });
   return deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
 }
 
@@ -839,27 +843,13 @@ export function periodoDelServicio({ vigenteDesde, vigenteHasta } = {}) {
   };
 }
 
-// Un Cliente nuevo con su primer Servicio, desde Servicios del Panel. Quien contrata y el Paciente
-// ya están en Contactos: el Panel manda cuáles, no sus datos. El email y el teléfono
-// de la cuenta salen de los datos de quien contrata, que es donde viven.
-//
-// Si esa persona ya contrata en esta Prestadora para ese mismo Paciente, el Cliente ya existe y no
-// se crea otro: se lo elige de la lista.
-//
-// Cuando se carga uno por uno dentro de un lote de importación, `importacionId` es ese lote: el
-// Cliente y su Paciente quedan marcados con él y esperan la misma revisión que los importados. La
-// ruta comprueba antes que el lote esté abierto y sea de esta Prestadora.
-export async function crearClienteConServicio(db, {
-  prestadoraId, contratantePersonaId, pacientePersonaId, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
-  importacionId,
-}) {
-  if (!prestadoraId || !contratantePersonaId || !pacientePersonaId || !String(etiqueta ?? '').trim()) {
-    throw new ErrorConMotivo('faltan_datos');
-  }
-  // El período se revisa antes de crear la cuenta, para no crearla y deshacerla por una fecha mal.
-  periodoDelServicio({ vigenteDesde, vigenteHasta });
-
-  const { data: fichas, error: errorFichas } = await db
+// Con qué datos se crea la cuenta de quien contrata: el nombre, el email y el teléfono, que viven
+// en Contactos. Se leen con la credencial de quien pide, por dos motivos: así sólo alcanza a
+// personas que esa persona ve, y el trabajo sin persona no puede leer el email, sólo escribirlo.
+// También comprueba que el Paciente sea una persona que quien pide ve.
+export async function datosDeQuienContrata(dbDeQuienPide, { prestadoraId, contratantePersonaId, pacientePersonaId }) {
+  if (!prestadoraId || !contratantePersonaId || !pacientePersonaId) throw new ErrorConMotivo('faltan_datos');
+  const { data: fichas, error: errorFichas } = await dbDeQuienPide
     .from('personas')
     .select('id, nombre, apellido, email')
     .eq('prestadora_id', prestadoraId)
@@ -871,26 +861,55 @@ export async function crearClienteConServicio(db, {
   }
   if (!contratante.email) throw new ErrorConMotivo('falta_el_email_de_quien_contrata');
 
-  const yaEstaba = await clienteQueYaEstaba(db, {
-    prestadoraId, contratanteId: contratantePersonaId, pacientePersonaId,
-  });
-  if (yaEstaba) throw new ErrorConMotivo('el_cliente_ya_existe');
-
-  const { data: telefono } = await db
+  const { data: telefono, error: errorTelefono } = await dbDeQuienPide
     .from('telefonos_de_la_persona')
     .select('telefono')
     .eq('prestadora_id', prestadoraId)
     .eq('persona_id', contratantePersonaId)
     .limit(1)
     .maybeSingle();
+  if (errorTelefono) throw new Error(errorTelefono.message);
+
+  return {
+    nombre: [contratante.nombre, contratante.apellido].filter(Boolean).join(' '),
+    email: contratante.email,
+    telefono: telefono?.telefono ?? null,
+  };
+}
+
+// Un Cliente nuevo con su primer Servicio, desde Servicios del Panel. Quien contrata y el Paciente
+// ya están en Contactos: el Panel manda cuáles, no sus datos. Los datos de la cuenta de quien
+// contrata llegan en `contratante`, leídos antes con `datosDeQuienContrata`.
+//
+// Si esa persona ya contrata en esta Prestadora para ese mismo Paciente, el Cliente ya existe y no
+// se crea otro: se lo elige de la lista.
+//
+// Cuando se carga uno por uno dentro de un lote de importación, `importacionId` es ese lote: el
+// Cliente y su Paciente quedan marcados con él y esperan la misma revisión que los importados. La
+// ruta comprueba antes que el lote esté abierto y sea de esta Prestadora.
+export async function crearClienteConServicio(db, {
+  prestadoraId, contratantePersonaId, pacientePersonaId, contratante, etiqueta, coordinadorId, vigenteDesde, vigenteHasta,
+  importacionId,
+}) {
+  if (!prestadoraId || !contratantePersonaId || !pacientePersonaId || !contratante?.email
+    || !String(etiqueta ?? '').trim()) {
+    throw new ErrorConMotivo('faltan_datos');
+  }
+  // El período se revisa antes de crear la cuenta, para no crearla y deshacerla por una fecha mal.
+  periodoDelServicio({ vigenteDesde, vigenteHasta });
+
+  const yaEstaba = await clienteQueYaEstaba(db, {
+    prestadoraId, contratanteId: contratantePersonaId, pacientePersonaId,
+  });
+  if (yaEstaba) throw new ErrorConMotivo('el_cliente_ya_existe');
 
   let cuentaId;
   let clienteId;
   try {
     ({ userId: cuentaId } = await crearCuentaConPerfil({
       email: contratante.email,
-      nombre: [contratante.nombre, contratante.apellido].filter(Boolean).join(' '),
-      telefono: telefono?.telefono ?? null,
+      nombre: contratante.nombre,
+      telefono: contratante.telefono,
       rol: 'cliente',
       prestadoraId,
       enviarActivacion: true,

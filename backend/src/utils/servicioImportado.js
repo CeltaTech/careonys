@@ -139,6 +139,7 @@ async function asistentePorCuil(ctx, cuil) {
     .select('id')
     .eq('prestadora_id', ctx.prestadoraId)
     .eq('documento_numero', cuil)
+    .eq('estado', 'activo')
     .eq('pendiente_conformidad', false)
     .is('deleted_at', null)
     .limit(2);

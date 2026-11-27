@@ -118,36 +118,11 @@ de una Prestadora no lee nada de otra.
      Asistente se admite. Es información de salud: no viaja al Panel, la base contesta sólo si la
      Asistente alcanza o no.
 
-**29.** Agregar el tipo «Servicio» a Ajustes › Importación, que hoy no está entre los tipos que se
-pueden importar. Va después de que el acto exista: importar un Servicio sin coordinador asignado
-sería dar de alta algo que el producto no habilita.
-
-En el mismo paso, el resto de la migración. Una Prestadora que ya trabajaba migra lo que tiene
-—Clientes, Asistentes, historias clínicas y lo demás— y cada dato entra por planilla o cargado a
-mano de a uno: es una sola migración, con dos formas de cargarla, y no pasa por el circuito
-comercial del que llega nuevo. Hoy la importación sólo admite Clientes y Asistentes, y la carga a
-mano no existe para ninguno. Falta decidir cómo se llaman, en pantalla, la carga a mano y la
-sección, cuyo título habla sólo de archivos. Cierre: cada cosa que se migra entra por las dos
-formas, por el mismo lote y la misma revisión.
-
-En la importación nada queda afuera y nada se inventa. De cada renglón entra cada dato que no es
-dudoso. El dato que falta o que es dudoso la IA lo busca primero en la misma planilla; si no lo
-encuentra con certeza, se lo pide a la Prestadora en pantalla apenas termina la importación, la
-ayuda a completarlo y mantiene el pedido abierto hasta que se completa. La Prestadora conoce a sus
-Clientes y los datos de ellos: ella contesta, y ni la IA ni el sistema completan un dato con el
-más probable. Hoy un renglón con un dato dudoso no entra y vuelve en una planilla de renglones no
-cargados: esa planilla deja de existir. Cierre: después de una importación no queda ningún renglón
-afuera, cada dato que faltaba lo pidió la IA y lo contestó la Prestadora, y ningún dato guardado
-salió de una suposición.
-
-Un Servicio que ya estaba en curso entra completo: con sus guardias y con los Asistentes asignados
-a cada una. **Los Clientes heredados que tienen un Servicio en curso se tratan aparte y primero.**
-Existen desde que entran y se opera con ellos desde el primer momento. La Prestadora no puede
-rechazar esa tanda: sólo puede resolver lo que traba su regularización, y mientras no lo resuelva
-quedan encendidas todas las alarmas que correspondan. La revisión con rechazo queda para lo que no
-tiene un Servicio en curso. Cierre: un Cliente heredado con su Servicio, sus guardias y sus
-Asistentes entra, se ve y se opera; no se puede rechazar; y cada cosa que falta enciende su alarma
-hasta que se resuelve.
+**29.** Migrar las historias clínicas de una Prestadora que ya trabajaba. Los Clientes, los
+Asistentes y los Servicios en curso ya se migran por planilla o cargados uno por uno, en el mismo
+lote y con la misma revisión; las historias clínicas todavía no tienen ninguna de las dos formas.
+Cierre: una historia clínica entra por planilla o cargada a mano, en el mismo lote, sin que quede
+ningún dato afuera ni se invente ninguno.
 
 ### El Paciente nunca queda solo
 
@@ -1255,7 +1230,7 @@ salen del tablero— y `panel/src/pages/Dashboard.jsx` no tiene ningún gráfico
 en Oportunidad; cerrar la negociación de forma positiva lo convierte en Cliente; si la negociación
 fracasa, vuelve a ser Prospecto con todo su historial. Es la misma persona de Contactos en
 las tres etapas, nunca una tabla aparte. Sin presupuesto aprobado no hay Cliente, y no hay alta manual de
-Cliente desde el Panel; la cartera que una Prestadora ya tenía se migra aparte (paso 29).
+Cliente desde el Panel; la cartera que una Prestadora ya tenía se migra aparte, por Ajustes › Importación.
 
 Prospectos y Oportunidades son asunto de la comercialización, que es la administración. Los Clientes
 les importan a la administración y a la coordinación, y a los Asistentes involucrados en lo suyo.

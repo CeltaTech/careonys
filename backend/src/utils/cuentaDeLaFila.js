@@ -14,10 +14,16 @@ import { enLaPrestadora } from '../db/connection.js';
 // Lo lee el trabajo de la Prestadora: quien pide no siempre ve la cuenta de la otra persona —el
 // Asistente, la de su Cliente—, y la base acota ese trabajo a una sola Prestadora.
 
-/** La cuenta de un solo renglón. Devuelve el identificador de la cuenta, o `null`. */
-export async function cuentaDeLaFila(tabla, filaId, prestadoraId) {
+/**
+ * La cuenta de un solo renglón. Devuelve el identificador de la cuenta, o `null`.
+ *
+ * `trabajo` es el trabajo de la Prestadora que lee. Un renglón de un lote importado que todavía
+ * espera la conformidad sólo lo ve el trabajo de la importación: con cualquier otro la base no lo
+ * devuelve, y la cuenta de ese renglón quedaría sin encontrar.
+ */
+export async function cuentaDeLaFila(tabla, filaId, prestadoraId, { trabajo = 'La cuenta de un Legajo' } = {}) {
   if (!filaId || !prestadoraId) return null;
-  const { data } = await enLaPrestadora(prestadoraId, 'La cuenta de un Legajo', (db) => db
+  const { data } = await enLaPrestadora(prestadoraId, trabajo, (db) => db
     .from(tabla)
     .select('usuario_id')
     .eq('id', filaId)

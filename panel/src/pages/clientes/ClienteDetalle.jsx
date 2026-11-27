@@ -18,6 +18,7 @@ import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { AgregarPersonaAutorizadaModal } from './AgregarPersonaAutorizadaModal';
 import { ContactosDeEmergencia } from './ContactosDeEmergencia';
 import { AccesosALaInformacionDeSalud } from './AccesosALaInformacionDeSalud';
+import { BloqueDeAntecedentes } from '../../components/antecedentes/BloqueDeAntecedentes';
 import {
   AlertasDelCliente,
   TurnosGuardiaActivosDelCliente,
@@ -73,6 +74,9 @@ export function ClienteDetalle() {
   // Leer no es escribir: el estado del Pagador lo ve quien edita el Cliente, porque saber si firmó
   // hace falta para trabajar. Hacerlo firmar pide su propio permiso, que nace reservado al Admin.
   const puedeRegistrarConsentimiento = esAdmin || puede('registrar_consentimiento_pagador');
+  // Los Antecedentes del Cliente son facturas, cobros y deudas de antes: los ve quien ve la
+  // facturación. El backend lo vuelve a decidir; esto es no pedir lo que va a contestar que no.
+  const puedeVerAntecedentesDelCliente = esAdmin || puede('ver_facturacion_cliente');
   const [cliente, setCliente] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -301,6 +305,19 @@ export function ClienteDetalle() {
               <p className="molde-vacio">{t.clientes.sin_pacientes}</p>
             )}
           </section>
+        )}
+
+        {/* Lo que trajo la importación de antes del sistema. Cada bloque aparece sólo si hay algo. */}
+        {tab === 'pacientes' && (cliente.pacientes ?? []).map((p) => (
+          <BloqueDeAntecedentes
+            key={p.id}
+            sujeto="paciente"
+            id={p.id}
+            titulo={con(t.antecedentes.historia_anterior_de, { nombre: p.nombre || '—' })}
+          />
+        ))}
+        {tab === 'pacientes' && puedeVerAntecedentesDelCliente && (
+          <BloqueDeAntecedentes sujeto="cliente" id={cliente.id} titulo={t.antecedentes.antecedentes_del_cliente} />
         )}
 
         {tab === 'personas_autorizadas' && (

@@ -18,7 +18,7 @@ import { fechaDeArchivo } from './intercambioDeFacturacion.js';
 // Campos destino disponibles para el mapeo, por tipo — reflejan exactamente lo que
 // panel/src/pages/clientes/NuevoPacienteModal.jsx, EditarPacienteModal.jsx y
 // crearAsistenteDirecto()/crearClienteImportado() (backend/src/utils/cuentasPanel.js) aceptan.
-// La medicación no se importa: se carga después como indicación, con su firma.
+// La medicación que el Paciente ya tomaba entra con su propia clase de importación, `medicacion`.
 //
 // El domicilio se acepta de las dos formas en que llega: partido en columnas, o entero en una sola
 // celda, que la importación separa. La localidad no se guarda como texto: la resuelve
@@ -59,7 +59,25 @@ export const CAMPOS_IMPORTACION = {
     'fechaNacimientoPaciente', 'nivelComplejidadPaciente', 'patologiasPaciente',
     'tipoServicio', 'modalidad', 'coordinador', 'dias', 'horario', 'cuilAsistente', 'vigenteDesde',
   ],
+  // La medicación que el Paciente ya venía tomando. Entra vigente; la receta y la firma que falten
+  // quedan como pedido.
+  medicacion: [
+    'documentoPaciente', 'nombrePaciente', 'medicamento', 'dosis', 'frecuencia', 'via',
+    'fechaDesde', 'fechaHasta', 'nota',
+  ],
+  // Los valores normales de los signos vitales de cada Paciente.
+  rangos_vitales: ['documentoPaciente', 'nombrePaciente', 'signo', 'valorMin', 'valorMax', 'unidad'],
+  // La historia anterior: guardias, reportes, internaciones, facturas, cobros y deudas de antes.
+  // El renglón entero se guarda; estos campos sólo dicen de quién es y de qué día.
+  historia: [
+    'documentoPaciente', 'nombrePaciente', 'documentoAsistente', 'nombreAsistente', 'documentoContacto', 'fecha',
+  ],
+  // Un documento no es una tabla: no tiene columnas que asignar.
+  documento: [],
 };
+
+// Las clases de hoja de una importación de historia anterior.
+export const CLASES_DE_HOJA = ['guardia', 'reporte', 'internacion', 'factura', 'cobro', 'deuda', 'otro'];
 
 // Los campos que la pantalla marca como obligatorios al revisar qué columna es cuál. Un renglón al que
 // le falta uno no queda afuera: entra con lo demás y queda un pedido de dato para la Prestadora.
@@ -74,7 +92,14 @@ export const CAMPOS_OBLIGATORIOS = {
     'documentoPaciente', 'dniPaciente', 'generoPaciente',
     'tipoServicio', 'modalidad', 'dias', 'horario',
   ],
+  medicacion: ['medicamento', 'dosis', 'frecuencia'],
+  rangos_vitales: ['signo'],
+  historia: [],
+  documento: [],
 };
+
+// Todas las clases de importación que la pantalla puede elegir.
+export const TIPOS_DE_IMPORTACION = Object.keys(CAMPOS_IMPORTACION);
 
 /** Lo que dice la fila sobre el domicilio, como lo recibe `resolverLocalidades`. */
 export function domicilioDesdeFila(fila, mapeo, tipo) {
@@ -102,6 +127,10 @@ export const CAMPOS_LISTA = {
   asistente: new Set(['dondeAceptaTrabajar']),
   cliente: new Set(['patologiasPaciente']),
   servicio: new Set(['patologiasPaciente']),
+  medicacion: new Set(),
+  rangos_vitales: new Set(),
+  historia: new Set(),
+  documento: new Set(),
 };
 
 export function valorDesdeFila(fila, mapeo, campo, esLista) {
@@ -147,110 +176,16 @@ export function parsearArchivo(buffer, nombreArchivo) {
   const planilla = libro.Sheets[libro.SheetNames[0]];
   const filas = XLSX.utils.sheet_to_json(planilla, { defval: '' });
   if (filas.length === 0) {
-    throw new Error('El archivo no tiene filas de datos');
+    throw new ErrorConMotivo('archivo_ilegible', 'el archivo no tiene filas de datos');
   }
   const headers = Object.keys(filas[0]);
   return { headers, filas };
 }
 
-// Sigue dentro de Capa 1 (formato conocido, sin IA): dump SQL estándar de una tabla, del
-// tipo `INSERT INTO tabla (col1, col2, ...) VALUES (v1, v2, ...), (...), ...;` — lo que
-// exportan por defecto pgAdmin/phpMyAdmin/mysqldump con "solo datos". No interpreta CREATE
-// TABLE ni tipos — si el archivo no calza con este patrón devuelve null, sin lanzar error,
-// para que el caller seleccione la Capa 2 (juicio de viabilidad IA) en vez de fallar en seco.
-export function intentarParsearSQL(buffer) {
-  const texto = buffer.toString('utf8');
-  const regexInsert = /INSERT\s+INTO\s+[`"[\]\w.]+\s*\(([^)]+)\)\s*VALUES\s*([\s\S]+?);/gi;
-  const columnas = [];
-  const filas = [];
-
-  let matchInsert;
-  while ((matchInsert = regexInsert.exec(texto)) !== null) {
-    const headers = matchInsert[1].split(',').map((c) => c.trim().replace(/^[`"[]|[`"\]]$/g, ''));
-    if (columnas.length === 0) columnas.push(...headers);
-
-    const bloqueValores = matchInsert[2];
-    const regexTupla = /\(([^()]*)\)/g;
-    let matchTupla;
-    while ((matchTupla = regexTupla.exec(bloqueValores)) !== null) {
-      const valores = matchTupla[1]
-        .split(',')
-        .map((v) => v.trim().replace(/^'(.*)'$/s, '$1').replace(/''/g, "'"))
-        .map((v) => (v.toUpperCase() === 'NULL' ? '' : v));
-      if (valores.length !== headers.length) continue;
-      const fila = {};
-      headers.forEach((h, i) => { fila[h] = valores[i]; });
-      filas.push(fila);
-    }
-  }
-
-  if (columnas.length === 0 || filas.length === 0) return null;
-  return { headers: columnas, filas };
-}
-
-const SYSTEM_PROMPT_VIABILIDAD = `Este asistente decide si un archivo, subido por una
-Prestadora de cuidado domiciliario a ${IDENTIDAD.nombre} para importación masiva de Asistentes o
-Clientes/Pacientes, se puede interpretar como una tabla de datos con certeza suficiente de
-no producir una importación incorrecta. El archivo no es un Excel/CSV/planilla estándar ni
-un dump SQL reconocible (esos casos ya se resolvieron antes de llegar acá) — puede ser JSON,
-XML, texto de ancho fijo, u otro formato exportado por un sistema de terceros.
-
-Si no hay garantía razonable de qué valor de cada fila corresponde a qué columna, se marca
-viable=false y se explica el motivo en una frase — nunca se inventa una estructura de columnas
-que no esté claramente presente en la muestra.
-
-${TRATO_IA}
-Alcanza a "motivo", que se muestra en pantalla a quien subió el archivo.
-
-Se responde únicamente con un JSON de esta forma, sin texto adicional:
-{"viable": true|false, "motivo": "texto breve", "headers": ["col1", "col2", ...], "filas": [{"col1": "valor", ...}, ...]}
-Si viable=false, "headers" y "filas" quedan como arrays vacíos.`;
-
-// Capa 2: juicio de viabilidad de IA para formatos que no calzaron con la Capa 1 (ni
-// `xlsx` ni el parser de dump SQL). Fallback seguro ante falta de API key o respuesta
-// inválida: nunca inventa datos, rechaza la importación y pide un formato conocido.
-export async function evaluarViabilidadIA({ tipo, nombreArchivo, buffer, prestadoraId }) {
-  const anthropic = obtenerCliente();
-  if (!anthropic) {
-    return {
-      viable: false,
-      motivo: 'ANTHROPIC_API_KEY no configurada — hace falta subir el archivo en Excel, CSV o un dump SQL estándar',
-      headers: [],
-      filas: [],
-    };
-  }
-
-  const muestraTexto = buffer.toString('utf8').slice(0, 8000);
-  const mensaje = `Tipo de importación: ${tipo}
-Nombre del archivo: ${nombreArchivo}
-Contenido del archivo (puede estar truncado a los primeros 8000 caracteres):
-${muestraTexto}`;
-
-  const respuesta = await anthropic.messages.create({
-    model: MODELO_IA,
-    max_tokens: 4000,
-    system: SYSTEM_PROMPT_VIABILIDAD,
-    messages: [{ role: 'user', content: mensaje }],
-  });
-
-  registrarUsoIA({ prestadoraId, modulo: 'importacion_viabilidad', modelo: MODELO_IA, respuestaAnthropic: respuesta });
-
-  const parseado = jsonDeRespuestaIA(respuesta);
-  if (!parseado) {
-    return { viable: false, motivo: 'La IA no devolvió una respuesta válida — conviene probar con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
-  }
-  if (!parseado.viable) {
-    return { viable: false, motivo: parseado.motivo || 'La IA determinó que no es viable importar este archivo con certeza', headers: [], filas: [] };
-  }
-  if (!Array.isArray(parseado.headers) || !Array.isArray(parseado.filas) || parseado.filas.length === 0) {
-    return { viable: false, motivo: 'La IA no devolvió filas interpretables — conviene probar con un formato conocido (Excel, CSV, dump SQL)', headers: [], filas: [] };
-  }
-  return { viable: true, motivo: parseado.motivo || '', headers: parseado.headers, filas: parseado.filas };
-}
-
 const SYSTEM_PROMPT = `Este asistente ayuda a mapear columnas de una planilla (Excel/CSV)
 subida por una Prestadora de cuidado domiciliario a los campos internos del sistema ${IDENTIDAD.nombre},
-para importar Asistentes, Clientes/Pacientes o Servicios en curso en forma masiva. Cada Prestadora
+para importar en forma masiva Asistentes, Clientes/Pacientes, Servicios en curso, la medicación
+que cada Paciente ya tomaba, los valores normales de sus signos vitales o su historia anterior. Cada Prestadora
 nombra sus columnas distinto (puede venir en español, con abreviaturas, en otro orden, con
 columnas de más que no aplican). La tarea es proponer, para cada columna del archivo, a qué
 campo interno corresponde (o null si no aplica a ninguno), y marcar advertencias sobre datos
@@ -263,11 +198,20 @@ precios ("tipoServicio", "modalidad"), el Coordinador ("coordinador"), los días
 nombre del Asistente no se mapea a ningún campo: al Asistente se lo identifica sólo por su CUIL.
 Si los días y el horario vienen juntos en una sola columna, esa columna va a "dias".
 
+En una importación de medicación (tipo "medicacion") cada fila es un medicamento de un Paciente; la
+vía de administración va a "via". En una de signos vitales de referencia (tipo "rangos_vitales")
+cada fila es un signo de un Paciente con su valor mínimo, su valor máximo y su unidad. En una de
+historia anterior (tipo "historia") sólo se mapean las columnas que dicen de quién es el renglón y
+de qué día: el renglón entero se guarda igual, con todas sus columnas.
+
+Además se propone "clase": sólo en el tipo "historia", qué es cada renglón de esta hoja, uno de
+guardia, reporte, internacion, factura, cobro, deuda u otro; en los demás tipos queda null.
+
 ${TRATO_IA}
 Alcanza a "advertencias", que se muestran en pantalla a quien subió la planilla.
 
 Se responde únicamente con un JSON de esta forma, sin texto adicional:
-{"mapeo": {"columna_del_archivo": "campo_interno_o_null", ...}, "advertencias": ["texto breve", ...]}`;
+{"mapeo": {"columna_del_archivo": "campo_interno_o_null", ...}, "advertencias": ["texto breve", ...], "clase": null}`;
 
 const SYSTEM_PROMPT_LOCALIDADES = `Este asistente reescribe localidades de {{pais}} que una
 Prestadora de cuidado domiciliario cargó a mano en una planilla y que el servicio oficial de
@@ -338,7 +282,8 @@ export function lectorDeGeneros({ prestadoraId }) {
 }
 
 let cliente = null;
-function obtenerCliente() {
+/** El cliente de la IA, o null si no está configurada. Lo comparten las lecturas de la importación. */
+export function obtenerCliente() {
   if (!process.env.ANTHROPIC_API_KEY) return null;
   if (!cliente) cliente = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return cliente;
@@ -350,7 +295,8 @@ export async function proponerMapeoIA({ tipo, headers, filasMuestra, prestadoraI
   if (!anthropic) {
     return {
       mapeo: Object.fromEntries(headers.map((h) => [h, null])),
-      advertencias: ['ANTHROPIC_API_KEY no configurada — hace falta revisar y completar el mapeo a mano antes de confirmar'],
+      advertencias: ['ia_no_configurada'],
+      clase: null,
     };
   }
 
@@ -358,6 +304,7 @@ export async function proponerMapeoIA({ tipo, headers, filasMuestra, prestadoraI
 Campos internos disponibles: ${camposDisponibles.join(', ')}
 Columnas del archivo: ${headers.join(', ')}
 Primeras filas de muestra (JSON): ${JSON.stringify(filasMuestra.slice(0, 5))}`;
+  if (!camposDisponibles?.length) return { mapeo: {}, advertencias: [], clase: null };
 
   const respuesta = await anthropic.messages.create({
     model: MODELO_IA,
@@ -372,7 +319,8 @@ Primeras filas de muestra (JSON): ${JSON.stringify(filasMuestra.slice(0, 5))}`;
   if (!parseado) {
     return {
       mapeo: Object.fromEntries(headers.map((h) => [h, null])),
-      advertencias: ['La IA no devolvió un mapeo válido — hace falta revisar y completar el mapeo a mano antes de confirmar'],
+      advertencias: ['ia_sin_mapeo'],
+      clase: null,
     };
   }
 
@@ -382,5 +330,6 @@ Primeras filas de muestra (JSON): ${JSON.stringify(filasMuestra.slice(0, 5))}`;
       return [h, camposDisponibles.includes(campo) ? campo : null];
     })
   );
-  return { mapeo, advertencias: Array.isArray(parseado.advertencias) ? parseado.advertencias : [] };
+  const clase = tipo === 'historia' && CLASES_DE_HOJA.includes(parseado.clase) ? parseado.clase : null;
+  return { mapeo, advertencias: Array.isArray(parseado.advertencias) ? parseado.advertencias : [], clase };
 }

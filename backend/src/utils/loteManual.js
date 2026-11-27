@@ -55,13 +55,16 @@ export async function abrirLoteManual(db, { prestadoraId, usuarioPanelId, tipo, 
  * Anota un lote nuevo de importación, de cualquier clase, y devuelve su identificador.
  *
  * Es el único lugar que crea un lote. La cuenta de la importación sólo puede escribir, al crearlo,
- * la Prestadora, quién importa, la clase, el nombre del archivo y cuántos renglones trae. El
+ * la Prestadora, quién importa, la clase, el nombre, el tipo y el tamaño del archivo, cuántos
+ * renglones trae y sus hojas. El
  * resultado (filas creadas, errores, conformidad) se completa después, con una actualización.
  * `db` es la conexión de la importación de esa Prestadora.
  *
  * @returns {Promise<string>} el identificador del lote
  */
-export async function anotarLote(db, { prestadoraId, usuarioPanelId, tipo, archivoNombre, filasTotales }) {
+export async function anotarLote(db, {
+  prestadoraId, usuarioPanelId, tipo, archivoNombre, filasTotales, archivoTipo = null, archivoTamano = null, hojas = [],
+}) {
   const { data: nuevo, error } = await db
     .from('importaciones_prestadora')
     .insert({
@@ -70,6 +73,10 @@ export async function anotarLote(db, { prestadoraId, usuarioPanelId, tipo, archi
       tipo,
       archivo_nombre: archivoNombre || null,
       filas_totales: filasTotales,
+      archivo_tipo: archivoTipo,
+      archivo_tamano: archivoTamano,
+      // Cada hoja del archivo, con su nombre y sus renglones contados y leídos.
+      hojas: Array.isArray(hojas) ? hojas : [],
     })
     .select('id')
     .single();

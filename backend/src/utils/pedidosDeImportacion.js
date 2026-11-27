@@ -35,7 +35,18 @@ import { domicilioEscrito } from './domicilioEscrito.js';
 
 export const DATOS_DE_PEDIDO = [
   'localidad', 'coordinador', 'asistente', 'horario', 'documento', 'documento_paciente', 'tipo_servicio', 'dato',
+  'persona', 'hallazgo', 'receta', 'firma_medicacion', 'renglones',
 ];
+
+/**
+ * Los pedidos que abre la importación de lo que no es una persona nueva: de quién es un renglón de
+ * historia, lo encontrado en un documento, la receta o la firma de una medicación importada, el
+ * dato que le falta a una medicación o a unos valores normales de signos vitales, y los renglones
+ * contados que no se leyeron. Se reconocen por `renglon.para`, y los contesta `pedidosAmpliados.js`.
+ */
+export const PARA_DE_LOS_PEDIDOS_AMPLIADOS = new Set([
+  'persona', 'hallazgo', 'renglones', 'receta', 'firma_medicacion', 'medicacion', 'rango_vital',
+]);
 
 const COLUMNAS_DEL_PEDIDO = 'id, importacion_id, fila, dato, valor_original, motivo, sugerencias, renglon, '
   + 'servicio_id, cliente_id, paciente_id, asistente_id, estado, created_at';
@@ -154,6 +165,9 @@ export function pedidoParaLaPantalla(pedido) {
     // El campo del renglón que se pide, para que el Panel diga qué dato falta. Del renglón no
     // sale nada más: el resto son los datos de la planilla.
     campo: typeof pedido.renglon?.campo === 'string' ? pedido.renglon.campo : null,
+    // Lo encontrado en un documento, que el Panel muestra al pedirlo leído con la sesión de quien pide.
+    hallazgoId: typeof pedido.renglon?.hallazgo_id === 'string' ? pedido.renglon.hallazgo_id : null,
+    pacienteId: pedido.paciente_id ?? null,
   };
 }
 
@@ -668,7 +682,10 @@ export async function responderPedido(ctx, id, valor, deps = {}) {
   };
 
   let resultado;
-  if (DATOS_DEL_SERVICIO.has(pedido.dato)) {
+  if (PARA_DE_LOS_PEDIDOS_AMPLIADOS.has(pedido.renglon?.para)) {
+    if (!deps.responderAmpliado) throw respuestaInvalida();
+    resultado = await deps.responderAmpliado(enElLote, pedido, valor);
+  } else if (DATOS_DEL_SERVICIO.has(pedido.dato)) {
     if (!deps.responderDeServicio) throw respuestaInvalida();
     resultado = await deps.responderDeServicio(enElLote, pedido, valor);
   } else if (pedido.renglon?.datos) {

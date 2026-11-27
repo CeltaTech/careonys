@@ -32,6 +32,17 @@ export function extensionDeArchivo(mimetype) {
   return EXTENSIONES[mimetype] ?? 'jpg';
 }
 
+/** Si el tipo de archivo es uno de los que aceptan las rutas que reciben archivos. */
+export function esTipoAceptado(mimetype) {
+  return Object.hasOwn(EXTENSIONES, mimetype);
+}
+
+// La receta de una indicación de medicación, en la carpeta del Paciente, que el depósito le deja
+// leer al Asistente. Con un identificador nuevo: nadie reemplaza una receta guardada.
+export function rutaDeLaReceta(prestadoraId, pacienteId, extension) {
+  return `${prestadoraId}/${pacienteId}/prescripcion-${randomUUID()}.${extension}`;
+}
+
 // El documento firmado de una indicación de medicación. Afuera de la carpeta del Paciente, que es la
 // que el depósito le deja leer al Asistente.
 export function rutaDelDocumentoFirmado(prestadoraId, pacienteId, consentimientoId, extension) {

@@ -81,8 +81,9 @@ async function coordinadoresSugeridos(conexionDeQuienPide, servicioId) {
 /**
  * El contexto que esperan `pedidosDeImportacion.js` y `servicioImportado.js`.
  *
- * `conexionDeQuienPide` es la sesión de la persona que importa. Sólo se usa para preguntarle a la
- * base qué Coordinadores sugiere para un Servicio.
+ * `conexionDeQuienPide` es la sesión de la persona que importa. Se usa para preguntarle a la base
+ * qué Coordinadores sugiere para un Servicio, y para cargar la medicación importada y su firma
+ * pendiente: esas dos tablas sólo las escribe el Administrador de la Prestadora, con su sesión.
  */
 export async function contextoDeLaImportacion({
   db, prestadoraId, importacionId = null, usuarioPanelId, conexionDeQuienPide = null,
@@ -99,6 +100,8 @@ export async function contextoDeLaImportacion({
     prestadoraId,
     importacionId,
     usuarioPanelId,
+    conexionDeQuienPide,
+    pais: paisDeEsta,
     hoy: await hoyEnLaPrestadora(db, prestadoraId),
     crear: {
       asistente: (datos) => crearAsistenteDirecto(datos),

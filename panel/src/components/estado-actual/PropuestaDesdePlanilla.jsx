@@ -7,6 +7,7 @@ import { llamarApiPanel } from '../../lib/apiPanel';
 import { guardarPlanillaAnalizada } from '../../lib/planillaAnalizada';
 import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
+import { advertenciasDelAnalisis, fraseDeAdvertencia, renglonesDelAnalisis } from '../../lib/importacion';
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
@@ -58,6 +59,16 @@ export function PropuestaDesdePlanilla() {
 
   const textos = t.guia_primeros_pasos;
 
+  // La respuesta trae las hojas del archivo: los renglones y las advertencias se toman de ahí
+  // cuando no vienen sumados.
+  const filasTotales = propuesta ? propuesta.filasTotales ?? renglonesDelAnalisis(propuesta.analisis) : 0;
+  const tiposNuevos = propuesta?.tiposNuevos ?? [];
+  const advertencias = propuesta
+    ? (Array.isArray(propuesta.advertencias) && propuesta.advertencias.length > 0
+      ? propuesta.advertencias.map((texto) => (typeof texto === 'string' ? { texto } : texto))
+      : advertenciasDelAnalisis(propuesta.analisis))
+    : [];
+
   async function leerPlanilla(evento) {
     evento.preventDefault();
     if (!archivo) {
@@ -90,7 +101,7 @@ export function PropuestaDesdePlanilla() {
   // La revisión y la confirmación viven en la pantalla de importación: acá sólo se le entrega
   // lo ya leído para que no vuelva a pedir el archivo.
   function continuarAImportacion() {
-    guardarPlanillaAnalizada(propuesta.tipo, propuesta.analisis);
+    guardarPlanillaAnalizada(propuesta.tipo, propuesta.analisis, { archivo });
     navegar('/importacion');
   }
 
@@ -135,29 +146,33 @@ export function PropuestaDesdePlanilla() {
           <Alert variant="info">
             {con(
               propuesta.tipo === 'asistente' ? textos.planilla_filas_asistente : textos.planilla_filas_cliente,
-              { n: propuesta.filasTotales },
+              { n: filasTotales },
             )}
           </Alert>
 
-          {propuesta.tiposNuevos.length > 0 && (
+          {tiposNuevos.length > 0 && (
             <Alert variant="info">
-              {con(textos.planilla_tipos_nuevos, { lista: propuesta.tiposNuevos.join(', ') })}{' '}
+              {con(textos.planilla_tipos_nuevos, { lista: tiposNuevos.join(', ') })}{' '}
               <Link to={RUTA_TIPOS} className="btn btn-secondary">
                 {textos.planilla_tipos_cta}
               </Link>
             </Alert>
           )}
 
-          {propuesta.tiposNuevos.length === 0 && (
+          {tiposNuevos.length === 0 && (
             <Alert variant="success">{textos.planilla_nada_para_configurar}</Alert>
           )}
 
-          {propuesta.advertencias.length > 0 && (
+          {advertencias.length > 0 && (
             <Alert variant="info">
               <strong>{textos.planilla_advertencias_titulo}</strong>
               <ul>
-                {propuesta.advertencias.map((advertencia, i) => (
-                  <li key={i}>{advertencia}</li>
+                {advertencias.map((advertencia, i) => (
+                  <li key={i}>
+                    {advertencia.hoja
+                      ? con(t.importacion.hoja_de_fila, { hoja: advertencia.hoja, texto: fraseDeAdvertencia(advertencia.texto, t) })
+                      : fraseDeAdvertencia(advertencia.texto, t)}
+                  </li>
                 ))}
               </ul>
             </Alert>

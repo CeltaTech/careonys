@@ -16,7 +16,7 @@ import { abrirLoteManual, anotarLote, exigirLoteAbierto, esIdentificador } from 
 const PRESTADORA = 'prestadora-a';
 const OTRA = 'prestadora-b';
 const USUARIO = 'usuario-1';
-const COLUMNAS_AL_CREAR = ['archivo_nombre', 'filas_totales', 'prestadora_id', 'tipo', 'usuario_id'];
+const COLUMNAS_AL_CREAR = ['archivo_nombre', 'archivo_tamano', 'archivo_tipo', 'filas_totales', 'hojas', 'prestadora_id', 'tipo', 'usuario_id'];
 
 function inicial(lotes = []) {
   return {

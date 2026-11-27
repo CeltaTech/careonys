@@ -9,6 +9,8 @@ import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { CasillerosDeHorario } from '../../components/turnos_guardia/CasillerosDeHorario';
+import { PEDIDOS_CON_RESPUESTA_PROPIA } from '../../lib/importacion';
+import { RespuestaDePedido } from './RespuestasDePedido';
 
 const llamarApi = llamadorDe('/importacion');
 
@@ -75,7 +77,14 @@ export function PedidosDeDatos({ importacionId = null, soloSiHay = false }) {
       {estado === 'listo' && pedidos.length > 0 && (
         <div className="molde-pila">
           {pedidos.map((pedido) => (
-            <RenglonDePedido key={pedido.id} pedido={pedido} alResponder={alResponder} />
+            PEDIDOS_CON_RESPUESTA_PROPIA.has(pedido.dato) ? (
+              <div key={pedido.id}>
+                <EncabezadoDelPedido pedido={pedido} />
+                <RespuestaDePedido pedido={pedido} alResponder={alResponder} />
+              </div>
+            ) : (
+              <RenglonDePedido key={pedido.id} pedido={pedido} alResponder={alResponder} />
+            )
           ))}
         </div>
       )}
@@ -83,8 +92,44 @@ export function PedidosDeDatos({ importacionId = null, soloSiHay = false }) {
   );
 }
 
-function RenglonDePedido({ pedido, alResponder }) {
+// Quién es, qué valor traía el archivo y por qué quedó abierto el pedido.
+function EncabezadoDelPedido({ pedido }) {
   const { t, locale } = useLocale();
+  const textos = t.importacion.pedidos;
+
+  // El motivo es un código del catálogo de errores y se traduce por el mismo camino que
+  // cualquier otro error del Panel: la modalidad trae pegada cuál es, y el resto sale de los
+  // motivos o, si no hay frase propia, de la situación —falla_del_sistema—.
+  const codigo = String(pedido.motivo ?? '');
+  // Lo encontrado en un documento trae como motivo qué se encontró —una indicación de
+  // medicación, unos valores normales—, que tiene su propia frase.
+  const delHallazgo = pedido.dato === 'hallazgo' && Object.hasOwn(textos.hallazgos ?? {}, codigo)
+    ? textos.hallazgos[codigo]
+    : '';
+  const frase = delHallazgo || (codigo
+    ? mensajeDeModalidad(codigo, t.modalidades) ?? mensajeDeError({ motivo: codigo.split(':')[0] }, t, 'pedido de dato')
+    : '');
+  const motivo = frase
+    ? con(frase, {
+      opciones: new Intl.ListFormat(locale, { type: 'disjunction' }).format(
+        (pedido.sugerencias ?? []).map((sugerencia) => sugerencia.etiqueta),
+      ),
+    })
+    : '';
+  const propia = PEDIDOS_CON_RESPUESTA_PROPIA.has(pedido.dato);
+
+  return (
+    <>
+      <h3>{pedido.quien}</h3>
+      {propia && <p className="panel-mini">{textos.datos[pedido.dato]}</p>}
+      {pedido.valorOriginal && <p className="panel-mini">{con(textos.valor_original, { valor: pedido.valorOriginal })}</p>}
+      {motivo && <p className="panel-mini">{motivo}</p>}
+    </>
+  );
+}
+
+function RenglonDePedido({ pedido, alResponder }) {
+  const { t } = useLocale();
   const textos = t.importacion.pedidos;
   const nombre = `pedido-${pedido.id}`;
   const conSugerencias = DATOS_CON_SUGERENCIAS.has(pedido.dato);
@@ -116,21 +161,6 @@ function RenglonDePedido({ pedido, alResponder }) {
   const avisos = intentado ? faltantes() : {};
   const falta = t.formularios.falta_un_dato_obligatorio;
   const erroresDelHorario = Object.fromEntries(Object.keys(avisos).map((casillero) => [casillero, falta]));
-
-  // El motivo es un código del catálogo de errores y se traduce por el mismo camino que
-  // cualquier otro error del Panel: la modalidad trae pegada cuál es, y el resto sale de los
-  // motivos o, si no hay frase propia, de la situación —falla_del_sistema—.
-  const codigo = String(pedido.motivo ?? '');
-  const frase = codigo
-    ? mensajeDeModalidad(codigo, t.modalidades) ?? mensajeDeError({ motivo: codigo.split(':')[0] }, t, 'pedido de dato')
-    : '';
-  const motivo = frase
-    ? con(frase, {
-      opciones: new Intl.ListFormat(locale, { type: 'disjunction' }).format(
-        (pedido.sugerencias ?? []).map((sugerencia) => sugerencia.etiqueta),
-      ),
-    })
-    : '';
 
   async function guardar(e) {
     e.preventDefault();
@@ -175,9 +205,7 @@ function RenglonDePedido({ pedido, alResponder }) {
 
   return (
     <form onSubmit={guardar} noValidate>
-      <h3>{pedido.quien}</h3>
-      {pedido.valorOriginal && <p className="panel-mini">{con(textos.valor_original, { valor: pedido.valorOriginal })}</p>}
-      {motivo && <p className="panel-mini">{motivo}</p>}
+      <EncabezadoDelPedido pedido={pedido} />
       {error && <Alert variant="error">{error}</Alert>}
 
       {conSugerencias && (

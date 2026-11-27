@@ -291,6 +291,23 @@ const ESTADO_POR_MOTIVO = {
   pedido_ya_resuelto: 409,
   respuesta_invalida: 400,
   lote_no_abierto: 409,
+  // La importación de un archivo. El lote que no existe y el de otra Prestadora contestan lo
+  // mismo. El archivo que supera el tope es 413, que es el código que la web reserva para eso.
+  // Los datos de una indicación o de unos valores normales que no se entienden son 400.
+  tipo_de_importacion_invalido: 400,
+  falta_el_archivo: 400,
+  archivo_demasiado_grande: 413,
+  archivo_ilegible: 400,
+  importacion_incompleta: 400,
+  lote_no_encontrado: 404,
+  lote_ya_revisado: 409,
+  sin_original: 404,
+  persona_no_encontrada: 404,
+  campo_obligatorio: 400,
+  via_no_reconocida: 400,
+  signo_no_reconocido: 400,
+  numero_invalido: 400,
+  rango_invertido: 400,
 };
 
 // Los motivos que la base levanta en cualquier tabla, sin importar qué ruta escribió. Llegan como el
@@ -342,5 +359,7 @@ export function responderError(res, error, estadoPorOmision = 500) {
   if (error?.motivo && Array.isArray(error.documentos)) cuerpo.documentos = error.documentos;
   // Desde qué fecha tiene que estar emitido un documento, para decirlo con la fecha.
   if (error?.motivo && typeof error.fecha === 'string') cuerpo.fecha = error.fecha;
+  // La hoja del archivo en la que está el problema, por su número de orden.
+  if (error?.motivo && Number.isInteger(error.hoja)) cuerpo.hoja = error.hoja;
   return res.status(estado).json(cuerpo);
 }

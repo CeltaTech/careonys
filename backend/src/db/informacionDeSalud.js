@@ -21,7 +21,8 @@
 // rompe si se despegan.
 export const TABLAS_DE_SALUD = new Set([
   'aclaraciones_reporte', 'alertas', 'cargas_sujetas_a_aprobacion', 'emergencias_turno_guardia',
-  'hospitalizaciones_paciente', 'indicaciones_medicacion', 'informacion_de_salud_del_paciente',
+  'historia_anterior_del_paciente', 'hospitalizaciones_paciente', 'indicaciones_medicacion',
+  'informacion_de_salud_del_paciente',
   'informes_obra_social', 'rangos_referencia_vitales', 'reportes', 'versiones_registro_clinico',
 ]);
 

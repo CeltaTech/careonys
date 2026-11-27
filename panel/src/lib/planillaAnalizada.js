@@ -13,12 +13,16 @@
 
    SE TOMA UNA SOLA VEZ. `tomar()` devuelve lo guardado y lo borra: si alguien entra después a
    la pantalla de importación por el menú, empieza de cero y elige su archivo, que es lo que
-   corresponde. */
+   corresponde.
+
+   VIAJA TAMBIÉN EL ORIGINAL. Confirmar la importación vuelve a mandar el archivo, porque el
+   backend lo guarda con el lote para poder descargarlo después. Por eso se guarda junto con lo
+   leído: el archivo elegido, o el texto pegado. */
 
 let guardada = null;
 
-export function guardarPlanillaAnalizada(tipo, analisis) {
-  guardada = { tipo, analisis };
+export function guardarPlanillaAnalizada(tipo, analisis, origen) {
+  guardada = { tipo, analisis, origen: origen ?? null };
 }
 
 export function tomarPlanillaAnalizada() {

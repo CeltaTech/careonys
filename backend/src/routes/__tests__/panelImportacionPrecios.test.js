@@ -135,7 +135,7 @@ describe('la lista de precios pide la facturación del Cliente', () => {
     respuestas.set('GET /rest/v1/importaciones_prestadora', () => [unLote('lista_precios')]);
     const { estado, cuerpo } = await pedir('GET', `/revision/${LOTE}`);
     assert.equal(estado, 403);
-    assert.equal(cuerpo.error, 'La Prestadora no habilitó esta acción');
+    assert.equal(cuerpo.error, 'sin_permiso');
     assert.equal(cuerpo.lote, undefined);
   });
 

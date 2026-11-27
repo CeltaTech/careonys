@@ -15,6 +15,7 @@ import { EvaluacionesTab } from './EvaluacionesTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
 import { DesactivarAsistenteModal } from './DesactivarAsistenteModal';
+import { BloqueDeAntecedentes } from '../../components/antecedentes/BloqueDeAntecedentes';
 import { mensajeDeError } from '../../lib/errores';
 import { useDocumentosDelAsistente } from '../../hooks/useDocumentosDelAsistente';
 import { documentosPendientes, graciaVigente } from '../../lib/documentos';
@@ -157,6 +158,7 @@ export function AsistenteDetalle() {
 
       <div className="panel-tab-contenido molde-pila">
         {tab === 'perfil' && <PerfilTab asistente={asistente} onActualizado={recargar} documentosDelAsistente={documentosDelAsistente} />}
+        {tab === 'perfil' && <BloqueDeAntecedentes sujeto="asistente" id={asistente.id} titulo={t.antecedentes.antecedentes_del_legajo} />}
         {tab === 'verificacion' && <VerificacionTab asistente={asistente} />}
         {tab === 'certificado' && <CertificadoTab asistente={asistente} />}
         {tab === 'datos_bancarios' && (esAdmin || puede('ver_datos_bancarios_asistente')) && (

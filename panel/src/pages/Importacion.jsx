@@ -3,57 +3,38 @@ import { useLocale } from '../i18n/LocaleContext';
 import { usePermisos } from '../context/PermisosContext';
 import { useAuth } from '../context/AuthContext';
 import { usePuestaEnMarchaAlDia } from '../context/PuestaEnMarchaContext';
-import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { Cabecera } from '../components/ui/Cabecera';
-import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
+import { mensajeDeError } from '../lib/errores';
 import { con } from '../lib/textos';
 import { numeroConGuiones } from '../lib/documentoDeIdentidad';
 import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
-import { esAdminOSuperior } from '../lib/roles';
+import { esAdminDePrestadora, esAdminOSuperior } from '../lib/roles';
+import {
+  TIPOS_CON_REVISION,
+  TIPOS_DE_IMPORTACION,
+  asignacionesPropuestas,
+  clasesPropuestas,
+  formularioDeAnalisis,
+  formularioDeConfirmacion,
+  hayOrigen,
+  hojasDelAnalisis,
+  llamarApiImportacion as llamarApi,
+  nombreDeLaFila,
+  renglonDelError,
+} from '../lib/importacion';
+import { usePersonasParaElegir } from '../hooks/usePersonasParaElegir';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { NuevoAsistenteModal } from './asistentes/NuevoAsistenteModal';
 import { NuevoServicioModal } from './servicios/NuevoServicioModal';
 import { PedidosDeDatos } from './importacion/PedidosDeDatos';
+import { HojaDeImportacion } from './importacion/HojaDeImportacion';
+import { LotesImportados } from './importacion/LotesImportados';
+import { ListaDeAdvertencias } from './importacion/ListaDeAdvertencias';
 import '../styles/molde-paginas.css';
 import './importacion.css';
-
-const API_URL = import.meta.env.VITE_API_URL;
-
-async function llamarApi(path, opciones = {}) {
-  const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/importacion${path}`, {
-    ...opciones,
-    headers: {
-      Authorization: `Bearer ${data.session?.access_token}`,
-      ...opciones.headers,
-    },
-  });
-  const resultado = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
-  return resultado;
-}
-
-// Qué se puede importar. Cada clase tiene su resumen y su lista de renglones no cargados.
-const TIPOS = ['asistente', 'cliente', 'servicio'];
-
-// Qué dice una fila del archivo en el campo que se le pide, con el mapeo ya revisado. Es la misma
-// lectura que hace el backend (`valorDesdeFila`), para nombrar a la persona que no se cargó.
-function valorDeLaFila(fila, mapeo, campo) {
-  const columna = Object.keys(mapeo).find((col) => mapeo[col] === campo);
-  const valor = columna ? fila?.[columna] : undefined;
-  return valor === '' || valor == null ? '' : String(valor).trim();
-}
-
-function nombreDeLaFila(fila, mapeo, tipo) {
-  if (tipo === 'asistente') return valorDeLaFila(fila, mapeo, 'nombre');
-  const contacto = [valorDeLaFila(fila, mapeo, 'nombreContacto'), valorDeLaFila(fila, mapeo, 'apellidoContacto')]
-    .filter(Boolean)
-    .join(' ');
-  return contacto || valorDeLaFila(fila, mapeo, 'nombrePaciente');
-}
 
 export function Importacion() {
   const modal = useModalAccesible(() => setConfirmandoRechazo(false));
@@ -71,13 +52,21 @@ export function Importacion() {
   ];
 
   const [tipo, setTipo] = useState('asistente');
+  // Lo que se manda a analizar: un archivo de cualquier formato, o un texto pegado.
   const [archivo, setArchivo] = useState(null);
+  const [texto, setTexto] = useState('');
+  const [origen, setOrigen] = useState(null);
+  const [intentado, setIntentado] = useState(false);
   const [paso, setPaso] = useState(1);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
 
   const [analisis, setAnalisis] = useState(null);
-  const [mapeo, setMapeo] = useState({});
+  // Una asignación de columnas por hoja, y en la Historia anterior la clase de cada hoja.
+  const [asignaciones, setAsignaciones] = useState({});
+  const [clases, setClases] = useState({});
+  // El documento suelto se carga en la Historia anterior del Paciente que se elige.
+  const [pacienteId, setPacienteId] = useState('');
   const [resultado, setResultado] = useState(null);
   const [revision, setRevision] = useState(null);
   const [revisionFinal, setRevisionFinal] = useState(null);
@@ -91,14 +80,18 @@ export function Importacion() {
   // Si se llegó desde la guía de primeros pasos, la planilla ya fue leída allá: se arranca en
   // el paso de revisar el mapeo, sin volver a pedir el archivo ni a preguntarle a la IA por el
   // mismo contenido. Al entrar por el menú no hay nada guardado y la pantalla empieza de cero.
+  // El original viaja con la planilla, porque la confirmación lo vuelve a mandar; sin él se
+  // arranca en el primer paso con la clase ya elegida.
   useEffect(() => {
     const previa = tomarPlanillaAnalizada();
     if (!previa) return;
     setTipo(previa.tipo);
-    setAnalisis(previa.analisis);
-    setMapeo(previa.analisis.mapeoPropuesto);
-    setPaso(2);
+    if (!previa.origen || !previa.analisis) return;
+    tomarAnalisis(previa.analisis, previa.origen);
   }, []);
+
+  const esAdministrador = esAdminDePrestadora(usuario?.rol);
+  const { estado: estadoPacientes, listas } = usePersonasParaElegir(tipo === 'documento' ? ['paciente'] : []);
 
   if (cargado && !puede('importar_datos_masivos')) {
     return (
@@ -109,29 +102,31 @@ export function Importacion() {
     );
   }
 
+  function tomarAnalisis(leido, origenLeido) {
+    setAnalisis(leido);
+    setOrigen(origenLeido);
+    setAsignaciones(asignacionesPropuestas(leido));
+    setClases(clasesPropuestas(leido));
+    setPacienteId('');
+    setIntentado(false);
+    setPaso(2);
+  }
+
+  const origenElegido = archivo ? { archivo } : { texto };
+  const faltaOrigen = intentado && !hayOrigen(origenElegido);
+
   async function handleAnalizar(e) {
     e.preventDefault();
-    if (!archivo) {
-      setError(t.importacion.falta_archivo);
-      return;
-    }
+    setIntentado(true);
+    if (!hayOrigen(origenElegido)) return;
     setCargando(true);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append('archivo', archivo);
-      formData.append('tipo', tipo);
-      const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/importacion/analizar`, {
+      const leido = await llamarApi('/analizar', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${data.session?.access_token}` },
-        body: formData,
+        body: formularioDeAnalisis({ tipo, origen: origenElegido }),
       });
-      const resultadoJson = await respuesta.json().catch(() => ({}));
-      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultadoJson);
-      setAnalisis(resultadoJson);
-      setMapeo(resultadoJson.mapeoPropuesto);
-      setPaso(2);
+      tomarAnalisis(leido, origenElegido);
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
@@ -139,19 +134,17 @@ export function Importacion() {
     }
   }
 
+  const faltaPaciente = intentado && analisis?.esDocumento && !pacienteId;
+
   async function handleConfirmar() {
+    setIntentado(true);
+    if (analisis?.esDocumento && !pacienteId) return;
     setCargando(true);
     setError(null);
     try {
       const resultadoJson = await llamarApi('/confirmar', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo,
-          filas: analisis.filas,
-          mapeo,
-          archivoNombre: analisis.archivoNombre,
-        }),
+        body: formularioDeConfirmacion({ tipo, origen, analisis, asignaciones, clases, pacienteId }),
       });
       setResultado(resultadoJson);
       setPaso(3);
@@ -175,7 +168,9 @@ export function Importacion() {
     return con(frase, { opciones: e.hayMas ? `${opciones}…` : opciones });
   }
 
-  const noCargados = TIPOS.includes(tipo) ? tipo : 'cliente';
+  const noCargados = TIPOS_DE_IMPORTACION.includes(tipo) ? tipo : 'cliente';
+  const hojas = hojasDelAnalisis(analisis);
+  const variasHojas = hojas.length > 1;
 
   async function verRevision(importacionId) {
     setCargando(true);
@@ -250,8 +245,13 @@ export function Importacion() {
   function handleReiniciar() {
     setPaso(1);
     setArchivo(null);
+    setTexto('');
+    setOrigen(null);
+    setIntentado(false);
     setAnalisis(null);
-    setMapeo({});
+    setAsignaciones({});
+    setClases({});
+    setPacienteId('');
     setResultado(null);
     setRevision(null);
     setRevisionFinal(null);
@@ -284,20 +284,31 @@ export function Importacion() {
             <div className="panel-tarjeta-titulo">
               <h2>{t.importacion.paso1_titulo}</h2>
             </div>
-            <form onSubmit={handleAnalizar}>
+            <form onSubmit={handleAnalizar} noValidate>
               <div className="molde-formgrid">
                 <FormField label={t.importacion.paso1_tipo} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-                  <option value="asistente">{t.importacion.tipo_asistente}</option>
-                  <option value="cliente">{t.importacion.tipo_cliente}</option>
-                  <option value="servicio">{t.importacion.tipo_servicio}</option>
+                  {TIPOS_DE_IMPORTACION.map((una) => (
+                    <option key={una} value={una}>{t.importacion[`tipo_${una}`]}</option>
+                  ))}
                 </FormField>
                 <FormField
                   label={t.importacion.paso1_archivo}
                   name="archivo"
                   type="file"
                   onChange={(e) => setArchivo(e.target.files?.[0] || null)}
+                  error={faltaOrigen ? t.importacion.falta_archivo : null}
                 />
               </div>
+              {!archivo && (
+                <FormField
+                  label={t.importacion.paso1_texto}
+                  name="texto"
+                  type="textarea"
+                  rows={6}
+                  value={texto}
+                  onChange={(e) => setTexto(e.target.value)}
+                />
+              )}
               <div className="molde-acciones">
                 <Button type="submit" disabled={cargando || cargaDeGenteBloqueada}>
                   {cargando ? t.importacion.analizando : t.importacion.analizar}
@@ -306,94 +317,61 @@ export function Importacion() {
             </form>
           </section>
           <PedidosDeDatos soloSiHay />
+          {esAdministrador && <LotesImportados />}
         </div>
       )}
 
       {paso === 2 && analisis && (
         <div className="molde-pila">
-          <section className="panel-tarjeta">
-            <div className="panel-tarjeta-titulo">
-              <h2>{t.importacion.paso2_titulo}</h2>
-              <span className="panel-mini">{analisis.headers.length}</span>
-            </div>
-
-            {analisis.advertencias.length > 0 && (
-              <Alert variant="info">
-                <strong>{t.importacion.advertencias_titulo}</strong>
-                <ul>
-                  {analisis.advertencias.map((adv, i) => (
-                    <li key={i}>{adv}</li>
+          {analisis.esDocumento ? (
+            <section className="panel-tarjeta">
+              <div className="panel-tarjeta-titulo">
+                <h2>{analisis.archivoNombre || t.importacion.tipo_documento}</h2>
+              </div>
+              <ListaDeAdvertencias advertencias={analisis.advertencias} />
+              {estadoPacientes === 'error' && <Alert variant="error">{t.comun.error_generico}</Alert>}
+              <div className="molde-formgrid">
+                <FormField
+                  label={t.importacion.paciente_del_documento}
+                  name="pacienteId"
+                  type="select"
+                  required
+                  value={pacienteId}
+                  onChange={(e) => setPacienteId(e.target.value)}
+                  disabled={estadoPacientes !== 'listo'}
+                  error={faltaPaciente ? t.formularios.falta_un_dato_obligatorio : null}
+                >
+                  <option value="">{estadoPacientes === 'cargando' ? t.comun.cargando : t.importacion.pedidos.sin_elegir}</option>
+                  {(listas.paciente ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
                   ))}
-                </ul>
-              </Alert>
-            )}
+                </FormField>
+              </div>
+            </section>
+          ) : (
+            hojas.map((hoja) => (
+              <HojaDeImportacion
+                key={hoja.indice}
+                hoja={hoja}
+                camposDisponibles={analisis.camposDisponibles}
+                camposObligatorios={analisis.camposObligatorios}
+                clasesDeHoja={analisis.clasesDeHoja}
+                asignacion={asignaciones[hoja.indice]}
+                onAsignacion={(nueva) => setAsignaciones((previas) => ({ ...previas, [hoja.indice]: nueva }))}
+                clase={clases[hoja.indice]}
+                onClase={(nueva) => setClases((previas) => ({ ...previas, [hoja.indice]: nueva }))}
+              />
+            ))
+          )}
 
-            <table className="panel-tabla">
-              <thead>
-                <tr>
-                  <th>{t.importacion.col_archivo}</th>
-                  <th>{t.importacion.col_campo}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analisis.headers.map((columna) => (
-                  <tr key={columna}>
-                    <td><b>{columna}</b></td>
-                    <td>
-                      <div className="molde-campo">
-                        <select
-                          value={mapeo[columna] || ''}
-                          onChange={(e) => setMapeo({ ...mapeo, [columna]: e.target.value || null })}
-                          aria-label={con(t.importacion.campo_de_columna, { columna })}
-                        >
-                          <option value="">{t.importacion.campo_ninguno}</option>
-                          {analisis.camposDisponibles.map((campo) => (
-                            <option key={campo} value={campo}>
-                              {t.importacion[`campo_${campo}`] || campo}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section className="panel-tarjeta">
-            <div className="panel-tarjeta-titulo">
-              <h2>{t.importacion.vista_previa_titulo}</h2>
-            </div>
-            <div className="importacion-desplazable">
-              <table className="panel-tabla">
-                <thead>
-                  <tr>
-                    {analisis.headers.map((h) => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {analisis.filas.slice(0, 5).map((fila, i) => (
-                    <tr key={i}>
-                      {analisis.headers.map((h) => (
-                        <td key={h}>{String(fila[h])}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="molde-acciones">
-              <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
-                {t.importacion.volver}
-              </Button>
-              <Button onClick={handleConfirmar} disabled={cargando || cargaDeGenteBloqueada}>
-                {cargando ? t.importacion.confirmando : t.importacion.confirmar}
-              </Button>
-            </div>
-          </section>
+          <div className="molde-acciones">
+            <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
+              {t.importacion.volver}
+            </Button>
+            <Button onClick={handleConfirmar} disabled={cargando || cargaDeGenteBloqueada}>
+              {cargando ? t.importacion.confirmando : t.importacion.confirmar}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -409,6 +387,8 @@ export function Importacion() {
                 total: resultado.filasTotales,
               })}
             </Alert>
+
+            <ListaDeAdvertencias advertencias={resultado.advertencias} />
 
             {resultado.vinculadas?.length > 0 && (
               <Alert variant="info">
@@ -434,11 +414,13 @@ export function Importacion() {
               <Alert variant="error">
                 <strong>{t.importacion[`no_cargados_${noCargados}`]}</strong>
                 <ul>
-                  {resultado.errores.map((e) => {
-                    const nombre = nombreDeLaFila(analisis.filas[e.fila - 1], mapeo, tipo);
+                  {resultado.errores.map((e, i) => {
+                    const { hoja, fila, mapeo } = renglonDelError(e, analisis, asignaciones);
+                    const nombre = nombreDeLaFila(fila, mapeo, tipo);
+                    const frase = nombre ? con(t.importacion.no_cargado, { nombre, error: motivoDe(e) }) : motivoDe(e);
                     return (
-                      <li key={e.fila}>
-                        {nombre ? con(t.importacion.no_cargado, { nombre, error: motivoDe(e) }) : motivoDe(e)}
+                      <li key={`${e.hoja ?? 0}-${e.fila}-${i}`}>
+                        {variasHojas && hoja?.nombre ? con(t.importacion.hoja_de_fila, { hoja: hoja.nombre, texto: frase }) : frase}
                       </li>
                     );
                   })}
@@ -450,7 +432,7 @@ export function Importacion() {
               <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
                 {t.importacion.nueva_importacion}
               </Button>
-              {resultado.filasCreadas > 0 && (
+              {resultado.filasCreadas > 0 && TIPOS_CON_REVISION.has(tipo) && (
                 <Button onClick={() => verRevision(resultado.importacionId)} disabled={cargando}>
                   {cargando
                     ? t.importacion.cargando_revision

@@ -142,7 +142,8 @@ export function hojasDelLibro(buffer, { texto = null } = {}) {
       .filter((r) => r.some((v) => String(v ?? '').trim() !== ''));
     if (!crudas.length) return;
     const contados = texto !== null ? contarRegistrosDelimitados(texto) : Math.max(0, crudas.length - 1);
-    hojas.push(hojaDeFilas(hojas.length, nombre, filas, contados));
+    // Un texto delimitado no tiene hojas: el nombre que le pone la biblioteca no es de nadie.
+    hojas.push(hojaDeFilas(hojas.length, texto !== null ? null : nombre, filas, contados));
   });
   return hojas;
 }

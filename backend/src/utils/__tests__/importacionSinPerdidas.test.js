@@ -107,6 +107,11 @@ describe('el texto pegado', () => {
     assert.equal(lectura.hojas[0].filas.length, 2);
   });
 
+  it('una tabla de texto no tiene nombre de hoja', async () => {
+    const lectura = await leerArchivo(archivoDelTexto('Nombre;DNI\nAna Prueba;20111222'));
+    assert.equal(lectura.hojas[0].nombre, null);
+  });
+
   it('sin forma de tabla y sin IA, queda como documento con su texto entero', async () => {
     const texto = 'La paciente toma una pastilla a la mañana.';
     const lectura = await leerLaImportacion(

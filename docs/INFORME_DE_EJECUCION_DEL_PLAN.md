@@ -10,6 +10,14 @@ administración, del paso 27.
 
 ## Lo que se hizo
 
+**Paso 29, la importación de una Prestadora que ya trabajaba.** La importación acepta planillas,
+libros de varias hojas, documentos y texto pegado, en cualquier formato. Nada se descarta: lo que
+no se vuelve dato del sistema queda guardado junto al Cliente o al Asistente que corresponde, o en
+el lote, y el archivo original de cada lote se conserva y se descarga. La historia clínica anterior
+de cada Paciente queda en su Ficha como información de salud, y la medicación importada se carga
+con sus pedidos de firma. Todo eso lo ve el Administrador de esa misma Prestadora y nadie de otra.
+Las importaciones hechas antes de esta corrección no tienen guardado su archivo original.
+
 **Paso 31, la salida sin Reporte Diario.** El relevo lee con la ubicación el código QR del
 Asistente que sale y toma la guardia aunque el que sale no haya presentado el Reporte Diario. La
 hora de la lectura es la hora de salida del que sale. Si el que sale ya presentó el reporte, su

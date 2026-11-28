@@ -108,14 +108,6 @@ repositorio, de GitHub ni del backend alcanza a más de una Prestadora —el bac
 porque trabaja para todas, pero cada una abre sólo la suya—; un pase pedido con la cuenta
 de una Prestadora no lee nada de otra.
 
-### El acto de armar un Servicio
-
-**29.** Migrar las historias clínicas de una Prestadora que ya trabajaba. Los Clientes, los
-Asistentes y los Servicios en curso ya se migran por planilla o cargados uno por uno, en el mismo
-lote y con la misma revisión; las historias clínicas todavía no tienen ninguna de las dos formas.
-Cierre: una historia clínica entra por planilla o cargada a mano, en el mismo lote, sin que quede
-ningún dato afuera ni se invente ninguno.
-
 ### El Paciente nunca queda solo
 
 **31.** **El cierre y el Reporte.** Las cinco formas de cierre y el código QR con la
